@@ -1,6 +1,6 @@
-package com.creatorssuite.panels;
+package com.creatorskit.panels;
 
-import com.creatorssuite.CreatorsPlugin;
+import com.creatorskit.CreatorsPlugin;
 import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
@@ -11,10 +11,7 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.*;
 import javax.swing.border.LineBorder;
-import javax.swing.event.ChangeListener;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 
 public class ProgramPanel extends JFrame

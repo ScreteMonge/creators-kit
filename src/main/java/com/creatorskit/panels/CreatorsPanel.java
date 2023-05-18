@@ -1,10 +1,10 @@
-package com.creatorssuite.panels;
+package com.creatorskit.panels;
 
-import com.creatorssuite.CreatorsConfig;
-import com.creatorssuite.CreatorsPlugin;
-import com.creatorssuite.NPCCharacter;
-import com.creatorssuite.models.CustomModel;
-import com.creatorssuite.programming.Program;
+import com.creatorskit.CreatorsConfig;
+import com.creatorskit.CreatorsPlugin;
+import com.creatorskit.NPCCharacter;
+import com.creatorskit.models.CustomModel;
+import com.creatorskit.programming.Program;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;

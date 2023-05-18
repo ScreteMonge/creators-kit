@@ -1,4 +1,4 @@
-package com.creatorssuite.models;
+package com.creatorskit.models;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

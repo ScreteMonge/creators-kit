@@ -1,7 +1,7 @@
-package com.creatorssuite.programming;
+package com.creatorskit.programming;
 
-import com.creatorssuite.CreatorsPlugin;
-import com.creatorssuite.NPCCharacter;
+import com.creatorskit.CreatorsPlugin;
+import com.creatorskit.NPCCharacter;
 import net.runelite.api.Client;
 import net.runelite.api.RuneLiteObject;
 import net.runelite.api.coords.LocalPoint;

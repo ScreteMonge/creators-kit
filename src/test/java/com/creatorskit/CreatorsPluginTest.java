@@ -1,4 +1,4 @@
-package com.creatorssuite;
+package com.creatorskit;
 
 import net.runelite.client.RuneLite;
 import net.runelite.client.externalplugins.ExternalPluginManager;

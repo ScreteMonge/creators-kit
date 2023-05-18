@@ -1,8 +1,4 @@
-package com.creatorssuite.models;
-
-import net.runelite.api.Client;
-import net.runelite.api.ModelData;
-import org.apache.commons.lang3.ArrayUtils;
+package com.creatorskit.models;
 
 import java.io.BufferedReader;
 import java.io.IOException;

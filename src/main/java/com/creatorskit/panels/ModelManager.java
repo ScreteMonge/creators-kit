@@ -1,8 +1,8 @@
-package com.creatorssuite.panels;
+package com.creatorskit.panels;
 
-import com.creatorssuite.CreatorsPlugin;
-import com.creatorssuite.models.CustomModel;
-import com.creatorssuite.models.DetailedModel;
+import com.creatorskit.CreatorsPlugin;
+import com.creatorskit.models.CustomModel;
+import com.creatorskit.models.DetailedModel;
 import net.runelite.api.Client;
 import net.runelite.api.Model;
 import net.runelite.client.callback.ClientThread;

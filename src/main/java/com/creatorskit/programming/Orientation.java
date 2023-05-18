@@ -1,4 +1,4 @@
-package com.creatorssuite.programming;
+package com.creatorskit.programming;
 
 public class Orientation
 {

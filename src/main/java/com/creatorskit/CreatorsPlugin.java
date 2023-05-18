@@ -1,12 +1,12 @@
-package com.creatorssuite;
+package com.creatorskit;
 
-import com.creatorssuite.models.*;
-import com.creatorssuite.panels.CreatorsPanel;
-import com.creatorssuite.panels.ModelManager;
-import com.creatorssuite.panels.ProgramPanel;
-import com.creatorssuite.programming.Orientation;
-import com.creatorssuite.programming.Program;
-import com.creatorssuite.programming.ProgramManager;
+import com.creatorskit.models.*;
+import com.creatorskit.panels.CreatorsPanel;
+import com.creatorskit.panels.ModelManager;
+import com.creatorskit.panels.ProgramPanel;
+import com.creatorskit.programming.Orientation;
+import com.creatorskit.programming.Program;
+import com.creatorskit.programming.ProgramManager;
 import com.google.inject.Provides;
 import javax.inject.Inject;
 import javax.swing.*;
@@ -45,9 +45,9 @@ import java.util.List;
 
 @Slf4j
 @PluginDescriptor(
-		name = "0Creators' Suite",
+		name = "0Creators' Kit",
 		description = "A suite of tools for content creators",
-		tags = {"tool", "creator", "content"}
+		tags = {"tool", "creator", "content", "kit"}
 )
 public class CreatorsPlugin extends Plugin
 {
