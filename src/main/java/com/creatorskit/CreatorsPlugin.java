@@ -1,9 +1,7 @@
 package com.creatorskit;
 
 import com.creatorskit.models.*;
-import com.creatorskit.panels.CreatorsPanel;
-import com.creatorskit.panels.ModelManager;
-import com.creatorskit.panels.ProgramPanel;
+import com.creatorskit.swing.CreatorsPanel;
 import com.creatorskit.programming.Orientation;
 import com.creatorskit.programming.Program;
 import com.creatorskit.programming.ProgramManager;
@@ -81,11 +79,8 @@ public class CreatorsPlugin extends Plugin
 	@Inject
 	private ItemManager itemManager;
 
-
 	private ProgramManager programManager = new ProgramManager();
 	private CreatorsPanel creatorsPanel;
-	private ModelManager modelOrganizer;
-	private ProgramPanel programPanel;
 	private NavigationButton navigationButton;
 	@Getter
 	private boolean overlaysActive = true;
@@ -103,13 +98,13 @@ public class CreatorsPlugin extends Plugin
 	private NPCCharacter hoveredNPC;
 	@Getter
 	private double speed = 1;
+	private AutoRotate autoRotateYaw = AutoRotate.OFF;
+	private AutoRotate autoRotatePitch = AutoRotate.OFF;
 
 	@Override
 	protected void startUp() throws Exception
 	{
 		creatorsPanel = injector.getInstance(CreatorsPanel.class);
-		modelOrganizer = injector.getInstance(ModelManager.class);
-		programPanel = injector.getInstance(ProgramPanel.class);
 		final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
 		navigationButton = NavigationButton.builder()
 				.tooltip("Creators' Suite")
@@ -126,6 +121,11 @@ public class CreatorsPlugin extends Plugin
 		keyManager.registerKeyListener(quickLocationListener);
 		keyManager.registerKeyListener(quickRotateCWListener);
 		keyManager.registerKeyListener(quickRotateCCWListener);
+		keyManager.registerKeyListener(autoStopListener);
+		keyManager.registerKeyListener(autoLeftListener);
+		keyManager.registerKeyListener(autoRightListener);
+		keyManager.registerKeyListener(autoUpListener);
+		keyManager.registerKeyListener(autoDownListener);
 	}
 
 	@Override
@@ -135,18 +135,23 @@ public class CreatorsPlugin extends Plugin
 		clientToolbar.removeNavigation(navigationButton);
 		overlayManager.remove(overlay);
 		keyManager.unregisterKeyListener(overlayKeyListener);
-		keyManager.registerKeyListener(oculusOrbListener);
-		keyManager.registerKeyListener(quickSpawnListener);
-		keyManager.registerKeyListener(quickLocationListener);
-		keyManager.registerKeyListener(quickRotateCWListener);
-		keyManager.registerKeyListener(quickRotateCCWListener);
+		keyManager.unregisterKeyListener(oculusOrbListener);
+		keyManager.unregisterKeyListener(quickSpawnListener);
+		keyManager.unregisterKeyListener(quickLocationListener);
+		keyManager.unregisterKeyListener(quickRotateCWListener);
+		keyManager.unregisterKeyListener(quickRotateCCWListener);
+		keyManager.unregisterKeyListener(autoStopListener);
+		keyManager.unregisterKeyListener(autoLeftListener);
+		keyManager.unregisterKeyListener(autoRightListener);
+		keyManager.unregisterKeyListener(autoUpListener);
+		keyManager.unregisterKeyListener(autoDownListener);
 	}
-
 
 	@Subscribe
 	public void onChatMessage(ChatMessage event)
 	{
 		String message = event.getMessage();
+
 		if (message.startsWith("Speed"))
 		{
 			String[] split = message.split(",");
@@ -165,123 +170,6 @@ public class CreatorsPlugin extends Plugin
 			double s = Double.parseDouble(split[1]);
 
 			selectedNPC.setProgram(new Program(s, selectedTile.getLocalLocation()));
-			return;
-		}
-
-		if (message.startsWith("Spawn"))
-		{
-			String[] split = message.split(",");
-			String text = split[1];
-
-			ArrayList<DetailedModel> list = new ArrayList<>();
-
-			try {
-				File myObj = new File(text + ".txt");
-				Scanner myReader = new Scanner(myObj);
-				myReader.nextLine();
-				String s = "";
-
-				while ((s = myReader.nextLine()) != null) {
-					System.out.println("Line: " + s);
-					int modelId = 0;
-					int xTranslate = 0;
-					int yTranslate = 0;
-					int zTranslate = 0;
-					int xScale = 0;
-					int yScale = 0;
-					int zScale = 0;
-					int rotate = 0;
-					String newColours = "";
-					String oldColours = "";
-					boolean setBreak = false;
-
-					String data = "";
-					try
-					{
-						while (!(data = myReader.nextLine()).equals(""))
-						{
-							System.out.println("Data: " + data);
-							if (data.startsWith("modelid="))
-								modelId = Integer.parseInt(data.split("=")[1]);
-
-							if (data.startsWith("xt="))
-								xTranslate = Integer.parseInt(data.split("=")[1]);
-
-							if (data.startsWith("yt="))
-								yTranslate = Integer.parseInt(data.split("=")[1]);
-
-							if (data.startsWith("zt="))
-								zTranslate = Integer.parseInt(data.split("=")[1]);
-
-							if (data.startsWith("xs="))
-								xScale = Integer.parseInt(data.split("=")[1]);
-
-							if (data.startsWith("ys="))
-								yScale = Integer.parseInt(data.split("=")[1]);
-
-							if (data.startsWith("zs="))
-								zScale = Integer.parseInt(data.split("=")[1]);
-
-							if (data.startsWith("r="))
-								rotate = Integer.parseInt(data.split("=")[1]);
-
-							if (data.startsWith("n="))
-								oldColours = data.split("=")[1];
-
-							if (data.startsWith("o="))
-								newColours = data.split("=")[1];
-						}
-					}
-					catch (NoSuchElementException e)
-					{
-						setBreak = true;
-					}
-
-
-					String[] newSplit = newColours.split(",");
-					short[] newShort = new short[newSplit.length];
-					String[] oldSplit = oldColours.split(",");
-					short[] oldShort = new short[newSplit.length];
-
-					if (!newColours.isEmpty() && !oldColours.isEmpty() && newSplit.length == oldSplit.length)
-					{
-						for (int i = 0; i < newSplit.length; i++)
-						{
-							newShort[i] = Short.parseShort(newSplit[i]);
-							oldShort[i] = Short.parseShort(oldSplit[i]);
-						}
-					}
-
-
-					DetailedModel detailedModel = new DetailedModel(modelId, xTranslate, yTranslate, zTranslate, xScale, yScale, zScale, rotate, newShort, oldShort);
-					System.out.println("ID: " + detailedModel.getModelId() + ", xT: " + detailedModel.getXTranslate());
-					list.add(detailedModel);
-					if (setBreak)
-						break;
-				}
-
-				myReader.close();
-
-				System.out.println("size: " + list.size());
-				DetailedModel[] models = new DetailedModel[list.size()];
-				for (int i = 0; i < list.size(); i++)
-				{
-					models[i] = list.get(i);
-				}
-
-				System.out.println("creating model");
-				Model model = createComplexModel(models);
-				CustomModel customModel = new CustomModel(model, text);
-				addCustomModel(customModel, true);
-
-
-			} catch (FileNotFoundException e)
-			{
-				System.out.println("An error occurred.");
-				e.printStackTrace();
-			}
-
-
 		}
 	}
 
@@ -291,6 +179,24 @@ public class CreatorsPlugin extends Plugin
 		if (client.getGameState() != GameState.LOGGED_IN)
 		{
 			return;
+		}
+
+		switch (autoRotateYaw)
+		{
+			case LEFT:
+				client.setCameraYawTarget(client.getCameraYaw() - config.rotateHorizontalSpeed());
+				break;
+			case RIGHT:
+				client.setCameraYawTarget(client.getCameraYaw() + config.rotateHorizontalSpeed());
+		}
+
+		switch (autoRotatePitch)
+		{
+			case UP:
+				client.setCameraPitchTarget(client.getCameraPitch() + config.rotateVerticalSpeed());
+				break;
+			case DOWN:
+				client.setCameraPitchTarget(client.getCameraPitch() - config.rotateVerticalSpeed());
 		}
 
 		for (NPCCharacter npcCharacter : npcCharacters)
@@ -359,17 +265,19 @@ public class CreatorsPlugin extends Plugin
 					.setType(MenuAction.RUNELITE)
 					.onClick(e ->
 					{
-						NPCComposition npcComposition = npc.getComposition();
-						int[] models = npcComposition.getModels();
-						if (models == null)
+						Thread thread = new Thread(() ->
 						{
-							sendChatMessage("Problem attempting to store this NPC :(");
-							return;
-						}
-						CustomModel model = new CustomModel(constructSimpleModel(models, new short[0], new short[0]), npc.getName());
-						storedModels.add(model);
-						addCustomModel(model, false);
-						sendChatMessage("Model stored: " + npc.getName());
+							ModelStats[] modelStats = ModelFinder.findModelsForNPC(npc.getId());
+							clientThread.invokeLater(() ->
+							{
+								Model model = constructModelFromCache(modelStats, new int[0], false);
+								CustomModel customModel = new CustomModel(model, npc.getName());
+								storedModels.add(customModel);
+								addCustomModel(customModel, false);
+								sendChatMessage("Model stored: " + npc.getName());
+							});
+						});
+						thread.start();
 					});
 		}
 
@@ -377,11 +285,6 @@ public class CreatorsPlugin extends Plugin
         Tile tile = client.getSelectedSceneTile();
         if (tile != null)
 		{
-			if (option.equals("Examine"))
-			{
-
-			}
-
 			if (option.equals("Walk here"))
 			{
 				GameObject[] gameObjects = tile.getGameObjects();
@@ -478,14 +381,16 @@ public class CreatorsPlugin extends Plugin
 					int[] items = comp.getEquipmentIds();
 					int[] colours = comp.getColors();
 					ColorTextureOverride[] textures = comp.getColorTextureOverrides();
+					int entry = 0;
 					for (int colour : colours) {
-						System.out.println("col: " + colour);
+						System.out.println(entry + ", col: " + colour);
+						entry++;
 						/*
 						0 = hair, jaw
 						1 = torso, arms
-						2 = pants
-						3 = boots
-						4 = skin
+						2 = legs
+						3 = Feet
+						4 = Hands
 						 */
 					}
 
@@ -507,7 +412,7 @@ public class CreatorsPlugin extends Plugin
 						}
 					}
 
-
+					//Convert equipmentId to itemId or kitId as appropriate
 					int[] ids = new int[items.length];
 					for (int i = 0; i < ids.length; i++)
 					{
@@ -527,10 +432,10 @@ public class CreatorsPlugin extends Plugin
 
 					Thread thread = new Thread(() ->
 					{
-						ModelStats[] modelStats = ModelFinder.findModelsForItems(false, comp.getGender() == 0, ids);
+						ModelStats[] modelStats = ModelFinder.findModelsForPlayer(false, comp.getGender() == 0, ids);
 						clientThread.invokeLater(() ->
 						{
-							Model model = constructCacheModel(modelStats);
+							Model model = constructModelFromCache(modelStats, comp.getColors(), false);
 							CustomModel customModel = new CustomModel(model, player.getName());
 							addCustomModel(customModel, false);
 						});
@@ -964,18 +869,10 @@ public class CreatorsPlugin extends Plugin
 			ModelData modelData = client.loadModelData(detailedModel.getModelId());
 			if (modelData == null)
 			{
-				System.out.println("modeldata null");
 				return null;
 			}
 
 			modelData.cloneVertices().cloneColors();
-
-			for (short s : modelData.getFaceColors())
-			{
-				System.out.println("Modelid: " + detailedModel.getModelId() + ", Colour: " + s);
-			}
-
-
 			switch(detailedModel.getRotate())
 			{
 				case 0:
@@ -991,13 +888,41 @@ public class CreatorsPlugin extends Plugin
 			}
 
 			//swapping y and z, making y positive to align with traditional axes
-			modelData.translate(detailedModel.getXTranslate(), -1 * detailedModel.getZTranslate(), detailedModel.getYTranslate());
+			modelData.translate(detailedModel.getXTranslate() + detailedModel.getXTile() * 128, -1 * (detailedModel.getZTranslate() + detailedModel.getZTile() * 128), detailedModel.getYTranslate() + detailedModel.getYTile() * 128);
 			modelData.scale(detailedModel.getXScale(), detailedModel.getZScale(), detailedModel.getYScale());
 
+			String[] newColoursArray = detailedModel.getRecolourNew().split(",");
+			short[] newColours = new short[newColoursArray.length];
+			String[] oldColoursArray = detailedModel.getRecolourOld().split(",");
+			short[] oldColours = new short[oldColoursArray.length];
 
-			for (int i = 0; i < detailedModel.getRecolourNew().length; i++)
+			if (!detailedModel.getRecolourNew().isEmpty() && !detailedModel.getRecolourOld().isEmpty())
 			{
-				modelData.recolor(detailedModel.getRecolourOld()[i], detailedModel.getRecolourNew()[i]);
+				if (newColoursArray.length != oldColoursArray.length)
+				{
+					clientThread.invokeLater(() -> sendChatMessage("Please ensure that each model has the same number of New Colours as Old Colours"));
+					return null;
+				}
+
+				try
+				{
+					for (int i = 0; i < oldColours.length; i++)
+					{
+						oldColours[i] = Short.parseShort(oldColoursArray[i]);
+						newColours[i] = Short.parseShort(newColoursArray[i]);
+					}
+				}
+				catch (Exception exception)
+				{
+					clientThread.invokeLater(() -> sendChatMessage("Please reformat your colour entry to CSV format (ex. 123,987,456"));
+					return null;
+				}
+			}
+
+
+			for (int i = 0; i < newColours.length; i++)
+			{
+				modelData.recolor(oldColours[i], newColours[i]);
 			}
 
 			models[e] = modelData;
@@ -1006,7 +931,7 @@ public class CreatorsPlugin extends Plugin
 		return client.mergeModels(models).light();
 	}
 
-	public Model constructCacheModel(ModelStats[] modelStatsArray)
+	public Model constructModelFromCache(ModelStats[] modelStatsArray, int[] kitRecolours, boolean player)
 	{
 		ModelData[] modelDatas = new ModelData[modelStatsArray.length];
 
@@ -1015,23 +940,135 @@ public class CreatorsPlugin extends Plugin
 			ModelStats modelStats = modelStatsArray[i];
 			ModelData modelData = client.loadModelData(modelStats.getModelId());
 
-			try
-			{
-				modelData.cloneColors();
-				for (short s = 0; s < modelStats.getRecolourFrom().length; s++)
-				{
-					modelData.recolor(modelStats.getRecolourFrom()[s], modelStats.getRecolourTo()[s]);
-				}
-			}
-			catch (Exception e)
-			{
+			if (modelData == null)
+				continue;
 
-			}
+			modelData.cloneColors();
+			for (short s = 0; s < modelStats.getRecolourFrom().length; s++)
+				modelData.recolor(modelStats.getRecolourFrom()[s], modelStats.getRecolourTo()[s]);
+
+
+			if (player)
+				KitRecolourer.recolourKitModel(modelData, modelStats.getBodyPart(), kitRecolours);
 
 			modelDatas[i] = modelData;
 		}
 
-		return client.mergeModels(modelDatas).light();
+		return client.mergeModels(modelDatas).light(65, 1400, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
+	}
+
+	public void loadCustomModel(File file)
+	{
+		ArrayList<DetailedModel> list = new ArrayList<>();
+
+		try
+		{
+			Scanner myReader = new Scanner(file);
+			myReader.nextLine();
+			String s = "";
+
+			while ((s = myReader.nextLine()) != null) {
+				System.out.println("Line: " + s);
+				int modelId = 0;
+				int xTile = 0;
+				int yTile = 0;
+				int zTile = 0;
+				int xTranslate = 0;
+				int yTranslate = 0;
+				int zTranslate = 0;
+				int xScale = 0;
+				int yScale = 0;
+				int zScale = 0;
+				int rotate = 0;
+				String newColours = "";
+				String oldColours = "";
+				boolean setBreak = false;
+
+				String data = "";
+				try
+				{
+					while (!(data = myReader.nextLine()).equals(""))
+					{
+						System.out.println("Data: " + data);
+						if (data.startsWith("modelid="))
+							modelId = Integer.parseInt(data.split("=")[1]);
+
+						if (data.startsWith("xtile="))
+							xTile = Integer.parseInt(data.split("=")[1]);
+
+						if (data.startsWith("ytile="))
+							yTile = Integer.parseInt(data.split("=")[1]);
+
+						if (data.startsWith("ztile="))
+							zTile = Integer.parseInt(data.split("=")[1]);
+
+						if (data.startsWith("xt="))
+							xTranslate = Integer.parseInt(data.split("=")[1]);
+
+						if (data.startsWith("yt="))
+							yTranslate = Integer.parseInt(data.split("=")[1]);
+
+						if (data.startsWith("zt="))
+							zTranslate = Integer.parseInt(data.split("=")[1]);
+
+						if (data.startsWith("xs="))
+							xScale = Integer.parseInt(data.split("=")[1]);
+
+						if (data.startsWith("ys="))
+							yScale = Integer.parseInt(data.split("=")[1]);
+
+						if (data.startsWith("zs="))
+							zScale = Integer.parseInt(data.split("=")[1]);
+
+						if (data.startsWith("r="))
+							rotate = Integer.parseInt(data.split("=")[1]);
+
+						if (data.startsWith("n="))
+							oldColours = data.split("=")[1];
+
+						if (data.startsWith("o="))
+							newColours = data.split("=")[1];
+					}
+				}
+				catch (NoSuchElementException e)
+				{
+					setBreak = true;
+				}
+
+				DetailedModel detailedModel = new DetailedModel(modelId, xTile, yTile, zTile, xTranslate, yTranslate, zTranslate, xScale, yScale, zScale, rotate, newColours, oldColours);
+				list.add(detailedModel);
+				if (setBreak)
+					break;
+			}
+
+			myReader.close();
+
+			SwingUtilities.invokeLater(() ->
+			{
+				for (DetailedModel detailedModel : list)
+				{
+					creatorsPanel.getModelAnvil().createComplexPanel(
+							detailedModel.getModelId(),
+							detailedModel.getXTile(),
+							detailedModel.getYTile(),
+							detailedModel.getZTile(),
+							detailedModel.getXTranslate(),
+							detailedModel.getYTranslate(),
+							detailedModel.getZTranslate(),
+							detailedModel.getXScale(),
+							detailedModel.getYScale(),
+							detailedModel.getZScale(),
+							detailedModel.getRotate(),
+							detailedModel.getRecolourNew(),
+							detailedModel.getRecolourOld());
+				}
+			});
+		}
+		catch (FileNotFoundException e)
+		{
+			System.out.println("An error occurred.");
+			e.printStackTrace();
+		}
 	}
 
 	public void addCustomModel(CustomModel customModel, boolean setComboBox)
@@ -1039,7 +1076,7 @@ public class CreatorsPlugin extends Plugin
 		SwingUtilities.invokeLater(() ->
 		{
 			creatorsPanel.addModelOption(customModel, setComboBox);
-
+			System.out.println("Model added");
 		});
 		storedModels.add(customModel);
 	}
@@ -1153,6 +1190,51 @@ public class CreatorsPlugin extends Plugin
 			{
 
 			}
+		}
+	};
+
+	private final HotkeyListener autoStopListener = new HotkeyListener(() -> config.stopRotationHotkey())
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			autoRotateYaw = AutoRotate.OFF;
+		}
+	};
+
+	private final HotkeyListener autoLeftListener = new HotkeyListener(() -> config.rotateLeftHotkey())
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			autoRotateYaw = (autoRotateYaw == AutoRotate.OFF) ? AutoRotate.LEFT : AutoRotate.OFF;
+		}
+	};
+
+	private final HotkeyListener autoRightListener = new HotkeyListener(() -> config.rotateRightHotkey())
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			autoRotateYaw = (autoRotateYaw == AutoRotate.OFF) ? AutoRotate.RIGHT : AutoRotate.OFF;
+		}
+	};
+
+	private final HotkeyListener autoUpListener = new HotkeyListener(() -> config.rotateUpHotkey())
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			autoRotatePitch = (autoRotatePitch == AutoRotate.OFF) ? AutoRotate.UP : AutoRotate.OFF;
+		}
+	};
+
+	private final HotkeyListener autoDownListener = new HotkeyListener(() -> config.rotateDownHotkey())
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			autoRotatePitch = (autoRotatePitch == AutoRotate.OFF) ? AutoRotate.DOWN : AutoRotate.OFF;
 		}
 	};
 

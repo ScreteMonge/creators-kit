@@ -1,6 +1,6 @@
 package com.creatorskit;
 
-import com.creatorskit.panels.CreatorsPanel;
+import com.creatorskit.swing.CreatorsPanel;
 import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.client.ui.overlay.Overlay;

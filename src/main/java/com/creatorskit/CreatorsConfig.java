@@ -10,13 +10,13 @@ public interface CreatorsConfig extends Config
 			description = "Settings for enabling and modifying Oculus Orb mode",
 			position = 0
 	)
-	String oculusOrbSettings = "oculusOrbSettings";
+	String cameraSettings = "cameraSettings";
 
 	@ConfigItem(
 			keyName = "orbToggle",
 			name = "Toggle Oculus Orb Mode",
 			description = "Hotkey to toggle Oculus Orb mode",
-			section = oculusOrbSettings,
+			section = cameraSettings,
 			position = 2
 	)
 	default Keybind toggleOrbHotkey()
@@ -28,7 +28,7 @@ public interface CreatorsConfig extends Config
 			keyName = "orbSpeed",
 			name = "Orb Speed",
 			description = "Set the normal speed of the Oculus Orb. Unset to disable",
-			section = oculusOrbSettings,
+			section = cameraSettings,
 			position = 3
 	)
 	default int orbSpeed()
@@ -36,10 +36,94 @@ public interface CreatorsConfig extends Config
 		return 36;
 	}
 
+	@ConfigItem(
+			keyName = "stopRotation",
+			name = "Stop AutoRotate",
+			description = "Hotkey to stop automatic camera rotation",
+			section = cameraSettings,
+			position = 4
+	)
+	default Keybind stopRotationHotkey()
+	{
+		return Keybind.NOT_SET;
+	}
+
+	@ConfigItem(
+			keyName = "rotateLeft",
+			name = "AutoRotate Left",
+			description = "Hotkey to toggle automatic camera rotation to the left",
+			section = cameraSettings,
+			position = 5
+	)
+	default Keybind rotateLeftHotkey()
+	{
+		return Keybind.NOT_SET;
+	}
+
+	@ConfigItem(
+			keyName = "rotateRight",
+			name = "AutoRotate Right",
+			description = "Hotkey to toggle automatic camera rotation to the right",
+			section = cameraSettings,
+			position = 6
+	)
+	default Keybind rotateRightHotkey()
+	{
+		return Keybind.NOT_SET;
+	}
+
+	@ConfigItem(
+			keyName = "rotateUp",
+			name = "AutoRotate Up",
+			description = "Hotkey to toggle automatic camera rotation up",
+			section = cameraSettings,
+			position = 7
+	)
+	default Keybind rotateUpHotkey()
+	{
+		return Keybind.NOT_SET;
+	}
+
+	@ConfigItem(
+			keyName = "rotateDown",
+			name = "AutoRotate Down",
+			description = "Hotkey to toggle automatic camera rotation down",
+			section = cameraSettings,
+			position = 8
+	)
+	default Keybind rotateDownHotkey()
+	{
+		return Keybind.NOT_SET;
+	}
+
+	@ConfigItem(
+			keyName = "rotateHorizontalSpeed",
+			name = "Rotate Horizontal Speed",
+			description = "Set the horizontal automatic camera rotation speed",
+			section = cameraSettings,
+			position = 9
+	)
+	default int rotateHorizontalSpeed()
+	{
+		return 3;
+	}
+
+	@ConfigItem(
+			keyName = "rotateVerticalSpeed",
+			name = "Rotate Vertical Speed",
+			description = "Set the vertical automatic camera rotation speed",
+			section = cameraSettings,
+			position = 10
+	)
+	default int rotateVerticalSpeed()
+	{
+		return 3;
+	}
+
 	@ConfigSection(
 			name = "Scene",
 			description = "Settings for setting up your scene",
-			position = 4
+			position = 11
 	)
 	String sceneSettings = "sceneSettings";
 
@@ -48,7 +132,7 @@ public interface CreatorsConfig extends Config
 			name = "Quick Spawn",
 			description = "Hotkey to toggle the spawn or despawn state of the selected object",
 			section = sceneSettings,
-			position = 5
+			position = 12
 	)
 	default Keybind quickSpawnHotkey()
 	{
@@ -60,7 +144,7 @@ public interface CreatorsConfig extends Config
 			name = "Quick Location",
 			description = "Hotkey to set the selected object to the mouse location",
 			section = sceneSettings,
-			position = 6
+			position = 13
 	)
 	default Keybind quickLocationHotkey()
 	{
@@ -72,7 +156,7 @@ public interface CreatorsConfig extends Config
 			name = "Quick Rotate CW",
 			description = "Hotkey to rotate the selected object by 90 degrees clockwise",
 			section = sceneSettings,
-			position = 7
+			position = 14
 	)
 	default Keybind quickRotateCWHotkey()
 	{
@@ -84,7 +168,7 @@ public interface CreatorsConfig extends Config
 			name = "Quick Rotate CCW",
 			description = "Hotkey to rotate the selected object by 90 degrees counter-clockwise",
 			section = sceneSettings,
-			position = 8
+			position = 15
 	)
 	default Keybind quickRotateCCWHotkey()
 	{
@@ -96,7 +180,7 @@ public interface CreatorsConfig extends Config
 			name = "Quick Duplicate",
 			description = "Hotkey to duplicate the selected object",
 			section = sceneSettings,
-			position = 9
+			position = 16
 	)
 	default Keybind quickDuplicate()
 	{
@@ -106,7 +190,7 @@ public interface CreatorsConfig extends Config
 	@ConfigSection(
 			name = "Overlays",
 			description = "Settings for enabling/disabling overlays",
-			position = 10
+			position = 17
 	)
 	String overlaySettings = "overlaySettings";
 
@@ -115,7 +199,7 @@ public interface CreatorsConfig extends Config
 			name = "Toggle Overlays Hotkey",
 			description = "Hotkey to toggle all overlays. Unset to disable",
 			section = overlaySettings,
-			position = 11
+			position = 18
 	)
 	default Keybind toggleOverlaysHotkey()
 	{
@@ -127,7 +211,7 @@ public interface CreatorsConfig extends Config
 			name = "Select Tile Overlay",
 			description = "Enables an overlay that hovers over the selected tile",
 			section = overlaySettings,
-			position = 12
+			position = 19
 	)
 	default boolean selectOverlay()
 	{
@@ -139,7 +223,7 @@ public interface CreatorsConfig extends Config
 			name = "My Object Overlay",
 			description = "Enables an overlay for objects introduced via this plugin",
 			section = overlaySettings,
-			position = 13
+			position = 20
 	)
 	default boolean myObjectOverlay()
 	{
@@ -151,7 +235,7 @@ public interface CreatorsConfig extends Config
 			name = "Game Object Overlay",
 			description = "Enables an overlay for GameObjects",
 			section = overlaySettings,
-			position = 14
+			position = 21
 	)
 	default boolean gameObjectOverlay()
 	{
@@ -163,7 +247,7 @@ public interface CreatorsConfig extends Config
 			name = "Player Overlay",
 			description = "Enables an overlay for Players",
 			section = overlaySettings,
-			position = 15
+			position = 22
 	)
 	default boolean playerOverlay()
 	{
@@ -175,7 +259,7 @@ public interface CreatorsConfig extends Config
 			name = "NPC Overlay",
 			description = "Enables an overlay for NPCs",
 			section = overlaySettings,
-			position = 16
+			position = 23
 	)
 	default boolean npcOverlay()
 	{
@@ -187,7 +271,7 @@ public interface CreatorsConfig extends Config
 			name = "Ground Object Overlay",
 			description = "Enables an overlay for GroundObjects",
 			section = overlaySettings,
-			position = 17
+			position = 24
 	)
 	default boolean groundObjectOverlay()
 	{
@@ -199,7 +283,7 @@ public interface CreatorsConfig extends Config
 			name = "Wall Object Overlay",
 			description = "Enables an overlay for TileObjects",
 			section = overlaySettings,
-			position = 18
+			position = 25
 	)
 	default boolean wallObjectOverlay()
 	{
@@ -211,7 +295,7 @@ public interface CreatorsConfig extends Config
 			name = "Decorative Object Overlay",
 			description = "Enables an overlay for DecorativeObjects",
 			section = overlaySettings,
-			position = 19
+			position = 26
 	)
 	default boolean decorativeObjectOverlay()
 	{

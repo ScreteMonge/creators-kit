@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 
 public class ModelFinder
 {
-    public static ModelStats[] findModelsForItems(boolean groundItem, boolean maleItem, int... itemIdFull)
+    public static ModelStats[] findModelsForPlayer(boolean groundItem, boolean maleItem, int... itemIdFull)
     {
         Pattern recolFrom = Pattern.compile("recol\\ds=.+");
         Pattern recolTo = Pattern.compile("recol\\dd=.+");
@@ -50,7 +50,7 @@ public class ModelFinder
             BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
             String s = "";
             Pattern[] patterns = new Pattern[itemId.length];
-            System.out.println(itemId.length);
+            System.out.println("length: " + itemId.length);
 
             for (int i = 0; i < itemId.length; i++)
             {
@@ -160,7 +160,7 @@ public class ModelFinder
                         {
                             if (id > 0)
                             {
-                                modelStatsItems.add(new ModelStats(id, recolourFromArray, recolourToArray));
+                                modelStatsItems.add(new ModelStats(id, BodyPart.NA, recolourFromArray, recolourToArray));
                             }
                         }
 
@@ -196,6 +196,7 @@ public class ModelFinder
 
             for (int i = 0; i < kitId.length; i++)
             {
+                //Create a pattern to match the format [idk_XXX] per kitId
                 int item = kitId[i];
                 Pattern kitPattern = Pattern.compile("\\[.+_" + item + "]");
                 patterns[i] = kitPattern;
@@ -213,6 +214,7 @@ public class ModelFinder
                         int[] modelIds = new int[2];
                         ArrayList<Integer> recolourFrom = new ArrayList<>();
                         ArrayList<Integer> recolourTo = new ArrayList<>();
+                        BodyPart bodyPart = BodyPart.NA;
 
 
                         String string = "";
@@ -232,6 +234,28 @@ public class ModelFinder
                                 continue;
                             }
 
+                            if (string.endsWith("hair"))
+                                bodyPart = BodyPart.HAIR;
+
+                            if (string.endsWith("jaw"))
+                                bodyPart = BodyPart.JAW;
+
+                            if (string.endsWith("torso"))
+                                bodyPart = BodyPart.TORSO;
+
+                            if (string.endsWith("arms"))
+                                bodyPart = BodyPart.ARMS;
+
+                            if (string.endsWith("hands"))
+                                bodyPart = BodyPart.HANDS;
+
+                            if (string.endsWith("legs"))
+                                bodyPart = BodyPart.LEGS;
+
+                            if (string.endsWith("feet"))
+                                bodyPart = BodyPart.FEET;
+
+                            //recolour if a recol1s and recol1d are present with the kitId
                             matcher = recolFrom.matcher(string);
 
                             if (matcher.matches())
@@ -265,16 +289,9 @@ public class ModelFinder
                         {
                             if (id > 0)
                             {
-                                modelStatsItems.add(new ModelStats(id, recolourFromArray, recolourToArray));
-                                /*
-                                ModelData modelData = client.loadModelData(id);
-                                short[] colors = modelData.getFaceColors();
-                                for (short d : colors)
-                                {
-                                    System.out.println("id: " + id + ", " + d);
-                                }
+                                modelStatsItems.add(new ModelStats(id, bodyPart, recolourFromArray, recolourToArray));
 
-                                 */
+
                             }
                         }
 
@@ -293,5 +310,78 @@ public class ModelFinder
         }
 
         return modelStatsItems.toArray(new ModelStats[0]);
+    }
+
+    public static ModelStats[] findModelsForNPC(int npcId)
+    {
+        Pattern recolFrom = Pattern.compile("recol\\ds=.+");
+        Pattern recolTo = Pattern.compile("recol\\dd=.+");
+
+        ArrayList<Integer> modelIds = new ArrayList<>();
+        ArrayList<Short> recolourFrom = new ArrayList<>();
+        ArrayList<Short> recolourTo = new ArrayList<>();
+
+        try
+        {
+            URL url = new URL("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.npc");
+            URLConnection connection = url.openConnection();
+            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            String s = "";
+
+            Pattern npcPattern = Pattern.compile("\\[.+_" + npcId + "]");
+
+            while ((s = br.readLine()) != null)
+            {
+                Matcher match = npcPattern.matcher(s);
+                if (match.matches())
+                {
+                    String string = "";
+                    while (!(string = br.readLine()).equals(""))
+                    {
+                        if (string.startsWith("model"))
+                        {
+                            String[] split = string.split("_");
+                            modelIds.add(Integer.parseInt(split[split.length - 1]));
+                        }
+
+                        match = recolFrom.matcher(string);
+
+                        if (match.matches())
+                        {
+                            String[] split = string.split("=");
+                            recolourFrom.add(Short.parseShort(split[1]));
+                        }
+
+                        match = recolTo.matcher(string);
+
+                        if (match.matches())
+                        {
+                            String[] split = string.split("=");
+                            recolourTo.add(Short.parseShort(split[1]));
+                        }
+
+                    }
+                }
+            }
+            br.close();
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(e);
+        }
+
+        short[] rf = new short[recolourFrom.size()];
+        short[] rt = new short[recolourTo.size()];
+        for (int i = 0; i < recolourFrom.size(); i++)
+        {
+            rf[i] = recolourFrom.get(i);
+            rt[i] = recolourTo.get(i);
+        }
+
+        ModelStats[] modelStats = new ModelStats[modelIds.size()];
+        for (int i = 0; i < modelIds.size(); i++)
+            modelStats[i] = new ModelStats(modelIds.get(i), BodyPart.NA, rf, rt);
+
+        return modelStats;
     }
 }

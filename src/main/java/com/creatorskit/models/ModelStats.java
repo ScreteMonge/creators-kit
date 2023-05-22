@@ -8,6 +8,7 @@ import lombok.Getter;
 public class ModelStats
 {
     private int modelId;
+    private BodyPart bodyPart;
     private short[] recolourFrom;
     private short[] recolourTo;
 }

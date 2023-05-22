@@ -1,4 +1,4 @@
-package com.creatorskit.panels;
+package com.creatorskit.swing;
 
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicSliderUI;

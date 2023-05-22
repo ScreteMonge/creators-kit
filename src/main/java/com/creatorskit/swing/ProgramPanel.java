@@ -1,4 +1,4 @@
-package com.creatorskit.panels;
+package com.creatorskit.swing;
 
 import com.creatorskit.CreatorsPlugin;
 import net.runelite.api.Client;

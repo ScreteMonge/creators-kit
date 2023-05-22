@@ -1,6 +1,5 @@
-package com.creatorskit.panels;
+package com.creatorskit.swing;
 
-import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.NPCCharacter;
 import com.creatorskit.models.CustomModel;
@@ -32,13 +31,13 @@ public class CreatorsPanel extends PluginPanel
     @Inject
     private ClientThread clientThread;
     private final CreatorsPlugin plugin;
-    private final CreatorsConfig config;
-    private final ModelManager modelManager;
+
+    @Getter
+    private final ModelAnvil modelAnvil;
+    private final ModelOrganizer modelOrganizer;
     private final ProgramPanel programPanel;
 
     private final JButton createNPCButton = new JButton();
-    private final JButton managerPanelButton = new JButton();
-    private final JButton programPanelButton = new JButton();
     private final JPanel mainPanel = new JPanel();
     private GridBagConstraints cNPC = new GridBagConstraints();
     private int npcPanels = 0;
@@ -58,13 +57,13 @@ public class CreatorsPanel extends PluginPanel
     private final BufferedImage CLOSE = ImageUtil.loadImageResource(getClass(), "/Close.png");
 
     @Inject
-    public CreatorsPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin, CreatorsConfig config, ModelManager modelForge, ProgramPanel programPanel)
+    public CreatorsPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin, ModelOrganizer modelOrganizer, ProgramPanel programPanel, ModelAnvil modelAnvil)
     {
         this.clientThread = clientThread;
         this.plugin = plugin;
-        this.config = config;
-        this.modelManager = modelForge;
+        this.modelOrganizer = modelOrganizer;
         this.programPanel = programPanel;
+        this.modelAnvil = modelAnvil;
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new GridBagLayout());
@@ -77,31 +76,49 @@ public class CreatorsPanel extends PluginPanel
         c.gridx = 0;
         c.gridy = 0;
         c.weightx = 1;
-        managerPanelButton.setText("Model Manager");
-        managerPanelButton.setToolTipText("Opens an interface for managing custom models");
-        managerPanelButton.setFocusable(false);
-        managerPanelButton.addActionListener(e ->
+        JButton organizerButton = new JButton("Organizer");
+        organizerButton.setToolTipText("Opens an interface for managing custom models");
+        organizerButton.setFocusable(false);
+        organizerButton.addActionListener(e ->
         {
-            modelForge.setVisible(!modelForge.isVisible());
+            modelOrganizer.setVisible(!modelOrganizer.isVisible());
+            revalidate();
+            repaint();
         });
-        add(managerPanelButton, c);
+        add(organizerButton, c);
 
         c.gridx = 1;
         c.gridy = 0;
         c.weightx = 1;
-        programPanelButton.setText("Programmer");
-        programPanelButton.setToolTipText("Opens an interface for programming object actions");
-        programPanelButton.setFocusable(false);
-        programPanelButton.addActionListener(e ->
+        JButton anvilButton = new JButton("Anvil");
+        anvilButton.setToolTipText("Opens an interface for creating custom models");
+        anvilButton.setFocusable(false);
+        anvilButton.addActionListener(e ->
+        {
+            modelAnvil.setVisible(!modelAnvil.isVisible());
+            revalidate();
+            repaint();
+        });
+        add(anvilButton, c);
+
+        c.gridx = 2;
+        c.gridy = 0;
+        c.weightx = 1;
+        JButton programmerButton = new JButton("Programmer");
+        programmerButton.setToolTipText("Opens an interface for programming object actions");
+        programmerButton.setFocusable(false);
+        programmerButton.addActionListener(e ->
         {
             programPanel.setVisible(!programPanel.isVisible());
+            revalidate();
+            repaint();
         });
-        add(programPanelButton, c);
+        add(programmerButton, c);
 
 
         c.gridx = 0;
         c.gridy = 1;
-        c.gridwidth = 2;
+        c.gridwidth = 3;
         c.weightx = 1;
         c.ipady = 5;
         createNPCButton.setText("Add Object");
@@ -115,7 +132,7 @@ public class CreatorsPanel extends PluginPanel
         add(createNPCButton, c);
 
 
-        c.gridwidth = 2;
+        c.gridwidth = 3;
         c.gridx = 0;
         c.gridy = 2;
         c.weighty = 1;
@@ -144,6 +161,12 @@ public class CreatorsPanel extends PluginPanel
         masterPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         masterPanel.setBorder(defaultBorder);
         masterPanel.setLayout(new GridBagLayout());
+        masterPanel.addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                int y = e.getPoint().y;
+            }
+        });
 
         GridBagConstraints c = new GridBagConstraints();
         c.fill = GridBagConstraints.BOTH;
@@ -539,7 +562,7 @@ public class CreatorsPanel extends PluginPanel
                 }
             }
         }
-        modelManager.createModelPanel(model);
+        modelOrganizer.createModelPanel(model);
     }
 
     public void removeModelOption(CustomModel model)
@@ -548,6 +571,6 @@ public class CreatorsPanel extends PluginPanel
         {
             comboBox.removeItem(model);
         }
-        modelManager.removeModelPanel(model);
+        modelOrganizer.removeModelPanel(model);
     }
 }

@@ -10,6 +10,9 @@ import lombok.Setter;
 public class DetailedModel
 {
     int modelId;
+    int xTile;
+    int yTile;
+    int zTile;
     int xTranslate;
     int yTranslate;
     int zTranslate;
@@ -17,6 +20,6 @@ public class DetailedModel
     int yScale;
     int zScale;
     int rotate;
-    short[] recolourNew;
-    short[] recolourOld;
+    String recolourNew;
+    String recolourOld;
 }
