@@ -922,13 +922,25 @@ public class CreatorsPlugin extends Plugin
 
 			for (int i = 0; i < newColours.length; i++)
 			{
-				modelData.recolor(oldColours[i], newColours[i]);
+				modelData.recolor(newColours[i], oldColours[i]);
 			}
 
 			models[e] = modelData;
 		}
 
-		return client.mergeModels(models).light();
+		//Renderpriorities
+		Model model = client.mergeModels(models).light();
+		if (model != null)
+		{
+			byte[] renderPriorities = model.getFaceRenderPriorities();
+			for (int i = 0; i < renderPriorities.length; i++)
+			{
+				renderPriorities[i] = 0;
+			}
+		}
+
+
+		return model;
 	}
 
 	public Model constructModelFromCache(ModelStats[] modelStatsArray, int[] kitRecolours, boolean player)
@@ -1024,10 +1036,10 @@ public class CreatorsPlugin extends Plugin
 							rotate = Integer.parseInt(data.split("=")[1]);
 
 						if (data.startsWith("n="))
-							oldColours = data.split("=")[1];
+							oldColours = data.replaceAll("n=", "");
 
 						if (data.startsWith("o="))
-							newColours = data.split("=")[1];
+							newColours = data.replaceAll("o=", "");
 					}
 				}
 				catch (NoSuchElementException e)
@@ -1181,24 +1193,13 @@ public class CreatorsPlugin extends Plugin
 		}
 	};
 
-	private final HotkeyListener quickDuplicateListener = new HotkeyListener(() -> config.quickDuplicate())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			if (selectedNPC != null)
-			{
-
-			}
-		}
-	};
-
 	private final HotkeyListener autoStopListener = new HotkeyListener(() -> config.stopRotationHotkey())
 	{
 		@Override
 		public void hotkeyPressed()
 		{
 			autoRotateYaw = AutoRotate.OFF;
+			autoRotatePitch = AutoRotate.OFF;
 		}
 	};
 

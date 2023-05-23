@@ -59,7 +59,6 @@ public class ModelOrganizer extends JFrame
         scrollPane.setViewportView(modelFrame);
         add(scrollPane, c);
 
-        System.out.println("MO created");
         revalidate();
         pack();
     }

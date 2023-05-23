@@ -193,7 +193,6 @@ public class ModelAnvil extends JFrame
             forgeModel(client, simpleModeActive, modelLoadField, oldColourField, newColourField, nameField, true);
         });
 
-        System.out.println("Model anvil created");
         validate();
         pack();
     }
@@ -552,12 +551,10 @@ public class ModelAnvil extends JFrame
                     );
         });
 
-        System.out.println("Success");
         complexMode.add(complexModePanel);
         complexModePanel.setEnabled(true);
         complexModePanel.setVisible(true);
         complexPanels.add(complexModePanel);
-        System.out.println(complexPanels.size());
 
         revalidate();
         repaint();
@@ -765,7 +762,7 @@ public class ModelAnvil extends JFrame
                             JCheckBox checkBox = (JCheckBox) comp;
 
                             if (name.equals("check90") && checkBox.isSelected()) {
-                                rotate = 1;
+                                rotate = 3;
                                 continue;
                             }
 
@@ -775,7 +772,7 @@ public class ModelAnvil extends JFrame
                             }
 
                             if (name.equals("check270") && checkBox.isSelected()) {
-                                rotate = 3;
+                                rotate = 1;
                             }
                         }
                     }
@@ -850,10 +847,9 @@ public class ModelAnvil extends JFrame
 
             for (DetailedModel detailedModel : panelsToDetailedModels())
             {
-                writer.write("\n\n" + "modelid=" + detailedModel.getModelId() + "\n" + detailedModel.getXTile() + "\n" + detailedModel.getYTile() + "\n" + detailedModel.getZTile() + "\n" + "xt=" + detailedModel.getXTranslate() + "\n" + "yt=" + detailedModel.getYTranslate() + "\n" + "zt=" + detailedModel.getZTranslate() + "\n" + "xs=" + detailedModel.getXScale() + "\n" + "ys=" + detailedModel.getYScale() + "\n" + "zs=" + detailedModel.getZScale() + "\n" + "r=" + detailedModel.getRotate() + "\n" + "n=" + detailedModel.getRecolourNew() + "\n" + "o=" + detailedModel.getRecolourOld() + "\n" + "");
+                writer.write("\n\n" + "modelid=" + detailedModel.getModelId() + "\n" + "xtile=" + detailedModel.getXTile() + "\n"  + "ytile="+ detailedModel.getYTile() + "\n"  + "ztile=" + detailedModel.getZTile() + "\n" + "xt=" + detailedModel.getXTranslate() + "\n" + "yt=" + detailedModel.getYTranslate() + "\n" + "zt=" + detailedModel.getZTranslate() + "\n" + "xs=" + detailedModel.getXScale() + "\n" + "ys=" + detailedModel.getYScale() + "\n" + "zs=" + detailedModel.getZScale() + "\n" + "r=" + detailedModel.getRotate() + "\n" + "n=" + detailedModel.getRecolourNew() + "\n" + "o=" + detailedModel.getRecolourOld() + "\n" + "");
             }
 
-            System.out.println("Written");
             writer.close();
         }
         catch (IOException e)

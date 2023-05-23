@@ -150,12 +150,12 @@ public class CreatorsPanel extends PluginPanel
         cNPC.weighty = 1;
     }
 
-    private JPanel createPanel()
+    public JPanel createPanel()
     {
         return createPanel("Object " + npcPanels, 7699, null, false, 0,  -1, 60);
     }
 
-    private JPanel createPanel(String name, int modelId, CustomModel customModel, boolean customModeActive, int orientation, int animationId, int radius)
+    public JPanel createPanel(String name, int modelId, CustomModel customModel, boolean customModeActive, int orientation, int animationId, int radius)
     {
         JPanel masterPanel = new JPanel();
         masterPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
