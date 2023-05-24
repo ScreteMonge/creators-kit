@@ -385,6 +385,87 @@ public class ModelFinder
         return modelStats;
     }
 
+    public static ModelStats[] findModelsForObject(int objectId)
+    {
+        Pattern recolFrom = Pattern.compile("recol\\ds=.+");
+        Pattern recolTo = Pattern.compile("recol\\dd=.+");
+
+        ArrayList<Integer> modelIds = new ArrayList<>();
+        ArrayList<Short> recolourFrom = new ArrayList<>();
+        ArrayList<Short> recolourTo = new ArrayList<>();
+
+        try
+        {
+            URL url = new URL("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.loc");
+            URLConnection connection = url.openConnection();
+            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            String s = "";
+
+            Pattern npcPattern = Pattern.compile("\\[.+_" + objectId + "]");
+
+            while ((s = br.readLine()) != null)
+            {
+                Matcher match = npcPattern.matcher(s);
+                if (match.matches())
+                {
+                    String string = "";
+                    while (!(string = br.readLine()).equals(""))
+                    {
+                        if (string.startsWith("model"))
+                        {
+                            String[] split = string.split("_");
+                            if (split[split.length - 1].contains(","))
+                            {
+                                String split2 = split[split.length - 1].split(",")[0];
+                                modelIds.add(Integer.parseInt(split2));
+                            }
+                            else
+                            {
+                                modelIds.add(Integer.parseInt(split[split.length - 1]));
+                            }
+                        }
+
+                        match = recolFrom.matcher(string);
+
+                        if (match.matches())
+                        {
+                            String[] split = string.split("=");
+                            recolourFrom.add(Short.parseShort(split[1]));
+                        }
+
+                        match = recolTo.matcher(string);
+
+                        if (match.matches())
+                        {
+                            String[] split = string.split("=");
+                            recolourTo.add(Short.parseShort(split[1]));
+                        }
+
+                    }
+                }
+            }
+            br.close();
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(e);
+        }
+
+        short[] rf = new short[recolourFrom.size()];
+        short[] rt = new short[recolourTo.size()];
+        for (int i = 0; i < recolourFrom.size(); i++)
+        {
+            rf[i] = recolourFrom.get(i);
+            rt[i] = recolourTo.get(i);
+        }
+
+        ModelStats[] modelStats = new ModelStats[modelIds.size()];
+        for (int i = 0; i < modelIds.size(); i++)
+            modelStats[i] = new ModelStats(modelIds.get(i), BodyPart.NA, rf, rt);
+
+        return modelStats;
+    }
+
     public static String shortArrayToString(short[] array)
     {
         StringBuilder stringBuilder = new StringBuilder();

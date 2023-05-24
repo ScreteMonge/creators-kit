@@ -100,8 +100,10 @@ public class CreatorsPlugin extends Plugin
 	private double speed = 1;
 	private AutoRotate autoRotateYaw = AutoRotate.OFF;
 	private AutoRotate autoRotatePitch = AutoRotate.OFF;
-	private final int actorAmbient = 65;
-	private final int actorContrast = 1400;
+	private final int BRIGHT_AMBIENT = 65;
+	private final int BRIGHT_CONTRAST = 1400;
+	private final int DARK_AMBIENT = 128;
+	private final int DARK_CONTRAST = 4000;
 
 	@Override
 	protected void startUp() throws Exception
@@ -249,6 +251,15 @@ public class CreatorsPlugin extends Plugin
 	}
 
 	@Subscribe
+	public void onConfigChanged(ConfigChanged event)
+	{
+		if (event.getKey().equals("orbSpeed"))
+		{
+			client.setOculusOrbNormalSpeed(config.orbSpeed());
+		}
+	}
+
+	@Subscribe
 	public void onMenuOpened(MenuOpened event)
 	{
 		if (!overlaysActive)
@@ -333,6 +344,7 @@ public class CreatorsPlugin extends Plugin
 					{
 						Model model = (Model) renderable;
 						addGameObjectGetter("<col=FFFF>GameObject", "GameObject", model);
+						addObjectGetterToAnvil("<col=FFFF>GameObject", "GameObject", gameObject.getId());
 					}
 				}
 
@@ -344,6 +356,7 @@ public class CreatorsPlugin extends Plugin
 					{
 						Model model = (Model) groundObject.getRenderable();
 						addGameObjectGetter("<col=FFFF>GroundObject", "GroundObject", model);
+						addObjectGetterToAnvil("<col=FFFF>GroundObject", "GroundObject", groundObject.getId());
 					}
 				}
 
@@ -355,6 +368,7 @@ public class CreatorsPlugin extends Plugin
 					{
 						Model model = (Model) decorativeObject.getRenderable();
 						addGameObjectGetter("<col=FFFF>DecorativeObject", "DecorativeObject", model);
+						addObjectGetterToAnvil("<col=FFFF>DecorativeObject", "DecorativeObject", decorativeObject.getId());
 					}
 				}
 
@@ -366,6 +380,7 @@ public class CreatorsPlugin extends Plugin
 					{
 						Model model = (Model) renderable;
 						addGameObjectGetter("<col=FFFF>WallObject", "WallObject", model);
+						addObjectGetterToAnvil("<col=FFFF>WallObject", "WallObject", wallObject.getId());
 					}
 				}
 
@@ -376,6 +391,7 @@ public class CreatorsPlugin extends Plugin
 					{
 						Model model = tileItem.getModel();
 						addGameObjectGetter("<col=FFFF>Item", "Item", model);
+						addObjectGetterToAnvil("<col=FFFF>Item", "Item", tileItem.getId());
 					}
 				}
 			}
@@ -462,7 +478,7 @@ public class CreatorsPlugin extends Plugin
 							clientThread.invokeLater(() ->
 							{
 								cacheToAnvil(modelStats, comp.getColors(), true);
-								sendChatMessage("Model sent to Anvil Complex Mode: " + player.getName());
+								sendChatMessage("Model sent to Anvil: " + player.getName());
 							});
 						});
 						thread.start();
@@ -497,13 +513,25 @@ public class CreatorsPlugin extends Plugin
 				});
 	}
 
-	@Subscribe
-	public void onConfigChanged(ConfigChanged event)
+	public void addObjectGetterToAnvil(String target, String name, int objectId)
 	{
-		if (event.getKey().equals("orbSpeed"))
-		{
-			client.setOculusOrbNormalSpeed(config.orbSpeed());
-		}
+		client.createMenuEntry(-2)
+				.setOption("Anvil")
+				.setTarget(target)
+				.setType(MenuAction.RUNELITE)
+				.onClick(e ->
+				{
+					Thread thread = new Thread(() ->
+					{
+						ModelStats[] modelStats = ModelFinder.findModelsForObject(objectId);
+						clientThread.invokeLater(() ->
+						{
+							cacheToAnvil(modelStats, new int[0], false);
+							sendChatMessage("Model sent to Anvil: " + name);
+						});
+					});
+					thread.start();
+				});
 	}
 
 	public void setRightClick()
@@ -874,7 +902,7 @@ public class CreatorsPlugin extends Plugin
 		chatMessageManager.queue(QueuedMessage.builder().type(ChatMessageType.GAMEMESSAGE).runeLiteFormattedMessage(message).build());
 	}
 
-	public Model constructSimpleModel(int[] modelIds, short[] colourToFind, short[] colourToReplace, boolean actorLighting)
+	public Model constructSimpleModel(int[] modelIds, short[] colourToFind, short[] colourToReplace, LightingStyle lightingStyle)
 	{
 		ModelData[] data = new ModelData[modelIds.length];
 
@@ -895,13 +923,19 @@ public class CreatorsPlugin extends Plugin
 			data[i] = modelData;
 		}
 
-		if (actorLighting)
-			return client.mergeModels(data).light(actorAmbient, actorContrast, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
-
-		return client.mergeModels(data).light();
+		switch (lightingStyle)
+		{
+			default:
+			case DEFAULT:
+				return client.mergeModels(data).light();
+			case ACTOR:
+				return client.mergeModels(data).light(BRIGHT_AMBIENT, BRIGHT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
+			case NONE:
+				return client.mergeModels(data).light(DARK_AMBIENT, DARK_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
+		}
 	}
 
-	public Model createComplexModel(DetailedModel[] detailedModels, boolean setPriority, boolean actorLighting)
+	public Model createComplexModel(DetailedModel[] detailedModels, boolean setPriority, LightingStyle lightingStyle)
 	{
 		ModelData[] models = new ModelData[detailedModels.length];
 
@@ -961,7 +995,6 @@ public class CreatorsPlugin extends Plugin
 				}
 			}
 
-
 			for (int i = 0; i < newColours.length; i++)
 			{
 				modelData.recolor(oldColours[i], newColours[i]);
@@ -970,7 +1003,19 @@ public class CreatorsPlugin extends Plugin
 			models[e] = modelData;
 		}
 
-		Model model	= (actorLighting) ? client.mergeModels(models).light(actorAmbient, actorContrast, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z) : client.mergeModels(models).light();
+		Model model;
+		switch (lightingStyle)
+		{
+			default:
+			case DEFAULT:
+				model =  client.mergeModels(models).light();
+				break;
+			case ACTOR:
+				model = client.mergeModels(models).light(BRIGHT_AMBIENT, BRIGHT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
+				break;
+			case NONE:
+				model = client.mergeModels(models).light(DARK_AMBIENT, DARK_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
+		}
 
 		if (model == null)
 		{
@@ -980,7 +1025,8 @@ public class CreatorsPlugin extends Plugin
 		if (setPriority)
 		{
 			byte[] renderPriorities = model.getFaceRenderPriorities();
-			Arrays.fill(renderPriorities, (byte) 0);
+			if (renderPriorities.length > 0)
+				Arrays.fill(renderPriorities, (byte) 0);
 		}
 
 		//6200 faces, 4000 vertices is about max
