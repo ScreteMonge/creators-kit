@@ -9,6 +9,7 @@ import lombok.Setter;
 @Setter
 public class DetailedModel
 {
+    String name;
     int modelId;
     int xTile;
     int yTile;

@@ -249,31 +249,31 @@ public class ModelAnvil extends JFrame
 
     public void createComplexPanel()
     {
-        createComplexPanel(0, 0, 0, 0, 0, 0, 0, 128, 128, 128, 0, "", "");
+        createComplexPanel("Name", -1, 0, 0, 0, 0, 0, 0, 128, 128, 128, 0, "", "");
     }
 
-    public void createComplexPanel(int modelId, int xTile, int yTile, int zTile, int xTranslate, int yTranslate, int zTranslate, int scaleX, int scaleY, int scaleZ, int rotate, String newColours, String oldColours)
+    public void createComplexPanel(String name, int modelId, int xTile, int yTile, int zTile, int xTranslate, int yTranslate, int zTranslate, int scaleX, int scaleY, int scaleZ, int rotate, String newColours, String oldColours)
     {
         JPanel complexModePanel = new JPanel();
         complexModePanel.setLayout(new GridBagLayout());
         complexModePanel.setBorder(new LineBorder(getBorderColour(modelId), 1));
 
         c.insets = new Insets(2, 4, 2, 4);
-        c.weightx = 1;
-        c.weighty = 1;
-        c.gridwidth = 1;
+        c.weightx = 0;
+        c.weighty = 0;
+
+        c.gridwidth = 3;
+        c.gridheight = 1;
         c.gridx = 0;
         c.gridy = 0;
-        JLabel modelIdLabel = new JLabel("Model Id:");
-        modelIdLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        modelIdLabel.setVerticalAlignment(SwingConstants.CENTER);
-        complexModePanel.add(modelIdLabel, c);
+        JTextField nameField = new JTextField(name);
+        nameField.setName("nameField");
+        nameField.setToolTipText("Name. No relevance to the Anvil's output - for organizational purposes only");
+        complexModePanel.add(nameField, c);
 
-        c.gridx = 0;
-        c.gridy = 1;
-        JLabel emptyLabel = new JLabel("");
-        complexModePanel.add(emptyLabel, c);
-
+        c.weightx = 1;
+        c.gridwidth = 1;
+        c.gridheight = 1;
         c.gridx = 0;
         c.gridy = 2;
         JPanel xyzPanel = new JPanel();
@@ -281,14 +281,17 @@ public class ModelAnvil extends JFrame
         complexModePanel.add(xyzPanel, c);
 
         JLabel xLabel = new JLabel("x:");
+        xLabel.setToolTipText("East/West");
         xLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         xyzPanel.add(xLabel);
 
         JLabel yLabel = new JLabel("y:");
+        yLabel.setToolTipText("North/South");
         yLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         xyzPanel.add(yLabel);
 
         JLabel zLabel = new JLabel("z:");
+        zLabel.setToolTipText("Up/Down");
         zLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         xyzPanel.add(zLabel);
 
@@ -296,26 +299,28 @@ public class ModelAnvil extends JFrame
         c.gridy = 3;
         JLabel colourNewLabel = new JLabel("New Colours:");
         colourNewLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        colourNewLabel.setToolTipText("Choose New Colours to replace Old Colours. Order matters (1st New Colour will replace all of 1st Old Colour, etc)");
         complexModePanel.add(colourNewLabel, c);
 
         c.gridx = 0;
         c.gridy = 4;
         JLabel colourOldLabel = new JLabel("Old Colours:");
         colourOldLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        colourOldLabel.setToolTipText("Choose Old Colours to replace with New Colours. Order matters (1st New Colour will replace all of 1st Old Colour, etc)");
         complexModePanel.add(colourOldLabel, c);
 
-        c.weightx = 1;
-        c.weighty = 1;
-        c.gridx = 1;
+        c.gridx = 3;
         c.gridy = 0;
-        c.gridwidth = 4;
-        JSpinner modelIdSpinner = new JSpinner();
-        modelIdSpinner.setValue(modelId);
-        modelIdSpinner.setToolTipText("Set the Model Id");
+        c.gridwidth = 2;
+        SpinnerNumberModel modelIdModel = new SpinnerNumberModel(modelId, -1, 99999, 1);
+        JSpinner modelIdSpinner = new JSpinner(modelIdModel);
+        modelIdSpinner.setBackground((modelId == -1) ? ColorScheme.PROGRESS_ERROR_COLOR : ColorScheme.MEDIUM_GRAY_COLOR);
+        modelIdSpinner.setToolTipText("Set the id of the model you want to draw from the cache");
         modelIdSpinner.setName("modelIdSpinner");
         modelIdSpinner.addChangeListener(e ->
         {
             complexModePanel.setBorder(new LineBorder(getBorderColour((int) modelIdSpinner.getValue()), 1));
+            modelIdSpinner.setBackground(((int) modelIdSpinner.getValue() == -1) ? ColorScheme.PROGRESS_ERROR_COLOR : ColorScheme.MEDIUM_GRAY_COLOR);
         });
         complexModePanel.add(modelIdSpinner, c);
 
@@ -324,6 +329,7 @@ public class ModelAnvil extends JFrame
         c.gridwidth = 1;
         JButton arrowLeftButton = new JButton(new ImageIcon(ARROW_LEFT));
         arrowLeftButton.setFocusable(false);
+        arrowLeftButton.setToolTipText("Move panel left");
         arrowLeftButton.addActionListener(e -> {setPanelIndex(complexModePanel, -1);});
         complexModePanel.add(arrowLeftButton, c);
 
@@ -332,6 +338,7 @@ public class ModelAnvil extends JFrame
         c.gridwidth = 1;
         JButton arrowRightButton = new JButton(new ImageIcon(ARROW_RIGHT));
         arrowRightButton.setFocusable(false);
+        arrowRightButton.setToolTipText("Move panel right");
         arrowRightButton.addActionListener(e -> {setPanelIndex(complexModePanel, 1);});
         complexModePanel.add(arrowRightButton, c);
 
@@ -340,6 +347,7 @@ public class ModelAnvil extends JFrame
         c.gridwidth = 1;
         JButton duplicateButton = new JButton(new ImageIcon(DUPLICATE));
         duplicateButton.setFocusable(false);
+        duplicateButton.setToolTipText("Duplicate panel");
         complexModePanel.add(duplicateButton, c);
 
         c.gridx = 8;
@@ -347,6 +355,7 @@ public class ModelAnvil extends JFrame
         c.gridwidth = 1;
         JButton removeButton = new JButton(new ImageIcon(CLOSE));
         removeButton.setFocusable(false);
+        removeButton.setToolTipText("Remove panel");
         removeButton.addActionListener(e ->
         {
             complexMode.remove(complexModePanel);
@@ -360,7 +369,7 @@ public class ModelAnvil extends JFrame
         c.gridy = 1;
         c.gridwidth = 2;
         JLabel tileLabel = new JLabel(new ImageIcon(TRANSLATE));
-        tileLabel.setToolTipText("Translate by unit tile");
+        tileLabel.setToolTipText("Translate by full tile");
         tileLabel.setBackground(Color.BLACK);
         complexModePanel.add(tileLabel, c);
 
@@ -368,7 +377,7 @@ public class ModelAnvil extends JFrame
         c.gridy = 1;
         c.gridwidth = 2;
         JLabel translateLabel = new JLabel(new ImageIcon(TRANSLATE_SUBTILE));
-        translateLabel.setToolTipText("Translate by unit sub-tile (1/128 of a tile)");
+        translateLabel.setToolTipText("Translate by sub-tile (1/128 of a tile)");
         translateLabel.setBackground(Color.BLACK);
         complexModePanel.add(translateLabel, c);
 
@@ -376,7 +385,7 @@ public class ModelAnvil extends JFrame
         c.gridy = 1;
         c.gridwidth = 2;
         JLabel scaleLabel = new JLabel(new ImageIcon(SCALE));
-        scaleLabel.setToolTipText("Scale (128 is default scale)");
+        scaleLabel.setToolTipText("Scale. 128 is default scale");
         scaleLabel.setBackground(Color.BLACK);
         complexModePanel.add(scaleLabel, c);
 
@@ -397,17 +406,20 @@ public class ModelAnvil extends JFrame
 
         JSpinner xTileSpinner = new JSpinner();
         xTileSpinner.setValue(xTile);
+        xTileSpinner.setToolTipText("E/W");
         xTileSpinner.setPreferredSize(spinnerDimension);
         xTileSpinner.setName("xTileSpinner");
         tilePanel.add(xTileSpinner);
 
         JSpinner yTileSpinner = new JSpinner();
         yTileSpinner.setValue(yTile);
+        yTileSpinner.setToolTipText("N/S");
         yTileSpinner.setName("yTileSpinner");
         tilePanel.add(yTileSpinner);
 
         JSpinner zTileSpinner = new JSpinner();
         zTileSpinner.setValue(zTile);
+        zTileSpinner.setToolTipText("U/D");
         zTileSpinner.setName("zTileSpinner");
         tilePanel.add(zTileSpinner);
 
@@ -420,17 +432,20 @@ public class ModelAnvil extends JFrame
 
         JSpinner xSpinner = new JSpinner();
         xSpinner.setValue(xTranslate);
+        xSpinner.setToolTipText("E/W");
         xSpinner.setPreferredSize(spinnerDimension);
         xSpinner.setName("xSpinner");
         translatePanel.add(xSpinner);
 
         JSpinner ySpinner = new JSpinner();
         ySpinner.setValue(yTranslate);
+        ySpinner.setToolTipText("N/S");
         ySpinner.setName("ySpinner");
         translatePanel.add(ySpinner);
 
         JSpinner zSpinner = new JSpinner();
         zSpinner.setValue(zTranslate);
+        zSpinner.setToolTipText("U/D");
         zSpinner.setName("zSpinner");
         translatePanel.add(zSpinner);
 
@@ -444,19 +459,19 @@ public class ModelAnvil extends JFrame
         JSpinner xScaleSpinner = new JSpinner();
         xScaleSpinner.setValue(scaleX);
         xScaleSpinner.setPreferredSize(spinnerDimension);
-        xScaleSpinner.setToolTipText("Scale x. 128 is default scale");
+        xScaleSpinner.setToolTipText("E/W");
         xScaleSpinner.setName("xScaleSpinner");
         scalePanel.add(xScaleSpinner);
 
         JSpinner yScaleSpinner = new JSpinner();
         yScaleSpinner.setValue(scaleY);
-        yScaleSpinner.setToolTipText("Scale y. 128 is default scale");
+        yScaleSpinner.setToolTipText("N/S");
         yScaleSpinner.setName("yScaleSpinner");
         scalePanel.add(yScaleSpinner);
 
         JSpinner zScaleSpinner = new JSpinner();
         zScaleSpinner.setValue(scaleZ);
-        zScaleSpinner.setToolTipText("Scale z. 128 is default scale");
+        zScaleSpinner.setToolTipText("U/D");
         zScaleSpinner.setName("zScaleSpinner");
         scalePanel.add(zScaleSpinner);
 
@@ -533,6 +548,7 @@ public class ModelAnvil extends JFrame
         JTextField colourNewField = new JTextField();
         colourNewField.setText(newColours);
         colourNewField.setName("colourNewField");
+        colourNewField.setToolTipText("CSV format (eg. 123,456,789");
         colourNewField.addActionListener(e -> { stringToCSV(arrayPattern, colourNewField); });
         colourNewField.addFocusListener(new FocusListener() {
             @Override
@@ -551,6 +567,7 @@ public class ModelAnvil extends JFrame
         JTextField colourOldField = new JTextField();
         colourOldField.setText(oldColours);
         colourOldField.setName("colourOldField");
+        colourOldField.setToolTipText("CSV format (eg. 123,456,789");
         colourOldField.addActionListener(e -> { stringToCSV(arrayPattern, colourOldField); });
         colourOldField.addFocusListener(new FocusListener() {
             @Override
@@ -572,7 +589,8 @@ public class ModelAnvil extends JFrame
         c.gridx = 7;
         c.gridy = 4;
         c.gridwidth = 2;
-        JButton oldColourButton = new JButton("Find");
+        JButton oldColourButton = new JButton("Defaults");
+        oldColourButton.setToolTipText("Find default colours for the entered Model Id");
         oldColourButton.setFocusable(false);
         oldColourButton.addActionListener(e ->
         {
@@ -643,7 +661,8 @@ public class ModelAnvil extends JFrame
             }
 
             createComplexPanel
-                    ((int) modelIdSpinner.getValue(),
+                    (nameField.getText(),
+                            (int) modelIdSpinner.getValue(),
                             (int) xTileSpinner.getValue(),
                             (int) yTileSpinner.getValue(),
                             (int) zTileSpinner.getValue(),
@@ -776,6 +795,7 @@ public class ModelAnvil extends JFrame
         DetailedModel[] detailedModels = new DetailedModel[complexPanels.size()];
         for (int i = 0; i < complexPanels.size(); i++) {
             JPanel complexModePanel = complexPanels.get(i);
+            String name = "";
             int modelId = 0;
             int xTile = 0;
             int yTile = 0;
@@ -803,6 +823,10 @@ public class ModelAnvil extends JFrame
                 }
 
                 if (component instanceof JTextField) {
+                    if (primaryComponentName.equals("nameField")) {
+                        name = ((JTextField) component).getText();
+                    }
+
                     if (primaryComponentName.equals("colourNewField")) {
                         recolourNew = ((JTextField) component).getText();
                         continue;
@@ -818,50 +842,50 @@ public class ModelAnvil extends JFrame
                     JPanel componentPanel = (JPanel) component;
                     for (Component comp : componentPanel.getComponents())
                     {
-                        String name = comp.getName();
+                        String compName = comp.getName();
                         if (comp instanceof JSpinner)
                         {
-                            if (name.equals("xSpinner")) {
+                            if (compName.equals("xSpinner")) {
                                 xTranslate = (int) ((JSpinner) comp).getValue();
                                 continue;
                             }
 
-                            if (name.equals("ySpinner")) {
+                            if (compName.equals("ySpinner")) {
                                 yTranslate = (int) ((JSpinner) comp).getValue();
                                 continue;
                             }
 
-                            if (name.equals("zSpinner")) {
+                            if (compName.equals("zSpinner")) {
                                 zTranslate = (int) ((JSpinner) comp).getValue();
                                 continue;
                             }
 
-                            if (name.equals("xTileSpinner")) {
+                            if (compName.equals("xTileSpinner")) {
                                 xTile = (int) ((JSpinner) comp).getValue();
                                 continue;
                             }
 
-                            if (name.equals("yTileSpinner")) {
+                            if (compName.equals("yTileSpinner")) {
                                 yTile = (int) ((JSpinner) comp).getValue();
                                 continue;
                             }
 
-                            if (name.equals("zTileSpinner")) {
+                            if (compName.equals("zTileSpinner")) {
                                 zTile = (int) ((JSpinner) comp).getValue();
                                 continue;
                             }
 
-                            if (name.equals("xScaleSpinner")) {
+                            if (compName.equals("xScaleSpinner")) {
                                 xScale = (int) ((JSpinner) comp).getValue();
                                 continue;
                             }
 
-                            if (name.equals("yScaleSpinner")) {
+                            if (compName.equals("yScaleSpinner")) {
                                 yScale = (int) ((JSpinner) comp).getValue();
                                 continue;
                             }
 
-                            if (name.equals("zScaleSpinner")) {
+                            if (compName.equals("zScaleSpinner")) {
                                 zScale = (int) ((JSpinner) comp).getValue();
                                 continue;
                             }
@@ -872,17 +896,17 @@ public class ModelAnvil extends JFrame
                         if (comp instanceof JCheckBox) {
                             JCheckBox checkBox = (JCheckBox) comp;
 
-                            if (name.equals("check90") && checkBox.isSelected()) {
+                            if (compName.equals("check90") && checkBox.isSelected()) {
                                 rotate = 3;
                                 continue;
                             }
 
-                            if (name.equals("check180") && checkBox.isSelected()) {
+                            if (compName.equals("check180") && checkBox.isSelected()) {
                                 rotate = 2;
                                 continue;
                             }
 
-                            if (name.equals("check270") && checkBox.isSelected()) {
+                            if (compName.equals("check270") && checkBox.isSelected()) {
                                 rotate = 1;
                             }
                         }
@@ -890,7 +914,7 @@ public class ModelAnvil extends JFrame
                 }
             }
 
-            DetailedModel detailedModel = new DetailedModel(modelId, xTile, yTile, zTile, xTranslate, yTranslate, zTranslate, xScale, yScale, zScale, rotate, recolourNew, recolourOld);
+            DetailedModel detailedModel = new DetailedModel(name, modelId, xTile, yTile, zTile, xTranslate, yTranslate, zTranslate, xScale, yScale, zScale, rotate, recolourNew, recolourOld);
             detailedModels[i] = detailedModel;
         }
 
@@ -992,12 +1016,12 @@ public class ModelAnvil extends JFrame
 
     private Color getBorderColour(int modelId)
     {
-        if (modelId == 0)
+        if (modelId == -1)
         {
             return ColorScheme.MEDIUM_GRAY_COLOR;
         }
 
-        float hue = (float) modelId / 50;
+        float hue = ((float) modelId - 25) / 50;
         return Color.getHSBColor(hue, 1, (float) 0.7);
     }
 

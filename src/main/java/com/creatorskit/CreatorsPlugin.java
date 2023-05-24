@@ -1000,6 +1000,7 @@ public class CreatorsPlugin extends Plugin
 				{
 					if (modelStats.getBodyPart() == BodyPart.NA) {
 						creatorsPanel.getModelAnvil().createComplexPanel(
+								"Item",
 								modelStats.getModelId(),
 								0, 0, 0,
 								0, 0, 0,
@@ -1011,6 +1012,7 @@ public class CreatorsPlugin extends Plugin
 					else
 					{
 						creatorsPanel.getModelAnvil().createComplexPanel(
+								modelStats.getBodyPart().toString(),
 								modelStats.getModelId(),
 								0, 0, 0,
 								0, 0, 0,
@@ -1023,6 +1025,7 @@ public class CreatorsPlugin extends Plugin
 				}
 
 				creatorsPanel.getModelAnvil().createComplexPanel(
+						"Name",
 						modelStats.getModelId(),
 						0, 0, 0,
 						0, 0, 0,
@@ -1075,6 +1078,7 @@ public class CreatorsPlugin extends Plugin
 
 			while ((s = myReader.nextLine()) != null) {
 				System.out.println("Line: " + s);
+				String name = "";
 				int modelId = 0;
 				int xTile = 0;
 				int yTile = 0;
@@ -1096,6 +1100,9 @@ public class CreatorsPlugin extends Plugin
 					while (!(data = myReader.nextLine()).equals(""))
 					{
 						System.out.println("Data: " + data);
+						if (data.startsWith("name="))
+							name = data.split(",")[1];
+
 						if (data.startsWith("modelid="))
 							modelId = Integer.parseInt(data.split("=")[1]);
 
@@ -1141,7 +1148,7 @@ public class CreatorsPlugin extends Plugin
 					setBreak = true;
 				}
 
-				DetailedModel detailedModel = new DetailedModel(modelId, xTile, yTile, zTile, xTranslate, yTranslate, zTranslate, xScale, yScale, zScale, rotate, newColours, oldColours);
+				DetailedModel detailedModel = new DetailedModel(name, modelId, xTile, yTile, zTile, xTranslate, yTranslate, zTranslate, xScale, yScale, zScale, rotate, newColours, oldColours);
 				list.add(detailedModel);
 				if (setBreak)
 					break;
@@ -1154,6 +1161,7 @@ public class CreatorsPlugin extends Plugin
 				for (DetailedModel detailedModel : list)
 				{
 					creatorsPanel.getModelAnvil().createComplexPanel(
+							detailedModel.getName(),
 							detailedModel.getModelId(),
 							detailedModel.getXTile(),
 							detailedModel.getYTile(),

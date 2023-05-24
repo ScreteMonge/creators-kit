@@ -82,10 +82,6 @@ public class ModelOrganizer extends JFrame
             plugin.updatePanelComboBoxes();
         });
 
-        JButton saveButton = new JButton("Save");
-        saveButton.setFocusable(false);
-        panel.add(saveButton);
-
         JButton deleteButton = new JButton("Delete");
         deleteButton.setFocusable(false);
         deleteButton.addActionListener(e ->
