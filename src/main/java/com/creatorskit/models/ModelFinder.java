@@ -384,4 +384,18 @@ public class ModelFinder
 
         return modelStats;
     }
+
+    public static String shortArrayToString(short[] array)
+    {
+        StringBuilder stringBuilder = new StringBuilder();
+        for (int i = 0; i < array.length; i++)
+        {
+            short s = array[i];
+            stringBuilder.append(s);
+            if (i < array.length - 1)
+                stringBuilder.append(",");
+        }
+
+        return stringBuilder.toString();
+    }
 }

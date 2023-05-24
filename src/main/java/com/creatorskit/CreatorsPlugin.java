@@ -100,6 +100,8 @@ public class CreatorsPlugin extends Plugin
 	private double speed = 1;
 	private AutoRotate autoRotateYaw = AutoRotate.OFF;
 	private AutoRotate autoRotatePitch = AutoRotate.OFF;
+	private final int actorAmbient = 65;
+	private final int actorContrast = 1400;
 
 	@Override
 	protected void startUp() throws Exception
@@ -151,6 +153,13 @@ public class CreatorsPlugin extends Plugin
 	public void onChatMessage(ChatMessage event)
 	{
 		String message = event.getMessage();
+
+		if (message.startsWith("Spawn"))
+		{
+			ModelData md = client.loadModelData(Integer.parseInt(message.split(",")[1]));
+			for (short s : md.getFaceColors())
+				System.out.println("Colour: " + s);
+		}
 
 		if (message.startsWith("Speed"))
 		{
@@ -270,7 +279,7 @@ public class CreatorsPlugin extends Plugin
 							ModelStats[] modelStats = ModelFinder.findModelsForNPC(npc.getId());
 							clientThread.invokeLater(() ->
 							{
-								Model model = constructModelFromCache(modelStats, new int[0], false);
+								Model model = constructModelFromCache(modelStats, new int[0], false, true);
 								CustomModel customModel = new CustomModel(model, npc.getName());
 								storedModels.add(customModel);
 								addCustomModel(customModel, false);
@@ -278,6 +287,25 @@ public class CreatorsPlugin extends Plugin
 							});
 						});
 						thread.start();
+					});
+
+			client.createMenuEntry(-2)
+					.setOption("Anvil")
+					.setTarget(target)
+					.setType(MenuAction.RUNELITE)
+					.onClick(e ->
+					{
+						Thread thread = new Thread(() ->
+						{
+							ModelStats[] modelStats = ModelFinder.findModelsForNPC(npc.getId());
+							clientThread.invokeLater(() ->
+							{
+								cacheToAnvil(modelStats, new int[0], false);
+								sendChatMessage("Model sent to Anvil Complex Mode: " + npc.getName());
+							});
+						});
+						thread.start();
+
 					});
 		}
 
@@ -356,7 +384,8 @@ public class CreatorsPlugin extends Plugin
 		Player player = event.getMenuEntry().getPlayer();
 		if (player != null && option.equals("Trade with"))
 		{
-			addPlayerGetter(target, player);
+			addPlayerGetter(-1, target, "Store", player, false);
+			addPlayerGetter(-2, target, "Anvil", player, true);
 		}
 
 		Player localPlayer = client.getLocalPlayer();
@@ -364,15 +393,16 @@ public class CreatorsPlugin extends Plugin
 		{
 			if (tile.getLocalLocation().equals(localPlayer.getLocalLocation()))
 			{
-				addPlayerGetter(localPlayer.getName(), localPlayer);
+				addPlayerGetter(-1, localPlayer.getName(), "Store", localPlayer, false);
+				addPlayerGetter(-2, localPlayer.getName(), "Anvil", localPlayer, true);
 			}
 		}
 	}
 
-	public void addPlayerGetter(String target, Player player)
+	public void addPlayerGetter(int index, String target, String option, Player player, boolean sendToAnvil)
 	{
-		client.createMenuEntry(-1)
-				.setOption("Store")
+		client.createMenuEntry(index)
+				.setOption(option)
 				.setTarget(target)
 				.setType(MenuAction.RUNELITE)
 				.onClick(e ->
@@ -382,16 +412,10 @@ public class CreatorsPlugin extends Plugin
 					int[] colours = comp.getColors();
 					ColorTextureOverride[] textures = comp.getColorTextureOverrides();
 					int entry = 0;
-					for (int colour : colours) {
+					for (int colour : colours)
+					{
 						System.out.println(entry + ", col: " + colour);
 						entry++;
-						/*
-						0 = hair, jaw
-						1 = torso, arms
-						2 = legs
-						3 = Feet
-						4 = Hands
-						 */
 					}
 
 					if (textures != null)
@@ -430,12 +454,27 @@ public class CreatorsPlugin extends Plugin
 						}
 					}
 
+					if (sendToAnvil)
+					{
+						Thread thread = new Thread(() ->
+						{
+							ModelStats[] modelStats = ModelFinder.findModelsForPlayer(false, comp.getGender() == 0, ids);
+							clientThread.invokeLater(() ->
+							{
+								cacheToAnvil(modelStats, comp.getColors(), true);
+								sendChatMessage("Model sent to Anvil Complex Mode: " + player.getName());
+							});
+						});
+						thread.start();
+						return;
+					}
+
 					Thread thread = new Thread(() ->
 					{
 						ModelStats[] modelStats = ModelFinder.findModelsForPlayer(false, comp.getGender() == 0, ids);
 						clientThread.invokeLater(() ->
 						{
-							Model model = constructModelFromCache(modelStats, comp.getColors(), false);
+							Model model = constructModelFromCache(modelStats, comp.getColors(), false, true);
 							CustomModel customModel = new CustomModel(model, player.getName());
 							addCustomModel(customModel, false);
 						});
@@ -835,7 +874,7 @@ public class CreatorsPlugin extends Plugin
 		chatMessageManager.queue(QueuedMessage.builder().type(ChatMessageType.GAMEMESSAGE).runeLiteFormattedMessage(message).build());
 	}
 
-	public Model constructSimpleModel(int[] modelIds, short[] colourToFind, short[] colourToReplace)
+	public Model constructSimpleModel(int[] modelIds, short[] colourToFind, short[] colourToReplace, boolean actorLighting)
 	{
 		ModelData[] data = new ModelData[modelIds.length];
 
@@ -856,10 +895,13 @@ public class CreatorsPlugin extends Plugin
 			data[i] = modelData;
 		}
 
+		if (actorLighting)
+			return client.mergeModels(data).light(actorAmbient, actorContrast, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
+
 		return client.mergeModels(data).light();
 	}
 
-	public Model createComplexModel(DetailedModel[] detailedModels)
+	public Model createComplexModel(DetailedModel[] detailedModels, boolean setPriority, boolean actorLighting)
 	{
 		ModelData[] models = new ModelData[detailedModels.length];
 
@@ -922,28 +964,77 @@ public class CreatorsPlugin extends Plugin
 
 			for (int i = 0; i < newColours.length; i++)
 			{
-				modelData.recolor(newColours[i], oldColours[i]);
+				modelData.recolor(oldColours[i], newColours[i]);
 			}
 
 			models[e] = modelData;
 		}
 
-		//Renderpriorities
-		Model model = client.mergeModels(models).light();
-		if (model != null)
+		Model model	= (actorLighting) ? client.mergeModels(models).light(actorAmbient, actorContrast, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z) : client.mergeModels(models).light();
+
+		if (model == null)
 		{
-			byte[] renderPriorities = model.getFaceRenderPriorities();
-			for (int i = 0; i < renderPriorities.length; i++)
-			{
-				renderPriorities[i] = 0;
-			}
+			return null;
 		}
 
+		if (setPriority)
+		{
+			byte[] renderPriorities = model.getFaceRenderPriorities();
+			Arrays.fill(renderPriorities, (byte) 0);
+		}
+
+		//6200 faces, 4000 vertices is about max
+		if (model.getFaceCount() >= 6200 && model.getVerticesCount() >= 4000)
+			sendChatMessage("You've exceeded the max face count of 6200 or vertex count of 4000 in this model; any additional faces will not render");
 
 		return model;
 	}
 
-	public Model constructModelFromCache(ModelStats[] modelStatsArray, int[] kitRecolours, boolean player)
+	private void cacheToAnvil(ModelStats[] modelStatsArray, int[] kitRecolours, boolean player)
+	{
+		SwingUtilities.invokeLater(() ->
+		{
+			for (ModelStats modelStats : modelStatsArray)
+			{
+				if (player)
+				{
+					if (modelStats.getBodyPart() == BodyPart.NA) {
+						creatorsPanel.getModelAnvil().createComplexPanel(
+								modelStats.getModelId(),
+								0, 0, 0,
+								0, 0, 0,
+								128, 128, 128,
+								0,
+								ModelFinder.shortArrayToString(modelStats.getRecolourTo()),
+								ModelFinder.shortArrayToString(modelStats.getRecolourFrom()));
+					}
+					else
+					{
+						creatorsPanel.getModelAnvil().createComplexPanel(
+								modelStats.getModelId(),
+								0, 0, 0,
+								0, 0, 0,
+								128, 128, 128,
+								0,
+								KitRecolourer.getKitRecolourNew(modelStats.getBodyPart(), kitRecolours),
+								KitRecolourer.getKitRecolourOld(modelStats.getBodyPart()));
+					}
+					continue;
+				}
+
+				creatorsPanel.getModelAnvil().createComplexPanel(
+						modelStats.getModelId(),
+						0, 0, 0,
+						0, 0, 0,
+						128, 128, 128,
+						0,
+						ModelFinder.shortArrayToString(modelStats.getRecolourTo()),
+						ModelFinder.shortArrayToString(modelStats.getRecolourFrom()));
+			}
+		});
+	}
+
+	public Model constructModelFromCache(ModelStats[] modelStatsArray, int[] kitRecolours, boolean player, boolean actorLighting)
 	{
 		ModelData[] modelDatas = new ModelData[modelStatsArray.length];
 
@@ -966,7 +1057,10 @@ public class CreatorsPlugin extends Plugin
 			modelDatas[i] = modelData;
 		}
 
-		return client.mergeModels(modelDatas).light(65, 1400, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
+		if (actorLighting)
+			return client.mergeModels(modelDatas).light(65, 1400, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
+
+		return client.mergeModels(modelDatas).light();
 	}
 
 	public void loadCustomModel(File file)
@@ -1036,10 +1130,10 @@ public class CreatorsPlugin extends Plugin
 							rotate = Integer.parseInt(data.split("=")[1]);
 
 						if (data.startsWith("n="))
-							oldColours = data.replaceAll("n=", "");
+							newColours = data.replaceAll("n=", "");
 
 						if (data.startsWith("o="))
-							newColours = data.replaceAll("o=", "");
+							oldColours = data.replaceAll("o=", "");
 					}
 				}
 				catch (NoSuchElementException e)
@@ -1088,7 +1182,6 @@ public class CreatorsPlugin extends Plugin
 		SwingUtilities.invokeLater(() ->
 		{
 			creatorsPanel.addModelOption(customModel, setComboBox);
-			System.out.println("Model added");
 		});
 		storedModels.add(customModel);
 	}

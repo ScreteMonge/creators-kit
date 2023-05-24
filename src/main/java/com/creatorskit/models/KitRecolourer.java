@@ -65,4 +65,86 @@ public class KitRecolourer
         }
         return modelData;
     }
+
+    public static String getKitRecolourOld(BodyPart bodyPart)
+    {
+        StringBuilder stringBuilder = new StringBuilder();
+
+        switch (bodyPart)
+        {
+            case NA:
+                break;
+            case HAIR:
+            case JAW:
+                stringBuilder.append(BODY_COLOURS_1_SOURCE[0])
+                        .append(",")
+                        .append(BODY_COLOURS_2_SOURCE[0])
+                        .append(",")
+                        .append(BODY_COLOURS_1_SOURCE[4]);
+                break;
+            case TORSO:
+            case ARMS:
+                stringBuilder.append(BODY_COLOURS_1_SOURCE[1])
+                        .append(",")
+                        .append(BODY_COLOURS_2_SOURCE[1])
+                        .append(",")
+                        .append(BODY_COLOURS_1_SOURCE[4]);
+                break;
+            case LEGS:
+                stringBuilder.append(BODY_COLOURS_1_SOURCE[2])
+                        .append(",")
+                        .append(BODY_COLOURS_1_SOURCE[4]);
+                break;
+            case FEET:
+                stringBuilder.append(BODY_COLOURS_1_SOURCE[3])
+                        .append(",")
+                        .append(BODY_COLOURS_1_SOURCE[4]);
+                break;
+            case HANDS:
+                stringBuilder.append(BODY_COLOURS_1_SOURCE[4]);
+        }
+
+        return stringBuilder.toString();
+    }
+
+    public static String getKitRecolourNew(BodyPart bodyPart, int[] kitRecolours)
+    {
+        StringBuilder stringBuilder = new StringBuilder();
+
+        switch (bodyPart)
+        {
+            case NA:
+                break;
+            case HAIR:
+            case JAW:
+                stringBuilder.append(BODY_COLOURS_1_DEST[0][kitRecolours[0]])
+                        .append(",")
+                        .append(BODY_COLOURS_2_DEST[0][kitRecolours[0]])
+                        .append(",")
+                        .append(BODY_COLOURS_1_DEST[4][kitRecolours[4]]);
+                break;
+            case TORSO:
+            case ARMS:
+                stringBuilder.append(BODY_COLOURS_1_DEST[1][kitRecolours[1]])
+                        .append(",")
+                        .append(BODY_COLOURS_2_DEST[1][kitRecolours[1]])
+                        .append(",")
+                        .append(BODY_COLOURS_1_DEST[4][kitRecolours[4]]);
+                break;
+            case LEGS:
+                stringBuilder.append(BODY_COLOURS_1_DEST[2][kitRecolours[2]])
+                        .append(",")
+                        .append(BODY_COLOURS_1_DEST[4][kitRecolours[4]]);
+                break;
+            case FEET:
+                stringBuilder.append(BODY_COLOURS_1_DEST[3][kitRecolours[3]])
+                        .append(",")
+                        .append(BODY_COLOURS_1_DEST[4][kitRecolours[4]]);
+                break;
+            case HANDS:
+                stringBuilder.append(BODY_COLOURS_1_DEST[4][kitRecolours[4]]);
+        }
+
+        return stringBuilder.toString();
+    }
 }

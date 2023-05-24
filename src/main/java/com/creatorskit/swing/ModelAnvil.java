@@ -3,17 +3,21 @@ package com.creatorskit.swing;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.CustomModel;
 import com.creatorskit.models.DetailedModel;
-import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
+import net.runelite.api.JagexColor;
 import net.runelite.api.Model;
+import net.runelite.api.ModelData;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.config.ConfigManager;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
+import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
+import net.runelite.client.ui.components.colorpicker.RuneliteColorPicker;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.LinkBrowser;
+import org.apache.commons.lang3.ArrayUtils;
 
-import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.*;
 import javax.swing.border.LineBorder;
@@ -22,14 +26,13 @@ import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 public class ModelAnvil extends JFrame
 {
     private ClientThread clientThread;
     private final Client client;
+    private final ConfigManager configManager;
     private final CreatorsPlugin plugin;
     private final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
     private final BufferedImage DUPLICATE = ImageUtil.loadImageResource(getClass(), "/Duplicate.png");
@@ -46,14 +49,17 @@ public class ModelAnvil extends JFrame
     JPanel complexMode = new JPanel();
     JScrollPane scrollPane = new JScrollPane();
     GridBagConstraints c = new GridBagConstraints();
-    Pattern pattern = Pattern.compile("\\s|[^\\d,]");
+    JCheckBox lightingCheckBox = new JCheckBox("Bright Lighting");
+    Pattern oldPattern = Pattern.compile("\\s|[^\\d,\\-]");
+    Pattern arrayPattern = Pattern.compile("\\s|[^(?:\\d,)|\\-]|\\d+-\\d+|\\D,");
 
     @Inject
-    public ModelAnvil(Client client, ClientThread clientThread, CreatorsPlugin plugin)
+    public ModelAnvil(Client client, ClientThread clientThread, CreatorsPlugin plugin, ConfigManager configManager)
     {
         this.client = client;
         this.clientThread = clientThread;
         this.plugin = plugin;
+        this.configManager = configManager;
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new GridBagLayout());
@@ -87,6 +93,10 @@ public class ModelAnvil extends JFrame
         nameField.setText("Name");
         nameField.setHorizontalAlignment(JTextField.CENTER);
         buttonsPanel.add(nameField);
+
+        lightingCheckBox.setToolTipText("Light the model with a brighter formula better suited for Players & NPCs");
+        lightingCheckBox.setFocusable(false);
+        buttonsPanel.add(lightingCheckBox);
 
         JButton forgeButton = new JButton("Forge");
         forgeButton.setFocusable(false);
@@ -147,7 +157,6 @@ public class ModelAnvil extends JFrame
         scrollPane.setViewportView(complexMode);
         complexMode.setLayout(new GridLayout(0, 4, 8, 8));
         complexMode.setBackground(Color.BLACK);
-        createComplexPanel();
         tabbedPane.addTab("Complex Mode", scrollPane);
 
         JPanel headerPanel = new JPanel();
@@ -157,6 +166,21 @@ public class ModelAnvil extends JFrame
         addButton.setFocusable(false);
         addButton.addActionListener(e -> { createComplexPanel(); });
         headerPanel.add(addButton);
+
+        JButton clearButton = new JButton("Clear");
+        clearButton.setFocusable(false);
+        clearButton.addActionListener(e ->
+        {
+            for (JPanel complexModePanel : complexPanels)
+            {
+                complexMode.remove(complexModePanel);
+                repaint();
+                revalidate();
+            }
+
+            complexPanels.clear();
+        });
+        headerPanel.add(clearButton);
 
         JPopupMenu loadPopupMenu = new JPopupMenu();
         JMenuItem menuItem = new JMenuItem("Load");
@@ -174,6 +198,32 @@ public class ModelAnvil extends JFrame
         saveButton.addActionListener(e -> openSaveDialog());
         headerPanel.add(saveButton);
 
+        JCheckBox priorityCheckBox = new JCheckBox("Priority");
+        priorityCheckBox.setToolTipText("Use an oversimplified method of resolving render order issues (useful when adding many models but not for NPCs/Players)");
+        priorityCheckBox.setFocusable(false);
+        headerPanel.add(priorityCheckBox);
+
+        JLabel colourId = new JLabel("Colour: ");
+
+        JFrame colourSelect = new JFrame("RuneLite Colour Finder");
+        colourSelect.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        JButton colourPicker = new JButton("Find Colour");
+        colourPicker.setFocusable(false);
+        colourPicker.addActionListener(e ->
+        {
+            ColorPickerManager colorPickerManager = new ColorPickerManager(configManager);
+            RuneliteColorPicker runeliteColorPicker = colorPickerManager.create(colourSelect, Color.BLACK, "RuneLite Colour Finder", true);
+            runeliteColorPicker.setVisible(true);
+            runeliteColorPicker.setOnColorChange(color ->
+            {
+                double luminance = Math.sqrt(0.299 * color.getRed() * color.getRed() + 0.587 * color.getGreen() * color.getGreen() + 0.114 * color.getBlue() * color.getBlue()) / 255;
+                colourId.setText("Colour: " + JagexColor.rgbToHSL(color.getRGB(), luminance));
+            });
+        });
+
+        headerPanel.add(colourPicker);
+        headerPanel.add(colourId);
 
         forgeButton.addActionListener(e ->
         {
@@ -181,7 +231,7 @@ public class ModelAnvil extends JFrame
             if (tabbedPane.getSelectedComponent() == simpleMode)
                 simpleModeActive = true;
 
-            forgeModel(client, simpleModeActive, modelLoadField, oldColourField, newColourField, nameField, false);
+            forgeModel(client, simpleModeActive, modelLoadField, oldColourField, newColourField, nameField, priorityCheckBox.isSelected(), lightingCheckBox.isSelected(), false);
         });
 
         forgeSetButton.addActionListener(e ->
@@ -190,7 +240,7 @@ public class ModelAnvil extends JFrame
             if (tabbedPane.getSelectedComponent() == simpleMode)
                 simpleModeActive = true;
 
-            forgeModel(client, simpleModeActive, modelLoadField, oldColourField, newColourField, nameField, true);
+            forgeModel(client, simpleModeActive, modelLoadField, oldColourField, newColourField, nameField, priorityCheckBox.isSelected(), lightingCheckBox.isSelected(), true);
         });
 
         validate();
@@ -299,13 +349,10 @@ public class ModelAnvil extends JFrame
         removeButton.setFocusable(false);
         removeButton.addActionListener(e ->
         {
-            if (complexPanels.size() > 1)
-            {
-                complexMode.remove(complexModePanel);
-                complexPanels.remove(complexModePanel);
-                repaint();
-                revalidate();
-            }
+            complexMode.remove(complexModePanel);
+            complexPanels.remove(complexModePanel);
+            repaint();
+            revalidate();
         });
         complexModePanel.add(removeButton, c);
 
@@ -486,35 +533,96 @@ public class ModelAnvil extends JFrame
         JTextField colourNewField = new JTextField();
         colourNewField.setText(newColours);
         colourNewField.setName("colourNewField");
-        colourNewField.addActionListener(e -> { stringToCSV(pattern, colourNewField); });
+        colourNewField.addActionListener(e -> { stringToCSV(arrayPattern, colourNewField); });
         colourNewField.addFocusListener(new FocusListener() {
             @Override
             public void focusGained(FocusEvent e) { }
 
             @Override
             public void focusLost(FocusEvent e) {
-                stringToCSV(pattern, colourNewField);
+                stringToCSV(arrayPattern, colourNewField);
             }
         });
         complexModePanel.add(colourNewField, c);
 
         c.gridx = 1;
         c.gridy = 4;
-        c.gridwidth = 8;
+        c.gridwidth = 6;
         JTextField colourOldField = new JTextField();
         colourOldField.setText(oldColours);
         colourOldField.setName("colourOldField");
-        colourOldField.addActionListener(e -> { stringToCSV(pattern, colourOldField); });
+        colourOldField.addActionListener(e -> { stringToCSV(arrayPattern, colourOldField); });
         colourOldField.addFocusListener(new FocusListener() {
             @Override
             public void focusGained(FocusEvent e) { }
 
             @Override
             public void focusLost(FocusEvent e) {
-                stringToCSV(pattern, colourOldField);
+                stringToCSV(arrayPattern, colourOldField);
             }
         });
         complexModePanel.add(colourOldField, c);
+
+        JFrame oldColourFrame = new JFrame("Old Colours");
+        oldColourFrame.setVisible(false);
+        oldColourFrame.setBackground(Color.WHITE);
+        oldColourFrame.setIconImage(icon);
+        oldColourFrame.setLayout(new GridLayout(0, 2, 2, 2));
+
+        c.gridx = 7;
+        c.gridy = 4;
+        c.gridwidth = 2;
+        JButton oldColourButton = new JButton("Find");
+        oldColourButton.setFocusable(false);
+        oldColourButton.addActionListener(e ->
+        {
+            oldColourFrame.setVisible(!oldColourFrame.isVisible());
+
+            if (oldColourFrame.isVisible())
+            {
+                clientThread.invokeLater(() ->
+                {
+                    ModelData md = client.loadModelData((int) modelIdSpinner.getValue());
+                    if (md == null)
+                    {
+                        return;
+                    }
+
+                    ArrayList<Short> list = new ArrayList<>();
+                    for (short s : md.getFaceColors())
+                    {
+                        if (!list.contains(s))
+                        {
+                            list.add(s);
+                        }
+                    }
+
+                    SwingUtilities.invokeLater(() ->
+                    {
+                        for (Short s : list)
+                        {
+                            JLabel label = new JLabel(s + ": ");
+                            label.setName("" + s);
+                            float hue = (float) JagexColor.unpackHue(s) / JagexColor.HUE_MAX;
+                            float sat = (float) JagexColor.unpackSaturation(s) / JagexColor.SATURATION_MAX;
+                            float lum = (float) JagexColor.unpackLuminance(s) / JagexColor.LUMINANCE_MAX;
+
+                            int[] rgb = hslToRgb(hue, sat, lum);
+                            Color color = new Color(rgb[0], rgb[1], rgb[2]);
+                            label.setBorder(new LineBorder(color, 6));
+                            oldColourFrame.add(label);
+                        }
+
+                        oldColourFrame.revalidate();
+                        oldColourFrame.repaint();
+                        oldColourFrame.pack();
+                    });
+                });
+            }
+
+
+        });
+        complexModePanel.add(oldColourButton, c);
 
         duplicateButton.addActionListener(e ->
         {
@@ -571,7 +679,7 @@ public class ModelAnvil extends JFrame
         }
     }
 
-    private void forgeModel(Client client, boolean simpleModeActive, JTextField modelLoadField, JTextField oldColourField, JTextField newColourField, JTextField nameField, boolean forgeAndSet)
+    private void forgeModel(Client client, boolean simpleModeActive, JTextField modelLoadField, JTextField oldColourField, JTextField newColourField, JTextField nameField, boolean setPriority, boolean actorLighting, boolean forgeAndSet)
     {
         if (client == null)
         {
@@ -635,16 +743,19 @@ public class ModelAnvil extends JFrame
 
             clientThread.invokeLater(() ->
             {
-                Model model = plugin.constructSimpleModel(modelIds, oldColours, newColours);
+                Model model = plugin.constructSimpleModel(modelIds, oldColours, newColours, lightingCheckBox.isSelected());
                 CustomModel customModel = new CustomModel(model, nameField.getText());
                 plugin.addCustomModel(customModel, forgeAndSet);
             });
             return;
         }
 
+        if (complexPanels.isEmpty())
+            return;
+
         clientThread.invokeLater(() ->
         {
-            Model model = forgeComplexModel();
+            Model model = forgeComplexModel(setPriority);
             if (model == null)
             {
                 return;
@@ -655,9 +766,9 @@ public class ModelAnvil extends JFrame
         });
     }
 
-    private Model forgeComplexModel()
+    private Model forgeComplexModel(boolean setPriority)
     {
-        return plugin.createComplexModel(panelsToDetailedModels());
+        return plugin.createComplexModel(panelsToDetailedModels(), setPriority, lightingCheckBox.isSelected());
     }
 
     private DetailedModel[] panelsToDetailedModels()
@@ -888,5 +999,36 @@ public class ModelAnvil extends JFrame
 
         float hue = (float) modelId / 50;
         return Color.getHSBColor(hue, 1, (float) 0.7);
+    }
+
+    public static int[] hslToRgb(float h, float s, float l){
+        float r, g, b;
+
+        if (s == 0f) {
+            r = g = b = l; // achromatic
+        } else {
+            float q = l < 0.5f ? l * (1 + s) : l + s - l * s;
+            float p = 2 * l - q;
+            r = hueToRgb(p, q, h + 1f/3f);
+            g = hueToRgb(p, q, h);
+            b = hueToRgb(p, q, h - 1f/3f);
+        }
+        return new int[]{to255(r), to255(g), to255(b)};
+    }
+
+    public static int to255(float v) { return (int)Math.min(255,256*v); }
+
+    public static float hueToRgb(float p, float q, float t) {
+        if (t < 0f)
+            t += 1f;
+        if (t > 1f)
+            t -= 1f;
+        if (t < 1f/6f)
+            return p + (q - p) * 6f * t;
+        if (t < 1f/2f)
+            return q;
+        if (t < 2f/3f)
+            return p + (q - p) * (2f/3f - t) * 6f;
+        return p;
     }
 }
