@@ -83,7 +83,7 @@ public class CreatorsPlugin extends Plugin
 	private CreatorsPanel creatorsPanel;
 	private NavigationButton navigationButton;
 	@Getter
-	private boolean overlaysActive = true;
+	private boolean overlaysActive = false;
 	@Getter
 	private Tile selectedTile;
 	@Getter
@@ -96,8 +96,6 @@ public class CreatorsPlugin extends Plugin
 	@Getter
 	@Setter
 	private NPCCharacter hoveredNPC;
-	@Getter
-	private double speed = 1;
 	private AutoRotate autoRotateYaw = AutoRotate.OFF;
 	private AutoRotate autoRotatePitch = AutoRotate.OFF;
 	private final int BRIGHT_AMBIENT = 65;
@@ -130,6 +128,12 @@ public class CreatorsPlugin extends Plugin
 		keyManager.registerKeyListener(autoRightListener);
 		keyManager.registerKeyListener(autoUpListener);
 		keyManager.registerKeyListener(autoDownListener);
+		keyManager.registerKeyListener(setStartListener);
+		keyManager.registerKeyListener(setEndListener);
+		keyManager.registerKeyListener(resetListener);
+		keyManager.registerKeyListener(playPauseListener);
+		keyManager.registerKeyListener(playPauseAllListener);
+		keyManager.registerKeyListener(resetAllListener);
 	}
 
 	@Override
@@ -149,6 +153,12 @@ public class CreatorsPlugin extends Plugin
 		keyManager.unregisterKeyListener(autoRightListener);
 		keyManager.unregisterKeyListener(autoUpListener);
 		keyManager.unregisterKeyListener(autoDownListener);
+		keyManager.unregisterKeyListener(setStartListener);
+		keyManager.unregisterKeyListener(setEndListener);
+		keyManager.unregisterKeyListener(resetListener);
+		keyManager.unregisterKeyListener(playPauseListener);
+		keyManager.unregisterKeyListener(playPauseAllListener);
+		keyManager.unregisterKeyListener(resetAllListener);
 	}
 
 	@Subscribe
@@ -156,31 +166,13 @@ public class CreatorsPlugin extends Plugin
 	{
 		String message = event.getMessage();
 
-		if (message.startsWith("Spawn"))
-		{
-			ModelData md = client.loadModelData(Integer.parseInt(message.split(",")[1]));
-			for (short s : md.getFaceColors())
-				System.out.println("Colour: " + s);
-		}
-
 		if (message.startsWith("Speed"))
 		{
 			String[] split = message.split(",");
-			speed = Double.parseDouble(split[1]);
-			return;
-		}
-
-		if (message.startsWith("Set"))
-		{
-			if (selectedNPC == null && selectedTile == null)
+			if (selectedNPC != null)
 			{
-				return;
+				selectedNPC.getProgram().setSpeed(Double.parseDouble(split[1]));
 			}
-
-			String[] split = message.split(",");
-			double s = Double.parseDouble(split[1]);
-
-			selectedNPC.setProgram(new Program(s, selectedTile.getLocalLocation()));
 		}
 	}
 
@@ -214,12 +206,13 @@ public class CreatorsPlugin extends Plugin
 		{
 			Program program = npcCharacter.getProgram();
 			if (program == null || !npcCharacter.isMoving())
-			{
 				continue;
-			}
 
 			LocalPoint endTile = program.getEndLocation();
-			double speed = 128 * ((double) program.getSpeed() * 20 / 600);
+			if (endTile == null)
+				continue;
+
+			double speed = 128 * (program.getSpeed() * 20 / 600);
 			RuneLiteObject runeLiteObject = npcCharacter.getRuneLiteObject();
 			LocalPoint lp = runeLiteObject.getLocation();
 
@@ -776,7 +769,7 @@ public class CreatorsPlugin extends Plugin
 				id,
 				false,
 				false,
-				null,
+				new Program(1, null, null),
 				null,
 				customModel,
 				panel,
@@ -1383,6 +1376,85 @@ public class CreatorsPlugin extends Plugin
 		public void hotkeyPressed()
 		{
 			autoRotatePitch = (autoRotatePitch == AutoRotate.OFF) ? AutoRotate.DOWN : AutoRotate.OFF;
+		}
+	};
+
+	private final HotkeyListener setStartListener = new HotkeyListener(() -> config.setStartHotkey())
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			if (selectedNPC != null)
+			{
+				Tile tile = client.getSelectedSceneTile();
+				if (tile != null)
+					selectedNPC.getProgram().setStartLocation(tile.getLocalLocation());
+
+				setLocation(selectedNPC, true);
+			}
+		}
+	};
+
+	private final HotkeyListener setEndListener = new HotkeyListener(() -> config.setEndHotkey())
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			if (selectedNPC != null)
+			{
+				Tile tile = client.getSelectedSceneTile();
+				if (tile != null)
+					selectedNPC.getProgram().setEndLocation(tile.getLocalLocation());
+			}
+		}
+	};
+
+	private final HotkeyListener playPauseListener = new HotkeyListener(() -> config.playPauseHotkey())
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			if (selectedNPC != null)
+			{
+				selectedNPC.setMoving(!selectedNPC.isMoving());
+			}
+		}
+	};
+
+	private final HotkeyListener playPauseAllListener = new HotkeyListener(() -> config.playPauseAllHotkey())
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			for (NPCCharacter npcCharacter : npcCharacters)
+			{
+				npcCharacter.setMoving(!selectedNPC.isMoving());
+			}
+		}
+	};
+
+	private final HotkeyListener resetListener = new HotkeyListener(() -> config.resetHotkey())
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			if (selectedNPC != null)
+			{
+				selectedNPC.getRuneLiteObject().setLocation(selectedNPC.getProgram().getStartLocation(), client.getPlane());
+			}
+		}
+	};
+
+	private final HotkeyListener resetAllListener = new HotkeyListener(() -> config.resetAllHotkey())
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			for (NPCCharacter npcCharacter : npcCharacters)
+			{
+				npcCharacter.getRuneLiteObject().setLocation(npcCharacter.getProgram().getStartLocation(), client.getPlane());
+				npcCharacter.setMoving(false);
+			}
 		}
 	};
 

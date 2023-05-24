@@ -249,13 +249,6 @@ public class CreatorsPanel extends PluginPanel
         animationButton.setFocusable(false);
         masterPanel.add(animationButton, c);
 
-        c.gridy++;
-        JButton setEndButton = new JButton();
-        setEndButton.setFont(FontManager.getRunescapeFont());
-        setEndButton.setText("Set End");
-        setEndButton.setFocusable(false);
-        masterPanel.add(setEndButton, c);
-
 
         //Labels
 
@@ -345,12 +338,7 @@ public class CreatorsPanel extends PluginPanel
         animationSpinner.setMinimumSize(spinnerSize);
         masterPanel.add(animationSpinner, c);
 
-        c.gridy++;
-        JButton goButton = new JButton();
-        goButton.setFont(FontManager.getRunescapeFont());
-        goButton.setText("Go!");
-        goButton.setFocusable(false);
-        masterPanel.add(goButton, c);
+
 
 
         minimizeButton.addActionListener(e ->
@@ -427,20 +415,6 @@ public class CreatorsPanel extends PluginPanel
                     animationId,
                     animationSpinner);
 
-            setEndButton.addActionListener(e ->
-            {
-                if (plugin.getSelectedTile() != null)
-                {
-                    LocalPoint lp = plugin.getSelectedTile().getLocalLocation();
-                    Program program = new Program(plugin.getSpeed(), lp);
-                    npcCharacter.setProgram(program);
-                }
-            });
-
-            goButton.addActionListener(e ->
-            {
-                npcCharacter.setMoving(!npcCharacter.isMoving());
-            });
 
             textField.addMouseListener(new MouseAdapter()
             {

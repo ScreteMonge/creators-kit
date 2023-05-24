@@ -301,4 +301,83 @@ public interface CreatorsConfig extends Config
 	{
 		return false;
 	}
+
+	@ConfigSection(
+			name = "Programmer",
+			description = "Settings for quickly programming the selected object",
+			position = 27
+	)
+	String programmer = "programmer";
+
+	@ConfigItem(
+			keyName = "setStartLocation",
+			name = "Set Start Location",
+			description = "Hotkey to set the start location of the selected object",
+			section = programmer,
+			position = 28
+	)
+	default Keybind setStartHotkey()
+	{
+		return Keybind.NOT_SET;
+	}
+
+	@ConfigItem(
+			keyName = "setEndLocation",
+			name = "Set End Location",
+			description = "Hotkey to set the end location of the selected object",
+			section = programmer,
+			position = 29
+	)
+	default Keybind setEndHotkey()
+	{
+		return Keybind.NOT_SET;
+	}
+
+	@ConfigItem(
+			keyName = "playPauseToggle",
+			name = "Play/Pause Toggle",
+			description = "Hotkey to play/pause selected object",
+			section = programmer,
+			position = 30
+	)
+	default Keybind playPauseHotkey()
+	{
+		return Keybind.NOT_SET;
+	}
+
+	@ConfigItem(
+			keyName = "playPauseAllToggle",
+			name = "Play/Pause All",
+			description = "Hotkey to play/pause all programs",
+			section = programmer,
+			position = 31
+	)
+	default Keybind playPauseAllHotkey()
+	{
+		return Keybind.NOT_SET;
+	}
+
+	@ConfigItem(
+			keyName = "resetLocations",
+			name = "Reset Locations",
+			description = "Hotkey to set selected object to its start location",
+			section = programmer,
+			position = 32
+	)
+	default Keybind resetHotkey()
+	{
+		return Keybind.NOT_SET;
+	}
+
+	@ConfigItem(
+			keyName = "resetAllLocations",
+			name = "Reset All Locations",
+			description = "Hotkey to set all objects to their start location",
+			section = programmer,
+			position = 33
+	)
+	default Keybind resetAllHotkey()
+	{
+		return Keybind.NOT_SET;
+	}
 }

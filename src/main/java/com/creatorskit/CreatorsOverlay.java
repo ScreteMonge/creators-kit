@@ -168,43 +168,42 @@ public class CreatorsOverlay extends Overlay
             {
                 if (gameObject != null && gameObject.getSceneMinLocation().equals(tile.getSceneLocation()))
                 {
+                    if (gameObject.getRenderable() instanceof Actor)
+                    {
+                        continue;
+                    }
+
+                    StringBuilder stringBuilder = new StringBuilder();
+
+                    if (gameObject.getRenderable() instanceof RuneLiteObject && config.myObjectOverlay())
+                    {
+                        RuneLiteObject runeLiteObject = (RuneLiteObject) gameObject.getRenderable();
+                        for (int i = 0; i < plugin.getNpcCharacters().size(); i++)
+                        {
+                            NPCCharacter npcCharacter = plugin.getNpcCharacters().get(i);
+                            if (npcCharacter.getRuneLiteObject() == runeLiteObject)
+                            {
+                                stringBuilder.append(npcCharacter.getName());
+                                if (plugin.getSelectedNPC() == npcCharacter)
+                                {
+                                    OverlayUtil.renderTileOverlay(graphics, gameObject, stringBuilder.toString(), SELECTED_COLOUR);
+                                    continue;
+                                }
+
+                                if (plugin.getHoveredNPC() == npcCharacter)
+                                {
+                                    OverlayUtil.renderTileOverlay(graphics, gameObject, stringBuilder.toString(), HOVERED_COLOUR);
+                                    continue;
+                                }
+
+                                OverlayUtil.renderTileOverlay(graphics, gameObject, stringBuilder.toString(), MY_OBJECT_COLOUR);
+                            }
+                        }
+                        continue;
+                    }
+
                     if (player.getLocalLocation().distanceTo(gameObject.getLocalLocation()) <= MAX_DISTANCE)
                     {
-                        if (gameObject.getRenderable() instanceof Actor)
-                        {
-                            continue;
-                        }
-
-                        StringBuilder stringBuilder = new StringBuilder();
-
-                        if (gameObject.getRenderable() instanceof RuneLiteObject && config.myObjectOverlay())
-                        {
-                            RuneLiteObject runeLiteObject = (RuneLiteObject) gameObject.getRenderable();
-                            for (int i = 0; i < plugin.getNpcCharacters().size(); i++)
-                            {
-                                NPCCharacter npcCharacter = plugin.getNpcCharacters().get(i);
-                                if (npcCharacter.getRuneLiteObject() == runeLiteObject)
-                                {
-                                    stringBuilder.append(npcCharacter.getName());
-                                    if (plugin.getSelectedNPC() == npcCharacter)
-                                    {
-                                        OverlayUtil.renderTileOverlay(graphics, gameObject, stringBuilder.toString(), SELECTED_COLOUR);
-                                        continue;
-                                    }
-
-                                    if (plugin.getHoveredNPC() == npcCharacter)
-                                    {
-                                        OverlayUtil.renderTileOverlay(graphics, gameObject, stringBuilder.toString(), HOVERED_COLOUR);
-                                        continue;
-                                    }
-
-                                    OverlayUtil.renderTileOverlay(graphics, gameObject, stringBuilder.toString(), MY_OBJECT_COLOUR);
-                                }
-                            }
-
-                            continue;
-                        }
-
                         if (!config.gameObjectOverlay())
                         {
                             continue;

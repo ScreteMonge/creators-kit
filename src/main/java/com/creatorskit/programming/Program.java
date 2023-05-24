@@ -11,5 +11,6 @@ import net.runelite.api.coords.LocalPoint;
 public class Program
 {
     private double speed;
+    private LocalPoint startLocation;
     private LocalPoint endLocation;
 }
