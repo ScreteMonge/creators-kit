@@ -446,6 +446,7 @@ public class CreatorsPanel extends PluginPanel
                             npc.getRuneLiteObject().setActive(false);
                         });
                         npcCharacters.remove(npc);
+                        plugin.setSelectedNPC(null);
                         mainPanel.updateUI();
                         return;
                     }

@@ -286,6 +286,7 @@ public class ModelAnvil extends JFrame
         JTextField nameField = new JTextField(name);
         nameField.setName("nameField");
         nameField.setToolTipText("Name. No relevance to the Anvil's output - for organizational purposes only");
+        nameField.addActionListener(e -> { nameField.setText(nameField.getText().replaceAll("=", "")); });
         complexModePanel.add(nameField, c);
 
         c.gridwidth = 1;
@@ -630,6 +631,7 @@ public class ModelAnvil extends JFrame
             oldColourFrame.setVisible(true);
             oldColourFrame.setIconImage(icon);
             oldColourFrame.setLayout(new GridLayout(0, 2, 2, 2));
+            oldColourFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
             clientThread.invokeLater(() ->
             {
@@ -671,6 +673,8 @@ public class ModelAnvil extends JFrame
                     oldColourFrame.revalidate();
                     oldColourFrame.repaint();
                     oldColourFrame.pack();
+                    revalidate();
+                    repaint();
                 });
             });
         });
@@ -1020,7 +1024,7 @@ public class ModelAnvil extends JFrame
 
             for (DetailedModel detailedModel : panelsToDetailedModels())
             {
-                writer.write("\n\n" + "modelid=" + detailedModel.getModelId() + "\n" + "xtile=" + detailedModel.getXTile() + "\n"  + "ytile="+ detailedModel.getYTile() + "\n"  + "ztile=" + detailedModel.getZTile() + "\n" + "xt=" + detailedModel.getXTranslate() + "\n" + "yt=" + detailedModel.getYTranslate() + "\n" + "zt=" + detailedModel.getZTranslate() + "\n" + "xs=" + detailedModel.getXScale() + "\n" + "ys=" + detailedModel.getYScale() + "\n" + "zs=" + detailedModel.getZScale() + "\n" + "r=" + detailedModel.getRotate() + "\n" + "n=" + detailedModel.getRecolourNew() + "\n" + "o=" + detailedModel.getRecolourOld() + "\n" + "");
+                writer.write("\n\n" + "name=" + detailedModel.getName() + "\n" + "modelid=" + detailedModel.getModelId() + "\n" + "xtile=" + detailedModel.getXTile() + "\n"  + "ytile="+ detailedModel.getYTile() + "\n"  + "ztile=" + detailedModel.getZTile() + "\n" + "xt=" + detailedModel.getXTranslate() + "\n" + "yt=" + detailedModel.getYTranslate() + "\n" + "zt=" + detailedModel.getZTranslate() + "\n" + "xs=" + detailedModel.getXScale() + "\n" + "ys=" + detailedModel.getYScale() + "\n" + "zs=" + detailedModel.getZScale() + "\n" + "r=" + detailedModel.getRotate() + "\n" + "n=" + detailedModel.getRecolourNew() + "\n" + "o=" + detailedModel.getRecolourOld() + "\n" + "");
             }
 
             writer.close();

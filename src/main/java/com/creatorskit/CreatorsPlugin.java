@@ -102,6 +102,7 @@ public class CreatorsPlugin extends Plugin
 	private final int BRIGHT_CONTRAST = 1400;
 	private final int DARK_AMBIENT = 128;
 	private final int DARK_CONTRAST = 4000;
+	private boolean pauseMode = true;
 
 	@Override
 	protected void startUp() throws Exception
@@ -1018,13 +1019,13 @@ public class CreatorsPlugin extends Plugin
 		if (setPriority)
 		{
 			byte[] renderPriorities = model.getFaceRenderPriorities();
-			if (renderPriorities.length > 0)
+			if (renderPriorities != null && renderPriorities.length > 0)
 				Arrays.fill(renderPriorities, (byte) 0);
 		}
 
-		//6200 faces, 4000 vertices is about max
-		if (model.getFaceCount() >= 6200 && model.getVerticesCount() >= 4000)
-			sendChatMessage("You've exceeded the max face count of 6200 or vertex count of 4000 in this model; any additional faces will not render");
+		sendChatMessage("Model forged. Faces: " + model.getFaceCount() + ", Vertices: " + model.getVerticesCount());
+		if (model.getFaceCount() >= 6200 && model.getVerticesCount() >= 3900)
+			sendChatMessage("You've exceeded the max face count of 6200 or vertex count of 4000 in this model; any additional faces or vertices will not render");
 
 		return model;
 	}
@@ -1140,7 +1141,11 @@ public class CreatorsPlugin extends Plugin
 					{
 						System.out.println("Data: " + data);
 						if (data.startsWith("name="))
-							name = data.split(",")[1];
+						{
+							String[] split = data.split("=");
+							if (split.length > 1)
+								name = split[1];
+						}
 
 						if (data.startsWith("modelid="))
 							modelId = Integer.parseInt(data.split("=")[1]);
@@ -1426,9 +1431,11 @@ public class CreatorsPlugin extends Plugin
 		@Override
 		public void hotkeyPressed()
 		{
+			pauseMode = !pauseMode;
+
 			for (NPCCharacter npcCharacter : npcCharacters)
 			{
-				npcCharacter.setMoving(!selectedNPC.isMoving());
+				npcCharacter.setMoving(!pauseMode);
 			}
 		}
 	};
@@ -1440,7 +1447,14 @@ public class CreatorsPlugin extends Plugin
 		{
 			if (selectedNPC != null)
 			{
-				selectedNPC.getRuneLiteObject().setLocation(selectedNPC.getProgram().getStartLocation(), client.getPlane());
+				LocalPoint lp = selectedNPC.getProgram().getStartLocation();
+				if (lp == null)
+				{
+					return;
+				}
+
+				selectedNPC.getRuneLiteObject().setLocation(lp, client.getPlane());
+				selectedNPC.setMoving(false);
 			}
 		}
 	};
@@ -1452,7 +1466,13 @@ public class CreatorsPlugin extends Plugin
 		{
 			for (NPCCharacter npcCharacter : npcCharacters)
 			{
-				npcCharacter.getRuneLiteObject().setLocation(npcCharacter.getProgram().getStartLocation(), client.getPlane());
+				LocalPoint lp = npcCharacter.getProgram().getStartLocation();
+				if (lp == null)
+				{
+					continue;
+				}
+
+				npcCharacter.getRuneLiteObject().setLocation(lp, client.getPlane());
 				npcCharacter.setMoving(false);
 			}
 		}
