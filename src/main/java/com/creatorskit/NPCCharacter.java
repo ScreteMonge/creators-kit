@@ -25,6 +25,7 @@ public class NPCCharacter
     private JPanel panel;
     private JComboBox<CustomModel> comboBox;
     private JButton spawnButton;
-    private JButton despawnButton;
+    private JButton modelButton;
+    private JSpinner modelSpinner;
     private RuneLiteObject runeLiteObject;
 }

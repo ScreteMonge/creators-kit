@@ -10,31 +10,30 @@ import net.runelite.api.Model;
 import net.runelite.api.ModelData;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
-import net.runelite.client.config.ConfigManager;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
-import net.runelite.client.ui.components.colorpicker.ColorPickerManager;
-import net.runelite.client.ui.components.colorpicker.RuneliteColorPicker;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.LinkBrowser;
 
 import javax.inject.Inject;
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 public class ModelAnvil extends JFrame
 {
     private ClientThread clientThread;
     private final Client client;
-    private final ConfigManager configManager;
     private final CreatorsPlugin plugin;
-    private final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
+    private final BufferedImage ICON = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
     private final BufferedImage DUPLICATE = ImageUtil.loadImageResource(getClass(), "/Duplicate.png");
     private final BufferedImage CLOSE = ImageUtil.loadImageResource(getClass(), "/Close.png");
     private final BufferedImage ARROW_LEFT = ImageUtil.loadImageResource(getClass(), "/Arrow_Left.png");
@@ -45,7 +44,7 @@ public class ModelAnvil extends JFrame
     private final BufferedImage ROTATE = ImageUtil.loadImageResource(getClass(), "/Rotate.png");
     private final BufferedImage TRANSLATE_SUBTILE = ImageUtil.loadImageResource(getClass(), "/Translate subtile.png");
     private final BufferedImage SCALE = ImageUtil.loadImageResource(getClass(), "/Scale.png");
-    private final Dimension spinnerDimension = new Dimension(65, 25);
+    private final Dimension SPINNER_DIMENSION = new Dimension(65, 25);
     private final ArrayList<JPanel> complexPanels = new ArrayList<>();
     public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
     JPanel complexMode = new JPanel();
@@ -53,22 +52,19 @@ public class ModelAnvil extends JFrame
     GridBagConstraints c = new GridBagConstraints();
     JCheckBox brightLightCheckBox = new JCheckBox("Actor Lighting");
     JCheckBox noLightCheckBox = new JCheckBox("No Lighting");
-    Pattern oldPattern = Pattern.compile("\\s|[^\\d,\\-]");
-    Pattern arrayPattern = Pattern.compile("\\s|[^(?:\\d,)|\\-]|\\d+-\\d+|\\D,");
+    //Pattern arrayPattern = Pattern.compile("\\s|[^(?:\\d,)|\\-]|\\d+-\\d+|\\D,");
 
     @Inject
-    public ModelAnvil(Client client, ClientThread clientThread, CreatorsPlugin plugin, ConfigManager configManager)
+    public ModelAnvil(Client client, ClientThread clientThread, CreatorsPlugin plugin)
     {
         this.client = client;
         this.clientThread = clientThread;
         this.plugin = plugin;
-        this.configManager = configManager;
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new GridBagLayout());
         setTitle("RuneLite Model Anvil");
-        setIconImage(icon);
-
+        setIconImage(ICON);
 
         c.fill = GridBagConstraints.BOTH;
         c.insets = new Insets(4, 4, 4, 4);
@@ -138,45 +134,6 @@ public class ModelAnvil extends JFrame
         tabbedPane.setBorder(new LineBorder(ColorScheme.LIGHT_GRAY_COLOR, 1));
         add(tabbedPane, c);
 
-        JPanel simpleMode = new JPanel();
-        simpleMode.setLayout(new GridBagLayout());
-        tabbedPane.addTab("Simple Mode", simpleMode);
-
-        c.gridx = 0;
-        c.gridy = 0;
-        c.weightx = 0;
-        JLabel modelLoadLabel = new JLabel("Models to load:");
-        modelLoadLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        simpleMode.add(modelLoadLabel, c);
-
-        c.gridx = 0;
-        c.gridy = 1;
-        JLabel newColourLabel = new JLabel("New colours:");
-        newColourLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        simpleMode.add(newColourLabel, c);
-
-        c.gridx = 0;
-        c.gridy = 2;
-        JLabel oldColourLabel = new JLabel("Old colours:");
-        oldColourLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        simpleMode.add(oldColourLabel, c);
-
-        c.gridx = 1;
-        c.gridy = 0;
-        c.weightx = 1;
-        JTextField modelLoadField = new JTextField();
-        simpleMode.add(modelLoadField, c);
-
-        c.gridx = 1;
-        c.gridy = 1;
-        JTextField newColourField = new JTextField();
-        simpleMode.add(newColourField, c);
-
-        c.gridx = 1;
-        c.gridy = 2;
-        JTextField oldColourField = new JTextField();
-        simpleMode.add(oldColourField, c);
-
         scrollPane.setViewportView(complexMode);
         complexMode.setLayout(new GridLayout(0, 4, 8, 8));
         complexMode.setBackground(Color.BLACK);
@@ -222,31 +179,50 @@ public class ModelAnvil extends JFrame
         headerPanel.add(saveButton);
 
         JCheckBox priorityCheckBox = new JCheckBox("Priority");
-        priorityCheckBox.setToolTipText("Use an oversimplified method of resolving render order issues (useful when adding many models but not for NPCs/Players)");
+        priorityCheckBox.setToolTipText("Use an oversimplified method of resolving render order issues (useful when merging models but not for NPCs/Players)");
         priorityCheckBox.setFocusable(false);
         headerPanel.add(priorityCheckBox);
 
-        JLabel colourId = new JLabel("Colour: ");
+        //SIMPLE MODE
+        JPanel simpleMode = new JPanel();
+        simpleMode.setLayout(new GridBagLayout());
+        tabbedPane.addTab("Simple Mode", simpleMode);
 
-        JFrame colourSelect = new JFrame("RuneLite Colour Finder");
-        colourSelect.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        c.gridx = 0;
+        c.gridy = 0;
+        c.weightx = 0;
+        JLabel modelLoadLabel = new JLabel("Models to load:");
+        modelLoadLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        simpleMode.add(modelLoadLabel, c);
 
-        JButton colourPicker = new JButton("Find Colour");
-        colourPicker.setFocusable(false);
-        colourPicker.addActionListener(e ->
-        {
-            ColorPickerManager colorPickerManager = new ColorPickerManager(configManager);
-            RuneliteColorPicker runeliteColorPicker = colorPickerManager.create(colourSelect, Color.BLACK, "RuneLite Colour Finder", true);
-            runeliteColorPicker.setVisible(true);
-            runeliteColorPicker.setOnColorChange(color ->
-            {
-                double luminance = Math.sqrt(0.299 * color.getRed() * color.getRed() + 0.587 * color.getGreen() * color.getGreen() + 0.114 * color.getBlue() * color.getBlue()) / 255;
-                colourId.setText("Colour: " + JagexColor.rgbToHSL(color.getRGB(), luminance));
-            });
-        });
+        c.gridx = 0;
+        c.gridy = 1;
+        JLabel newColourLabel = new JLabel("New colours:");
+        newColourLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        simpleMode.add(newColourLabel, c);
 
-        headerPanel.add(colourPicker);
-        headerPanel.add(colourId);
+        c.gridx = 0;
+        c.gridy = 2;
+        JLabel oldColourLabel = new JLabel("Old colours:");
+        oldColourLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        simpleMode.add(oldColourLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 0;
+        c.weightx = 1;
+        JTextField modelLoadField = new JTextField();
+        simpleMode.add(modelLoadField, c);
+
+        c.gridx = 1;
+        c.gridy = 1;
+        JTextField newColourField = new JTextField();
+        simpleMode.add(newColourField, c);
+
+        c.gridx = 1;
+        c.gridy = 2;
+        JTextField oldColourField = new JTextField();
+        simpleMode.add(oldColourField, c);
+
 
         forgeButton.addActionListener(e ->
         {
@@ -285,8 +261,7 @@ public class ModelAnvil extends JFrame
         c.gridy = 0;
         JTextField nameField = new JTextField(name);
         nameField.setName("nameField");
-        nameField.setToolTipText("Name. No relevance to the Anvil's output - for organizational purposes only");
-        nameField.addActionListener(e -> { nameField.setText(nameField.getText().replaceAll("=", "")); });
+        nameField.setToolTipText("Name for organizational purposes only");
         complexModePanel.add(nameField, c);
 
         c.gridwidth = 1;
@@ -351,18 +326,10 @@ public class ModelAnvil extends JFrame
         c.gridwidth = 2;
         c.gridx = 0;
         c.gridy = 3;
-        JLabel colourNewLabel = new JLabel("New Colours:");
-        colourNewLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        colourNewLabel.setToolTipText("Choose New Colours to replace Old Colours. Order matters (1st New Colour will replace all of 1st Old Colour, etc)");
-        complexModePanel.add(colourNewLabel, c);
-
-        c.gridwidth = 2;
-        c.gridx = 0;
-        c.gridy = 4;
-        JLabel colourOldLabel = new JLabel("Old Colours:");
-        colourOldLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        colourOldLabel.setToolTipText("Choose Old Colours to replace with New Colours. Order matters (1st New Colour will replace all of 1st Old Colour, etc)");
-        complexModePanel.add(colourOldLabel, c);
+        JLabel colourLabel = new JLabel("Colours:");
+        colourLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        colourLabel.setToolTipText("Choose new Colours to replace default Colours");
+        complexModePanel.add(colourLabel, c);
 
         c.gridwidth = 2;
         c.gridx = 4;
@@ -393,13 +360,6 @@ public class ModelAnvil extends JFrame
         JButton removeButton = new JButton(new ImageIcon(CLOSE));
         removeButton.setFocusable(false);
         removeButton.setToolTipText("Remove panel");
-        removeButton.addActionListener(e ->
-        {
-            complexMode.remove(complexModePanel);
-            complexPanels.remove(complexModePanel);
-            repaint();
-            revalidate();
-        });
         complexModePanel.add(removeButton, c);
 
         c.gridx = 2;
@@ -444,7 +404,7 @@ public class ModelAnvil extends JFrame
         JSpinner xTileSpinner = new JSpinner();
         xTileSpinner.setValue(xTile);
         xTileSpinner.setToolTipText("E/W");
-        xTileSpinner.setPreferredSize(spinnerDimension);
+        xTileSpinner.setPreferredSize(SPINNER_DIMENSION);
         xTileSpinner.setName("xTileSpinner");
         tilePanel.add(xTileSpinner);
 
@@ -470,7 +430,7 @@ public class ModelAnvil extends JFrame
         JSpinner xSpinner = new JSpinner();
         xSpinner.setValue(xTranslate);
         xSpinner.setToolTipText("E/W");
-        xSpinner.setPreferredSize(spinnerDimension);
+        xSpinner.setPreferredSize(SPINNER_DIMENSION);
         xSpinner.setName("xSpinner");
         translatePanel.add(xSpinner);
 
@@ -495,7 +455,7 @@ public class ModelAnvil extends JFrame
 
         JSpinner xScaleSpinner = new JSpinner();
         xScaleSpinner.setValue(scaleX);
-        xScaleSpinner.setPreferredSize(spinnerDimension);
+        xScaleSpinner.setPreferredSize(SPINNER_DIMENSION);
         xScaleSpinner.setToolTipText("E/W");
         xScaleSpinner.setName("xScaleSpinner");
         scalePanel.add(xScaleSpinner);
@@ -579,59 +539,67 @@ public class ModelAnvil extends JFrame
                 check90.setSelected(true);
         }
 
+        HashMap<Short, Short> colourMap = new HashMap<>();
+        if (!newColours.equals("") && !oldColours.equals(""))
+        {
+            try
+            {
+                String[] newCols = newColours.split(",");
+                String[] oldCols = oldColours.split(",");
+
+                for (int i = 0; i < newCols.length; i++)
+                {
+                    Short newCol = Short.parseShort(newCols[i]);
+                    Short oldCol = Short.parseShort(oldCols[i]);
+                    colourMap.put(oldCol, newCol);
+                }
+            }
+            catch (Exception e)
+            {
+                System.out.println("Broken");
+            }
+        }
+
+        JTextField colourNewField = new JTextField();
+        colourNewField.setName("colourNewField");
+        colourNewField.setText(newColours);
+        colourNewField.setVisible(false);
+        complexModePanel.add(colourNewField);
+
+        JTextField colourOldField = new JTextField();
+        colourOldField.setName("colourOldField");
+        colourOldField.setText(oldColours);
+        colourOldField.setVisible(false);
+        complexModePanel.add(colourOldField);
+
+        JButton clearColoursButton = new JButton("Clear (" + colourMap.size() + ")");
+
+        JFrame swapperFrame = new JFrame("Colour Swapper: " + nameField.getText());
+        swapperFrame.setVisible(false);
+        swapperFrame.setEnabled(false);
+        swapperFrame.setIconImage(ICON);
+        swapperFrame.setLayout(new FlowLayout());
+
+        JPanel gridMenu = new JPanel();
+        gridMenu.setLayout(new GridLayout(0, 2, 2, 2));
+        swapperFrame.add(gridMenu);
+
+        JColorChooser colorChooser = new JColorChooser();
+        swapperFrame.add(colorChooser);
+
         c.gridx = 2;
         c.gridy = 3;
-        c.gridwidth = 8;
-        JTextField colourNewField = new JTextField();
-        colourNewField.setText(newColours);
-        colourNewField.setName("colourNewField");
-        colourNewField.setToolTipText("CSV format (eg. 123,456,789");
-        colourNewField.addActionListener(e -> { stringToCSV(arrayPattern, colourNewField); });
-        colourNewField.addFocusListener(new FocusListener() {
-            @Override
-            public void focusGained(FocusEvent e) { }
-
-            @Override
-            public void focusLost(FocusEvent e) {
-                stringToCSV(arrayPattern, colourNewField);
-            }
-        });
-        complexModePanel.add(colourNewField, c);
-
-        c.gridx = 2;
-        c.gridy = 4;
         c.gridwidth = 6;
-        JTextField colourOldField = new JTextField();
-        colourOldField.setText(oldColours);
-        colourOldField.setName("colourOldField");
-        colourOldField.setToolTipText("CSV format (eg. 123,456,789");
-        colourOldField.addActionListener(e -> { stringToCSV(arrayPattern, colourOldField); });
-        colourOldField.addFocusListener(new FocusListener() {
-            @Override
-            public void focusGained(FocusEvent e) { }
-
-            @Override
-            public void focusLost(FocusEvent e) {
-                stringToCSV(arrayPattern, colourOldField);
-            }
-        });
-        complexModePanel.add(colourOldField, c);
-
-
-
-        c.gridx = 8;
-        c.gridy = 4;
-        c.gridwidth = 2;
-        JButton oldColourButton = new JButton("Defaults");
-        oldColourButton.setToolTipText("Find default colours for the entered Model Id");
-        oldColourButton.setFocusable(false);
-        oldColourButton.addActionListener(e ->
+        JButton colourSwapper = new JButton("Colour Swapper");
+        colourSwapper.setFocusable(false);
+        colourSwapper.setToolTipText("Opens an interface to swap colours on this model");
+        complexModePanel.add(colourSwapper, c);
+        colourSwapper.addActionListener(e ->
         {
-            JFrame oldColourFrame = new JFrame("Old Colours");
-            oldColourFrame.setVisible(true);
-            oldColourFrame.setIconImage(icon);
-            oldColourFrame.setLayout(new GridLayout(0, 2, 2, 2));
-            oldColourFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            swapperFrame.setVisible(true);
+            swapperFrame.setEnabled(true);
+            swapperFrame.setTitle("Colour Swapper: " + nameField.getText());
+            gridMenu.removeAll();
 
             clientThread.invokeLater(() ->
             {
@@ -652,34 +620,119 @@ public class ModelAnvil extends JFrame
 
                 SwingUtilities.invokeLater(() ->
                 {
-                    for (Short s : list)
+                    JLabel oldColourTitle = new JLabel("Old Colours");
+                    oldColourTitle.setFont(FontManager.getRunescapeBoldFont());
+                    oldColourTitle.setToolTipText("Default colours of the model");
+                    oldColourTitle.setHorizontalAlignment(SwingConstants.CENTER);
+                    oldColourTitle.setVerticalAlignment(SwingConstants.BOTTOM);
+                    gridMenu.add(oldColourTitle);
+
+                    JLabel newColourTitle = new JLabel("New Colours");
+                    newColourTitle.setToolTipText("Pick colours to replace Old Colours");
+                    newColourTitle.setFont(FontManager.getRunescapeBoldFont());
+                    newColourTitle.setHorizontalAlignment(SwingConstants.CENTER);
+                    newColourTitle.setVerticalAlignment(SwingConstants.BOTTOM);
+                    gridMenu.add(newColourTitle);
+
+                    for (int i = 0; i < list.size(); i++)
                     {
-                        JLabel label = new JLabel(s + "", JLabel.CENTER);
+                        short s = list.get(i);
+                        JLabel oldColour = new JLabel(s + "", JLabel.CENTER);
+                        oldColour.setFont(FontManager.getRunescapeBoldFont());
+                        oldColour.setOpaque(true);
+                        oldColour.setBackground(Color.BLACK);
+                        Color color = colorFromShort(s);
+                        oldColour.setBorder(new LineBorder(color, 12));
+                        gridMenu.add(oldColour);
 
-                        label.setName("" + s);
-                        label.setFont(FontManager.getRunescapeBoldFont());
-                        label.setOpaque(true);
-                        label.setBackground(Color.BLACK);
+                        JButton newColour = new JButton();
+                        newColour.setName("newColour");
+                        newColour.setFocusable(false);
+                        newColour.setFont(FontManager.getRunescapeBoldFont());
+                        newColour.setText("Set");
+                        gridMenu.add(newColour);
+                        if (colourMap.containsKey(s))
+                        {
+                            newColour.setBorder(new LineBorder(colorFromShort(colourMap.get(s)), 12));
+                            newColour.setText("Unset");
+                        }
 
-                        float hue = (float) JagexColor.unpackHue(s) / JagexColor.HUE_MAX;
-                        float sat = (float) JagexColor.unpackSaturation(s) / JagexColor.SATURATION_MAX;
-                        float lum = (float) JagexColor.unpackLuminance(s) / JagexColor.LUMINANCE_MAX;
-                        int[] rgb = hslToRgb(hue, sat, lum);
-                        Color color = new Color(rgb[0], rgb[1], rgb[2]);
-                        label.setBorder(new LineBorder(color, 12));
-                        oldColourFrame.add(label);
+                        newColour.addActionListener(f ->
+                        {
+                            if (newColour.getText().equals("Unset"))
+                            {
+                                colourMap.remove(s);
+                                newColour.setBorder(new EmptyBorder(4, 4, 4, 4));
+                                newColour.setText("Set");
+                            }
+                            else
+                            {
+                                Color colourToAdd = colorChooser.getColor();
+                                colourMap.put(s, shortFromColour(colourToAdd));
+                                newColour.setBorder(new LineBorder(colourToAdd, 12));
+                                newColour.setText("Unset");
+                            }
+
+                            String[] mapToCSV = hashmapToCSV(colourMap);
+                            colourNewField.setText(mapToCSV[1]);
+                            colourOldField.setText(mapToCSV[0]);
+                            clearColoursButton.setText("Clear (" + colourMap.size() + ")");
+
+                            swapperFrame.revalidate();
+                            swapperFrame.repaint();
+                            swapperFrame.pack();
+                            revalidate();
+                            repaint();
+                        });
                     }
 
-                    oldColourFrame.revalidate();
-                    oldColourFrame.repaint();
-                    oldColourFrame.pack();
+                    swapperFrame.revalidate();
+                    swapperFrame.repaint();
+                    swapperFrame.pack();
                     revalidate();
                     repaint();
                 });
             });
+
+            swapperFrame.revalidate();
+            swapperFrame.repaint();
+            swapperFrame.pack();
+            revalidate();
+            repaint();
         });
 
-        complexModePanel.add(oldColourButton, c);
+        c.gridx = 8;
+        c.gridy = 3;
+        c.gridwidth = 2;
+        clearColoursButton.setFocusable(false);
+        clearColoursButton.setToolTipText("Clears all swapped colours");
+        complexModePanel.add(clearColoursButton, c);
+        clearColoursButton.addActionListener(e ->
+        {
+            for (Component component : gridMenu.getComponents())
+            {
+                if (component instanceof JButton)
+                {
+                    JButton button = (JButton) component;
+                    if (button.getText().equals("Unset"))
+                    {
+                        button.setBorder(new EmptyBorder(4, 4, 4, 4));
+                        button.setText("Set");
+                    }
+                }
+            }
+
+            colourMap.clear();
+            colourNewField.setText("");
+            colourOldField.setText("");
+            clearColoursButton.setText("Clear (0)");
+
+            swapperFrame.revalidate();
+            swapperFrame.repaint();
+            swapperFrame.pack();
+            revalidate();
+            repaint();
+        });
 
         duplicateButton.addActionListener(e ->
         {
@@ -699,6 +752,8 @@ public class ModelAnvil extends JFrame
                 rotation = 3;
             }
 
+            String[] colourSwaps = hashmapToCSV(colourMap);
+
             createComplexPanel
                     (nameField.getText(),
                             (int) modelIdSpinner.getValue(),
@@ -712,9 +767,25 @@ public class ModelAnvil extends JFrame
                             (int) yScaleSpinner.getValue(),
                             (int) zScaleSpinner.getValue(),
                             rotation,
-                            colourNewField.getText(),
-                            colourOldField.getText()
+                            colourSwaps[1],
+                            colourSwaps[0]
                     );
+        });
+
+        removeButton.addActionListener(e ->
+        {
+            swapperFrame.setVisible(false);
+            swapperFrame.setEnabled(false);
+            complexMode.remove(complexModePanel);
+            complexPanels.remove(complexModePanel);
+            repaint();
+            revalidate();
+        });
+
+        nameField.addActionListener(e ->
+        {
+            nameField.setText(nameField.getText().replaceAll("=", ""));
+            swapperFrame.setTitle("Colour Swapper: " + nameField.getText());
         });
 
         complexMode.add(complexModePanel);
@@ -867,6 +938,7 @@ public class ModelAnvil extends JFrame
                 if (component instanceof JTextField) {
                     if (primaryComponentName.equals("nameField")) {
                         name = ((JTextField) component).getText();
+                        continue;
                     }
 
                     if (primaryComponentName.equals("colourNewField")) {
@@ -1056,6 +1128,48 @@ public class ModelAnvil extends JFrame
         jTextField.setText(pattern.matcher(jTextField.getText()).replaceAll(""));
     }
 
+    private String[] hashmapToCSV(HashMap<Short, Short> map)
+    {
+        if (map.isEmpty())
+        {
+            return new String[]{"", ""};
+        }
+
+        StringBuilder oldBuilder = new StringBuilder();
+        StringBuilder newBuilder = new StringBuilder();
+        for (Map.Entry<Short, Short> entry : map.entrySet())
+        {
+            short oldColour = entry.getKey();
+            short newColour = entry.getValue();
+
+            oldBuilder.append(oldColour).append(",");
+            newBuilder.append(newColour).append(",");
+        }
+
+        //remove final comma
+        oldBuilder.deleteCharAt(oldBuilder.length() - 1);
+        newBuilder.deleteCharAt(newBuilder.length() - 1);
+        return new String[]{oldBuilder.toString(), newBuilder.toString()};
+    }
+
+    private Color colorFromShort(short s)
+    {
+        float hue = (float) JagexColor.unpackHue(s) / JagexColor.HUE_MAX;
+        float sat = (float) JagexColor.unpackSaturation(s) / JagexColor.SATURATION_MAX;
+        float lum = (float) JagexColor.unpackLuminance(s) / JagexColor.LUMINANCE_MAX;
+        int[] rgb = hslToRgb(hue, sat, lum);
+        return new Color(rgb[0], rgb[1], rgb[2]);
+    }
+
+    private short shortFromColour(Color color)
+    {
+        float[] col = rgbToHsl(color.getRed(), color.getGreen(), color.getBlue());
+        int hue = (int) (col[0] * JagexColor.HUE_MAX);
+        int sat = (int) (col[1] * JagexColor.SATURATION_MAX);
+        int lum = (int) (col[2] * JagexColor.LUMINANCE_MAX);
+        return JagexColor.packHSL(hue, sat, lum);
+    }
+
     private Color getBorderColour(int modelId)
     {
         if (modelId == -1)
@@ -1089,6 +1203,37 @@ public class ModelAnvil extends JFrame
             b = hueToRgb(p, q, h - 1f/3f);
         }
         return new int[]{to255(r), to255(g), to255(b)};
+    }
+
+    public static float[] rgbToHsl(int red, int green, int blue) {
+        float r = red / 255f;
+        float g = green / 255f;
+        float b = blue / 255f;
+
+        float max = (r > g && r > b) ? r : (g > b) ? g : b;
+        float min = (r < g && r < b) ? r : (g < b) ? g : b;
+
+        float h, s, l;
+        l = (max + min) / 2.0f;
+
+        if (max == min) {
+            h = s = 0.0f;
+        } else {
+            float d = max - min;
+            s = (l > 0.5f) ? d / (2.0f - max - min) : d / (max + min);
+
+            if (r > g && r > b)
+                h = (g - b) / d + (g < b ? 6.0f : 0.0f);
+
+            else if (g > b)
+                h = (b - r) / d + 2.0f;
+
+            else
+                h = (r - g) / d + 4.0f;
+
+            h /= 6.0f;
+        }
+        return new float[]{h, s, l};
     }
 
     public static int to255(float v) { return (int)Math.min(255,256*v); }

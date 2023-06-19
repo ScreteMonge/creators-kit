@@ -25,6 +25,30 @@ public interface CreatorsConfig extends Config
 	}
 
 	@ConfigItem(
+			keyName = "orbUp",
+			name = "Increase Orb Speed",
+			description = "Hotkey to increase the speed of Oculus Orb mode",
+			section = cameraSettings,
+			position = 2
+	)
+	default Keybind orbUpHotkey()
+	{
+		return Keybind.NOT_SET;
+	}
+
+	@ConfigItem(
+			keyName = "orbDown",
+			name = "Decrease Orb Speed",
+			description = "Hotkey to decrease the speed of Oculus Orb mode",
+			section = cameraSettings,
+			position = 2
+	)
+	default Keybind orbDownHotkey()
+	{
+		return Keybind.NOT_SET;
+	}
+
+	@ConfigItem(
 			keyName = "orbSpeed",
 			name = "Orb Speed",
 			description = "Set the normal speed of the Oculus Orb. Unset to disable",
@@ -34,18 +58,6 @@ public interface CreatorsConfig extends Config
 	default int orbSpeed()
 	{
 		return 36;
-	}
-
-	@ConfigItem(
-			keyName = "stopRotation",
-			name = "Stop AutoRotate",
-			description = "Hotkey to stop automatic camera rotation",
-			section = cameraSettings,
-			position = 4
-	)
-	default Keybind stopRotationHotkey()
-	{
-		return Keybind.NOT_SET;
 	}
 
 	@ConfigItem(

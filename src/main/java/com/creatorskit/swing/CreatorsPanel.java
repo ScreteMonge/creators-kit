@@ -152,10 +152,10 @@ public class CreatorsPanel extends PluginPanel
 
     public JPanel createPanel()
     {
-        return createPanel("Object " + npcPanels, 7699, null, false, 0,  -1, 60);
+        return createPanel("Object " + npcPanels, 7699, null, false, false, 0,  -1, 60);
     }
 
-    public JPanel createPanel(String name, int modelId, CustomModel customModel, boolean customModeActive, int orientation, int animationId, int radius)
+    public JPanel createPanel(String name, int modelId, CustomModel customModel, boolean customModeActive, boolean setMinimized, int orientation, int animationId, int radius)
     {
         JPanel masterPanel = new JPanel();
         masterPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -196,7 +196,7 @@ public class CreatorsPanel extends PluginPanel
         duplicateButton.setFocusable(false);
         topButtonsPanel.add(duplicateButton);
 
-        final boolean[] minimized = {false};
+        final boolean[] minimized = {setMinimized};
         ImageIcon minimize = new ImageIcon(MINIMIZE);
         ImageIcon maximize = new ImageIcon(MAXIMIZE);
         JButton minimizeButton = new JButton(minimize);
@@ -338,8 +338,26 @@ public class CreatorsPanel extends PluginPanel
         animationSpinner.setMinimumSize(spinnerSize);
         masterPanel.add(animationSpinner, c);
 
-
-
+        if (setMinimized)
+        {
+            customMode[0] = modelComboBox.isVisible();
+            relocateButton.setVisible(false);
+            modelButton.setVisible(false);
+            modelLabel.setVisible(false);
+            modelSpinner.setVisible(false);
+            modelComboBox.setVisible(false);
+            spawnButton.setVisible(false);
+            orientationLabel.setVisible(false);
+            orientationSpinner.setVisible(false);
+            animationButton.setVisible(false);
+            animationLabel.setVisible(false);
+            animationSpinner.setVisible(false);
+            radiusLabel.setVisible(false);
+            radiusSpinner.setVisible(false);
+            minimizeButton.setIcon(maximize);
+            minimizeButton.setToolTipText("Maximize");
+            masterPanel.updateUI();
+        }
 
         minimizeButton.addActionListener(e ->
         {
@@ -399,7 +417,6 @@ public class CreatorsPanel extends PluginPanel
                     npcPanels,
                     masterPanel,
                     textField,
-                    modelComboBox,
                     relocateButton,
                     spawnButton,
                     animationButton,
@@ -456,7 +473,7 @@ public class CreatorsPanel extends PluginPanel
             duplicateButton.addActionListener(e ->
             {
                 boolean customModelMode = modelComboBox.isVisible();
-                createPanel(textField.getText() + " Dupe", (int) modelSpinner.getValue(), (CustomModel) modelComboBox.getSelectedItem(), customModelMode, (int) orientationSpinner.getValue(), (int) animationSpinner.getValue(), (int) radiusSpinner.getValue());
+                createPanel(textField.getText() + " Dupe", (int) modelSpinner.getValue(), (CustomModel) modelComboBox.getSelectedItem(), customModelMode, minimized[0], (int) orientationSpinner.getValue(), (int) animationSpinner.getValue(), (int) radiusSpinner.getValue());
             });
 
             masterPanel.addMouseListener(new MouseAdapter() {
@@ -525,19 +542,33 @@ public class CreatorsPanel extends PluginPanel
 
     public void addModelOption(CustomModel model, boolean setComboBox)
     {
+        modelOrganizer.createModelPanel(model);
+        NPCCharacter selectedNPC = plugin.getSelectedNPC();
+        if (selectedNPC == null)
+            return;
+
         for (JComboBox<CustomModel> comboBox : comboBoxes)
         {
             comboBox.addItem(model);
-            if (setComboBox && plugin.getSelectedNPC() != null)
+            if (!setComboBox)
+                continue;
+
+            JComboBox<CustomModel> selectedBox = selectedNPC.getComboBox();
+            if (comboBox == selectedBox)
             {
-                JComboBox<CustomModel> selectedBox = plugin.getSelectedNPC().getComboBox();
-                if (comboBox == selectedBox)
+                comboBox.setSelectedItem(model);
+                selectedNPC.getModelButton().setText("Custom");
+
+                if (selectedNPC.getModelSpinner().isVisible() || comboBox.isVisible())
                 {
-                    comboBox.setSelectedItem(model);
+                    comboBox.setVisible(true);
+                    selectedNPC.getModelSpinner().setVisible(false);
                 }
             }
+
+            selectedNPC.setStoredModel(model);
+            plugin.setModel(selectedNPC, true, -1);
         }
-        modelOrganizer.createModelPanel(model);
     }
 
     public void removeModelOption(CustomModel model)

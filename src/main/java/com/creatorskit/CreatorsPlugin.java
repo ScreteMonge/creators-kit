@@ -59,6 +59,9 @@ public class CreatorsPlugin extends Plugin
 	private CreatorsConfig config;
 
 	@Inject
+	private ConfigManager configManager;
+
+	@Inject
 	private ClientToolbar clientToolbar;
 
 	@Inject
@@ -120,11 +123,12 @@ public class CreatorsPlugin extends Plugin
 		overlayManager.add(overlay);
 		keyManager.registerKeyListener(overlayKeyListener);
 		keyManager.registerKeyListener(oculusOrbListener);
+		keyManager.registerKeyListener(orbSpeedUpListener);
+		keyManager.registerKeyListener(orbSpeedDownListener);
 		keyManager.registerKeyListener(quickSpawnListener);
 		keyManager.registerKeyListener(quickLocationListener);
 		keyManager.registerKeyListener(quickRotateCWListener);
 		keyManager.registerKeyListener(quickRotateCCWListener);
-		keyManager.registerKeyListener(autoStopListener);
 		keyManager.registerKeyListener(autoLeftListener);
 		keyManager.registerKeyListener(autoRightListener);
 		keyManager.registerKeyListener(autoUpListener);
@@ -145,11 +149,12 @@ public class CreatorsPlugin extends Plugin
 		overlayManager.remove(overlay);
 		keyManager.unregisterKeyListener(overlayKeyListener);
 		keyManager.unregisterKeyListener(oculusOrbListener);
+		keyManager.unregisterKeyListener(orbSpeedUpListener);
+		keyManager.unregisterKeyListener(orbSpeedDownListener);
 		keyManager.unregisterKeyListener(quickSpawnListener);
 		keyManager.unregisterKeyListener(quickLocationListener);
 		keyManager.unregisterKeyListener(quickRotateCWListener);
 		keyManager.unregisterKeyListener(quickRotateCCWListener);
-		keyManager.unregisterKeyListener(autoStopListener);
 		keyManager.unregisterKeyListener(autoLeftListener);
 		keyManager.unregisterKeyListener(autoRightListener);
 		keyManager.unregisterKeyListener(autoUpListener);
@@ -464,6 +469,7 @@ public class CreatorsPlugin extends Plugin
 						}
 					}
 
+					//For "Anvil" option on players
 					if (sendToAnvil)
 					{
 						Thread thread = new Thread(() ->
@@ -479,12 +485,13 @@ public class CreatorsPlugin extends Plugin
 						return;
 					}
 
+					//For "Store" option on players
 					Thread thread = new Thread(() ->
 					{
 						ModelStats[] modelStats = ModelFinder.findModelsForPlayer(false, comp.getGender() == 0, ids);
 						clientThread.invokeLater(() ->
 						{
-							Model model = constructModelFromCache(modelStats, comp.getColors(), false, true);
+							Model model = constructModelFromCache(modelStats, comp.getColors(), true, true);
 							CustomModel customModel = new CustomModel(model, player.getName());
 							addCustomModel(customModel, false);
 						});
@@ -571,6 +578,7 @@ public class CreatorsPlugin extends Plugin
 				}
 
 				LocalPoint localPoint = tile.getLocalLocation();
+				runeLiteObject.setActive(false);
 				runeLiteObject.setLocation(localPoint, client.getPlane());
 				runeLiteObject.setActive(true);
 				npcCharacter.getSpawnButton().setText("Despawn");
@@ -587,6 +595,7 @@ public class CreatorsPlugin extends Plugin
 					return;
 				}
 				LocalPoint localPoint = player.getLocalLocation();
+				runeLiteObject.setActive(false);
 				runeLiteObject.setLocation(localPoint, client.getPlane());
 				runeLiteObject.setActive(true);
 				npcCharacter.getSpawnButton().setText("Despawn");
@@ -595,6 +604,7 @@ public class CreatorsPlugin extends Plugin
 				return;
 			}
 
+			runeLiteObject.setActive(false);
 			LocalPoint localPoint = selectedTile.getLocalLocation();
 			if (localPoint == null)
 			{
@@ -739,7 +749,6 @@ public class CreatorsPlugin extends Plugin
 						 int id,
 						 JPanel panel,
 						 JTextField nameTextField,
-						 JComboBox<CustomModel> comboBox,
 						 JButton setLocationButton,
 						 JButton spawnButton,
 						 JButton animationButton,
@@ -774,9 +783,10 @@ public class CreatorsPlugin extends Plugin
 				null,
 				customModel,
 				panel,
-				comboBox,
+				modelComboBox,
 				spawnButton,
 				modelButton,
+				modelSpinner,
 				runeLiteObject);
 
 		npcCharacters.add(npcCharacter);
@@ -825,14 +835,14 @@ public class CreatorsPlugin extends Plugin
 		{
 			if (modelComboBox.isVisible())
 			{
-				modelButton.setText("Custom");
+				modelButton.setText("Id");
 				modelSpinner.setVisible(true);
 				modelComboBox.setVisible(false);
 				setModel(npcCharacter, false, (int) modelSpinner.getValue());
 			}
 			else
 			{
-				modelButton.setText("Model ID");
+				modelButton.setText("Custom");
 				modelSpinner.setVisible(false);
 				modelComboBox.setVisible(true);
 				setModel(npcCharacter, true, -1);
@@ -845,11 +855,12 @@ public class CreatorsPlugin extends Plugin
 			setModel(npcCharacter, false, modelNumber);
 		});
 
-		modelComboBox.addActionListener(e ->
+		modelComboBox.addItemListener(e ->
 		{
 			CustomModel m = (CustomModel) modelComboBox.getSelectedItem();
 			npcCharacter.setStoredModel(m);
-			setModel(npcCharacter, true, -1);
+			if (modelComboBox.isVisible() && npcCharacter == selectedNPC)
+				setModel(npcCharacter, true, -1);
 		});
 
 		orientationSpinner.addChangeListener(e ->
@@ -1290,6 +1301,30 @@ public class CreatorsPlugin extends Plugin
 		}
 	};
 
+	private final HotkeyListener orbSpeedUpListener = new HotkeyListener(() -> config.orbUpHotkey())
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			int orbSpeed = config.orbSpeed();
+			configManager.setConfiguration("creatorssuite", "orbSpeed", orbSpeed + 1);
+			client.setOculusOrbNormalSpeed(orbSpeed + 1);
+			System.out.println(orbSpeed + 1);
+		}
+	};
+
+	private final HotkeyListener orbSpeedDownListener = new HotkeyListener(() -> config.orbDownHotkey())
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			int orbSpeed = config.orbSpeed();
+			configManager.setConfiguration("creatorssuite", "orbSpeed", orbSpeed - 1);
+			client.setOculusOrbNormalSpeed(orbSpeed - 1);
+			System.out.println(orbSpeed - 1);
+		}
+	};
+
 	private final HotkeyListener quickSpawnListener = new HotkeyListener(() -> config.quickSpawnHotkey())
 	{
 		@Override
@@ -1335,16 +1370,6 @@ public class CreatorsPlugin extends Plugin
 			{
 				addOrientation(selectedNPC, 512);
 			}
-		}
-	};
-
-	private final HotkeyListener autoStopListener = new HotkeyListener(() -> config.stopRotationHotkey())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			autoRotateYaw = AutoRotate.OFF;
-			autoRotatePitch = AutoRotate.OFF;
 		}
 	};
 
