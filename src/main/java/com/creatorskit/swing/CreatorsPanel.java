@@ -441,7 +441,7 @@ public class CreatorsPanel extends PluginPanel
 
             SwingUtilities.invokeLater(() ->
             {
-                programPanel.createProgramPanel(character, program);
+                programPanel.createProgramPanel(character, program, programmerNameLabel, programmerIdleSpinner);
             });
 
             textField.addMouseListener(new MouseAdapter()

@@ -144,7 +144,7 @@ public class ModelAnvil extends JFrame
         complexMode.setLayout(new GridLayout(0, COMPLEX_GRID_COLUMNS, 8, 8));
         complexMode.setBackground(Color.BLACK);
         complexMode.setBorder(new LineBorder(ColorScheme.DARK_GRAY_COLOR, 8));
-        tabbedPane.addTab("Complex Mode", scrollPane);
+        tabbedPane.addTab("Anvil", scrollPane);
 
         JPanel headerPanel = new JPanel();
         headerPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
@@ -194,58 +194,17 @@ public class ModelAnvil extends JFrame
         JPanel sidePanel = new GroupPanel(client, plugin, clientThread);
         scrollPane.setRowHeaderView(sidePanel);
 
-        //SIMPLE MODE
-        JPanel simpleMode = new JPanel();
-        simpleMode.setLayout(new GridBagLayout());
-        tabbedPane.addTab("Simple Mode", simpleMode);
-
-        c.gridx = 0;
-        c.gridy = 0;
-        c.weightx = 0;
-        JLabel modelLoadLabel = new JLabel("Models to load:");
-        modelLoadLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        simpleMode.add(modelLoadLabel, c);
-
-        c.gridx = 0;
-        c.gridy = 1;
-        JLabel newColourLabel = new JLabel("New colours:");
-        newColourLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        simpleMode.add(newColourLabel, c);
-
-        c.gridx = 0;
-        c.gridy = 2;
-        JLabel oldColourLabel = new JLabel("Old colours:");
-        oldColourLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        simpleMode.add(oldColourLabel, c);
-
-        c.gridx = 1;
-        c.gridy = 0;
-        c.weightx = 1;
-        JTextField modelLoadField = new JTextField();
-        simpleMode.add(modelLoadField, c);
-
-        c.gridx = 1;
-        c.gridy = 1;
-        JTextField newColourField = new JTextField();
-        simpleMode.add(newColourField, c);
-
-        c.gridx = 1;
-        c.gridy = 2;
-        JTextField oldColourField = new JTextField();
-        simpleMode.add(oldColourField, c);
-
-
         forgeButton.addActionListener(e ->
         {
-            boolean simpleModeActive = tabbedPane.getSelectedComponent() == simpleMode;
-            forgeModel(client, simpleModeActive, modelLoadField, oldColourField, newColourField, nameField, priorityCheckBox.isSelected(), brightLightCheckBox.isSelected(), false);
+            forgeModel(client, nameField, priorityCheckBox.isSelected(), brightLightCheckBox.isSelected(), false);
         });
 
         forgeSetButton.addActionListener(e ->
         {
-            boolean simpleModeActive = tabbedPane.getSelectedComponent() == simpleMode;
-            forgeModel(client, simpleModeActive, modelLoadField, oldColourField, newColourField, nameField, priorityCheckBox.isSelected(), brightLightCheckBox.isSelected(), true);
+            forgeModel(client, nameField, priorityCheckBox.isSelected(), brightLightCheckBox.isSelected(), true);
         });
+
+
 
         validate();
         pack();
@@ -656,8 +615,6 @@ public class ModelAnvil extends JFrame
                 setupColourSwapper(swapperFrame, gridMenu, copyColourButton, pasteColourButton, nameField, modelIdSpinner, colourMap, colorChooser, colourNewField, colourOldField, clearColoursButton);
         });
 
-
-
         c.gridx = 8;
         c.gridy = 3;
         c.gridwidth = 2;
@@ -769,74 +726,10 @@ public class ModelAnvil extends JFrame
         revalidate();
     }
 
-    private void forgeModel(Client client, boolean simpleModeActive, JTextField modelLoadField, JTextField oldColourField, JTextField newColourField, JTextField nameField, boolean setPriority, boolean actorLighting, boolean forgeAndSet)
+    private void forgeModel(Client client, JTextField nameField, boolean setPriority, boolean actorLighting, boolean forgeAndSet)
     {
         if (client == null)
         {
-            return;
-        }
-
-        if (simpleModeActive)
-        {
-            if (modelLoadField.getText().isEmpty())
-            {
-                clientThread.invokeLater(() ->
-                {
-                    plugin.sendChatMessage("You must enter at least one ModelId to Forge a new model.");
-                });
-                return;
-            }
-
-            String[] modelIdString = modelLoadField.getText().split(",");
-            int[] modelIds = new int[modelIdString.length];
-
-            String[] oldColourStringArray = oldColourField.getText().split(",");
-            short[] oldColours = new short[oldColourStringArray.length];
-            String[] newColourStringArray = newColourField.getText().split(",");
-            short[] newColours = new short[newColourStringArray.length];
-
-            if (!oldColourField.getText().isEmpty() && !newColourField.getText().isEmpty())
-            {
-                if (oldColourStringArray.length != newColourStringArray.length)
-                {
-                    clientThread.invokeLater(() -> plugin.sendChatMessage("There must be the same number of New and Old colours."));
-                    return;
-                }
-
-                try
-                {
-                    for (int i = 0; i < oldColourStringArray.length; i++)
-                    {
-                        oldColours[i] = Short.parseShort(oldColourStringArray[i]);
-                        newColours[i] = Short.parseShort(newColourStringArray[i]);
-                    }
-                }
-                catch (Exception exception)
-                {
-                    clientThread.invokeLater(() -> plugin.sendChatMessage("Please reformat your Colours by separating each Colour with a comma and removing excess characters."));
-                    return;
-                }
-            }
-
-            try
-            {
-                for (int i = 0; i < modelIdString.length; i++)
-                {
-                    modelIds[i] = Integer.parseInt(modelIdString[i]);
-                }
-            }
-            catch (Exception exception)
-            {
-                clientThread.invokeLater(() -> plugin.sendChatMessage("Please reformat your ModelIds by separating each ModelId with a comma and removing excess characters."));
-                return;
-            }
-
-            clientThread.invokeLater(() ->
-            {
-                Model model = plugin.constructSimpleModel(modelIds, oldColours, newColours, getLightingStyle());
-                CustomModel customModel = new CustomModel(model, nameField.getText());
-                plugin.addCustomModel(customModel, forgeAndSet);
-            });
             return;
         }
 

@@ -23,6 +23,7 @@ public class ProgramPanel extends JFrame
     private final CreatorsPlugin plugin;
     private final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
     private GridBagConstraints c = new GridBagConstraints();
+    private JPanel allPanel = new JPanel();
 
     @Inject
     public ProgramPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin)
@@ -30,22 +31,19 @@ public class ProgramPanel extends JFrame
         this.clientThread = clientThread;
         this.plugin = plugin;
 
-        setBackground(ColorScheme.DARK_GRAY_COLOR);
-        setLayout(new GridBagLayout());
+        setBackground(ColorScheme.DARKER_GRAY_COLOR);
         setTitle("Creators Kit Programmer");
         setIconImage(icon);
 
-
-        c.fill = GridBagConstraints.BOTH;
-        c.insets = new Insets(4, 4, 4, 4);
-        c.gridx = 0;
-        c.gridy = 0;
+        allPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        allPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
+        add(allPanel);
         pack();
     }
 
-    public void createProgramPanel(Character character, JPanel programPanel)
+    public void createProgramPanel(Character character, JPanel programPanel, JLabel nameLabel, JSpinner idleAnimSpinner)
     {
-        programPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        programPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         programPanel.setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR));
         programPanel.setLayout(new GridBagLayout());
 
@@ -53,22 +51,32 @@ public class ProgramPanel extends JFrame
         c.insets = new Insets(4, 4, 4, 4);
         c.gridx = 0;
         c.gridy = 0;
+        c.gridwidth = 2;
 
-        JLabel nameLabel = new JLabel(character.getName());
+        nameLabel.setText(character.getName());
+        nameLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        nameLabel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         programPanel.add(nameLabel, c);
 
         c.gridx = 0;
         c.gridy = 1;
+        c.gridwidth = 1;
         JPanel textPanel = new JPanel();
         textPanel.setLayout(new GridLayout(0, 1));
-        textPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
+        textPanel.setBorder(new EmptyBorder(2, 2, 2, 0));
+        textPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         programPanel.add(textPanel, c);
 
         JLabel idleAnimLabel = new JLabel("Idle animation: ");
+        idleAnimLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         JLabel walkAnimLabel = new JLabel("Active animation: ");
+        walkAnimLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         JLabel speedLabel = new JLabel("Speed: ");
+        speedLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         JLabel turnSpeedLabel = new JLabel("Turn speed: ");
+        turnSpeedLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         JLabel waterWalkLabel = new JLabel("Watercraft? ");
+        waterWalkLabel.setHorizontalAlignment(SwingConstants.RIGHT);
 
         textPanel.add(idleAnimLabel);
         textPanel.add(walkAnimLabel);
@@ -81,12 +89,13 @@ public class ProgramPanel extends JFrame
         c.gridy = 1;
         JPanel optionsPanel = new JPanel();
         optionsPanel.setLayout(new GridLayout(0, 1));
-        optionsPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
+        optionsPanel.setBorder(new EmptyBorder(2, 0, 2, 2));
+        optionsPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         programPanel.add(optionsPanel, c);
 
         Program program = character.getProgram();
 
-        JSpinner idleAnimSpinner = new JSpinner(new SpinnerNumberModel(program.getIdleAnim(), -1, 9999, 1));
+        idleAnimSpinner.setModel(new SpinnerNumberModel(program.getIdleAnim(), -1, 9999, 1));
         idleAnimSpinner.addChangeListener(e ->
         {
             int idleAnim = (int) idleAnimSpinner.getValue();
@@ -125,7 +134,7 @@ public class ProgramPanel extends JFrame
         });
         optionsPanel.add(waterWalkCheckBox);
 
-        add(programPanel);
+        allPanel.add(programPanel);
         repaint();
         revalidate();
         pack();
@@ -133,7 +142,7 @@ public class ProgramPanel extends JFrame
 
     public void removeProgramPanel(JPanel panel)
     {
-        remove(panel);
+        allPanel.remove(panel);
         repaint();
         revalidate();
         pack();

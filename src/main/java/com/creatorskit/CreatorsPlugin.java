@@ -683,7 +683,7 @@ public class CreatorsPlugin extends Plugin
 				id,
 				false,
 				false,
-				new Program(new LocalPoint[0], new LocalPoint[0], new Coordinate[0], 0, 1, DEFAULT_TURN_SPEED, -1, -1, false),
+				new Program(new LocalPoint[0], new LocalPoint[0], new Coordinate[0], 0, 1, DEFAULT_TURN_SPEED, -1, -1, false, programmerNameLabel, programmerIdleSpinner),
 				null,
 				customModel,
 				panel,
@@ -786,6 +786,7 @@ public class CreatorsPlugin extends Plugin
 			animationButton.setText("Anim Off");
 			int animationNumber = (int) animationSpinner.getValue();
 			setAnimation(character, animationNumber);
+			programmerIdleSpinner.setValue(animationNumber);
 		});
 
 		radiusSpinner.addChangeListener(e ->
