@@ -22,6 +22,11 @@ public class ModelFinder
         {
             if (i == 0)
             {
+                if (!kitList.contains(0))
+                {
+                    kitList.add(i);
+                }
+
                 continue;
             }
 

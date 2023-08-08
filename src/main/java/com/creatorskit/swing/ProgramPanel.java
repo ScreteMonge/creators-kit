@@ -1,15 +1,17 @@
 package com.creatorskit.swing;
 
 import com.creatorskit.CreatorsPlugin;
+import com.creatorskit.Character;
+import com.creatorskit.programming.Program;
 import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
-import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -19,11 +21,8 @@ public class ProgramPanel extends JFrame
     @Inject
     private ClientThread clientThread;
     private final CreatorsPlugin plugin;
-    JPanel graph = new JPanel();
     private final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
     private GridBagConstraints c = new GridBagConstraints();
-    private int timeline = 50;
-    private int rows = 5;
 
     @Inject
     public ProgramPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin)
@@ -33,63 +32,110 @@ public class ProgramPanel extends JFrame
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new GridBagLayout());
-        setTitle("RuneLite Object Programmer");
+        setTitle("Creators Kit Programmer");
         setIconImage(icon);
 
 
         c.fill = GridBagConstraints.BOTH;
+        c.insets = new Insets(4, 4, 4, 4);
         c.gridx = 0;
         c.gridy = 0;
-        add(setupDopeSheet(), c);
         pack();
     }
 
-    private JPanel setupDopeSheet()
+    public void createProgramPanel(Character character, JPanel programPanel)
     {
-        JPanel dopeSheet = new JPanel();
-        dopeSheet.setLayout(new GridBagLayout());
+        programPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        programPanel.setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR));
+        programPanel.setLayout(new GridBagLayout());
+
         c.fill = GridBagConstraints.BOTH;
-
-        c.gridx = 1;
+        c.insets = new Insets(4, 4, 4, 4);
+        c.gridx = 0;
         c.gridy = 0;
-        c.weightx = 1;
-        JSlider arrowSlider = new JSlider(0, timeline, 0);
-        arrowSlider.setPaintLabels(true);
-        arrowSlider.setPreferredSize(new Dimension(800, 40));
-        arrowSlider.setFont(FontManager.getRunescapeSmallFont());
-        arrowSlider.setFocusable(false);
-        arrowSlider.setSnapToTicks(true);
-        arrowSlider.setMinorTickSpacing(1);
-        arrowSlider.setPaintTicks(true);
-        arrowSlider.setMajorTickSpacing(5);
-        arrowSlider.setPaintTrack(true);
-        arrowSlider.setUI(new JSliderUI(arrowSlider));
-        dopeSheet.add(arrowSlider, c);
 
+        JLabel nameLabel = new JLabel(character.getName());
+        programPanel.add(nameLabel, c);
 
         c.gridx = 0;
         c.gridy = 1;
-        c.weightx = 0;
-        c.ipadx = 5;
-        JPanel column = new JPanel(new GridLayout(rows, 1));
-        for (int i = 0; i < rows; i++)
-        {
-            JLabel label = new JLabel("Object_" + i);
-            label.setFont(FontManager.getRunescapeSmallFont());
-            column.add(label);
-        }
-        dopeSheet.add(column, c);
+        JPanel textPanel = new JPanel();
+        textPanel.setLayout(new GridLayout(0, 1));
+        textPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
+        programPanel.add(textPanel, c);
 
+        JLabel idleAnimLabel = new JLabel("Idle animation: ");
+        JLabel walkAnimLabel = new JLabel("Active animation: ");
+        JLabel speedLabel = new JLabel("Speed: ");
+        JLabel turnSpeedLabel = new JLabel("Turn speed: ");
+        JLabel waterWalkLabel = new JLabel("Watercraft? ");
+
+        textPanel.add(idleAnimLabel);
+        textPanel.add(walkAnimLabel);
+        textPanel.add(speedLabel);
+        textPanel.add(turnSpeedLabel);
+        textPanel.add(waterWalkLabel);
 
 
         c.gridx = 1;
         c.gridy = 1;
-        c.weightx = 1;
-        c.ipadx = 0;
-        graph.setLayout(new GridLayout(rows, timeline));
-        graph.setBorder(new LineBorder(ColorScheme.LIGHT_GRAY_COLOR, 1));
-        dopeSheet.add(graph, c);
+        JPanel optionsPanel = new JPanel();
+        optionsPanel.setLayout(new GridLayout(0, 1));
+        optionsPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
+        programPanel.add(optionsPanel, c);
 
-        return dopeSheet;
+        Program program = character.getProgram();
+
+        JSpinner idleAnimSpinner = new JSpinner(new SpinnerNumberModel(program.getIdleAnim(), -1, 9999, 1));
+        idleAnimSpinner.addChangeListener(e ->
+        {
+            int idleAnim = (int) idleAnimSpinner.getValue();
+            program.setIdleAnim(idleAnim);
+            character.getAnimationSpinner().setValue(idleAnim);
+        });
+        optionsPanel.add(idleAnimSpinner);
+
+        JSpinner walkAnimSpinner = new JSpinner(new SpinnerNumberModel(program.getWalkAnim(), -1, 9999, 1));
+        walkAnimSpinner.addChangeListener(e ->
+        {
+            program.setWalkAnim((int) walkAnimSpinner.getValue());
+        });
+        optionsPanel.add(walkAnimSpinner);
+
+        JSpinner speedSpinner = new JSpinner(new SpinnerNumberModel(program.getSpeed(), 0, 10, 1));
+        speedSpinner.addChangeListener(e ->
+        {
+            program.setSpeed((double) speedSpinner.getValue());
+        });
+        optionsPanel.add(speedSpinner);
+
+        JSpinner turnSpeedSpinner = new JSpinner();
+        turnSpeedSpinner.setValue(program.getTurnSpeed());
+        turnSpeedSpinner.addChangeListener(e ->
+        {
+            program.setTurnSpeed((int) turnSpeedSpinner.getValue());
+        });
+        optionsPanel.add(turnSpeedSpinner);
+
+        JCheckBox waterWalkCheckBox = new JCheckBox();
+        waterWalkCheckBox.setSelected(program.isWaterWalk());
+        waterWalkCheckBox.addChangeListener(e ->
+        {
+            program.setWaterWalk(waterWalkCheckBox.isSelected());
+        });
+        optionsPanel.add(waterWalkCheckBox);
+
+        add(programPanel);
+        repaint();
+        revalidate();
+        pack();
+    }
+
+    public void removeProgramPanel(JPanel panel)
+    {
+        remove(panel);
+        repaint();
+        revalidate();
+        pack();
     }
 }

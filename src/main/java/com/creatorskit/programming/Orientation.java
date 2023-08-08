@@ -119,6 +119,17 @@ public class Orientation
         return 0;
     }
 
+    public static int subtract(int first, int second)
+    {
+        int product = boundOrientation(first - second);
+        if (product > 1024)
+        {
+            return (product - 1024) * -1;
+        }
+
+        return product;
+    }
+
     public static int boundOrientation(int orientation)
     {
         while (orientation >= 2048)

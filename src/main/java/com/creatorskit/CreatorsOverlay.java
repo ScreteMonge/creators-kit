@@ -1,7 +1,11 @@
 package com.creatorskit;
 
+import com.creatorskit.programming.Coordinate;
+import com.creatorskit.programming.PathFinder;
+import com.creatorskit.programming.Program;
 import com.creatorskit.swing.CreatorsPanel;
 import net.runelite.api.*;
+import net.runelite.api.Point;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
@@ -19,7 +23,9 @@ public class CreatorsOverlay extends Overlay
     private final CreatorsPlugin plugin;
     private final CreatorsPanel panel;
     private final CreatorsConfig config;
-    private static final Color SELECTED_TILE_COLOUR = new Color(238, 255, 0);
+    private final PathFinder pathFinder;
+    private static final Color PATH_COLOUR = new Color(238, 255, 0);
+    private static final Color COORDINATE_COLOUR = new Color(255, 255, 255);
     private static final Color HOVERED_COLOUR = new Color(146, 206, 193, 255);
     private static final Color SELECTED_COLOUR = new Color(220, 253, 245);
     private static final Color MY_OBJECT_COLOUR = new Color(35, 208, 187);
@@ -33,8 +39,9 @@ public class CreatorsOverlay extends Overlay
     BufferedImage panelIcon = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
 
     @Inject
-    private CreatorsOverlay(Client client, CreatorsPlugin plugin, CreatorsPanel panel, CreatorsConfig config)
+    private CreatorsOverlay(Client client, CreatorsPlugin plugin, CreatorsPanel panel, CreatorsConfig config, PathFinder pathFinder)
     {
+        this.pathFinder = pathFinder;
         setPosition(OverlayPosition.DYNAMIC);
         setLayer(OverlayLayer.ABOVE_SCENE);
         this.client = client;
@@ -51,7 +58,10 @@ public class CreatorsOverlay extends Overlay
             return null;
         }
 
+        //renderWalkableOverlay(graphics);
+        renderCoordinates(graphics);
         renderObjectsOverlay(graphics);
+        renderProgramOverlay(graphics);
 
         if (config.npcOverlay())
         {
@@ -63,15 +73,98 @@ public class CreatorsOverlay extends Overlay
             renderPlayerOverlay(graphics);
         }
 
-        if (config.selectOverlay())
-        {
-            renderSelectedTile(graphics);
-        }
-
         return null;
     }
 
-    public  void renderPlayerOverlay(Graphics2D graphics)
+    public void renderProgramOverlay(Graphics2D graphics)
+    {
+        for (Character character : plugin.getCharacters())
+        {
+            Program program = character.getProgram();
+            if (program == null)
+                continue;
+
+            Coordinate[] coordinates = character.getProgram().getCoordinates();
+            for (int i = 0; i < coordinates.length; i++)
+            {
+                if (coordinates[i] == null)
+                    continue;
+
+                LocalPoint localPoint = LocalPoint.fromScene(coordinates[i].getColumn(), coordinates[i].getRow());
+                Point textPoint = Perspective.getCanvasTextLocation(client, graphics, localPoint, "" + i, 0);
+                OverlayUtil.renderTextLocation(graphics, textPoint, "" + i, COORDINATE_COLOUR);
+            }
+
+            LocalPoint[] points = character.getProgram().getSteps();
+            for (int i = 0; i < points.length; i++)
+            {
+                Point textPoint = Perspective.getCanvasTextLocation(client, graphics, points[i], character.getName(), 0);
+                OverlayUtil.renderTextLocation(graphics, textPoint, character.getName(), PATH_COLOUR);
+            }
+        }
+    }
+
+    public void renderCoordinates(Graphics2D graphics)
+    {
+        if (client.getGameState() != GameState.LOGGED_IN || client.getLocalPlayer() == null)
+            return;
+
+        Tile[][] tiles = client.getScene().getTiles()[client.getPlane()];
+
+        if (plugin.getCoords() == null)
+        {
+            return;
+        }
+
+        for (Coordinate coordinate : plugin.getCoords())
+        {
+            Tile tile = tiles[coordinate.getColumn()][coordinate.getRow()];
+            if (tile == null)
+                continue;
+
+            OverlayUtil.renderTileOverlay(client, graphics, tile.getLocalLocation(), panelIcon, Color.WHITE);
+        }
+    }
+
+    public void renderWalkableOverlay(Graphics2D graphics)
+    {
+        if (client.getGameState() != GameState.LOGGED_IN || client.getLocalPlayer() == null)
+            return;
+
+        plugin.getAdjacentTiles().clear();
+
+        LocalPoint lp = client.getLocalPlayer().getLocalLocation();
+        int curX = lp.getSceneX();
+        int curY = lp.getSceneY();
+        int z = client.getPlane();
+
+        for (int x = -1; x <= 1; x++)
+        {
+            for (int y = -1; y <= 1; y++)
+            {
+                Tile tile = plugin.getAllTiles()[z][curX + x][curY + y];
+                if (client.getCollisionMaps() == null)
+                {
+                    return;
+                }
+
+                CollisionData data = client.getCollisionMaps()[client.getPlane()];
+                int setting = data.getFlags()[curX + x][curY + y];
+
+                if ((setting & CollisionDataFlag.BLOCK_MOVEMENT_EAST) == 0)
+                {
+                    plugin.getAdjacentTiles().add(tile);
+                }
+            }
+        }
+
+        for (Tile tile : plugin.getAdjacentTiles())
+        {
+            OverlayUtil.renderTileOverlay(client, graphics, tile.getLocalLocation(), panelIcon, Color.WHITE);
+        }
+    }
+
+    public void renderPlayerOverlay(Graphics2D graphics)
     {
         for (Player player : client.getPlayers())
         {
@@ -97,20 +190,6 @@ public class CreatorsOverlay extends Overlay
 
             OverlayUtil.renderActorOverlay(graphics, npc, "ID: " + npc.getId() + ", A: " + npc.getAnimation() + ", P: " + npc.getPoseAnimation(), NPC_COLOUR);
         }
-    }
-
-    public void renderSelectedTile(Graphics2D graphics)
-    {
-        Tile tile = plugin.getSelectedTile();
-        if (tile == null)
-        {
-            return;
-        }
-
-        LocalPoint localPoint = tile.getLocalLocation();
-        Polygon poly = Perspective.getCanvasTilePoly(client, localPoint, 0);
-        OverlayUtil.renderPolygon(graphics, poly, SELECTED_TILE_COLOUR);
-        OverlayUtil.renderImageLocation(client, graphics, localPoint, panelIcon, 10);
     }
 
     public void renderObjectsOverlay(Graphics2D graphics)
@@ -178,19 +257,19 @@ public class CreatorsOverlay extends Overlay
                     if (gameObject.getRenderable() instanceof RuneLiteObject && config.myObjectOverlay())
                     {
                         RuneLiteObject runeLiteObject = (RuneLiteObject) gameObject.getRenderable();
-                        for (int i = 0; i < plugin.getNpcCharacters().size(); i++)
+                        for (int i = 0; i < plugin.getCharacters().size(); i++)
                         {
-                            NPCCharacter npcCharacter = plugin.getNpcCharacters().get(i);
-                            if (npcCharacter.getRuneLiteObject() == runeLiteObject)
+                            Character character = plugin.getCharacters().get(i);
+                            if (character.getRuneLiteObject() == runeLiteObject)
                             {
-                                stringBuilder.append(npcCharacter.getName());
-                                if (plugin.getSelectedNPC() == npcCharacter)
+                                stringBuilder.append(character.getName());
+                                if (plugin.getSelectedNPC() == character)
                                 {
                                     OverlayUtil.renderTileOverlay(graphics, gameObject, stringBuilder.toString(), SELECTED_COLOUR);
                                     continue;
                                 }
 
-                                if (plugin.getHoveredNPC() == npcCharacter)
+                                if (plugin.getHoveredNPC() == character)
                                 {
                                     OverlayUtil.renderTileOverlay(graphics, gameObject, stringBuilder.toString(), HOVERED_COLOUR);
                                     continue;

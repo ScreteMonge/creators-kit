@@ -1,8 +1,9 @@
 package com.creatorskit.swing;
 
 import com.creatorskit.CreatorsPlugin;
-import com.creatorskit.NPCCharacter;
+import com.creatorskit.Character;
 import com.creatorskit.models.CustomModel;
+import com.creatorskit.programming.Coordinate;
 import com.creatorskit.programming.Program;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +47,7 @@ public class CreatorsPanel extends PluginPanel
     @Getter
     private final ArrayList<JComboBox<CustomModel>> comboBoxes = new ArrayList<>();
     private final Dimension spinnerSize = new Dimension(72, 30);
+    private final int DEFAULT_TURN_SPEED = 68;
 
     LineBorder defaultBorder = new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1);
     LineBorder hoveredBorder = new LineBorder(ColorScheme.LIGHT_GRAY_COLOR, 1);
@@ -249,7 +251,6 @@ public class CreatorsPanel extends PluginPanel
         animationButton.setFocusable(false);
         masterPanel.add(animationButton, c);
 
-
         //Labels
 
         c.fill = GridBagConstraints.NONE;
@@ -410,9 +411,13 @@ public class CreatorsPanel extends PluginPanel
             masterPanel.updateUI();
         });
 
+        JLabel programmerNameLabel = new JLabel(name);
+        JSpinner programmerIdleSpinner = new JSpinner();
+        JPanel program = new JPanel();
 
-        clientThread.invokeLater(() -> {
-            NPCCharacter npcCharacter = plugin.buildNPC(
+        clientThread.invokeLater(() ->
+        {
+            Character character = plugin.buildCharacter(
                     textField.getText(),
                     npcPanels,
                     masterPanel,
@@ -430,21 +435,27 @@ public class CreatorsPanel extends PluginPanel
                     radius,
                     radiusSpinner,
                     animationId,
-                    animationSpinner);
+                    animationSpinner,
+                    programmerNameLabel,
+                    programmerIdleSpinner);
 
+            SwingUtilities.invokeLater(() ->
+            {
+                programPanel.createProgramPanel(character, program);
+            });
 
             textField.addMouseListener(new MouseAdapter()
             {
                 @Override
                 public void mouseEntered (MouseEvent e)
                 {
-                    setHoveredCharacter(npcCharacter, masterPanel);
+                    setHoveredCharacter(character, masterPanel);
                 }
 
                 @Override
                 public void mouseExited (MouseEvent e)
                 {
-                    unsetHoveredCharacter(npcCharacter, masterPanel);
+                    unsetHoveredCharacter(character, masterPanel);
                 }
             });
 
@@ -452,9 +463,13 @@ public class CreatorsPanel extends PluginPanel
             {
                 mainPanel.remove(masterPanel);
                 objectPanels.remove(masterPanel);
+                SwingUtilities.invokeLater(() ->
+                {
+                    programPanel.removeProgramPanel(program);
+                });
 
-                ArrayList<NPCCharacter> npcCharacters = plugin.getNpcCharacters();
-                for (NPCCharacter npc : npcCharacters)
+                ArrayList<Character> characters = plugin.getCharacters();
+                for (Character npc : characters)
                 {
                     if (npc.getPanel() == masterPanel)
                     {
@@ -462,7 +477,7 @@ public class CreatorsPanel extends PluginPanel
                         {
                             npc.getRuneLiteObject().setActive(false);
                         });
-                        npcCharacters.remove(npc);
+                        characters.remove(npc);
                         plugin.setSelectedNPC(null);
                         mainPanel.updateUI();
                         return;
@@ -472,14 +487,13 @@ public class CreatorsPanel extends PluginPanel
 
             duplicateButton.addActionListener(e ->
             {
-                boolean customModelMode = modelComboBox.isVisible();
-                createPanel(textField.getText() + " Dupe", (int) modelSpinner.getValue(), (CustomModel) modelComboBox.getSelectedItem(), customModelMode, minimized[0], (int) orientationSpinner.getValue(), (int) animationSpinner.getValue(), (int) radiusSpinner.getValue());
+                createPanel(textField.getText() + " Dupe", (int) modelSpinner.getValue(), (CustomModel) modelComboBox.getSelectedItem(), customMode[0], minimized[0], (int) orientationSpinner.getValue(), (int) animationSpinner.getValue(), (int) radiusSpinner.getValue());
             });
 
             masterPanel.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mousePressed(MouseEvent e) {
-                    setSelectedCharacter(npcCharacter, masterPanel);
+                    setSelectedCharacter(character, masterPanel);
                 }
             });
 
@@ -488,12 +502,12 @@ public class CreatorsPanel extends PluginPanel
                 component.addMouseListener(new MouseAdapter() {
                     @Override
                     public void mousePressed(MouseEvent e) {
-                        setSelectedCharacter(npcCharacter, masterPanel);
+                        setSelectedCharacter(character, masterPanel);
                     }
                 });
             }
 
-            setSelectedCharacter(npcCharacter, masterPanel);
+            setSelectedCharacter(character, masterPanel);
         });
 
         mainPanel.add(masterPanel, cNPC);
@@ -506,7 +520,7 @@ public class CreatorsPanel extends PluginPanel
         return masterPanel;
     }
 
-    public void setSelectedCharacter(NPCCharacter selected, JPanel jPanel)
+    public void setSelectedCharacter(Character selected, JPanel jPanel)
     {
         for (JPanel panel : objectPanels)
         {
@@ -517,7 +531,7 @@ public class CreatorsPanel extends PluginPanel
         plugin.setSelectedNPC(selected);
     }
 
-    public void setHoveredCharacter(NPCCharacter hovered, JPanel jPanel)
+    public void setHoveredCharacter(Character hovered, JPanel jPanel)
     {
         if (plugin.getSelectedNPC() == hovered)
         {
@@ -528,7 +542,7 @@ public class CreatorsPanel extends PluginPanel
         plugin.setHoveredNPC(hovered);
     }
 
-    public void unsetHoveredCharacter(NPCCharacter hoverRemoved, JPanel jPanel)
+    public void unsetHoveredCharacter(Character hoverRemoved, JPanel jPanel)
     {
         plugin.setHoveredNPC(null);
 
@@ -543,7 +557,7 @@ public class CreatorsPanel extends PluginPanel
     public void addModelOption(CustomModel model, boolean setComboBox)
     {
         modelOrganizer.createModelPanel(model);
-        NPCCharacter selectedNPC = plugin.getSelectedNPC();
+        Character selectedNPC = plugin.getSelectedNPC();
         if (selectedNPC == null)
             return;
 

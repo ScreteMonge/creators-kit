@@ -13,11 +13,11 @@ import javax.swing.*;
 @Getter
 @Setter
 @AllArgsConstructor
-public class NPCCharacter
+public class Character
 {
     private String name;
     private int id;
-    private boolean moving;
+    private boolean programActive;
     private boolean locationSet;
     private Program program;
     private LocalPoint savedLocation;
@@ -27,5 +27,9 @@ public class NPCCharacter
     private JButton spawnButton;
     private JButton modelButton;
     private JSpinner modelSpinner;
+    private JSpinner animationSpinner;
+    private JLabel programmerLabel;
+    private JSpinner programmerIdleSpinner;
     private RuneLiteObject runeLiteObject;
+    private int targetOrientation;
 }

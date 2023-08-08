@@ -10,7 +10,13 @@ import net.runelite.api.coords.LocalPoint;
 @AllArgsConstructor
 public class Program
 {
+    private LocalPoint[] steps;
+    private LocalPoint[] path;
+    private Coordinate[] coordinates;
+    private int currentStep;
     private double speed;
-    private LocalPoint startLocation;
-    private LocalPoint endLocation;
+    private int turnSpeed;
+    private int idleAnim;
+    private int walkAnim;
+    private boolean waterWalk;
 }

@@ -2,6 +2,8 @@ package com.creatorskit;
 
 import net.runelite.client.config.*;
 
+import java.awt.event.KeyEvent;
+
 @ConfigGroup("creatorssuite")
 public interface CreatorsConfig extends Config
 {
@@ -17,35 +19,11 @@ public interface CreatorsConfig extends Config
 			name = "Toggle Oculus Orb Mode",
 			description = "Hotkey to toggle Oculus Orb mode",
 			section = cameraSettings,
-			position = 2
+			position = 1
 	)
 	default Keybind toggleOrbHotkey()
 	{
-		return Keybind.NOT_SET;
-	}
-
-	@ConfigItem(
-			keyName = "orbUp",
-			name = "Increase Orb Speed",
-			description = "Hotkey to increase the speed of Oculus Orb mode",
-			section = cameraSettings,
-			position = 2
-	)
-	default Keybind orbUpHotkey()
-	{
-		return Keybind.NOT_SET;
-	}
-
-	@ConfigItem(
-			keyName = "orbDown",
-			name = "Decrease Orb Speed",
-			description = "Hotkey to decrease the speed of Oculus Orb mode",
-			section = cameraSettings,
-			position = 2
-	)
-	default Keybind orbDownHotkey()
-	{
-		return Keybind.NOT_SET;
+		return new Keybind(KeyEvent.VK_PAGE_UP, 0);
 	}
 
 	@ConfigItem(
@@ -53,7 +31,7 @@ public interface CreatorsConfig extends Config
 			name = "Orb Speed",
 			description = "Set the normal speed of the Oculus Orb. Unset to disable",
 			section = cameraSettings,
-			position = 3
+			position = 2
 	)
 	default int orbSpeed()
 	{
@@ -65,7 +43,7 @@ public interface CreatorsConfig extends Config
 			name = "AutoRotate Left",
 			description = "Hotkey to toggle automatic camera rotation to the left",
 			section = cameraSettings,
-			position = 5
+			position = 3
 	)
 	default Keybind rotateLeftHotkey()
 	{
@@ -77,7 +55,7 @@ public interface CreatorsConfig extends Config
 			name = "AutoRotate Right",
 			description = "Hotkey to toggle automatic camera rotation to the right",
 			section = cameraSettings,
-			position = 6
+			position = 4
 	)
 	default Keybind rotateRightHotkey()
 	{
@@ -89,7 +67,7 @@ public interface CreatorsConfig extends Config
 			name = "AutoRotate Up",
 			description = "Hotkey to toggle automatic camera rotation up",
 			section = cameraSettings,
-			position = 7
+			position = 5
 	)
 	default Keybind rotateUpHotkey()
 	{
@@ -101,7 +79,7 @@ public interface CreatorsConfig extends Config
 			name = "AutoRotate Down",
 			description = "Hotkey to toggle automatic camera rotation down",
 			section = cameraSettings,
-			position = 8
+			position = 6
 	)
 	default Keybind rotateDownHotkey()
 	{
@@ -113,7 +91,7 @@ public interface CreatorsConfig extends Config
 			name = "Rotate Horizontal Speed",
 			description = "Set the horizontal automatic camera rotation speed",
 			section = cameraSettings,
-			position = 9
+			position = 7
 	)
 	default int rotateHorizontalSpeed()
 	{
@@ -125,7 +103,7 @@ public interface CreatorsConfig extends Config
 			name = "Rotate Vertical Speed",
 			description = "Set the vertical automatic camera rotation speed",
 			section = cameraSettings,
-			position = 10
+			position = 8
 	)
 	default int rotateVerticalSpeed()
 	{
@@ -135,7 +113,7 @@ public interface CreatorsConfig extends Config
 	@ConfigSection(
 			name = "Scene",
 			description = "Settings for setting up your scene",
-			position = 11
+			position = 9
 	)
 	String sceneSettings = "sceneSettings";
 
@@ -144,11 +122,11 @@ public interface CreatorsConfig extends Config
 			name = "Quick Spawn",
 			description = "Hotkey to toggle the spawn or despawn state of the selected object",
 			section = sceneSettings,
-			position = 12
+			position = 10
 	)
 	default Keybind quickSpawnHotkey()
 	{
-		return Keybind.NOT_SET;
+		return new Keybind(KeyEvent.VK_INSERT, 0);
 	}
 
 	@ConfigItem(
@@ -156,11 +134,11 @@ public interface CreatorsConfig extends Config
 			name = "Quick Location",
 			description = "Hotkey to set the selected object to the mouse location",
 			section = sceneSettings,
-			position = 13
+			position = 11
 	)
 	default Keybind quickLocationHotkey()
 	{
-		return Keybind.NOT_SET;
+		return new Keybind(KeyEvent.VK_HOME, 0);
 	}
 
 	@ConfigItem(
@@ -168,11 +146,11 @@ public interface CreatorsConfig extends Config
 			name = "Quick Rotate CW",
 			description = "Hotkey to rotate the selected object by 90 degrees clockwise",
 			section = sceneSettings,
-			position = 14
+			position = 12
 	)
 	default Keybind quickRotateCWHotkey()
 	{
-		return Keybind.NOT_SET;
+		return new Keybind(KeyEvent.VK_DELETE, 0);
 	}
 
 	@ConfigItem(
@@ -180,29 +158,17 @@ public interface CreatorsConfig extends Config
 			name = "Quick Rotate CCW",
 			description = "Hotkey to rotate the selected object by 90 degrees counter-clockwise",
 			section = sceneSettings,
-			position = 15
+			position = 13
 	)
 	default Keybind quickRotateCCWHotkey()
 	{
-		return Keybind.NOT_SET;
-	}
-
-	@ConfigItem(
-			keyName = "quickDuplicate",
-			name = "Quick Duplicate",
-			description = "Hotkey to duplicate the selected object",
-			section = sceneSettings,
-			position = 16
-	)
-	default Keybind quickDuplicate()
-	{
-		return Keybind.NOT_SET;
+		return new Keybind(KeyEvent.VK_END, 0);
 	}
 
 	@ConfigSection(
 			name = "Overlays",
 			description = "Settings for enabling/disabling overlays",
-			position = 17
+			position = 14
 	)
 	String overlaySettings = "overlaySettings";
 
@@ -211,23 +177,11 @@ public interface CreatorsConfig extends Config
 			name = "Toggle Overlays Hotkey",
 			description = "Hotkey to toggle all overlays. Unset to disable",
 			section = overlaySettings,
-			position = 18
+			position = 15
 	)
 	default Keybind toggleOverlaysHotkey()
 	{
-		return Keybind.NOT_SET;
-	}
-
-	@ConfigItem(
-			keyName = "selectOverlay",
-			name = "Select Tile Overlay",
-			description = "Enables an overlay that hovers over the selected tile",
-			section = overlaySettings,
-			position = 19
-	)
-	default boolean selectOverlay()
-	{
-		return true;
+		return new Keybind(KeyEvent.VK_PAGE_DOWN, 0);
 	}
 
 	@ConfigItem(
@@ -235,7 +189,7 @@ public interface CreatorsConfig extends Config
 			name = "My Object Overlay",
 			description = "Enables an overlay for objects introduced via this plugin",
 			section = overlaySettings,
-			position = 20
+			position = 16
 	)
 	default boolean myObjectOverlay()
 	{
@@ -247,7 +201,7 @@ public interface CreatorsConfig extends Config
 			name = "Game Object Overlay",
 			description = "Enables an overlay for GameObjects",
 			section = overlaySettings,
-			position = 21
+			position = 17
 	)
 	default boolean gameObjectOverlay()
 	{
@@ -259,7 +213,7 @@ public interface CreatorsConfig extends Config
 			name = "Player Overlay",
 			description = "Enables an overlay for Players",
 			section = overlaySettings,
-			position = 22
+			position = 18
 	)
 	default boolean playerOverlay()
 	{
@@ -271,7 +225,7 @@ public interface CreatorsConfig extends Config
 			name = "NPC Overlay",
 			description = "Enables an overlay for NPCs",
 			section = overlaySettings,
-			position = 23
+			position = 19
 	)
 	default boolean npcOverlay()
 	{
@@ -283,7 +237,7 @@ public interface CreatorsConfig extends Config
 			name = "Ground Object Overlay",
 			description = "Enables an overlay for GroundObjects",
 			section = overlaySettings,
-			position = 24
+			position = 20
 	)
 	default boolean groundObjectOverlay()
 	{
@@ -295,7 +249,7 @@ public interface CreatorsConfig extends Config
 			name = "Wall Object Overlay",
 			description = "Enables an overlay for TileObjects",
 			section = overlaySettings,
-			position = 25
+			position = 21
 	)
 	default boolean wallObjectOverlay()
 	{
@@ -307,7 +261,7 @@ public interface CreatorsConfig extends Config
 			name = "Decorative Object Overlay",
 			description = "Enables an overlay for DecorativeObjects",
 			section = overlaySettings,
-			position = 26
+			position = 22
 	)
 	default boolean decorativeObjectOverlay()
 	{
@@ -317,32 +271,44 @@ public interface CreatorsConfig extends Config
 	@ConfigSection(
 			name = "Programmer",
 			description = "Settings for quickly programming the selected object",
-			position = 27
+			position = 23
 	)
 	String programmer = "programmer";
 
 	@ConfigItem(
-			keyName = "setStartLocation",
-			name = "Set Start Location",
-			description = "Hotkey to set the start location of the selected object",
+			keyName = "addStep",
+			name = "Add Program Step",
+			description = "Hotkey to add the hovered location to the selected object's program",
 			section = programmer,
-			position = 28
+			position = 24
 	)
-	default Keybind setStartHotkey()
+	default Keybind addProgramStepHotkey()
 	{
-		return Keybind.NOT_SET;
+		return new Keybind(KeyEvent.VK_A, KeyEvent.CTRL_DOWN_MASK);
 	}
 
 	@ConfigItem(
-			keyName = "setEndLocation",
-			name = "Set End Location",
-			description = "Hotkey to set the end location of the selected object",
+			keyName = "removeStep",
+			name = "Remove Program Step",
+			description = "Hotkey to remove the hovered location from the selected object's program",
 			section = programmer,
-			position = 29
+			position = 25
 	)
-	default Keybind setEndHotkey()
+	default Keybind removeProgramStepHotkey()
 	{
-		return Keybind.NOT_SET;
+		return new Keybind(KeyEvent.VK_D, KeyEvent.CTRL_DOWN_MASK);
+	}
+
+	@ConfigItem(
+			keyName = "clearSteps",
+			name = "Clear Program Steps",
+			description = "Hotkey to clear all steps from the selected object's program",
+			section = programmer,
+			position = 26
+	)
+	default Keybind clearProgramStepHotkey()
+	{
+		return new Keybind(KeyEvent.VK_C, KeyEvent.CTRL_DOWN_MASK);
 	}
 
 	@ConfigItem(
@@ -350,11 +316,11 @@ public interface CreatorsConfig extends Config
 			name = "Play/Pause Toggle",
 			description = "Hotkey to play/pause selected object",
 			section = programmer,
-			position = 30
+			position = 27
 	)
 	default Keybind playPauseHotkey()
 	{
-		return Keybind.NOT_SET;
+		return new Keybind(KeyEvent.VK_SPACE, KeyEvent.CTRL_DOWN_MASK);
 	}
 
 	@ConfigItem(
@@ -362,11 +328,11 @@ public interface CreatorsConfig extends Config
 			name = "Play/Pause All",
 			description = "Hotkey to play/pause all programs",
 			section = programmer,
-			position = 31
+			position = 28
 	)
 	default Keybind playPauseAllHotkey()
 	{
-		return Keybind.NOT_SET;
+		return new Keybind(KeyEvent.VK_END, KeyEvent.CTRL_DOWN_MASK);
 	}
 
 	@ConfigItem(
@@ -374,11 +340,11 @@ public interface CreatorsConfig extends Config
 			name = "Reset Locations",
 			description = "Hotkey to set selected object to its start location",
 			section = programmer,
-			position = 32
+			position = 29
 	)
 	default Keybind resetHotkey()
 	{
-		return Keybind.NOT_SET;
+		return new Keybind(KeyEvent.VK_R, KeyEvent.CTRL_DOWN_MASK);
 	}
 
 	@ConfigItem(
@@ -386,10 +352,10 @@ public interface CreatorsConfig extends Config
 			name = "Reset All Locations",
 			description = "Hotkey to set all objects to their start location",
 			section = programmer,
-			position = 33
+			position = 30
 	)
 	default Keybind resetAllHotkey()
 	{
-		return Keybind.NOT_SET;
+		return new Keybind(KeyEvent.VK_HOME, KeyEvent.CTRL_DOWN_MASK);
 	}
 }

@@ -4,6 +4,7 @@ import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.CustomModel;
 import com.creatorskit.models.DetailedModel;
 import com.creatorskit.models.LightingStyle;
+import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.api.JagexColor;
 import net.runelite.api.Model;
@@ -44,15 +45,20 @@ public class ModelAnvil extends JFrame
     private final BufferedImage ROTATE = ImageUtil.loadImageResource(getClass(), "/Rotate.png");
     private final BufferedImage TRANSLATE_SUBTILE = ImageUtil.loadImageResource(getClass(), "/Translate subtile.png");
     private final BufferedImage SCALE = ImageUtil.loadImageResource(getClass(), "/Scale.png");
+    private final BufferedImage COPY_COLOURS = ImageUtil.loadImageResource(getClass(), "/Copy_Colours.png");
+    private final BufferedImage PASTE_COLOURS = ImageUtil.loadImageResource(getClass(), "/Paste_Colours.png");
+    private final BufferedImage CLEAR_COLOURS = ImageUtil.loadImageResource(getClass(), "/Clear_Colours.png");
     private final Dimension SPINNER_DIMENSION = new Dimension(65, 25);
-    private final ArrayList<JPanel> complexPanels = new ArrayList<>();
+    @Getter
+    private final ArrayList<ComplexPanel> complexPanels = new ArrayList<>();
     public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
-    JPanel complexMode = new JPanel();
-    JScrollPane scrollPane = new JScrollPane();
-    GridBagConstraints c = new GridBagConstraints();
-    JCheckBox brightLightCheckBox = new JCheckBox("Actor Lighting");
-    JCheckBox noLightCheckBox = new JCheckBox("No Lighting");
-    //Pattern arrayPattern = Pattern.compile("\\s|[^(?:\\d,)|\\-]|\\d+-\\d+|\\D,");
+    private JPanel complexMode = new JPanel();
+    private JScrollPane scrollPane = new JScrollPane();
+    private GridBagConstraints c = new GridBagConstraints();
+    private JCheckBox brightLightCheckBox = new JCheckBox("Actor Lighting");
+    private JCheckBox noLightCheckBox = new JCheckBox("No Lighting");
+    private HashMap<Short, Short> copiedColourMap = new HashMap<>();
+    private final int COMPLEX_GRID_COLUMNS = 3;
 
     @Inject
     public ModelAnvil(Client client, ClientThread clientThread, CreatorsPlugin plugin)
@@ -135,11 +141,13 @@ public class ModelAnvil extends JFrame
         add(tabbedPane, c);
 
         scrollPane.setViewportView(complexMode);
-        complexMode.setLayout(new GridLayout(0, 4, 8, 8));
+        complexMode.setLayout(new GridLayout(0, COMPLEX_GRID_COLUMNS, 8, 8));
         complexMode.setBackground(Color.BLACK);
+        complexMode.setBorder(new LineBorder(ColorScheme.DARK_GRAY_COLOR, 8));
         tabbedPane.addTab("Complex Mode", scrollPane);
 
         JPanel headerPanel = new JPanel();
+        headerPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         scrollPane.setColumnHeaderView(headerPanel);
 
         JButton addButton = new JButton("Add");
@@ -182,6 +190,9 @@ public class ModelAnvil extends JFrame
         priorityCheckBox.setToolTipText("Use an oversimplified method of resolving render order issues (useful when merging models but not for NPCs/Players)");
         priorityCheckBox.setFocusable(false);
         headerPanel.add(priorityCheckBox);
+
+        JPanel sidePanel = new GroupPanel(client, plugin, clientThread);
+        scrollPane.setRowHeaderView(sidePanel);
 
         //SIMPLE MODE
         JPanel simpleMode = new JPanel();
@@ -242,16 +253,34 @@ public class ModelAnvil extends JFrame
 
     public void createComplexPanel()
     {
-        createComplexPanel("Name", -1, 0, 0, 0, 0, 0, 0, 128, 128, 128, 0, "", "");
+        createComplexPanel("Name", -1, 1, 0, 0, 0, 0, 0, 0, 128, 128, 128, 0, "", "");
     }
 
-    public void createComplexPanel(String name, int modelId, int xTile, int yTile, int zTile, int xTranslate, int yTranslate, int zTranslate, int scaleX, int scaleY, int scaleZ, int rotate, String newColours, String oldColours)
+    public void createComplexPanel(String name, int modelId, int group, int xTile, int yTile, int zTile, int xTranslate, int yTranslate, int zTranslate, int scaleX, int scaleY, int scaleZ, int rotate, String newColours, String oldColours)
     {
-        JPanel complexModePanel = new JPanel();
+        JSpinner modelIdSpinner = new JSpinner();
+        JSpinner groupSpinner = new JSpinner();
+        JTextField nameField = new JTextField(name);
+        JTextField colourNewField = new JTextField();
+        JTextField colourOldField = new JTextField();
+        JSpinner xTileSpinner = new JSpinner();
+        JSpinner yTileSpinner = new JSpinner();
+        JSpinner zTileSpinner = new JSpinner();
+        JSpinner xSpinner = new JSpinner();
+        JSpinner ySpinner = new JSpinner();
+        JSpinner zSpinner = new JSpinner();
+        JSpinner xScaleSpinner = new JSpinner();
+        JSpinner yScaleSpinner = new JSpinner();
+        JSpinner zScaleSpinner = new JSpinner();
+        JCheckBox check90 = new JCheckBox();
+        JCheckBox check180 = new JCheckBox();
+        JCheckBox check270 = new JCheckBox();
+        ComplexPanel complexModePanel = new ComplexPanel(modelIdSpinner, groupSpinner, nameField, colourNewField, colourOldField, xSpinner, ySpinner, zSpinner, xTileSpinner, yTileSpinner, zTileSpinner, xScaleSpinner, yScaleSpinner, zScaleSpinner, check90, check180, check270);
+
         complexModePanel.setLayout(new GridBagLayout());
         complexModePanel.setBorder(new LineBorder(getBorderColour(modelId), 1));
 
-        c.insets = new Insets(2, 4, 2, 4);
+        c.insets = new Insets(4, 4, 4, 4);
         c.weightx = 1;
         c.weighty = 0;
 
@@ -259,8 +288,6 @@ public class ModelAnvil extends JFrame
         c.gridheight = 1;
         c.gridx = 0;
         c.gridy = 0;
-        JTextField nameField = new JTextField(name);
-        nameField.setName("nameField");
         nameField.setToolTipText("Name for organizational purposes only");
         complexModePanel.add(nameField, c);
 
@@ -276,7 +303,7 @@ public class ModelAnvil extends JFrame
         arrowUpButton.setFocusable(false);
         arrowUpButton.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
         arrowUpButton.setToolTipText("Move panel up");
-        arrowUpButton.addActionListener(e -> {setPanelIndex(complexModePanel, -4);});
+        arrowUpButton.addActionListener(e -> {setPanelIndex(complexModePanel, -COMPLEX_GRID_COLUMNS);});
         arrowPanel.add(arrowUpButton, BorderLayout.PAGE_START);
 
         JButton arrowLeftButton = new JButton(new ImageIcon(ARROW_LEFT));
@@ -297,7 +324,7 @@ public class ModelAnvil extends JFrame
         arrowDownButton.setFocusable(false);
         arrowDownButton.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
         arrowDownButton.setToolTipText("Move panel up");
-        arrowDownButton.addActionListener(e -> {setPanelIndex(complexModePanel, 4);});
+        arrowDownButton.addActionListener(e -> {setPanelIndex(complexModePanel, COMPLEX_GRID_COLUMNS);});
         arrowPanel.add(arrowDownButton, BorderLayout.PAGE_END);
 
         c.weightx = 0;
@@ -335,16 +362,29 @@ public class ModelAnvil extends JFrame
         c.gridx = 4;
         c.gridy = 0;
         SpinnerNumberModel modelIdModel = new SpinnerNumberModel(modelId, -1, 99999, 1);
-        JSpinner modelIdSpinner = new JSpinner(modelIdModel);
+        modelIdSpinner.setModel(modelIdModel);
         modelIdSpinner.setBackground((modelId == -1) ? ColorScheme.PROGRESS_ERROR_COLOR : ColorScheme.MEDIUM_GRAY_COLOR);
         modelIdSpinner.setToolTipText("Set the id of the model you want to draw from the cache");
-        modelIdSpinner.setName("modelIdSpinner");
         modelIdSpinner.addChangeListener(e ->
         {
             complexModePanel.setBorder(new LineBorder(getBorderColour((int) modelIdSpinner.getValue()), 1));
             modelIdSpinner.setBackground(((int) modelIdSpinner.getValue() == -1) ? ColorScheme.PROGRESS_ERROR_COLOR : ColorScheme.MEDIUM_GRAY_COLOR);
         });
         complexModePanel.add(modelIdSpinner, c);
+
+        c.gridwidth = 2;
+        c.gridx = 6;
+        c.gridy = 0;
+        SpinnerNumberModel groupSpinnerNumberModel = new SpinnerNumberModel(group, 1, 99, 1);
+        groupSpinner.setModel(groupSpinnerNumberModel);
+        groupSpinner.setToolTipText("Set the group for the purpose of Group Transforms");
+        groupSpinner.setBackground(getBorderColour(group * 6));
+        complexModePanel.add(groupSpinner, c);
+        groupSpinner.addChangeListener(e ->
+        {
+            int colourPick = ((int) groupSpinner.getValue()) * 6;
+            groupSpinner.setBackground(getBorderColour(colourPick));
+        });
 
         c.gridx = 8;
         c.gridy = 0;
@@ -401,23 +441,17 @@ public class ModelAnvil extends JFrame
         tilePanel.setLayout(new GridLayout(3, 0));
         complexModePanel.add(tilePanel, c);
 
-        JSpinner xTileSpinner = new JSpinner();
         xTileSpinner.setValue(xTile);
         xTileSpinner.setToolTipText("E/W");
         xTileSpinner.setPreferredSize(SPINNER_DIMENSION);
-        xTileSpinner.setName("xTileSpinner");
         tilePanel.add(xTileSpinner);
 
-        JSpinner yTileSpinner = new JSpinner();
         yTileSpinner.setValue(yTile);
         yTileSpinner.setToolTipText("N/S");
-        yTileSpinner.setName("yTileSpinner");
         tilePanel.add(yTileSpinner);
 
-        JSpinner zTileSpinner = new JSpinner();
         zTileSpinner.setValue(zTile);
         zTileSpinner.setToolTipText("U/D");
-        zTileSpinner.setName("zTileSpinner");
         tilePanel.add(zTileSpinner);
 
         c.gridx = 4;
@@ -427,23 +461,17 @@ public class ModelAnvil extends JFrame
         translatePanel.setLayout(new GridLayout(3, 0));
         complexModePanel.add(translatePanel, c);
 
-        JSpinner xSpinner = new JSpinner();
         xSpinner.setValue(xTranslate);
         xSpinner.setToolTipText("E/W");
         xSpinner.setPreferredSize(SPINNER_DIMENSION);
-        xSpinner.setName("xSpinner");
         translatePanel.add(xSpinner);
 
-        JSpinner ySpinner = new JSpinner();
         ySpinner.setValue(yTranslate);
         ySpinner.setToolTipText("N/S");
-        ySpinner.setName("ySpinner");
         translatePanel.add(ySpinner);
 
-        JSpinner zSpinner = new JSpinner();
         zSpinner.setValue(zTranslate);
         zSpinner.setToolTipText("U/D");
-        zSpinner.setName("zSpinner");
         translatePanel.add(zSpinner);
 
         c.gridx = 6;
@@ -453,23 +481,17 @@ public class ModelAnvil extends JFrame
         scalePanel.setLayout(new GridLayout(3, 0));
         complexModePanel.add(scalePanel, c);
 
-        JSpinner xScaleSpinner = new JSpinner();
         xScaleSpinner.setValue(scaleX);
         xScaleSpinner.setPreferredSize(SPINNER_DIMENSION);
         xScaleSpinner.setToolTipText("E/W");
-        xScaleSpinner.setName("xScaleSpinner");
         scalePanel.add(xScaleSpinner);
 
-        JSpinner yScaleSpinner = new JSpinner();
         yScaleSpinner.setValue(scaleY);
         yScaleSpinner.setToolTipText("N/S");
-        yScaleSpinner.setName("yScaleSpinner");
         scalePanel.add(yScaleSpinner);
 
-        JSpinner zScaleSpinner = new JSpinner();
         zScaleSpinner.setValue(scaleZ);
         zScaleSpinner.setToolTipText("U/D");
-        zScaleSpinner.setName("zScaleSpinner");
         scalePanel.add(zScaleSpinner);
 
         c.gridx = 8;
@@ -480,23 +502,17 @@ public class ModelAnvil extends JFrame
         rotatePanel.setLayout(new GridLayout(3, 0));
         complexModePanel.add(rotatePanel, c);
 
-        JCheckBox check90 = new JCheckBox();
         check90.setText("90°");
-        check90.setName("check90");
         check90.setHorizontalAlignment(SwingConstants.LEFT);
         check90.setFocusable(false);
         rotatePanel.add(check90);
 
-        JCheckBox check180 = new JCheckBox();
         check180.setText("180°");
-        check180.setName("check180");
         check180.setHorizontalAlignment(SwingConstants.LEFT);
         check180.setFocusable(false);
         rotatePanel.add(check180);
 
-        JCheckBox check270 = new JCheckBox();
         check270.setText("270°");
-        check270.setName("check270");
         check270.setHorizontalAlignment(SwingConstants.LEFT);
         check270.setFocusable(false);
         rotatePanel.add(check270);
@@ -560,14 +576,10 @@ public class ModelAnvil extends JFrame
             }
         }
 
-        JTextField colourNewField = new JTextField();
-        colourNewField.setName("colourNewField");
         colourNewField.setText(newColours);
         colourNewField.setVisible(false);
         complexModePanel.add(colourNewField);
 
-        JTextField colourOldField = new JTextField();
-        colourOldField.setName("colourOldField");
         colourOldField.setText(oldColours);
         colourOldField.setVisible(false);
         complexModePanel.add(colourOldField);
@@ -584,122 +596,67 @@ public class ModelAnvil extends JFrame
         gridMenu.setLayout(new GridLayout(0, 2, 2, 2));
         swapperFrame.add(gridMenu);
 
+        JButton copyColourButton = new JButton("Copy");
+        copyColourButton.setFocusable(false);
+        copyColourButton.setToolTipText("Copy New Colours");
+        copyColourButton.addActionListener(e -> { copiedColourMap = colourMap; });
+
+        JButton pasteColourButton = new JButton("Paste");
+        pasteColourButton.setFocusable(false);
+        pasteColourButton.setToolTipText("Paste copied New Colours");
+
         JColorChooser colorChooser = new JColorChooser();
         swapperFrame.add(colorChooser);
 
         c.gridx = 2;
         c.gridy = 3;
-        c.gridwidth = 6;
+        c.gridwidth = 4;
         JButton colourSwapper = new JButton("Colour Swapper");
         colourSwapper.setFocusable(false);
         colourSwapper.setToolTipText("Opens an interface to swap colours on this model");
         complexModePanel.add(colourSwapper, c);
         colourSwapper.addActionListener(e ->
         {
-            swapperFrame.setVisible(true);
-            swapperFrame.setEnabled(true);
-            swapperFrame.setTitle("Colour Swapper: " + nameField.getText());
-            gridMenu.removeAll();
-
-            clientThread.invokeLater(() ->
-            {
-                ModelData md = client.loadModelData((int) modelIdSpinner.getValue());
-                if (md == null)
-                {
-                    return;
-                }
-
-                ArrayList<Short> list = new ArrayList<>();
-                for (short s : md.getFaceColors())
-                {
-                    if (!list.contains(s))
-                    {
-                        list.add(s);
-                    }
-                }
-
-                SwingUtilities.invokeLater(() ->
-                {
-                    JLabel oldColourTitle = new JLabel("Old Colours");
-                    oldColourTitle.setFont(FontManager.getRunescapeBoldFont());
-                    oldColourTitle.setToolTipText("Default colours of the model");
-                    oldColourTitle.setHorizontalAlignment(SwingConstants.CENTER);
-                    oldColourTitle.setVerticalAlignment(SwingConstants.BOTTOM);
-                    gridMenu.add(oldColourTitle);
-
-                    JLabel newColourTitle = new JLabel("New Colours");
-                    newColourTitle.setToolTipText("Pick colours to replace Old Colours");
-                    newColourTitle.setFont(FontManager.getRunescapeBoldFont());
-                    newColourTitle.setHorizontalAlignment(SwingConstants.CENTER);
-                    newColourTitle.setVerticalAlignment(SwingConstants.BOTTOM);
-                    gridMenu.add(newColourTitle);
-
-                    for (int i = 0; i < list.size(); i++)
-                    {
-                        short s = list.get(i);
-                        JLabel oldColour = new JLabel(s + "", JLabel.CENTER);
-                        oldColour.setFont(FontManager.getRunescapeBoldFont());
-                        oldColour.setOpaque(true);
-                        oldColour.setBackground(Color.BLACK);
-                        Color color = colorFromShort(s);
-                        oldColour.setBorder(new LineBorder(color, 12));
-                        gridMenu.add(oldColour);
-
-                        JButton newColour = new JButton();
-                        newColour.setName("newColour");
-                        newColour.setFocusable(false);
-                        newColour.setFont(FontManager.getRunescapeBoldFont());
-                        newColour.setText("Set");
-                        gridMenu.add(newColour);
-                        if (colourMap.containsKey(s))
-                        {
-                            newColour.setBorder(new LineBorder(colorFromShort(colourMap.get(s)), 12));
-                            newColour.setText("Unset");
-                        }
-
-                        newColour.addActionListener(f ->
-                        {
-                            if (newColour.getText().equals("Unset"))
-                            {
-                                colourMap.remove(s);
-                                newColour.setBorder(new EmptyBorder(4, 4, 4, 4));
-                                newColour.setText("Set");
-                            }
-                            else
-                            {
-                                Color colourToAdd = colorChooser.getColor();
-                                colourMap.put(s, shortFromColour(colourToAdd));
-                                newColour.setBorder(new LineBorder(colourToAdd, 12));
-                                newColour.setText("Unset");
-                            }
-
-                            String[] mapToCSV = hashmapToCSV(colourMap);
-                            colourNewField.setText(mapToCSV[1]);
-                            colourOldField.setText(mapToCSV[0]);
-                            clearColoursButton.setText("Clear (" + colourMap.size() + ")");
-
-                            swapperFrame.revalidate();
-                            swapperFrame.repaint();
-                            swapperFrame.pack();
-                            revalidate();
-                            repaint();
-                        });
-                    }
-
-                    swapperFrame.revalidate();
-                    swapperFrame.repaint();
-                    swapperFrame.pack();
-                    revalidate();
-                    repaint();
-                });
-            });
-
-            swapperFrame.revalidate();
-            swapperFrame.repaint();
-            swapperFrame.pack();
-            revalidate();
-            repaint();
+            setupColourSwapper(swapperFrame, gridMenu, copyColourButton, pasteColourButton, nameField, modelIdSpinner, colourMap, colorChooser, colourNewField, colourOldField, clearColoursButton);
         });
+        pasteColourButton.addActionListener(e ->
+        {
+            colourMap.clear();
+            colourMap.putAll(copiedColourMap);
+            String[] mapToCSV = hashmapToCSV(colourMap);
+            colourNewField.setText(mapToCSV[1]);
+            colourOldField.setText(mapToCSV[0]);
+            setupColourSwapper(swapperFrame, gridMenu, copyColourButton, pasteColourButton, nameField, modelIdSpinner, colourMap, colorChooser, colourNewField, colourOldField, clearColoursButton);
+        });
+
+        c.gridx = 6;
+        c.gridy = 3;
+        c.gridwidth = 1;
+        JButton copyColourButtonMain = new JButton(new ImageIcon(COPY_COLOURS));
+        copyColourButtonMain.setFocusable(false);
+        copyColourButtonMain.setToolTipText("Copy New Colours");
+        copyColourButtonMain.addActionListener(e -> { copiedColourMap = colourMap; });
+        complexModePanel.add(copyColourButtonMain, c);
+
+        c.gridx = 7;
+        c.gridy = 3;
+        c.gridwidth = 1;
+        JButton pasteColourButtonMain = new JButton(new ImageIcon(PASTE_COLOURS));
+        pasteColourButtonMain.setFocusable(false);
+        pasteColourButtonMain.setToolTipText("Paste copied New Colours");
+        complexModePanel.add(pasteColourButtonMain, c);
+        pasteColourButtonMain.addActionListener(e ->
+        {
+            colourMap.clear();
+            colourMap.putAll(copiedColourMap);
+            String[] mapToCSV = hashmapToCSV(colourMap);
+            colourNewField.setText(mapToCSV[1]);
+            colourOldField.setText(mapToCSV[0]);
+            if (swapperFrame.isVisible())
+                setupColourSwapper(swapperFrame, gridMenu, copyColourButton, pasteColourButton, nameField, modelIdSpinner, colourMap, colorChooser, colourNewField, colourOldField, clearColoursButton);
+        });
+
+
 
         c.gridx = 8;
         c.gridy = 3;
@@ -757,6 +714,7 @@ public class ModelAnvil extends JFrame
             createComplexPanel
                     (nameField.getText(),
                             (int) modelIdSpinner.getValue(),
+                            (int) groupSpinner.getValue(),
                             (int) xTileSpinner.getValue(),
                             (int) yTileSpinner.getValue(),
                             (int) zTileSpinner.getValue(),
@@ -906,129 +864,41 @@ public class ModelAnvil extends JFrame
     private DetailedModel[] panelsToDetailedModels()
     {
         DetailedModel[] detailedModels = new DetailedModel[complexPanels.size()];
+
         for (int i = 0; i < complexPanels.size(); i++) {
-            JPanel complexModePanel = complexPanels.get(i);
-            String name = "";
-            int modelId = 0;
-            int xTile = 0;
-            int yTile = 0;
-            int zTile = 0;
-            int xTranslate = 0;
-            int yTranslate = 0;
-            int zTranslate = 0;
-            int xScale = 128;
-            int yScale = 128;
-            int zScale = 128;
+            ComplexPanel complexModePanel = complexPanels.get(i);
+            String name = complexModePanel.getNameField().getText();
+            int modelId = (int) complexModePanel.getModelIdSpinner().getValue();
+            int group = (int) complexModePanel.getGroupSpinner().getValue();
+            int xTile = (int) complexModePanel.getXTileSpinner().getValue();
+            int yTile = (int) complexModePanel.getYTileSpinner().getValue();
+            int zTile = (int) complexModePanel.getZTileSpinner().getValue();
+            int xTranslate = (int) complexModePanel.getXSpinner().getValue();
+            int yTranslate = (int) complexModePanel.getYSpinner().getValue();
+            int zTranslate = (int) complexModePanel.getZSpinner().getValue();
+            int xScale = (int) complexModePanel.getXScaleSpinner().getValue();
+            int yScale = (int) complexModePanel.getYScaleSpinner().getValue();
+            int zScale = (int) complexModePanel.getZScaleSpinner().getValue();
             int rotate = 0;
-            String recolourNew = "";
-            String recolourOld = "";
+            String recolourNew = complexModePanel.getColourNewField().getText();
+            String recolourOld = complexModePanel.getColourOldField().getText();
 
-            for (Component component : complexModePanel.getComponents())
-            {
-                String primaryComponentName = component.getName();
-                if (component instanceof JSpinner)
-                {
-                    if (primaryComponentName.equals("modelIdSpinner"))
-                    {
-                        modelId = (int) ((JSpinner) component).getValue();
-                        continue;
-                    }
-                }
 
-                if (component instanceof JTextField) {
-                    if (primaryComponentName.equals("nameField")) {
-                        name = ((JTextField) component).getText();
-                        continue;
-                    }
 
-                    if (primaryComponentName.equals("colourNewField")) {
-                        recolourNew = ((JTextField) component).getText();
-                        continue;
-                    }
+            JCheckBox check90 = complexModePanel.getCheck90();
+            JCheckBox check180 = complexModePanel.getCheck180();
+            JCheckBox check270 = complexModePanel.getCheck270();
 
-                    if (primaryComponentName.equals("colourOldField")) {
-                        recolourOld = ((JTextField) component).getText();
-                    }
-                }
+            if (check90.isSelected())
+                rotate = 3;
 
-                if (component instanceof JPanel)
-                {
-                    JPanel componentPanel = (JPanel) component;
-                    for (Component comp : componentPanel.getComponents())
-                    {
-                        String compName = comp.getName();
-                        if (comp instanceof JSpinner)
-                        {
-                            if (compName.equals("xSpinner")) {
-                                xTranslate = (int) ((JSpinner) comp).getValue();
-                                continue;
-                            }
+            if (check180.isSelected())
+                rotate = 2;
 
-                            if (compName.equals("ySpinner")) {
-                                yTranslate = (int) ((JSpinner) comp).getValue();
-                                continue;
-                            }
+            if (check270.isSelected())
+                rotate = 1;
 
-                            if (compName.equals("zSpinner")) {
-                                zTranslate = (int) ((JSpinner) comp).getValue();
-                                continue;
-                            }
-
-                            if (compName.equals("xTileSpinner")) {
-                                xTile = (int) ((JSpinner) comp).getValue();
-                                continue;
-                            }
-
-                            if (compName.equals("yTileSpinner")) {
-                                yTile = (int) ((JSpinner) comp).getValue();
-                                continue;
-                            }
-
-                            if (compName.equals("zTileSpinner")) {
-                                zTile = (int) ((JSpinner) comp).getValue();
-                                continue;
-                            }
-
-                            if (compName.equals("xScaleSpinner")) {
-                                xScale = (int) ((JSpinner) comp).getValue();
-                                continue;
-                            }
-
-                            if (compName.equals("yScaleSpinner")) {
-                                yScale = (int) ((JSpinner) comp).getValue();
-                                continue;
-                            }
-
-                            if (compName.equals("zScaleSpinner")) {
-                                zScale = (int) ((JSpinner) comp).getValue();
-                                continue;
-                            }
-
-                            continue;
-                        }
-
-                        if (comp instanceof JCheckBox) {
-                            JCheckBox checkBox = (JCheckBox) comp;
-
-                            if (compName.equals("check90") && checkBox.isSelected()) {
-                                rotate = 3;
-                                continue;
-                            }
-
-                            if (compName.equals("check180") && checkBox.isSelected()) {
-                                rotate = 2;
-                                continue;
-                            }
-
-                            if (compName.equals("check270") && checkBox.isSelected()) {
-                                rotate = 1;
-                            }
-                        }
-                    }
-                }
-            }
-
-            DetailedModel detailedModel = new DetailedModel(name, modelId, xTile, yTile, zTile, xTranslate, yTranslate, zTranslate, xScale, yScale, zScale, rotate, recolourNew, recolourOld);
+            DetailedModel detailedModel = new DetailedModel(name, modelId, group, xTile, yTile, zTile, xTranslate, yTranslate, zTranslate, xScale, yScale, zScale, rotate, recolourNew, recolourOld);
             detailedModels[i] = detailedModel;
         }
 
@@ -1096,7 +966,7 @@ public class ModelAnvil extends JFrame
 
             for (DetailedModel detailedModel : panelsToDetailedModels())
             {
-                writer.write("\n\n" + "name=" + detailedModel.getName() + "\n" + "modelid=" + detailedModel.getModelId() + "\n" + "xtile=" + detailedModel.getXTile() + "\n"  + "ytile="+ detailedModel.getYTile() + "\n"  + "ztile=" + detailedModel.getZTile() + "\n" + "xt=" + detailedModel.getXTranslate() + "\n" + "yt=" + detailedModel.getYTranslate() + "\n" + "zt=" + detailedModel.getZTranslate() + "\n" + "xs=" + detailedModel.getXScale() + "\n" + "ys=" + detailedModel.getYScale() + "\n" + "zs=" + detailedModel.getZScale() + "\n" + "r=" + detailedModel.getRotate() + "\n" + "n=" + detailedModel.getRecolourNew() + "\n" + "o=" + detailedModel.getRecolourOld() + "\n" + "");
+                writer.write("\n\n" + "name=" + detailedModel.getName() + "\n" + "group=" + detailedModel.getGroup() + "\n" + "modelid=" + detailedModel.getModelId() + "\n" + "xtile=" + detailedModel.getXTile() + "\n"  + "ytile="+ detailedModel.getYTile() + "\n"  + "ztile=" + detailedModel.getZTile() + "\n" + "xt=" + detailedModel.getXTranslate() + "\n" + "yt=" + detailedModel.getYTranslate() + "\n" + "zt=" + detailedModel.getZTranslate() + "\n" + "xs=" + detailedModel.getXScale() + "\n" + "ys=" + detailedModel.getYScale() + "\n" + "zs=" + detailedModel.getZScale() + "\n" + "r=" + detailedModel.getRotate() + "\n" + "n=" + detailedModel.getRecolourNew() + "\n" + "o=" + detailedModel.getRecolourOld() + "\n" + "");
             }
 
             writer.close();
@@ -1123,12 +993,123 @@ public class ModelAnvil extends JFrame
         }
     }
 
+    private void setupColourSwapper(JFrame swapperFrame, JPanel gridMenu, JButton copyColourButton, JButton pasteColourButton, JTextField nameField, JSpinner modelIdSpinner, HashMap<Short, Short> colourMap, JColorChooser colorChooser, JTextField colourNewField, JTextField colourOldField, JButton clearColoursButton)
+    {
+        swapperFrame.setVisible(true);
+        swapperFrame.setEnabled(true);
+        swapperFrame.setTitle("Colour Swapper: " + nameField.getText());
+        gridMenu.removeAll();
+
+        clientThread.invokeLater(() ->
+        {
+            ModelData md = client.loadModelData((int) modelIdSpinner.getValue());
+            if (md == null)
+            {
+                return;
+            }
+
+            ArrayList<Short> list = new ArrayList<>();
+            for (short s : md.getFaceColors())
+            {
+                if (!list.contains(s))
+                {
+                    list.add(s);
+                }
+            }
+
+            SwingUtilities.invokeLater(() ->
+            {
+                gridMenu.add(copyColourButton);
+                gridMenu.add(pasteColourButton);
+
+                JLabel oldColourTitle = new JLabel("Old Colours");
+                oldColourTitle.setFont(FontManager.getRunescapeBoldFont());
+                oldColourTitle.setToolTipText("Default colours of the model");
+                oldColourTitle.setHorizontalAlignment(SwingConstants.CENTER);
+                oldColourTitle.setVerticalAlignment(SwingConstants.BOTTOM);
+                gridMenu.add(oldColourTitle);
+
+                JLabel newColourTitle = new JLabel("New Colours");
+                newColourTitle.setToolTipText("Pick colours to replace Old Colours");
+                newColourTitle.setFont(FontManager.getRunescapeBoldFont());
+                newColourTitle.setHorizontalAlignment(SwingConstants.CENTER);
+                newColourTitle.setVerticalAlignment(SwingConstants.BOTTOM);
+                gridMenu.add(newColourTitle);
+
+                for (int i = 0; i < list.size(); i++)
+                {
+                    short s = list.get(i);
+                    JLabel oldColour = new JLabel(s + "", JLabel.CENTER);
+                    oldColour.setFont(FontManager.getRunescapeBoldFont());
+                    oldColour.setOpaque(true);
+                    oldColour.setBackground(Color.BLACK);
+                    Color color = colorFromShort(s);
+                    oldColour.setBorder(new LineBorder(color, 12));
+                    gridMenu.add(oldColour);
+
+                    JButton newColour = new JButton();
+                    newColour.setName("newColour");
+                    newColour.setFocusable(false);
+                    newColour.setFont(FontManager.getRunescapeBoldFont());
+                    newColour.setText("Set");
+                    gridMenu.add(newColour);
+                    if (colourMap.containsKey(s))
+                    {
+                        newColour.setBorder(new LineBorder(colorFromShort(colourMap.get(s)), 12));
+                        newColour.setText("Unset");
+                    }
+
+                    newColour.addActionListener(f ->
+                    {
+                        if (newColour.getText().equals("Unset"))
+                        {
+                            colourMap.remove(s);
+                            newColour.setBorder(new EmptyBorder(4, 4, 4, 4));
+                            newColour.setText("Set");
+                        }
+                        else
+                        {
+                            Color colourToAdd = colorChooser.getColor();
+                            colourMap.put(s, shortFromColour(colourToAdd));
+                            newColour.setBorder(new LineBorder(colourToAdd, 12));
+                            newColour.setText("Unset");
+                        }
+
+                        String[] mapToCSV = hashmapToCSV(colourMap);
+                        colourNewField.setText(mapToCSV[1]);
+                        colourOldField.setText(mapToCSV[0]);
+                        clearColoursButton.setText("Clear (" + colourMap.size() + ")");
+
+                        swapperFrame.revalidate();
+                        swapperFrame.repaint();
+                        swapperFrame.pack();
+                        revalidate();
+                        repaint();
+                    });
+                }
+
+                swapperFrame.revalidate();
+                swapperFrame.repaint();
+                swapperFrame.pack();
+                revalidate();
+                repaint();
+            });
+        });
+
+        clearColoursButton.setText("Clear (" + colourMap.size() + ")");
+        swapperFrame.revalidate();
+        swapperFrame.repaint();
+        swapperFrame.pack();
+        revalidate();
+        repaint();
+    }
+
     private void stringToCSV(Pattern pattern, JTextField jTextField)
     {
         jTextField.setText(pattern.matcher(jTextField.getText()).replaceAll(""));
     }
 
-    private String[] hashmapToCSV(HashMap<Short, Short> map)
+    public static String[] hashmapToCSV(HashMap<Short, Short> map)
     {
         if (map.isEmpty())
         {
@@ -1152,7 +1133,7 @@ public class ModelAnvil extends JFrame
         return new String[]{oldBuilder.toString(), newBuilder.toString()};
     }
 
-    private Color colorFromShort(short s)
+    public static Color colorFromShort(short s)
     {
         float hue = (float) JagexColor.unpackHue(s) / JagexColor.HUE_MAX;
         float sat = (float) JagexColor.unpackSaturation(s) / JagexColor.SATURATION_MAX;
@@ -1161,7 +1142,7 @@ public class ModelAnvil extends JFrame
         return new Color(rgb[0], rgb[1], rgb[2]);
     }
 
-    private short shortFromColour(Color color)
+    public static short shortFromColour(Color color)
     {
         float[] col = rgbToHsl(color.getRed(), color.getGreen(), color.getBlue());
         int hue = (int) (col[0] * JagexColor.HUE_MAX);
@@ -1170,14 +1151,14 @@ public class ModelAnvil extends JFrame
         return JagexColor.packHSL(hue, sat, lum);
     }
 
-    private Color getBorderColour(int modelId)
+    public static Color getBorderColour(int i)
     {
-        if (modelId == -1)
+        if (i == -1)
         {
             return ColorScheme.MEDIUM_GRAY_COLOR;
         }
 
-        float hue = ((float) modelId - 25) / 50;
+        float hue = ((float) i - 25) / 50;
         return Color.getHSBColor(hue, 1, (float) 0.7);
     }
 

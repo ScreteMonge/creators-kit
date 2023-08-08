@@ -11,6 +11,7 @@ public class DetailedModel
 {
     String name;
     int modelId;
+    int group;
     int xTile;
     int yTile;
     int zTile;
