@@ -1,7 +1,7 @@
 # Creator's Kit
 Creator's Kit provides tools for creators of all sorts to make in-game scenes by spawning and merging models from the cache to animate and program.
 
-![Title](https://imgur.com/MHdDVfj.gif)
+![Title](https://imgur.com/JtGbuHb.gif)
 
 ## Creator's Panel
 
@@ -115,7 +115,7 @@ This plugin also features a programming function to set your objects on a path t
 
 ### Setting a Path
 
-![Path](https://imgur.com/ZbwaNnl.png)
+![Path](https://imgur.com/nvpKHp8.gif)
 
 You can set a path using the hotkeys described in the config menu.
 
