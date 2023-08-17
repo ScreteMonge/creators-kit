@@ -174,7 +174,7 @@ public interface CreatorsConfig extends Config
 
 	@ConfigItem(
 			keyName = "toggleOverlays",
-			name = "Toggle Overlays Hotkey",
+			name = "Toggle Overlays",
 			description = "Hotkey to toggle all overlays. Unset to disable",
 			section = overlaySettings,
 			position = 15
@@ -193,7 +193,19 @@ public interface CreatorsConfig extends Config
 	)
 	default boolean myObjectOverlay()
 	{
-		return false;
+		return true;
+	}
+
+	@ConfigItem(
+			keyName = "pathOverlay",
+			name = "Object Path Overlay",
+			description = "Enables an overlay for the pathing of programmed objects introduced via this plugin",
+			section = overlaySettings,
+			position = 17
+	)
+	default boolean pathOverlay()
+	{
+		return true;
 	}
 
 	@ConfigItem(
@@ -201,7 +213,7 @@ public interface CreatorsConfig extends Config
 			name = "Game Object Overlay",
 			description = "Enables an overlay for GameObjects",
 			section = overlaySettings,
-			position = 17
+			position = 18
 	)
 	default boolean gameObjectOverlay()
 	{
@@ -213,7 +225,7 @@ public interface CreatorsConfig extends Config
 			name = "Player Overlay",
 			description = "Enables an overlay for Players",
 			section = overlaySettings,
-			position = 18
+			position = 19
 	)
 	default boolean playerOverlay()
 	{
@@ -225,7 +237,7 @@ public interface CreatorsConfig extends Config
 			name = "NPC Overlay",
 			description = "Enables an overlay for NPCs",
 			section = overlaySettings,
-			position = 19
+			position = 20
 	)
 	default boolean npcOverlay()
 	{
@@ -237,7 +249,7 @@ public interface CreatorsConfig extends Config
 			name = "Ground Object Overlay",
 			description = "Enables an overlay for GroundObjects",
 			section = overlaySettings,
-			position = 20
+			position = 21
 	)
 	default boolean groundObjectOverlay()
 	{
@@ -249,7 +261,7 @@ public interface CreatorsConfig extends Config
 			name = "Wall Object Overlay",
 			description = "Enables an overlay for TileObjects",
 			section = overlaySettings,
-			position = 21
+			position = 22
 	)
 	default boolean wallObjectOverlay()
 	{
@@ -261,7 +273,7 @@ public interface CreatorsConfig extends Config
 			name = "Decorative Object Overlay",
 			description = "Enables an overlay for DecorativeObjects",
 			section = overlaySettings,
-			position = 22
+			position = 23
 	)
 	default boolean decorativeObjectOverlay()
 	{
@@ -271,7 +283,7 @@ public interface CreatorsConfig extends Config
 	@ConfigSection(
 			name = "Programmer",
 			description = "Settings for quickly programming the selected object",
-			position = 23
+			position = 24
 	)
 	String programmer = "programmer";
 
@@ -280,7 +292,7 @@ public interface CreatorsConfig extends Config
 			name = "Add Program Step",
 			description = "Hotkey to add the hovered location to the selected object's program",
 			section = programmer,
-			position = 24
+			position = 25
 	)
 	default Keybind addProgramStepHotkey()
 	{
@@ -292,7 +304,7 @@ public interface CreatorsConfig extends Config
 			name = "Remove Program Step",
 			description = "Hotkey to remove the hovered location from the selected object's program",
 			section = programmer,
-			position = 25
+			position = 26
 	)
 	default Keybind removeProgramStepHotkey()
 	{
@@ -304,7 +316,7 @@ public interface CreatorsConfig extends Config
 			name = "Clear Program Steps",
 			description = "Hotkey to clear all steps from the selected object's program",
 			section = programmer,
-			position = 26
+			position = 27
 	)
 	default Keybind clearProgramStepHotkey()
 	{
@@ -316,7 +328,7 @@ public interface CreatorsConfig extends Config
 			name = "Play/Pause Toggle",
 			description = "Hotkey to play/pause selected object",
 			section = programmer,
-			position = 27
+			position = 28
 	)
 	default Keybind playPauseHotkey()
 	{
@@ -328,7 +340,7 @@ public interface CreatorsConfig extends Config
 			name = "Play/Pause All",
 			description = "Hotkey to play/pause all programs",
 			section = programmer,
-			position = 28
+			position = 29
 	)
 	default Keybind playPauseAllHotkey()
 	{
@@ -340,7 +352,7 @@ public interface CreatorsConfig extends Config
 			name = "Reset Locations",
 			description = "Hotkey to set selected object to its start location",
 			section = programmer,
-			position = 29
+			position = 30
 	)
 	default Keybind resetHotkey()
 	{
@@ -352,7 +364,7 @@ public interface CreatorsConfig extends Config
 			name = "Reset All Locations",
 			description = "Hotkey to set all objects to their start location",
 			section = programmer,
-			position = 30
+			position = 31
 	)
 	default Keybind resetAllHotkey()
 	{

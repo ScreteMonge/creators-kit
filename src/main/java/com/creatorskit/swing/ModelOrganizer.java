@@ -2,13 +2,11 @@ package com.creatorskit.swing;
 
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.CustomModel;
-import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
 
-import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.*;
 import javax.swing.border.LineBorder;
@@ -33,7 +31,7 @@ public class ModelOrganizer extends JFrame
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new GridBagLayout());
-        setTitle("RuneLite Model Organizer");
+        setTitle("Creator's Kit Model Organizer");
         setIconImage(icon);
         setPreferredSize(new Dimension(1100, 200));
 
@@ -85,9 +83,7 @@ public class ModelOrganizer extends JFrame
         JButton deleteButton = new JButton("Delete");
         deleteButton.setFocusable(false);
         deleteButton.addActionListener(e ->
-        {
-            plugin.removeCustomModel(model);
-        });
+                plugin.removeCustomModel(model));
         panel.add(deleteButton);
 
         revalidate();

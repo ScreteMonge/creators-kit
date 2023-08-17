@@ -36,7 +36,7 @@ public class PathFinder
                     {CollisionDataFlag.BLOCK_MOVEMENT_NORTH_EAST, CollisionDataFlag.BLOCK_MOVEMENT_NORTH, CollisionDataFlag.BLOCK_MOVEMENT_EAST}
             };
 
-    public Coordinate[] getPath(LocalPoint startLoc, LocalPoint destLoc, boolean waterWalk)
+    public Coordinate[] getPath(LocalPoint startLoc, LocalPoint destLoc, MovementType movementType)
     {
         final ArrayList<Integer> rowQueue = new ArrayList<>();
         final ArrayList<Integer> columnQueue = new ArrayList<>();
@@ -46,10 +46,8 @@ public class PathFinder
         boolean reachedEnd = false;
         int startX = startLoc.getSceneX();
         int startY = startLoc.getSceneY();
-        System.out.println("StartX: " + startX + ", StartY: " + startY);
         int endX = destLoc.getSceneX();
         int endY = destLoc.getSceneY();
-        System.out.println("EndX: " + endX + ", EndY: " + endY);
         rowQueue.add(startY);
         columnQueue.add(startX);
         visited[startX][startY] = true;
@@ -73,16 +71,14 @@ public class PathFinder
                 break;
             }
 
-            exploreNeighbours(row, column, data, overlays, visited, columnQueue, rowQueue, path, waterWalk);
+            exploreNeighbours(row, column, data, overlays, visited, columnQueue, rowQueue, path, movementType);
         }
 
         if (reachedEnd)
         {
-            System.out.println("End Found!");
             return reconstructPath(endX, endY, path);
         }
 
-        System.out.println("end unfindable");
         return null;
     }
 
@@ -106,57 +102,59 @@ public class PathFinder
         return path;
     }
 
-    private void exploreNeighbours(int row, int column, CollisionData data, short[][] overlays, boolean[][] visited, ArrayList<Integer> columnQueue, ArrayList<Integer> rowQueue, Coordinate[][] path, boolean waterWalk)
+    private void exploreNeighbours(int row, int column, CollisionData data, short[][] overlays, boolean[][] visited, ArrayList<Integer> columnQueue, ArrayList<Integer> rowQueue, Coordinate[][] path, MovementType movementType)
     {
         for (int i = 0; i < 8; i++)
         {
             int testRow = row + directionRow[i];
             int testColumn = column + directionColumn[i];
-            //System.out.println("X: " + testColumn + ", Y: " + testRow);
 
             if (testRow > SCENE_SIZE || testRow < 0 || testColumn > SCENE_SIZE || testColumn < 0)
             {
                 continue;
             }
 
-            int setting = data.getFlags()[testColumn][testRow];
-            int currentSetting = data.getFlags()[column][row];
-
-            if ((setting & CollisionDataFlag.BLOCK_MOVEMENT_FULL) != 0 && (!waterWalk || !(overlays[testColumn][testRow] == WATER_OVERLAY) || (setting & CollisionDataFlag.BLOCK_MOVEMENT_OBJECT) != 0))
+            if (movementType != MovementType.GHOST)
             {
-                continue;
-            }
+                int setting = data.getFlags()[testColumn][testRow];
+                int currentSetting = data.getFlags()[column][row];
 
-            if (waterWalk && (setting & CollisionDataFlag.BLOCK_MOVEMENT_FULL) == 0)
-            {
-                continue;
-            }
-
-            int[] blocks = directionBlocks[i];
-            if ((currentSetting & blocks[0]) != 0)
-            {
-                continue;
-            }
-
-            if (i >= 4)
-            {
-                int settingEW = data.getFlags()[testColumn][row];
-                int settingNS = data.getFlags()[column][testRow];
-
-                if (((settingEW & CollisionDataFlag.BLOCK_MOVEMENT_FULL) != 0 && (!waterWalk || !(overlays[testColumn][row] == WATER_OVERLAY) || (settingEW & CollisionDataFlag.BLOCK_MOVEMENT_OBJECT) != 0))
-                        || ((settingNS & CollisionDataFlag.BLOCK_MOVEMENT_FULL) != 0 && (!waterWalk || !(overlays[column][testRow] == WATER_OVERLAY) || (settingNS & CollisionDataFlag.BLOCK_MOVEMENT_OBJECT) != 0)))
+                if ((setting & CollisionDataFlag.BLOCK_MOVEMENT_FULL) != 0 && (movementType != MovementType.WATERBORNE || !(overlays[testColumn][testRow] == WATER_OVERLAY) || (setting & CollisionDataFlag.BLOCK_MOVEMENT_OBJECT) != 0))
                 {
                     continue;
                 }
 
-                if (waterWalk && ((settingEW & CollisionDataFlag.BLOCK_MOVEMENT_FULL) == 0 || (settingNS & CollisionDataFlag.BLOCK_MOVEMENT_FULL) == 0))
+                if (movementType == MovementType.WATERBORNE && (setting & CollisionDataFlag.BLOCK_MOVEMENT_FULL) == 0)
+                {
                     continue;
+                }
 
-                if ((settingEW & blocks[1]) != 0 || (settingNS & blocks[2]) != 0)
+                int[] blocks = directionBlocks[i];
+                if ((currentSetting & blocks[0]) != 0)
+                {
                     continue;
+                }
 
-                if ((currentSetting & blocks[1]) != 0 || (currentSetting & blocks[2]) != 0)
-                    continue;
+                if (i >= 4)
+                {
+                    int settingEW = data.getFlags()[testColumn][row];
+                    int settingNS = data.getFlags()[column][testRow];
+
+                    if (((settingEW & CollisionDataFlag.BLOCK_MOVEMENT_FULL) != 0 && (movementType != MovementType.WATERBORNE || !(overlays[testColumn][row] == WATER_OVERLAY) || (settingEW & CollisionDataFlag.BLOCK_MOVEMENT_OBJECT) != 0))
+                            || ((settingNS & CollisionDataFlag.BLOCK_MOVEMENT_FULL) != 0 && (movementType != MovementType.WATERBORNE || !(overlays[column][testRow] == WATER_OVERLAY) || (settingNS & CollisionDataFlag.BLOCK_MOVEMENT_OBJECT) != 0)))
+                    {
+                        continue;
+                    }
+
+                    if (movementType == MovementType.WATERBORNE && ((settingEW & CollisionDataFlag.BLOCK_MOVEMENT_FULL) == 0 || (settingNS & CollisionDataFlag.BLOCK_MOVEMENT_FULL) == 0))
+                        continue;
+
+                    if ((settingEW & blocks[1]) != 0 || (settingNS & blocks[2]) != 0)
+                        continue;
+
+                    if ((currentSetting & blocks[1]) != 0 || (currentSetting & blocks[2]) != 0)
+                        continue;
+                }
             }
 
             if (visited[testColumn][testRow])

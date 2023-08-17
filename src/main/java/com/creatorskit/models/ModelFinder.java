@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 
 public class ModelFinder
 {
-    public static ModelStats[] findModelsForPlayer(boolean groundItem, boolean maleItem, int... itemIdFull)
+    public static ModelStats[] findModelsForPlayer(boolean groundItem, boolean maleItem, boolean baldHead, int... itemIdFull)
     {
         Pattern recolFrom = Pattern.compile("recol\\ds=.+");
         Pattern recolTo = Pattern.compile("recol\\dd=.+");
@@ -22,11 +22,6 @@ public class ModelFinder
         {
             if (i == 0)
             {
-                if (!kitList.contains(0))
-                {
-                    kitList.add(i);
-                }
-
                 continue;
             }
 
@@ -39,9 +34,14 @@ public class ModelFinder
             itemList.add(i);
         }
 
-        ArrayList<ModelStats> modelStatsItems = new ArrayList<>();
-        //for modelIds
+        if (baldHead)
+        {
+            kitList.add(0);
+        }
 
+        ArrayList<ModelStats> modelStatsItems = new ArrayList<>();
+
+        //for modelIds
         int[] itemId = new int[itemList.size()];
         for (int i = 0; i < itemList.size(); i++)
         {
@@ -55,7 +55,7 @@ public class ModelFinder
             BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
             String s = "";
             Pattern[] patterns = new Pattern[itemId.length];
-            System.out.println("length: " + itemId.length);
+            //System.out.println("length: " + itemId.length);
 
             for (int i = 0; i < itemId.length; i++)
             {
@@ -72,7 +72,7 @@ public class ModelFinder
                     Matcher matcher = pattern.matcher(s);
                     if (matcher.matches())
                     {
-                        System.out.println("Match found: " + s);
+                        //System.out.println("Match found: " + s);
                         int[] modelIds = new int[3];
                         ArrayList<Integer> recolourFrom = new ArrayList<>();
                         ArrayList<Integer> recolourTo = new ArrayList<>();
@@ -215,7 +215,7 @@ public class ModelFinder
                     Matcher matcher = pattern.matcher(s);
                     if (matcher.matches())
                     {
-                        System.out.println("Match found: " + s);
+                        //System.out.println("Match found: " + s);
                         int[] modelIds = new int[2];
                         ArrayList<Integer> recolourFrom = new ArrayList<>();
                         ArrayList<Integer> recolourTo = new ArrayList<>();
@@ -354,7 +354,12 @@ public class ModelFinder
                         if (match.matches())
                         {
                             String[] split = string.split("=");
-                            recolourFrom.add(Short.parseShort(split[1]));
+                            int i = Integer.parseInt(split[1]);
+                            if (i > 32767)
+                            {
+                                i -= 65536;
+                            }
+                            recolourFrom.add((short) i);
                         }
 
                         match = recolTo.matcher(string);
@@ -362,7 +367,12 @@ public class ModelFinder
                         if (match.matches())
                         {
                             String[] split = string.split("=");
-                            recolourTo.add(Short.parseShort(split[1]));
+                            int i = Integer.parseInt(split[1]);
+                            if (i > 32767)
+                            {
+                                i -= 65536;
+                            }
+                            recolourTo.add((short) i);
                         }
 
                     }

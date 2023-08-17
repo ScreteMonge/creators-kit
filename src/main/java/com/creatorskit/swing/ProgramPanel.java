@@ -2,6 +2,7 @@ package com.creatorskit.swing;
 
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.Character;
+import com.creatorskit.programming.MovementType;
 import com.creatorskit.programming.Program;
 import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
@@ -15,6 +16,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.util.Random;
 
 public class ProgramPanel extends JFrame
 {
@@ -24,6 +26,7 @@ public class ProgramPanel extends JFrame
     private final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
     private GridBagConstraints c = new GridBagConstraints();
     private JPanel allPanel = new JPanel();
+    private final Random random = new Random();
 
     @Inject
     public ProgramPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin)
@@ -34,10 +37,15 @@ public class ProgramPanel extends JFrame
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
         setTitle("Creators Kit Programmer");
         setIconImage(icon);
+        setPreferredSize(new Dimension(300, 300));
+
+        JScrollPane scrollPane = new JScrollPane();
+        scrollPane.setViewportView(allPanel);
+        add(scrollPane);
 
         allPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         allPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
-        add(allPanel);
+        allPanel.setLayout(new GridLayout(0, 7));
         pack();
     }
 
@@ -47,12 +55,14 @@ public class ProgramPanel extends JFrame
         programPanel.setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR));
         programPanel.setLayout(new GridBagLayout());
 
-        c.fill = GridBagConstraints.BOTH;
+        c.fill = GridBagConstraints.VERTICAL;
         c.insets = new Insets(4, 4, 4, 4);
+        c.weightx = 0;
+        c.weighty = 0;
+
         c.gridx = 0;
         c.gridy = 0;
         c.gridwidth = 2;
-
         nameLabel.setText(character.getName());
         nameLabel.setHorizontalAlignment(SwingConstants.CENTER);
         nameLabel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
@@ -67,16 +77,25 @@ public class ProgramPanel extends JFrame
         textPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         programPanel.add(textPanel, c);
 
-        JLabel idleAnimLabel = new JLabel("Idle animation: ");
+        JLabel idleAnimLabel = new JLabel("Idle animation:");
         idleAnimLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        JLabel walkAnimLabel = new JLabel("Active animation: ");
+        idleAnimLabel.setToolTipText("Set the animation for when the object isn't moving");
+
+        JLabel walkAnimLabel = new JLabel("Active animation:");
         walkAnimLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        JLabel speedLabel = new JLabel("Speed: ");
+        walkAnimLabel.setToolTipText("Set the animation for when the object is moving");
+
+        JLabel speedLabel = new JLabel("Speed:");
         speedLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        JLabel turnSpeedLabel = new JLabel("Turn speed: ");
+        speedLabel.setToolTipText("Set how fast the object moves");
+
+        JLabel turnSpeedLabel = new JLabel("Turn speed:");
         turnSpeedLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        JLabel waterWalkLabel = new JLabel("Watercraft? ");
+        turnSpeedLabel.setToolTipText("Set how fast the object turns. Set to 0 for no turning");
+
+        JLabel waterWalkLabel = new JLabel("Movement Type:");
         waterWalkLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        waterWalkLabel.setToolTipText("Determines the terrain on which the object can travel");
 
         textPanel.add(idleAnimLabel);
         textPanel.add(walkAnimLabel);
@@ -106,38 +125,56 @@ public class ProgramPanel extends JFrame
 
         JSpinner walkAnimSpinner = new JSpinner(new SpinnerNumberModel(program.getWalkAnim(), -1, 9999, 1));
         walkAnimSpinner.addChangeListener(e ->
-        {
-            program.setWalkAnim((int) walkAnimSpinner.getValue());
-        });
+                program.setWalkAnim((int) walkAnimSpinner.getValue()));
         optionsPanel.add(walkAnimSpinner);
 
-        JSpinner speedSpinner = new JSpinner(new SpinnerNumberModel(program.getSpeed(), 0, 10, 1));
+        JSpinner speedSpinner = new JSpinner(new SpinnerNumberModel(program.getSpeed(), 0, 2, 1));
         speedSpinner.addChangeListener(e ->
-        {
-            program.setSpeed((double) speedSpinner.getValue());
-        });
+                program.setSpeed((double) speedSpinner.getValue()));
         optionsPanel.add(speedSpinner);
 
         JSpinner turnSpeedSpinner = new JSpinner();
         turnSpeedSpinner.setValue(program.getTurnSpeed());
         turnSpeedSpinner.addChangeListener(e ->
-        {
-            program.setTurnSpeed((int) turnSpeedSpinner.getValue());
-        });
+                program.setTurnSpeed((int) turnSpeedSpinner.getValue()));
         optionsPanel.add(turnSpeedSpinner);
 
-        JCheckBox waterWalkCheckBox = new JCheckBox();
-        waterWalkCheckBox.setSelected(program.isWaterWalk());
-        waterWalkCheckBox.addChangeListener(e ->
+        JComboBox<String> movementBox = new JComboBox<>();
+        movementBox.addItem("Normal");
+        movementBox.addItem("Waterborne");
+        movementBox.addItem("Ghost");
+        movementBox.addItemListener(e ->
         {
-            program.setWaterWalk(waterWalkCheckBox.isSelected());
+            switch ((String) e.getItem())
+            {
+                case "Normal":
+                    program.setMovementType(MovementType.NORMAL);
+                    break;
+                case "Waterborne":
+                    program.setMovementType(MovementType.WATERBORNE);
+                    break;
+                case "Ghost":
+                    program.setMovementType(MovementType.GHOST);
+            }
+
+            plugin.updateProgramPath(program);
         });
-        optionsPanel.add(waterWalkCheckBox);
+        optionsPanel.add(movementBox);
+
+        c.gridx = 0;
+        c.gridy = 2;
+        c.gridwidth = 2;
+        JButton colourButton = new JButton();
+        colourButton.setText("Reroll Colour");
+        colourButton.setToolTipText("Rerolls a new random colour for the path");
+        colourButton.setFocusable(false);
+        colourButton.addActionListener(e ->
+                program.setColor(getRandomColor()));
+        programPanel.add(colourButton, c);
 
         allPanel.add(programPanel);
         repaint();
         revalidate();
-        pack();
     }
 
     public void removeProgramPanel(JPanel panel)
@@ -145,6 +182,13 @@ public class ProgramPanel extends JFrame
         allPanel.remove(panel);
         repaint();
         revalidate();
-        pack();
+    }
+
+    private Color getRandomColor()
+    {
+        float r = random.nextFloat();
+        float g = random.nextFloat();
+        float b = random.nextFloat();
+        return new Color(r, g, b);
     }
 }

@@ -1,9 +1,7 @@
 package com.creatorskit;
 
 import com.creatorskit.programming.Coordinate;
-import com.creatorskit.programming.PathFinder;
 import com.creatorskit.programming.Program;
-import com.creatorskit.swing.CreatorsPanel;
 import net.runelite.api.*;
 import net.runelite.api.Point;
 import net.runelite.api.coords.LocalPoint;
@@ -21,11 +19,7 @@ public class CreatorsOverlay extends Overlay
 {
     private final Client client;
     private final CreatorsPlugin plugin;
-    private final CreatorsPanel panel;
     private final CreatorsConfig config;
-    private final PathFinder pathFinder;
-    private static final Color PATH_COLOUR = new Color(238, 255, 0);
-    private static final Color COORDINATE_COLOUR = new Color(255, 255, 255);
     private static final Color HOVERED_COLOUR = new Color(146, 206, 193, 255);
     private static final Color SELECTED_COLOUR = new Color(220, 253, 245);
     private static final Color MY_OBJECT_COLOUR = new Color(35, 208, 187);
@@ -36,18 +30,15 @@ public class CreatorsOverlay extends Overlay
     private static final Color NPC_COLOUR = new Color(188, 198, 255);
     private static final Color PLAYER_COLOUR = new Color(221, 133, 255);
     private static final int MAX_DISTANCE = 2400;
-    BufferedImage panelIcon = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
 
     @Inject
-    private CreatorsOverlay(Client client, CreatorsPlugin plugin, CreatorsPanel panel, CreatorsConfig config, PathFinder pathFinder)
+    private CreatorsOverlay(Client client, CreatorsPlugin plugin, CreatorsConfig config)
     {
-        this.pathFinder = pathFinder;
         setPosition(OverlayPosition.DYNAMIC);
         setLayer(OverlayLayer.ABOVE_SCENE);
         this.client = client;
         this.plugin = plugin;
         this.config = config;
-        this.panel = panel;
     }
 
     @Override
@@ -58,10 +49,12 @@ public class CreatorsOverlay extends Overlay
             return null;
         }
 
-        //renderWalkableOverlay(graphics);
-        renderCoordinates(graphics);
         renderObjectsOverlay(graphics);
-        renderProgramOverlay(graphics);
+
+        if (config.pathOverlay())
+        {
+            renderProgramOverlay(graphics);
+        }
 
         if (config.npcOverlay())
         {
@@ -85,82 +78,46 @@ public class CreatorsOverlay extends Overlay
                 continue;
 
             Coordinate[] coordinates = character.getProgram().getCoordinates();
-            for (int i = 0; i < coordinates.length; i++)
+            for (int i = 0; i < coordinates.length - 1; i++)
             {
                 if (coordinates[i] == null)
                     continue;
 
-                LocalPoint localPoint = LocalPoint.fromScene(coordinates[i].getColumn(), coordinates[i].getRow());
-                Point textPoint = Perspective.getCanvasTextLocation(client, graphics, localPoint, "" + i, 0);
-                OverlayUtil.renderTextLocation(graphics, textPoint, "" + i, COORDINATE_COLOUR);
+                LocalPoint lpStart = LocalPoint.fromScene(coordinates[i].getColumn(), coordinates[i].getRow());
+                LocalPoint lpEnd = LocalPoint.fromScene(coordinates[i + 1].getColumn(), coordinates[i + 1].getRow());
+                Point startPoint = Perspective.localToCanvas(client, lpStart, client.getPlane());
+                Point endPoint = Perspective.localToCanvas(client, lpEnd, client.getPlane());
+                if (startPoint == null || endPoint == null)
+                    continue;
+
+                graphics.setColor(program.getColor());
+                graphics.setStroke(new BasicStroke(1));
+                graphics.drawLine(startPoint.getX(), startPoint.getY(), endPoint.getX(), endPoint.getY());
             }
 
             LocalPoint[] points = character.getProgram().getSteps();
+            String name = character.getName();
+            String abbreviation = "";
+            int abbreviationLength = 3;
+            int nameLength = name.length();
+
+            if (abbreviationLength > nameLength)
+            {
+                abbreviation = character.getName().substring(0, nameLength - 1);
+            }
+            else
+            {
+                abbreviation = character.getName().substring(0, 3);
+            }
+
             for (int i = 0; i < points.length; i++)
             {
-                Point textPoint = Perspective.getCanvasTextLocation(client, graphics, points[i], character.getName(), 0);
-                OverlayUtil.renderTextLocation(graphics, textPoint, character.getName(), PATH_COLOUR);
+                Point textPoint = Perspective.getCanvasTextLocation(client, graphics, points[i], abbreviation, 0);
+                if (textPoint == null)
+                    continue;
+
+                OverlayUtil.renderTextLocation(graphics, textPoint, abbreviation, program.getColor());
             }
-        }
-    }
-
-    public void renderCoordinates(Graphics2D graphics)
-    {
-        if (client.getGameState() != GameState.LOGGED_IN || client.getLocalPlayer() == null)
-            return;
-
-        Tile[][] tiles = client.getScene().getTiles()[client.getPlane()];
-
-        if (plugin.getCoords() == null)
-        {
-            return;
-        }
-
-        for (Coordinate coordinate : plugin.getCoords())
-        {
-            Tile tile = tiles[coordinate.getColumn()][coordinate.getRow()];
-            if (tile == null)
-                continue;
-
-            OverlayUtil.renderTileOverlay(client, graphics, tile.getLocalLocation(), panelIcon, Color.WHITE);
-        }
-    }
-
-    public void renderWalkableOverlay(Graphics2D graphics)
-    {
-        if (client.getGameState() != GameState.LOGGED_IN || client.getLocalPlayer() == null)
-            return;
-
-        plugin.getAdjacentTiles().clear();
-
-        LocalPoint lp = client.getLocalPlayer().getLocalLocation();
-        int curX = lp.getSceneX();
-        int curY = lp.getSceneY();
-        int z = client.getPlane();
-
-        for (int x = -1; x <= 1; x++)
-        {
-            for (int y = -1; y <= 1; y++)
-            {
-                Tile tile = plugin.getAllTiles()[z][curX + x][curY + y];
-                if (client.getCollisionMaps() == null)
-                {
-                    return;
-                }
-
-                CollisionData data = client.getCollisionMaps()[client.getPlane()];
-                int setting = data.getFlags()[curX + x][curY + y];
-
-                if ((setting & CollisionDataFlag.BLOCK_MOVEMENT_EAST) == 0)
-                {
-                    plugin.getAdjacentTiles().add(tile);
-                }
-            }
-        }
-
-        for (Tile tile : plugin.getAdjacentTiles())
-        {
-            OverlayUtil.renderTileOverlay(client, graphics, tile.getLocalLocation(), panelIcon, Color.WHITE);
         }
     }
 

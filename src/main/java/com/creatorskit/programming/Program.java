@@ -6,6 +6,7 @@ import lombok.Setter;
 import net.runelite.api.coords.LocalPoint;
 
 import javax.swing.*;
+import java.awt.*;
 
 @Getter
 @Setter
@@ -20,7 +21,8 @@ public class Program
     private int turnSpeed;
     private int idleAnim;
     private int walkAnim;
-    private boolean waterWalk;
+    private MovementType movementType;
     private JLabel nameLabel;
     private JSpinner idleAnimSpinner;
+    private Color color;
 }

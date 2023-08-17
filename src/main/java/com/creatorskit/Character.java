@@ -23,6 +23,7 @@ public class Character
     private LocalPoint savedLocation;
     private CustomModel storedModel;
     private JPanel panel;
+    private boolean customMode;
     private JComboBox<CustomModel> comboBox;
     private JButton spawnButton;
     private JButton modelButton;

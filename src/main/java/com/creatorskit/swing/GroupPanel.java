@@ -2,7 +2,6 @@ package com.creatorskit.swing;
 
 import com.creatorskit.CreatorsPlugin;
 import net.runelite.api.Client;
-import net.runelite.api.ModelData;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
@@ -26,7 +25,7 @@ public class GroupPanel extends JPanel
     private CreatorsPlugin plugin;
     private Client client;
     private ClientThread clientThread;
-    private GridBagConstraints c = new GridBagConstraints();
+    private final GridBagConstraints c = new GridBagConstraints();
 
     private final BufferedImage ICON = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
     private final BufferedImage TRANSLATE = ImageUtil.loadImageResource(getClass(), "/Translate.png");
@@ -34,7 +33,7 @@ public class GroupPanel extends JPanel
     private final BufferedImage TRANSLATE_SUBTILE = ImageUtil.loadImageResource(getClass(), "/Translate subtile.png");
     private final BufferedImage SCALE = ImageUtil.loadImageResource(getClass(), "/Scale.png");
     private final Dimension SPINNER_DIMENSION = new Dimension(35, 25);
-    private JSpinner groupSpinner = new JSpinner();
+    private final JSpinner groupSpinner = new JSpinner();
 
     @Inject
     public GroupPanel(@Nullable Client client, CreatorsPlugin plugin, ClientThread clientThread)
@@ -75,9 +74,7 @@ public class GroupPanel extends JPanel
         groupSpinner.setToolTipText("Pick the Group number to Group Transform");
         add(groupSpinner, c);
         groupSpinner.addChangeListener(e ->
-        {
-            groupSpinner.setBackground(ModelAnvil.getBorderColour((int) groupSpinner.getValue() * 6));
-        });
+                groupSpinner.setBackground(ModelAnvil.getBorderColour((int) groupSpinner.getValue() * 6)));
 
         JPanel adjustPanel = createAdjustPanel();
         c.gridx = 0;

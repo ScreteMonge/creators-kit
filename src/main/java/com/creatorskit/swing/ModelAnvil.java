@@ -27,7 +27,6 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 public class ModelAnvil extends JFrame
 {
@@ -47,16 +46,15 @@ public class ModelAnvil extends JFrame
     private final BufferedImage SCALE = ImageUtil.loadImageResource(getClass(), "/Scale.png");
     private final BufferedImage COPY_COLOURS = ImageUtil.loadImageResource(getClass(), "/Copy_Colours.png");
     private final BufferedImage PASTE_COLOURS = ImageUtil.loadImageResource(getClass(), "/Paste_Colours.png");
-    private final BufferedImage CLEAR_COLOURS = ImageUtil.loadImageResource(getClass(), "/Clear_Colours.png");
     private final Dimension SPINNER_DIMENSION = new Dimension(65, 25);
     @Getter
     private final ArrayList<ComplexPanel> complexPanels = new ArrayList<>();
     public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
-    private JPanel complexMode = new JPanel();
-    private JScrollPane scrollPane = new JScrollPane();
-    private GridBagConstraints c = new GridBagConstraints();
-    private JCheckBox brightLightCheckBox = new JCheckBox("Actor Lighting");
-    private JCheckBox noLightCheckBox = new JCheckBox("No Lighting");
+    private final JPanel complexMode = new JPanel();
+    private final JScrollPane scrollPane = new JScrollPane();
+    private final GridBagConstraints c = new GridBagConstraints();
+    private final JCheckBox brightLightCheckBox = new JCheckBox("Actor Lighting");
+    private final JCheckBox noLightCheckBox = new JCheckBox("No Lighting");
     private HashMap<Short, Short> copiedColourMap = new HashMap<>();
     private final int COMPLEX_GRID_COLUMNS = 3;
 
@@ -69,7 +67,7 @@ public class ModelAnvil extends JFrame
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new GridBagLayout());
-        setTitle("RuneLite Model Anvil");
+        setTitle("Creator's Kit Anvil");
         setIconImage(ICON);
 
         c.fill = GridBagConstraints.BOTH;
@@ -152,7 +150,7 @@ public class ModelAnvil extends JFrame
 
         JButton addButton = new JButton("Add");
         addButton.setFocusable(false);
-        addButton.addActionListener(e -> { createComplexPanel(); });
+        addButton.addActionListener(e -> createComplexPanel());
         headerPanel.add(addButton);
 
         JButton clearButton = new JButton("Clear");
@@ -195,16 +193,10 @@ public class ModelAnvil extends JFrame
         scrollPane.setRowHeaderView(sidePanel);
 
         forgeButton.addActionListener(e ->
-        {
-            forgeModel(client, nameField, priorityCheckBox.isSelected(), brightLightCheckBox.isSelected(), false);
-        });
+                forgeModel(client, nameField, priorityCheckBox.isSelected(), brightLightCheckBox.isSelected(), false));
 
         forgeSetButton.addActionListener(e ->
-        {
-            forgeModel(client, nameField, priorityCheckBox.isSelected(), brightLightCheckBox.isSelected(), true);
-        });
-
-
+                forgeModel(client, nameField, priorityCheckBox.isSelected(), brightLightCheckBox.isSelected(), true));
 
         validate();
         pack();
@@ -262,28 +254,28 @@ public class ModelAnvil extends JFrame
         arrowUpButton.setFocusable(false);
         arrowUpButton.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
         arrowUpButton.setToolTipText("Move panel up");
-        arrowUpButton.addActionListener(e -> {setPanelIndex(complexModePanel, -COMPLEX_GRID_COLUMNS);});
+        arrowUpButton.addActionListener(e -> setPanelIndex(complexModePanel, -COMPLEX_GRID_COLUMNS));
         arrowPanel.add(arrowUpButton, BorderLayout.PAGE_START);
 
         JButton arrowLeftButton = new JButton(new ImageIcon(ARROW_LEFT));
         arrowLeftButton.setFocusable(false);
         arrowLeftButton.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
         arrowLeftButton.setToolTipText("Move panel left");
-        arrowLeftButton.addActionListener(e -> {setPanelIndex(complexModePanel, -1);});
+        arrowLeftButton.addActionListener(e -> setPanelIndex(complexModePanel, -1));
         arrowPanel.add(arrowLeftButton, BorderLayout.LINE_START);
 
         JButton arrowRightButton = new JButton(new ImageIcon(ARROW_RIGHT));
         arrowRightButton.setFocusable(false);
         arrowRightButton.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
         arrowRightButton.setToolTipText("Move panel right");
-        arrowRightButton.addActionListener(e -> {setPanelIndex(complexModePanel, 1);});
+        arrowRightButton.addActionListener(e -> setPanelIndex(complexModePanel, 1));
         arrowPanel.add(arrowRightButton, BorderLayout.LINE_END);
 
         JButton arrowDownButton = new JButton(new ImageIcon(ARROW_DOWN));
         arrowDownButton.setFocusable(false);
         arrowDownButton.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
         arrowDownButton.setToolTipText("Move panel up");
-        arrowDownButton.addActionListener(e -> {setPanelIndex(complexModePanel, COMPLEX_GRID_COLUMNS);});
+        arrowDownButton.addActionListener(e -> setPanelIndex(complexModePanel, COMPLEX_GRID_COLUMNS));
         arrowPanel.add(arrowDownButton, BorderLayout.PAGE_END);
 
         c.weightx = 0;
@@ -531,7 +523,6 @@ public class ModelAnvil extends JFrame
             }
             catch (Exception e)
             {
-                System.out.println("Broken");
             }
         }
 
@@ -558,7 +549,7 @@ public class ModelAnvil extends JFrame
         JButton copyColourButton = new JButton("Copy");
         copyColourButton.setFocusable(false);
         copyColourButton.setToolTipText("Copy New Colours");
-        copyColourButton.addActionListener(e -> { copiedColourMap = colourMap; });
+        copyColourButton.addActionListener(e -> copiedColourMap = colourMap);
 
         JButton pasteColourButton = new JButton("Paste");
         pasteColourButton.setFocusable(false);
@@ -575,9 +566,8 @@ public class ModelAnvil extends JFrame
         colourSwapper.setToolTipText("Opens an interface to swap colours on this model");
         complexModePanel.add(colourSwapper, c);
         colourSwapper.addActionListener(e ->
-        {
-            setupColourSwapper(swapperFrame, gridMenu, copyColourButton, pasteColourButton, nameField, modelIdSpinner, colourMap, colorChooser, colourNewField, colourOldField, clearColoursButton);
-        });
+                setupColourSwapper(swapperFrame, gridMenu, copyColourButton, pasteColourButton, nameField, modelIdSpinner, colourMap, colorChooser, colourNewField, colourOldField, clearColoursButton));
+
         pasteColourButton.addActionListener(e ->
         {
             colourMap.clear();
@@ -594,7 +584,7 @@ public class ModelAnvil extends JFrame
         JButton copyColourButtonMain = new JButton(new ImageIcon(COPY_COLOURS));
         copyColourButtonMain.setFocusable(false);
         copyColourButtonMain.setToolTipText("Copy New Colours");
-        copyColourButtonMain.addActionListener(e -> { copiedColourMap = colourMap; });
+        copyColourButtonMain.addActionListener(e -> copiedColourMap = colourMap);
         complexModePanel.add(copyColourButtonMain, c);
 
         c.gridx = 7;
@@ -995,11 +985,6 @@ public class ModelAnvil extends JFrame
         swapperFrame.pack();
         revalidate();
         repaint();
-    }
-
-    private void stringToCSV(Pattern pattern, JTextField jTextField)
-    {
-        jTextField.setText(pattern.matcher(jTextField.getText()).replaceAll(""));
     }
 
     public static String[] hashmapToCSV(HashMap<Short, Short> map)

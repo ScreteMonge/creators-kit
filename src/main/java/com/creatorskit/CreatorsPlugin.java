@@ -44,8 +44,8 @@ import java.util.List;
 
 @Slf4j
 @PluginDescriptor(
-		name = "0Creators' Kit",
-		description = "A suite of tools for content creators",
+		name = "Creator's Kit",
+		description = "A suite of tools for creators",
 		tags = {"tool", "creator", "content", "kit", "camera"}
 )
 public class CreatorsPlugin extends Plugin
@@ -113,8 +113,6 @@ public class CreatorsPlugin extends Plugin
 	@Getter
 	private final ArrayList<Tile> pathTiles = new ArrayList<>();
 	@Getter
-	private Coordinate[] coords;
-	@Getter
 	private Tile selectedTile;
 	private int savedRegion = -1;
 	private AutoRotate autoRotateYaw = AutoRotate.OFF;
@@ -124,7 +122,6 @@ public class CreatorsPlugin extends Plugin
 	private final int DARK_AMBIENT = 128;
 	private final int DARK_CONTRAST = 4000;
 	private boolean pauseMode = true;
-	private final int DEFAULT_TURN_SPEED = 68;
 
 	@Override
 	protected void startUp() throws Exception
@@ -132,7 +129,7 @@ public class CreatorsPlugin extends Plugin
 		creatorsPanel = injector.getInstance(CreatorsPanel.class);
 		final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
 		navigationButton = NavigationButton.builder()
-				.tooltip("Creators' Suite")
+				.tooltip("Creator's Kit")
 				.icon(icon)
 				.priority(10)
 				.panel(creatorsPanel)
@@ -232,11 +229,25 @@ public class CreatorsPlugin extends Plugin
 		for (Character character : characters)
 		{
 			Program program = character.getProgram();
-			if (program == null || !character.isProgramActive())
+			RuneLiteObject runeLiteObject = character.getRuneLiteObject();
+			if (program == null)
 				continue;
 
+			if (!character.isProgramActive())
+			{
+				Animation animation = runeLiteObject.getAnimation();
+				if (animation == null)
+					continue;
+
+				if (animation.getId() != program.getIdleAnim())
+					runeLiteObject.setAnimation(client.loadAnimation(program.getIdleAnim()));
+
+				continue;
+			}
+
+
 			double speed = 128 * (program.getSpeed() * 20 / 600);
-			RuneLiteObject runeLiteObject = character.getRuneLiteObject();
+
 			int currentStep = program.getCurrentStep();
 			LocalPoint[] path = program.getPath();
 
@@ -246,15 +257,20 @@ public class CreatorsPlugin extends Plugin
 					continue;
 
 				if (runeLiteObject.getAnimation().getId() != program.getIdleAnim())
-				{
 					runeLiteObject.setAnimation(client.loadAnimation(program.getIdleAnim()));
-				}
+
 				continue;
 			}
 
-			if (runeLiteObject.getAnimation() != null && runeLiteObject.getAnimation().getId() != program.getWalkAnim())
+			Animation currentAnim = runeLiteObject.getAnimation();
+			if (currentAnim != null && currentAnim.getId() != program.getWalkAnim())
 			{
-				runeLiteObject.setAnimation(client.loadAnimation(program.getWalkAnim()));
+				int walkAnimId = program.getWalkAnim();
+				if (walkAnimId == -1)
+					walkAnimId = program.getIdleAnim();
+
+				if (currentAnim.getId() != walkAnimId)
+					runeLiteObject.setAnimation(client.loadAnimation(program.getWalkAnim()));
 			}
 
 			LocalPoint start = runeLiteObject.getLocation();
@@ -351,38 +367,6 @@ public class CreatorsPlugin extends Plugin
 
 		Tile tile = client.getSelectedSceneTile();
 		selectedTile = tile;
-
-		if (selectedNPC != null && option.equals("Walk here"))
-		{
-			client.createMenuEntry(-1)
-					.setOption("Add Step")
-					.setType(MenuAction.RUNELITE)
-					.onClick(e ->
-					{
-						if (tile == null)
-							return;
-
-						LocalPoint localPoint = tile.getLocalLocation();
-						Program program = selectedNPC.getProgram();
-						LocalPoint[] steps = program.getSteps();
-						program.setSteps(ArrayUtils.add(steps, localPoint));
-					});
-
-			client.createMenuEntry(-1)
-					.setOption("Remove Step")
-					.setType(MenuAction.RUNELITE)
-					.onClick(e ->
-					{
-						if (tile == null)
-							return;
-
-						LocalPoint localPoint = tile.getLocalLocation();
-						Program program = selectedNPC.getProgram();
-						LocalPoint[] steps = program.getSteps();
-						program.setSteps(ArrayUtils.removeElement(steps, localPoint));
-					});
-		}
-
 
 		NPC npc = event.getMenuEntry().getNpc();
 		if (npc != null && option.equals("Examine"))
@@ -525,12 +509,12 @@ public class CreatorsPlugin extends Plugin
 	{
 		if (character.getRuneLiteObject().isActive())
 		{
-			despawnNPC(character);
+			despawnCharacter(character);
 			spawnButton.setText("Spawn");
 			return;
 		}
 
-		spawnNPC(character);
+		spawnCharacter(character);
 		spawnButton.setText("Despawn");
 
 		if (!character.isLocationSet())
@@ -539,7 +523,7 @@ public class CreatorsPlugin extends Plugin
 		}
 	}
 
-	public void spawnNPC(Character character)
+	public void spawnCharacter(Character character)
 	{
 		RuneLiteObject runeLiteObject = character.getRuneLiteObject();
 
@@ -548,7 +532,7 @@ public class CreatorsPlugin extends Plugin
 		});
 	}
 
-	public void despawnNPC(Character character)
+	public void despawnCharacter(Character character)
 	{
 		RuneLiteObject runeLiteObject = character.getRuneLiteObject();
 		clientThread.invoke(() -> {
@@ -585,7 +569,8 @@ public class CreatorsPlugin extends Plugin
 	public void setAnimation(Character character, int animationId)
 	{
 		RuneLiteObject runeLiteObject = character.getRuneLiteObject();
-		clientThread.invoke(() -> {
+		clientThread.invoke(() ->
+		{
 			Animation animation = client.loadAnimation(animationId);
 			runeLiteObject.setAnimation(animation);
 		});
@@ -594,7 +579,8 @@ public class CreatorsPlugin extends Plugin
 	public void unsetAnimation(Character character)
 	{
 		RuneLiteObject runeLiteObject = character.getRuneLiteObject();
-		clientThread.invoke(() -> {
+		clientThread.invoke(() ->
+		{
 			Animation animation = client.loadAnimation(-1);
 			runeLiteObject.setAnimation(animation);
 		});
@@ -665,6 +651,7 @@ public class CreatorsPlugin extends Plugin
 									JSpinner radiusSpinner,
 									int animationId,
 									JSpinner animationSpinner,
+									Program program,
 									JLabel programmerNameLabel,
 									JSpinner programmerIdleSpinner)
 	{
@@ -683,10 +670,11 @@ public class CreatorsPlugin extends Plugin
 				id,
 				false,
 				false,
-				new Program(new LocalPoint[0], new LocalPoint[0], new Coordinate[0], 0, 1, DEFAULT_TURN_SPEED, -1, -1, false, programmerNameLabel, programmerIdleSpinner),
+				program,
 				null,
 				customModel,
 				panel,
+				customModelMode,
 				modelComboBox,
 				spawnButton,
 				modelButton,
@@ -707,14 +695,10 @@ public class CreatorsPlugin extends Plugin
 		});
 
 		setLocationButton.addActionListener(e ->
-		{
-			setLocation(character, false);
-		});
+				setLocation(character, false));
 
 		spawnButton.addActionListener(e ->
-		{
-			toggleSpawn(spawnButton, character);
-		});
+				toggleSpawn(spawnButton, character));
 
 		animationButton.addActionListener(e ->
 		{
@@ -739,22 +723,23 @@ public class CreatorsPlugin extends Plugin
 			}
 
 			animationButton.setText("Anim On");
-			programmerIdleSpinner.setValue(-1);
 			unsetAnimation(character);
 		});
 
 		modelButton.addActionListener(e ->
 		{
-			if (modelComboBox.isVisible())
+			if (character.isCustomMode())
 			{
-				modelButton.setText("Id");
+				character.setCustomMode(false);
+				modelButton.setText("Custom");
 				modelSpinner.setVisible(true);
 				modelComboBox.setVisible(false);
 				setModel(character, false, (int) modelSpinner.getValue());
 			}
 			else
 			{
-				modelButton.setText("Custom");
+				character.setCustomMode(true);
+				modelButton.setText("Id");
 				modelSpinner.setVisible(false);
 				modelComboBox.setVisible(true);
 				setModel(character, true, -1);
@@ -1020,7 +1005,6 @@ public class CreatorsPlugin extends Plugin
 			for (short s = 0; s < modelStats.getRecolourFrom().length; s++)
 				modelData.recolor(modelStats.getRecolourFrom()[s], modelStats.getRecolourTo()[s]);
 
-
 			if (player)
 				KitRecolourer.recolourKitModel(modelData, modelStats.getBodyPart(), kitRecolours);
 
@@ -1067,7 +1051,7 @@ public class CreatorsPlugin extends Plugin
 				{
 					while (!(data = myReader.nextLine()).equals(""))
 					{
-						System.out.println("Data: " + data);
+						//System.out.println("Data: " + data);
 						if (data.startsWith("name="))
 						{
 							String[] split = data.split("=");
@@ -1156,7 +1140,7 @@ public class CreatorsPlugin extends Plugin
 		}
 		catch (FileNotFoundException e)
 		{
-			System.out.println("An error occurred.");
+			System.out.println("Could not find file.");
 			e.printStackTrace();
 		}
 	}
@@ -1179,7 +1163,7 @@ public class CreatorsPlugin extends Plugin
 		storedModels.remove(customModel);
 	}
 
-	private void updateProgramPath(Program program)
+	public void updateProgramPath(Program program)
 	{
 		LocalPoint[] steps = program.getSteps();
 		LocalPoint[] path = new LocalPoint[0];
@@ -1194,7 +1178,7 @@ public class CreatorsPlugin extends Plugin
 
 		for (int i = 0; i < steps.length - 1; i++)
 		{
-			Coordinate[] coordinates = pathFinder.getPath(steps[i], steps[i + 1], program.isWaterWalk());
+			Coordinate[] coordinates = pathFinder.getPath(steps[i], steps[i + 1], program.getMovementType());
 			if (coordinates == null)
 			{
 				sendChatMessage("A path could not be found.");
@@ -1458,11 +1442,12 @@ public class CreatorsPlugin extends Plugin
 				Program program = selectedNPC.getProgram();
 				program.setCurrentStep(0);
 
+				if (program.getSteps().length == 0)
+					return;
+
 				LocalPoint lp = program.getSteps()[0];
 				if (lp == null)
-				{
 					return;
-				}
 
 				selectedNPC.getRuneLiteObject().setLocation(lp, client.getPlane());
 				selectedNPC.setProgramActive(false);
@@ -1479,6 +1464,11 @@ public class CreatorsPlugin extends Plugin
 			{
 				Program program = character.getProgram();
 				program.setCurrentStep(0);
+
+				if (program.getSteps().length == 0)
+				{
+					continue;
+				}
 
 				LocalPoint lp = program.getSteps()[0];
 				if (lp == null)

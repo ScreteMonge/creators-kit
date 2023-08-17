@@ -15,7 +15,6 @@ public class ModelGetter
     @Inject
     private CreatorsPlugin plugin;
 
-
     public void storeNPC(String target, NPC npc)
     {
         client.createMenuEntry(-1)
@@ -72,15 +71,9 @@ public class ModelGetter
                 {
                     PlayerComposition comp = player.getPlayerComposition();
                     int[] items = comp.getEquipmentIds();
-                    int[] colours = comp.getColors();
-                    ColorTextureOverride[] textures = comp.getColorTextureOverrides();
-                    int entry = 0;
-                    for (int colour : colours)
-                    {
-                        System.out.println(entry + ", col: " + colour);
-                        entry++;
-                    }
 
+                    /*
+                    ColorTextureOverride[] textures = comp.getColorTextureOverrides();
                     if (textures != null)
                     {
                         for (ColorTextureOverride colorTextureOverride : textures)
@@ -98,12 +91,17 @@ public class ModelGetter
                             }
                         }
                     }
+                     */
 
                     //Convert equipmentId to itemId or kitId as appropriate
                     int[] ids = new int[items.length];
+                    boolean baldHead = false;
                     for (int i = 0; i < ids.length; i++)
                     {
                         int item = items[i];
+
+                        if (item == 256)
+                            baldHead = true;
 
                         if (item >= 256 && item <= 512)
                         {
@@ -117,12 +115,13 @@ public class ModelGetter
                         }
                     }
 
+                    boolean finalBaldHead = baldHead;
                     //For "Anvil" option on players
                     if (sendToAnvil)
                     {
                         Thread thread = new Thread(() ->
                         {
-                            ModelStats[] modelStats = ModelFinder.findModelsForPlayer(false, comp.getGender() == 0, ids);
+                            ModelStats[] modelStats = ModelFinder.findModelsForPlayer(false, comp.getGender() == 0, finalBaldHead, ids);
                             clientThread.invokeLater(() ->
                             {
                                 plugin.cacheToAnvil(modelStats, comp.getColors(), true);
@@ -136,7 +135,7 @@ public class ModelGetter
                     //For "Store" option on players
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = ModelFinder.findModelsForPlayer(false, comp.getGender() == 0, ids);
+                        ModelStats[] modelStats = ModelFinder.findModelsForPlayer(false, comp.getGender() == 0, finalBaldHead, ids);
                         clientThread.invokeLater(() ->
                         {
                             Model model = plugin.constructModelFromCache(modelStats, comp.getColors(), true, true);

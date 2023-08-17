@@ -40,7 +40,7 @@ dependencies {
 }
 
 group = 'com.creatorssuite'
-version = '1.2-SNAPSHOT'
+version = '1.0-TEST'
 sourceCompatibility = '1.9'
 
 tasks.withType(JavaCompile) {
