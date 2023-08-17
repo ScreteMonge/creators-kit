@@ -1,7 +1,7 @@
 # Creator's Kit
 Creator's Kit provides tools for creators of all sorts to make in-game scenes by spawning and merging models from the cache to animate and program.
 
-![Title](https://imgur.com/IDsz52m.gif)
+![Title](https://imgur.com/ngUlJdQ.gif)
 
 ## Creator's Panel
 
