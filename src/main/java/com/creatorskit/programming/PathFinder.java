@@ -23,7 +23,6 @@ public class PathFinder
     @Inject
     private CreatorsConfig config;
 
-    private final int SCENE_SIZE = 104;
     private final int WATER_OVERLAY = 6;
     private final int[] directionColumn = new int[]{1, -1, 0, 0, -1, 1, -1, 1};
     private final int[] directionRow = new int[]{0, 0, -1, 1, -1, -1, 1, 1};
@@ -126,7 +125,7 @@ public class PathFinder
             int testRow = row + directionRow[i];
             int testColumn = column + directionColumn[i];
 
-            if (testRow > SCENE_SIZE || testRow < 0 || testColumn > SCENE_SIZE || testColumn < 0)
+            if (testRow > Constants.SCENE_SIZE || testRow < 0 || testColumn > Constants.SCENE_SIZE || testColumn < 0)
             {
                 continue;
             }

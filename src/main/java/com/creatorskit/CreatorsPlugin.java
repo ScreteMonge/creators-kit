@@ -556,6 +556,7 @@ public class CreatorsPlugin extends Plugin
 			else if (setToPathStart && steps.length > 0)
 			{
 				Collection<WorldPoint> worldPoints = WorldPoint.toLocalInstance(client, steps[0]);
+
 				WorldPoint worldPoint = worldPoints.iterator().hasNext() ? worldPoints.iterator().next() : null;
 				if (worldPoint == null)
 				{
@@ -575,8 +576,15 @@ public class CreatorsPlugin extends Plugin
 				else
 				{
 					Collection<WorldPoint> worldPoints = WorldPoint.toLocalInstance(client, character.getSavedLocation());
-					WorldPoint worldPoint = worldPoints.iterator().next();
-					localPoint = LocalPoint.fromWorld(client, worldPoint);
+					WorldPoint worldPoint = worldPoints.iterator().hasNext() ? worldPoints.iterator().next() : null;
+					if (worldPoint == null)
+					{
+						localPoint = null;
+					}
+					else
+					{
+						localPoint = LocalPoint.fromWorld(client, worldPoint);
+					}
 				}
 			}
 
