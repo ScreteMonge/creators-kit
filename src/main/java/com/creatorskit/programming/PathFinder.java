@@ -1,13 +1,16 @@
 package com.creatorskit.programming;
 
+import com.creatorskit.Character;
 import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
 import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
+import net.runelite.api.coords.WorldPoint;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.inject.Inject;
 import java.util.ArrayList;
+import java.util.Collection;
 
 public class PathFinder
 {
@@ -36,7 +39,7 @@ public class PathFinder
                     {CollisionDataFlag.BLOCK_MOVEMENT_NORTH_EAST, CollisionDataFlag.BLOCK_MOVEMENT_NORTH, CollisionDataFlag.BLOCK_MOVEMENT_EAST}
             };
 
-    public Coordinate[] getPath(LocalPoint startLoc, LocalPoint destLoc, MovementType movementType)
+    public Coordinate[] getPath(WorldPoint startLocation, WorldPoint destLocation, MovementType movementType)
     {
         final ArrayList<Integer> rowQueue = new ArrayList<>();
         final ArrayList<Integer> columnQueue = new ArrayList<>();
@@ -44,6 +47,20 @@ public class PathFinder
         final Coordinate[][] path = new Coordinate[104][104];
 
         boolean reachedEnd = false;
+        Collection<WorldPoint> startPoints = WorldPoint.toLocalInstance(client, startLocation);
+        WorldPoint startPoint = startPoints.iterator().next();
+
+        Collection<WorldPoint> destPoints = WorldPoint.toLocalInstance(client, destLocation);
+        WorldPoint destPoint = destPoints.iterator().next();
+
+        LocalPoint startLoc = LocalPoint.fromWorld(client, startPoint);
+        LocalPoint destLoc = LocalPoint.fromWorld(client, destPoint);
+
+        if (startLoc == null || destLoc == null)
+        {
+            return null;
+        }
+
         int startX = startLoc.getSceneX();
         int startY = startLoc.getSceneY();
         int endX = destLoc.getSceneX();
@@ -167,5 +184,28 @@ public class PathFinder
             visited[testColumn][testRow] = true;
             path[testColumn][testRow] = new Coordinate(column, row);
         }
+    }
+
+    public void transplantPath(Character character, WorldPoint newLocation)
+    {
+        Program program = character.getProgram();
+        ProgramComp comp = program.getComp();
+        WorldPoint[] steps = comp.getSteps();
+        if (steps.length == 0)
+            return;
+
+        int changeX = newLocation.getX() - steps[0].getX();
+        int changeY = newLocation.getY() - steps[0].getY();
+
+        WorldPoint[] newSteps = new WorldPoint[steps.length];
+        for (int i = 0; i < steps.length; i++)
+        {
+            WorldPoint wp = steps[i];
+            WorldPoint point = new WorldPoint(wp.getX() + changeX, wp.getY() + changeY, newLocation.getPlane());
+            newSteps[i] = point;
+        }
+
+        comp.setSteps(newSteps);
+        comp.setCurrentStep(0);
     }
 }

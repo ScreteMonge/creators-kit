@@ -11,19 +11,39 @@ import java.util.regex.Pattern;
 
 public class ModelFinder
 {
-    public static ModelStats[] findModelsForPlayer(boolean groundItem, boolean maleItem, boolean baldHead, int... itemIdFull)
+    public static ModelStats[] findModelsForPlayer(boolean groundItem, boolean maleItem, int[] items)
     {
-        Pattern recolFrom = Pattern.compile("recol\\ds=.+");
-        Pattern recolTo = Pattern.compile("recol\\dd=.+");
-
-        ArrayList<Integer> itemList = new ArrayList<>();
-        ArrayList<Integer> kitList = new ArrayList<>();
-        for (int i : itemIdFull)
+        //Convert equipmentId to itemId or kitId as appropriate
+        int[] ids = new int[items.length];
+        boolean baldHead = false;
+        for (int i = 0; i < ids.length; i++)
         {
-            if (i == 0)
+            int item = items[i];
+
+            if (item == 256)
+                baldHead = true;
+
+            if (item >= 256 && item <= 512)
             {
+                ids[i] = item - 256;
                 continue;
             }
+
+            if (item > 512)
+            {
+                ids[i] = item - 512;
+            }
+        }
+
+        Pattern recolFrom = Pattern.compile("recol\\ds=.+");
+        Pattern recolTo = Pattern.compile("recol\\dd=.+");
+        ArrayList<Integer> itemList = new ArrayList<>();
+        ArrayList<Integer> kitList = new ArrayList<>();
+
+        for (int i : ids)
+        {
+            if (i == 0)
+                continue;
 
             if (i < 256)
             {

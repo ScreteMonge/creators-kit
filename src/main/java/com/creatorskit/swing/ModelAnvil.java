@@ -1,9 +1,7 @@
 package com.creatorskit.swing;
 
 import com.creatorskit.CreatorsPlugin;
-import com.creatorskit.models.CustomModel;
-import com.creatorskit.models.DetailedModel;
-import com.creatorskit.models.LightingStyle;
+import com.creatorskit.models.*;
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.api.JagexColor;
@@ -205,6 +203,11 @@ public class ModelAnvil extends JFrame
     public void createComplexPanel()
     {
         createComplexPanel("Name", -1, 1, 0, 0, 0, 0, 0, 0, 128, 128, 128, 0, "", "");
+    }
+
+    public void createComplexPanel(DetailedModel dm)
+    {
+        createComplexPanel(dm.getName(), dm.getModelId(), dm.getGroup(), dm.getXTile(), dm.getYTile(), dm.getZTile(), dm.getXTranslate(), dm.getYTranslate(), dm.getZTranslate(), dm.getXScale(), dm.getYScale(), dm.getZScale(), dm.getRotate(), dm.getRecolourNew(), dm.getRecolourOld());
     }
 
     public void createComplexPanel(String name, int modelId, int group, int xTile, int yTile, int zTile, int xTranslate, int yTranslate, int zTranslate, int scaleX, int scaleY, int scaleZ, int rotate, String newColours, String oldColours)
@@ -540,23 +543,31 @@ public class ModelAnvil extends JFrame
         swapperFrame.setVisible(false);
         swapperFrame.setEnabled(false);
         swapperFrame.setIconImage(ICON);
-        swapperFrame.setLayout(new FlowLayout());
+        swapperFrame.setLayout(new BorderLayout());
+
+        JScrollPane colourScrollPane = new JScrollPane();
+        swapperFrame.add(colourScrollPane, BorderLayout.LINE_START);
 
         JPanel gridMenu = new JPanel();
         gridMenu.setLayout(new GridLayout(0, 2, 2, 2));
-        swapperFrame.add(gridMenu);
+        colourScrollPane.setViewportView(gridMenu);
+
+        JPanel colourButtons = new JPanel();
+        colourScrollPane.setColumnHeaderView(colourButtons);
 
         JButton copyColourButton = new JButton("Copy");
         copyColourButton.setFocusable(false);
         copyColourButton.setToolTipText("Copy New Colours");
         copyColourButton.addActionListener(e -> copiedColourMap = colourMap);
+        colourButtons.add(copyColourButton);
 
         JButton pasteColourButton = new JButton("Paste");
         pasteColourButton.setFocusable(false);
         pasteColourButton.setToolTipText("Paste copied New Colours");
+        colourButtons.add(pasteColourButton);
 
         JColorChooser colorChooser = new JColorChooser();
-        swapperFrame.add(colorChooser);
+        swapperFrame.add(colorChooser, BorderLayout.LINE_END);
 
         c.gridx = 2;
         c.gridy = 3;
@@ -566,7 +577,7 @@ public class ModelAnvil extends JFrame
         colourSwapper.setToolTipText("Opens an interface to swap colours on this model");
         complexModePanel.add(colourSwapper, c);
         colourSwapper.addActionListener(e ->
-                setupColourSwapper(swapperFrame, gridMenu, copyColourButton, pasteColourButton, nameField, modelIdSpinner, colourMap, colorChooser, colourNewField, colourOldField, clearColoursButton));
+                setupColourSwapper(swapperFrame, gridMenu, nameField, modelIdSpinner, colourMap, colorChooser, colourNewField, colourOldField, clearColoursButton));
 
         pasteColourButton.addActionListener(e ->
         {
@@ -575,7 +586,7 @@ public class ModelAnvil extends JFrame
             String[] mapToCSV = hashmapToCSV(colourMap);
             colourNewField.setText(mapToCSV[1]);
             colourOldField.setText(mapToCSV[0]);
-            setupColourSwapper(swapperFrame, gridMenu, copyColourButton, pasteColourButton, nameField, modelIdSpinner, colourMap, colorChooser, colourNewField, colourOldField, clearColoursButton);
+            setupColourSwapper(swapperFrame, gridMenu, nameField, modelIdSpinner, colourMap, colorChooser, colourNewField, colourOldField, clearColoursButton);
         });
 
         c.gridx = 6;
@@ -602,7 +613,7 @@ public class ModelAnvil extends JFrame
             colourNewField.setText(mapToCSV[1]);
             colourOldField.setText(mapToCSV[0]);
             if (swapperFrame.isVisible())
-                setupColourSwapper(swapperFrame, gridMenu, copyColourButton, pasteColourButton, nameField, modelIdSpinner, colourMap, colorChooser, colourNewField, colourOldField, clearColoursButton);
+                setupColourSwapper(swapperFrame, gridMenu, nameField, modelIdSpinner, colourMap, colorChooser, colourNewField, colourOldField, clearColoursButton);
         });
 
         c.gridx = 8;
@@ -728,20 +739,22 @@ public class ModelAnvil extends JFrame
 
         clientThread.invokeLater(() ->
         {
-            Model model = forgeComplexModel(setPriority);
+            DetailedModel[] detailedModels = panelsToDetailedModels();
+            Model model = forgeComplexModel(setPriority, detailedModels);
             if (model == null)
             {
                 return;
             }
 
-            CustomModel customModel = new CustomModel(model, nameField.getText());
+            CustomModelComp comp = new CustomModelComp(plugin.getStoredModels().size(), CustomModelType.FORGED, -1, null, null, detailedModels, getLightingStyle(), setPriority, nameField.getText());
+            CustomModel customModel = new CustomModel(model, comp);
             plugin.addCustomModel(customModel, forgeAndSet);
         });
     }
 
-    private Model forgeComplexModel(boolean setPriority)
+    private Model forgeComplexModel(boolean setPriority, DetailedModel[] detailedModels)
     {
-        return plugin.createComplexModel(panelsToDetailedModels(), setPriority, getLightingStyle());
+        return plugin.createComplexModel(detailedModels, setPriority, getLightingStyle());
     }
 
     private DetailedModel[] panelsToDetailedModels()
@@ -799,9 +812,9 @@ public class ModelAnvil extends JFrame
             public void approveSelection()
             {
                 File f = getSelectedFile();
-                if (!f.getName().endsWith(".txt"))
+                if (!f.getName().endsWith(".json"))
                 {
-                    f = new File(f.getPath() + ".txt");
+                    f = new File(f.getPath() + ".json");
                 }
                 if (f.exists() && getDialogType() == SAVE_DIALOG)
                 {
@@ -827,16 +840,16 @@ public class ModelAnvil extends JFrame
                 super.approveSelection();
             }
         };
-        fileChooser.setSelectedFile(new File("model.txt"));
+        fileChooser.setSelectedFile(new File("model"));
         fileChooser.setDialogTitle("Save current model collection");
 
         int option = fileChooser.showSaveDialog(this);
         if (option == JFileChooser.APPROVE_OPTION)
         {
             File selectedFile = fileChooser.getSelectedFile();
-            if (!selectedFile.getName().endsWith(".txt"))
+            if (!selectedFile.getName().endsWith(".json"))
             {
-                selectedFile = new File(selectedFile.getPath() + ".txt");
+                selectedFile = new File(selectedFile.getPath() + ".json");
             }
             saveToFile(selectedFile);
         }
@@ -847,11 +860,9 @@ public class ModelAnvil extends JFrame
         try {
             FileWriter writer = new FileWriter(file, false);
 
-            for (DetailedModel detailedModel : panelsToDetailedModels())
-            {
-                writer.write("\n\n" + "name=" + detailedModel.getName() + "\n" + "group=" + detailedModel.getGroup() + "\n" + "modelid=" + detailedModel.getModelId() + "\n" + "xtile=" + detailedModel.getXTile() + "\n"  + "ytile="+ detailedModel.getYTile() + "\n"  + "ztile=" + detailedModel.getZTile() + "\n" + "xt=" + detailedModel.getXTranslate() + "\n" + "yt=" + detailedModel.getYTranslate() + "\n" + "zt=" + detailedModel.getZTranslate() + "\n" + "xs=" + detailedModel.getXScale() + "\n" + "ys=" + detailedModel.getYScale() + "\n" + "zs=" + detailedModel.getZScale() + "\n" + "r=" + detailedModel.getRotate() + "\n" + "n=" + detailedModel.getRecolourNew() + "\n" + "o=" + detailedModel.getRecolourOld() + "\n" + "");
-            }
-
+            DetailedModel[] detailedModels = panelsToDetailedModels();
+            String string = plugin.gson.toJson(detailedModels);
+            writer.write(string);
             writer.close();
         }
         catch (IOException e)
@@ -862,11 +873,10 @@ public class ModelAnvil extends JFrame
 
     private void openLoadDialog()
     {
-        File outputDir = MODELS_DIR;
-        outputDir.mkdirs();
+        MODELS_DIR.mkdirs();
 
-        JFileChooser fileChooser = new JFileChooser(outputDir);
-        fileChooser.setDialogTitle("Choose a model collection to load");
+        JFileChooser fileChooser = new JFileChooser(MODELS_DIR);
+        fileChooser.setDialogTitle("Choose a model to load");
 
         int option = fileChooser.showOpenDialog(this);
         if (option == JFileChooser.APPROVE_OPTION)
@@ -876,7 +886,7 @@ public class ModelAnvil extends JFrame
         }
     }
 
-    private void setupColourSwapper(JFrame swapperFrame, JPanel gridMenu, JButton copyColourButton, JButton pasteColourButton, JTextField nameField, JSpinner modelIdSpinner, HashMap<Short, Short> colourMap, JColorChooser colorChooser, JTextField colourNewField, JTextField colourOldField, JButton clearColoursButton)
+    private void setupColourSwapper(JFrame swapperFrame, JPanel gridMenu, JTextField nameField, JSpinner modelIdSpinner, HashMap<Short, Short> colourMap, JColorChooser colorChooser, JTextField colourNewField, JTextField colourOldField, JButton clearColoursButton)
     {
         swapperFrame.setVisible(true);
         swapperFrame.setEnabled(true);
@@ -902,9 +912,6 @@ public class ModelAnvil extends JFrame
 
             SwingUtilities.invokeLater(() ->
             {
-                gridMenu.add(copyColourButton);
-                gridMenu.add(pasteColourButton);
-
                 JLabel oldColourTitle = new JLabel("Old Colours");
                 oldColourTitle.setFont(FontManager.getRunescapeBoldFont());
                 oldColourTitle.setToolTipText("Default colours of the model");
@@ -965,7 +972,6 @@ public class ModelAnvil extends JFrame
 
                         swapperFrame.revalidate();
                         swapperFrame.repaint();
-                        swapperFrame.pack();
                         revalidate();
                         repaint();
                     });

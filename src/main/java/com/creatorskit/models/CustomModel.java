@@ -11,11 +11,11 @@ import net.runelite.api.Model;
 public class CustomModel
 {
     private Model model;
-    private String string;
+    private CustomModelComp comp;
 
     @Override
     public String toString()
     {
-        return string;
+        return comp.getName();
     }
 }

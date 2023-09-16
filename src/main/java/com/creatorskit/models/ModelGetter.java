@@ -29,8 +29,8 @@ public class ModelGetter
                         clientThread.invokeLater(() ->
                         {
                             Model model = plugin.constructModelFromCache(modelStats, new int[0], false, true);
-                            CustomModel customModel = new CustomModel(model, npc.getName());
-                            plugin.getStoredModels().add(customModel);
+                            CustomModelComp comp = new CustomModelComp(0, CustomModelType.CACHE_NPC, npc.getId(), modelStats, null, null, LightingStyle.ACTOR, false, npc.getName());
+                            CustomModel customModel = new CustomModel(model, comp);
                             plugin.addCustomModel(customModel, false);
                             plugin.sendChatMessage("Model stored: " + npc.getName());
                         });
@@ -93,39 +93,16 @@ public class ModelGetter
                     }
                      */
 
-                    //Convert equipmentId to itemId or kitId as appropriate
-                    int[] ids = new int[items.length];
-                    boolean baldHead = false;
-                    for (int i = 0; i < ids.length; i++)
-                    {
-                        int item = items[i];
-
-                        if (item == 256)
-                            baldHead = true;
-
-                        if (item >= 256 && item <= 512)
-                        {
-                            ids[i] = item - 256;
-                            continue;
-                        }
-
-                        if (item > 512)
-                        {
-                            ids[i] = item - 512;
-                        }
-                    }
-
-                    boolean finalBaldHead = baldHead;
                     //For "Anvil" option on players
                     if (sendToAnvil)
                     {
                         Thread thread = new Thread(() ->
                         {
-                            ModelStats[] modelStats = ModelFinder.findModelsForPlayer(false, comp.getGender() == 0, finalBaldHead, ids);
+                            ModelStats[] modelStats = ModelFinder.findModelsForPlayer(false, comp.getGender() == 0, items);
                             clientThread.invokeLater(() ->
                             {
                                 plugin.cacheToAnvil(modelStats, comp.getColors(), true);
-                                plugin.sendChatMessage("Model sent to Anvil: " + player.getName());
+                                plugin.sendChatMessage("Model sent to Anvil: " + target);
                             });
                         });
                         thread.start();
@@ -135,11 +112,12 @@ public class ModelGetter
                     //For "Store" option on players
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = ModelFinder.findModelsForPlayer(false, comp.getGender() == 0, finalBaldHead, ids);
+                        ModelStats[] modelStats = ModelFinder.findModelsForPlayer(false, comp.getGender() == 0, items);
                         clientThread.invokeLater(() ->
                         {
                             Model model = plugin.constructModelFromCache(modelStats, comp.getColors(), true, true);
-                            CustomModel customModel = new CustomModel(model, player.getName());
+                            CustomModelComp composition = new CustomModelComp(0, CustomModelType.CACHE_PLAYER, -1, modelStats, comp.getColors(), null, LightingStyle.ACTOR, false, player.getName());
+                            CustomModel customModel = new CustomModel(model, composition);
                             plugin.addCustomModel(customModel, false);
                         });
                     });
@@ -147,7 +125,7 @@ public class ModelGetter
                 });
     }
 
-    public void addGameObjectGetter(String target, String name, Model model)
+    public void addGameObjectGetter(String target, String name, Model model, int objectId, CustomModelType type)
     {
         client.createMenuEntry(-1)
                 .setOption("Store")
@@ -155,9 +133,15 @@ public class ModelGetter
                 .setType(MenuAction.RUNELITE)
                 .onClick(e ->
                 {
-                    CustomModel customModel = new CustomModel(model, name);
-                    plugin.addCustomModel(customModel, false);
-                    plugin.sendChatMessage("Model stored: " + name);
+                    Thread thread = new Thread(() ->
+                    {
+                        ModelStats[] modelStats = ModelFinder.findModelsForObject(objectId);
+                        CustomModelComp comp = new CustomModelComp(0, type, objectId, modelStats, null, null, LightingStyle.DEFAULT, false, name);
+                        CustomModel customModel = new CustomModel(model, comp);
+                        plugin.addCustomModel(customModel, false);
+                        plugin.sendChatMessage("Model stored: " + name);
+                    });
+                    thread.start();
                 });
     }
 

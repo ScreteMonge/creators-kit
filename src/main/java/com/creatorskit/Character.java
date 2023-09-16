@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.RuneLiteObject;
 import net.runelite.api.coords.LocalPoint;
+import net.runelite.api.coords.WorldPoint;
 
 import javax.swing.*;
 
@@ -16,19 +17,20 @@ import javax.swing.*;
 public class Character
 {
     private String name;
-    private int id;
-    private boolean programActive;
+    private boolean active;
     private boolean locationSet;
+    private boolean minimized;
     private Program program;
-    private LocalPoint savedLocation;
+    private WorldPoint savedLocation;
     private CustomModel storedModel;
-    private JPanel panel;
+    private JPanel masterPanel;
     private boolean customMode;
     private JComboBox<CustomModel> comboBox;
     private JButton spawnButton;
     private JButton modelButton;
     private JSpinner modelSpinner;
     private JSpinner animationSpinner;
+    private JSpinner orientationSpinner;
     private JLabel programmerLabel;
     private JSpinner programmerIdleSpinner;
     private RuneLiteObject runeLiteObject;

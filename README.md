@@ -3,6 +3,8 @@ Creator's Kit provides tools for creators of all sorts to make in-game scenes by
 
 ![Title](https://imgur.com/ngUlJdQ.gif)
 
+A video guide on how to use the plugin can be found through [this link](https://www.youtube.com/watch?v=LRUrMMfdy60).
+
 ## Creator's Panel
 
 The kit functions around the Creator's panel, where  you have several options to open new menus, as well as the ability to add and modify objects.

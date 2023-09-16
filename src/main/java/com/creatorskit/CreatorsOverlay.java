@@ -2,18 +2,19 @@ package com.creatorskit;
 
 import com.creatorskit.programming.Coordinate;
 import com.creatorskit.programming.Program;
+import com.creatorskit.programming.ProgramComp;
 import net.runelite.api.*;
 import net.runelite.api.Point;
 import net.runelite.api.coords.LocalPoint;
+import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayUtil;
-import net.runelite.client.util.ImageUtil;
 
 import javax.inject.Inject;
 import java.awt.*;
-import java.awt.image.BufferedImage;
+import java.util.Collection;
 
 public class CreatorsOverlay extends Overlay
 {
@@ -71,13 +72,25 @@ public class CreatorsOverlay extends Overlay
 
     public void renderProgramOverlay(Graphics2D graphics)
     {
-        for (Character character : plugin.getCharacters())
+        for (int e = 0; e < plugin.getCharacters().size(); e++)
         {
+            Character character = plugin.getCharacters().get(e);
+            WorldPoint savedLocation = character.getSavedLocation();
+            if (savedLocation == null)
+                continue;
+
+            Collection<WorldPoint> wps = WorldPoint.toLocalInstance(client, character.getSavedLocation());
+            WorldPoint wp = wps.iterator().hasNext() ? wps.iterator().next() : null;
+            if (wp == null || !wp.isInScene(client))
+                continue;
+
             Program program = character.getProgram();
             if (program == null)
                 continue;
 
-            Coordinate[] coordinates = character.getProgram().getCoordinates();
+            ProgramComp comp = program.getComp();
+
+            Coordinate[] coordinates = comp.getCoordinates();
             for (int i = 0; i < coordinates.length - 1; i++)
             {
                 if (coordinates[i] == null)
@@ -90,12 +103,12 @@ public class CreatorsOverlay extends Overlay
                 if (startPoint == null || endPoint == null)
                     continue;
 
-                graphics.setColor(program.getColor());
+                graphics.setColor(comp.getColor());
                 graphics.setStroke(new BasicStroke(1));
                 graphics.drawLine(startPoint.getX(), startPoint.getY(), endPoint.getX(), endPoint.getY());
             }
 
-            LocalPoint[] points = character.getProgram().getSteps();
+            WorldPoint[] points = comp.getSteps();
             String name = character.getName();
             String abbreviation = "";
             int abbreviationLength = 3;
@@ -112,11 +125,17 @@ public class CreatorsOverlay extends Overlay
 
             for (int i = 0; i < points.length; i++)
             {
-                Point textPoint = Perspective.getCanvasTextLocation(client, graphics, points[i], abbreviation, 0);
+                Collection<WorldPoint> worldPoints = WorldPoint.toLocalInstance(client, points[i]);
+                WorldPoint worldPoint = worldPoints.iterator().next();
+                LocalPoint localPoint = LocalPoint.fromWorld(client, worldPoint);
+                if (localPoint == null)
+                    continue;
+
+                Point textPoint = Perspective.getCanvasTextLocation(client, graphics, localPoint, abbreviation, 0);
                 if (textPoint == null)
                     continue;
 
-                OverlayUtil.renderTextLocation(graphics, textPoint, abbreviation, program.getColor());
+                OverlayUtil.renderTextLocation(graphics, textPoint, abbreviation, comp.getColor());
             }
         }
     }
@@ -220,13 +239,13 @@ public class CreatorsOverlay extends Overlay
                             if (character.getRuneLiteObject() == runeLiteObject)
                             {
                                 stringBuilder.append(character.getName());
-                                if (plugin.getSelectedNPC() == character)
+                                if (plugin.getSelectedCharacter() == character)
                                 {
                                     OverlayUtil.renderTileOverlay(graphics, gameObject, stringBuilder.toString(), SELECTED_COLOUR);
                                     continue;
                                 }
 
-                                if (plugin.getHoveredNPC() == character)
+                                if (plugin.getHoveredCharacter() == character)
                                 {
                                     OverlayUtil.renderTileOverlay(graphics, gameObject, stringBuilder.toString(), HOVERED_COLOUR);
                                     continue;

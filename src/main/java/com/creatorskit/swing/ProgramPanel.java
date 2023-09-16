@@ -4,6 +4,8 @@ import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.Character;
 import com.creatorskit.programming.MovementType;
 import com.creatorskit.programming.Program;
+import com.creatorskit.programming.ProgramComp;
+import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
@@ -24,8 +26,9 @@ public class ProgramPanel extends JFrame
     private ClientThread clientThread;
     private final CreatorsPlugin plugin;
     private final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
-    private GridBagConstraints c = new GridBagConstraints();
-    private JPanel allPanel = new JPanel();
+    private final GridBagConstraints c = new GridBagConstraints();
+    @Getter
+    private final JPanel allPanel = new JPanel();
     private final Random random = new Random();
 
     @Inject
@@ -93,16 +96,20 @@ public class ProgramPanel extends JFrame
         turnSpeedLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         turnSpeedLabel.setToolTipText("Set how fast the object turns. Set to 0 for no turning");
 
-        JLabel waterWalkLabel = new JLabel("Movement Type:");
-        waterWalkLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        waterWalkLabel.setToolTipText("Determines the terrain on which the object can travel");
+        JLabel movementTypeLabel = new JLabel("Movement Type:");
+        movementTypeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        movementTypeLabel.setToolTipText("Determines the terrain on which the object can travel");
+
+        JLabel loopLabel = new JLabel("Loop:");
+        loopLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        loopLabel.setToolTipText("Set whether this program should loop once finished");
 
         textPanel.add(idleAnimLabel);
         textPanel.add(walkAnimLabel);
         textPanel.add(speedLabel);
         textPanel.add(turnSpeedLabel);
-        textPanel.add(waterWalkLabel);
-
+        textPanel.add(movementTypeLabel);
+        textPanel.add(loopLabel);
 
         c.gridx = 1;
         c.gridy = 1;
@@ -113,30 +120,31 @@ public class ProgramPanel extends JFrame
         programPanel.add(optionsPanel, c);
 
         Program program = character.getProgram();
+        ProgramComp comp = program.getComp();
 
-        idleAnimSpinner.setModel(new SpinnerNumberModel(program.getIdleAnim(), -1, 9999, 1));
+        idleAnimSpinner.setModel(new SpinnerNumberModel(comp.getIdleAnim(), -1, 9999, 1));
         idleAnimSpinner.addChangeListener(e ->
         {
             int idleAnim = (int) idleAnimSpinner.getValue();
-            program.setIdleAnim(idleAnim);
+            comp.setIdleAnim(idleAnim);
             character.getAnimationSpinner().setValue(idleAnim);
         });
         optionsPanel.add(idleAnimSpinner);
 
-        JSpinner walkAnimSpinner = new JSpinner(new SpinnerNumberModel(program.getWalkAnim(), -1, 9999, 1));
+        JSpinner walkAnimSpinner = new JSpinner(new SpinnerNumberModel(comp.getWalkAnim(), -1, 9999, 1));
         walkAnimSpinner.addChangeListener(e ->
-                program.setWalkAnim((int) walkAnimSpinner.getValue()));
+                comp.setWalkAnim((int) walkAnimSpinner.getValue()));
         optionsPanel.add(walkAnimSpinner);
 
-        JSpinner speedSpinner = new JSpinner(new SpinnerNumberModel(program.getSpeed(), 0, 2, 1));
+        JSpinner speedSpinner = new JSpinner(new SpinnerNumberModel(comp.getSpeed(), 0, 2, 1));
         speedSpinner.addChangeListener(e ->
-                program.setSpeed((double) speedSpinner.getValue()));
+                comp.setSpeed((double) speedSpinner.getValue()));
         optionsPanel.add(speedSpinner);
 
         JSpinner turnSpeedSpinner = new JSpinner();
-        turnSpeedSpinner.setValue(program.getTurnSpeed());
+        turnSpeedSpinner.setValue(comp.getTurnSpeed());
         turnSpeedSpinner.addChangeListener(e ->
-                program.setTurnSpeed((int) turnSpeedSpinner.getValue()));
+                comp.setTurnSpeed((int) turnSpeedSpinner.getValue()));
         optionsPanel.add(turnSpeedSpinner);
 
         JComboBox<String> movementBox = new JComboBox<>();
@@ -148,18 +156,24 @@ public class ProgramPanel extends JFrame
             switch ((String) e.getItem())
             {
                 case "Normal":
-                    program.setMovementType(MovementType.NORMAL);
+                    comp.setMovementType(MovementType.NORMAL);
                     break;
                 case "Waterborne":
-                    program.setMovementType(MovementType.WATERBORNE);
+                    comp.setMovementType(MovementType.WATERBORNE);
                     break;
                 case "Ghost":
-                    program.setMovementType(MovementType.GHOST);
+                    comp.setMovementType(MovementType.GHOST);
             }
 
-            plugin.updateProgramPath(program);
+            plugin.updateProgramPath(program, false);
         });
         optionsPanel.add(movementBox);
+
+        JCheckBox loopCheckBox = new JCheckBox();
+        loopCheckBox.setFocusable(false);
+        loopCheckBox.addActionListener(e ->
+                comp.setLoop(!comp.isLoop()));
+        optionsPanel.add(loopCheckBox);
 
         c.gridx = 0;
         c.gridy = 2;
@@ -169,7 +183,7 @@ public class ProgramPanel extends JFrame
         colourButton.setToolTipText("Rerolls a new random colour for the path");
         colourButton.setFocusable(false);
         colourButton.addActionListener(e ->
-                program.setColor(getRandomColor()));
+                comp.setColor(getRandomColor()));
         programPanel.add(colourButton, c);
 
         allPanel.add(programPanel);
