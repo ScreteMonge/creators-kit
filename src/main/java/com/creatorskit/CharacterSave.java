@@ -4,6 +4,7 @@ import com.creatorskit.programming.ProgramComp;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
+import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 
 @AllArgsConstructor
@@ -13,7 +14,11 @@ public class CharacterSave
 {
     private String name;
     private boolean locationSet;
-    private WorldPoint savedLocation;
+    private WorldPoint nonInstancedPoint;
+    private LocalPoint instancedPoint;
+    private int[] instancedRegions;
+    private int instancedPlane;
+    private boolean inInstance;
     private int compId;
     private boolean customMode;
     private boolean minimized;

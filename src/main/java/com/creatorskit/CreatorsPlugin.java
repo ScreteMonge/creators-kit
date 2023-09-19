@@ -25,9 +25,7 @@ import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
-import net.runelite.client.game.ItemManager;
 import net.runelite.client.input.KeyManager;
-import net.runelite.client.menus.MenuManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
@@ -36,6 +34,7 @@ import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.ColorUtil;
 import net.runelite.client.util.HotkeyListener;
 import net.runelite.client.util.ImageUtil;
+import net.runelite.client.util.Text;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.awt.*;
@@ -46,6 +45,8 @@ import java.util.*;
 import java.util.List;
 
 @Slf4j
+@Getter
+@Setter
 @PluginDescriptor(
 		name = "Creator's Kit",
 		description = "A suite of tools for creators",
@@ -78,13 +79,7 @@ public class CreatorsPlugin extends Plugin
 	private KeyManager keyManager;
 
 	@Inject
-	private MenuManager menuManager;
-
-	@Inject
 	private ChatMessageManager chatMessageManager;
-
-	@Inject
-	private ItemManager itemManager;
 
 	@Inject
 	private ModelGetter modelGetter;
@@ -97,17 +92,10 @@ public class CreatorsPlugin extends Plugin
 
 	private CreatorsPanel creatorsPanel;
 	private NavigationButton navigationButton;
-	@Getter
 	private boolean overlaysActive = false;
-	@Getter
 	private final ArrayList<Character> characters = new ArrayList<>();
-	@Getter
 	private final ArrayList<CustomModel> storedModels = new ArrayList<>();
-	@Getter
-	@Setter
 	private Character selectedCharacter;
-	@Getter
-	@Setter
 	private Character hoveredCharacter;
 	private int savedRegion = -1;
 	private int savedPlane = -1;
@@ -192,19 +180,20 @@ public class CreatorsPlugin extends Plugin
 		if (client.getLocalPlayer() == null)
 			return;
 
-		WorldPoint wp = WorldPoint.fromLocalInstance(client, client.getLocalPlayer().getLocalLocation(), client.getPlane());
-		int region = wp.getRegionID();
+		WorldPoint worldPoint = client.getLocalPlayer().getWorldLocation();
+		LocalPoint localPoint = client.getLocalPlayer().getLocalLocation();
+
+		int region = client.isInInstancedRegion() ? WorldPoint.fromLocalInstance(client, localPoint).getRegionID() : worldPoint.getRegionID();
+
 		if (savedRegion != region)
-		{
 			savedRegion = region;
-			resetAllLocations();
-		}
 
 		int plane = client.getPlane();
 		if (savedPlane != plane)
 		{
 			savedPlane = plane;
-			resetAllLocations();
+			for (Character character : characters)
+				resetProgram(character, character.getProgram().getComp().isProgramActive());
 		}
 	}
 
@@ -239,6 +228,10 @@ public class CreatorsPlugin extends Plugin
 			Program program = character.getProgram();
 			ProgramComp comp = program.getComp();
 			RuneLiteObject runeLiteObject = character.getRuneLiteObject();
+			boolean instance = client.isInInstancedRegion();
+
+			if (!isInScene(character))
+				continue;
 
 			if (!comp.isProgramActive())
 			{
@@ -253,11 +246,10 @@ public class CreatorsPlugin extends Plugin
 			}
 
 			double speed = 128 * (comp.getSpeed() * 20 / 600);
-
 			int currentStep = comp.getCurrentStep();
-			WorldPoint[] path = comp.getPath();
 
-			if (currentStep >= path.length)
+			int pathLength = instance ? comp.getPathLP().length : comp.getPathWP().length;
+			if (currentStep >= pathLength)
 			{
 				if (comp.isLoop())
 				{
@@ -285,13 +277,18 @@ public class CreatorsPlugin extends Plugin
 					runeLiteObject.setAnimation(client.loadAnimation(comp.getWalkAnim()));
 			}
 
-			Collection<WorldPoint> currentStepWPs = WorldPoint.toLocalInstance(client, path[currentStep]);
-			WorldPoint currentStepWP = currentStepWPs.iterator().hasNext() ? currentStepWPs.iterator().next() : null;
-			if (currentStepWP == null)
-				continue;
-
 			LocalPoint start = runeLiteObject.getLocation();
-			LocalPoint destination = LocalPoint.fromWorld(client, currentStepWP);
+			LocalPoint destination;
+
+			if (instance)
+			{
+				destination = comp.getPathLP()[currentStep];
+			}
+			else
+			{
+				destination = LocalPoint.fromWorld(client, comp.getPathWP()[currentStep]);
+			}
+
 			if (destination == null)
 				continue;
 
@@ -325,12 +322,19 @@ public class CreatorsPlugin extends Plugin
 			{
 				int nextStep = currentStep + 1;
 				comp.setCurrentStep(nextStep);
-				if (nextStep < path.length)
+				if (nextStep < pathLength)
 				{
-					Collection<WorldPoint> nextPathWPs = WorldPoint.toLocalInstance(client, path[nextStep]);
-					WorldPoint nextPathWP = nextPathWPs.iterator().next();
+					LocalPoint nextPath;
 
-					LocalPoint nextPath = LocalPoint.fromWorld(client, nextPathWP);
+					if (instance)
+					{
+						nextPath = comp.getPathLP()[currentStep];
+					}
+					else
+					{
+						nextPath = LocalPoint.fromWorld(client, comp.getPathWP()[currentStep]);
+					}
+
 					if (nextPath == null)
 						continue;
 
@@ -377,20 +381,14 @@ public class CreatorsPlugin extends Plugin
 	{
 		if (event.getGameState() == GameState.LOGGED_IN)
 		{
-			int[] regions = client.getMapRegions();
+			boolean instance = client.isInInstancedRegion();
+
 			for (Character character : characters)
 			{
-				if (character.getSavedLocation() == null)
-					continue;
-
-				for (int i : regions)
-				{
-					if (i == character.getSavedLocation().getRegionID())
-					{
-						setLocation(character, false, true);
-						updateProgramPath(character.getProgram(), true);
-					}
-				}
+				setLocation(character, false, false, true);
+				resetProgram(character, character.getProgram().getComp().isProgramActive());
+				if ((character.isInInstance() && instance && client.getPlane() == character.getInstancedPlane()) || (!character.isInInstance() && !instance))
+					updateProgramPath(character.getProgram(), true, character.isInInstance());
 			}
 		}
 	}
@@ -423,28 +421,6 @@ public class CreatorsPlugin extends Plugin
 		{
 			if (option.equals("Walk here"))
 			{
-				GameObject[] gameObjects = tile.getGameObjects();
-				for (GameObject gameObject : gameObjects)
-				{
-					if (gameObject == null)
-					{
-						continue;
-					}
-
-					Renderable renderable = gameObject.getRenderable();
-					if (renderable == null)
-					{
-						continue;
-					}
-
-					if (renderable instanceof Model)
-					{
-						Model model = (Model) renderable;
-						modelGetter.addGameObjectGetter("<col=FFFF>GameObject", "GameObject", model, gameObject.getId(), CustomModelType.CACHE_OBJECT);
-						modelGetter.addObjectGetterToAnvil("<col=FFFF>GameObject", "GameObject", gameObject.getId());
-					}
-				}
-
 				GroundObject groundObject = tile.getGroundObject();
 				if (groundObject != null)
 				{
@@ -492,6 +468,24 @@ public class CreatorsPlugin extends Plugin
 					}
 				}
 
+				GameObject[] gameObjects = tile.getGameObjects();
+				for (GameObject gameObject : gameObjects)
+				{
+					if (gameObject == null)
+						continue;
+
+					Renderable renderable = gameObject.getRenderable();
+					if (renderable == null)
+						continue;
+
+					if (renderable instanceof Model)
+					{
+						Model model = (Model) renderable;
+						modelGetter.addGameObjectGetter("<col=FFFF>GameObject", "GameObject", model, gameObject.getId(), CustomModelType.CACHE_OBJECT);
+						modelGetter.addObjectGetterToAnvil("<col=FFFF>GameObject", "GameObject", gameObject.getId());
+					}
+				}
+
 				for (Character character : characters)
 				{
 					if (character.getRuneLiteObject().getLocation().equals(tile.getLocalLocation()))
@@ -524,26 +518,31 @@ public class CreatorsPlugin extends Plugin
 		}
 	}
 
-	private void resetAllLocations()
-	{
-		for (Character character : characters)
-		{
-			if (character.isActive())
-			{
-				setLocation(character, false, true);
-			}
-		}
-	}
-
-	public void setLocation(Character character, boolean setToHoveredTile, boolean setToPathStart)
+	public void setLocation(Character character, boolean newLocation, boolean setToHoveredTile, boolean setToPathStart)
 	{
 		if (client.getGameState() != GameState.LOGGED_IN)
 			return;
 
+		boolean instance = client.isInInstancedRegion();
+
+		if (!newLocation && !isInScene(character))
+			return;
+
+		if (instance)
+		{
+			setLocationInstance(character, setToHoveredTile, setToPathStart);
+			return;
+		}
+
+		setLocationNonInstance(character, setToHoveredTile, setToPathStart);
+	}
+
+	public void setLocationNonInstance(Character character, boolean setToHoveredTile, boolean setToPathStart)
+	{
 		clientThread.invoke(() ->
 		{
 			LocalPoint localPoint;
-			WorldPoint[] steps = character.getProgram().getComp().getSteps();
+			WorldPoint[] steps = character.getProgram().getComp().getStepsWP();
 
 			if (setToHoveredTile)
 			{
@@ -555,36 +554,17 @@ public class CreatorsPlugin extends Plugin
 			}
 			else if (setToPathStart && steps.length > 0)
 			{
-				Collection<WorldPoint> worldPoints = WorldPoint.toLocalInstance(client, steps[0]);
-
-				WorldPoint worldPoint = worldPoints.iterator().hasNext() ? worldPoints.iterator().next() : null;
-				if (worldPoint == null)
-				{
-					localPoint = null;
-				}
-				else
-				{
-					localPoint = LocalPoint.fromWorld(client, worldPoint);
-				}
+				localPoint = LocalPoint.fromWorld(client, steps[0]);
 			}
 			else
 			{
-				if (character.getSavedLocation() == null)
+				if (character.getNonInstancedPoint() == null)
 				{
 					localPoint = client.getLocalPlayer().getLocalLocation();
 				}
 				else
 				{
-					Collection<WorldPoint> worldPoints = WorldPoint.toLocalInstance(client, character.getSavedLocation());
-					WorldPoint worldPoint = worldPoints.iterator().hasNext() ? worldPoints.iterator().next() : null;
-					if (worldPoint == null)
-					{
-						localPoint = null;
-					}
-					else
-					{
-						localPoint = LocalPoint.fromWorld(client, worldPoint);
-					}
+					localPoint = LocalPoint.fromWorld(client, character.getNonInstancedPoint());
 				}
 			}
 
@@ -593,14 +573,15 @@ public class CreatorsPlugin extends Plugin
 
 			WorldPoint newLocation = WorldPoint.fromLocalInstance(client, localPoint);
 
+			character.setLocationSet(true);
+
 			if (newLocation != null)
 			{
-				pathFinder.transplantPath(character, newLocation);
-				updateProgramPath(character.getProgram(), false);
+				pathFinder.transplantSteps(character, newLocation.getX(), newLocation.getY(), character.isInInstance(), false);
+				character.setInInstance(false);
+				character.setNonInstancedPoint(newLocation);
+				updateProgramPath(character.getProgram(), false, false);
 			}
-
-			character.setSavedLocation(newLocation);
-			character.setLocationSet(true);
 
 			RuneLiteObject runeLiteObject = character.getRuneLiteObject();
 			runeLiteObject.setActive(false);
@@ -610,6 +591,79 @@ public class CreatorsPlugin extends Plugin
 			character.setActive(true);
 			character.getSpawnButton().setText("Despawn");
 		});
+	}
+
+	public void setLocationInstance(Character character, boolean setToHoveredTile, boolean setToPathStart)
+	{
+		clientThread.invoke(() ->
+		{
+			LocalPoint localPoint;
+			LocalPoint[] steps = character.getProgram().getComp().getStepsLP();
+
+			if (setToHoveredTile) {
+				Tile tile = client.getSelectedSceneTile();
+				if (tile == null)
+					return;
+
+				localPoint = tile.getLocalLocation();
+			}
+			else if (setToPathStart && steps.length > 0)
+			{
+				localPoint = steps[0];
+			}
+			else
+			{
+				localPoint = character.getInstancedPoint();
+			}
+
+			if (localPoint == null)
+				return;
+
+			character.setInstancedPoint(localPoint);
+			pathFinder.transplantSteps(character, localPoint.getSceneX(), localPoint.getSceneY(), character.isInInstance(), true);
+			character.setLocationSet(true);
+			character.setInInstance(true);
+			character.setInstancedRegions(client.getMapRegions());
+			character.setInstancedPlane(client.getPlane());
+			updateProgramPath(character.getProgram(), false, true);
+			RuneLiteObject runeLiteObject = character.getRuneLiteObject();
+			runeLiteObject.setActive(false);
+			runeLiteObject.setLocation(localPoint, client.getPlane());
+			runeLiteObject.setActive(true);
+			runeLiteObject.setOrientation((int) character.getOrientationSpinner().getValue());
+			character.setActive(true);
+			character.getSpawnButton().setText("Despawn");
+		});
+	}
+
+	public boolean isInScene(Character character)
+	{
+		int[] mapRegions = client.getMapRegions();
+		if (client.isInInstancedRegion() && character.isInInstance())
+		{
+			if (character.getInstancedPoint() == null)
+				return false;
+
+			if (character.getInstancedPlane() != client.getPlane())
+				return false;
+
+			//This function is finnicky with larger instances, in that only an exact region:region map will load
+			//The alternative of finding any match will otherwise make spawns off if the regions don't match because the scenes won't exactly match
+			Object[] mapRegionsObjects = {mapRegions};
+			Object[] instancedRegionObjects = {character.getInstancedRegions()};
+			return Arrays.deepEquals(mapRegionsObjects, instancedRegionObjects);
+		}
+
+		if (!client.isInInstancedRegion() && !character.isInInstance())
+		{
+			WorldPoint worldPoint = character.getNonInstancedPoint();
+			if (worldPoint == null)
+				return false;
+
+			return worldPoint.isInScene(client);
+		}
+
+		return false;
 	}
 
 	public void toggleSpawn(JButton spawnButton, Character character)
@@ -626,7 +680,7 @@ public class CreatorsPlugin extends Plugin
 
 		if (!character.isLocationSet())
 		{
-			setLocation(character, false, false);
+			setLocation(character, true, false, false);
 		}
 	}
 
@@ -651,16 +705,7 @@ public class CreatorsPlugin extends Plugin
 			if (modelMode)
 			{
 				CustomModel customModel = character.getStoredModel();
-				Model model;
-				if (customModel == null)
-				{
-					model = client.loadModel(29757);
-				}
-				else
-				{
-					model = customModel.getModel();
-				}
-
+				Model model = customModel == null ? client.loadModel(29757) : customModel.getModel();
 				runeLiteObject.setModel(model);
 				return;
 			}
@@ -702,14 +747,10 @@ public class CreatorsPlugin extends Plugin
 		int orientation = runeLiteObject.getOrientation();
 		orientation += addition;
 		if (orientation >= 2048)
-		{
 			orientation -= 2048;
-		}
 
 		if (orientation < 0)
-		{
 			orientation += 2048;
-		}
 
 		setOrientation(character, orientation);
 		JPanel masterPanel = character.getMasterPanel();
@@ -755,7 +796,11 @@ public class CreatorsPlugin extends Plugin
 									JLabel programmerNameLabel,
 									JSpinner programmerIdleSpinner,
 									boolean active,
-									WorldPoint savedLocation)
+									WorldPoint savedWorldPoint,
+									LocalPoint savedLocalPoint,
+									int[] localPointRegion,
+									int localPointPlane,
+									boolean locatedInInstance)
 	{
 		RuneLiteObject runeLiteObject = client.createRuneLiteObject();
 		runeLiteObject.setRadius(radius);
@@ -766,10 +811,14 @@ public class CreatorsPlugin extends Plugin
 		Character character = new Character(
 				name,
 				active,
-				savedLocation != null,
+				savedWorldPoint != null || savedLocalPoint != null,
 				minimized,
 				program,
-				savedLocation,
+				savedWorldPoint,
+				savedLocalPoint,
+				localPointRegion,
+				localPointPlane,
+				locatedInInstance,
 				customModel,
 				panel,
 				customModelMode,
@@ -790,7 +839,8 @@ public class CreatorsPlugin extends Plugin
 		runeLiteObject.setShouldLoop(true);
 		setAnimation(character, animationId);
 		setModel(character, customModelMode, modelId);
-		setLocation(character, false, true);
+
+		setLocation(character, !character.isLocationSet(), false, false);
 		runeLiteObject.setActive(active);
 
 		nameTextField.addActionListener(e ->
@@ -800,7 +850,7 @@ public class CreatorsPlugin extends Plugin
 		});
 
 		setLocationButton.addActionListener(e ->
-				setLocation(character, false, false));
+				setLocation(character, !character.isLocationSet(), false, false));
 
 		spawnButton.addActionListener(e ->
 				toggleSpawn(spawnButton, character));
@@ -904,9 +954,7 @@ public class CreatorsPlugin extends Plugin
 	public void sendChatMessage(String chatMessage)
 	{
 		if (client.getGameState() != GameState.LOGGED_IN)
-		{
 			return;
-		}
 
 		final String message = new ChatMessageBuilder().append(ChatColorType.HIGHLIGHT).append(chatMessage).build();
 		chatMessageManager.queue(QueuedMessage.builder().type(ChatMessageType.GAMEMESSAGE).runeLiteFormattedMessage(message).build());
@@ -954,9 +1002,7 @@ public class CreatorsPlugin extends Plugin
 			DetailedModel detailedModel = detailedModels[e];
 			ModelData modelData = client.loadModelData(detailedModel.getModelId());
 			if (modelData == null)
-			{
 				return null;
-			}
 
 			modelData.cloneVertices().cloneColors();
 			switch(detailedModel.getRotate())
@@ -1028,9 +1074,7 @@ public class CreatorsPlugin extends Plugin
 		}
 
 		if (model == null)
-		{
 			return null;
-		}
 
 		if (setPriority)
 		{
@@ -1041,7 +1085,7 @@ public class CreatorsPlugin extends Plugin
 
 		sendChatMessage("Model forged. Faces: " + model.getFaceCount() + ", Vertices: " + model.getVerticesCount());
 		if (model.getFaceCount() >= 6200 && model.getVerticesCount() >= 3900)
-			sendChatMessage("You've exceeded the max face count of 6200 or vertex count of 4000 in this model; any additional faces or vertices will not render");
+			sendChatMessage("You've exceeded the max face count of 6200 or vertex count of 3900 in this model; any additional faces or vertices will not render");
 
 		return model;
 	}
@@ -1136,9 +1180,8 @@ public class CreatorsPlugin extends Plugin
 			{
 				DetailedModel[] detailedModels = comp.getDetailedModels();
 				for (DetailedModel detailedModel : detailedModels)
-				{
 					modelAnvil.createComplexPanel(detailedModel);
-				}
+
 				return;
 			}
 
@@ -1190,7 +1233,6 @@ public class CreatorsPlugin extends Plugin
 			String s = "";
 
 			while ((s = myReader.nextLine()) != null) {
-				//System.out.println("Line: " + s);
 				String name = "";
 				int modelId = 0;
 				int group = 1;
@@ -1213,7 +1255,6 @@ public class CreatorsPlugin extends Plugin
 				{
 					while (!(data = myReader.nextLine()).equals(""))
 					{
-						//System.out.println("Data: " + data);
 						if (data.startsWith("name="))
 						{
 							String[] split = data.split("=");
@@ -1341,29 +1382,42 @@ public class CreatorsPlugin extends Plugin
 		storedModels.remove(customModel);
 	}
 
-	public void updateProgramPath(Program program, boolean gameStateChanged)
+	public void updateProgramPath(Program program, boolean gameStateChanged, boolean instanced)
+	{
+		if (instanced)
+		{
+			updateInstancedProgramPath(program, gameStateChanged);
+			return;
+		}
+
+		updateNonInstancedProgramPath(program, gameStateChanged);
+	}
+
+	public void updateInstancedProgramPath(Program program, boolean gameStateChanged)
 	{
 		ProgramComp comp = program.getComp();
-		WorldPoint[] steps = comp.getSteps();
-		WorldPoint[] path = new WorldPoint[0];
+		LocalPoint[] stepsLP = comp.getStepsLP();
+		LocalPoint[] pathLP = new LocalPoint[0];
 		Coordinate[] allCoordinates = new Coordinate[0];
 
-		if (steps.length < 2)
+		if (stepsLP.length < 2)
 		{
-			comp.setPath(path);
+			comp.setPathLP(pathLP);
 			comp.setCoordinates(allCoordinates);
 			return;
 		}
 
-		for (int i = 0; i < steps.length - 1; i++)
+		for (int i = 0; i < stepsLP.length - 1; i++)
 		{
-			Coordinate[] coordinates = pathFinder.getPath(steps[i], steps[i + 1], comp.getMovementType());
+			Coordinate[] coordinates;
+			coordinates = pathFinder.getPath(stepsLP[i], stepsLP[i + 1], comp.getMovementType());
+
 			if (coordinates == null)
 			{
 				if (!gameStateChanged)
 					sendChatMessage("A path could not be found.");
 
-				comp.setPath(new WorldPoint[0]);
+				comp.setPathLP(new LocalPoint[0]);
 				comp.setCoordinates(new Coordinate[0]);
 				return;
 			}
@@ -1386,39 +1440,119 @@ public class CreatorsPlugin extends Plugin
 				{
 					direction = newDirection;
 					LocalPoint localPoint = LocalPoint.fromScene(x, y);
-					path = ArrayUtils.add(path, WorldPoint.fromLocalInstance(client, localPoint));
+					pathLP = ArrayUtils.add(pathLP, localPoint);
 				}
 			}
 		}
 
-		path = ArrayUtils.add(path, steps[steps.length - 1]);
-		comp.setPath(path);
+		pathLP = ArrayUtils.add(pathLP, stepsLP[stepsLP.length - 1]);
+		comp.setPathLP(pathLP);
 		comp.setCoordinates(allCoordinates);
 	}
 
-	public void resetProgram(Character character, boolean loopReset)
+	public void updateNonInstancedProgramPath(Program program, boolean gameStateChanged)
+	{
+		ProgramComp comp = program.getComp();
+		WorldPoint[] stepsWP = comp.getStepsWP();
+		WorldPoint[] pathWP = new WorldPoint[0];
+		Coordinate[] allCoordinates = new Coordinate[0];
+
+		if (stepsWP.length < 2)
+		{
+			comp.setPathWP(pathWP);
+			comp.setCoordinates(allCoordinates);
+			return;
+		}
+
+		for (int i = 0; i < stepsWP.length - 1; i++)
+		{
+			Coordinate[] coordinates;
+			coordinates = pathFinder.getPath(stepsWP[i], stepsWP[i + 1], comp.getMovementType());
+
+			if (coordinates == null)
+			{
+				if (!gameStateChanged)
+					sendChatMessage("A path could not be found.");
+
+				comp.setPathWP(new WorldPoint[0]);
+				comp.setCoordinates(new Coordinate[0]);
+				return;
+			}
+
+			allCoordinates = ArrayUtils.addAll(allCoordinates, coordinates);
+
+			Direction direction = Direction.UNSET;
+
+			for (int c = 0; c < coordinates.length - 1; c++)
+			{
+				int x = coordinates[c].getColumn();
+				int y = coordinates[c].getRow();
+				int nextX = coordinates[c + 1].getColumn();
+				int nextY = coordinates[c + 1].getRow();
+				int changeX = nextX - x;
+				int changeY = nextY - y;
+
+				Direction newDirection = Direction.getDirection(changeX, changeY);
+				if (direction == Direction.UNSET || direction != newDirection)
+				{
+					direction = newDirection;
+					LocalPoint localPoint = LocalPoint.fromScene(x, y);
+					pathWP = ArrayUtils.add(pathWP, WorldPoint.fromLocalInstance(client, localPoint));
+
+				}
+			}
+		}
+
+		pathWP = ArrayUtils.add(pathWP, stepsWP[stepsWP.length - 1]);
+		comp.setPathWP(pathWP);
+		comp.setCoordinates(allCoordinates);
+	}
+
+	public void resetProgram(Character character, boolean restart)
 	{
 		Program program = character.getProgram();
 		ProgramComp comp = program.getComp();
 		comp.setCurrentStep(0);
 
-		if (comp.getSteps().length == 0)
+		if (!isInScene(character))
 			return;
 
-		WorldPoint wp = comp.getSteps()[0];
-		if (wp == null)
-			return;
-
-		Collection<WorldPoint> worldPoints = WorldPoint.toLocalInstance(client, wp);
-		WorldPoint worldPoint = worldPoints.iterator().next();
-		if (!worldPoint.isInScene(client))
-			return;
-
-		if (!loopReset)
+		boolean resetLocation = true;
+		if (character.isInInstance())
 		{
-			setLocation(character, false, true);
-			comp.setProgramActive(false);
+			if (comp.getStepsLP().length == 0)
+				return;
+
+			LocalPoint lp = comp.getStepsLP()[0];
+			if (lp == null)
+				return;
+
+			if (!lp.isInScene())
+				return;
+
+			int arrayLength = comp.getStepsLP().length;
+			if (restart && lp.distanceTo(comp.getStepsLP()[arrayLength - 1]) == 0)
+				resetLocation = false;
 		}
+
+		if (!character.isInInstance())
+		{
+			if (comp.getStepsWP().length == 0)
+				return;
+
+			WorldPoint wp = comp.getStepsWP()[0];
+			if (wp == null)
+				return;
+
+			int arrayLength = comp.getStepsWP().length;
+			if (restart && wp.distanceTo(comp.getStepsWP()[arrayLength - 1]) == 0)
+				resetLocation = false;
+		}
+
+		if (resetLocation)
+			setLocation(character, false, false, true);
+
+		comp.setProgramActive(restart);
 	}
 
 	public void updatePanelComboBoxes()
@@ -1426,9 +1560,7 @@ public class CreatorsPlugin extends Plugin
 		SwingUtilities.invokeLater(() ->
 		{
 			for (JComboBox<CustomModel> comboBox : creatorsPanel.getComboBoxes())
-			{
 				comboBox.updateUI();
-			}
 		});
 	}
 
@@ -1442,13 +1574,7 @@ public class CreatorsPlugin extends Plugin
 		@Override
 		public void hotkeyPressed()
 		{
-			if (overlaysActive)
-			{
-				overlaysActive = false;
-				return;
-			}
-
-			overlaysActive = true;
+			overlaysActive = !overlaysActive;
 		}
 	};
 
@@ -1488,7 +1614,7 @@ public class CreatorsPlugin extends Plugin
 		{
 			if (selectedCharacter != null)
 			{
-				setLocation(selectedCharacter, true, false);
+				setLocation(selectedCharacter, true, true, false);
 			}
 		}
 	};
@@ -1565,17 +1691,56 @@ public class CreatorsPlugin extends Plugin
 					return;
 
 				Program program = selectedCharacter.getProgram();
-				WorldPoint[] steps = program.getComp().getSteps();
+				boolean isInScene = isInScene(selectedCharacter);
 
-				if (steps.length == 0)
+				if (isInScene && client.isInInstancedRegion())
 				{
-					setLocation(selectedCharacter, true, false);
+					LocalPoint[] steps = program.getComp().getStepsLP();
+
+					if (steps.length == 0)
+					{
+						setLocation(selectedCharacter, true, true, false);
+					}
+
+					steps = ArrayUtils.add(steps, tile.getLocalLocation());
+					program.getComp().setStepsLP(steps);
+					updateProgramPath(program, false, selectedCharacter.isInInstance());
+					return;
 				}
 
-				WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, tile.getLocalLocation());
-				steps = ArrayUtils.add(steps, worldPoint);
-				program.getComp().setSteps(steps);
-				updateProgramPath(program, false);
+				if (!isInScene && client.isInInstancedRegion())
+				{
+					program.getComp().setStepsLP(new LocalPoint[]{tile.getLocalLocation()});
+					program.getComp().setStepsWP(new WorldPoint[0]);
+					setLocation(selectedCharacter, true, true, false);
+					updateProgramPath(program, false, selectedCharacter.isInInstance());
+					return;
+				}
+
+				if (isInScene && !client.isInInstancedRegion())
+				{
+					WorldPoint[] steps = program.getComp().getStepsWP();
+
+					if (steps.length == 0)
+					{
+						setLocation(selectedCharacter, true, true, false);
+					}
+
+					WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, tile.getLocalLocation());
+					steps = ArrayUtils.add(steps, worldPoint);
+					program.getComp().setStepsWP(steps);
+					updateProgramPath(program, false, selectedCharacter.isInInstance());
+					return;
+				}
+
+				if (!isInScene && !client.isInInstancedRegion())
+				{
+					WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, tile.getLocalLocation());
+					program.getComp().setStepsWP(new WorldPoint[]{worldPoint});
+					program.getComp().setStepsLP(new LocalPoint[0]);
+					setLocation(selectedCharacter, true, true, false);
+					updateProgramPath(program, false, selectedCharacter.isInInstance());
+				}
 			}
 		}
 	};
@@ -1587,19 +1752,33 @@ public class CreatorsPlugin extends Plugin
 		{
 			if (selectedCharacter != null)
 			{
+				if (!isInScene(selectedCharacter))
+					return;
+
 				Tile tile = client.getSelectedSceneTile();
-				if (tile != null)
+				if (tile == null)
+					return;
+
+				Program program = selectedCharacter.getProgram();
+				ProgramComp comp = program.getComp();
+
+				if (client.isInInstancedRegion())
+				{
+					LocalPoint[] steps = comp.getStepsLP();
+					steps = ArrayUtils.removeElement(steps, tile.getLocalLocation());
+					comp.setStepsLP(steps);
+				}
+				else
 				{
 					WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, tile.getLocalLocation());
-					Program program = selectedCharacter.getProgram();
-					ProgramComp comp = program.getComp();
-					WorldPoint[] steps = comp.getSteps();
+					WorldPoint[] steps = comp.getStepsWP();
 					steps = ArrayUtils.removeElement(steps, worldPoint);
-					comp.setSteps(steps);
-					comp.setCurrentStep(0);
-					updateProgramPath(program, false);
-					setLocation(selectedCharacter, false, true);
+					comp.setStepsWP(steps);
 				}
+
+				comp.setCurrentStep(0);
+				updateProgramPath(program, false, selectedCharacter.isInInstance());
+				setLocation(selectedCharacter, false, false, true);
 			}
 		}
 	};
@@ -1612,9 +1791,11 @@ public class CreatorsPlugin extends Plugin
 			if (selectedCharacter != null)
 			{
 				Program program = selectedCharacter.getProgram();
-				program.getComp().setSteps(new WorldPoint[0]);
-				updateProgramPath(program, false);
-				setLocation(selectedCharacter, false, false);
+				program.getComp().setStepsWP(new WorldPoint[0]);
+				program.getComp().setStepsLP(new LocalPoint[0]);
+				program.getComp().setProgramActive(false);
+				updateProgramPath(program, false, selectedCharacter.isInInstance());
+				setLocation(selectedCharacter, false, false, false);
 			}
 		}
 	};
@@ -1640,9 +1821,7 @@ public class CreatorsPlugin extends Plugin
 			pauseMode = !pauseMode;
 
 			for (Character character : characters)
-			{
 				character.getProgram().getComp().setProgramActive(!pauseMode);
-			}
 		}
 	};
 
@@ -1652,9 +1831,7 @@ public class CreatorsPlugin extends Plugin
 		public void hotkeyPressed()
 		{
 			if (selectedCharacter != null)
-			{
 				resetProgram(selectedCharacter, false);
-			}
 		}
 	};
 
@@ -1664,9 +1841,7 @@ public class CreatorsPlugin extends Plugin
 		public void hotkeyPressed()
 		{
 			for (Character character : characters)
-			{
 				resetProgram(character, false);
-			}
 		}
 	};
 

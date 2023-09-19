@@ -3,6 +3,7 @@ package com.creatorskit.programming;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
+import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 
 import java.awt.*;
@@ -12,8 +13,10 @@ import java.awt.*;
 @Setter
 public class ProgramComp
 {
-    private WorldPoint[] steps;
-    private WorldPoint[] path;
+    private WorldPoint[] stepsWP;
+    private WorldPoint[] pathWP;
+    private LocalPoint[] stepsLP;
+    private LocalPoint[] pathLP;
     private Coordinate[] coordinates;
     private int currentStep;
     private double speed;

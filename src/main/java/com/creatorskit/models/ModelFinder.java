@@ -75,7 +75,6 @@ public class ModelFinder
             BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
             String s = "";
             Pattern[] patterns = new Pattern[itemId.length];
-            //System.out.println("length: " + itemId.length);
 
             for (int i = 0; i < itemId.length; i++)
             {
@@ -92,7 +91,6 @@ public class ModelFinder
                     Matcher matcher = pattern.matcher(s);
                     if (matcher.matches())
                     {
-                        //System.out.println("Match found: " + s);
                         int[] modelIds = new int[3];
                         ArrayList<Integer> recolourFrom = new ArrayList<>();
                         ArrayList<Integer> recolourTo = new ArrayList<>();
@@ -174,10 +172,16 @@ public class ModelFinder
                         int size = recolourFrom.size();
                         short[] recolourFromArray = new short[size];
                         short[] recolourToArray = new short[size];
-                        for (int e = 0; e < size; e++) {
+                        for (int e = 0; e < size; e++)
+                        {
                             int from = recolourFrom.get(e);
+                            if (from > 32767)
+                                from -= 65536;
                             recolourFromArray[e] = (short) from;
+
                             int to = recolourTo.get(e);
+                            if (to > 32767)
+                                to -= 65536;
                             recolourToArray[e] = (short) to;
                         }
 
@@ -235,7 +239,6 @@ public class ModelFinder
                     Matcher matcher = pattern.matcher(s);
                     if (matcher.matches())
                     {
-                        //System.out.println("Match found: " + s);
                         int[] modelIds = new int[2];
                         ArrayList<Integer> recolourFrom = new ArrayList<>();
                         ArrayList<Integer> recolourTo = new ArrayList<>();
@@ -305,8 +308,13 @@ public class ModelFinder
                         for (int e = 0; e < size; e++)
                         {
                             int from = recolourFrom.get(e);
+                            if (from > 32767)
+                                from -= 65536;
                             recolourFromArray[e] = (short) from;
+
                             int to = recolourTo.get(e);
+                            if (to > 32767)
+                                to -= 65536;
                             recolourToArray[e] = (short) to;
                         }
 
@@ -315,8 +323,6 @@ public class ModelFinder
                             if (id > 0)
                             {
                                 modelStatsItems.add(new ModelStats(id, bodyPart, recolourFromArray, recolourToArray));
-
-
                             }
                         }
 
@@ -465,7 +471,12 @@ public class ModelFinder
                         if (match.matches())
                         {
                             String[] split = string.split("=");
-                            recolourFrom.add(Short.parseShort(split[1]));
+                            int i = Integer.parseInt(split[1]);
+                            if (i > 32767)
+                            {
+                                i -= 65536;
+                            }
+                            recolourFrom.add((short) i);
                         }
 
                         match = recolTo.matcher(string);
@@ -473,7 +484,12 @@ public class ModelFinder
                         if (match.matches())
                         {
                             String[] split = string.split("=");
-                            recolourTo.add(Short.parseShort(split[1]));
+                            int i = Integer.parseInt(split[1]);
+                            if (i > 32767)
+                            {
+                                i -= 65536;
+                            }
+                            recolourTo.add((short) i);
                         }
 
                     }

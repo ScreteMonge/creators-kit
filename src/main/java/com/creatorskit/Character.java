@@ -21,7 +21,11 @@ public class Character
     private boolean locationSet;
     private boolean minimized;
     private Program program;
-    private WorldPoint savedLocation;
+    private WorldPoint nonInstancedPoint;
+    private LocalPoint instancedPoint;
+    private int[] instancedRegions;
+    private int instancedPlane;
+    private boolean inInstance;
     private CustomModel storedModel;
     private JPanel masterPanel;
     private boolean customMode;

@@ -14,7 +14,6 @@ import net.runelite.client.ui.overlay.OverlayUtil;
 
 import javax.inject.Inject;
 import java.awt.*;
-import java.util.Collection;
 
 public class CreatorsOverlay extends Overlay
 {
@@ -54,7 +53,14 @@ public class CreatorsOverlay extends Overlay
 
         if (config.pathOverlay())
         {
-            renderProgramOverlay(graphics);
+            if (client.isInInstancedRegion())
+            {
+                renderInstancedProgramOverlay(graphics);
+            }
+            else
+            {
+                renderNonInstancedProgramOverlay(graphics);
+            }
         }
 
         if (config.npcOverlay())
@@ -70,18 +76,12 @@ public class CreatorsOverlay extends Overlay
         return null;
     }
 
-    public void renderProgramOverlay(Graphics2D graphics)
+    public void renderNonInstancedProgramOverlay(Graphics2D graphics)
     {
         for (int e = 0; e < plugin.getCharacters().size(); e++)
         {
             Character character = plugin.getCharacters().get(e);
-            WorldPoint savedLocation = character.getSavedLocation();
-            if (savedLocation == null)
-                continue;
-
-            Collection<WorldPoint> wps = WorldPoint.toLocalInstance(client, character.getSavedLocation());
-            WorldPoint wp = wps.iterator().hasNext() ? wps.iterator().next() : null;
-            if (wp == null || !wp.isInScene(client))
+            if (!plugin.isInScene(character))
                 continue;
 
             Program program = character.getProgram();
@@ -108,7 +108,73 @@ public class CreatorsOverlay extends Overlay
                 graphics.drawLine(startPoint.getX(), startPoint.getY(), endPoint.getX(), endPoint.getY());
             }
 
-            WorldPoint[] points = comp.getSteps();
+            WorldPoint[] points = comp.getStepsWP();
+            String name = character.getName();
+            String abbreviation = "";
+            int abbreviationLength = 3;
+            int nameLength = name.length();
+
+            if (abbreviationLength > nameLength)
+            {
+                abbreviation = character.getName().substring(0, nameLength);
+            }
+            else
+            {
+                abbreviation = character.getName().substring(0, 3);
+            }
+
+            for (int i = 0; i < points.length; i++)
+            {
+                LocalPoint localPoint = LocalPoint.fromWorld(client, points[i]);
+                if (localPoint == null)
+                    continue;
+
+                Point textPoint = Perspective.getCanvasTextLocation(client, graphics, localPoint, abbreviation, 0);
+                if (textPoint == null)
+                    continue;
+
+                OverlayUtil.renderTextLocation(graphics, textPoint, abbreviation, comp.getColor());
+            }
+        }
+    }
+
+    public void renderInstancedProgramOverlay(Graphics2D graphics)
+    {
+        for (int e = 0; e < plugin.getCharacters().size(); e++)
+        {
+            Character character = plugin.getCharacters().get(e);
+            if (!plugin.isInScene(character))
+                continue;
+
+            LocalPoint savedLocation = character.getInstancedPoint();
+            if (savedLocation == null || !savedLocation.isInScene())
+                continue;
+
+            Program program = character.getProgram();
+            if (program == null)
+                continue;
+
+            ProgramComp comp = program.getComp();
+
+            Coordinate[] coordinates = comp.getCoordinates();
+            for (int i = 0; i < coordinates.length - 1; i++)
+            {
+                if (coordinates[i] == null)
+                    continue;
+
+                LocalPoint lpStart = LocalPoint.fromScene(coordinates[i].getColumn(), coordinates[i].getRow());
+                LocalPoint lpEnd = LocalPoint.fromScene(coordinates[i + 1].getColumn(), coordinates[i + 1].getRow());
+                Point startPoint = Perspective.localToCanvas(client, lpStart, client.getPlane());
+                Point endPoint = Perspective.localToCanvas(client, lpEnd, client.getPlane());
+                if (startPoint == null || endPoint == null)
+                    continue;
+
+                graphics.setColor(comp.getColor());
+                graphics.setStroke(new BasicStroke(1));
+                graphics.drawLine(startPoint.getX(), startPoint.getY(), endPoint.getX(), endPoint.getY());
+            }
+
+            LocalPoint[] points = comp.getStepsLP();
             String name = character.getName();
             String abbreviation = "";
             int abbreviationLength = 3;
@@ -125,9 +191,7 @@ public class CreatorsOverlay extends Overlay
 
             for (int i = 0; i < points.length; i++)
             {
-                Collection<WorldPoint> worldPoints = WorldPoint.toLocalInstance(client, points[i]);
-                WorldPoint worldPoint = worldPoints.iterator().next();
-                LocalPoint localPoint = LocalPoint.fromWorld(client, worldPoint);
+                LocalPoint localPoint = points[i];
                 if (localPoint == null)
                     continue;
 
@@ -257,7 +321,8 @@ public class CreatorsOverlay extends Overlay
                         continue;
                     }
 
-                    if (player.getLocalLocation().distanceTo(gameObject.getLocalLocation()) <= MAX_DISTANCE)
+                    LocalPoint camera = new LocalPoint(client.getCameraX(), client.getCameraY());
+                    if (gameObject.getLocalLocation().distanceTo(camera) <= MAX_DISTANCE)
                     {
                         if (!config.gameObjectOverlay())
                         {

@@ -147,32 +147,23 @@ public class ProgramPanel extends JFrame
                 comp.setTurnSpeed((int) turnSpeedSpinner.getValue()));
         optionsPanel.add(turnSpeedSpinner);
 
-        JComboBox<String> movementBox = new JComboBox<>();
-        movementBox.addItem("Normal");
-        movementBox.addItem("Waterborne");
-        movementBox.addItem("Ghost");
+        JComboBox<MovementType> movementBox = new JComboBox<>();
+        movementBox.addItem(MovementType.NORMAL);
+        movementBox.addItem(MovementType.WATERBORNE);
+        movementBox.addItem(MovementType.GHOST);
         movementBox.addItemListener(e ->
         {
-            switch ((String) e.getItem())
-            {
-                case "Normal":
-                    comp.setMovementType(MovementType.NORMAL);
-                    break;
-                case "Waterborne":
-                    comp.setMovementType(MovementType.WATERBORNE);
-                    break;
-                case "Ghost":
-                    comp.setMovementType(MovementType.GHOST);
-            }
-
-            plugin.updateProgramPath(program, false);
+            comp.setMovementType((MovementType) movementBox.getSelectedItem());
+            plugin.updateProgramPath(program, false, character.isInInstance());
         });
+        movementBox.setSelectedItem(comp.getMovementType());
         optionsPanel.add(movementBox);
 
         JCheckBox loopCheckBox = new JCheckBox();
         loopCheckBox.setFocusable(false);
+        loopCheckBox.setSelected(comp.isLoop());
         loopCheckBox.addActionListener(e ->
-                comp.setLoop(!comp.isLoop()));
+                comp.setLoop(loopCheckBox.isSelected()));
         optionsPanel.add(loopCheckBox);
 
         c.gridx = 0;

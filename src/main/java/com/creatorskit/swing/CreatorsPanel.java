@@ -13,6 +13,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.Model;
+import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
@@ -43,17 +44,16 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Slf4j
+@Getter
 public class CreatorsPanel extends PluginPanel
 {
     @Inject
     private ClientThread clientThread;
     private final CreatorsPlugin plugin;
 
-    @Getter
     private final ModelAnvil modelAnvil;
     private final ModelOrganizer modelOrganizer;
     private final ProgramPanel programPanel;
-
     private final JButton addObjectButton = new JButton();
     private final JPanel mainPanel = new JPanel();
     private final GridBagConstraints cNPC = new GridBagConstraints();
@@ -61,17 +61,10 @@ public class CreatorsPanel extends PluginPanel
     public static final File SETUP_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit-setups");
     private final Pattern pattern = Pattern.compile("\\(\\d+\\)\\Z");
     private int npcPanels = 0;
-    @Getter
     private final ArrayList<JPanel> objectPanels = new ArrayList<>();
-    @Getter
     private final ArrayList<JComboBox<CustomModel>> comboBoxes = new ArrayList<>();
     private final Dimension spinnerSize = new Dimension(72, 30);
     private final int DEFAULT_TURN_SPEED = 68;
-
-    LineBorder defaultBorder = new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1);
-    LineBorder hoveredBorder = new LineBorder(ColorScheme.LIGHT_GRAY_COLOR, 1);
-    LineBorder selectedBorder = new LineBorder(Color.WHITE, 1);
-
     private final BufferedImage MAXIMIZE = ImageUtil.loadImageResource(getClass(), "/Maximize.png");
     private final BufferedImage MINIMIZE = ImageUtil.loadImageResource(getClass(), "/Minimize.png");
     private final BufferedImage DUPLICATE = ImageUtil.loadImageResource(getClass(), "/Duplicate.png");
@@ -79,6 +72,9 @@ public class CreatorsPanel extends PluginPanel
     private final BufferedImage CLEAR = ImageUtil.loadImageResource(getClass(), "/Clear.png");
     private final BufferedImage LOAD = ImageUtil.loadImageResource(getClass(), "/Load.png");
     private final BufferedImage SAVE = ImageUtil.loadImageResource(getClass(), "/SAVE.png");
+    private final LineBorder defaultBorder = new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1);
+    private final LineBorder hoveredBorder = new LineBorder(ColorScheme.LIGHT_GRAY_COLOR, 1);
+    private final LineBorder selectedBorder = new LineBorder(Color.WHITE, 1);
 
     @Inject
     public CreatorsPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin, ModelOrganizer modelOrganizer, ProgramPanel programPanel, ModelAnvil modelAnvil)
@@ -205,10 +201,10 @@ public class CreatorsPanel extends PluginPanel
 
     public JPanel createPanel()
     {
-        return createPanel("Object (" + npcPanels + ")", 7699, null, false, false, 0,  -1, 60, createEmptyProgram(), false, null);
+        return createPanel("Object (" + npcPanels + ")", 7699, null, false, false, 0,  -1, 60, createEmptyProgram(), false, null, null, new int[0], -1, false);
     }
 
-    public JPanel createPanel(String name, int modelId, CustomModel customModel, boolean customModeActive, boolean setMinimized, int orientation, int animationId, int radius, Program program, boolean active, WorldPoint worldPoint)
+    public JPanel createPanel(String name, int modelId, CustomModel customModel, boolean customModeActive, boolean setMinimized, int orientation, int animationId, int radius, Program program, boolean active, WorldPoint worldPoint, LocalPoint localPoint, int[] localPointRegion, int localPointPlane, boolean inInstance)
     {
         JPanel masterPanel = new JPanel();
         masterPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -446,7 +442,11 @@ public class CreatorsPanel extends PluginPanel
                     programmerNameLabel,
                     programmerIdleSpinner,
                     active,
-                    worldPoint);
+                    worldPoint,
+                    localPoint,
+                    localPointRegion,
+                    localPointPlane,
+                    inInstance);
 
             SwingUtilities.invokeLater(() ->
                     programPanel.createProgramPanel(character, programJPanel, programmerNameLabel, programmerIdleSpinner));
@@ -477,10 +477,12 @@ public class CreatorsPanel extends PluginPanel
             {
                 ProgramComp comp = program.getComp();
 
-                WorldPoint[] newSteps = ArrayUtils.clone(comp.getSteps());
-                WorldPoint[] newPath = ArrayUtils.clone(comp.getPath());
+                WorldPoint[] newSteps = ArrayUtils.clone(comp.getStepsWP());
+                WorldPoint[] newPath = ArrayUtils.clone(comp.getPathWP());
+                LocalPoint[] newStepsLP = ArrayUtils.clone(comp.getStepsLP());
+                LocalPoint[] newPathLP = ArrayUtils.clone(comp.getPathLP());
                 Coordinate[] newCoordinates = ArrayUtils.clone(comp.getCoordinates());
-                ProgramComp newComp = new ProgramComp(newSteps, newPath, newCoordinates, 0, comp.getSpeed(), comp.getTurnSpeed(), comp.getIdleAnim(), comp.getWalkAnim(), comp.getMovementType(), getRandomColor(), comp.isLoop(), comp.isProgramActive());
+                ProgramComp newComp = new ProgramComp(newSteps, newPath, newStepsLP, newPathLP, newCoordinates, 0, comp.getSpeed(), comp.getTurnSpeed(), comp.getIdleAnim(), comp.getWalkAnim(), comp.getMovementType(), getRandomColor(), comp.isLoop(), comp.isProgramActive());
 
                 String newName = textField.getText();
                 Matcher matcher = pattern.matcher(newName);
@@ -499,7 +501,7 @@ public class CreatorsPanel extends PluginPanel
                 }
 
                 Program newProgram = new Program(newComp, new JLabel(), new JSpinner());
-                createPanel(newName, (int) modelSpinner.getValue(), (CustomModel) modelComboBox.getSelectedItem(), character.isCustomMode(), minimized[0], (int) orientationSpinner.getValue(), (int) animationSpinner.getValue(), (int) radiusSpinner.getValue(), newProgram, character.getRuneLiteObject().isActive(), character.getSavedLocation());
+                createPanel(newName, (int) modelSpinner.getValue(), (CustomModel) modelComboBox.getSelectedItem(), character.isCustomMode(), minimized[0], (int) orientationSpinner.getValue(), (int) animationSpinner.getValue(), (int) radiusSpinner.getValue(), newProgram, character.getRuneLiteObject().isActive(), character.getNonInstancedPoint(), character.getInstancedPoint(), character.getInstancedRegions(), character.getInstancedPlane(), character.isInInstance());
             });
 
             minimizeButton.addActionListener(e ->
@@ -742,7 +744,7 @@ public class CreatorsPanel extends PluginPanel
 
     private Program createEmptyProgram()
     {
-        ProgramComp comp = new ProgramComp(new WorldPoint[0], new WorldPoint[0], new Coordinate[0], 0, 1, DEFAULT_TURN_SPEED, -1, -1, MovementType.NORMAL, getRandomColor(), false, false);
+        ProgramComp comp = new ProgramComp(new WorldPoint[0], new WorldPoint[0], new LocalPoint[0], new LocalPoint[0], new Coordinate[0], 0, 1, DEFAULT_TURN_SPEED, -1, -1, MovementType.NORMAL, getRandomColor(), false, false);
         return new Program(comp, new JLabel(), new JSpinner());
     }
 
@@ -818,7 +820,11 @@ public class CreatorsPanel extends PluginPanel
             Character character = characters.get(i);
             String name = character.getName();
             boolean locationSet = character.isLocationSet();
-            WorldPoint savedLocation = character.getSavedLocation();
+            WorldPoint savedWorldPoint = character.getNonInstancedPoint();
+            LocalPoint savedLocalPoint = character.getInstancedPoint();
+            int[] localPointRegion = character.getInstancedRegions();
+            int localPointPlane = character.getInstancedPlane();
+            boolean inInstance = character.isInInstance();
             int compId = 0;
             CustomModel storedModel = character.getStoredModel();
             if (storedModel != null)
@@ -843,7 +849,7 @@ public class CreatorsPanel extends PluginPanel
             int animationId = (int) character.getAnimationSpinner().getValue();
             ProgramComp programComp = character.getProgram().getComp();
 
-            characterSaves[i] = new CharacterSave(name, locationSet, savedLocation, compId, customMode, minimized, modelId, active, radius, rotation, animationId, programComp);
+            characterSaves[i] = new CharacterSave(name, locationSet, savedWorldPoint, savedLocalPoint, localPointRegion, localPointPlane, inInstance, compId, customMode, minimized, modelId, active, radius, rotation, animationId, programComp);
         }
 
         SaveFile saveFile = new SaveFile(comps, characterSaves);
@@ -916,7 +922,7 @@ public class CreatorsPanel extends PluginPanel
                 SwingUtilities.invokeLater(() ->
                 {
                     Program program = new Program(save.getProgramComp(), new JLabel(), new JSpinner());
-                    createPanel(save.getName(), save.getModelId(), null, save.isCustomMode(), save.isMinimized(), save.getRotation(), save.getAnimationId(), save.getRadius(), program, save.isActive(), save.getSavedLocation());
+                    createPanel(save.getName(), save.getModelId(), null, save.isCustomMode(), save.isMinimized(), save.getRotation(), save.getAnimationId(), save.getRadius(), program, save.isActive(), save.getNonInstancedPoint(), save.getInstancedPoint(), save.getInstancedRegions(), save.getInstancedPlane(), save.isInInstance());
                 });
             }
             return;
@@ -962,7 +968,7 @@ public class CreatorsPanel extends PluginPanel
             SwingUtilities.invokeLater(() ->
             {
                 Program program = new Program(save.getProgramComp(), new JLabel(), new JSpinner());
-                createPanel(save.getName(), save.getModelId(), customModels[save.getCompId()], save.isCustomMode(), save.isMinimized(), save.getRotation(), save.getAnimationId(), save.getRadius(), program, save.isActive(), save.getSavedLocation());
+                createPanel(save.getName(), save.getModelId(), customModels[save.getCompId()], save.isCustomMode(), save.isMinimized(), save.getRotation(), save.getAnimationId(), save.getRadius(), program, save.isActive(), save.getNonInstancedPoint(), save.getInstancedPoint(), save.getInstancedRegions(), save.getInstancedPlane(), save.isInInstance());
             });
         }
     }
