@@ -120,7 +120,8 @@ public interface CreatorsConfig extends Config
 	@ConfigItem(
 			keyName = "toggleAutoSetup",
 			name = "Enable Auto-Setup",
-			description = "Automatically loads the saved setup defined below",
+			description = "Automatically loads the saved setup from the file path below" +
+				"<br>Please note that enabling this feature will slow down client start-up",
 			section = sceneSettings,
 			position = 10
 	)

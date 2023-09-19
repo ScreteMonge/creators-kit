@@ -106,6 +106,7 @@ public class CreatorsPlugin extends Plugin
 	private final int DARK_AMBIENT = 128;
 	private final int DARK_CONTRAST = 4000;
 	private boolean pauseMode = true;
+	private boolean autoSetupFailed = false;
 
 	@Override
 	protected void startUp() throws Exception
@@ -140,9 +141,13 @@ public class CreatorsPlugin extends Plugin
 		keyManager.registerKeyListener(resetAllListener);
 
 		File SETUP_DIR = new File(config.setupPath() + ".json");
-		if (SETUP_DIR.exists() && config.autoSetup())
+		if (config.autoSetup())
 		{
-			creatorsPanel.loadSetup(SETUP_DIR);
+			if (SETUP_DIR.exists())
+				creatorsPanel.loadSetup(SETUP_DIR);
+
+			if (!SETUP_DIR.exists())
+				autoSetupFailed = true;
 		}
 	}
 
@@ -176,6 +181,13 @@ public class CreatorsPlugin extends Plugin
 	{
 		if (client.getGameState() != GameState.LOGGED_IN)
 			return;
+
+		if (autoSetupFailed)
+		{
+			autoSetupFailed = false;
+			sendChatMessage("Creator's Kit auto-setup has failed to find the file at the path: " + config.setupPath());
+			sendChatMessage("Please ensure the config menu has the appropriate file path.");
+		}
 
 		if (client.getLocalPlayer() == null)
 			return;
