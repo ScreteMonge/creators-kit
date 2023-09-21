@@ -34,7 +34,6 @@ import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.ColorUtil;
 import net.runelite.client.util.HotkeyListener;
 import net.runelite.client.util.ImageUtil;
-import net.runelite.client.util.Text;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.awt.*;
@@ -106,7 +105,7 @@ public class CreatorsPlugin extends Plugin
 	private final int DARK_AMBIENT = 128;
 	private final int DARK_CONTRAST = 4000;
 	private boolean pauseMode = true;
-	private boolean autoSetupFailed = false;
+	private boolean autoSetupPathFound = true;
 
 	@Override
 	protected void startUp() throws Exception
@@ -144,10 +143,19 @@ public class CreatorsPlugin extends Plugin
 		if (config.autoSetup())
 		{
 			if (SETUP_DIR.exists())
-				creatorsPanel.loadSetup(SETUP_DIR);
+			{
+				try
+				{
+					creatorsPanel.loadSetup(SETUP_DIR);
+				}
+				catch (Exception e)
+				{
+
+				}
+			}
 
 			if (!SETUP_DIR.exists())
-				autoSetupFailed = true;
+				autoSetupPathFound = false;
 		}
 	}
 
@@ -182,9 +190,9 @@ public class CreatorsPlugin extends Plugin
 		if (client.getGameState() != GameState.LOGGED_IN)
 			return;
 
-		if (autoSetupFailed)
+		if (!autoSetupPathFound)
 		{
-			autoSetupFailed = false;
+			autoSetupPathFound = true;
 			sendChatMessage("Creator's Kit auto-setup has failed to find the file at the path: " + config.setupPath());
 			sendChatMessage("Please ensure the config menu has the appropriate file path.");
 		}
@@ -729,6 +737,9 @@ public class CreatorsPlugin extends Plugin
 
 	public void setAnimation(Character character, int animationId)
 	{
+		if (client.getGameState() != GameState.LOGGED_IN)
+			return;
+
 		RuneLiteObject runeLiteObject = character.getRuneLiteObject();
 		clientThread.invoke(() ->
 		{
