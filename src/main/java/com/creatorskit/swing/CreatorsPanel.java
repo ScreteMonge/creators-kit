@@ -71,7 +71,7 @@ public class CreatorsPanel extends PluginPanel
     private final BufferedImage CLOSE = ImageUtil.loadImageResource(getClass(), "/Close.png");
     private final BufferedImage CLEAR = ImageUtil.loadImageResource(getClass(), "/Clear.png");
     private final BufferedImage LOAD = ImageUtil.loadImageResource(getClass(), "/Load.png");
-    private final BufferedImage SAVE = ImageUtil.loadImageResource(getClass(), "/SAVE.png");
+    private final BufferedImage SAVE = ImageUtil.loadImageResource(getClass(), "/Save.png");
     private final LineBorder defaultBorder = new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1);
     private final LineBorder hoveredBorder = new LineBorder(ColorScheme.LIGHT_GRAY_COLOR, 1);
     private final LineBorder selectedBorder = new LineBorder(Color.WHITE, 1);
