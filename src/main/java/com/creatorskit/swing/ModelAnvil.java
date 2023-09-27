@@ -183,18 +183,59 @@ public class ModelAnvil extends JFrame
         headerPanel.add(saveButton);
 
         JCheckBox priorityCheckBox = new JCheckBox("Priority");
-        priorityCheckBox.setToolTipText("Use an oversimplified method of resolving render order issues (useful when merging models but not for NPCs/Players)");
+        priorityCheckBox.setToolTipText("Use an oversimplified method of resolving render order issues\n(useful when merging models but not for NPCs/Players)");
         priorityCheckBox.setFocusable(false);
         headerPanel.add(priorityCheckBox);
-
-        JPanel sidePanel = new GroupPanel(client, plugin, clientThread);
-        scrollPane.setRowHeaderView(sidePanel);
 
         forgeButton.addActionListener(e ->
                 forgeModel(client, nameField, priorityCheckBox.isSelected(), brightLightCheckBox.isSelected(), false));
 
         forgeSetButton.addActionListener(e ->
                 forgeModel(client, nameField, priorityCheckBox.isSelected(), brightLightCheckBox.isSelected(), true));
+
+        JPanel sidePanel = new JPanel();
+        sidePanel.setLayout(new BorderLayout());
+        scrollPane.setRowHeaderView(sidePanel);
+
+        JPanel cacheSearcherPanel = new JPanel();
+        cacheSearcherPanel.setLayout(new GridLayout(0, 1, 4, 4));
+        cacheSearcherPanel.setBorder(new EmptyBorder(4, 20, 4, 20));
+        cacheSearcherPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        sidePanel.add(cacheSearcherPanel, BorderLayout.PAGE_START);
+
+        JPanel groupPanel = new GroupPanel(client, plugin, clientThread);
+        sidePanel.add(groupPanel, BorderLayout.CENTER);
+
+        JLabel searcherLabel = new JLabel("Cache Searcher");
+        searcherLabel.setFont(FontManager.getRunescapeBoldFont());
+        searcherLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        searcherLabel.setVerticalAlignment(SwingConstants.CENTER);
+        cacheSearcherPanel.add(searcherLabel);
+
+        JSpinner idSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 99999, 1));
+        idSpinner.setToolTipText("Choose the NPC or Object Id to find");
+        cacheSearcherPanel.add(idSpinner);
+
+        JComboBox<CustomModelType> modelTypeComboBox = new JComboBox<>();
+        modelTypeComboBox.addItem(CustomModelType.CACHE_NPC);
+        modelTypeComboBox.addItem(CustomModelType.CACHE_OBJECT);
+        modelTypeComboBox.setFocusable(false);
+        modelTypeComboBox.setToolTipText("Pick which part of the cache to search");
+        cacheSearcherPanel.add(modelTypeComboBox);
+
+        JButton addModelsButton = new JButton("Add Models");
+        addModelsButton.setFocusable(false);
+        addModelsButton.setToolTipText("Add the models from the chosen NPC or Object to the Anvil");
+        cacheSearcherPanel.add(addModelsButton);
+        addModelsButton.addActionListener(e ->
+        {
+            CustomModelType type = (CustomModelType) modelTypeComboBox.getSelectedItem();
+            if (type == null)
+                return;
+
+            int id = (int) idSpinner.getValue();
+            plugin.cacheToAnvil(type, id);
+        });
 
         validate();
         pack();

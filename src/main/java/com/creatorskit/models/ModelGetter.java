@@ -3,6 +3,7 @@ package com.creatorskit.models;
 import com.creatorskit.CreatorsPlugin;
 import net.runelite.api.*;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.util.Text;
 
 import javax.inject.Inject;
 
@@ -53,7 +54,7 @@ public class ModelGetter
                         clientThread.invokeLater(() ->
                         {
                             plugin.cacheToAnvil(modelStats, new int[0], false);
-                            plugin.sendChatMessage("Model sent to Anvil Complex Mode: " + npc.getName());
+                            plugin.sendChatMessage("Model sent to Anvil: " + npc.getName());
                         });
                     });
                     thread.start();
@@ -102,7 +103,7 @@ public class ModelGetter
                             clientThread.invokeLater(() ->
                             {
                                 plugin.cacheToAnvil(modelStats, comp.getColors(), true);
-                                plugin.sendChatMessage("Model sent to Anvil: " + target);
+                                plugin.sendChatMessage("Model sent to Anvil: " + Text.removeTags(target));
                             });
                         });
                         thread.start();
@@ -119,6 +120,7 @@ public class ModelGetter
                             CustomModelComp composition = new CustomModelComp(0, CustomModelType.CACHE_PLAYER, -1, modelStats, comp.getColors(), null, LightingStyle.ACTOR, false, player.getName());
                             CustomModel customModel = new CustomModel(model, composition);
                             plugin.addCustomModel(customModel, false);
+                            plugin.sendChatMessage("Model stored: " + Text.removeTags(target));
                         });
                     });
                     thread.start();

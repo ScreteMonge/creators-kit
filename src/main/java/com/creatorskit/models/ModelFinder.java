@@ -1,5 +1,7 @@
 package com.creatorskit.models;
 
+import net.runelite.client.util.Text;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -426,6 +428,36 @@ public class ModelFinder
         return modelStats;
     }
 
+    public static String findNameForNPC(int npcId)
+    {
+        try
+        {
+            URL url = new URL("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.npc");
+            URLConnection connection = url.openConnection();
+            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            String s = "";
+
+            Pattern npcPattern = Pattern.compile("\\[.+_" + npcId + "]");
+
+            while ((s = br.readLine()) != null)
+            {
+                Matcher match = npcPattern.matcher(s);
+                if (match.matches())
+                {
+                    String name = br.readLine();
+                    return Text.removeTags(name.replaceAll("name=", ""));
+                }
+            }
+            br.close();
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(e);
+        }
+
+        return "Null";
+    }
+
     public static ModelStats[] findModelsForObject(int objectId)
     {
         Pattern recolFrom = Pattern.compile("recol\\ds=.+");
@@ -515,6 +547,36 @@ public class ModelFinder
             modelStats[i] = new ModelStats(modelIds.get(i), BodyPart.NA, rf, rt);
 
         return modelStats;
+    }
+
+    public static String findNameForObject(int objectId)
+    {
+        try
+        {
+            URL url = new URL("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.loc");
+            URLConnection connection = url.openConnection();
+            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            String s = "";
+
+            Pattern npcPattern = Pattern.compile("\\[.+_" + objectId + "]");
+
+            while ((s = br.readLine()) != null)
+            {
+                Matcher match = npcPattern.matcher(s);
+                if (match.matches())
+                {
+                    String name = br.readLine();
+                    return Text.removeTags(name.replaceAll("name=", ""));
+                }
+            }
+            br.close();
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(e);
+        }
+
+        return "Null";
     }
 
     public static String shortArrayToString(short[] array)

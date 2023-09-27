@@ -5,9 +5,19 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public enum CustomModelType
 {
-    FORGED,
-    CACHE_NPC,
-    CACHE_OBJECT,
-    CACHE_PLAYER,
-    CACHE_GROUND_ITEM
+    FORGED("Forged"),
+    CACHE_NPC("NPC"),
+    CACHE_OBJECT("Object"),
+    CACHE_PLAYER("Player"),
+    CACHE_GROUND_ITEM("Ground Item")
+
+    ;
+
+    private final String name;
+
+    @Override
+    public String toString()
+    {
+        return name;
+    }
 }

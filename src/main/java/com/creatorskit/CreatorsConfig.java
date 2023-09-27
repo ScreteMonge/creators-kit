@@ -118,12 +118,24 @@ public interface CreatorsConfig extends Config
 	String sceneSettings = "sceneSettings";
 
 	@ConfigItem(
+			keyName = "enableRightClick",
+			name = "Enable Right-Click",
+			description = "Enables Right-Click menu options to Store & Anvil objects/NPCs, and selecting spawned Objects",
+			section = sceneSettings,
+			position = 10
+	)
+	default boolean rightClick()
+	{
+		return true;
+	}
+
+	@ConfigItem(
 			keyName = "toggleAutoSetup",
 			name = "Enable Auto-Setup",
 			description = "Automatically loads the saved setup from the file path below" +
 				"<br>Please note that enabling this feature will slow down client start-up",
 			section = sceneSettings,
-			position = 10
+			position = 11
 	)
 	default boolean autoSetup()
 	{
@@ -135,7 +147,7 @@ public interface CreatorsConfig extends Config
 			name = "Auto-Setup Path",
 			description = "Enter the file path of a previously saved setup to automatically load on client start-up",
 			section = sceneSettings,
-			position = 11
+			position = 12
 	)
 	default String setupPath()
 	{
@@ -147,7 +159,7 @@ public interface CreatorsConfig extends Config
 			name = "Quick Spawn",
 			description = "Hotkey to toggle the spawn or despawn state of the selected object",
 			section = sceneSettings,
-			position = 12
+			position = 13
 	)
 	default Keybind quickSpawnHotkey()
 	{
@@ -159,7 +171,7 @@ public interface CreatorsConfig extends Config
 			name = "Quick Location",
 			description = "Hotkey to set the selected object to the mouse location",
 			section = sceneSettings,
-			position = 13
+			position = 14
 	)
 	default Keybind quickLocationHotkey()
 	{
@@ -171,7 +183,7 @@ public interface CreatorsConfig extends Config
 			name = "Quick Rotate CW",
 			description = "Hotkey to rotate the selected object by 90 degrees clockwise",
 			section = sceneSettings,
-			position = 14
+			position = 15
 	)
 	default Keybind quickRotateCWHotkey()
 	{
@@ -183,7 +195,7 @@ public interface CreatorsConfig extends Config
 			name = "Quick Rotate CCW",
 			description = "Hotkey to rotate the selected object by 90 degrees counter-clockwise",
 			section = sceneSettings,
-			position = 15
+			position = 16
 	)
 	default Keybind quickRotateCCWHotkey()
 	{
@@ -193,7 +205,7 @@ public interface CreatorsConfig extends Config
 	@ConfigSection(
 			name = "Overlays",
 			description = "Settings for enabling/disabling overlays",
-			position = 16
+			position = 17
 	)
 	String overlaySettings = "overlaySettings";
 
@@ -202,7 +214,7 @@ public interface CreatorsConfig extends Config
 			name = "Toggle Overlays",
 			description = "Hotkey to toggle all overlays. Unset to disable",
 			section = overlaySettings,
-			position = 17
+			position = 18
 	)
 	default Keybind toggleOverlaysHotkey()
 	{
@@ -214,7 +226,7 @@ public interface CreatorsConfig extends Config
 			name = "My Object Overlay",
 			description = "Enables an overlay for objects introduced via this plugin",
 			section = overlaySettings,
-			position = 18
+			position = 19
 	)
 	default boolean myObjectOverlay()
 	{
@@ -226,7 +238,7 @@ public interface CreatorsConfig extends Config
 			name = "Object Path Overlay",
 			description = "Enables an overlay for the pathing of programmed objects introduced via this plugin",
 			section = overlaySettings,
-			position = 19
+			position = 20
 	)
 	default boolean pathOverlay()
 	{
@@ -238,7 +250,7 @@ public interface CreatorsConfig extends Config
 			name = "Game Object Overlay",
 			description = "Enables an overlay for GameObjects",
 			section = overlaySettings,
-			position = 20
+			position = 21
 	)
 	default boolean gameObjectOverlay()
 	{
@@ -250,7 +262,7 @@ public interface CreatorsConfig extends Config
 			name = "Player Overlay",
 			description = "Enables an overlay for Players",
 			section = overlaySettings,
-			position = 21
+			position = 22
 	)
 	default boolean playerOverlay()
 	{
@@ -262,7 +274,7 @@ public interface CreatorsConfig extends Config
 			name = "NPC Overlay",
 			description = "Enables an overlay for NPCs",
 			section = overlaySettings,
-			position = 22
+			position = 23
 	)
 	default boolean npcOverlay()
 	{
@@ -274,7 +286,7 @@ public interface CreatorsConfig extends Config
 			name = "Ground Object Overlay",
 			description = "Enables an overlay for GroundObjects",
 			section = overlaySettings,
-			position = 23
+			position = 24
 	)
 	default boolean groundObjectOverlay()
 	{
@@ -286,7 +298,7 @@ public interface CreatorsConfig extends Config
 			name = "Wall Object Overlay",
 			description = "Enables an overlay for TileObjects",
 			section = overlaySettings,
-			position = 24
+			position = 25
 	)
 	default boolean wallObjectOverlay()
 	{
@@ -298,7 +310,7 @@ public interface CreatorsConfig extends Config
 			name = "Decorative Object Overlay",
 			description = "Enables an overlay for DecorativeObjects",
 			section = overlaySettings,
-			position = 25
+			position = 26
 	)
 	default boolean decorativeObjectOverlay()
 	{
@@ -308,7 +320,7 @@ public interface CreatorsConfig extends Config
 	@ConfigSection(
 			name = "Programmer",
 			description = "Settings for quickly programming the selected object",
-			position = 26
+			position = 27
 	)
 	String programmer = "programmer";
 
@@ -317,7 +329,7 @@ public interface CreatorsConfig extends Config
 			name = "Add Program Step",
 			description = "Hotkey to add the hovered location to the selected object's program",
 			section = programmer,
-			position = 27
+			position = 28
 	)
 	default Keybind addProgramStepHotkey()
 	{
@@ -329,7 +341,7 @@ public interface CreatorsConfig extends Config
 			name = "Remove Program Step",
 			description = "Hotkey to remove the hovered location from the selected object's program",
 			section = programmer,
-			position = 28
+			position = 29
 	)
 	default Keybind removeProgramStepHotkey()
 	{
@@ -341,7 +353,7 @@ public interface CreatorsConfig extends Config
 			name = "Clear Program Steps",
 			description = "Hotkey to clear all steps from the selected object's program",
 			section = programmer,
-			position = 29
+			position = 30
 	)
 	default Keybind clearProgramStepHotkey()
 	{
@@ -353,7 +365,7 @@ public interface CreatorsConfig extends Config
 			name = "Play/Pause Toggle",
 			description = "Hotkey to play/pause selected object",
 			section = programmer,
-			position = 30
+			position = 31
 	)
 	default Keybind playPauseHotkey()
 	{
@@ -365,7 +377,7 @@ public interface CreatorsConfig extends Config
 			name = "Play/Pause All",
 			description = "Hotkey to play/pause all programs",
 			section = programmer,
-			position = 31
+			position = 32
 	)
 	default Keybind playPauseAllHotkey()
 	{
@@ -377,7 +389,7 @@ public interface CreatorsConfig extends Config
 			name = "Reset Locations",
 			description = "Hotkey to set selected object to its start location",
 			section = programmer,
-			position = 32
+			position = 33
 	)
 	default Keybind resetHotkey()
 	{
@@ -389,7 +401,7 @@ public interface CreatorsConfig extends Config
 			name = "Reset All Locations",
 			description = "Hotkey to set all objects to their start location",
 			section = programmer,
-			position = 33
+			position = 34
 	)
 	default Keybind resetAllHotkey()
 	{

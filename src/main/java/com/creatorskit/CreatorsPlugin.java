@@ -49,7 +49,7 @@ import java.util.List;
 @PluginDescriptor(
 		name = "Creator's Kit",
 		description = "A suite of tools for creators",
-		tags = {"tool", "creator", "content", "kit", "camera"}
+		tags = {"tool", "creator", "content", "kit", "camera", "immersion"}
 )
 public class CreatorsPlugin extends Plugin
 {
@@ -144,18 +144,11 @@ public class CreatorsPlugin extends Plugin
 		{
 			if (SETUP_DIR.exists())
 			{
-				try
-				{
-					creatorsPanel.loadSetup(SETUP_DIR);
-				}
-				catch (Exception e)
-				{
-
-				}
+				creatorsPanel.loadSetup(SETUP_DIR);
+				return;
 			}
 
-			if (!SETUP_DIR.exists())
-				autoSetupPathFound = false;
+			autoSetupPathFound = false;
 		}
 	}
 
@@ -213,7 +206,10 @@ public class CreatorsPlugin extends Plugin
 		{
 			savedPlane = plane;
 			for (Character character : characters)
+			{
+				setLocation(character, false, false, false, true);
 				resetProgram(character, character.getProgram().getComp().isProgramActive());
+			}
 		}
 	}
 
@@ -405,7 +401,7 @@ public class CreatorsPlugin extends Plugin
 
 			for (Character character : characters)
 			{
-				setLocation(character, false, false, true);
+				setLocation(character, false, false, false, true);
 				resetProgram(character, character.getProgram().getComp().isProgramActive());
 				if ((character.isInInstance() && instance && client.getPlane() == character.getInstancedPlane()) || (!character.isInInstance() && !instance))
 					updateProgramPath(character.getProgram(), true, character.isInInstance());
@@ -425,6 +421,9 @@ public class CreatorsPlugin extends Plugin
 	@Subscribe
 	public void onMenuEntryAdded(MenuEntryAdded event)
 	{
+		if (!config.rightClick())
+			return;
+
 		String target = event.getTarget();
 		String option = event.getOption();
 
@@ -538,7 +537,7 @@ public class CreatorsPlugin extends Plugin
 		}
 	}
 
-	public void setLocation(Character character, boolean newLocation, boolean setToHoveredTile, boolean setToPathStart)
+	public void setLocation(Character character, boolean newLocation, boolean setToPlayer, boolean setToHoveredTile, boolean setToPathStart)
 	{
 		if (client.getGameState() != GameState.LOGGED_IN)
 			return;
@@ -550,21 +549,25 @@ public class CreatorsPlugin extends Plugin
 
 		if (instance)
 		{
-			setLocationInstance(character, setToHoveredTile, setToPathStart);
+			setLocationInstance(character, setToPlayer, setToHoveredTile, setToPathStart);
 			return;
 		}
 
-		setLocationNonInstance(character, setToHoveredTile, setToPathStart);
+		setLocationNonInstance(character, setToPlayer, setToHoveredTile, setToPathStart);
 	}
 
-	public void setLocationNonInstance(Character character, boolean setToHoveredTile, boolean setToPathStart)
+	public void setLocationNonInstance(Character character, boolean setToPlayer, boolean setToHoveredTile, boolean setToPathStart)
 	{
 		clientThread.invoke(() ->
 		{
 			LocalPoint localPoint;
 			WorldPoint[] steps = character.getProgram().getComp().getStepsWP();
 
-			if (setToHoveredTile)
+			if (setToPlayer)
+			{
+				localPoint = client.getLocalPlayer().getLocalLocation();
+			}
+			else if (setToHoveredTile)
 			{
 				Tile tile = client.getSelectedSceneTile();
 				if (tile == null)
@@ -613,14 +616,19 @@ public class CreatorsPlugin extends Plugin
 		});
 	}
 
-	public void setLocationInstance(Character character, boolean setToHoveredTile, boolean setToPathStart)
+	public void setLocationInstance(Character character, boolean setToPlayer, boolean setToHoveredTile, boolean setToPathStart)
 	{
 		clientThread.invoke(() ->
 		{
 			LocalPoint localPoint;
 			LocalPoint[] steps = character.getProgram().getComp().getStepsLP();
 
-			if (setToHoveredTile) {
+			if (setToPlayer)
+			{
+				localPoint = client.getLocalPlayer().getLocalLocation();
+			}
+			else if (setToHoveredTile)
+			{
 				Tile tile = client.getSelectedSceneTile();
 				if (tile == null)
 					return;
@@ -700,7 +708,7 @@ public class CreatorsPlugin extends Plugin
 
 		if (!character.isLocationSet())
 		{
-			setLocation(character, true, false, false);
+			setLocation(character, true, true, false, false);
 		}
 	}
 
@@ -863,7 +871,7 @@ public class CreatorsPlugin extends Plugin
 		setAnimation(character, animationId);
 		setModel(character, customModelMode, modelId);
 
-		setLocation(character, !character.isLocationSet(), false, false);
+		setLocation(character, !character.isLocationSet(), false, false, false);
 		runeLiteObject.setActive(active);
 
 		nameTextField.addActionListener(e ->
@@ -873,7 +881,7 @@ public class CreatorsPlugin extends Plugin
 		});
 
 		setLocationButton.addActionListener(e ->
-				setLocation(character, !character.isLocationSet(), false, false));
+				setLocation(character, !character.isLocationSet(), false, false, false));
 
 		spawnButton.addActionListener(e ->
 				toggleSpawn(spawnButton, character));
@@ -983,39 +991,6 @@ public class CreatorsPlugin extends Plugin
 		chatMessageManager.queue(QueuedMessage.builder().type(ChatMessageType.GAMEMESSAGE).runeLiteFormattedMessage(message).build());
 	}
 
-	public Model constructSimpleModel(int[] modelIds, short[] colourToFind, short[] colourToReplace, LightingStyle lightingStyle)
-	{
-		ModelData[] data = new ModelData[modelIds.length];
-
-		for (int i = 0; i < modelIds.length; i++)
-		{
-			int id = modelIds[i];
-			ModelData modelData = client.loadModelData(id);
-
-			if (modelData != null && modelData.getFaceColors().length > 0)
-			{
-				modelData.cloneColors();
-				for (int e = 0; e < colourToFind.length; e++)
-				{
-					modelData.recolor(colourToFind[e], colourToReplace[e]);
-				}
-			}
-
-			data[i] = modelData;
-		}
-
-		switch (lightingStyle)
-		{
-			default:
-			case DEFAULT:
-				return client.mergeModels(data).light();
-			case ACTOR:
-				return client.mergeModels(data).light(BRIGHT_AMBIENT, BRIGHT_CONTRAST, -30, -50, -30);
-			case NONE:
-				return client.mergeModels(data).light(DARK_AMBIENT, DARK_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
-		}
-	}
-
 	public Model createComplexModel(DetailedModel[] detailedModels, boolean setPriority, LightingStyle lightingStyle)
 	{
 		ModelData[] models = new ModelData[detailedModels.length];
@@ -1121,31 +1096,48 @@ public class CreatorsPlugin extends Plugin
 			{
 				if (player)
 				{
-					if (modelStats.getBodyPart() == BodyPart.NA) {
-						creatorsPanel.getModelAnvil().createComplexPanel(
-								"Item",
-								modelStats.getModelId(),
-								9,
-								0, 0, 0,
-								0, 0, 0,
-								128, 128, 128,
-								0,
-								ModelFinder.shortArrayToString(modelStats.getRecolourTo()),
-								ModelFinder.shortArrayToString(modelStats.getRecolourFrom()));
-					}
-					else
+					String name = "Item";
+					if (modelStats.getBodyPart() != BodyPart.NA)
+						name = modelStats.getBodyPart().toString();
+
+					StringBuilder recolourNew = new StringBuilder();
+					StringBuilder recolourOld = new StringBuilder();
+
+					String itemRecolourNew = ModelFinder.shortArrayToString(modelStats.getRecolourTo());
+					String itemRecolourOld = ModelFinder.shortArrayToString(modelStats.getRecolourFrom());
+					String kitRecolourNew = KitRecolourer.getKitRecolourNew(modelStats.getBodyPart(), kitRecolours);
+					String kitRecolourOld = KitRecolourer.getKitRecolourOld(modelStats.getBodyPart());
+
+					recolourNew.append(itemRecolourNew);
+					recolourOld.append(itemRecolourOld);
+
+					if (!kitRecolourNew.equals(""))
 					{
-						creatorsPanel.getModelAnvil().createComplexPanel(
-								modelStats.getBodyPart().toString(),
-								modelStats.getModelId(),
-								9,
-								0, 0, 0,
-								0, 0, 0,
-								128, 128, 128,
-								0,
-								KitRecolourer.getKitRecolourNew(modelStats.getBodyPart(), kitRecolours),
-								KitRecolourer.getKitRecolourOld(modelStats.getBodyPart()));
+						if (!itemRecolourNew.equals(""))
+							recolourNew.append(",");
+
+						recolourNew.append(kitRecolourNew);
 					}
+
+					if (!kitRecolourOld.equals(""))
+					{
+						if (!itemRecolourOld.equals(""))
+							recolourOld.append(",");
+
+						recolourOld.append(kitRecolourOld);
+					}
+
+					creatorsPanel.getModelAnvil().createComplexPanel(
+							name,
+							modelStats.getModelId(),
+							9,
+							0, 0, 0,
+							0, 0, 0,
+							128, 128, 128,
+							0,
+							recolourNew.toString(),
+							recolourOld.toString());
+
 					continue;
 				}
 
@@ -1161,6 +1153,64 @@ public class CreatorsPlugin extends Plugin
 						ModelFinder.shortArrayToString(modelStats.getRecolourFrom()));
 			}
 		});
+	}
+
+	public void cacheToAnvil(CustomModelType type, int id)
+	{
+		Thread thread = new Thread(() ->
+		{
+			ModelStats[] modelStats;
+			String name;
+
+			switch (type)
+			{
+				case CACHE_NPC:
+					modelStats = ModelFinder.findModelsForNPC(id);
+					name = ModelFinder.findNameForNPC(id);
+					break;
+				default:
+				case CACHE_OBJECT:
+					modelStats = ModelFinder.findModelsForObject(id);
+					name = ModelFinder.findNameForObject(id);
+			}
+
+			cacheToAnvil(modelStats, new int[0], false);
+			sendChatMessage("Model sent to Anvil: " + name);
+		});
+		thread.start();
+	}
+
+	public void cacheToCustomModel(CustomModelType type, int id)
+	{
+		Thread thread = new Thread(() ->
+		{
+			ModelStats[] modelStats;
+			String name;
+			CustomModelComp comp;
+
+			switch (type)
+			{
+				case CACHE_NPC:
+					modelStats = ModelFinder.findModelsForNPC(id);
+					name = ModelFinder.findNameForNPC(id);
+					comp = new CustomModelComp(0, CustomModelType.CACHE_NPC, id, modelStats, null, null, LightingStyle.ACTOR, false, name);
+					break;
+				default:
+				case CACHE_OBJECT:
+					modelStats = ModelFinder.findModelsForObject(id);
+					name = ModelFinder.findNameForObject(id);
+					comp = new CustomModelComp(0, CustomModelType.CACHE_OBJECT, id, modelStats, null, null, LightingStyle.DEFAULT, false, name);
+			}
+
+			clientThread.invokeLater(() ->
+			{
+				Model model = constructModelFromCache(modelStats, new int[0], false, true);
+				CustomModel customModel = new CustomModel(model, comp);
+				addCustomModel(customModel, false);
+				sendChatMessage("Model stored: " + name);
+			});
+		});
+		thread.start();
 	}
 
 	public Model constructModelFromCache(ModelStats[] modelStatsArray, int[] kitRecolours, boolean player, boolean actorLighting)
@@ -1573,7 +1623,7 @@ public class CreatorsPlugin extends Plugin
 		}
 
 		if (resetLocation)
-			setLocation(character, false, false, true);
+			setLocation(character, false, false, false, true);
 
 		comp.setProgramActive(restart);
 	}
@@ -1637,7 +1687,7 @@ public class CreatorsPlugin extends Plugin
 		{
 			if (selectedCharacter != null)
 			{
-				setLocation(selectedCharacter, true, true, false);
+				setLocation(selectedCharacter, true, false, true, false);
 			}
 		}
 	};
@@ -1722,7 +1772,7 @@ public class CreatorsPlugin extends Plugin
 
 					if (steps.length == 0)
 					{
-						setLocation(selectedCharacter, true, true, false);
+						setLocation(selectedCharacter, true, false, true, false);
 					}
 
 					steps = ArrayUtils.add(steps, tile.getLocalLocation());
@@ -1735,7 +1785,7 @@ public class CreatorsPlugin extends Plugin
 				{
 					program.getComp().setStepsLP(new LocalPoint[]{tile.getLocalLocation()});
 					program.getComp().setStepsWP(new WorldPoint[0]);
-					setLocation(selectedCharacter, true, true, false);
+					setLocation(selectedCharacter, true, false, true, false);
 					updateProgramPath(program, false, selectedCharacter.isInInstance());
 					return;
 				}
@@ -1746,7 +1796,7 @@ public class CreatorsPlugin extends Plugin
 
 					if (steps.length == 0)
 					{
-						setLocation(selectedCharacter, true, true, false);
+						setLocation(selectedCharacter, true, false, true, false);
 					}
 
 					WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, tile.getLocalLocation());
@@ -1761,7 +1811,7 @@ public class CreatorsPlugin extends Plugin
 					WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, tile.getLocalLocation());
 					program.getComp().setStepsWP(new WorldPoint[]{worldPoint});
 					program.getComp().setStepsLP(new LocalPoint[0]);
-					setLocation(selectedCharacter, true, true, false);
+					setLocation(selectedCharacter, true, false, true, false);
 					updateProgramPath(program, false, selectedCharacter.isInInstance());
 				}
 			}
@@ -1801,7 +1851,7 @@ public class CreatorsPlugin extends Plugin
 
 				comp.setCurrentStep(0);
 				updateProgramPath(program, false, selectedCharacter.isInInstance());
-				setLocation(selectedCharacter, false, false, true);
+				setLocation(selectedCharacter, false, false, false, true);
 			}
 		}
 	};
@@ -1818,7 +1868,7 @@ public class CreatorsPlugin extends Plugin
 				program.getComp().setStepsLP(new LocalPoint[0]);
 				program.getComp().setProgramActive(false);
 				updateProgramPath(program, false, selectedCharacter.isInInstance());
-				setLocation(selectedCharacter, false, false, false);
+				setLocation(selectedCharacter, false, false, false, false);
 			}
 		}
 	};

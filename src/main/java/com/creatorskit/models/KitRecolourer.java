@@ -73,6 +73,7 @@ public class KitRecolourer
         switch (bodyPart)
         {
             case NA:
+                stringBuilder.append(BODY_COLOURS_1_SOURCE[4]);
                 break;
             case HAIR:
             case JAW:
@@ -103,7 +104,6 @@ public class KitRecolourer
             case HANDS:
                 stringBuilder.append(BODY_COLOURS_1_SOURCE[4]);
         }
-
         return stringBuilder.toString();
     }
 
@@ -114,6 +114,7 @@ public class KitRecolourer
         switch (bodyPart)
         {
             case NA:
+                stringBuilder.append(BODY_COLOURS_1_DEST[4][kitRecolours[4]]);
                 break;
             case HAIR:
             case JAW:
@@ -144,7 +145,6 @@ public class KitRecolourer
             case HANDS:
                 stringBuilder.append(BODY_COLOURS_1_DEST[4][kitRecolours[4]]);
         }
-
         return stringBuilder.toString();
     }
 }
