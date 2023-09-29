@@ -34,6 +34,7 @@ import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.ColorUtil;
 import net.runelite.client.util.HotkeyListener;
 import net.runelite.client.util.ImageUtil;
+import okhttp3.OkHttpClient;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.awt.*;
@@ -88,6 +89,9 @@ public class CreatorsPlugin extends Plugin
 
 	@Inject
 	public Gson gson;
+
+	@Inject
+	public OkHttpClient okHttpClient;
 
 	private CreatorsPanel creatorsPanel;
 	private NavigationButton navigationButton;
@@ -1157,60 +1161,52 @@ public class CreatorsPlugin extends Plugin
 
 	public void cacheToAnvil(CustomModelType type, int id)
 	{
-		Thread thread = new Thread(() ->
+		ModelStats[] modelStats;
+		String name;
+
+		switch (type)
 		{
-			ModelStats[] modelStats;
-			String name;
+			case CACHE_NPC:
+				modelStats = ModelFinder.findModelsForNPC(id);
+				name = ModelFinder.findNameForNPC(id);
+				break;
+			default:
+			case CACHE_OBJECT:
+				modelStats = ModelFinder.findModelsForObject(id);
+				name = ModelFinder.findNameForObject(id);
+		}
 
-			switch (type)
-			{
-				case CACHE_NPC:
-					modelStats = ModelFinder.findModelsForNPC(id);
-					name = ModelFinder.findNameForNPC(id);
-					break;
-				default:
-				case CACHE_OBJECT:
-					modelStats = ModelFinder.findModelsForObject(id);
-					name = ModelFinder.findNameForObject(id);
-			}
-
-			cacheToAnvil(modelStats, new int[0], false);
-			sendChatMessage("Model sent to Anvil: " + name);
-		});
-		thread.start();
+		cacheToAnvil(modelStats, new int[0], false);
+		sendChatMessage("Model sent to Anvil: " + name);
 	}
 
 	public void cacheToCustomModel(CustomModelType type, int id)
 	{
-		Thread thread = new Thread(() ->
+		ModelStats[] modelStats;
+		String name;
+		CustomModelComp comp;
+
+		switch (type)
 		{
-			ModelStats[] modelStats;
-			String name;
-			CustomModelComp comp;
+			case CACHE_NPC:
+				modelStats = ModelFinder.findModelsForNPC(id);
+				name = ModelFinder.findNameForNPC(id);
+				comp = new CustomModelComp(0, CustomModelType.CACHE_NPC, id, modelStats, null, null, LightingStyle.ACTOR, false, name);
+				break;
+			default:
+			case CACHE_OBJECT:
+				modelStats = ModelFinder.findModelsForObject(id);
+				name = ModelFinder.findNameForObject(id);
+				comp = new CustomModelComp(0, CustomModelType.CACHE_OBJECT, id, modelStats, null, null, LightingStyle.DEFAULT, false, name);
+		}
 
-			switch (type)
-			{
-				case CACHE_NPC:
-					modelStats = ModelFinder.findModelsForNPC(id);
-					name = ModelFinder.findNameForNPC(id);
-					comp = new CustomModelComp(0, CustomModelType.CACHE_NPC, id, modelStats, null, null, LightingStyle.ACTOR, false, name);
-					break;
-				default:
-				case CACHE_OBJECT:
-					modelStats = ModelFinder.findModelsForObject(id);
-					name = ModelFinder.findNameForObject(id);
-					comp = new CustomModelComp(0, CustomModelType.CACHE_OBJECT, id, modelStats, null, null, LightingStyle.DEFAULT, false, name);
-			}
-
-			clientThread.invokeLater(() ->
-			{
-				Model model = constructModelFromCache(modelStats, new int[0], false, true);
-				CustomModel customModel = new CustomModel(model, comp);
-				addCustomModel(customModel, false);
-				sendChatMessage("Model stored: " + name);
-			});
+		clientThread.invokeLater(() ->
+		{
+			Model model = constructModelFromCache(modelStats, new int[0], false, true);
+			CustomModel customModel = new CustomModel(model, comp);
+			addCustomModel(customModel, false);
+			sendChatMessage("Model stored: " + name);
 		});
-		thread.start();
 	}
 
 	public Model constructModelFromCache(ModelStats[] modelStatsArray, int[] kitRecolours, boolean player, boolean actorLighting)
