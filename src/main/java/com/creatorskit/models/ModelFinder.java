@@ -8,6 +8,7 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -61,14 +62,29 @@ public class ModelFinder
             kitList.add(0);
         }
 
-        ArrayList<ModelStats> modelStatsItems = new ArrayList<>();
-
         //for modelIds
         int[] itemId = new int[itemList.size()];
         for (int i = 0; i < itemList.size(); i++)
         {
             itemId[i] = itemList.get(i);
         }
+        ArrayList<ModelStats> itemModelStats = getPlayerItems(groundItem, maleItem, itemId, recolFrom, recolTo);
+
+        //for KitIds
+        int[] kitId = new int[kitList.size()];
+        for (int i = 0; i < kitList.size(); i++)
+        {
+            kitId[i] = kitList.get(i);
+        }
+        ArrayList<ModelStats> kitModelStats = getPlayerKit(kitId, recolFrom, recolTo);
+
+        itemModelStats.addAll(kitModelStats);
+        return itemModelStats.toArray(new ModelStats[0]);
+    }
+
+    public static ArrayList<ModelStats> getPlayerItems(boolean groundItem, boolean maleItem, int[] itemId, Pattern recolFrom, Pattern recolTo)
+    {
+        ArrayList<ModelStats> modelStatsItems = new ArrayList<>();
 
         try
         {
@@ -209,13 +225,12 @@ public class ModelFinder
             throw new RuntimeException(e);
         }
 
+        return modelStatsItems;
+    }
 
-        //for KitIds
-        int[] kitId = new int[kitList.size()];
-        for (int i = 0; i < kitList.size(); i++)
-        {
-            kitId[i] = kitList.get(i);
-        }
+    public static ArrayList<ModelStats> getPlayerKit(int[] kitId, Pattern recolFrom, Pattern recolTo)
+    {
+        ArrayList<ModelStats> modelStatsItems = new ArrayList<>();
 
         try
         {
@@ -342,8 +357,9 @@ public class ModelFinder
             throw new RuntimeException(e);
         }
 
-        return modelStatsItems.toArray(new ModelStats[0]);
+        return modelStatsItems;
     }
+
 
     public static ModelStats[] findModelsForNPC(int npcId)
     {

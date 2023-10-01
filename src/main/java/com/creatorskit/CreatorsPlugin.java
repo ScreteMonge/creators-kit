@@ -91,7 +91,7 @@ public class CreatorsPlugin extends Plugin
 	public Gson gson;
 
 	@Inject
-	public OkHttpClient okHttpClient;
+	public OkHttpClient httpClient;
 
 	private CreatorsPanel creatorsPanel;
 	private NavigationButton navigationButton;
