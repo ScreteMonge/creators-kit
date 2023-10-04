@@ -3,6 +3,7 @@ package com.creatorskit.swing;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.*;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.JagexColor;
 import net.runelite.api.Model;
@@ -26,6 +27,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 public class ModelAnvil extends JFrame
 {
     private ClientThread clientThread;
@@ -51,8 +53,6 @@ public class ModelAnvil extends JFrame
     private final JPanel complexMode = new JPanel();
     private final JScrollPane scrollPane = new JScrollPane();
     private final GridBagConstraints c = new GridBagConstraints();
-    private final JCheckBox brightLightCheckBox = new JCheckBox("Actor Lighting");
-    private final JCheckBox noLightCheckBox = new JCheckBox("No Lighting");
     private HashMap<Short, Short> copiedColourMap = new HashMap<>();
     private final int COMPLEX_GRID_COLUMNS = 3;
 
@@ -94,30 +94,6 @@ public class ModelAnvil extends JFrame
         nameField.setText("Name");
         nameField.setHorizontalAlignment(JTextField.CENTER);
         buttonsPanel.add(nameField);
-
-        JPanel lightingPanel = new JPanel();
-        lightingPanel.setLayout(new GridLayout(0, 1));
-        buttonsPanel.add(lightingPanel);
-
-        brightLightCheckBox.setToolTipText("Light the model with a formula better suited for Players & NPCs");
-        brightLightCheckBox.setFocusable(false);
-        lightingPanel.add(brightLightCheckBox);
-
-        noLightCheckBox.setToolTipText("Apply no lighting to the model");
-        noLightCheckBox.setFocusable(false);
-        lightingPanel.add(noLightCheckBox);
-
-        brightLightCheckBox.addChangeListener(e ->
-        {
-            if (brightLightCheckBox.isSelected())
-                noLightCheckBox.setSelected(false);
-        });
-
-        noLightCheckBox.addChangeListener(e ->
-        {
-            if (noLightCheckBox.isSelected())
-                brightLightCheckBox.setSelected(false);
-        });
 
         JButton forgeButton = new JButton("Forge");
         forgeButton.setFocusable(false);
@@ -179,19 +155,27 @@ public class ModelAnvil extends JFrame
 
         JButton saveButton = new JButton("Save");
         saveButton.setFocusable(false);
-        saveButton.addActionListener(e -> openSaveDialog());
+        saveButton.addActionListener(e -> openSaveDialog(nameField.getText()));
         headerPanel.add(saveButton);
 
+        JComboBox<LightingStyle> lightingComboBox = new JComboBox<>();
+        lightingComboBox.addItem(LightingStyle.DEFAULT);
+        lightingComboBox.addItem(LightingStyle.ACTOR);
+        lightingComboBox.addItem(LightingStyle.NONE);
+        lightingComboBox.setFocusable(false);
+        lightingComboBox.setToolTipText("Sets the lighting style. Use Actor for NPCs or Players");
+        headerPanel.add(lightingComboBox);
+
         JCheckBox priorityCheckBox = new JCheckBox("Priority");
-        priorityCheckBox.setToolTipText("Use an oversimplified method of resolving render order issues\n(useful when merging models but not for NPCs/Players)");
+        priorityCheckBox.setToolTipText("Use an oversimplified method of resolving render order issues (useful when merging models but not for NPCs/Players)");
         priorityCheckBox.setFocusable(false);
         headerPanel.add(priorityCheckBox);
 
         forgeButton.addActionListener(e ->
-                forgeModel(client, nameField, priorityCheckBox.isSelected(), brightLightCheckBox.isSelected(), false));
+                forgeModel(client, nameField, priorityCheckBox.isSelected(), (LightingStyle) lightingComboBox.getSelectedItem(), false));
 
         forgeSetButton.addActionListener(e ->
-                forgeModel(client, nameField, priorityCheckBox.isSelected(), brightLightCheckBox.isSelected(), true));
+                forgeModel(client, nameField, priorityCheckBox.isSelected(), (LightingStyle) lightingComboBox.getSelectedItem(), true));
 
         JPanel sidePanel = new JPanel();
         sidePanel.setLayout(new BorderLayout());
@@ -768,7 +752,7 @@ public class ModelAnvil extends JFrame
         revalidate();
     }
 
-    private void forgeModel(Client client, JTextField nameField, boolean setPriority, boolean actorLighting, boolean forgeAndSet)
+    private void forgeModel(Client client, JTextField nameField, boolean setPriority, LightingStyle lightingStyle, boolean forgeAndSet)
     {
         if (client == null)
         {
@@ -781,21 +765,21 @@ public class ModelAnvil extends JFrame
         clientThread.invokeLater(() ->
         {
             DetailedModel[] detailedModels = panelsToDetailedModels();
-            Model model = forgeComplexModel(setPriority, detailedModels);
+            Model model = forgeComplexModel(setPriority, detailedModels, lightingStyle);
             if (model == null)
             {
                 return;
             }
 
-            CustomModelComp comp = new CustomModelComp(plugin.getStoredModels().size(), CustomModelType.FORGED, -1, null, null, detailedModels, getLightingStyle(), setPriority, nameField.getText());
+            CustomModelComp comp = new CustomModelComp(plugin.getStoredModels().size(), CustomModelType.FORGED, -1, null, null, detailedModels, lightingStyle, setPriority, nameField.getText());
             CustomModel customModel = new CustomModel(model, comp);
             plugin.addCustomModel(customModel, forgeAndSet);
         });
     }
 
-    private Model forgeComplexModel(boolean setPriority, DetailedModel[] detailedModels)
+    public Model forgeComplexModel(boolean setPriority, DetailedModel[] detailedModels, LightingStyle lightingStyle)
     {
-        return plugin.createComplexModel(detailedModels, setPriority, getLightingStyle());
+        return plugin.createComplexModel(detailedModels, setPriority, lightingStyle);
     }
 
     private DetailedModel[] panelsToDetailedModels()
@@ -842,7 +826,7 @@ public class ModelAnvil extends JFrame
         return detailedModels;
     }
 
-    private void openSaveDialog()
+    private void openSaveDialog(String name)
     {
         File outputDir = MODELS_DIR;
         outputDir.mkdirs();
@@ -881,7 +865,7 @@ public class ModelAnvil extends JFrame
                 super.approveSelection();
             }
         };
-        fileChooser.setSelectedFile(new File("model"));
+        fileChooser.setSelectedFile(new File(name));
         fileChooser.setDialogTitle("Save current model collection");
 
         int option = fileChooser.showSaveDialog(this);
@@ -908,7 +892,7 @@ public class ModelAnvil extends JFrame
         }
         catch (IOException e)
         {
-            System.out.println("Error occurred while writing to file.");
+            log.debug("Error when saving Forge model to file");
         }
     }
 
@@ -923,7 +907,7 @@ public class ModelAnvil extends JFrame
         if (option == JFileChooser.APPROVE_OPTION)
         {
             File selectedFile = fileChooser.getSelectedFile();
-            plugin.loadCustomModel(selectedFile);
+            plugin.loadCustomModelToAnvil(selectedFile);
         }
     }
 
@@ -1085,15 +1069,6 @@ public class ModelAnvil extends JFrame
 
         float hue = ((float) i - 25) / 50;
         return Color.getHSBColor(hue, 1, (float) 0.7);
-    }
-
-    private LightingStyle getLightingStyle()
-    {
-        if (brightLightCheckBox.isSelected())
-            return LightingStyle.ACTOR;
-        if (noLightCheckBox.isSelected())
-            return LightingStyle.NONE;
-        return LightingStyle.DEFAULT;
     }
 
     public static int[] hslToRgb(float h, float s, float l){

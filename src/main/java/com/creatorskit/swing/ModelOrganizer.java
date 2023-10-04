@@ -1,11 +1,14 @@
 package com.creatorskit.swing;
 
 import com.creatorskit.Character;
+import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.*;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
-import net.runelite.api.FontID;
 import net.runelite.api.Model;
+import net.runelite.api.RuneLiteObject;
+import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
@@ -16,31 +19,42 @@ import javax.swing.*;
 import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+@Slf4j
 public class ModelOrganizer extends JFrame
 {
     private final Client client;
     private final CreatorsPlugin plugin;
     private final ClientThread clientThread;
+    private final CreatorsConfig config;
     private final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
+    private final BufferedImage CLEAR = ImageUtil.loadImageResource(getClass(), "/Clear.png");
+    private final BufferedImage ANVIL = ImageUtil.loadImageResource(getClass(), "/Anvil.png");
+    private final BufferedImage SAVE = ImageUtil.loadImageResource(getClass(), "/Save.png");
+    private final BufferedImage TRANSMOG = ImageUtil.loadImageResource(getClass(), "/Transmog.png");
     private final HashMap<CustomModel, JPanel> panelMap = new HashMap<>();
     JPanel modelPane = new JPanel();
     GridBagConstraints c = new GridBagConstraints();
+    public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
 
     @Inject
-    public ModelOrganizer(Client client, CreatorsPlugin plugin, ClientThread clientThread)
+    public ModelOrganizer(Client client, CreatorsPlugin plugin, ClientThread clientThread, CreatorsConfig config)
     {
         this.client = client;
         this.plugin = plugin;
         this.clientThread = clientThread;
+        this.config = config;
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new GridBagLayout());
         setTitle("Creator's Kit Model Organizer");
         setIconImage(icon);
-        setPreferredSize(new Dimension(1100, 200));
+        setPreferredSize(new Dimension(1100, 300));
 
         c.fill = GridBagConstraints.BOTH;
         c.insets = new Insets(4, 4, 4, 4);
@@ -59,7 +73,7 @@ public class ModelOrganizer extends JFrame
         modelPane.setLayout(new GridLayout(0, 10, 8, 8));
 
         c.weightx = 0.1;
-        c.gridx = 1;
+        c.gridx = 2;
         c.gridy = 0;
         c.gridheight = 1;
         JLabel searcherLabel = new JLabel("Cache Searcher");
@@ -67,13 +81,13 @@ public class ModelOrganizer extends JFrame
         searcherLabel.setFont(FontManager.getRunescapeBoldFont());
         add(searcherLabel, c);
 
-        c.gridx = 1;
+        c.gridx = 2;
         c.gridy = 1;
         JSpinner idSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 99999, 1));
         idSpinner.setToolTipText("Choose the NPC or Object Id to find");
         add(idSpinner, c);
 
-        c.gridx = 1;
+        c.gridx = 2;
         c.gridy = 2;
         JComboBox<CustomModelType> modelTypeComboBox = new JComboBox<>();
         modelTypeComboBox.addItem(CustomModelType.CACHE_NPC);
@@ -82,7 +96,7 @@ public class ModelOrganizer extends JFrame
         modelTypeComboBox.setToolTipText("Pick which part of the cache to search");
         add(modelTypeComboBox, c);
 
-        c.gridx = 1;
+        c.gridx = 2;
         c.gridy = 3;
         JButton addCustomModelButton = new JButton("Add Custom Model");
         addCustomModelButton.setFocusable(false);
@@ -98,9 +112,21 @@ public class ModelOrganizer extends JFrame
             plugin.cacheToCustomModel(type, id);
         });
 
-        c.gridx = 2;
+        c.gridx = 3;
         c.gridy = 0;
-        c.gridheight = 4;
+        c.gridheight = 2;
+        JButton loadButton = new JButton("Load Custom Model");
+        loadButton.setFocusable(false);
+        loadButton.setToolTipText("Loads a previously forged and saved Custom Model");
+        add(loadButton, c);
+        loadButton.addActionListener(e ->
+        {
+            openLoadDialog();
+        });
+
+        c.gridx = 3;
+        c.gridy = 2;
+        c.gridheight = 2;
         JButton clearButton = new JButton("Clear Unused Models");
         clearButton.setFocusable(false);
         clearButton.setToolTipText("Clears all unused models from Custom Model dropdown menus");
@@ -108,10 +134,14 @@ public class ModelOrganizer extends JFrame
         clearButton.addActionListener(e ->
         {
             ArrayList<CustomModel> unusedModels = new ArrayList<>();
+            CustomModel transmogModel = plugin.getTransmogModel();
 
             for (int i = 0; i < plugin.getStoredModels().size(); i++)
             {
                 CustomModel customModel = plugin.getStoredModels().get(i);
+
+                if (customModel == transmogModel)
+                    continue;
 
                 boolean isBeingUsed = false;
                 for (Character character : plugin.getCharacters())
@@ -166,19 +196,41 @@ public class ModelOrganizer extends JFrame
             plugin.updatePanelComboBoxes();
         });
 
-        JButton deleteButton = new JButton("Delete");
+        JPanel buttonsPanel = new JPanel(new GridLayout(1, 0, 4, 4));
+        panel.add(buttonsPanel);
+
+        JButton deleteButton = new JButton(new ImageIcon(CLEAR));
         deleteButton.setFocusable(false);
         deleteButton.setToolTipText("Remove this model from all Objects and dropdown menus");
         deleteButton.addActionListener(e ->
                 plugin.removeCustomModel(model));
-        panel.add(deleteButton);
+        buttonsPanel.add(deleteButton);
 
-        JButton anvilButton = new JButton("To Anvil");
+        JButton anvilButton = new JButton(new ImageIcon(ANVIL));
         anvilButton.setFocusable(false);
         anvilButton.setToolTipText("Send this model to the Anvil");
-        panel.add(anvilButton);
+        buttonsPanel.add(anvilButton);
         anvilButton.addActionListener(e ->
                 plugin.customModelToAnvil(model));
+
+        JButton saveButton = new JButton(new ImageIcon(SAVE));
+        saveButton.setFocusable(false);
+        saveButton.setToolTipText("Save this model for future use");
+        buttonsPanel.add(saveButton);
+        saveButton.addActionListener(e ->
+        {
+            openSaveDialog(model, textField.getText());
+        });
+
+        JButton transmogButton = new JButton(new ImageIcon(TRANSMOG));
+        transmogButton.setFocusable(false);
+        transmogButton.setToolTipText("Set this as your player transmog");
+        buttonsPanel.add(transmogButton);
+        transmogButton.addActionListener(e ->
+        {
+            setTransmog(model);
+        });
+
         revalidate();
         repaint();
     }
@@ -191,5 +243,176 @@ public class ModelOrganizer extends JFrame
         panelMap.remove(model);
         revalidate();
         repaint();
+    }
+
+    private void openLoadDialog()
+    {
+        MODELS_DIR.mkdirs();
+
+        JFileChooser fileChooser = new JFileChooser(MODELS_DIR);
+        fileChooser.setDialogTitle("Choose a model to load");
+
+        JCheckBox priorityCheckbox = new JCheckBox("Set Priority?");
+        priorityCheckbox.setToolTipText("May resolve some rendering issues by setting all faces to the same priority. Leave off if you're unsure");
+
+        JComboBox<LightingStyle> comboBox = new JComboBox<>();
+        comboBox.setToolTipText("Sets the lighting style");
+        comboBox.addItem(LightingStyle.DEFAULT);
+        comboBox.addItem(LightingStyle.ACTOR);
+        comboBox.addItem(LightingStyle.NONE);
+        comboBox.setFocusable(false);
+
+        JPanel accessory = new JPanel();
+        accessory.setLayout(new GridLayout(0, 1));
+        accessory.add(priorityCheckbox);
+        accessory.add(comboBox);
+
+        fileChooser.setAccessory(accessory);
+
+        int option = fileChooser.showOpenDialog(fileChooser);
+        if (option == JFileChooser.APPROVE_OPTION)
+        {
+            File selectedFile = fileChooser.getSelectedFile();
+            String name = selectedFile.getName();
+            if (name.endsWith(".json"))
+                name = replaceLast(name, ".json");
+
+            if (name.endsWith(".txt"))
+                name = replaceLast(name, ".txt");
+
+            plugin.loadCustomModel(selectedFile, priorityCheckbox.isSelected(), (LightingStyle) comboBox.getSelectedItem(), name);
+        }
+    }
+
+    private String replaceLast(String string, String from)
+    {
+        int lastIndex = string.lastIndexOf(from);
+        if (lastIndex < 0)
+            return string;
+        String tail = string.substring(lastIndex).replaceFirst(from, "");
+        return string.substring(0, lastIndex) + tail;
+    }
+
+    private void openSaveDialog(CustomModel customModel, String name)
+    {
+        File outputDir = MODELS_DIR;
+        outputDir.mkdirs();
+
+        JFileChooser fileChooser = new JFileChooser(outputDir)
+        {
+            @Override
+            public void approveSelection()
+            {
+                File f = getSelectedFile();
+                if (!f.getName().endsWith(".json"))
+                {
+                    f = new File(f.getPath() + ".json");
+                }
+                if (f.exists() && getDialogType() == SAVE_DIALOG)
+                {
+                    int result = JOptionPane.showConfirmDialog(
+                            this,
+                            "File already exists, overwrite?",
+                            "Warning",
+                            JOptionPane.YES_NO_CANCEL_OPTION
+                    );
+                    switch (result)
+                    {
+                        case JOptionPane.YES_OPTION:
+                            super.approveSelection();
+                            return;
+                        case JOptionPane.NO_OPTION:
+                        case JOptionPane.CLOSED_OPTION:
+                            return;
+                        case JOptionPane.CANCEL_OPTION:
+                            cancelSelection();
+                            return;
+                    }
+                }
+                super.approveSelection();
+            }
+        };
+        fileChooser.setSelectedFile(new File(name));
+        fileChooser.setDialogTitle("Save Custom Model");
+
+        int option = fileChooser.showSaveDialog(this);
+        if (option == JFileChooser.APPROVE_OPTION)
+        {
+            File selectedFile = fileChooser.getSelectedFile();
+            if (!selectedFile.getName().endsWith(".json"))
+            {
+                selectedFile = new File(selectedFile.getPath() + ".json");
+            }
+            saveToFile(selectedFile, customModel);
+        }
+    }
+
+    public void saveToFile(File file, CustomModel customModel)
+    {
+        try {
+            FileWriter writer = new FileWriter(file, false);
+
+            DetailedModel[] detailedModels = customModel.getComp().getDetailedModels();
+            if (detailedModels == null)
+            {
+                detailedModels = modelToDetailedPanels(customModel);
+            }
+
+            String string = plugin.gson.toJson(detailedModels);
+            writer.write(string);
+            writer.close();
+        }
+        catch (IOException e)
+        {
+            log.debug("Error when saving Custom Model to file");
+        }
+    }
+
+    private DetailedModel[] modelToDetailedPanels(CustomModel customModel)
+    {
+        CustomModelComp comp = customModel.getComp();
+        CustomModelType type = comp.getType();
+
+        ModelStats[] modelStats = customModel.getComp().getModelStats();
+        DetailedModel[] detailedModels = new DetailedModel[modelStats.length];
+        int group = 1;
+        if (type == CustomModelType.CACHE_NPC)
+            group = 8;
+
+        if (type == CustomModelType.CACHE_PLAYER)
+            group = 9;
+
+        for (int i = 0; i < modelStats.length; i++)
+        {
+            ModelStats modelStat = modelStats[i];
+            String recolFrom = ModelFinder.shortArrayToString(modelStat.getRecolourFrom());
+            String recolTo = ModelFinder.shortArrayToString(modelStat.getRecolourTo());
+            String bodyPart = "Name";
+            if (type == CustomModelType.CACHE_PLAYER)
+                bodyPart = "Item";
+
+            if (modelStat.getBodyPart() != BodyPart.NA)
+                bodyPart = modelStat.getBodyPart().toString();
+
+            DetailedModel detailedModel = new DetailedModel(bodyPart, modelStat.getModelId(), group, 0, 0, 0, 0, 0, 0, 128, 128, 128, 0, recolTo, recolFrom);
+            detailedModels[i] = detailedModel;
+        }
+
+        return detailedModels;
+    }
+
+    public void setTransmog(CustomModel customModel)
+    {
+        RuneLiteObject transmog = plugin.getTransmog();
+        if (transmog == null)
+        {
+            transmog = client.createRuneLiteObject();
+            plugin.setTransmog(transmog);
+        }
+
+        plugin.setTransmogModel(customModel);
+        transmog.setModel(customModel.getModel());
+        transmog.setShouldLoop(true);
+        transmog.setRadius(config.transmogRadius());
     }
 }

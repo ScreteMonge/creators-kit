@@ -72,6 +72,8 @@ public class CreatorsPanel extends PluginPanel
     private final BufferedImage CLEAR = ImageUtil.loadImageResource(getClass(), "/Clear.png");
     private final BufferedImage LOAD = ImageUtil.loadImageResource(getClass(), "/Load.png");
     private final BufferedImage SAVE = ImageUtil.loadImageResource(getClass(), "/Save.png");
+    private final BufferedImage CUSTOM_MODEL = ImageUtil.loadImageResource(getClass(), "/Custom model.png");
+    public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
     private final LineBorder defaultBorder = new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1);
     private final LineBorder hoveredBorder = new LineBorder(ColorScheme.LIGHT_GRAY_COLOR, 1);
     private final LineBorder selectedBorder = new LineBorder(Color.WHITE, 1);
@@ -172,7 +174,15 @@ public class CreatorsPanel extends PluginPanel
         loadButton.setFocusable(false);
         loadButton.setToolTipText("Load a previously saved setup");
         add(loadButton, c);
-        loadButton.addActionListener(e -> openLoadDialog());
+        loadButton.addActionListener(e -> openLoadSetupDialog());
+
+        c.gridx = 3;
+        c.gridy = 2;
+        JButton loadCustomModelButton = new JButton(new ImageIcon(CUSTOM_MODEL));
+        loadCustomModelButton.setFocusable(false);
+        loadCustomModelButton.setToolTipText("Load a previously saved Custom Model");
+        add(loadCustomModelButton, c);
+        loadCustomModelButton.addActionListener(e -> openLoadCustomModelDialog());
 
         c.gridx = 4;
         c.gridy = 2;
@@ -867,7 +877,55 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
-    private void openLoadDialog()
+    private void openLoadCustomModelDialog()
+    {
+        MODELS_DIR.mkdirs();
+
+        JFileChooser fileChooser = new JFileChooser(MODELS_DIR);
+        fileChooser.setDialogTitle("Choose a model to load");
+
+        JCheckBox priorityCheckbox = new JCheckBox("Set Priority?");
+        priorityCheckbox.setToolTipText("May resolve some rendering issues by setting all faces to the same priority. Leave off if you're unsure");
+
+        JComboBox<LightingStyle> comboBox = new JComboBox<>();
+        comboBox.setToolTipText("Sets the lighting style");
+        comboBox.addItem(LightingStyle.DEFAULT);
+        comboBox.addItem(LightingStyle.ACTOR);
+        comboBox.addItem(LightingStyle.NONE);
+        comboBox.setFocusable(false);
+
+        JPanel accessory = new JPanel();
+        accessory.setLayout(new GridLayout(0, 1));
+        accessory.add(priorityCheckbox);
+        accessory.add(comboBox);
+
+        fileChooser.setAccessory(accessory);
+
+        int option = fileChooser.showOpenDialog(fileChooser);
+        if (option == JFileChooser.APPROVE_OPTION)
+        {
+            File selectedFile = fileChooser.getSelectedFile();
+            String name = selectedFile.getName();
+            if (name.endsWith(".json"))
+                name = replaceLast(name, ".json");
+
+            if (name.endsWith(".txt"))
+                name = replaceLast(name, ".txt");
+
+            plugin.loadCustomModel(selectedFile, priorityCheckbox.isSelected(), (LightingStyle) comboBox.getSelectedItem(), name);
+        }
+    }
+
+    private String replaceLast(String string, String from)
+    {
+        int lastIndex = string.lastIndexOf(from);
+        if (lastIndex < 0)
+            return string;
+        String tail = string.substring(lastIndex).replaceFirst(from, "");
+        return string.substring(0, lastIndex) + tail;
+    }
+
+    private void openLoadSetupDialog()
     {
         File outputDir = SETUP_DIR;
         outputDir.mkdirs();
@@ -906,7 +964,6 @@ public class CreatorsPanel extends PluginPanel
         {
             plugin.sendChatMessage("An error occurred while attempting to read this file.");
         }
-
     }
 
     private void loadSetup(SaveFile saveFile)
@@ -942,7 +999,7 @@ public class CreatorsPanel extends PluginPanel
                     customModel = new CustomModel(model, comp);
                     break;
                 case CACHE_NPC:
-                    modelStats = ModelFinder.findModelsForNPC(comp.getModelId());
+                    modelStats = comp.getModelStats();
                     model = plugin.constructModelFromCache(modelStats, new int[0], false, true);
                     customModel = new CustomModel(model, comp);
                     break;

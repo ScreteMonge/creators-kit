@@ -407,4 +407,59 @@ public interface CreatorsConfig extends Config
 	{
 		return new Keybind(KeyEvent.VK_HOME, KeyEvent.CTRL_DOWN_MASK);
 	}
+
+	@ConfigSection(
+			name = "Transmogification",
+			description = "Settings for replacing your player character with a saved Custom Model",
+			position = 35
+	)
+	String transmogrification = "transmogrification";
+
+	@ConfigItem(
+			keyName = "enableTransmog",
+			name = "Enable Transmogrification",
+			description = "Allow your character to be transmogrified into a chosen Custom Model",
+			section = transmogrification,
+			position = 36
+	)
+	default boolean enableTransmog()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+			keyName = "transmogAnimation",
+			name = "Enable Transmog Animations",
+			description = "Gives your transmog animations based on your actual player animations",
+			section = transmogrification,
+			position = 37
+	)
+	default boolean transmogAnimations()
+	{
+		return true;
+	}
+
+	@ConfigItem(
+			keyName = "transmogRadius",
+			name = "Transmog Radius",
+			description = "Sets the radius of your transmog. 60 is best for an object the size of 1 tile",
+			section = transmogrification,
+			position = 38
+	)
+	default int transmogRadius()
+	{
+		return 60;
+	}
+
+	@ConfigItem(
+			keyName = "transmogRightClick",
+			name = "Enable Transmog Right-Click",
+			description = "Provides a right-click option to Transmog on any object or NPC",
+			section = transmogrification,
+			position = 39
+	)
+	default boolean transmogRightClick()
+	{
+		return false;
+	}
 }

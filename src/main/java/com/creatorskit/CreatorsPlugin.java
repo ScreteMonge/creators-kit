@@ -34,7 +34,6 @@ import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.ColorUtil;
 import net.runelite.client.util.HotkeyListener;
 import net.runelite.client.util.ImageUtil;
-import okhttp3.OkHttpClient;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.awt.*;
@@ -91,7 +90,7 @@ public class CreatorsPlugin extends Plugin
 	public Gson gson;
 
 	@Inject
-	public OkHttpClient httpClient;
+	private ModelFinder modelFinder;
 
 	private CreatorsPanel creatorsPanel;
 	private NavigationButton navigationButton;
@@ -100,6 +99,8 @@ public class CreatorsPlugin extends Plugin
 	private final ArrayList<CustomModel> storedModels = new ArrayList<>();
 	private Character selectedCharacter;
 	private Character hoveredCharacter;
+	private RuneLiteObject transmog;
+	private CustomModel transmogModel;
 	private int savedRegion = -1;
 	private int savedPlane = -1;
 	private AutoRotate autoRotateYaw = AutoRotate.OFF;
@@ -149,10 +150,11 @@ public class CreatorsPlugin extends Plugin
 			if (SETUP_DIR.exists())
 			{
 				creatorsPanel.loadSetup(SETUP_DIR);
-				return;
 			}
-
-			autoSetupPathFound = false;
+			else
+			{
+				autoSetupPathFound = false;
+			}
 		}
 	}
 
@@ -394,6 +396,40 @@ public class CreatorsPlugin extends Plugin
 			LocalPoint finalPoint = new LocalPoint(endX, endY);
 			runeLiteObject.setLocation(finalPoint, client.getPlane());
 		}
+
+		if (config.enableTransmog() && transmog != null)
+		{
+			Player player = client.getLocalPlayer();
+			if (player == null)
+				return;
+
+			LocalPoint localPoint = player.getLocalLocation();
+			transmog.setLocation(localPoint, client.getPlane());
+			transmog.setOrientation(player.getCurrentOrientation());
+			if (!transmog.isActive())
+				transmog.setActive(true);
+
+			if (config.transmogAnimations())
+			{
+				int playerAnimation = player.getAnimation();
+				int playerPose = player.getPoseAnimation();
+				Animation animation = transmog.getAnimation();
+				int transmogAnimation = -1;
+				if (animation != null)
+					transmogAnimation = animation.getId();
+
+				if (playerAnimation == -1)
+				{
+					if (transmogAnimation != playerPose)
+						transmog.setAnimation(client.loadAnimation(playerPose));
+				}
+				else
+				{
+					if (transmogAnimation != playerAnimation)
+						transmog.setAnimation(client.loadAnimation(playerAnimation));
+				}
+			}
+		}
 	}
 
 	@Subscribe
@@ -410,6 +446,12 @@ public class CreatorsPlugin extends Plugin
 				if ((character.isInInstance() && instance && client.getPlane() == character.getInstancedPlane()) || (!character.isInInstance() && !instance))
 					updateProgramPath(character.getProgram(), true, character.isInInstance());
 			}
+
+			if (config.enableTransmog() && transmog != null)
+			{
+				transmog.setActive(false);
+				transmog.setActive(true);
+			}
 		}
 	}
 
@@ -419,6 +461,44 @@ public class CreatorsPlugin extends Plugin
 		if (event.getKey().equals("orbSpeed"))
 		{
 			client.setOculusOrbNormalSpeed(config.orbSpeed());
+		}
+
+		if (event.getKey().equals("enableTransmog"))
+		{
+			if (transmog == null)
+				return;
+
+			clientThread.invokeLater(() ->
+			{
+				boolean enableTransmog = config.enableTransmog();
+				transmog.setActive(enableTransmog);
+				if (!enableTransmog)
+				{
+					transmog.setAnimation(client.loadAnimation(-1));
+				}
+			});
+		}
+
+		if (event.getKey().equals("transmogAnimation"))
+		{
+			if (transmog == null || !config.enableTransmog() || config.transmogAnimations())
+				return;
+
+			clientThread.invokeLater(() ->
+			{
+				transmog.setAnimation(client.loadAnimation(-1));
+			});
+		}
+
+		if (event.getKey().equals("transmogRadius"))
+		{
+			if (transmog == null)
+				return;
+
+			clientThread.invokeLater(() ->
+			{
+				transmog.setRadius(config.transmogRadius());
+			});
 		}
 	}
 
@@ -436,8 +516,9 @@ public class CreatorsPlugin extends Plugin
 		NPC npc = event.getMenuEntry().getNpc();
 		if (npc != null && option.equals("Examine"))
 		{
-			modelGetter.storeNPC(target, npc);
-			modelGetter.sendToAnvilNPC(target, npc);
+			modelGetter.storeNPC(-1, target, npc, "Store", false);
+			modelGetter.sendToAnvilNPC(-2, target, npc);
+			modelGetter.storeNPC(-3, target, npc, "Transmog", true);
 		}
 
         if (tile != null)
@@ -451,8 +532,9 @@ public class CreatorsPlugin extends Plugin
 					if (renderable instanceof Model)
 					{
 						Model model = (Model) groundObject.getRenderable();
-						modelGetter.addGameObjectGetter("<col=FFFF>GroundObject", "GroundObject", model, groundObject.getId(), CustomModelType.CACHE_OBJECT);
+						modelGetter.addGameObjectGetter(-1, "Store", "<col=FFFF>GroundObject", "GroundObject", model, groundObject.getId(), CustomModelType.CACHE_OBJECT, false);
 						modelGetter.addObjectGetterToAnvil("<col=FFFF>GroundObject", "GroundObject", groundObject.getId());
+						modelGetter.addGameObjectGetter(-3, "Transmog", "<col=FFFF>GroundObject", "GroundObject", model, groundObject.getId(), CustomModelType.CACHE_OBJECT, true);
 					}
 				}
 
@@ -463,8 +545,9 @@ public class CreatorsPlugin extends Plugin
 					if (renderable instanceof Model)
 					{
 						Model model = (Model) decorativeObject.getRenderable();
-						modelGetter.addGameObjectGetter("<col=FFFF>DecorativeObject", "DecorativeObject", model, decorativeObject.getId(), CustomModelType.CACHE_OBJECT);
+						modelGetter.addGameObjectGetter(-1, "Store", "<col=FFFF>DecorativeObject", "DecorativeObject", model, decorativeObject.getId(), CustomModelType.CACHE_OBJECT, false);
 						modelGetter.addObjectGetterToAnvil("<col=FFFF>DecorativeObject", "DecorativeObject", decorativeObject.getId());
+						modelGetter.addGameObjectGetter(-3, "Transmog", "<col=FFFF>DecorativeObject", "DecorativeObject", model, decorativeObject.getId(), CustomModelType.CACHE_OBJECT, true);
 					}
 				}
 
@@ -475,8 +558,9 @@ public class CreatorsPlugin extends Plugin
 					if (renderable instanceof Model)
 					{
 						Model model = (Model) renderable;
-						modelGetter.addGameObjectGetter("<col=FFFF>WallObject", "WallObject", model, wallObject.getId(), CustomModelType.CACHE_OBJECT);
+						modelGetter.addGameObjectGetter(-1, "Store", "<col=FFFF>WallObject", "WallObject", model, wallObject.getId(), CustomModelType.CACHE_OBJECT, false);
 						modelGetter.addObjectGetterToAnvil("<col=FFFF>WallObject", "WallObject", wallObject.getId());
+						modelGetter.addGameObjectGetter(-3, "Transmog", "<col=FFFF>WallObject", "WallObject", model, wallObject.getId(), CustomModelType.CACHE_OBJECT, true);
 					}
 				}
 
@@ -486,8 +570,9 @@ public class CreatorsPlugin extends Plugin
 					for (TileItem tileItem : tileItems)
 					{
 						Model model = tileItem.getModel();
-						modelGetter.addGameObjectGetter("<col=FFFF>Item", "Item", model, tileItem.getId(), CustomModelType.CACHE_GROUND_ITEM);
+						modelGetter.addGameObjectGetter(-1, "Store", "<col=FFFF>Item", "Item", model, tileItem.getId(), CustomModelType.CACHE_GROUND_ITEM, false);
 						modelGetter.addObjectGetterToAnvil("<col=FFFF>Item", "Item", tileItem.getId());
+						modelGetter.addGameObjectGetter(-3, "Transmog", "<col=FFFF>Item", "Item", model, tileItem.getId(), CustomModelType.CACHE_GROUND_ITEM, true);
 					}
 				}
 
@@ -504,14 +589,15 @@ public class CreatorsPlugin extends Plugin
 					if (renderable instanceof Model)
 					{
 						Model model = (Model) renderable;
-						modelGetter.addGameObjectGetter("<col=FFFF>GameObject", "GameObject", model, gameObject.getId(), CustomModelType.CACHE_OBJECT);
+						modelGetter.addGameObjectGetter(-1, "Store", "<col=FFFF>GameObject", "GameObject", model, gameObject.getId(), CustomModelType.CACHE_OBJECT, false);
 						modelGetter.addObjectGetterToAnvil("<col=FFFF>GameObject", "GameObject", gameObject.getId());
+						modelGetter.addGameObjectGetter(-3, "Transmog", "<col=FFFF>GameObject", "GameObject", model, gameObject.getId(), CustomModelType.CACHE_OBJECT, true);
 					}
 				}
 
 				for (Character character : characters)
 				{
-					if (character.getRuneLiteObject().getLocation().equals(tile.getLocalLocation()))
+					if (character.isActive() && character.getRuneLiteObject().getLocation().equals(tile.getLocalLocation()))
 					{
 						client.createMenuEntry(-1)
 								.setOption("Select")
@@ -526,8 +612,9 @@ public class CreatorsPlugin extends Plugin
 		Player player = event.getMenuEntry().getPlayer();
 		if (player != null && option.equals("Trade with"))
 		{
-			modelGetter.addPlayerGetter(-1, target, "Store", player, false);
-			modelGetter.addPlayerGetter(-2, target, "Anvil", player, true);
+			modelGetter.addPlayerGetter(-1, target, "Store", player, false, false);
+			modelGetter.addPlayerGetter(-2, target, "Anvil", player, true, false);
+			modelGetter.addPlayerGetter(-3, target, "Transmog", player, false, true);
 		}
 
 		Player localPlayer = client.getLocalPlayer();
@@ -535,8 +622,8 @@ public class CreatorsPlugin extends Plugin
 		{
 			if (tile.getLocalLocation().equals(localPlayer.getLocalLocation()))
 			{
-				modelGetter.addPlayerGetter(-1, localPlayer.getName(), "Store", localPlayer, false);
-				modelGetter.addPlayerGetter(-2, localPlayer.getName(), "Anvil", localPlayer, true);
+				modelGetter.addPlayerGetter(-1, localPlayer.getName(), "Store", localPlayer, false, false);
+				modelGetter.addPlayerGetter(-2, localPlayer.getName(), "Anvil", localPlayer, true, false);
 			}
 		}
 	}
@@ -997,6 +1084,7 @@ public class CreatorsPlugin extends Plugin
 
 	public Model createComplexModel(DetailedModel[] detailedModels, boolean setPriority, LightingStyle lightingStyle)
 	{
+		//Tried storing player -> load model from MO. NPE at line 1000. Wasn't composed of detailedmodels?? Wasn't forged sooo...
 		ModelData[] models = new ModelData[detailedModels.length];
 
 		for (int e = 0; e < detailedModels.length; e++)
@@ -1161,52 +1249,60 @@ public class CreatorsPlugin extends Plugin
 
 	public void cacheToAnvil(CustomModelType type, int id)
 	{
-		ModelStats[] modelStats;
-		String name;
-
-		switch (type)
+		Thread thread = new Thread(() ->
 		{
-			case CACHE_NPC:
-				modelStats = ModelFinder.findModelsForNPC(id);
-				name = ModelFinder.findNameForNPC(id);
-				break;
-			default:
-			case CACHE_OBJECT:
-				modelStats = ModelFinder.findModelsForObject(id);
-				name = ModelFinder.findNameForObject(id);
-		}
+			ModelStats[] modelStats;
+			String name;
 
-		cacheToAnvil(modelStats, new int[0], false);
-		sendChatMessage("Model sent to Anvil: " + name);
+			switch (type)
+			{
+				case CACHE_NPC:
+					modelStats = modelFinder.findModelsForNPC(id);
+					name = modelFinder.getLastFound();
+					break;
+				default:
+				case CACHE_OBJECT:
+					modelStats = modelFinder.findModelsForObject(id);
+					name = modelFinder.getLastFound();
+			}
+
+			cacheToAnvil(modelStats, new int[0], false);
+			sendChatMessage("Model sent to Anvil: " + name);
+		});
+		thread.start();
 	}
 
 	public void cacheToCustomModel(CustomModelType type, int id)
 	{
-		ModelStats[] modelStats;
-		String name;
-		CustomModelComp comp;
-
-		switch (type)
+		Thread thread = new Thread(() ->
 		{
-			case CACHE_NPC:
-				modelStats = ModelFinder.findModelsForNPC(id);
-				name = ModelFinder.findNameForNPC(id);
-				comp = new CustomModelComp(0, CustomModelType.CACHE_NPC, id, modelStats, null, null, LightingStyle.ACTOR, false, name);
-				break;
-			default:
-			case CACHE_OBJECT:
-				modelStats = ModelFinder.findModelsForObject(id);
-				name = ModelFinder.findNameForObject(id);
-				comp = new CustomModelComp(0, CustomModelType.CACHE_OBJECT, id, modelStats, null, null, LightingStyle.DEFAULT, false, name);
-		}
+			ModelStats[] modelStats;
+			String name;
+			CustomModelComp comp;
 
-		clientThread.invokeLater(() ->
-		{
-			Model model = constructModelFromCache(modelStats, new int[0], false, true);
-			CustomModel customModel = new CustomModel(model, comp);
-			addCustomModel(customModel, false);
-			sendChatMessage("Model stored: " + name);
+			switch (type)
+			{
+				case CACHE_NPC:
+					modelStats = modelFinder.findModelsForNPC(id);
+					name = modelFinder.getLastFound();
+					comp = new CustomModelComp(0, CustomModelType.CACHE_NPC, id, modelStats, null, null, LightingStyle.ACTOR, false, name);
+					break;
+				default:
+				case CACHE_OBJECT:
+					modelStats = modelFinder.findModelsForObject(id);
+					name = modelFinder.getLastFound();
+					comp = new CustomModelComp(0, CustomModelType.CACHE_OBJECT, id, modelStats, null, null, LightingStyle.DEFAULT, false, name);
+			}
+
+			clientThread.invokeLater(() ->
+			{
+				Model model = constructModelFromCache(modelStats, new int[0], false, true);
+				CustomModel customModel = new CustomModel(model, comp);
+				addCustomModel(customModel, false);
+				sendChatMessage("Model stored: " + name);
+			});
 		});
+		thread.start();
 	}
 
 	public Model constructModelFromCache(ModelStats[] modelStatsArray, int[] kitRecolours, boolean player, boolean actorLighting)
@@ -1268,7 +1364,7 @@ public class CreatorsPlugin extends Plugin
 		});
 	}
 
-	public void loadCustomModel(File file)
+	public void loadCustomModelToAnvil(File file)
 	{
 		try
 		{
@@ -1279,6 +1375,29 @@ public class CreatorsPlugin extends Plugin
 				{
 					creatorsPanel.getModelAnvil().createComplexPanel(detailedModel);
 				}
+			});
+			reader.close();
+			return;
+		}
+		catch (Exception e)
+		{
+			sendChatMessage("The file chosen is not a valid .json file. Attempting conversion...");
+		}
+
+		convertTextToJson(file);
+	}
+
+	public void loadCustomModel(File file, boolean priority, LightingStyle lightingStyle, String name)
+	{
+		try
+		{
+			Reader reader = Files.newBufferedReader(file.toPath());
+			DetailedModel[] detailedModels = gson.fromJson(reader, DetailedModel[].class);
+			clientThread.invokeLater(() -> {
+				CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, lightingStyle, priority, name);
+				Model model = createComplexModel(detailedModels, priority, lightingStyle);
+				CustomModel customModel = new CustomModel(model, comp);
+				addCustomModel(customModel, false);
 			});
 			reader.close();
 			return;
