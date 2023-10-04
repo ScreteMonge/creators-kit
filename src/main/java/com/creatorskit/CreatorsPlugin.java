@@ -111,6 +111,11 @@ public class CreatorsPlugin extends Plugin
 	private final int DARK_CONTRAST = 4000;
 	private boolean pauseMode = true;
 	private boolean autoSetupPathFound = true;
+	private int[] poseAnimations = new int[]
+			{244, 808, 809, 813, 847, 1421, 1461, 1652, 1662, 1713, 1824, 1832, 1837,
+			2061, 2065, 2074, 2148, 2316, 2561, 2911, 3040, 3175, 3296, 3677, 4193, 4646, 5160, 5246, 5253, 5363,
+			5869, 6297, 6604, 6657, 6936, 7053, 7220, 7271, 7508, 7518, 7538, 8009, 8057, 8208, 8521, 9018, 9341,
+			9460, 9494, 9814, 9857, 10032};
 
 	@Override
 	protected void startUp() throws Exception
@@ -409,15 +414,16 @@ public class CreatorsPlugin extends Plugin
 			if (!transmog.isActive())
 				transmog.setActive(true);
 
-			if (config.transmogAnimations())
-			{
-				int playerAnimation = player.getAnimation();
-				int playerPose = player.getPoseAnimation();
-				Animation animation = transmog.getAnimation();
-				int transmogAnimation = -1;
-				if (animation != null)
-					transmogAnimation = animation.getId();
+			int playerAnimation = player.getAnimation();
+			int playerPose = player.getPoseAnimation();
+			Animation animation = transmog.getAnimation();
 
+			int transmogAnimation = -1;
+			if (animation != null)
+				transmogAnimation = animation.getId();
+
+			if (config.transmogAnimations() == CreatorsConfig.TransmogAnimation.PLAYER)
+			{
 				if (playerAnimation == -1)
 				{
 					if (transmogAnimation != playerPose)
@@ -427,6 +433,28 @@ public class CreatorsPlugin extends Plugin
 				{
 					if (transmogAnimation != playerAnimation)
 						transmog.setAnimation(client.loadAnimation(playerAnimation));
+				}
+			}
+
+			if (config.transmogAnimations() == CreatorsConfig.TransmogAnimation.CONFIG)
+			{
+				if (playerAnimation == -1)
+				{
+					if (Arrays.stream(poseAnimations).anyMatch(n -> playerPose == n))
+					{
+						if (transmogAnimation != config.transmogPose())
+							transmog.setAnimation(client.loadAnimation(config.transmogPose()));
+					}
+					else
+					{
+						if (transmogAnimation != config.transmogWalk())
+							transmog.setAnimation(client.loadAnimation(config.transmogWalk()));
+					}
+				}
+				else
+				{
+					if (transmogAnimation != config.transmogAction())
+						transmog.setAnimation(client.loadAnimation(config.transmogAction()));
 				}
 			}
 		}
@@ -481,7 +509,10 @@ public class CreatorsPlugin extends Plugin
 
 		if (event.getKey().equals("transmogAnimation"))
 		{
-			if (transmog == null || !config.enableTransmog() || config.transmogAnimations())
+			if (transmog == null || !config.enableTransmog())
+				return;
+
+			if (config.transmogAnimations() != CreatorsConfig.TransmogAnimation.NONE)
 				return;
 
 			clientThread.invokeLater(() ->

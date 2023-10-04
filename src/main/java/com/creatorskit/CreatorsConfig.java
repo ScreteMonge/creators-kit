@@ -7,6 +7,13 @@ import java.awt.event.KeyEvent;
 @ConfigGroup("creatorssuite")
 public interface CreatorsConfig extends Config
 {
+	enum TransmogAnimation
+	{
+		PLAYER,
+		CONFIG,
+		NONE
+	}
+
 	@ConfigSection(
 			name = "Oculus Orb",
 			description = "Settings for enabling and modifying Oculus Orb mode",
@@ -429,22 +436,58 @@ public interface CreatorsConfig extends Config
 
 	@ConfigItem(
 			keyName = "transmogAnimation",
-			name = "Enable Transmog Animations",
-			description = "Gives your transmog animations based on your actual player animations",
+			name = "Animation Type",
+			description = "Gives your transmog animations based on 1) your player animations, 2) the animations below, or 3) no animation",
 			section = transmogrification,
 			position = 37
 	)
-	default boolean transmogAnimations()
+	default TransmogAnimation transmogAnimations()
 	{
-		return true;
+		return TransmogAnimation.PLAYER;
+	}
+
+	@ConfigItem(
+			keyName = "transmogPose",
+			name = "Pose Animation",
+			description = "Sets the pose animation of your transmog if the Config animation type is chosen",
+			section = transmogrification,
+			position = 38
+	)
+	default int transmogPose()
+	{
+		return 808;
+	}
+
+	@ConfigItem(
+			keyName = "transmogWalk",
+			name = "Walk Animation",
+			description = "Sets the walk animation of your transmog if the Config animation type is chosen",
+			section = transmogrification,
+			position = 39
+	)
+	default int transmogWalk()
+	{
+		return 819;
+	}
+
+	@ConfigItem(
+			keyName = "transmogAction",
+			name = "Action Animation",
+			description = "Sets the action animation of your transmog if the Config animation type is chosen",
+			section = transmogrification,
+			position = 40
+	)
+	default int transmogAction()
+	{
+		return 866;
 	}
 
 	@ConfigItem(
 			keyName = "transmogRadius",
-			name = "Transmog Radius",
+			name = "Radius",
 			description = "Sets the radius of your transmog. 60 is best for an object the size of 1 tile",
 			section = transmogrification,
-			position = 38
+			position = 41
 	)
 	default int transmogRadius()
 	{
@@ -456,7 +499,7 @@ public interface CreatorsConfig extends Config
 			name = "Enable Transmog Right-Click",
 			description = "Provides a right-click option to Transmog on any object or NPC",
 			section = transmogrification,
-			position = 39
+			position = 42
 	)
 	default boolean transmogRightClick()
 	{
