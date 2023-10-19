@@ -6,7 +6,6 @@ import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.*;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
-import net.runelite.api.Model;
 import net.runelite.api.RuneLiteObject;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
@@ -16,6 +15,7 @@ import net.runelite.client.util.ImageUtil;
 
 import javax.inject.Inject;
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -26,19 +26,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 @Slf4j
-public class ModelOrganizer extends JFrame
+public class ModelOrganizer extends JPanel
 {
     private final Client client;
     private final CreatorsPlugin plugin;
     private final ClientThread clientThread;
     private final CreatorsConfig config;
-    private final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
     private final BufferedImage CLEAR = ImageUtil.loadImageResource(getClass(), "/Clear.png");
     private final BufferedImage ANVIL = ImageUtil.loadImageResource(getClass(), "/Anvil.png");
     private final BufferedImage SAVE = ImageUtil.loadImageResource(getClass(), "/Save.png");
     private final BufferedImage TRANSMOG = ImageUtil.loadImageResource(getClass(), "/Transmog.png");
     private final HashMap<CustomModel, JPanel> panelMap = new HashMap<>();
-    JPanel modelPane = new JPanel();
+    JPanel modelPanel = new JPanel();
     GridBagConstraints c = new GridBagConstraints();
     public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
 
@@ -51,10 +50,19 @@ public class ModelOrganizer extends JFrame
         this.config = config;
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
-        setLayout(new GridBagLayout());
-        setTitle("Creator's Kit Model Organizer");
-        setIconImage(icon);
-        setPreferredSize(new Dimension(1100, 300));
+        setLayout(new BorderLayout());
+
+        JScrollPane scrollPane = new JScrollPane();
+        JPanel headerPanel = new JPanel();
+        headerPanel.setLayout(new GridBagLayout());
+        headerPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        scrollPane.setColumnHeaderView(headerPanel);
+
+        modelPanel.setBackground(Color.BLACK);
+        modelPanel.setLayout(new GridLayout(0, 8, 8, 8));
+        modelPanel.setBorder(new EmptyBorder(6, 4, 6, 4));
+        scrollPane.setViewportView(modelPanel);
+        add(scrollPane);
 
         c.fill = GridBagConstraints.BOTH;
         c.insets = new Insets(4, 4, 4, 4);
@@ -67,10 +75,7 @@ public class ModelOrganizer extends JFrame
         JLabel organizerLabel = new JLabel("Model Organizer");
         organizerLabel.setHorizontalAlignment(SwingConstants.CENTER);
         organizerLabel.setFont(FontManager.getRunescapeBoldFont());
-        add(organizerLabel, c);
-
-        modelPane.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        modelPane.setLayout(new GridLayout(0, 10, 8, 8));
+        headerPanel.add(organizerLabel, c);
 
         c.weightx = 0.1;
         c.gridx = 2;
@@ -79,13 +84,13 @@ public class ModelOrganizer extends JFrame
         JLabel searcherLabel = new JLabel("Cache Searcher");
         searcherLabel.setHorizontalAlignment(SwingConstants.CENTER);
         searcherLabel.setFont(FontManager.getRunescapeBoldFont());
-        add(searcherLabel, c);
+        headerPanel.add(searcherLabel, c);
 
         c.gridx = 2;
         c.gridy = 1;
         JSpinner idSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 99999, 1));
         idSpinner.setToolTipText("Choose the NPC or Object Id to find");
-        add(idSpinner, c);
+        headerPanel.add(idSpinner, c);
 
         c.gridx = 2;
         c.gridy = 2;
@@ -94,14 +99,13 @@ public class ModelOrganizer extends JFrame
         modelTypeComboBox.addItem(CustomModelType.CACHE_OBJECT);
         modelTypeComboBox.setFocusable(false);
         modelTypeComboBox.setToolTipText("Pick which part of the cache to search");
-        add(modelTypeComboBox, c);
+        headerPanel.add(modelTypeComboBox, c);
 
         c.gridx = 2;
         c.gridy = 3;
         JButton addCustomModelButton = new JButton("Add Custom Model");
-        addCustomModelButton.setFocusable(false);
         addCustomModelButton.setToolTipText("Add the chosen NPC or Object as a Custom Model");
-        add(addCustomModelButton, c);
+        headerPanel.add(addCustomModelButton, c);
         addCustomModelButton.addActionListener(e ->
         {
             CustomModelType type = (CustomModelType) modelTypeComboBox.getSelectedItem();
@@ -116,9 +120,8 @@ public class ModelOrganizer extends JFrame
         c.gridy = 0;
         c.gridheight = 2;
         JButton loadButton = new JButton("Load Custom Model");
-        loadButton.setFocusable(false);
         loadButton.setToolTipText("Loads a previously forged and saved Custom Model");
-        add(loadButton, c);
+        headerPanel.add(loadButton, c);
         loadButton.addActionListener(e ->
         {
             openLoadDialog();
@@ -128,9 +131,8 @@ public class ModelOrganizer extends JFrame
         c.gridy = 2;
         c.gridheight = 2;
         JButton clearButton = new JButton("Clear Unused Models");
-        clearButton.setFocusable(false);
         clearButton.setToolTipText("Clears all unused models from Custom Model dropdown menus");
-        add(clearButton, c);
+        headerPanel.add(clearButton, c);
         clearButton.addActionListener(e ->
         {
             ArrayList<CustomModel> unusedModels = new ArrayList<>();
@@ -161,43 +163,43 @@ public class ModelOrganizer extends JFrame
                 plugin.removeCustomModel(customModel);
         });
 
-        c.fill = GridBagConstraints.BOTH;
-        c.weightx = 1;
-        c.weighty = 1;
-        c.anchor = GridBagConstraints.PAGE_START;
-        c.gridx = 0;
-        c.gridy = 4;
-        c.gridwidth = 4;
-        c.gridheight = 1;
-        JScrollPane scrollPane = new JScrollPane();
-        scrollPane.setViewportView(modelPane);
-        add(scrollPane, c);
-
         revalidate();
-        pack();
     }
 
     public void createModelPanel(CustomModel model)
     {
         JPanel panel = new JPanel();
-        panel.setLayout(new GridLayout(0, 1, 2, 2));
+        panel.setLayout(new GridBagLayout());
         panel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         panel.setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1));
-        modelPane.add(panel);
+        modelPanel.add(panel);
 
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.weightx = 1;
+        c.weighty = 0;
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.insets = new Insets(2, 2, 2, 2);
+
+        c.gridx = 0;
+        c.gridy = 0;
         JTextField textField = new JTextField();
         textField.setText(model.getComp().getName());
         textField.setHorizontalAlignment(SwingConstants.CENTER);
-        panel.add(textField);
+        panel.add(textField, c);
         panelMap.put(model, panel);
         textField.addActionListener(e ->
         {
-            model.getComp().setName(textField.getText());
+            String text = textField.getText();
+            model.getComp().setName(text);
             plugin.updatePanelComboBoxes();
+            plugin.getCreatorsPanel().getTransmogPanel().getTransmogLabel().setText(text);
         });
 
+        c.gridx = 0;
+        c.gridy = 1;
         JPanel buttonsPanel = new JPanel(new GridLayout(1, 0, 4, 4));
-        panel.add(buttonsPanel);
+        panel.add(buttonsPanel, c);
 
         JButton deleteButton = new JButton(new ImageIcon(CLEAR));
         deleteButton.setFocusable(false);
@@ -238,8 +240,8 @@ public class ModelOrganizer extends JFrame
     public void removeModelPanel(CustomModel model)
     {
         JPanel panel = panelMap.get(model);
-        modelPane.remove(panel);
-        modelPane.updateUI();
+        modelPanel.remove(panel);
+        modelPanel.updateUI();
         panelMap.remove(model);
         revalidate();
         repaint();
@@ -352,13 +354,15 @@ public class ModelOrganizer extends JFrame
         try {
             FileWriter writer = new FileWriter(file, false);
 
-            DetailedModel[] detailedModels = customModel.getComp().getDetailedModels();
+            CustomModelComp comp = customModel.getComp();
+            DetailedModel[] detailedModels = comp.getDetailedModels();
             if (detailedModels == null)
             {
                 detailedModels = modelToDetailedPanels(customModel);
+                comp.setDetailedModels(detailedModels);
             }
 
-            String string = plugin.gson.toJson(detailedModels);
+            String string = plugin.gson.toJson(comp);
             writer.write(string);
             writer.close();
         }
@@ -368,12 +372,11 @@ public class ModelOrganizer extends JFrame
         }
     }
 
-    private DetailedModel[] modelToDetailedPanels(CustomModel customModel)
+    public DetailedModel[] modelToDetailedPanels(CustomModelComp comp)
     {
-        CustomModelComp comp = customModel.getComp();
         CustomModelType type = comp.getType();
 
-        ModelStats[] modelStats = customModel.getComp().getModelStats();
+        ModelStats[] modelStats = comp.getModelStats();
         DetailedModel[] detailedModels = new DetailedModel[modelStats.length];
         int group = 1;
         if (type == CustomModelType.CACHE_NPC)
@@ -401,6 +404,11 @@ public class ModelOrganizer extends JFrame
         return detailedModels;
     }
 
+    public DetailedModel[] modelToDetailedPanels(CustomModel customModel)
+    {
+        return modelToDetailedPanels(customModel.getComp());
+    }
+
     public void setTransmog(CustomModel customModel)
     {
         RuneLiteObject transmog = plugin.getTransmog();
@@ -411,8 +419,9 @@ public class ModelOrganizer extends JFrame
         }
 
         plugin.setTransmogModel(customModel);
+        plugin.getCreatorsPanel().getTransmogPanel().getTransmogLabel().setText(customModel.getComp().getName());
         transmog.setModel(customModel.getModel());
         transmog.setShouldLoop(true);
-        transmog.setRadius(config.transmogRadius());
+        transmog.setRadius(plugin.getCreatorsPanel().getTransmogPanel().getRadius());
     }
 }

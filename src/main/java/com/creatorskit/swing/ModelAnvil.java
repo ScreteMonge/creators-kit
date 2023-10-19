@@ -28,7 +28,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
-public class ModelAnvil extends JFrame
+public class ModelAnvil extends JPanel
 {
     private ClientThread clientThread;
     private final Client client;
@@ -52,6 +52,12 @@ public class ModelAnvil extends JFrame
     public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
     private final JPanel complexMode = new JPanel();
     private final JScrollPane scrollPane = new JScrollPane();
+    @Getter
+    private final JCheckBox priorityCheckBox = new JCheckBox("Priority");
+    @Getter
+    private final JComboBox<LightingStyle> lightingComboBox = new JComboBox<>();
+    @Getter
+    private final JTextField nameField = new JTextField();
     private final GridBagConstraints c = new GridBagConstraints();
     private HashMap<Short, Short> copiedColourMap = new HashMap<>();
     private final int COMPLEX_GRID_COLUMNS = 3;
@@ -65,8 +71,6 @@ public class ModelAnvil extends JFrame
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new GridBagLayout());
-        setTitle("Creator's Kit Anvil");
-        setIconImage(ICON);
 
         c.fill = GridBagConstraints.BOTH;
         c.insets = new Insets(4, 4, 4, 4);
@@ -90,17 +94,14 @@ public class ModelAnvil extends JFrame
         buttonsPanel.setLayout(new GridLayout(1, 0, 10, 0));
         add(buttonsPanel, c);
 
-        JTextField nameField = new JTextField();
         nameField.setText("Name");
         nameField.setHorizontalAlignment(JTextField.CENTER);
         buttonsPanel.add(nameField);
 
         JButton forgeButton = new JButton("Forge");
-        forgeButton.setFocusable(false);
         buttonsPanel.add(forgeButton);
 
         JButton forgeSetButton = new JButton("Forge & Set");
-        forgeSetButton.setFocusable(false);
         buttonsPanel.add(forgeSetButton);
 
         c.gridx = 0;
@@ -123,12 +124,10 @@ public class ModelAnvil extends JFrame
         scrollPane.setColumnHeaderView(headerPanel);
 
         JButton addButton = new JButton("Add");
-        addButton.setFocusable(false);
         addButton.addActionListener(e -> createComplexPanel());
         headerPanel.add(addButton);
 
         JButton clearButton = new JButton("Clear");
-        clearButton.setFocusable(false);
         clearButton.addActionListener(e ->
         {
             for (JPanel complexModePanel : complexPanels)
@@ -149,16 +148,13 @@ public class ModelAnvil extends JFrame
 
         JButton loadButton = new JButton("Load");
         loadButton.addActionListener(e -> openLoadDialog());
-        loadButton.setFocusable(false);
         loadButton.setComponentPopupMenu(loadPopupMenu);
         headerPanel.add(loadButton);
 
         JButton saveButton = new JButton("Save");
-        saveButton.setFocusable(false);
-        saveButton.addActionListener(e -> openSaveDialog(nameField.getText()));
+
         headerPanel.add(saveButton);
 
-        JComboBox<LightingStyle> lightingComboBox = new JComboBox<>();
         lightingComboBox.addItem(LightingStyle.DEFAULT);
         lightingComboBox.addItem(LightingStyle.ACTOR);
         lightingComboBox.addItem(LightingStyle.NONE);
@@ -166,7 +162,6 @@ public class ModelAnvil extends JFrame
         lightingComboBox.setToolTipText("Sets the lighting style. Use Actor for NPCs or Players");
         headerPanel.add(lightingComboBox);
 
-        JCheckBox priorityCheckBox = new JCheckBox("Priority");
         priorityCheckBox.setToolTipText("Use an oversimplified method of resolving render order issues (useful when merging models but not for NPCs/Players)");
         priorityCheckBox.setFocusable(false);
         headerPanel.add(priorityCheckBox);
@@ -176,6 +171,8 @@ public class ModelAnvil extends JFrame
 
         forgeSetButton.addActionListener(e ->
                 forgeModel(client, nameField, priorityCheckBox.isSelected(), (LightingStyle) lightingComboBox.getSelectedItem(), true));
+
+        saveButton.addActionListener(e -> openSaveDialog(nameField.getText(), priorityCheckBox.isSelected(), (LightingStyle) lightingComboBox.getSelectedItem()));
 
         JPanel sidePanel = new JPanel();
         sidePanel.setLayout(new BorderLayout());
@@ -208,7 +205,6 @@ public class ModelAnvil extends JFrame
         cacheSearcherPanel.add(modelTypeComboBox);
 
         JButton addModelsButton = new JButton("Add Models");
-        addModelsButton.setFocusable(false);
         addModelsButton.setToolTipText("Add the models from the chosen NPC or Object to the Anvil");
         cacheSearcherPanel.add(addModelsButton);
         addModelsButton.addActionListener(e ->
@@ -221,8 +217,7 @@ public class ModelAnvil extends JFrame
             plugin.cacheToAnvil(type, id);
         });
 
-        validate();
-        pack();
+        revalidate();
     }
 
     public void createComplexPanel()
@@ -826,7 +821,7 @@ public class ModelAnvil extends JFrame
         return detailedModels;
     }
 
-    private void openSaveDialog(String name)
+    private void openSaveDialog(String name, boolean priority, LightingStyle lightingStyle)
     {
         File outputDir = MODELS_DIR;
         outputDir.mkdirs();
@@ -876,17 +871,18 @@ public class ModelAnvil extends JFrame
             {
                 selectedFile = new File(selectedFile.getPath() + ".json");
             }
-            saveToFile(selectedFile);
+            saveToFile(selectedFile, name, priority, lightingStyle);
         }
     }
 
-    public void saveToFile(File file)
+    public void saveToFile(File file, String name, boolean priority, LightingStyle lightingStyle)
     {
         try {
             FileWriter writer = new FileWriter(file, false);
 
             DetailedModel[] detailedModels = panelsToDetailedModels();
-            String string = plugin.gson.toJson(detailedModels);
+            CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, lightingStyle, priority, name);
+            String string = plugin.gson.toJson(comp);
             writer.write(string);
             writer.close();
         }
@@ -907,7 +903,7 @@ public class ModelAnvil extends JFrame
         if (option == JFileChooser.APPROVE_OPTION)
         {
             File selectedFile = fileChooser.getSelectedFile();
-            plugin.loadCustomModelToAnvil(selectedFile);
+            plugin.loadCustomModelToAnvil(selectedFile, priorityCheckBox.isSelected(), (LightingStyle) lightingComboBox.getSelectedItem(), nameField.getText());
         }
     }
 

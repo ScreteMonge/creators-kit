@@ -54,6 +54,7 @@ public class KitRecolourer
                 break;
             case LEGS:
                 modelData.recolor(BODY_COLOURS_1_SOURCE[2], BODY_COLOURS_1_DEST[2][kitRecolours[2]]);
+                modelData.recolor(BODY_COLOURS_1_SOURCE[3], BODY_COLOURS_1_DEST[3][kitRecolours[3]]);
                 modelData.recolor(BODY_COLOURS_1_SOURCE[4], BODY_COLOURS_1_DEST[4][kitRecolours[4]]);
                 break;
             case FEET:
@@ -93,6 +94,8 @@ public class KitRecolourer
                 break;
             case LEGS:
                 stringBuilder.append(BODY_COLOURS_1_SOURCE[2])
+                        .append(",")
+                        .append(BODY_COLOURS_1_SOURCE[3])
                         .append(",")
                         .append(BODY_COLOURS_1_SOURCE[4]);
                 break;
@@ -134,6 +137,8 @@ public class KitRecolourer
                 break;
             case LEGS:
                 stringBuilder.append(BODY_COLOURS_1_DEST[2][kitRecolours[2]])
+                        .append(",")
+                        .append(BODY_COLOURS_1_DEST[3][kitRecolours[3]])
                         .append(",")
                         .append(BODY_COLOURS_1_DEST[4][kitRecolours[4]]);
                 break;

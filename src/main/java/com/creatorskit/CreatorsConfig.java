@@ -7,13 +7,6 @@ import java.awt.event.KeyEvent;
 @ConfigGroup("creatorssuite")
 public interface CreatorsConfig extends Config
 {
-	enum TransmogAnimation
-	{
-		PLAYER,
-		CONFIG,
-		NONE
-	}
-
 	@ConfigSection(
 			name = "Oculus Orb",
 			description = "Settings for enabling and modifying Oculus Orb mode",
@@ -139,7 +132,7 @@ public interface CreatorsConfig extends Config
 	@ConfigItem(
 			keyName = "toggleAutoSetup",
 			name = "Enable Auto-Setup",
-			description = "Automatically loads the saved setup from the file path below" +
+			description = "Automatically loads the saved Setup from the file path below" +
 				"<br>Please note that enabling this feature will slow down client start-up",
 			section = sceneSettings,
 			position = 11
@@ -324,10 +317,22 @@ public interface CreatorsConfig extends Config
 		return false;
 	}
 
+	@ConfigItem(
+			keyName = "projectileOverlay",
+			name = "Projectile Overlay",
+			description = "Enables an overlay for Projectiles",
+			section = overlaySettings,
+			position = 27
+	)
+	default boolean projectileOverlay()
+	{
+		return false;
+	}
+
 	@ConfigSection(
 			name = "Programmer",
 			description = "Settings for quickly programming the selected object",
-			position = 27
+			position = 28
 	)
 	String programmer = "programmer";
 
@@ -336,7 +341,7 @@ public interface CreatorsConfig extends Config
 			name = "Add Program Step",
 			description = "Hotkey to add the hovered location to the selected object's program",
 			section = programmer,
-			position = 28
+			position = 29
 	)
 	default Keybind addProgramStepHotkey()
 	{
@@ -348,7 +353,7 @@ public interface CreatorsConfig extends Config
 			name = "Remove Program Step",
 			description = "Hotkey to remove the hovered location from the selected object's program",
 			section = programmer,
-			position = 29
+			position = 30
 	)
 	default Keybind removeProgramStepHotkey()
 	{
@@ -360,7 +365,7 @@ public interface CreatorsConfig extends Config
 			name = "Clear Program Steps",
 			description = "Hotkey to clear all steps from the selected object's program",
 			section = programmer,
-			position = 30
+			position = 31
 	)
 	default Keybind clearProgramStepHotkey()
 	{
@@ -372,7 +377,7 @@ public interface CreatorsConfig extends Config
 			name = "Play/Pause Toggle",
 			description = "Hotkey to play/pause selected object",
 			section = programmer,
-			position = 31
+			position = 32
 	)
 	default Keybind playPauseHotkey()
 	{
@@ -384,7 +389,7 @@ public interface CreatorsConfig extends Config
 			name = "Play/Pause All",
 			description = "Hotkey to play/pause all programs",
 			section = programmer,
-			position = 32
+			position = 33
 	)
 	default Keybind playPauseAllHotkey()
 	{
@@ -396,7 +401,7 @@ public interface CreatorsConfig extends Config
 			name = "Reset Locations",
 			description = "Hotkey to set selected object to its start location",
 			section = programmer,
-			position = 33
+			position = 34
 	)
 	default Keybind resetHotkey()
 	{
@@ -408,7 +413,7 @@ public interface CreatorsConfig extends Config
 			name = "Reset All Locations",
 			description = "Hotkey to set all objects to their start location",
 			section = programmer,
-			position = 34
+			position = 35
 	)
 	default Keybind resetAllHotkey()
 	{
@@ -416,9 +421,9 @@ public interface CreatorsConfig extends Config
 	}
 
 	@ConfigSection(
-			name = "Transmogification",
+			name = "transmogrification",
 			description = "Settings for replacing your player character with a saved Custom Model",
-			position = 35
+			position = 36
 	)
 	String transmogrification = "transmogrification";
 
@@ -427,7 +432,7 @@ public interface CreatorsConfig extends Config
 			name = "Enable Transmogrification",
 			description = "Allow your character to be transmogrified into a chosen Custom Model",
 			section = transmogrification,
-			position = 36
+			position = 37
 	)
 	default boolean enableTransmog()
 	{
@@ -435,74 +440,39 @@ public interface CreatorsConfig extends Config
 	}
 
 	@ConfigItem(
-			keyName = "transmogAnimation",
-			name = "Animation Type",
-			description = "Gives your transmog animations based on 1) your player animations, 2) the animations below, or 3) no animation",
-			section = transmogrification,
-			position = 37
-	)
-	default TransmogAnimation transmogAnimations()
-	{
-		return TransmogAnimation.PLAYER;
-	}
-
-	@ConfigItem(
-			keyName = "transmogPose",
-			name = "Pose Animation",
-			description = "Sets the pose animation of your transmog if the Config animation type is chosen",
-			section = transmogrification,
-			position = 38
-	)
-	default int transmogPose()
-	{
-		return 808;
-	}
-
-	@ConfigItem(
-			keyName = "transmogWalk",
-			name = "Walk Animation",
-			description = "Sets the walk animation of your transmog if the Config animation type is chosen",
-			section = transmogrification,
-			position = 39
-	)
-	default int transmogWalk()
-	{
-		return 819;
-	}
-
-	@ConfigItem(
-			keyName = "transmogAction",
-			name = "Action Animation",
-			description = "Sets the action animation of your transmog if the Config animation type is chosen",
-			section = transmogrification,
-			position = 40
-	)
-	default int transmogAction()
-	{
-		return 866;
-	}
-
-	@ConfigItem(
-			keyName = "transmogRadius",
-			name = "Radius",
-			description = "Sets the radius of your transmog. 60 is best for an object the size of 1 tile",
-			section = transmogrification,
-			position = 41
-	)
-	default int transmogRadius()
-	{
-		return 60;
-	}
-
-	@ConfigItem(
 			keyName = "transmogRightClick",
 			name = "Enable Transmog Right-Click",
 			description = "Provides a right-click option to Transmog on any object or NPC",
 			section = transmogrification,
-			position = 42
+			position = 38
 	)
 	default boolean transmogRightClick()
 	{
 		return false;
+	}
+
+	@ConfigItem(
+			keyName = "enableAutoTransmog",
+			name = "Enable Auto-Transmog",
+			description = "Automatically loads the Transmog from the file path below" +
+					"<br>Please note that enabling this feature will slow down client start-up",
+			section = transmogrification,
+			position = 39
+	)
+	default boolean autoTransmog()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+			keyName = "transmogPath",
+			name = "Auto-Transmog Path",
+			description = "Enter the file path of a previously saved Transmog to automatically load on client start-up",
+			section = transmogrification,
+			position = 40
+	)
+	default String transmogPath()
+	{
+		return "";
 	}
 }

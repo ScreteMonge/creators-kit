@@ -1,9 +1,9 @@
 package com.creatorskit.swing;
 
-import com.creatorskit.CharacterSave;
+import com.creatorskit.saves.CharacterSave;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.Character;
-import com.creatorskit.SaveFile;
+import com.creatorskit.saves.SetupSave;
 import com.creatorskit.models.*;
 import com.creatorskit.programming.Coordinate;
 import com.creatorskit.programming.MovementType;
@@ -51,9 +51,11 @@ public class CreatorsPanel extends PluginPanel
     private ClientThread clientThread;
     private final CreatorsPlugin plugin;
 
+    private final ToolBoxFrame toolBox;
     private final ModelAnvil modelAnvil;
     private final ModelOrganizer modelOrganizer;
     private final ProgramPanel programPanel;
+    private final TransmogPanel transmogPanel;
     private final JButton addObjectButton = new JButton();
     private final JPanel mainPanel = new JPanel();
     private final GridBagConstraints cNPC = new GridBagConstraints();
@@ -61,7 +63,7 @@ public class CreatorsPanel extends PluginPanel
     public static final File SETUP_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit-setups");
     private final Pattern pattern = Pattern.compile("\\(\\d+\\)\\Z");
     private int npcPanels = 0;
-    private final ArrayList<JPanel> objectPanels = new ArrayList<>();
+    private final ArrayList<JPanel> allObjectPanels = new ArrayList<>();
     private final ArrayList<JComboBox<CustomModel>> comboBoxes = new ArrayList<>();
     private final Dimension spinnerSize = new Dimension(72, 30);
     private final int DEFAULT_TURN_SPEED = 68;
@@ -79,13 +81,15 @@ public class CreatorsPanel extends PluginPanel
     private final LineBorder selectedBorder = new LineBorder(Color.WHITE, 1);
 
     @Inject
-    public CreatorsPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin, ModelOrganizer modelOrganizer, ProgramPanel programPanel, ModelAnvil modelAnvil)
+    public CreatorsPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin, ToolBoxFrame toolBox)
     {
         this.clientThread = clientThread;
         this.plugin = plugin;
-        this.modelOrganizer = modelOrganizer;
-        this.programPanel = programPanel;
-        this.modelAnvil = modelAnvil;
+        this.toolBox = toolBox;
+        this.modelOrganizer = toolBox.getModelOrganizer();
+        this.programPanel = toolBox.getProgramPanel();
+        this.modelAnvil = toolBox.getModelAnvil();
+        this.transmogPanel = toolBox.getTransmogPanel();
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new GridBagLayout());
@@ -98,61 +102,34 @@ public class CreatorsPanel extends PluginPanel
         c.gridx = 0;
         c.gridy = 0;
         c.weightx = 1;
-        c.gridwidth = 1;
-        JButton organizerButton = new JButton("Organizer");
-        organizerButton.setToolTipText("Opens an interface for managing custom models");
-        organizerButton.setFocusable(false);
-        organizerButton.addActionListener(e ->
+        c.gridwidth = 5;
+        JButton toolBoxButton = new JButton("Toolbox");
+        toolBoxButton.setToolTipText("Opens an interface for organizing Objects, creating Custom Models, programming, and more");
+        toolBoxButton.setFocusable(false);
+        toolBoxButton.addActionListener(e ->
         {
-            modelOrganizer.setVisible(!modelOrganizer.isVisible());
+            toolBox.setVisible(!toolBox.isVisible());
             revalidate();
             repaint();
         });
-        add(organizerButton, c);
-
-        c.gridx = 1;
-        c.gridy = 0;
-        c.weightx = 1;
-        c.gridwidth = 2;
-        JButton anvilButton = new JButton("Anvil");
-        anvilButton.setToolTipText("Opens an interface for creating custom models");
-        anvilButton.setFocusable(false);
-        anvilButton.addActionListener(e ->
-        {
-            modelAnvil.setVisible(!modelAnvil.isVisible());
-            revalidate();
-            repaint();
-        });
-        add(anvilButton, c);
-
-        c.gridx = 3;
-        c.gridy = 0;
-        c.weightx = 1;
-        c.gridwidth = 2;
-        JButton programmerButton = new JButton("Programmer");
-        programmerButton.setToolTipText("Opens an interface for programming object actions");
-        programmerButton.setFocusable(false);
-        programmerButton.addActionListener(e ->
-        {
-            programPanel.setVisible(!programPanel.isVisible());
-            revalidate();
-            repaint();
-        });
-        add(programmerButton, c);
+        add(toolBoxButton, c);
 
 
         c.gridx = 0;
         c.gridy = 1;
         c.gridwidth = 3;
         c.gridheight = 2;
-        c.weightx = 1;
+        c.weightx = 3;
         c.weighty = 1;
         c.fill = GridBagConstraints.BOTH;
         addObjectButton.setText("Add Object");
         addObjectButton.setToolTipText("Add an new Object to the palette");
         addObjectButton.setFocusable(false);
         addObjectButton.addActionListener(e ->
-                        createPanel());
+                {
+                    JPanel panel = createPanel();
+                    addPanel(panel);
+                });
         add(addObjectButton, c);
 
         c.fill = GridBagConstraints.HORIZONTAL;
@@ -160,7 +137,7 @@ public class CreatorsPanel extends PluginPanel
         c.gridy = 1;
         c.gridwidth = 1;
         c.gridheight = 1;
-        c.weightx = 1;
+        c.weightx = 0;
         c.weighty = 0;
         JButton saveButton = new JButton(new ImageIcon(SAVE));
         saveButton.setFocusable(false);
@@ -214,18 +191,26 @@ public class CreatorsPanel extends PluginPanel
         return createPanel("Object (" + npcPanels + ")", 7699, null, false, false, 0,  -1, 60, createEmptyProgram(), false, null, null, new int[0], -1, false);
     }
 
-    public JPanel createPanel(String name, int modelId, CustomModel customModel, boolean customModeActive, boolean setMinimized, int orientation, int animationId, int radius, Program program, boolean active, WorldPoint worldPoint, LocalPoint localPoint, int[] localPointRegion, int localPointPlane, boolean inInstance)
+    public JPanel createPanel(String name,
+                              int modelId,
+                              CustomModel customModel,
+                              boolean customModeActive,
+                              boolean setMinimized,
+                              int orientation,
+                              int animationId,
+                              int radius,
+                              Program program,
+                              boolean active,
+                              WorldPoint worldPoint,
+                              LocalPoint localPoint,
+                              int[] localPointRegion,
+                              int localPointPlane,
+                              boolean inInstance)
     {
         JPanel masterPanel = new JPanel();
         masterPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         masterPanel.setBorder(defaultBorder);
         masterPanel.setLayout(new GridBagLayout());
-        masterPanel.addMouseMotionListener(new MouseAdapter() {
-            @Override
-            public void mouseDragged(MouseEvent e) {
-                int y = e.getPoint().y;
-            }
-        });
 
         GridBagConstraints c = new GridBagConstraints();
         c.fill = GridBagConstraints.BOTH;
@@ -464,7 +449,7 @@ public class CreatorsPanel extends PluginPanel
             deleteButton.addActionListener(e ->
             {
                 mainPanel.remove(masterPanel);
-                objectPanels.remove(masterPanel);
+                allObjectPanels.remove(masterPanel);
                 SwingUtilities.invokeLater(() ->
                         programPanel.removeProgramPanel(programJPanel));
 
@@ -511,7 +496,9 @@ public class CreatorsPanel extends PluginPanel
                 }
 
                 Program newProgram = new Program(newComp, new JLabel(), new JSpinner());
-                createPanel(newName, (int) modelSpinner.getValue(), (CustomModel) modelComboBox.getSelectedItem(), character.isCustomMode(), minimized[0], (int) orientationSpinner.getValue(), (int) animationSpinner.getValue(), (int) radiusSpinner.getValue(), newProgram, character.getRuneLiteObject().isActive(), character.getNonInstancedPoint(), character.getInstancedPoint(), character.getInstancedRegions(), character.getInstancedPlane(), character.isInInstance());
+                JPanel panel = createPanel(
+                        newName, (int) modelSpinner.getValue(), (CustomModel) modelComboBox.getSelectedItem(), character.isCustomMode(), minimized[0], (int) orientationSpinner.getValue(), (int) animationSpinner.getValue(), (int) radiusSpinner.getValue(), newProgram, character.getRuneLiteObject().isActive(), character.getNonInstancedPoint(), character.getInstancedPoint(), character.getInstancedRegions(), character.getInstancedPlane(), character.isInInstance());
+                addPanel(panel);
             });
 
             minimizeButton.addActionListener(e ->
@@ -638,19 +625,23 @@ public class CreatorsPanel extends PluginPanel
             setSelectedCharacter(character, masterPanel);
         });
 
+        mainPanel.add(masterPanel);
+        allObjectPanels.add(masterPanel);
+        comboBoxes.add(modelComboBox);
+        return masterPanel;
+    }
+
+    private void addPanel(JPanel masterPanel)
+    {
         mainPanel.add(masterPanel, cNPC);
         mainPanel.updateUI();
-        objectPanels.add(masterPanel);
-        comboBoxes.add(modelComboBox);
         npcPanels++;
         cNPC.gridy++;
-
-        return masterPanel;
     }
 
     public void clearPanels()
     {
-        objectPanels.clear();
+        allObjectPanels.clear();
         mainPanel.removeAll();
         plugin.clearNPCs();
         plugin.setSelectedCharacter(null);
@@ -673,7 +664,7 @@ public class CreatorsPanel extends PluginPanel
 
     public void setSelectedCharacter(Character selected, JPanel jPanel)
     {
-        for (JPanel panel : objectPanels)
+        for (JPanel panel : allObjectPanels)
         {
             panel.setBorder(defaultBorder);
         }
@@ -862,7 +853,7 @@ public class CreatorsPanel extends PluginPanel
             characterSaves[i] = new CharacterSave(name, locationSet, savedWorldPoint, savedLocalPoint, localPointRegion, localPointPlane, inInstance, compId, customMode, minimized, modelId, active, radius, rotation, animationId, programComp);
         }
 
-        SaveFile saveFile = new SaveFile(comps, characterSaves);
+        SetupSave saveFile = new SetupSave(comps, characterSaves);
 
         try {
             FileWriter writer = new FileWriter(file, false);
@@ -940,7 +931,7 @@ public class CreatorsPanel extends PluginPanel
             try
             {
                 Reader reader = Files.newBufferedReader(selectedFile.toPath());
-                SaveFile saveFile = plugin.gson.fromJson(reader, SaveFile.class);
+                SetupSave saveFile = plugin.gson.fromJson(reader, SetupSave.class);
                 clientThread.invokeLater(() -> loadSetup(saveFile));
                 reader.close();
             }
@@ -956,7 +947,7 @@ public class CreatorsPanel extends PluginPanel
         try
         {
             Reader reader = Files.newBufferedReader(file.toPath());
-            SaveFile saveFile = plugin.gson.fromJson(reader, SaveFile.class);
+            SetupSave saveFile = plugin.gson.fromJson(reader, SetupSave.class);
             clientThread.invokeLater(() -> loadSetup(saveFile));
             reader.close();
         }
@@ -966,7 +957,7 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
-    private void loadSetup(SaveFile saveFile)
+    private void loadSetup(SetupSave saveFile)
     {
         CustomModelComp[] comps = saveFile.getComps();
         CharacterSave[] characterSaves = saveFile.getSaves();
@@ -979,7 +970,8 @@ public class CreatorsPanel extends PluginPanel
                 SwingUtilities.invokeLater(() ->
                 {
                     Program program = new Program(save.getProgramComp(), new JLabel(), new JSpinner());
-                    createPanel(save.getName(), save.getModelId(), null, save.isCustomMode(), save.isMinimized(), save.getRotation(), save.getAnimationId(), save.getRadius(), program, save.isActive(), save.getNonInstancedPoint(), save.getInstancedPoint(), save.getInstancedRegions(), save.getInstancedPlane(), save.isInInstance());
+                    JPanel panel = createPanel(save.getName(), save.getModelId(), null, save.isCustomMode(), save.isMinimized(), save.getRotation(), save.getAnimationId(), save.getRadius(), program, save.isActive(), save.getNonInstancedPoint(), save.getInstancedPoint(), save.getInstancedRegions(), save.getInstancedPlane(), save.isInInstance());
+                    addPanel(panel);
                 });
             }
             return;
@@ -1025,7 +1017,8 @@ public class CreatorsPanel extends PluginPanel
             SwingUtilities.invokeLater(() ->
             {
                 Program program = new Program(save.getProgramComp(), new JLabel(), new JSpinner());
-                createPanel(save.getName(), save.getModelId(), customModels[save.getCompId()], save.isCustomMode(), save.isMinimized(), save.getRotation(), save.getAnimationId(), save.getRadius(), program, save.isActive(), save.getNonInstancedPoint(), save.getInstancedPoint(), save.getInstancedRegions(), save.getInstancedPlane(), save.isInInstance());
+                JPanel panel = createPanel(save.getName(), save.getModelId(), customModels[save.getCompId()], save.isCustomMode(), save.isMinimized(), save.getRotation(), save.getAnimationId(), save.getRadius(), program, save.isActive(), save.getNonInstancedPoint(), save.getInstancedPoint(), save.getInstancedRegions(), save.getInstancedPlane(), save.isInInstance());
+                addPanel(panel);
             });
         }
     }

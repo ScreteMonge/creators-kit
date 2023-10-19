@@ -2,9 +2,9 @@ package com.creatorskit;
 
 import com.creatorskit.models.*;
 import com.creatorskit.programming.*;
-import com.creatorskit.swing.CreatorsPanel;
-import com.creatorskit.swing.ComplexPanel;
-import com.creatorskit.swing.ModelAnvil;
+import com.creatorskit.saves.TransmogLoadOption;
+import com.creatorskit.saves.TransmogSave;
+import com.creatorskit.swing.*;
 import com.google.gson.Gson;
 import com.google.inject.Provides;
 import javax.inject.Inject;
@@ -97,6 +97,7 @@ public class CreatorsPlugin extends Plugin
 	private boolean overlaysActive = false;
 	private final ArrayList<Character> characters = new ArrayList<>();
 	private final ArrayList<CustomModel> storedModels = new ArrayList<>();
+	private Animation[] loadedAnimations = new Animation[0];
 	private Character selectedCharacter;
 	private Character hoveredCharacter;
 	private RuneLiteObject transmog;
@@ -111,11 +112,7 @@ public class CreatorsPlugin extends Plugin
 	private final int DARK_CONTRAST = 4000;
 	private boolean pauseMode = true;
 	private boolean autoSetupPathFound = true;
-	private int[] poseAnimations = new int[]
-			{244, 808, 809, 813, 847, 1421, 1461, 1652, 1662, 1713, 1824, 1832, 1837,
-			2061, 2065, 2074, 2148, 2316, 2561, 2911, 3040, 3175, 3296, 3677, 4193, 4646, 5160, 5246, 5253, 5363,
-			5869, 6297, 6604, 6657, 6936, 7053, 7220, 7271, 7508, 7518, 7538, 8009, 8057, 8208, 8521, 9018, 9341,
-			9460, 9494, 9814, 9857, 10032};
+	private boolean autoTransmogFound = true;
 
 	@Override
 	protected void startUp() throws Exception
@@ -161,6 +158,19 @@ public class CreatorsPlugin extends Plugin
 				autoSetupPathFound = false;
 			}
 		}
+
+		File TRANSMOG_DIR = new File(config.transmogPath() + ".json");
+		if (config.autoTransmog())
+		{
+			if (TRANSMOG_DIR.exists())
+			{
+				loadTransmog(TRANSMOG_DIR, TransmogLoadOption.BOTH);
+			}
+			else
+			{
+				autoTransmogFound = false;
+			}
+		}
 	}
 
 	@Override
@@ -197,7 +207,14 @@ public class CreatorsPlugin extends Plugin
 		if (!autoSetupPathFound)
 		{
 			autoSetupPathFound = true;
-			sendChatMessage("Creator's Kit auto-setup has failed to find the file at the path: " + config.setupPath());
+			sendChatMessage("Creator's Kit auto-Setup has failed to find the file at the path: " + config.setupPath());
+			sendChatMessage("Please ensure the config menu has the appropriate file path.");
+		}
+
+		if (!autoTransmogFound)
+		{
+			autoTransmogFound = true;
+			sendChatMessage("Creator's Kit auto-Transmog has failed to find the file at the path: " + config.transmogPath());
 			sendChatMessage("Please ensure the config menu has the appropriate file path.");
 		}
 
@@ -250,6 +267,8 @@ public class CreatorsPlugin extends Plugin
 				client.setCameraPitchTarget(client.getCameraPitch() - config.rotateVerticalSpeed());
 		}
 
+		Player player = client.getLocalPlayer();
+
 		for (Character character : characters)
 		{
 			Program program = character.getProgram();
@@ -267,7 +286,7 @@ public class CreatorsPlugin extends Plugin
 					continue;
 
 				if (animation.getId() != comp.getIdleAnim())
-					runeLiteObject.setAnimation(client.loadAnimation(comp.getIdleAnim()));
+					runeLiteObject.setAnimation(getAnimation(comp.getIdleAnim()));
 
 				continue;
 			}
@@ -288,7 +307,7 @@ public class CreatorsPlugin extends Plugin
 					continue;
 
 				if (runeLiteObject.getAnimation().getId() != comp.getIdleAnim())
-					runeLiteObject.setAnimation(client.loadAnimation(comp.getIdleAnim()));
+					runeLiteObject.setAnimation(getAnimation(comp.getIdleAnim()));
 
 				continue;
 			}
@@ -301,7 +320,7 @@ public class CreatorsPlugin extends Plugin
 					walkAnimId = comp.getIdleAnim();
 
 				if (currentAnim.getId() != walkAnimId)
-					runeLiteObject.setAnimation(client.loadAnimation(comp.getWalkAnim()));
+					runeLiteObject.setAnimation(getAnimation(comp.getWalkAnim()));
 			}
 
 			LocalPoint start = runeLiteObject.getLocation();
@@ -402,9 +421,10 @@ public class CreatorsPlugin extends Plugin
 			runeLiteObject.setLocation(finalPoint, client.getPlane());
 		}
 
+		TransmogPanel transmogPanel = creatorsPanel.getTransmogPanel();
+
 		if (config.enableTransmog() && transmog != null)
 		{
-			Player player = client.getLocalPlayer();
 			if (player == null)
 				return;
 
@@ -422,41 +442,147 @@ public class CreatorsPlugin extends Plugin
 			if (animation != null)
 				transmogAnimation = animation.getId();
 
-			if (config.transmogAnimations() == CreatorsConfig.TransmogAnimation.PLAYER)
+			TransmogAnimationMode animationMode = transmogPanel.getTransmogAnimationMode();
+			if (animationMode == TransmogAnimationMode.PLAYER)
 			{
 				if (playerAnimation == -1)
 				{
 					if (transmogAnimation != playerPose)
-						transmog.setAnimation(client.loadAnimation(playerPose));
-				}
-				else
-				{
-					if (transmogAnimation != playerAnimation)
-						transmog.setAnimation(client.loadAnimation(playerAnimation));
+						transmog.setAnimation(getAnimation(playerPose));
 				}
 			}
 
-			if (config.transmogAnimations() == CreatorsConfig.TransmogAnimation.CONFIG)
+			if (animationMode == TransmogAnimationMode.CUSTOM || animationMode == TransmogAnimationMode.MODIFIED)
 			{
 				if (playerAnimation == -1)
 				{
-					if (Arrays.stream(poseAnimations).anyMatch(n -> playerPose == n))
+					int pose = transmogPanel.getPoseAnimation();
+					int walk = transmogPanel.getWalkAnimation();
+					int run = transmogPanel.getRunAnimation();
+					int backwards = transmogPanel.getBackwardsAnimation();
+					int left = transmogPanel.getLeftAnimation();
+					int right = transmogPanel.getRightAnimation();
+					int rotate = transmogPanel.getRotateAnimation();
+
+					if (animationMode == TransmogAnimationMode.MODIFIED)
 					{
-						if (transmogAnimation != config.transmogPose())
-							transmog.setAnimation(client.loadAnimation(config.transmogPose()));
+						if (pose == -1)
+							pose = playerPose;
+						if (walk == -1)
+							walk = playerPose;
+						if (run == -1)
+							run = playerPose;
+						if (backwards == -1)
+							backwards = playerPose;
+						if (left == -1)
+							left = playerPose;
+						if (right == -1)
+							right = playerPose;
+						if (rotate == -1)
+							rotate = playerPose;
+					}
+
+					PoseAnimation poseAnimation = AnimationData.getPoseAnimation(playerPose);
+
+					if (pose != -1 && poseAnimation == PoseAnimation.POSE)
+					{
+						if (transmogAnimation != pose)
+							transmog.setAnimation(getAnimation(pose));
+					}
+					else if (walk != -1 && poseAnimation == PoseAnimation.WALK)
+					{
+						if (transmogAnimation != walk)
+							transmog.setAnimation(getAnimation(walk));
+					}
+					else if (run != -1 && poseAnimation == PoseAnimation.RUN)
+					{
+						if (transmogAnimation != run)
+							transmog.setAnimation(getAnimation(run));
+					}
+					else if (backwards != -1 && poseAnimation == PoseAnimation.BACKWARDS)
+					{
+						if (transmogAnimation != backwards)
+							transmog.setAnimation(getAnimation(backwards));
+					}
+					else if (right != -1 && poseAnimation == PoseAnimation.SHUFFLE_RIGHT)
+					{
+						if (transmogAnimation != right)
+							transmog.setAnimation(getAnimation(right));
+					}
+					else if (left != -1 && poseAnimation == PoseAnimation.SHUFFLE_LEFT)
+					{
+						if (transmogAnimation != left)
+							transmog.setAnimation(getAnimation(left));
+					}
+					else if (rotate != -1 && poseAnimation == PoseAnimation.ROTATE)
+					{
+						if (transmogAnimation != rotate)
+							transmog.setAnimation(getAnimation(rotate));
+					}
+					else if (animationMode == TransmogAnimationMode.MODIFIED)
+					{
+						transmog.setAnimation(getAnimation(playerPose));
 					}
 					else
 					{
-						if (transmogAnimation != config.transmogWalk())
-							transmog.setAnimation(client.loadAnimation(config.transmogWalk()));
+						if (transmogAnimation != walk)
+							transmog.setAnimation(getAnimation(walk));
 					}
 				}
-				else
+			}
+		}
+	}
+
+	@Subscribe
+	public void onAnimationChanged(AnimationChanged event)
+	{
+		if (!config.enableTransmog() || transmog == null)
+			return;
+
+		TransmogPanel transmogPanel = creatorsPanel.getTransmogPanel();
+		TransmogAnimationMode animationMode = transmogPanel.getTransmogAnimationMode();
+
+		if (animationMode == TransmogAnimationMode.NONE)
+			return;
+
+		if (event.getActor() instanceof Player)
+		{
+			Player player = (Player) event.getActor();
+			if (player != client.getLocalPlayer())
+				return;
+
+			int playerAnimation = player.getAnimation();
+			Animation animation = transmog.getAnimation();
+			int transmogAnimation = -1;
+			if (animation != null)
+				transmogAnimation = animation.getId();
+
+			int action = transmogPanel.getActionAnimation();
+
+			if (animationMode == TransmogAnimationMode.PLAYER && transmogAnimation != playerAnimation)
+			{
+				transmog.setAnimation(getAnimation(playerAnimation));
+				return;
+			}
+
+			int[][] animationSwaps = transmogPanel.getAnimationSwaps();
+			for (int[] swap : animationSwaps)
+			{
+				if (swap[0] == player.getAnimation() && transmogAnimation != swap[1])
 				{
-					if (transmogAnimation != config.transmogAction())
-						transmog.setAnimation(client.loadAnimation(config.transmogAction()));
+					transmog.setAnimation(getAnimation(swap[1]));
+					return;
 				}
 			}
+
+			if (animationMode == TransmogAnimationMode.MODIFIED && transmogAnimation != playerAnimation && action == -1)
+				transmog.setAnimation(getAnimation(playerAnimation));
+
+			if (animationMode == TransmogAnimationMode.MODIFIED && transmogAnimation != action && action != -1)
+				transmog.setAnimation(getAnimation(action));
+
+			if (animationMode == TransmogAnimationMode.CUSTOM && transmogAnimation != action)
+				transmog.setAnimation(getAnimation(action));
 		}
 	}
 
@@ -502,33 +628,8 @@ public class CreatorsPlugin extends Plugin
 				transmog.setActive(enableTransmog);
 				if (!enableTransmog)
 				{
-					transmog.setAnimation(client.loadAnimation(-1));
+					transmog.setAnimation(getAnimation(-1));
 				}
-			});
-		}
-
-		if (event.getKey().equals("transmogAnimation"))
-		{
-			if (transmog == null || !config.enableTransmog())
-				return;
-
-			if (config.transmogAnimations() != CreatorsConfig.TransmogAnimation.NONE)
-				return;
-
-			clientThread.invokeLater(() ->
-			{
-				transmog.setAnimation(client.loadAnimation(-1));
-			});
-		}
-
-		if (event.getKey().equals("transmogRadius"))
-		{
-			if (transmog == null)
-				return;
-
-			clientThread.invokeLater(() ->
-			{
-				transmog.setRadius(config.transmogRadius());
 			});
 		}
 	}
@@ -865,6 +966,19 @@ public class CreatorsPlugin extends Plugin
 		});
 	}
 
+	public Animation getAnimation(int id)
+	{
+		for (Animation animation : loadedAnimations)
+		{
+			if (animation != null && animation.getId() == id)
+				return animation;
+		}
+
+		Animation animation = client.loadAnimation(id);
+		loadedAnimations = ArrayUtils.add(loadedAnimations, animation);
+		return animation;
+	}
+
 	public void setAnimation(Character character, int animationId)
 	{
 		if (client.getGameState() != GameState.LOGGED_IN)
@@ -873,8 +987,9 @@ public class CreatorsPlugin extends Plugin
 		RuneLiteObject runeLiteObject = character.getRuneLiteObject();
 		clientThread.invoke(() ->
 		{
-			Animation animation = client.loadAnimation(animationId);
+			Animation animation = getAnimation(animationId);
 			runeLiteObject.setAnimation(animation);
+			loadedAnimations = ArrayUtils.removeAllOccurences(loadedAnimations, null);
 		});
 	}
 
@@ -883,7 +998,7 @@ public class CreatorsPlugin extends Plugin
 		RuneLiteObject runeLiteObject = character.getRuneLiteObject();
 		clientThread.invoke(() ->
 		{
-			Animation animation = client.loadAnimation(-1);
+			Animation animation = getAnimation(-1);
 			runeLiteObject.setAnimation(animation);
 		});
 	}
@@ -1115,7 +1230,6 @@ public class CreatorsPlugin extends Plugin
 
 	public Model createComplexModel(DetailedModel[] detailedModels, boolean setPriority, LightingStyle lightingStyle)
 	{
-		//Tried storing player -> load model from MO. NPE at line 1000. Wasn't composed of detailedmodels?? Wasn't forged sooo...
 		ModelData[] models = new ModelData[detailedModels.length];
 
 		for (int e = 0; e < detailedModels.length; e++)
@@ -1371,6 +1485,9 @@ public class CreatorsPlugin extends Plugin
 			CustomModelComp comp = customModel.getComp();
 			sendChatMessage("Model sent to Anvil: " + comp.getName());
 			ModelAnvil modelAnvil = creatorsPanel.getModelAnvil();
+			modelAnvil.getPriorityCheckBox().setSelected(comp.isPriority());
+			modelAnvil.getLightingComboBox().setSelectedItem(comp.getLightingStyle());
+			modelAnvil.getNameField().setText(comp.getName());
 
 			if (comp.getModelStats() == null)
 			{
@@ -1395,8 +1512,30 @@ public class CreatorsPlugin extends Plugin
 		});
 	}
 
-	public void loadCustomModelToAnvil(File file)
+	public void loadCustomModelToAnvil(File file, boolean priority, LightingStyle lightingStyle, String name)
 	{
+		try
+		{
+			Reader reader = Files.newBufferedReader(file.toPath());
+			CustomModelComp comp = gson.fromJson(reader, CustomModelComp.class);
+			ModelAnvil modelAnvil = creatorsPanel.getModelAnvil();
+			SwingUtilities.invokeLater(() -> {
+				for (DetailedModel detailedModel : comp.getDetailedModels())
+				{
+					modelAnvil.createComplexPanel(detailedModel);
+				}
+			});
+			modelAnvil.getLightingComboBox().setSelectedItem(comp.getLightingStyle());
+			modelAnvil.getPriorityCheckBox().setSelected(comp.isPriority());
+			modelAnvil.getNameField().setText(comp.getName());
+			reader.close();
+			return;
+		}
+		catch (Exception e)
+		{
+			sendChatMessage("The file chosen is possibly in an older v1.2 file. Attempting conversion...");
+		}
+
 		try
 		{
 			Reader reader = Files.newBufferedReader(file.toPath());
@@ -1408,14 +1547,33 @@ public class CreatorsPlugin extends Plugin
 				}
 			});
 			reader.close();
+
+			CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, lightingStyle, priority, name);
+			try
+			{
+				file.delete();
+				String fileName = file.getPath();
+				File newFile = new File(fileName);
+				FileWriter writer = new FileWriter(newFile, false);
+				String string = gson.toJson(comp);
+				writer.write(string);
+				writer.close();
+				sendChatMessage("The chosen v1.2 file has been successfully updated to a v1.3 file for future use.");
+			}
+			catch (IOException e)
+			{
+				e.printStackTrace();
+				sendChatMessage("An error occurred while trying to convert this file to a .json file.");
+			}
+
 			return;
 		}
 		catch (Exception e)
 		{
-			sendChatMessage("The file chosen is not a valid .json file. Attempting conversion...");
+			sendChatMessage("The file chosen is possibly an older v1.0 file. Attempting conversion...");
 		}
 
-		convertTextToJson(file);
+		convertTextToJson(file, priority, lightingStyle, name);
 	}
 
 	public void loadCustomModel(File file, boolean priority, LightingStyle lightingStyle, String name)
@@ -1423,10 +1581,9 @@ public class CreatorsPlugin extends Plugin
 		try
 		{
 			Reader reader = Files.newBufferedReader(file.toPath());
-			DetailedModel[] detailedModels = gson.fromJson(reader, DetailedModel[].class);
+			CustomModelComp comp = gson.fromJson(reader, CustomModelComp.class);
 			clientThread.invokeLater(() -> {
-				CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, lightingStyle, priority, name);
-				Model model = createComplexModel(detailedModels, priority, lightingStyle);
+				Model model = createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle());
 				CustomModel customModel = new CustomModel(model, comp);
 				addCustomModel(customModel, false);
 			});
@@ -1435,13 +1592,51 @@ public class CreatorsPlugin extends Plugin
 		}
 		catch (Exception e)
 		{
-			sendChatMessage("The file chosen is not a valid .json file. Attempting conversion...");
+			sendChatMessage("The file chosen is possibly in an older v1.2 file. Attempting conversion...");
 		}
 
-		convertTextToJson(file);
+		try
+		{
+			Reader reader = Files.newBufferedReader(file.toPath());
+			DetailedModel[] detailedModels = gson.fromJson(reader, DetailedModel[].class);
+			CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, lightingStyle, priority, name);
+
+			clientThread.invokeLater(() -> {
+				Model model = createComplexModel(detailedModels, priority, lightingStyle);
+				CustomModel customModel = new CustomModel(model, comp);
+				addCustomModel(customModel, false);
+			});
+			reader.close();
+
+			try
+			{
+				file.delete();
+				String fileName = file.getPath();
+				File newFile = new File(fileName);
+				FileWriter writer = new FileWriter(newFile, false);
+				String string = gson.toJson(comp);
+				writer.write(string);
+				writer.close();
+
+				sendChatMessage("The chosen v1.2 file has been successfully updated to a v1.3 file for future use.");
+			}
+			catch (IOException e)
+			{
+				e.printStackTrace();
+				sendChatMessage("An error occurred while trying to convert this v1.2 file to a v1.3 file.");
+			}
+
+			return;
+		}
+		catch (Exception e)
+		{
+			sendChatMessage("The file chosen is possibly an older v1.0 file. Attempting conversion...");
+		}
+
+		convertTextToJson(file, priority, lightingStyle, name);
 	}
 
-	private void convertTextToJson(File file)
+	private void convertTextToJson(File file, boolean priority, LightingStyle lightingStyle, String customModelName)
 	{
 		ArrayList<DetailedModel> list = new ArrayList<>();
 
@@ -1562,30 +1757,83 @@ public class CreatorsPlugin extends Plugin
 
 			try
 			{
-				String name = file.getPath();
-				if (name.endsWith(".txt"))
+				String fileName = file.getPath();
+				if (fileName.endsWith(".txt"))
 				{
-					name = name.substring(0, name.length() - 4);
+					fileName = fileName.substring(0, fileName.length() - 4);
 				}
 
-				File newFile = new File(name + ".json");
+				File newFile = new File(fileName + ".json");
 				FileWriter writer = new FileWriter(newFile, false);
-				String string = gson.toJson(list);
+				DetailedModel[] detailedModels = (DetailedModel[]) list.toArray();
+				CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, lightingStyle, priority, customModelName);
+				String string = gson.toJson(comp);
 				writer.write(string);
 				writer.close();
 				file.delete();
-				sendChatMessage("The chosen .txt file has been successfully updated to a .json file for future use.");
+				sendChatMessage("The chosen v1.0 file has been successfully updated to v1.3 for future use.");
 			}
 			catch (IOException e)
 			{
 				e.printStackTrace();
-				sendChatMessage("An error occurred while trying to convert this file to a .json file.");
+				sendChatMessage("An error occurred while trying to convert this file from a v1.0 to a v1.3 file.");
 			}
 		}
 		catch (FileNotFoundException e)
 		{
-			sendChatMessage("An error occurred while trying to convert this file to a .json file.");
+			sendChatMessage("An error occurred while trying to convert this file from a v1.0 to a v1.3 file.");
 			e.printStackTrace();
+		}
+	}
+
+	public void loadTransmog(File file, TransmogLoadOption transmogLoadOption)
+	{
+		try
+		{
+			Reader reader = Files.newBufferedReader(file.toPath());
+			TransmogSave transmogSave = gson.fromJson(reader, TransmogSave.class);
+			CustomModelComp comp = transmogSave.getCustomModelComp();
+			if (comp != null)
+			{
+				DetailedModel[] detailedModels = comp.getDetailedModels();
+				if (detailedModels == null)
+				{
+					detailedModels = creatorsPanel.getModelOrganizer().modelToDetailedPanels(comp);
+					comp.setDetailedModels(detailedModels);
+				}
+			}
+
+			reader.close();
+
+			boolean loadCustomModel = false;
+			switch (transmogLoadOption)
+			{
+				case ANIMATIONS:
+					creatorsPanel.getTransmogPanel().loadTransmog(transmogSave);
+					break;
+				case CUSTOM_MODEL:
+					if (comp != null)
+						loadCustomModel = true;
+					break;
+				case BOTH:
+					creatorsPanel.getTransmogPanel().loadTransmog(transmogSave);
+					if (comp != null)
+						loadCustomModel = true;
+			}
+
+			if (loadCustomModel)
+			{
+				clientThread.invokeLater(() -> {
+					Model model = createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle());
+					CustomModel customModel = new CustomModel(model, comp);
+					addCustomModel(customModel, false);
+					creatorsPanel.getModelOrganizer().setTransmog(customModel);
+				});
+			}
+		}
+		catch (Exception e)
+		{
+			sendChatMessage("Failed to load the selected Transmog. Make sure you selected an appropriate transmog file.");
 		}
 	}
 

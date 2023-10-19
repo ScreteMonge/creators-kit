@@ -9,6 +9,7 @@ import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
+import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
 
 import javax.annotation.Nullable;
@@ -20,12 +21,11 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.Random;
 
-public class ProgramPanel extends JFrame
+public class ProgramPanel extends JPanel
 {
     @Inject
     private ClientThread clientThread;
     private final CreatorsPlugin plugin;
-    private final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
     private final GridBagConstraints c = new GridBagConstraints();
     @Getter
     private final JPanel allPanel = new JPanel();
@@ -38,24 +38,54 @@ public class ProgramPanel extends JFrame
         this.plugin = plugin;
 
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        setTitle("Creators Kit Programmer");
-        setIconImage(icon);
-        setPreferredSize(new Dimension(300, 300));
+        setLayout(new BorderLayout());
+
+        JPanel headerPanel = new JPanel();
+        headerPanel.setLayout(new GridBagLayout());
+        headerPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+
+        c.gridx = 0;
+        c.gridy = 0;
+        c.weightx = 1;
+        JLabel titleLabel = new JLabel("Programmer");
+        titleLabel.setFont(FontManager.getRunescapeBoldFont());
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        titleLabel.setVerticalAlignment(SwingConstants.CENTER);
+        headerPanel.add(titleLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 0;
+        c.weightx = 0;
+        JButton syncButton = new JButton("Sync Idles");
+        syncButton.setToolTipText("Synchronizes the idle animations of all current Objects");
+        headerPanel.add(syncButton, c);
+        syncButton.addActionListener(e ->
+        {
+            for (Character character : plugin.getCharacters())
+            {
+                plugin.setAnimation(character, (int) character.getAnimationSpinner().getValue());
+            }
+        });
 
         JScrollPane scrollPane = new JScrollPane();
         scrollPane.setViewportView(allPanel);
+        scrollPane.setColumnHeaderView(headerPanel);
         add(scrollPane);
 
-        allPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        allPanel.setBackground(Color.BLACK);
         allPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
-        allPanel.setLayout(new GridLayout(0, 7));
-        pack();
+        allPanel.setLayout(new GridLayout(0, 7, 6, 6));
+
+        revalidate();
     }
 
     public void createProgramPanel(Character character, JPanel programPanel, JLabel nameLabel, JSpinner idleAnimSpinner)
     {
+        Program program = character.getProgram();
+        ProgramComp comp = program.getComp();
+
         programPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        programPanel.setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR));
+        programPanel.setBorder(new LineBorder(comp.getColor(), 1));
         programPanel.setLayout(new GridBagLayout());
 
         c.fill = GridBagConstraints.VERTICAL;
@@ -119,9 +149,6 @@ public class ProgramPanel extends JFrame
         optionsPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         programPanel.add(optionsPanel, c);
 
-        Program program = character.getProgram();
-        ProgramComp comp = program.getComp();
-
         idleAnimSpinner.setModel(new SpinnerNumberModel(comp.getIdleAnim(), -1, 9999, 1));
         idleAnimSpinner.addChangeListener(e ->
         {
@@ -174,7 +201,11 @@ public class ProgramPanel extends JFrame
         colourButton.setToolTipText("Rerolls a new random colour for the path");
         colourButton.setFocusable(false);
         colourButton.addActionListener(e ->
-                comp.setColor(getRandomColor()));
+                {
+                    Color color = getRandomColor();
+                    comp.setColor(color);
+                    programPanel.setBorder(new LineBorder(color, 1));
+                });
         programPanel.add(colourButton, c);
 
         allPanel.add(programPanel);

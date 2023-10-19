@@ -27,6 +27,8 @@ public class CreatorsOverlay extends Overlay
     private static final Color GROUND_OBJECT_COLOUR = new Color(73, 255, 0);
     private static final Color WALL_OBJECT_COLOUR = new Color(255, 70, 70);
     private static final Color DECORATIVE_OBJECT_COLOUR = new Color(183, 126, 255);
+    private static final Color PROJECTILE_COLOUR = new Color(255, 222, 2);
+    private static final Color GRAPHICS_OBJECT_COLOUR = new Color(117, 113, 252);
     private static final Color NPC_COLOUR = new Color(188, 198, 255);
     private static final Color PLAYER_COLOUR = new Color(221, 133, 255);
     private static final int MAX_DISTANCE = 2400;
@@ -45,9 +47,7 @@ public class CreatorsOverlay extends Overlay
     public Dimension render(Graphics2D graphics)
     {
         if (client.getGameState() != GameState.LOGGED_IN || !plugin.isOverlaysActive())
-        {
             return null;
-        }
 
         renderObjectsOverlay(graphics);
 
@@ -64,14 +64,13 @@ public class CreatorsOverlay extends Overlay
         }
 
         if (config.npcOverlay())
-        {
             renderNPCOverlay(graphics);
-        }
 
         if (config.playerOverlay())
-        {
             renderPlayerOverlay(graphics);
-        }
+
+        if (config.projectileOverlay())
+            renderProjectiles(graphics);
 
         return null;
     }
@@ -210,11 +209,16 @@ public class CreatorsOverlay extends Overlay
         {
             LocalPoint localPoint = player.getLocalLocation();
             if (localPoint == null)
-            {
                 continue;
+
+            StringBuilder spotAnims = new StringBuilder();
+            for (ActorSpotAnim spotAnim : player.getSpotAnims())
+            {
+                spotAnims.append(", G: ");
+                spotAnims.append(spotAnim.getId());
             }
 
-            OverlayUtil.renderActorOverlay(graphics, player, "A: " + player.getAnimation() + ", P: " + player.getPoseAnimation(), PLAYER_COLOUR);
+            OverlayUtil.renderActorOverlay(graphics, player, "A: " + player.getAnimation() + ", P: " + player.getPoseAnimation() + spotAnims, PLAYER_COLOUR);
         }
     }
 
@@ -224,11 +228,16 @@ public class CreatorsOverlay extends Overlay
         {
             LocalPoint localPoint = npc.getLocalLocation();
             if (localPoint == null)
-            {
                 continue;
+
+            StringBuilder spotAnims = new StringBuilder();
+            for (ActorSpotAnim spotAnim : npc.getSpotAnims())
+            {
+                spotAnims.append(", G: ");
+                spotAnims.append(spotAnim.getId());
             }
 
-            OverlayUtil.renderActorOverlay(graphics, npc, "ID: " + npc.getId() + ", A: " + npc.getAnimation() + ", P: " + npc.getPoseAnimation(), NPC_COLOUR);
+            OverlayUtil.renderActorOverlay(graphics, npc, "ID: " + npc.getId() + ", A: " + npc.getAnimation() + ", P: " + npc.getPoseAnimation() + spotAnims, NPC_COLOUR);
         }
     }
 
@@ -386,6 +395,23 @@ public class CreatorsOverlay extends Overlay
             if (player.getLocalLocation().distanceTo(tileObject.getLocalLocation()) <= MAX_DISTANCE)
             {
                 OverlayUtil.renderTileOverlay(graphics, tileObject, "ID: " + tileObject.getId(), DECORATIVE_OBJECT_COLOUR);
+            }
+        }
+    }
+
+    private void renderProjectiles(Graphics2D graphics)
+    {
+        for (Projectile projectile : client.getProjectiles())
+        {
+            int projectileId = projectile.getId();
+            String text = "ID: " + projectileId;
+            int x = (int) projectile.getX();
+            int y = (int) projectile.getY();
+            LocalPoint projectilePoint = new LocalPoint(x, y);
+            Point textLocation = Perspective.getCanvasTextLocation(client, graphics, projectilePoint, text, 0);
+            if (textLocation != null)
+            {
+                OverlayUtil.renderTextLocation(graphics, textLocation, text, PROJECTILE_COLOUR);
             }
         }
     }
