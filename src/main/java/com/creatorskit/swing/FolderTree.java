@@ -7,6 +7,7 @@ import net.runelite.client.util.ImageUtil;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.util.Enumeration;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.tree.*;
@@ -80,7 +81,7 @@ public class FolderTree extends JPanel
         addFolderButton.setToolTipText("Add a new Folder to the currently selected Folder");
         addFolderButton.addActionListener(e ->
         {
-            addObject("New Folder");
+            addNode("New Folder");
         });
         folderHeader.add(addFolderButton, c);
 
@@ -88,7 +89,7 @@ public class FolderTree extends JPanel
         c.gridy = 1;
         JButton removeFolderButton = new JButton(new ImageIcon(CLOSE));
         removeFolderButton.setToolTipText("Remove the currently selected Folder and all its Objects");
-        removeFolderButton.addActionListener(e -> removeObject());
+        removeFolderButton.addActionListener(e -> removeNode());
         folderHeader.add(removeFolderButton, c);
 
         c.gridx = 2;
@@ -101,7 +102,7 @@ public class FolderTree extends JPanel
         return folderHeader;
     }
 
-    public DefaultMutableTreeNode addObject(Object child)
+    public DefaultMutableTreeNode addNode(Object child)
     {
         DefaultMutableTreeNode parentNode;
         TreePath parentPath = tree.getSelectionPath();
@@ -113,17 +114,23 @@ public class FolderTree extends JPanel
         else
         {
             parentNode = (DefaultMutableTreeNode) (parentPath.getLastPathComponent());
+            if (parentNode.getUserObject() instanceof ObjectPanel)
+            {
+                parentNode = (DefaultMutableTreeNode) parentPath.getParentPath().getLastPathComponent();
+                if (parentNode == null)
+                    parentNode = rootNode;
+            }
         }
 
-        return addObject(parentNode, child, true);
+        return addNode(parentNode, child, true);
     }
 
-    public DefaultMutableTreeNode addObject(DefaultMutableTreeNode parent, Object child)
+    public DefaultMutableTreeNode addNode(DefaultMutableTreeNode parent, Object child)
     {
-        return addObject(parent, child, false);
+        return addNode(parent, child, false);
     }
 
-    public DefaultMutableTreeNode addObject(DefaultMutableTreeNode parent, Object child, boolean shouldBeVisible)
+    public DefaultMutableTreeNode addNode(DefaultMutableTreeNode parent, Object child, boolean shouldBeVisible)
     {
         DefaultMutableTreeNode childNode = new DefaultMutableTreeNode(child);
 
@@ -138,7 +145,7 @@ public class FolderTree extends JPanel
         return childNode;
     }
 
-    public void removeObject()
+    public void removeNode()
     {
         TreePath currentSelection = tree.getSelectionPath();
         if (currentSelection == null)
@@ -148,6 +155,25 @@ public class FolderTree extends JPanel
         MutableTreeNode parent = (MutableTreeNode)(currentNode.getParent());
         if (parent != null)
             treeModel.removeNodeFromParent(currentNode);
+    }
+
+    public DefaultMutableTreeNode findNode(Object child)
+    {
+        Enumeration<?> e = rootNode.preorderEnumeration();
+        while(e.hasMoreElements())
+        {
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode) e.nextElement();
+            if (node.getUserObject() == child)
+                return node;
+        }
+        return null;
+    }
+
+    public void removeNode(Object child)
+    {
+        DefaultMutableTreeNode node = findNode(child);
+        if (node != null)
+            treeModel.removeNodeFromParent(node);
     }
 
     public void clearObjects()

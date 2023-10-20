@@ -735,7 +735,7 @@ public class CreatorsPlugin extends Plugin
 								.setOption("Select")
 								.setTarget(ColorUtil.colorTag(Color.GREEN) + character.getName())
 								.setType(MenuAction.RUNELITE)
-								.onClick(e -> creatorsPanel.setSelectedCharacter(character, character.getMasterPanel()));
+								.onClick(e -> creatorsPanel.setSelectedCharacter(character, character.getObjectPanel()));
 					}
 				}
 			}
@@ -1021,7 +1021,7 @@ public class CreatorsPlugin extends Plugin
 			orientation += 2048;
 
 		setOrientation(character, orientation);
-		JPanel masterPanel = character.getMasterPanel();
+		JPanel masterPanel = character.getObjectPanel();
 		for (Component component : masterPanel.getComponents())
 		{
 			if (component instanceof JSpinner)
@@ -1043,7 +1043,7 @@ public class CreatorsPlugin extends Plugin
 	}
 
 	public Character buildCharacter(String name,
-									JPanel panel,
+									ObjectPanel objectPanel,
 									JTextField nameTextField,
 									JButton setLocationButton,
 									JButton spawnButton,
@@ -1088,7 +1088,7 @@ public class CreatorsPlugin extends Plugin
 				localPointPlane,
 				locatedInInstance,
 				customModel,
-				panel,
+				objectPanel,
 				customModelMode,
 				modelComboBox,
 				spawnButton,
@@ -1206,7 +1206,7 @@ public class CreatorsPlugin extends Plugin
 		return character;
 	}
 
-	public void clearNPCs()
+	public void clearCharacters()
 	{
 		clientThread.invokeLater(() -> {
 			for (Character character : characters)
@@ -1216,6 +1216,18 @@ public class CreatorsPlugin extends Plugin
 			}
 
 			characters.clear();
+		});
+	}
+
+	public void clearCharacters(Character[] charactersToRemove)
+	{
+		clientThread.invokeLater(() -> {
+			for (Character character : charactersToRemove)
+			{
+				RuneLiteObject runeLiteObject = character.getRuneLiteObject();
+				runeLiteObject.setActive(false);
+				characters.remove(character);
+			}
 		});
 	}
 

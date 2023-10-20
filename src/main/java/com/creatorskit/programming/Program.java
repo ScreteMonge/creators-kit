@@ -12,6 +12,7 @@ import javax.swing.*;
 public class Program
 {
     private ProgramComp comp;
+    private JPanel programPanel;
     private JLabel nameLabel;
     private JSpinner idleAnimSpinner;
 }

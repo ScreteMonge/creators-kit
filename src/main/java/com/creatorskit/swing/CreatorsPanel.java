@@ -63,7 +63,8 @@ public class CreatorsPanel extends PluginPanel
     public static final File SETUP_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit-setups");
     private final Pattern pattern = Pattern.compile("\\(\\d+\\)\\Z");
     private int npcPanels = 0;
-    private final ArrayList<JPanel> allObjectPanels = new ArrayList<>();
+    private final ArrayList<ObjectPanel> allObjectPanels = new ArrayList<>();
+    private final ArrayList<ObjectPanel> sideObjectPanels = new ArrayList<>();
     private final ArrayList<JComboBox<CustomModel>> comboBoxes = new ArrayList<>();
     private final Dimension spinnerSize = new Dimension(72, 30);
     private final int DEFAULT_TURN_SPEED = 68;
@@ -127,8 +128,8 @@ public class CreatorsPanel extends PluginPanel
         addObjectButton.setFocusable(false);
         addObjectButton.addActionListener(e ->
                 {
-                    JPanel panel = createPanel();
-                    addPanel(panel);
+                    ObjectPanel panel = createPanel(sideObjectPanels, mainPanel);
+                    addPanel(sideObjectPanels, mainPanel, panel);
                 });
         add(addObjectButton, c);
 
@@ -181,17 +182,19 @@ public class CreatorsPanel extends PluginPanel
         cNPC.fill = GridBagConstraints.HORIZONTAL;
         cNPC.insets = new Insets(2, 2, 2, 2);
         cNPC.gridx = 0;
-        cNPC.gridy = 0;
+        cNPC.gridy = GridBagConstraints.RELATIVE;
         cNPC.weightx = 1;
         cNPC.weighty = 1;
     }
 
-    public JPanel createPanel()
+    public ObjectPanel createPanel(ArrayList<ObjectPanel> panelArray, JPanel parentPanel)
     {
-        return createPanel("Object (" + npcPanels + ")", 7699, null, false, false, 0,  -1, 60, createEmptyProgram(), false, null, null, new int[0], -1, false);
+        return createPanel(panelArray, parentPanel, "Object (" + npcPanels + ")", 7699, null, false, false, 0,  -1, 60, createEmptyProgram(), false, null, null, new int[0], -1, false);
     }
 
-    public JPanel createPanel(String name,
+    public ObjectPanel createPanel(ArrayList<ObjectPanel> panelArray,
+                              JPanel parentPanel,
+                              String name,
                               int modelId,
                               CustomModel customModel,
                               boolean customModeActive,
@@ -207,10 +210,10 @@ public class CreatorsPanel extends PluginPanel
                               int localPointPlane,
                               boolean inInstance)
     {
-        JPanel masterPanel = new JPanel();
-        masterPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        masterPanel.setBorder(defaultBorder);
-        masterPanel.setLayout(new GridBagLayout());
+        ObjectPanel objectPanel = new ObjectPanel(name);
+        objectPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        objectPanel.setBorder(defaultBorder);
+        objectPanel.setLayout(new GridBagLayout());
 
         GridBagConstraints c = new GridBagConstraints();
         c.fill = GridBagConstraints.BOTH;
@@ -220,7 +223,7 @@ public class CreatorsPanel extends PluginPanel
         c.gridy = 0;
         c.weightx = 1;
         JTextField textField = new JTextField(name);
-        masterPanel.add(textField, c);
+        objectPanel.add(textField, c);
 
         c.fill = GridBagConstraints.BOTH;
         c.gridwidth = 1;
@@ -233,7 +236,7 @@ public class CreatorsPanel extends PluginPanel
         topButtonsPanel.setPreferredSize(topButtonsPanelSize);
         topButtonsPanel.setMinimumSize(topButtonsPanelSize);
         topButtonsPanel.setLayout(new GridLayout(1, 3, 1, 0));
-        masterPanel.add(topButtonsPanel, c);
+        objectPanel.add(topButtonsPanel, c);
 
         JButton duplicateButton = new JButton(new ImageIcon(DUPLICATE));
         duplicateButton.setName("Duplicate");
@@ -271,7 +274,7 @@ public class CreatorsPanel extends PluginPanel
         modelButton.setText("Custom");
         modelButton.setToolTipText("Toggle between Custom Model and Model ID");
         modelButton.setFocusable(false);
-        masterPanel.add(modelButton, c);
+        objectPanel.add(modelButton, c);
 
         c.gridy++;
         JButton spawnButton = new JButton();
@@ -279,7 +282,7 @@ public class CreatorsPanel extends PluginPanel
         spawnButton.setText("Spawn");
         spawnButton.setToolTipText("Toggle the NPC on or off");
         spawnButton.setFocusable(false);
-        masterPanel.add(spawnButton, c);
+        objectPanel.add(spawnButton, c);
 
         c.gridy++;
         JButton relocateButton = new JButton();
@@ -287,7 +290,7 @@ public class CreatorsPanel extends PluginPanel
         relocateButton.setText("Relocate");
         relocateButton.setToolTipText("Set the object's location to the selected tile");
         relocateButton.setFocusable(false);
-        masterPanel.add(relocateButton, c);
+        objectPanel.add(relocateButton, c);
 
         c.gridy++;
         JButton animationButton = new JButton();
@@ -295,7 +298,7 @@ public class CreatorsPanel extends PluginPanel
         animationButton.setText("Anim Off");
         animationButton.setToolTipText("Toggle the playing animation");
         animationButton.setFocusable(false);
-        masterPanel.add(animationButton, c);
+        objectPanel.add(animationButton, c);
 
         //Labels
 
@@ -309,25 +312,25 @@ public class CreatorsPanel extends PluginPanel
         JLabel modelLabel = new JLabel("Model ID:");
         modelLabel.setToolTipText("The ID number of the model to spawn");
         modelLabel.setFont(FontManager.getRunescapeSmallFont());
-        masterPanel.add(modelLabel, c);
+        objectPanel.add(modelLabel, c);
 
         c.gridy++;
         JLabel orientationLabel = new JLabel("Rotation:");
         orientationLabel.setToolTipText("0 = South, 512 = West, 1024 = North, 1736 = East, 2048 = Max");
         orientationLabel.setFont(FontManager.getRunescapeSmallFont());
-        masterPanel.add(orientationLabel, c);
+        objectPanel.add(orientationLabel, c);
 
         c.gridy++;
         JLabel radiusLabel = new JLabel("Radius:");
         radiusLabel.setToolTipText("Increasing the radius may prevent clipping issues with the ground");
         radiusLabel.setFont(FontManager.getRunescapeSmallFont());
-        masterPanel.add(radiusLabel, c);
+        objectPanel.add(radiusLabel, c);
 
         c.gridy++;
         JLabel animationLabel = new JLabel("Anim ID:");
         animationLabel.setToolTipText("The animation ID number. -1 gives no animation");
         animationLabel.setFont(FontManager.getRunescapeSmallFont());
-        masterPanel.add(animationLabel, c);
+        objectPanel.add(animationLabel, c);
 
         //Spinners
 
@@ -343,7 +346,7 @@ public class CreatorsPanel extends PluginPanel
         modelSpinner.setMaximumSize(spinnerSize);
         modelSpinner.setPreferredSize(spinnerSize);
         modelSpinner.setMinimumSize(spinnerSize);
-        masterPanel.add(modelSpinner, c);
+        objectPanel.add(modelSpinner, c);
 
         JComboBox<CustomModel> modelComboBox = new JComboBox<>();
         modelComboBox.setFont(FontManager.getRunescapeFont());
@@ -359,7 +362,7 @@ public class CreatorsPanel extends PluginPanel
         }
         if (customModel != null)
             modelComboBox.setSelectedItem(customModel);
-        masterPanel.add(modelComboBox, c);
+        objectPanel.add(modelComboBox, c);
 
         c.gridy++;
         SpinnerModel orientationRange = new SpinnerNumberModel(orientation, 0, 2048, 1);
@@ -368,7 +371,7 @@ public class CreatorsPanel extends PluginPanel
         orientationSpinner.setMaximumSize(spinnerSize);
         orientationSpinner.setPreferredSize(spinnerSize);
         orientationSpinner.setMinimumSize(spinnerSize);
-        masterPanel.add(orientationSpinner, c);
+        objectPanel.add(orientationSpinner, c);
 
         c.gridy++;
         JSpinner radiusSpinner = new JSpinner();
@@ -376,7 +379,7 @@ public class CreatorsPanel extends PluginPanel
         radiusSpinner.setMaximumSize(spinnerSize);
         radiusSpinner.setPreferredSize(spinnerSize);
         radiusSpinner.setMinimumSize(spinnerSize);
-        masterPanel.add(radiusSpinner, c);
+        objectPanel.add(radiusSpinner, c);
 
         c.gridy++;
         JSpinner animationSpinner = new JSpinner();
@@ -384,7 +387,7 @@ public class CreatorsPanel extends PluginPanel
         animationSpinner.setMaximumSize(spinnerSize);
         animationSpinner.setPreferredSize(spinnerSize);
         animationSpinner.setMinimumSize(spinnerSize);
-        masterPanel.add(animationSpinner, c);
+        objectPanel.add(animationSpinner, c);
 
         if (setMinimized)
         {
@@ -404,19 +407,19 @@ public class CreatorsPanel extends PluginPanel
             radiusSpinner.setVisible(false);
             minimizeButton.setIcon(maximize);
             minimizeButton.setToolTipText("Maximize");
-            masterPanel.updateUI();
+            objectPanel.updateUI();
         }
 
         JLabel programmerNameLabel = program.getNameLabel();
         programmerNameLabel.setText(name);
         JSpinner programmerIdleSpinner = program.getIdleAnimSpinner();
-        JPanel programJPanel = new JPanel();
+        JPanel programJPanel = program.getProgramPanel();
 
         clientThread.invokeLater(() ->
         {
             Character character = plugin.buildCharacter(
                     textField.getText(),
-                    masterPanel,
+                    objectPanel,
                     textField,
                     relocateButton,
                     spawnButton,
@@ -446,23 +449,33 @@ public class CreatorsPanel extends PluginPanel
             SwingUtilities.invokeLater(() ->
                     programPanel.createProgramPanel(character, programJPanel, programmerNameLabel, programmerIdleSpinner));
 
+            textField.addActionListener(e ->
+            {
+                character.setName(textField.getText());
+                objectPanel.setName(textField.getText());
+                toolBox.getManagerPanel().revalidate();
+                toolBox.getManagerPanel().repaint();
+            });
+
             deleteButton.addActionListener(e ->
             {
-                mainPanel.remove(masterPanel);
-                allObjectPanels.remove(masterPanel);
+                removePanel(panelArray, parentPanel, objectPanel);
+                sideObjectPanels.remove(objectPanel);
+                allObjectPanels.remove(objectPanel);
                 SwingUtilities.invokeLater(() ->
                         programPanel.removeProgramPanel(programJPanel));
 
                 ArrayList<Character> characters = plugin.getCharacters();
                 for (Character npc : characters)
                 {
-                    if (npc.getMasterPanel() == masterPanel)
+                    if (npc.getObjectPanel() == objectPanel)
                     {
                         clientThread.invokeLater(() ->
                                 npc.getRuneLiteObject().setActive(false));
                         characters.remove(npc);
                         plugin.setSelectedCharacter(null);
-                        mainPanel.updateUI();
+                        parentPanel.repaint();
+                        parentPanel.revalidate();
                         return;
                     }
                 }
@@ -495,10 +508,25 @@ public class CreatorsPanel extends PluginPanel
                     newName = newName + " (1)";
                 }
 
-                Program newProgram = new Program(newComp, new JLabel(), new JSpinner());
-                JPanel panel = createPanel(
-                        newName, (int) modelSpinner.getValue(), (CustomModel) modelComboBox.getSelectedItem(), character.isCustomMode(), minimized[0], (int) orientationSpinner.getValue(), (int) animationSpinner.getValue(), (int) radiusSpinner.getValue(), newProgram, character.getRuneLiteObject().isActive(), character.getNonInstancedPoint(), character.getInstancedPoint(), character.getInstancedRegions(), character.getInstancedPlane(), character.isInInstance());
-                addPanel(panel);
+                Program newProgram = new Program(newComp, new JPanel(), new JLabel(), new JSpinner());
+                ObjectPanel panel = createPanel(
+                        panelArray,
+                        parentPanel,
+                        newName,
+                        (int) modelSpinner.getValue(),
+                        (CustomModel) modelComboBox.getSelectedItem(),
+                        character.isCustomMode(), minimized[0],
+                        (int) orientationSpinner.getValue(),
+                        (int) animationSpinner.getValue(),
+                        (int) radiusSpinner.getValue(),
+                        newProgram,
+                        character.getRuneLiteObject().isActive(),
+                        character.getNonInstancedPoint(),
+                        character.getInstancedPoint(),
+                        character.getInstancedRegions(),
+                        character.getInstancedPlane(),
+                        character.isInInstance());
+                addPanel(panelArray, parentPanel, panel);
             });
 
             minimizeButton.addActionListener(e ->
@@ -522,7 +550,7 @@ public class CreatorsPanel extends PluginPanel
                     minimizeButton.setIcon(maximize);
                     character.setMinimized(true);
                     minimizeButton.setToolTipText("Maximize");
-                    masterPanel.updateUI();
+                    objectPanel.updateUI();
                     return;
                 }
 
@@ -549,33 +577,33 @@ public class CreatorsPanel extends PluginPanel
                 minimizeButton.setIcon(minimize);
                 character.setMinimized(false);
                 minimizeButton.setToolTipText("Minimize");
-                masterPanel.updateUI();
+                objectPanel.updateUI();
             });
 
-            masterPanel.addMouseListener(new MouseAdapter() {
+            objectPanel.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mousePressed(MouseEvent e) {
-                    setSelectedCharacter(character, masterPanel);
+                    setSelectedCharacter(character, objectPanel);
                 }
             });
 
-            masterPanel.addMouseListener(new MouseAdapter()
+            objectPanel.addMouseListener(new MouseAdapter()
             {
                 @Override
                 public void mouseEntered (MouseEvent e)
                 {
-                    setHoveredCharacter(character, masterPanel);
+                    setHoveredCharacter(character, objectPanel);
                 }
 
                 @Override
                 public void mouseExited (MouseEvent e)
                 {
-                    unsetHoveredCharacter(character, masterPanel);
+                    unsetHoveredCharacter(character, objectPanel);
                 }
             });
 
             ArrayList<Component> list = new ArrayList<>();
-            for (Component component : masterPanel.getComponents())
+            for (Component component : objectPanel.getComponents())
             {
                 list.add(component);
 
@@ -601,12 +629,12 @@ public class CreatorsPanel extends PluginPanel
                     @Override
                     public void mouseEntered (MouseEvent e)
                     {
-                        setHoveredCharacter(character, masterPanel);
+                        setHoveredCharacter(character, objectPanel);
                     }
                     @Override
                     public void mouseExited (MouseEvent e)
                     {
-                        unsetHoveredCharacter(character, masterPanel);
+                        unsetHoveredCharacter(character, objectPanel);
                     }
                 });
 
@@ -616,35 +644,63 @@ public class CreatorsPanel extends PluginPanel
                     component.addMouseListener(new MouseAdapter() {
                         @Override
                         public void mousePressed(MouseEvent e) {
-                            setSelectedCharacter(character, masterPanel);
+                            setSelectedCharacter(character, objectPanel);
                         }
                     });
                 }
             }
 
-            setSelectedCharacter(character, masterPanel);
+            setSelectedCharacter(character, objectPanel);
         });
 
-        mainPanel.add(masterPanel);
-        allObjectPanels.add(masterPanel);
+        allObjectPanels.add(objectPanel);
         comboBoxes.add(modelComboBox);
-        return masterPanel;
+        return objectPanel;
     }
 
-    private void addPanel(JPanel masterPanel)
+    public void addPanel(ArrayList<ObjectPanel> panelArray, JPanel parentPanel, ObjectPanel childPanel)
     {
-        mainPanel.add(masterPanel, cNPC);
-        mainPanel.updateUI();
+        panelArray.add(childPanel);
+        parentPanel.add(childPanel, cNPC);
+        if (parentPanel != mainPanel)
+            toolBox.getManagerPanel().getFolderTree().addNode(childPanel);
+
+        parentPanel.repaint();
+        parentPanel.revalidate();
         npcPanels++;
-        cNPC.gridy++;
+    }
+
+    public void removePanel(ArrayList<ObjectPanel> panelArray, JPanel parentPanel, ObjectPanel childPanel)
+    {
+        panelArray.remove(childPanel);
+        parentPanel.remove(childPanel);
+        if (parentPanel != mainPanel)
+            toolBox.getManagerPanel().getFolderTree().removeNode(childPanel);
+
+        parentPanel.repaint();
+        parentPanel.revalidate();
     }
 
     public void clearPanels()
     {
-        allObjectPanels.clear();
+        Character[] characters = new Character[0];
+        JPanel[] programPanels = new JPanel[0];
+        for (Character character : plugin.getCharacters())
+        {
+            if (sideObjectPanels.contains(character.getObjectPanel()))
+            {
+                if (character == plugin.getSelectedCharacter())
+                    unsetSelectedCharacter();
+
+                characters = ArrayUtils.add(characters, character);
+                programPanels = ArrayUtils.add(programPanels, character.getProgram().getProgramPanel());
+                allObjectPanels.remove(character.getObjectPanel());
+            }
+        }
+
+        sideObjectPanels.clear();
+        plugin.clearCharacters(characters);
         mainPanel.removeAll();
-        plugin.clearNPCs();
-        plugin.setSelectedCharacter(null);
         mainPanel.updateUI();
 
         JPanel programmerAllPanel = programPanel.getAllPanel();
@@ -655,9 +711,11 @@ public class CreatorsPanel extends PluginPanel
             if (component instanceof JPanel)
             {
                 JPanel program = (JPanel) component;
-                programmerAllPanel.remove(program);
+                if (Arrays.stream(programPanels).anyMatch(n -> n == program))
+                    programmerAllPanel.remove(program);
             }
         }
+
         programPanel.revalidate();
         programPanel.repaint();
     }
@@ -665,12 +723,18 @@ public class CreatorsPanel extends PluginPanel
     public void setSelectedCharacter(Character selected, JPanel jPanel)
     {
         for (JPanel panel : allObjectPanels)
-        {
             panel.setBorder(defaultBorder);
-        }
 
         jPanel.setBorder(selectedBorder);
         plugin.setSelectedCharacter(selected);
+    }
+
+    public void unsetSelectedCharacter()
+    {
+        for (JPanel panel : allObjectPanels)
+            panel.setBorder(defaultBorder);
+
+        plugin.setSelectedCharacter(null);
     }
 
     public void setHoveredCharacter(Character hovered, JPanel jPanel)
@@ -746,7 +810,7 @@ public class CreatorsPanel extends PluginPanel
     private Program createEmptyProgram()
     {
         ProgramComp comp = new ProgramComp(new WorldPoint[0], new WorldPoint[0], new LocalPoint[0], new LocalPoint[0], new Coordinate[0], 0, 1, DEFAULT_TURN_SPEED, -1, -1, MovementType.NORMAL, getRandomColor(), false, false);
-        return new Program(comp, new JLabel(), new JSpinner());
+        return new Program(comp, new JPanel(), new JLabel(), new JSpinner());
     }
 
     private void openSaveDialog()
@@ -969,9 +1033,9 @@ public class CreatorsPanel extends PluginPanel
             {
                 SwingUtilities.invokeLater(() ->
                 {
-                    Program program = new Program(save.getProgramComp(), new JLabel(), new JSpinner());
-                    JPanel panel = createPanel(save.getName(), save.getModelId(), null, save.isCustomMode(), save.isMinimized(), save.getRotation(), save.getAnimationId(), save.getRadius(), program, save.isActive(), save.getNonInstancedPoint(), save.getInstancedPoint(), save.getInstancedRegions(), save.getInstancedPlane(), save.isInInstance());
-                    addPanel(panel);
+                    Program program = new Program(save.getProgramComp(), new JPanel(), new JLabel(), new JSpinner());
+                    ObjectPanel panel = createPanel(sideObjectPanels, mainPanel, save.getName(), save.getModelId(), null, save.isCustomMode(), save.isMinimized(), save.getRotation(), save.getAnimationId(), save.getRadius(), program, save.isActive(), save.getNonInstancedPoint(), save.getInstancedPoint(), save.getInstancedRegions(), save.getInstancedPlane(), save.isInInstance());
+                    addPanel(sideObjectPanels, mainPanel, panel);
                 });
             }
             return;
@@ -1016,9 +1080,9 @@ public class CreatorsPanel extends PluginPanel
         {
             SwingUtilities.invokeLater(() ->
             {
-                Program program = new Program(save.getProgramComp(), new JLabel(), new JSpinner());
-                JPanel panel = createPanel(save.getName(), save.getModelId(), customModels[save.getCompId()], save.isCustomMode(), save.isMinimized(), save.getRotation(), save.getAnimationId(), save.getRadius(), program, save.isActive(), save.getNonInstancedPoint(), save.getInstancedPoint(), save.getInstancedRegions(), save.getInstancedPlane(), save.isInInstance());
-                addPanel(panel);
+                Program program = new Program(save.getProgramComp(), new JPanel(), new JLabel(), new JSpinner());
+                ObjectPanel panel = createPanel(sideObjectPanels, mainPanel, save.getName(), save.getModelId(), customModels[save.getCompId()], save.isCustomMode(), save.isMinimized(), save.getRotation(), save.getAnimationId(), save.getRadius(), program, save.isActive(), save.getNonInstancedPoint(), save.getInstancedPoint(), save.getInstancedRegions(), save.getInstancedPlane(), save.isInInstance());
+                addPanel(sideObjectPanels, mainPanel, panel);
             });
         }
     }

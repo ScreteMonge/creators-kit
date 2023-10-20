@@ -2,6 +2,7 @@ package com.creatorskit;
 
 import com.creatorskit.models.CustomModel;
 import com.creatorskit.programming.Program;
+import com.creatorskit.swing.ObjectPanel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -27,7 +28,7 @@ public class Character
     private int instancedPlane;
     private boolean inInstance;
     private CustomModel storedModel;
-    private JPanel masterPanel;
+    private ObjectPanel objectPanel;
     private boolean customMode;
     private JComboBox<CustomModel> comboBox;
     private JButton spawnButton;

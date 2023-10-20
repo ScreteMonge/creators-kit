@@ -23,7 +23,7 @@ public class ManagerPanel extends JPanel
     private final Client client;
     private final GridBagConstraints c = new GridBagConstraints();
     private final JPanel objectHolder = new JPanel();
-    private final ArrayList<JPanel> managerPanels = new ArrayList<>();
+    private final ArrayList<ObjectPanel> objectPanels = new ArrayList<>();
     private final FolderTree folderTree = new FolderTree();
     private JPanel[] folders = new JPanel[0];
     private final JLabel objectLabel = new JLabel("Current Folder:");
@@ -96,22 +96,16 @@ public class ManagerPanel extends JPanel
         addObjectButton.setFocusable(false);
         addObjectButton.addActionListener(e ->
         {
-            //JPanel panel = plugin.getCreatorsPanel().createPanel(managerPanels, objectHolder);
-            //addPanel(panel);
+            CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
+            ObjectPanel panel = creatorsPanel.createPanel(objectPanels, objectHolder);
+            creatorsPanel.addPanel(objectPanels, objectHolder, panel);
         });
         objectHeader.add(addObjectButton);
 
         objectHolder.setBackground(Color.BLACK);
-        objectHolder.setLayout(new GridLayout(0, 3, 5, 5));
+        objectHolder.setLayout(new GridLayout(0, 6, 5, 5));
         objectScrollPane.setViewportView(objectHolder);
 
-        repaint();
-        revalidate();
-    }
-
-    public void addPanel(JPanel panel)
-    {
-        objectHolder.add(panel);
         repaint();
         revalidate();
     }
