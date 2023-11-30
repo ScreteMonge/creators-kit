@@ -180,7 +180,7 @@ public class CreatorsPanel extends PluginPanel
         clearButton.setFocusable(false);
         clearButton.setToolTipText("Clears all Objects");
         add(clearButton, c);
-        clearButton.addActionListener(e -> clearSidePanels());
+        clearButton.addActionListener(e -> clearSidePanels(true));
 
         c.gridwidth = 5;
         c.gridx = 0;
@@ -783,11 +783,14 @@ public class CreatorsPanel extends PluginPanel
         parentPanel.revalidate();
     }
 
-    public void clearSidePanels()
+    public void clearSidePanels(boolean warning)
     {
-        int result = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete all Objects from the Side Panel?");
-        if (result != JOptionPane.YES_OPTION)
-            return;
+        if (warning)
+        {
+            int result = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete all Objects from the Side Panel?");
+            if (result != JOptionPane.YES_OPTION)
+                return;
+        }
 
         Character[] characters = new Character[0];
 

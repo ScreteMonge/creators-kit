@@ -203,7 +203,7 @@ public class CreatorsPlugin extends Plugin {
 	@Override
 	protected void shutDown() throws Exception
 	{
-		creatorsPanel.clearSidePanels();
+		creatorsPanel.clearSidePanels(false);
 		creatorsPanel.clearManagerPanels();
 		clientToolbar.removeNavigation(navigationButton);
 		overlayManager.remove(overlay);
