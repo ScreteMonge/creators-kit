@@ -882,7 +882,7 @@ public class ModelAnvil extends JPanel
 
             DetailedModel[] detailedModels = panelsToDetailedModels();
             CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, lightingStyle, priority, name);
-            String string = plugin.gson.toJson(comp);
+            String string = plugin.getGson().toJson(comp);
             writer.write(string);
             writer.close();
         }

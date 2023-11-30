@@ -89,7 +89,9 @@ public class CreatorsPlugin extends Plugin {
 	@Inject
 	private ModelFinder modelFinder;
 
-	public Gson gson;
+	@Inject
+	private Gson gson;
+	
 	private CreatorsPanel creatorsPanel;
 	private NavigationButton navigationButton;
 	private boolean overlaysActive = false;
@@ -143,10 +145,6 @@ public class CreatorsPlugin extends Plugin {
 		keyManager.registerKeyListener(playPauseListener);
 		keyManager.registerKeyListener(playPauseAllListener);
 		keyManager.registerKeyListener(resetAllListener);
-
-		GsonBuilder gsonBuilder = new GsonBuilder();
-		gsonBuilder.setPrettyPrinting();
-		gson = gsonBuilder.create();
 
 		if (config.autoSetup())
 		{

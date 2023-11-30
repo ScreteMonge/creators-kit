@@ -357,7 +357,7 @@ public class ModelOrganizer extends JPanel
                 comp.setDetailedModels(detailedModels);
             }
 
-            String string = plugin.gson.toJson(comp);
+            String string = plugin.getGson().toJson(comp);
             writer.write(string);
             writer.close();
         }

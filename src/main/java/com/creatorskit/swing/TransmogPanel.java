@@ -542,7 +542,7 @@ public class TransmogPanel extends JPanel
                     leftAnimation,
                     rotateAnimation,
                     radius);
-            String string = plugin.gson.toJson(transmogSave);
+            String string = plugin.getGson().toJson(transmogSave);
             writer.write(string);
             writer.close();
         }
