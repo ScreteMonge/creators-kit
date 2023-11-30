@@ -38,8 +38,8 @@ public class ModelOrganizer extends JPanel
     private final BufferedImage SAVE = ImageUtil.loadImageResource(getClass(), "/Save.png");
     private final BufferedImage TRANSMOG = ImageUtil.loadImageResource(getClass(), "/Transmog.png");
     private final HashMap<CustomModel, JPanel> panelMap = new HashMap<>();
-    JPanel modelPanel = new JPanel();
-    GridBagConstraints c = new GridBagConstraints();
+    private final JPanel modelPanel = new JPanel();
+    private final GridBagConstraints c = new GridBagConstraints();
     public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
 
     @Inject

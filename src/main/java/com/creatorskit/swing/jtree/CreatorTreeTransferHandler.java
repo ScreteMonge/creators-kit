@@ -16,9 +16,9 @@ import java.util.*;
 @Slf4j
 class CreatorTreeTransferHandler extends TransferHandler
 {
-    DataFlavor nodesFlavor;
-    DataFlavor[] flavors = new DataFlavor[1];
-    DefaultMutableTreeNode[] nodesToRemove;
+    private DataFlavor nodesFlavor;
+    private DataFlavor[] flavors = new DataFlavor[1];
+    private DefaultMutableTreeNode[] nodesToRemove;
 
     public CreatorTreeTransferHandler()
     {
