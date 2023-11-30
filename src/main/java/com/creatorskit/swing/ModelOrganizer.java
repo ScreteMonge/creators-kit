@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 
 @Slf4j
@@ -123,9 +124,7 @@ public class ModelOrganizer extends JPanel
         loadButton.setToolTipText("Loads a previously forged and saved Custom Model");
         headerPanel.add(loadButton, c);
         loadButton.addActionListener(e ->
-        {
-            openLoadDialog();
-        });
+                openLoadDialog());
 
         c.gridx = 3;
         c.gridy = 2;
@@ -220,18 +219,14 @@ public class ModelOrganizer extends JPanel
         saveButton.setToolTipText("Save this model for future use");
         buttonsPanel.add(saveButton);
         saveButton.addActionListener(e ->
-        {
-            openSaveDialog(model, textField.getText());
-        });
+                openSaveDialog(model, textField.getText()));
 
         JButton transmogButton = new JButton(new ImageIcon(TRANSMOG));
         transmogButton.setFocusable(false);
         transmogButton.setToolTipText("Set this as your player transmog");
         buttonsPanel.add(transmogButton);
         transmogButton.addActionListener(e ->
-        {
-            setTransmog(model);
-        });
+                setTransmog(model));
 
         revalidate();
         repaint();
@@ -372,6 +367,11 @@ public class ModelOrganizer extends JPanel
         }
     }
 
+    public DetailedModel[] modelToDetailedPanels(CustomModel customModel)
+    {
+        return modelToDetailedPanels(customModel.getComp());
+    }
+
     public DetailedModel[] modelToDetailedPanels(CustomModelComp comp)
     {
         CustomModelType type = comp.getType();
@@ -388,8 +388,20 @@ public class ModelOrganizer extends JPanel
         for (int i = 0; i < modelStats.length; i++)
         {
             ModelStats modelStat = modelStats[i];
-            String recolFrom = ModelFinder.shortArrayToString(modelStat.getRecolourFrom());
-            String recolTo = ModelFinder.shortArrayToString(modelStat.getRecolourTo());
+
+            String recolFrom;
+            String recolTo;
+            if (type == CustomModelType.CACHE_PLAYER && modelStat.getBodyPart() != BodyPart.NA)
+            {
+                recolFrom = KitRecolourer.getKitRecolourOld(modelStat.getBodyPart());
+                recolTo = KitRecolourer.getKitRecolourNew(modelStat.getBodyPart(), comp.getKitRecolours());
+            }
+            else
+            {
+                recolFrom = ModelFinder.shortArrayToString(modelStat.getRecolourFrom());
+                recolTo = ModelFinder.shortArrayToString(modelStat.getRecolourTo());
+            }
+
             String bodyPart = "Name";
             if (type == CustomModelType.CACHE_PLAYER)
                 bodyPart = "Item";
@@ -402,11 +414,6 @@ public class ModelOrganizer extends JPanel
         }
 
         return detailedModels;
-    }
-
-    public DetailedModel[] modelToDetailedPanels(CustomModel customModel)
-    {
-        return modelToDetailedPanels(customModel.getComp());
     }
 
     public void setTransmog(CustomModel customModel)

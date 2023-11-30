@@ -6,6 +6,7 @@ import com.creatorskit.saves.TransmogLoadOption;
 import com.creatorskit.saves.TransmogSave;
 import com.creatorskit.swing.*;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.inject.Provides;
 import javax.inject.Inject;
 import javax.swing.*;
@@ -51,8 +52,7 @@ import java.util.List;
 		description = "A suite of tools for creators",
 		tags = {"tool", "creator", "content", "kit", "camera", "immersion"}
 )
-public class CreatorsPlugin extends Plugin
-{
+public class CreatorsPlugin extends Plugin {
 	@Inject
 	private Client client;
 
@@ -87,11 +87,9 @@ public class CreatorsPlugin extends Plugin
 	private PathFinder pathFinder;
 
 	@Inject
-	public Gson gson;
-
-	@Inject
 	private ModelFinder modelFinder;
 
+	public Gson gson;
 	private CreatorsPanel creatorsPanel;
 	private NavigationButton navigationButton;
 	private boolean overlaysActive = false;
@@ -146,9 +144,26 @@ public class CreatorsPlugin extends Plugin
 		keyManager.registerKeyListener(playPauseAllListener);
 		keyManager.registerKeyListener(resetAllListener);
 
-		File SETUP_DIR = new File(config.setupPath() + ".json");
+		GsonBuilder gsonBuilder = new GsonBuilder();
+		gsonBuilder.setPrettyPrinting();
+		gson = gsonBuilder.create();
+
 		if (config.autoSetup())
 		{
+			File SETUP_DIR = new File(config.setupPath());
+			if (!SETUP_DIR.exists())
+			{
+				SETUP_DIR = new File(config.setupPath() + ".json");
+				if (!SETUP_DIR.exists())
+				{
+					SETUP_DIR = new File(config.setupPath().replaceAll("/", "\\\\"));
+					if (!SETUP_DIR.exists())
+					{
+						SETUP_DIR = new File(config.setupPath().replaceAll("/", "\\\\") + ".json");
+					}
+				}
+			}
+
 			if (SETUP_DIR.exists())
 			{
 				creatorsPanel.loadSetup(SETUP_DIR);
@@ -159,9 +174,23 @@ public class CreatorsPlugin extends Plugin
 			}
 		}
 
-		File TRANSMOG_DIR = new File(config.transmogPath() + ".json");
+
 		if (config.autoTransmog())
 		{
+			File TRANSMOG_DIR = new File(config.transmogPath());
+			if (!TRANSMOG_DIR.exists())
+			{
+				TRANSMOG_DIR = new File(config.transmogPath() + ".json");
+				if (!TRANSMOG_DIR.exists())
+				{
+					TRANSMOG_DIR = new File(config.transmogPath().replaceAll("/", "\\\\"));
+					if (!TRANSMOG_DIR.exists())
+					{
+						TRANSMOG_DIR = new File(config.transmogPath().replaceAll("/", "\\\\") + ".json");
+					}
+				}
+			}
+
 			if (TRANSMOG_DIR.exists())
 			{
 				loadTransmog(TRANSMOG_DIR, TransmogLoadOption.BOTH);
@@ -176,7 +205,8 @@ public class CreatorsPlugin extends Plugin
 	@Override
 	protected void shutDown() throws Exception
 	{
-		creatorsPanel.clearPanels();
+		creatorsPanel.clearSidePanels();
+		creatorsPanel.clearManagerPanels();
 		clientToolbar.removeNavigation(navigationButton);
 		overlayManager.remove(overlay);
 		keyManager.unregisterKeyListener(overlayKeyListener);
@@ -199,8 +229,7 @@ public class CreatorsPlugin extends Plugin
 	}
 
 	@Subscribe
-	public void onGameTick(GameTick event)
-	{
+	public void onGameTick(GameTick event) {
 		if (client.getGameState() != GameState.LOGGED_IN)
 			return;
 
@@ -235,8 +264,11 @@ public class CreatorsPlugin extends Plugin
 			savedPlane = plane;
 			for (Character character : characters)
 			{
+				boolean active = character.isActive();
 				setLocation(character, false, false, false, true);
 				resetProgram(character, character.getProgram().getComp().isProgramActive());
+				if (!active)
+					despawnCharacter(character);
 			}
 		}
 	}
@@ -245,9 +277,7 @@ public class CreatorsPlugin extends Plugin
 	public void onClientTick(ClientTick event)
 	{
 		if (client.getGameState() != GameState.LOGGED_IN)
-		{
 			return;
-		}
 
 		switch (autoRotateYaw)
 		{
@@ -348,7 +378,7 @@ public class CreatorsPlugin extends Plugin
 
 			double changeX = destX - startX;
 			double changeY = destY - startY;
-			double angle = Orientation.radiansToJAngle(Math.atan(changeY/changeX), changeX, changeY);
+			double angle = Orientation.radiansToJAngle(Math.atan(changeY / changeX), changeX, changeY);
 
 			character.setTargetOrientation((int) angle);
 
@@ -388,7 +418,7 @@ public class CreatorsPlugin extends Plugin
 					int nextY = nextPath.getSceneY();
 					double nextChangeX = nextX - start.getSceneX();
 					double nextChangeY = nextY - start.getSceneY();
-					double nextAngle = Orientation.radiansToJAngle(Math.atan(nextChangeY/nextChangeX), nextChangeX, nextChangeY);
+					double nextAngle = Orientation.radiansToJAngle(Math.atan(nextChangeY / nextChangeX), nextChangeX, nextChangeY);
 					character.setTargetOrientation((int) nextAngle);
 				}
 			}
@@ -595,10 +625,14 @@ public class CreatorsPlugin extends Plugin
 
 			for (Character character : characters)
 			{
+				boolean active = character.isActive();
 				setLocation(character, false, false, false, true);
 				resetProgram(character, character.getProgram().getComp().isProgramActive());
 				if ((character.isInInstance() && instance && client.getPlane() == character.getInstancedPlane()) || (!character.isInInstance() && !instance))
 					updateProgramPath(character.getProgram(), true, character.isInInstance());
+
+				if (!active)
+					despawnCharacter(character);
 			}
 
 			if (config.enableTransmog() && transmog != null)
@@ -653,7 +687,7 @@ public class CreatorsPlugin extends Plugin
 			modelGetter.storeNPC(-3, target, npc, "Transmog", true);
 		}
 
-        if (tile != null)
+		if (tile != null)
 		{
 			if (option.equals("Walk here"))
 			{
@@ -1090,6 +1124,7 @@ public class CreatorsPlugin extends Plugin
 				customModel,
 				objectPanel,
 				customModelMode,
+				nameTextField,
 				modelComboBox,
 				spawnButton,
 				modelButton,
@@ -1110,6 +1145,7 @@ public class CreatorsPlugin extends Plugin
 
 		setLocation(character, !character.isLocationSet(), false, false, false);
 		runeLiteObject.setActive(active);
+		character.setActive(active);
 
 		nameTextField.addActionListener(e ->
 		{
@@ -1206,7 +1242,7 @@ public class CreatorsPlugin extends Plugin
 		return character;
 	}
 
-	public void clearCharacters()
+	public void removeCharacters()
 	{
 		clientThread.invokeLater(() -> {
 			for (Character character : characters)
@@ -1219,7 +1255,7 @@ public class CreatorsPlugin extends Plugin
 		});
 	}
 
-	public void clearCharacters(Character[] charactersToRemove)
+	public void removeCharacters(Character[] charactersToRemove)
 	{
 		clientThread.invokeLater(() -> {
 			for (Character character : charactersToRemove)
@@ -1228,6 +1264,27 @@ public class CreatorsPlugin extends Plugin
 				runeLiteObject.setActive(false);
 				characters.remove(character);
 			}
+		});
+	}
+
+	public void removeCharacter(ObjectPanel objectPanel)
+	{
+		for (Character character : characters)
+		{
+			if (character.getObjectPanel() == objectPanel)
+			{
+				removeCharacter(character);
+				return;
+			}
+		}
+	}
+
+	public void removeCharacter(Character character)
+	{
+		clientThread.invokeLater(() -> {
+				RuneLiteObject runeLiteObject = character.getRuneLiteObject();
+				runeLiteObject.setActive(false);
+				characters.remove(character);
 		});
 	}
 
@@ -2105,7 +2162,7 @@ public class CreatorsPlugin extends Plugin
 		{
 			if (selectedCharacter != null)
 			{
-				addOrientation(selectedCharacter, -512);
+				addOrientation(selectedCharacter, config.rotateDegrees().degrees * -1);
 			}
 		}
 	};
@@ -2117,7 +2174,7 @@ public class CreatorsPlugin extends Plugin
 		{
 			if (selectedCharacter != null)
 			{
-				addOrientation(selectedCharacter, 512);
+				addOrientation(selectedCharacter, config.rotateDegrees().degrees);
 			}
 		}
 	};

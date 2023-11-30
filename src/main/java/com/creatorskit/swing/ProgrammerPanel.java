@@ -6,11 +6,12 @@ import com.creatorskit.programming.MovementType;
 import com.creatorskit.programming.Program;
 import com.creatorskit.programming.ProgramComp;
 import lombok.Getter;
+import lombok.Setter;
 import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
-import net.runelite.client.util.ImageUtil;
+import org.apache.commons.lang3.ArrayUtils;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -18,35 +19,43 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
-import java.awt.image.BufferedImage;
 import java.util.Random;
 
-public class ProgramPanel extends JPanel
+@Getter
+public class ProgrammerPanel extends JPanel
 {
     @Inject
     private ClientThread clientThread;
     private final CreatorsPlugin plugin;
     private final GridBagConstraints c = new GridBagConstraints();
-    @Getter
-    private final JPanel allPanel = new JPanel();
+    private final JPanel managerProgramHolder = new JPanel();
+    private final JPanel sideProgramHolder = new JPanel();
+    private JPanel[] sidePrograms = new JPanel[0];
     private final Random random = new Random();
 
+
     @Inject
-    public ProgramPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin)
+    public ProgrammerPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin)
     {
         this.clientThread = clientThread;
         this.plugin = plugin;
 
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        setLayout(new BorderLayout());
+        setLayout(new GridBagLayout());
 
+        c.fill = GridBagConstraints.BOTH;
+        c.gridx = 0;
+        c.gridy = 0;
+        c.gridwidth = 3;
         JPanel headerPanel = new JPanel();
         headerPanel.setLayout(new GridBagLayout());
         headerPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        add(headerPanel, c);
 
         c.gridx = 0;
         c.gridy = 0;
         c.weightx = 1;
+        c.gridwidth = 1;
         JLabel titleLabel = new JLabel("Programmer");
         titleLabel.setFont(FontManager.getRunescapeBoldFont());
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -56,10 +65,12 @@ public class ProgramPanel extends JPanel
         c.gridx = 1;
         c.gridy = 0;
         c.weightx = 0;
-        JButton syncButton = new JButton("Sync Idles");
-        syncButton.setToolTipText("Synchronizes the idle animations of all current Objects");
-        headerPanel.add(syncButton, c);
-        syncButton.addActionListener(e ->
+        c.gridwidth = 1;
+        JButton syncAllButton = new JButton("Sync All Idles");
+        syncAllButton.setToolTipText("Synchronizes the idle animations of all current Objects");
+        syncAllButton.setPreferredSize(new Dimension(150, 30));
+        headerPanel.add(syncAllButton, c);
+        syncAllButton.addActionListener(e ->
         {
             for (Character character : plugin.getCharacters())
             {
@@ -67,15 +78,72 @@ public class ProgramPanel extends JPanel
             }
         });
 
-        JScrollPane scrollPane = new JScrollPane();
-        scrollPane.setViewportView(allPanel);
-        scrollPane.setColumnHeaderView(headerPanel);
-        add(scrollPane);
+        JTabbedPane tabbedPane = new JTabbedPane();
+        JScrollPane managerScrollPane = new JScrollPane();
+        JScrollPane sideScrollPane = new JScrollPane();
 
-        allPanel.setBackground(Color.BLACK);
-        allPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
-        allPanel.setLayout(new GridLayout(0, 7, 6, 6));
+        c.gridx = 2;
+        c.gridy = 0;
+        c.weightx = 0;
+        c.gridwidth = 1;
+        JButton syncShownButton = new JButton("Sync Shown Idles");
+        syncShownButton.setToolTipText("Synchronizes the idle animations of all currently shown Objects");
+        syncShownButton.setPreferredSize(new Dimension(150, 30));
+        headerPanel.add(syncShownButton, c);
+        syncShownButton.addActionListener(e ->
+        {
+            Component component = tabbedPane.getSelectedComponent();
+            if (component == sideScrollPane)
+            {
+                for (ObjectPanel objectPanel : plugin.getCreatorsPanel().getSideObjectPanels())
+                {
+                    for (Character character : plugin.getCharacters())
+                    {
+                        if (character.getObjectPanel() == objectPanel)
+                        {
+                            plugin.setAnimation(character, (int) character.getAnimationSpinner().getValue());
+                        }
+                    }
+                }
+            }
 
+            if (component == managerScrollPane)
+            {
+                ObjectPanel[] objectPanels = plugin.getCreatorsPanel().getToolBox().getManagerPanel().getShownObjectPanels();
+                for (ObjectPanel objectPanel : objectPanels)
+                {
+                    for (Character character : plugin.getCharacters())
+                    {
+                        if (character.getObjectPanel() == objectPanel)
+                        {
+                            plugin.setAnimation(character, (int) character.getAnimationSpinner().getValue());
+                        }
+                    }
+                }
+            }
+        });
+
+        c.fill = GridBagConstraints.BOTH;
+        c.gridx = 1;
+        c.gridy = 1;
+        c.weightx = 0.8;
+        c.weighty = 1;
+        c.gridwidth = 2;
+        tabbedPane.addTab("Side Panel Objects", sideScrollPane);
+        tabbedPane.addTab("Manager Objects", managerScrollPane);
+        add(tabbedPane, c);
+
+        managerProgramHolder.setBackground(Color.BLACK);
+        managerProgramHolder.setBorder(new EmptyBorder(4, 4, 4, 4));
+        managerProgramHolder.setLayout(new GridBagLayout());
+        managerScrollPane.setViewportView(managerProgramHolder);
+
+        sideProgramHolder.setBackground(Color.BLACK);
+        sideProgramHolder.setBorder(new EmptyBorder(4, 4, 4, 4));
+        sideProgramHolder.setLayout(new GridBagLayout());
+        sideScrollPane.setViewportView(sideProgramHolder);
+
+        repaint();
         revalidate();
     }
 
@@ -85,11 +153,12 @@ public class ProgramPanel extends JPanel
         ProgramComp comp = program.getComp();
 
         programPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        programPanel.setBorder(new LineBorder(comp.getColor(), 1));
+        programPanel.setBorder(new LineBorder(program.getColor(), 1));
         programPanel.setLayout(new GridBagLayout());
 
         c.fill = GridBagConstraints.VERTICAL;
         c.insets = new Insets(4, 4, 4, 4);
+        c.anchor = GridBagConstraints.CENTER;
         c.weightx = 0;
         c.weighty = 0;
 
@@ -203,19 +272,18 @@ public class ProgramPanel extends JPanel
         colourButton.addActionListener(e ->
                 {
                     Color color = getRandomColor();
-                    comp.setColor(color);
+                    program.setColor(color);
+                    program.getComp().setRgb(color.getRGB());
                     programPanel.setBorder(new LineBorder(color, 1));
                 });
         programPanel.add(colourButton, c);
 
-        allPanel.add(programPanel);
         repaint();
         revalidate();
     }
 
     public void removeProgramPanel(JPanel panel)
     {
-        allPanel.remove(panel);
         repaint();
         revalidate();
     }
@@ -226,5 +294,63 @@ public class ProgramPanel extends JPanel
         float g = random.nextFloat();
         float b = random.nextFloat();
         return new Color(r, g, b);
+    }
+
+    public void addSideProgram(JPanel programPanel)
+    {
+        sidePrograms = ArrayUtils.add(sidePrograms, programPanel);
+        resetProgramSidePanel();
+    }
+
+    public void removeSideProgram(JPanel programPanel)
+    {
+        sidePrograms = ArrayUtils.removeElement(sidePrograms, programPanel);
+        resetProgramSidePanel();
+    }
+
+    public void clearSidePrograms()
+    {
+        sidePrograms = new JPanel[0];
+        sideProgramHolder.removeAll();
+    }
+
+    public void resetProgramSidePanel()
+    {
+        c.fill = GridBagConstraints.NONE;
+        c.insets = new Insets(2, 2, 2, 2);
+        c.gridx = 0;
+        c.gridy = 0;
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridheight = 1;
+        c.gridwidth = 1;
+        c.anchor = GridBagConstraints.FIRST_LINE_START;
+
+        sideProgramHolder.removeAll();
+        int rows = sidePrograms.length / 5;
+
+        for (int i = 0; i < sidePrograms.length; i++)
+        {
+            JPanel panel = sidePrograms[i];
+
+            c.weightx = c.gridx == 4 ? 1 : 0;
+            if (c.gridx == sidePrograms.length - 1)
+                c.weightx = 1;
+
+            c.weighty = c.gridy == rows ? 1 : 0;
+            if (i == sidePrograms.length - 1)
+                c.weighty = 1;
+
+            sideProgramHolder.add(panel, c);
+            c.gridx++;
+            if (c.gridx > 4)
+            {
+                c.gridx = 0;
+                c.gridy++;
+            }
+        }
+
+        sideProgramHolder.revalidate();
+        sideProgramHolder.repaint();
     }
 }

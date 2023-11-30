@@ -6,8 +6,6 @@ import lombok.Setter;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 
-import java.awt.*;
-
 @AllArgsConstructor
 @Getter
 @Setter
@@ -24,7 +22,7 @@ public class ProgramComp
     private int idleAnim;
     private int walkAnim;
     private MovementType movementType;
-    private Color color;
+    private int rgb;
     private boolean loop;
     private boolean programActive;
 }

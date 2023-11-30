@@ -12,6 +12,8 @@ import javax.swing.*;
 public class ObjectPanel extends JPanel
 {
     private String name;
+    private JPanel programPanel;
+    private JPanel parentPanel;
 
     @Override
     public String toString()

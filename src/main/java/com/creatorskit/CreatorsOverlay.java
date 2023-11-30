@@ -102,7 +102,7 @@ public class CreatorsOverlay extends Overlay
                 if (startPoint == null || endPoint == null)
                     continue;
 
-                graphics.setColor(comp.getColor());
+                graphics.setColor(program.getColor());
                 graphics.setStroke(new BasicStroke(1));
                 graphics.drawLine(startPoint.getX(), startPoint.getY(), endPoint.getX(), endPoint.getY());
             }
@@ -132,7 +132,7 @@ public class CreatorsOverlay extends Overlay
                 if (textPoint == null)
                     continue;
 
-                OverlayUtil.renderTextLocation(graphics, textPoint, abbreviation, comp.getColor());
+                OverlayUtil.renderTextLocation(graphics, textPoint, abbreviation, program.getColor());
             }
         }
     }
@@ -168,7 +168,7 @@ public class CreatorsOverlay extends Overlay
                 if (startPoint == null || endPoint == null)
                     continue;
 
-                graphics.setColor(comp.getColor());
+                graphics.setColor(program.getColor());
                 graphics.setStroke(new BasicStroke(1));
                 graphics.drawLine(startPoint.getX(), startPoint.getY(), endPoint.getX(), endPoint.getY());
             }
@@ -198,7 +198,7 @@ public class CreatorsOverlay extends Overlay
                 if (textPoint == null)
                     continue;
 
-                OverlayUtil.renderTextLocation(graphics, textPoint, abbreviation, comp.getColor());
+                OverlayUtil.renderTextLocation(graphics, textPoint, abbreviation, program.getColor());
             }
         }
     }

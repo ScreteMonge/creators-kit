@@ -30,6 +30,7 @@ public class Character
     private CustomModel storedModel;
     private ObjectPanel objectPanel;
     private boolean customMode;
+    private JTextField nameField;
     private JComboBox<CustomModel> comboBox;
     private JButton spawnButton;
     private JButton modelButton;

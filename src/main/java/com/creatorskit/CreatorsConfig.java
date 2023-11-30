@@ -156,7 +156,7 @@ public interface CreatorsConfig extends Config
 
 	@ConfigItem(
 			keyName = "quickSpawn",
-			name = "Quick Spawn",
+			name = "Spawn Hotkey",
 			description = "Hotkey to toggle the spawn or despawn state of the selected object",
 			section = sceneSettings,
 			position = 13
@@ -168,7 +168,7 @@ public interface CreatorsConfig extends Config
 
 	@ConfigItem(
 			keyName = "quickLocation",
-			name = "Quick Location",
+			name = "Set Location Hotkey",
 			description = "Hotkey to set the selected object to the mouse location",
 			section = sceneSettings,
 			position = 14
@@ -180,8 +180,8 @@ public interface CreatorsConfig extends Config
 
 	@ConfigItem(
 			keyName = "quickRotateCW",
-			name = "Quick Rotate CW",
-			description = "Hotkey to rotate the selected object by 90 degrees clockwise",
+			name = "Rotate CW Hotkey",
+			description = "Hotkey to rotate the selected object clockwise",
 			section = sceneSettings,
 			position = 15
 	)
@@ -192,8 +192,8 @@ public interface CreatorsConfig extends Config
 
 	@ConfigItem(
 			keyName = "quickRotateCCW",
-			name = "Quick Rotate CCW",
-			description = "Hotkey to rotate the selected object by 90 degrees counter-clockwise",
+			name = "Rotate CCW Hotkey",
+			description = "Hotkey to rotate the selected object counter-clockwise",
 			section = sceneSettings,
 			position = 16
 	)
@@ -202,10 +202,22 @@ public interface CreatorsConfig extends Config
 		return new Keybind(KeyEvent.VK_END, 0);
 	}
 
+	@ConfigItem(
+			keyName = "rotateDegrees",
+			name = "Rotate Degrees",
+			description = "Determines how much the Rotate Hotkeys rotate the Object by",
+			section = sceneSettings,
+			position = 17
+	)
+	default Rotation rotateDegrees()
+	{
+		return Rotation._90_DEGREES;
+	}
+
 	@ConfigSection(
 			name = "Overlays",
 			description = "Settings for enabling/disabling overlays",
-			position = 17
+			position = 18
 	)
 	String overlaySettings = "overlaySettings";
 
@@ -214,7 +226,7 @@ public interface CreatorsConfig extends Config
 			name = "Toggle Overlays",
 			description = "Hotkey to toggle all overlays. Unset to disable",
 			section = overlaySettings,
-			position = 18
+			position = 19
 	)
 	default Keybind toggleOverlaysHotkey()
 	{
@@ -226,7 +238,7 @@ public interface CreatorsConfig extends Config
 			name = "My Object Overlay",
 			description = "Enables an overlay for objects introduced via this plugin",
 			section = overlaySettings,
-			position = 19
+			position = 20
 	)
 	default boolean myObjectOverlay()
 	{
@@ -238,7 +250,7 @@ public interface CreatorsConfig extends Config
 			name = "Object Path Overlay",
 			description = "Enables an overlay for the pathing of programmed objects introduced via this plugin",
 			section = overlaySettings,
-			position = 20
+			position = 21
 	)
 	default boolean pathOverlay()
 	{
@@ -250,7 +262,7 @@ public interface CreatorsConfig extends Config
 			name = "Game Object Overlay",
 			description = "Enables an overlay for GameObjects",
 			section = overlaySettings,
-			position = 21
+			position = 22
 	)
 	default boolean gameObjectOverlay()
 	{
@@ -262,7 +274,7 @@ public interface CreatorsConfig extends Config
 			name = "Player Overlay",
 			description = "Enables an overlay for Players",
 			section = overlaySettings,
-			position = 22
+			position = 23
 	)
 	default boolean playerOverlay()
 	{
@@ -274,7 +286,7 @@ public interface CreatorsConfig extends Config
 			name = "NPC Overlay",
 			description = "Enables an overlay for NPCs",
 			section = overlaySettings,
-			position = 23
+			position = 24
 	)
 	default boolean npcOverlay()
 	{
@@ -286,7 +298,7 @@ public interface CreatorsConfig extends Config
 			name = "Ground Object Overlay",
 			description = "Enables an overlay for GroundObjects",
 			section = overlaySettings,
-			position = 24
+			position = 25
 	)
 	default boolean groundObjectOverlay()
 	{
@@ -298,7 +310,7 @@ public interface CreatorsConfig extends Config
 			name = "Wall Object Overlay",
 			description = "Enables an overlay for TileObjects",
 			section = overlaySettings,
-			position = 25
+			position = 26
 	)
 	default boolean wallObjectOverlay()
 	{
@@ -310,7 +322,7 @@ public interface CreatorsConfig extends Config
 			name = "Decorative Object Overlay",
 			description = "Enables an overlay for DecorativeObjects",
 			section = overlaySettings,
-			position = 26
+			position = 27
 	)
 	default boolean decorativeObjectOverlay()
 	{
@@ -322,7 +334,7 @@ public interface CreatorsConfig extends Config
 			name = "Projectile Overlay",
 			description = "Enables an overlay for Projectiles",
 			section = overlaySettings,
-			position = 27
+			position = 28
 	)
 	default boolean projectileOverlay()
 	{
@@ -332,7 +344,7 @@ public interface CreatorsConfig extends Config
 	@ConfigSection(
 			name = "Programmer",
 			description = "Settings for quickly programming the selected object",
-			position = 28
+			position = 29
 	)
 	String programmer = "programmer";
 
@@ -341,7 +353,7 @@ public interface CreatorsConfig extends Config
 			name = "Add Program Step",
 			description = "Hotkey to add the hovered location to the selected object's program",
 			section = programmer,
-			position = 29
+			position = 30
 	)
 	default Keybind addProgramStepHotkey()
 	{
@@ -353,7 +365,7 @@ public interface CreatorsConfig extends Config
 			name = "Remove Program Step",
 			description = "Hotkey to remove the hovered location from the selected object's program",
 			section = programmer,
-			position = 30
+			position = 31
 	)
 	default Keybind removeProgramStepHotkey()
 	{
@@ -365,7 +377,7 @@ public interface CreatorsConfig extends Config
 			name = "Clear Program Steps",
 			description = "Hotkey to clear all steps from the selected object's program",
 			section = programmer,
-			position = 31
+			position = 32
 	)
 	default Keybind clearProgramStepHotkey()
 	{
@@ -377,7 +389,7 @@ public interface CreatorsConfig extends Config
 			name = "Play/Pause Toggle",
 			description = "Hotkey to play/pause selected object",
 			section = programmer,
-			position = 32
+			position = 33
 	)
 	default Keybind playPauseHotkey()
 	{
@@ -389,7 +401,7 @@ public interface CreatorsConfig extends Config
 			name = "Play/Pause All",
 			description = "Hotkey to play/pause all programs",
 			section = programmer,
-			position = 33
+			position = 34
 	)
 	default Keybind playPauseAllHotkey()
 	{
@@ -401,7 +413,7 @@ public interface CreatorsConfig extends Config
 			name = "Reset Locations",
 			description = "Hotkey to set selected object to its start location",
 			section = programmer,
-			position = 34
+			position = 35
 	)
 	default Keybind resetHotkey()
 	{
@@ -413,7 +425,7 @@ public interface CreatorsConfig extends Config
 			name = "Reset All Locations",
 			description = "Hotkey to set all objects to their start location",
 			section = programmer,
-			position = 35
+			position = 36
 	)
 	default Keybind resetAllHotkey()
 	{
@@ -423,16 +435,16 @@ public interface CreatorsConfig extends Config
 	@ConfigSection(
 			name = "transmogrification",
 			description = "Settings for replacing your player character with a saved Custom Model",
-			position = 36
+			position = 37
 	)
-	String transmogrification = "transmogrification";
+	String transmogrification = "Transmogrification";
 
 	@ConfigItem(
 			keyName = "enableTransmog",
 			name = "Enable Transmogrification",
 			description = "Allow your character to be transmogrified into a chosen Custom Model",
 			section = transmogrification,
-			position = 37
+			position = 38
 	)
 	default boolean enableTransmog()
 	{
@@ -444,7 +456,7 @@ public interface CreatorsConfig extends Config
 			name = "Enable Transmog Right-Click",
 			description = "Provides a right-click option to Transmog on any object or NPC",
 			section = transmogrification,
-			position = 38
+			position = 39
 	)
 	default boolean transmogRightClick()
 	{
@@ -457,7 +469,7 @@ public interface CreatorsConfig extends Config
 			description = "Automatically loads the Transmog from the file path below" +
 					"<br>Please note that enabling this feature will slow down client start-up",
 			section = transmogrification,
-			position = 39
+			position = 40
 	)
 	default boolean autoTransmog()
 	{
@@ -469,7 +481,7 @@ public interface CreatorsConfig extends Config
 			name = "Auto-Transmog Path",
 			description = "Enter the file path of a previously saved Transmog to automatically load on client start-up",
 			section = transmogrification,
-			position = 40
+			position = 41
 	)
 	default String transmogPath()
 	{

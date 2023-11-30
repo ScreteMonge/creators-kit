@@ -12,18 +12,21 @@ import java.util.concurrent.CountDownLatch;
 
 public class ModelGetter
 {
+    private final Client client;
+    private final ClientThread clientThread;
+    private final CreatorsPlugin plugin;
+    private final ModelFinder modelFinder;
+    private final CreatorsConfig config;
+
     @Inject
-    private Client client;
-    @Inject
-    private ClientThread clientThread;
-    @Inject
-    private CreatorsPlugin plugin;
-    @Inject
-    private ModelFinder modelFinder;
-    @Inject
-    private ModelOrganizer modelOrganizer;
-    @Inject
-    private CreatorsConfig config;
+    public ModelGetter(Client client, ClientThread clientThread, CreatorsPlugin plugin, ModelFinder modelFinder, CreatorsConfig config)
+    {
+        this.client = client;
+        this.clientThread = clientThread;
+        this.plugin = plugin;
+        this.modelFinder = modelFinder;
+        this.config = config;
+    }
 
     public void storeNPC(int index, String target, NPC npc, String option, boolean setTransmog)
     {
@@ -47,7 +50,7 @@ public class ModelGetter
                             plugin.addCustomModel(customModel, false);
                             plugin.sendChatMessage("Model stored: " + npc.getName());
                             if (setTransmog)
-                                modelOrganizer.setTransmog(customModel);
+                                plugin.getCreatorsPanel().getModelOrganizer().setTransmog(customModel);
                         });
                     });
                     thread.start();
@@ -118,7 +121,7 @@ public class ModelGetter
                             plugin.addCustomModel(customModel, false);
                             plugin.sendChatMessage("Model stored: " + Text.removeTags(target));
                             if (setTransmog)
-                                modelOrganizer.setTransmog(customModel);
+                                plugin.getCreatorsPanel().getModelOrganizer().setTransmog(customModel);
                         });
                     });
                     thread.start();
@@ -144,7 +147,7 @@ public class ModelGetter
                         plugin.addCustomModel(customModel, false);
                         plugin.sendChatMessage("Model stored: " + name);
                         if (setTransmog)
-                            modelOrganizer.setTransmog(customModel);
+                            plugin.getCreatorsPanel().getModelOrganizer().setTransmog(customModel);
                     });
                     thread.start();
                 });

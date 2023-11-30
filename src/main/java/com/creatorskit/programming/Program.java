@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.swing.*;
+import java.awt.*;
 
 @Getter
 @Setter
@@ -15,4 +16,5 @@ public class Program
     private JPanel programPanel;
     private JLabel nameLabel;
     private JSpinner idleAnimSpinner;
+    private Color color;
 }
