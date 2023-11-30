@@ -393,8 +393,26 @@ public class ModelOrganizer extends JPanel
             String recolTo;
             if (type == CustomModelType.CACHE_PLAYER && modelStat.getBodyPart() != BodyPart.NA)
             {
-                recolFrom = KitRecolourer.getKitRecolourOld(modelStat.getBodyPart());
-                recolTo = KitRecolourer.getKitRecolourNew(modelStat.getBodyPart(), comp.getKitRecolours());
+                String modelStatFrom = ModelFinder.shortArrayToString(modelStat.getRecolourFrom());
+                String modelStatTo = ModelFinder.shortArrayToString(modelStat.getRecolourTo());
+                String kitRecolourOld = KitRecolourer.getKitRecolourOld(modelStat.getBodyPart());
+                String kitRecolourNew = KitRecolourer.getKitRecolourNew(modelStat.getBodyPart(), comp.getKitRecolours());
+
+                if (modelStatFrom.isEmpty() || modelStatTo.isEmpty())
+                {
+                    recolFrom = KitRecolourer.getKitRecolourOld(modelStat.getBodyPart());
+                    recolTo = KitRecolourer.getKitRecolourNew(modelStat.getBodyPart(), comp.getKitRecolours());
+                }
+                else if (kitRecolourOld.isEmpty() || kitRecolourNew.isEmpty())
+                {
+                    recolFrom = modelStatFrom;
+                    recolTo = modelStatTo;
+                }
+                else
+                {
+                    recolFrom = modelStatFrom + "," + kitRecolourOld;
+                    recolTo = modelStatTo + "," + kitRecolourNew;
+                }
             }
             else
             {
