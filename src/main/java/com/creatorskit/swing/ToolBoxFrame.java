@@ -43,7 +43,7 @@ public class ToolBoxFrame extends JFrame
         setLayout(new BorderLayout());
         setTitle("Creator's Kit Toolbox");
         setIconImage(ICON);
-        setPreferredSize(new Dimension(1450, 800));
+        setPreferredSize(new Dimension(1500, 800));
 
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setFont(FontManager.getRunescapeBoldFont());

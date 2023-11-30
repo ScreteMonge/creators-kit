@@ -480,6 +480,8 @@ public class CreatorsPanel extends PluginPanel
                 character.setName(textField.getText());
                 objectPanel.setName(textField.getText());
                 character.getProgram().getNameLabel().setText(textField.getText());
+                toolBox.getManagerPanel().revalidate();
+                toolBox.getManagerPanel().repaint();
             });
 
             textField.addFocusListener(new FocusListener() {
@@ -492,6 +494,8 @@ public class CreatorsPanel extends PluginPanel
                     character.setName(textField.getText());
                     objectPanel.setName(textField.getText());
                     character.getProgram().getNameLabel().setText(textField.getText());
+                    toolBox.getManagerPanel().revalidate();
+                    toolBox.getManagerPanel().repaint();
                 }
             });
 
