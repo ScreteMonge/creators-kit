@@ -26,4 +26,5 @@ public class ComplexPanel extends JPanel
     private final JCheckBox check90;
     private final JCheckBox check180;
     private final JCheckBox check270;
+    private final JCheckBox invertFaces;
 }

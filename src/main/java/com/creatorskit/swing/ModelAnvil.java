@@ -47,6 +47,7 @@ public class ModelAnvil extends JPanel
     private final BufferedImage COPY_COLOURS = ImageUtil.loadImageResource(getClass(), "/Copy_Colours.png");
     private final BufferedImage PASTE_COLOURS = ImageUtil.loadImageResource(getClass(), "/Paste_Colours.png");
     private final Dimension SPINNER_DIMENSION = new Dimension(65, 25);
+    private final Dimension BUTTON_DIMENSION = new Dimension(85, 25);
     @Getter
     private final ArrayList<ComplexPanel> complexPanels = new ArrayList<>();
     public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
@@ -222,15 +223,15 @@ public class ModelAnvil extends JPanel
 
     public void createComplexPanel()
     {
-        createComplexPanel("Name", -1, 1, 0, 0, 0, 0, 0, 0, 128, 128, 128, 0, "", "");
+        createComplexPanel("Name", -1, 1, 0, 0, 0, 0, 0, 0, 128, 128, 128, 0, "", "", false);
     }
 
     public void createComplexPanel(DetailedModel dm)
     {
-        createComplexPanel(dm.getName(), dm.getModelId(), dm.getGroup(), dm.getXTile(), dm.getYTile(), dm.getZTile(), dm.getXTranslate(), dm.getYTranslate(), dm.getZTranslate(), dm.getXScale(), dm.getYScale(), dm.getZScale(), dm.getRotate(), dm.getRecolourNew(), dm.getRecolourOld());
+        createComplexPanel(dm.getName(), dm.getModelId(), dm.getGroup(), dm.getXTile(), dm.getYTile(), dm.getZTile(), dm.getXTranslate(), dm.getYTranslate(), dm.getZTranslate(), dm.getXScale(), dm.getYScale(), dm.getZScale(), dm.getRotate(), dm.getRecolourNew(), dm.getRecolourOld(), dm.isInvertFaces());
     }
 
-    public void createComplexPanel(String name, int modelId, int group, int xTile, int yTile, int zTile, int xTranslate, int yTranslate, int zTranslate, int scaleX, int scaleY, int scaleZ, int rotate, String newColours, String oldColours)
+    public void createComplexPanel(String name, int modelId, int group, int xTile, int yTile, int zTile, int xTranslate, int yTranslate, int zTranslate, int scaleX, int scaleY, int scaleZ, int rotate, String newColours, String oldColours, boolean invertFaces)
     {
         JSpinner modelIdSpinner = new JSpinner();
         JSpinner groupSpinner = new JSpinner();
@@ -249,7 +250,19 @@ public class ModelAnvil extends JPanel
         JCheckBox check90 = new JCheckBox();
         JCheckBox check180 = new JCheckBox();
         JCheckBox check270 = new JCheckBox();
-        ComplexPanel complexModePanel = new ComplexPanel(modelIdSpinner, groupSpinner, nameField, colourNewField, colourOldField, xSpinner, ySpinner, zSpinner, xTileSpinner, yTileSpinner, zTileSpinner, xScaleSpinner, yScaleSpinner, zScaleSpinner, check90, check180, check270);
+        JCheckBox checkInvertFaces = new JCheckBox();
+
+        ComplexPanel complexModePanel = new ComplexPanel(
+                modelIdSpinner,
+                groupSpinner,
+                nameField,
+                colourNewField,
+                colourOldField,
+                xSpinner, ySpinner, zSpinner,
+                xTileSpinner, yTileSpinner, zTileSpinner,
+                xScaleSpinner, yScaleSpinner, zScaleSpinner,
+                check90, check180, check270,
+                checkInvertFaces);
 
         complexModePanel.setLayout(new GridBagLayout());
         complexModePanel.setBorder(new LineBorder(getBorderColour(modelId), 1));
@@ -591,10 +604,11 @@ public class ModelAnvil extends JPanel
 
         c.gridx = 2;
         c.gridy = 3;
-        c.gridwidth = 4;
-        JButton colourSwapper = new JButton("Colour Swapper");
+        c.gridwidth = 2;
+        JButton colourSwapper = new JButton("Swap");
         colourSwapper.setFocusable(false);
         colourSwapper.setToolTipText("Opens an interface to swap colours on this model");
+        colourSwapper.setPreferredSize(BUTTON_DIMENSION);
         complexModePanel.add(colourSwapper, c);
         colourSwapper.addActionListener(e ->
                 setupColourSwapper(swapperFrame, gridMenu, nameField, modelIdSpinner, colourMap, colorChooser, colourNewField, colourOldField, clearColoursButton));
@@ -609,7 +623,7 @@ public class ModelAnvil extends JPanel
             setupColourSwapper(swapperFrame, gridMenu, nameField, modelIdSpinner, colourMap, colorChooser, colourNewField, colourOldField, clearColoursButton);
         });
 
-        c.gridx = 6;
+        c.gridx = 4;
         c.gridy = 3;
         c.gridwidth = 1;
         JButton copyColourButtonMain = new JButton(new ImageIcon(COPY_COLOURS));
@@ -618,7 +632,7 @@ public class ModelAnvil extends JPanel
         copyColourButtonMain.addActionListener(e -> copiedColourMap = colourMap);
         complexModePanel.add(copyColourButtonMain, c);
 
-        c.gridx = 7;
+        c.gridx = 5;
         c.gridy = 3;
         c.gridwidth = 1;
         JButton pasteColourButtonMain = new JButton(new ImageIcon(PASTE_COLOURS));
@@ -636,11 +650,12 @@ public class ModelAnvil extends JPanel
                 setupColourSwapper(swapperFrame, gridMenu, nameField, modelIdSpinner, colourMap, colorChooser, colourNewField, colourOldField, clearColoursButton);
         });
 
-        c.gridx = 8;
+        c.gridx = 6;
         c.gridy = 3;
         c.gridwidth = 2;
         clearColoursButton.setFocusable(false);
         clearColoursButton.setToolTipText("Clears all swapped colours");
+        clearColoursButton.setPreferredSize(BUTTON_DIMENSION);
         complexModePanel.add(clearColoursButton, c);
         clearColoursButton.addActionListener(e ->
         {
@@ -668,6 +683,17 @@ public class ModelAnvil extends JPanel
             revalidate();
             repaint();
         });
+
+        c.gridx = 8;
+        c.gridy = 3;
+        c.gridwidth = 1;
+        checkInvertFaces.setText("Inv");
+        checkInvertFaces.setToolTipText("Inverts all faces. Should be used with scaling the x or y dimensions in the negative direction");
+        checkInvertFaces.setSelected(invertFaces);
+        checkInvertFaces.setHorizontalAlignment(SwingConstants.LEFT);
+        checkInvertFaces.setFocusable(false);
+        checkInvertFaces.setPreferredSize(BUTTON_DIMENSION);
+        complexModePanel.add(checkInvertFaces, c);
 
         duplicateButton.addActionListener(e ->
         {
@@ -704,7 +730,8 @@ public class ModelAnvil extends JPanel
                             (int) zScaleSpinner.getValue(),
                             rotation,
                             colourSwaps[1],
-                            colourSwaps[0]
+                            colourSwaps[0],
+                            checkInvertFaces.isSelected()
                     );
         });
 
@@ -798,8 +825,7 @@ public class ModelAnvil extends JPanel
             int rotate = 0;
             String recolourNew = complexModePanel.getColourNewField().getText();
             String recolourOld = complexModePanel.getColourOldField().getText();
-
-
+            boolean invertFaces = complexModePanel.getInvertFaces().isSelected();
 
             JCheckBox check90 = complexModePanel.getCheck90();
             JCheckBox check180 = complexModePanel.getCheck180();
@@ -814,7 +840,7 @@ public class ModelAnvil extends JPanel
             if (check270.isSelected())
                 rotate = 1;
 
-            DetailedModel detailedModel = new DetailedModel(name, modelId, group, xTile, yTile, zTile, xTranslate, yTranslate, zTranslate, xScale, yScale, zScale, rotate, recolourNew, recolourOld);
+            DetailedModel detailedModel = new DetailedModel(name, modelId, group, xTile, yTile, zTile, xTranslate, yTranslate, zTranslate, xScale, yScale, zScale, rotate, recolourNew, recolourOld, invertFaces);
             detailedModels[i] = detailedModel;
         }
 

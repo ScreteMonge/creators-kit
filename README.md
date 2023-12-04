@@ -154,6 +154,8 @@ There's also a few camera features like Oculus Orb mode which can be found in th
 - AutoRotate options: Allows you to automatically set a camera rotation for certain rotating shots
 - Rotation Speed: Sets the speed of AutoRotation
 
+## Credits
+Special thanks go to Craig Wood for the [JTree Drag and Drop functionality](https://coderanch.com/t/346509/java/JTree-drag-drop-tree-Java) as well as Albert Hendriks for the [improved version.](https://gitlab.com/alberthendriks/jtree-drag-drop)
 
 
 

@@ -24,4 +24,5 @@ public class DetailedModel
     int rotate;
     String recolourNew;
     String recolourOld;
+    boolean invertFaces;
 }

@@ -44,8 +44,8 @@ public class PathFinder
     {
         final ArrayList<Integer> rowQueue = new ArrayList<>();
         final ArrayList<Integer> columnQueue = new ArrayList<>();
-        final boolean[][] visited = new boolean[104][104];
-        final Coordinate[][] path = new Coordinate[104][104];
+        final boolean[][] visited = new boolean[Constants.SCENE_SIZE][Constants.SCENE_SIZE];
+        final Coordinate[][] path = new Coordinate[Constants.SCENE_SIZE][Constants.SCENE_SIZE];
 
         boolean reachedEnd = false;
 
@@ -97,8 +97,8 @@ public class PathFinder
     {
         final ArrayList<Integer> rowQueue = new ArrayList<>();
         final ArrayList<Integer> columnQueue = new ArrayList<>();
-        final boolean[][] visited = new boolean[104][104];
-        final Coordinate[][] path = new Coordinate[104][104];
+        final boolean[][] visited = new boolean[Constants.SCENE_SIZE][Constants.SCENE_SIZE];
+        final Coordinate[][] path = new Coordinate[Constants.SCENE_SIZE][Constants.SCENE_SIZE];
 
         boolean reachedEnd = false;
         Collection<WorldPoint> startPoints = WorldPoint.toLocalInstance(client, startLocation);

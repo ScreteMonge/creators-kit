@@ -1299,6 +1299,7 @@ public class CreatorsPlugin extends Plugin {
 	public Model createComplexModel(DetailedModel[] detailedModels, boolean setPriority, LightingStyle lightingStyle)
 	{
 		ModelData[] models = new ModelData[detailedModels.length];
+		ModelData[] modelsToReset = new ModelData[0];
 
 		for (int e = 0; e < detailedModels.length; e++)
 		{
@@ -1308,6 +1309,7 @@ public class CreatorsPlugin extends Plugin {
 				return null;
 
 			modelData.cloneVertices().cloneColors();
+
 			switch(detailedModel.getRotate())
 			{
 				case 0:
@@ -1325,6 +1327,21 @@ public class CreatorsPlugin extends Plugin {
 			//swapping y and z, making y positive to align with traditional axes
 			modelData.translate(detailedModel.getXTranslate() + detailedModel.getXTile() * 128, -1 * (detailedModel.getZTranslate() + detailedModel.getZTile() * 128), detailedModel.getYTranslate() + detailedModel.getYTile() * 128);
 			modelData.scale(detailedModel.getXScale(), detailedModel.getZScale(), detailedModel.getYScale());
+
+			//Note that because all ModelDatas for a given ModelId share arrays, if Forging multiple identical models, inverting one will invert them all
+			if (detailedModel.isInvertFaces())
+			{
+				modelsToReset = ArrayUtils.add(modelsToReset, modelData);
+				int[] faces2 = modelData.getFaceIndices2();
+				int[] faces3 = modelData.getFaceIndices3();
+				int[] faces2Copy = Arrays.copyOf(faces2, faces2.length);
+
+				for (int i = 0; i < modelData.getFaceCount(); i++)
+				{
+					faces2[i] = faces3[i];
+					faces3[i] = faces2Copy[i];
+				}
+			}
 
 			String[] newColoursArray = detailedModel.getRecolourNew().split(",");
 			short[] newColours = new short[newColoursArray.length];
@@ -1386,6 +1403,21 @@ public class CreatorsPlugin extends Plugin {
 				Arrays.fill(renderPriorities, (byte) 0);
 		}
 
+		//Need to reset after inverting Faces so that loading modelData for the same model in the future isn't automatically pre-inverted
+		for (ModelData modelData : modelsToReset)
+		{
+			int[] faces2 = modelData.getFaceIndices2();
+			int[] faces3 = modelData.getFaceIndices3();
+
+			int[] faces2Copy = Arrays.copyOf(faces2, faces2.length);
+
+			for (int i = 0; i < modelData.getFaceCount(); i++)
+			{
+				faces2[i] = faces3[i];
+				faces3[i] = faces2Copy[i];
+			}
+		}
+
 		sendChatMessage("Model forged. Faces: " + model.getFaceCount() + ", Vertices: " + model.getVerticesCount());
 		if (model.getFaceCount() >= 6200 && model.getVerticesCount() >= 3900)
 			sendChatMessage("You've exceeded the max face count of 6200 or vertex count of 3900 in this model; any additional faces or vertices will not render");
@@ -1441,7 +1473,8 @@ public class CreatorsPlugin extends Plugin {
 							128, 128, 128,
 							0,
 							recolourNew.toString(),
-							recolourOld.toString());
+							recolourOld.toString(),
+							false);
 
 					continue;
 				}
@@ -1455,7 +1488,8 @@ public class CreatorsPlugin extends Plugin {
 						128, 128, 128,
 						0,
 						ModelFinder.shortArrayToString(modelStats.getRecolourTo()),
-						ModelFinder.shortArrayToString(modelStats.getRecolourFrom()));
+						ModelFinder.shortArrayToString(modelStats.getRecolourFrom()),
+						false);
 			}
 		});
 	}
@@ -1792,7 +1826,7 @@ public class CreatorsPlugin extends Plugin {
 					setBreak = true;
 				}
 
-				DetailedModel detailedModel = new DetailedModel(name, modelId, group, xTile, yTile, zTile, xTranslate, yTranslate, zTranslate, xScale, yScale, zScale, rotate, newColours, oldColours);
+				DetailedModel detailedModel = new DetailedModel(name, modelId, group, xTile, yTile, zTile, xTranslate, yTranslate, zTranslate, xScale, yScale, zScale, rotate, newColours, oldColours, false);
 				list.add(detailedModel);
 				if (setBreak)
 					break;
@@ -1819,7 +1853,8 @@ public class CreatorsPlugin extends Plugin {
 							detailedModel.getZScale(),
 							detailedModel.getRotate(),
 							detailedModel.getRecolourNew(),
-							detailedModel.getRecolourOld());
+							detailedModel.getRecolourOld(),
+							detailedModel.isInvertFaces());
 				}
 			});
 

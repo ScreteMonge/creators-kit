@@ -266,28 +266,28 @@ public class CreatorsOverlay extends Overlay
 
                 if (config.gameObjectOverlay() || config.myObjectOverlay())
                 {
-                    renderGameObjects(graphics, tile, player);
+                    renderGameObjects(graphics, tile);
                 }
 
                 if (config.groundObjectOverlay())
                 {
-                    renderGroundObjects(graphics, tile, player);
+                    renderGroundObjects(graphics, tile);
                 }
 
                 if (config.wallObjectOverlay())
                 {
-                    renderWallObjects(graphics, tile, player);
+                    renderWallObjects(graphics, tile);
                 }
 
                 if (config.decorativeObjectOverlay())
                 {
-                    renderDecorativeObjects(graphics, tile, player);
+                    renderDecorativeObjects(graphics, tile);
                 }
             }
         }
     }
 
-    public void renderGameObjects(Graphics2D graphics, Tile tile, Player player)
+    public void renderGameObjects(Graphics2D graphics, Tile tile)
     {
         GameObject[] gameObjects = tile.getGameObjects();
         if (gameObjects != null)
@@ -363,36 +363,39 @@ public class CreatorsOverlay extends Overlay
         }
     }
 
-    public void renderGroundObjects(Graphics2D graphics, Tile tile, Player player)
+    public void renderGroundObjects(Graphics2D graphics, Tile tile)
     {
         GroundObject groundObject = tile.getGroundObject();
         if (groundObject != null)
         {
-            if (player.getLocalLocation().distanceTo(groundObject.getLocalLocation()) <= MAX_DISTANCE)
+            LocalPoint camera = new LocalPoint(client.getCameraX(), client.getCameraY());
+            if (groundObject.getLocalLocation().distanceTo(camera) <= MAX_DISTANCE)
             {
                 OverlayUtil.renderTileOverlay(graphics, groundObject, "ID: " + groundObject.getId(), GROUND_OBJECT_COLOUR);
             }
         }
     }
 
-    public void renderWallObjects(Graphics2D graphics, Tile tile, Player player)
+    public void renderWallObjects(Graphics2D graphics, Tile tile)
     {
         TileObject tileObject = tile.getWallObject();
         if (tileObject != null)
         {
-            if (player.getLocalLocation().distanceTo(tileObject.getLocalLocation()) <= MAX_DISTANCE)
+            LocalPoint camera = new LocalPoint(client.getCameraX(), client.getCameraY());
+            if (tileObject.getLocalLocation().distanceTo(camera) <= MAX_DISTANCE)
             {
                 OverlayUtil.renderTileOverlay(graphics, tileObject, "ID: " + tileObject.getId(), WALL_OBJECT_COLOUR);
             }
         }
     }
 
-    public void renderDecorativeObjects(Graphics2D graphics, Tile tile, Player player)
+    public void renderDecorativeObjects(Graphics2D graphics, Tile tile)
     {
         TileObject tileObject = tile.getDecorativeObject();
         if (tileObject != null)
         {
-            if (player.getLocalLocation().distanceTo(tileObject.getLocalLocation()) <= MAX_DISTANCE)
+            LocalPoint camera = new LocalPoint(client.getCameraX(), client.getCameraY());
+            if (tileObject.getLocalLocation().distanceTo(camera) <= MAX_DISTANCE)
             {
                 OverlayUtil.renderTileOverlay(graphics, tileObject, "ID: " + tileObject.getId(), DECORATIVE_OBJECT_COLOUR);
             }

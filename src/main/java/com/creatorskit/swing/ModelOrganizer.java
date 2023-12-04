@@ -427,7 +427,7 @@ public class ModelOrganizer extends JPanel
             if (modelStat.getBodyPart() != BodyPart.NA)
                 bodyPart = modelStat.getBodyPart().toString();
 
-            DetailedModel detailedModel = new DetailedModel(bodyPart, modelStat.getModelId(), group, 0, 0, 0, 0, 0, 0, 128, 128, 128, 0, recolTo, recolFrom);
+            DetailedModel detailedModel = new DetailedModel(bodyPart, modelStat.getModelId(), group, 0, 0, 0, 0, 0, 0, 128, 128, 128, 0, recolTo, recolFrom, false);
             detailedModels[i] = detailedModel;
         }
 
