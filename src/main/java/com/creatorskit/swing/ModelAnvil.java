@@ -751,6 +751,26 @@ public class ModelAnvil extends JPanel
             swapperFrame.setTitle("Colour Swapper: " + nameField.getText());
         });
 
+        JSpinner[] spinners = new JSpinner[]{xSpinner, ySpinner, zSpinner, xScaleSpinner, yScaleSpinner, zScaleSpinner, xTileSpinner, yTileSpinner, zTileSpinner};
+        for (JSpinner spinner : spinners)
+        {
+            JSpinner.DefaultEditor defaultEditor = (JSpinner.DefaultEditor) spinner.getEditor();
+            defaultEditor.getTextField().addMouseListener(new MouseAdapter()
+            {
+                @Override
+                public void mouseClicked(MouseEvent e)
+                {
+                    if (SwingUtilities.isRightMouseButton(e))
+                    {
+                        int i = 0;
+                        if (spinner == xScaleSpinner || spinner == yScaleSpinner || spinner == zScaleSpinner)
+                            i = 128;
+                        spinner.setValue(i);
+                    }
+                }
+            });
+        }
+
         complexMode.add(complexModePanel);
         complexModePanel.setEnabled(true);
         complexModePanel.setVisible(true);
@@ -760,7 +780,7 @@ public class ModelAnvil extends JPanel
         repaint();
     }
 
-    private void setPanelIndex(JPanel panel, int change)
+    private void setPanelIndex(ComplexPanel panel, int change)
     {
         int newPosition = complexMode.getComponentZOrder(panel) + change;
         if (newPosition < 0)
@@ -770,6 +790,9 @@ public class ModelAnvil extends JPanel
             newPosition = complexPanels.size() - 1;
 
         complexMode.setComponentZOrder(panel, newPosition);
+        complexPanels.remove(panel);
+        complexPanels.add(newPosition, panel);
+
         repaint();
         revalidate();
     }

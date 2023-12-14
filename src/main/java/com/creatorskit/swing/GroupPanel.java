@@ -113,6 +113,7 @@ public class GroupPanel extends JPanel
         JSpinner yScaleSpinner = new JSpinner();
         JSpinner zScaleSpinner = new JSpinner();
         JComboBox<String> rotateBox = new JComboBox<>();
+        JButton invertButton = new JButton("Invert");
 
         c.fill = GridBagConstraints.BOTH;
         c.insets = new Insets(2, 4, 2, 4);
@@ -305,6 +306,19 @@ public class GroupPanel extends JPanel
             }
         });
 
+        c.gridx = 2;
+        c.gridy = 9;
+        c.gridwidth = 2;
+        JPanel invertPanel = new JPanel();
+        invertPanel.setBackground(Color.BLACK);
+        adjustPanel.add(invertPanel, c);
+
+        invertPanel.add(invertButton);
+        invertButton.addActionListener(e ->
+        {
+            adjustValueInvert();
+        });
+
         JFrame swapperFrame = new JFrame("Colour Swapper");
         swapperFrame.setVisible(false);
         swapperFrame.setEnabled(false);
@@ -432,6 +446,18 @@ public class GroupPanel extends JPanel
         comboBox.addItemListener(itemListener);
     }
 
+    private void adjustValueInvert()
+    {
+        for (ComplexPanel complexPanel : plugin.getComplexPanels())
+        {
+            if (complexPanel.getGroupSpinner().getValue() == groupSpinner.getValue())
+            {
+                JCheckBox invertFaces = complexPanel.getInvertFaces();
+                invertFaces.setSelected(!invertFaces.isSelected());
+            }
+        }
+    }
+
     public JPanel createSetPanel()
     {
         JPanel setPanel = new JPanel();
@@ -451,6 +477,7 @@ public class GroupPanel extends JPanel
         JSpinner yScaleSpinner = new JSpinner();
         JSpinner zScaleSpinner = new JSpinner();
         JComboBox<String> rotateBox = new JComboBox<>();
+        JButton invertButton = new JButton("Inv On");
 
         c.fill = GridBagConstraints.BOTH;
         c.insets = new Insets(2, 4, 2, 4);
@@ -653,6 +680,18 @@ public class GroupPanel extends JPanel
             }
         });
 
+        c.gridx = 2;
+        c.gridy = 9;
+        c.gridwidth = 2;
+        JPanel invertPanel = new JPanel();
+        invertPanel.setBackground(Color.BLACK);
+        setPanel.add(invertPanel, c);
+
+        invertPanel.add(invertButton);
+        invertButton.addActionListener(e ->
+        {
+            setValueInvert(invertButton);
+        });
 
         HashMap<Short, Short> colourMap = new HashMap<>();
 
@@ -755,6 +794,21 @@ public class GroupPanel extends JPanel
         comboBox.removeItemListener(itemListener);
         comboBox.setSelectedItem("Rot");
         comboBox.addItemListener(itemListener);
+    }
+
+    private void setValueInvert(JButton button)
+    {
+        boolean invert = button.getText().equals("Inv On");
+        for (ComplexPanel complexPanel : plugin.getComplexPanels())
+        {
+            if (complexPanel.getGroupSpinner().getValue() == groupSpinner.getValue())
+            {
+                JCheckBox invertFaces = complexPanel.getInvertFaces();
+                invertFaces.setSelected(invert);
+            }
+        }
+
+        button.setText(invert ? "Inv Off" : "Inv On");
     }
 
     private JPanel createXYZPanel()

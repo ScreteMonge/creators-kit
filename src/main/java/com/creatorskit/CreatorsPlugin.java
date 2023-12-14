@@ -1299,7 +1299,7 @@ public class CreatorsPlugin extends Plugin {
 	public Model createComplexModel(DetailedModel[] detailedModels, boolean setPriority, LightingStyle lightingStyle)
 	{
 		ModelData[] models = new ModelData[detailedModels.length];
-		ModelData[] modelsToReset = new ModelData[0];
+		boolean[] facesToInvert = new boolean[0];
 
 		for (int e = 0; e < detailedModels.length; e++)
 		{
@@ -1328,20 +1328,9 @@ public class CreatorsPlugin extends Plugin {
 			modelData.translate(detailedModel.getXTranslate() + detailedModel.getXTile() * 128, -1 * (detailedModel.getZTranslate() + detailedModel.getZTile() * 128), detailedModel.getYTranslate() + detailedModel.getYTile() * 128);
 			modelData.scale(detailedModel.getXScale(), detailedModel.getZScale(), detailedModel.getYScale());
 
-			//Note that because all ModelDatas for a given ModelId share arrays, if Forging multiple identical models, inverting one will invert them all
-			if (detailedModel.isInvertFaces())
-			{
-				modelsToReset = ArrayUtils.add(modelsToReset, modelData);
-				int[] faces2 = modelData.getFaceIndices2();
-				int[] faces3 = modelData.getFaceIndices3();
-				int[] faces2Copy = Arrays.copyOf(faces2, faces2.length);
-
-				for (int i = 0; i < modelData.getFaceCount(); i++)
-				{
-					faces2[i] = faces3[i];
-					faces3[i] = faces2Copy[i];
-				}
-			}
+			boolean[] faceInvert = new boolean[modelData.getFaceCount()];
+			Arrays.fill(faceInvert, detailedModel.isInvertFaces());
+			facesToInvert = ArrayUtils.addAll(facesToInvert, faceInvert);
 
 			String[] newColoursArray = detailedModel.getRecolourNew().split(",");
 			short[] newColours = new short[newColoursArray.length];
@@ -1379,18 +1368,32 @@ public class CreatorsPlugin extends Plugin {
 			models[e] = modelData;
 		}
 
+		ModelData modelData = client.mergeModels(models);
+
+		int[] faces2 = modelData.getFaceIndices2();
+		int[] faces3 = modelData.getFaceIndices3();
+		int[] faces2Copy = Arrays.copyOf(faces2, faces2.length);
+		for (int i = 0; i < modelData.getFaceCount(); i++)
+		{
+			if (facesToInvert[i])
+			{
+				faces2[i] = faces3[i];
+				faces3[i] = faces2Copy[i];
+			}
+		}
+
 		Model model;
 		switch (lightingStyle)
 		{
 			default:
 			case DEFAULT:
-				model =  client.mergeModels(models).light();
+				model =  modelData.light();
 				break;
 			case ACTOR:
-				model = client.mergeModels(models).light(BRIGHT_AMBIENT, BRIGHT_CONTRAST, -30, -50, -30);
+				model = modelData.light(BRIGHT_AMBIENT, BRIGHT_CONTRAST, -30, -50, -30);
 				break;
 			case NONE:
-				model = client.mergeModels(models).light(DARK_AMBIENT, DARK_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
+				model = modelData.light(DARK_AMBIENT, DARK_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
 		}
 
 		if (model == null)
@@ -1401,21 +1404,6 @@ public class CreatorsPlugin extends Plugin {
 			byte[] renderPriorities = model.getFaceRenderPriorities();
 			if (renderPriorities != null && renderPriorities.length > 0)
 				Arrays.fill(renderPriorities, (byte) 0);
-		}
-
-		//Need to reset after inverting Faces so that loading modelData for the same model in the future isn't automatically pre-inverted
-		for (ModelData modelData : modelsToReset)
-		{
-			int[] faces2 = modelData.getFaceIndices2();
-			int[] faces3 = modelData.getFaceIndices3();
-
-			int[] faces2Copy = Arrays.copyOf(faces2, faces2.length);
-
-			for (int i = 0; i < modelData.getFaceCount(); i++)
-			{
-				faces2[i] = faces3[i];
-				faces3[i] = faces2Copy[i];
-			}
 		}
 
 		sendChatMessage("Model forged. Faces: " + model.getFaceCount() + ", Vertices: " + model.getVerticesCount());
