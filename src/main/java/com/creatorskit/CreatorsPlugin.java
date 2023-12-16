@@ -130,6 +130,7 @@ public class CreatorsPlugin extends Plugin {
 		overlayManager.add(overlay);
 		keyManager.registerKeyListener(overlayKeyListener);
 		keyManager.registerKeyListener(oculusOrbListener);
+		keyManager.registerKeyListener(orbSpeedListener);
 		keyManager.registerKeyListener(quickSpawnListener);
 		keyManager.registerKeyListener(quickLocationListener);
 		keyManager.registerKeyListener(quickRotateCWListener);
@@ -209,6 +210,7 @@ public class CreatorsPlugin extends Plugin {
 		overlayManager.remove(overlay);
 		keyManager.unregisterKeyListener(overlayKeyListener);
 		keyManager.unregisterKeyListener(oculusOrbListener);
+		keyManager.unregisterKeyListener(orbSpeedListener);
 		keyManager.unregisterKeyListener(quickSpawnListener);
 		keyManager.unregisterKeyListener(quickLocationListener);
 		keyManager.unregisterKeyListener(quickRotateCWListener);
@@ -2150,6 +2152,27 @@ public class CreatorsPlugin extends Plugin {
 
 			client.setOculusOrbState(1);
 			client.setOculusOrbNormalSpeed(config.orbSpeed());
+		}
+	};
+
+	private final HotkeyListener orbSpeedListener = new HotkeyListener(() -> config.setOrbSpeedHotkey())
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			SwingUtilities.invokeLater(() ->
+			{
+				String result = JOptionPane.showInputDialog(creatorsPanel, "Set the speed of the Oculus Orb");
+				try
+				{
+					int value = Integer.parseInt(result);
+					client.setOculusOrbNormalSpeed(value);
+				}
+				catch (Exception e)
+				{
+					sendChatMessage("Invalid input; enter a number to set the Oculus Orb speed.");
+				}
+			});
 		}
 	};
 
