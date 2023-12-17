@@ -639,16 +639,6 @@ public class ModelAnvil extends JPanel
         pasteColourButtonMain.setFocusable(false);
         pasteColourButtonMain.setToolTipText("Paste copied New Colours");
         complexModePanel.add(pasteColourButtonMain, c);
-        pasteColourButtonMain.addActionListener(e ->
-        {
-            colourMap.clear();
-            colourMap.putAll(copiedColourMap);
-            String[] mapToCSV = hashmapToCSV(colourMap);
-            colourNewField.setText(mapToCSV[1]);
-            colourOldField.setText(mapToCSV[0]);
-            if (swapperFrame.isVisible())
-                setupColourSwapper(swapperFrame, gridMenu, nameField, modelIdSpinner, colourMap, colorChooser, colourNewField, colourOldField, clearColoursButton);
-        });
 
         c.gridx = 6;
         c.gridy = 3;
@@ -682,6 +672,18 @@ public class ModelAnvil extends JPanel
             swapperFrame.pack();
             revalidate();
             repaint();
+        });
+
+        pasteColourButtonMain.addActionListener(e ->
+        {
+            colourMap.clear();
+            colourMap.putAll(copiedColourMap);
+            String[] mapToCSV = hashmapToCSV(colourMap);
+            colourNewField.setText(mapToCSV[1]);
+            colourOldField.setText(mapToCSV[0]);
+            clearColoursButton.setText("Clear (" + colourMap.size() + ")");
+            if (swapperFrame.isVisible())
+                setupColourSwapper(swapperFrame, gridMenu, nameField, modelIdSpinner, colourMap, colorChooser, colourNewField, colourOldField, clearColoursButton);
         });
 
         c.gridx = 8;
