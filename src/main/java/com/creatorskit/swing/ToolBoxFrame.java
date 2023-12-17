@@ -5,6 +5,7 @@ import com.creatorskit.swing.jtree.FolderTree;
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.config.ConfigManager;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
@@ -12,6 +13,8 @@ import net.runelite.client.util.ImageUtil;
 import javax.inject.Inject;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
 
 @Getter
@@ -20,6 +23,7 @@ public class ToolBoxFrame extends JFrame
     private ClientThread clientThread;
     private final Client client;
     private final CreatorsPlugin plugin;
+    private final ConfigManager configManager;
     private final ManagerPanel managerPanel;
     private final ModelOrganizer modelOrganizer;
     private final ModelAnvil modelAnvil;
@@ -28,11 +32,12 @@ public class ToolBoxFrame extends JFrame
     private final BufferedImage ICON = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
 
     @Inject
-    public ToolBoxFrame(Client client, ClientThread clientThread, CreatorsPlugin plugin, ManagerPanel managerPanel, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, ProgrammerPanel programPanel, TransmogPanel transmogPanel)
+    public ToolBoxFrame(Client client, ClientThread clientThread, CreatorsPlugin plugin, ConfigManager configManager, ManagerPanel managerPanel, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, ProgrammerPanel programPanel, TransmogPanel transmogPanel)
     {
         this.client = client;
         this.clientThread = clientThread;
         this.plugin = plugin;
+        this.configManager = configManager;
         this.managerPanel = managerPanel;
         this.modelOrganizer = modelOrganizer;
         this.modelAnvil = modelAnvil;
@@ -43,7 +48,28 @@ public class ToolBoxFrame extends JFrame
         setLayout(new BorderLayout());
         setTitle("Creator's Kit Toolbox");
         setIconImage(ICON);
-        setPreferredSize(new Dimension(1500, 800));
+
+        try
+        {
+            String string = configManager.getConfiguration("creatorssuite", "toolBoxSize");
+            String[] dimensions = string.split(",");
+            int width = Integer.parseInt(dimensions[0]);
+            int height = Integer.parseInt(dimensions[1]);
+            setPreferredSize(new Dimension(width, height));
+        }
+        catch (Exception e)
+        {
+            setPreferredSize(new Dimension(1500, 800));
+        }
+
+        addComponentListener(new ComponentAdapter()
+        {
+            public void componentResized(ComponentEvent componentEvent)
+            {
+                Dimension dimension = getSize();
+                configManager.setConfiguration("creatorssuite", "toolBoxSize", (int) dimension.getWidth() + "," + (int) dimension.getHeight());
+            }
+        });
 
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setFont(FontManager.getRunescapeBoldFont());
