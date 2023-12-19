@@ -2162,7 +2162,7 @@ public class CreatorsPlugin extends Plugin {
 		{
 			SwingUtilities.invokeLater(() ->
 			{
-				String result = JOptionPane.showInputDialog(creatorsPanel, "Set Orb Speed (5 = Walk, 9 = Run");
+				String result = JOptionPane.showInputDialog(creatorsPanel, "Set Orb Speed (5 = Walk, 9 = Run)");
 				try
 				{
 					int value = Integer.parseInt(result);
