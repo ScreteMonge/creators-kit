@@ -40,8 +40,8 @@ public interface CreatorsConfig extends Config
 
 	@ConfigItem(
 			keyName = "orbSpeed",
-			name = "Orb Speed",
-			description = "Set the normal speed of the Oculus Orb. Unset to disable",
+			name = "Default Orb Speed",
+			description = "Set the default normal speed of the Oculus Orb when the client starts",
 			section = cameraSettings,
 			position = 3
 	)

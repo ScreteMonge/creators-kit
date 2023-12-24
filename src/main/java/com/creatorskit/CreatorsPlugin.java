@@ -106,6 +106,7 @@ public class CreatorsPlugin extends Plugin {
 	private int savedPlane = -1;
 	private AutoRotate autoRotateYaw = AutoRotate.OFF;
 	private AutoRotate autoRotatePitch = AutoRotate.OFF;
+	private int oculusOrbSpeed = 36;
 	private final int BRIGHT_AMBIENT = 64;
 	private final int BRIGHT_CONTRAST = 850;
 	private final int DARK_AMBIENT = 128;
@@ -199,6 +200,8 @@ public class CreatorsPlugin extends Plugin {
 				autoTransmogFound = false;
 			}
 		}
+
+		oculusOrbSpeed = config.orbSpeed();
 	}
 
 	@Override
@@ -650,6 +653,7 @@ public class CreatorsPlugin extends Plugin {
 		if (event.getKey().equals("orbSpeed"))
 		{
 			client.setOculusOrbNormalSpeed(config.orbSpeed());
+			oculusOrbSpeed = config.orbSpeed();
 		}
 
 		if (event.getKey().equals("enableTransmog"))
@@ -2151,7 +2155,7 @@ public class CreatorsPlugin extends Plugin {
 			}
 
 			client.setOculusOrbState(1);
-			client.setOculusOrbNormalSpeed(config.orbSpeed());
+			client.setOculusOrbNormalSpeed(oculusOrbSpeed);
 		}
 	};
 
@@ -2162,11 +2166,12 @@ public class CreatorsPlugin extends Plugin {
 		{
 			SwingUtilities.invokeLater(() ->
 			{
-				String result = JOptionPane.showInputDialog(creatorsPanel, "Set Orb Speed (5 = Walk, 9 = Run)");
+				String result = JOptionPane.showInputDialog(creatorsPanel, "Set Orb Speed (5 = Walk, 9 = Run)", 36);
 				try
 				{
 					int value = Integer.parseInt(result);
 					client.setOculusOrbNormalSpeed(value);
+					oculusOrbSpeed = value;
 				}
 				catch (Exception e)
 				{
