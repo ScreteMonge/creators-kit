@@ -23,6 +23,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -954,6 +955,16 @@ public class ModelAnvil extends JPanel
         if (option == JFileChooser.APPROVE_OPTION)
         {
             File selectedFile = fileChooser.getSelectedFile();
+            if (!selectedFile.exists())
+            {
+                selectedFile = new File(selectedFile.getPath() + ".json");
+                if (!selectedFile.exists())
+                {
+                    plugin.sendChatMessage("Could not find the requested Custom Model file.");
+                    return;
+                }
+            }
+
             plugin.loadCustomModelToAnvil(selectedFile, priorityCheckBox.isSelected(), (LightingStyle) lightingComboBox.getSelectedItem(), nameField.getText());
         }
     }

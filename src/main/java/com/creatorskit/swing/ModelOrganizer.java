@@ -277,6 +277,16 @@ public class ModelOrganizer extends JPanel
             if (name.endsWith(".txt"))
                 name = replaceLast(name, ".txt");
 
+            if (!selectedFile.exists())
+            {
+                selectedFile = new File(selectedFile.getPath() + ".json");
+                if (!selectedFile.exists())
+                {
+                    plugin.sendChatMessage("Could not find the requested Custom Model file.");
+                    return;
+                }
+            }
+
             plugin.loadCustomModel(selectedFile, priorityCheckbox.isSelected(), (LightingStyle) comboBox.getSelectedItem(), name);
         }
     }

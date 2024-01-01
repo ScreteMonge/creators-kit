@@ -1162,13 +1162,23 @@ public class CreatorsPanel extends PluginPanel
         if (option == JFileChooser.APPROVE_OPTION)
         {
             File selectedFile = fileChooser.getSelectedFile();
+            if (!selectedFile.exists())
+            {
+                selectedFile = new File(selectedFile.getPath() + ".json");
+                if (!selectedFile.exists())
+                {
+                    plugin.sendChatMessage("Could not find the requested Setup file.");
+                    return;
+                }
+            }
+
             try
             {
                 Reader reader = Files.newBufferedReader(selectedFile.toPath());
                 SetupSave saveFile = plugin.getGson().fromJson(reader, SetupSave.class);
-                clientThread.invokeLater(() -> loadSetup(selectedFile, saveFile));
+                File finalSelectedFile = selectedFile;
+                clientThread.invokeLater(() -> loadSetup(finalSelectedFile, saveFile));
                 reader.close();
-                return;
             }
             catch (Exception e)
             {
