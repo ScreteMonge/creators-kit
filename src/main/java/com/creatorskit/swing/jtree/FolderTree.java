@@ -201,7 +201,7 @@ public class FolderTree extends JScrollPane
         }
 
         for (DefaultMutableTreeNode node : panelsToRemove)
-            plugin.getCreatorsPanel().onDeleteButtonPressed(managerPanel.getManagerObjectPanels(), (ObjectPanel) node.getUserObject());
+            plugin.getCreatorsPanel().onDeleteButtonPressed((ObjectPanel) node.getUserObject());
 
         for (DefaultMutableTreeNode node : foldersToRemove)
             removeNode(node.getUserObject());

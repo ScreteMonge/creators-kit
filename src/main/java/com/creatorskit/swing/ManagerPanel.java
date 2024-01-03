@@ -152,7 +152,7 @@ public class ManagerPanel extends JPanel
 
     public void removeObject(DefaultMutableTreeNode node)
     {
-        plugin.getCreatorsPanel().removePanel(managerObjectPanels, objectHolder, (ObjectPanel) node.getUserObject());
+        plugin.getCreatorsPanel().removePanel(objectHolder, (ObjectPanel) node.getUserObject());
     }
 
     public ObjectPanel[] getShownObjectPanels()

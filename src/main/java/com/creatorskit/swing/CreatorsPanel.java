@@ -507,7 +507,7 @@ public class CreatorsPanel extends PluginPanel
 
             deleteButton.addActionListener(e ->
             {
-                onDeleteButtonPressed(panelArray, objectPanel);
+                onDeleteButtonPressed(objectPanel);
             });
 
             duplicateButton.addActionListener(e ->
@@ -739,9 +739,9 @@ public class CreatorsPanel extends PluginPanel
         npcPanels++;
     }
 
-    public void onDeleteButtonPressed(ArrayList<ObjectPanel> panelArray, ObjectPanel objectPanel)
+    public void onDeleteButtonPressed(ObjectPanel objectPanel)
     {
-        removePanel(panelArray, objectPanel.getParentPanel(), objectPanel);
+        removePanel(objectPanel.getParentPanel(), objectPanel);
         allObjectPanels.remove(objectPanel);
         SwingUtilities.invokeLater(() ->
                 programmerPanel.removeProgramPanel(objectPanel.getProgramPanel()));
@@ -763,24 +763,24 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
-    public void removePanel(ArrayList<ObjectPanel> panelArray, JPanel parentPanel, ObjectPanel childPanel)
+    public void removePanel(JPanel parentPanel, ObjectPanel childPanel)
     {
-        panelArray.remove(childPanel);
-
         if (parentPanel == sidePanel)
         {
             parentPanel.remove(childPanel);
             programmerPanel.removeSideProgram(childPanel.getProgramPanel());
+            sideObjectPanels.remove(childPanel);
         }
 
-        JPanel objectHolder = toolBox.getManagerPanel().getObjectHolder();
+        ManagerPanel managerPanel = toolBox.getManagerPanel();
+        JPanel objectHolder = managerPanel.getObjectHolder();
         if (parentPanel == objectHolder)
         {
             parentPanel.remove(childPanel);
-            ManagerPanel managerPanel = toolBox.getManagerPanel();
             FolderTree folderTree = managerPanel.getFolderTree();
             folderTree.removeNode(childPanel);
             folderTree.resetObjectHolder();
+            managerPanel.getManagerObjectPanels().remove(childPanel);
         }
 
         parentPanel.repaint();
@@ -854,7 +854,7 @@ public class CreatorsPanel extends PluginPanel
 
         if (objectPanel.getParentPanel() == sidePanel)
         {
-            removePanel(sideObjectPanels, objectPanel.getParentPanel(), objectPanel);
+            removePanel(sidePanel, objectPanel);
             objectPanel.setParentPanel(objectHolder);
             addPanel(managerObjectPanels, objectHolder, objectPanel);
             return;
@@ -862,7 +862,7 @@ public class CreatorsPanel extends PluginPanel
 
         if (objectPanel.getParentPanel() == objectHolder)
         {
-            removePanel(managerObjectPanels, objectPanel.getParentPanel(), objectPanel);
+            removePanel(objectHolder, objectPanel);
             objectPanel.setParentPanel(sidePanel);
             addPanel(sideObjectPanels, sidePanel, objectPanel);
         }
