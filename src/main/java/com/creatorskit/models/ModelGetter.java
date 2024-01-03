@@ -92,17 +92,22 @@ public class ModelGetter
                 {
                     PlayerComposition comp = player.getPlayerComposition();
                     int[] items = comp.getEquipmentIds();
+                    String name = player.getName();
+                    if (player == client.getLocalPlayer())
+                        name = "Local Player";
+                    String finalName = name;
 
                     //For "Anvil" option on players
                     if (sendToAnvil)
                     {
+
                         Thread thread = new Thread(() ->
                         {
                             ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items);
                             clientThread.invokeLater(() ->
                             {
                                 plugin.cacheToAnvil(modelStats, comp.getColors(), true);
-                                plugin.sendChatMessage("Model sent to Anvil: " + Text.removeTags(target));
+                                plugin.sendChatMessage("Model sent to Anvil: " + finalName);
                             });
                         });
                         thread.start();
@@ -116,10 +121,10 @@ public class ModelGetter
                         clientThread.invokeLater(() ->
                         {
                             Model model = plugin.constructModelFromCache(modelStats, comp.getColors(), true, true);
-                            CustomModelComp composition = new CustomModelComp(0, CustomModelType.CACHE_PLAYER, -1, modelStats, comp.getColors(), null, LightingStyle.ACTOR, false, player.getName());
+                            CustomModelComp composition = new CustomModelComp(0, CustomModelType.CACHE_PLAYER, -1, modelStats, comp.getColors(), null, LightingStyle.ACTOR, false, finalName);
                             CustomModel customModel = new CustomModel(model, composition);
                             plugin.addCustomModel(customModel, false);
-                            plugin.sendChatMessage("Model stored: " + Text.removeTags(target));
+                            plugin.sendChatMessage("Model stored: " + finalName);
                             if (setTransmog)
                                 plugin.getCreatorsPanel().getModelOrganizer().setTransmog(customModel);
                         });
