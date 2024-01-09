@@ -526,6 +526,7 @@ public class CreatorsPanel extends PluginPanel
                         newStepsLP,
                         newPathLP,
                         newCoordinates,
+                        comp.isPathFound(),
                         0,
                         comp.getSpeed(),
                         comp.getTurnSpeed(),
@@ -976,7 +977,7 @@ public class CreatorsPanel extends PluginPanel
     private Program createEmptyProgram()
     {
         Color color = getRandomColor();
-        ProgramComp comp = new ProgramComp(new WorldPoint[0], new WorldPoint[0], new LocalPoint[0], new LocalPoint[0], new Coordinate[0], 0, 1, DEFAULT_TURN_SPEED, -1, -1, MovementType.NORMAL, color.getRGB(), false, false);
+        ProgramComp comp = new ProgramComp(new WorldPoint[0], new WorldPoint[0], new LocalPoint[0], new LocalPoint[0], new Coordinate[0], false, 0, 1, DEFAULT_TURN_SPEED, -1, -1, MovementType.NORMAL, color.getRGB(), false, false);
         return new Program(comp, new JPanel(), new JLabel(), new JSpinner(), color);
     }
 

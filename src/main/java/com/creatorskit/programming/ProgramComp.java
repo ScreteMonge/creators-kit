@@ -16,6 +16,7 @@ public class ProgramComp
     private LocalPoint[] stepsLP;
     private LocalPoint[] pathLP;
     private Coordinate[] coordinates;
+    private boolean pathFound;
     private int currentStep;
     private double speed;
     private int turnSpeed;

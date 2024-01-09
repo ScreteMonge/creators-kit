@@ -180,7 +180,7 @@ public class PathFinder
             int testRow = row + directionRow[i];
             int testColumn = column + directionColumn[i];
 
-            if (testRow > Constants.SCENE_SIZE || testRow < 0 || testColumn > Constants.SCENE_SIZE || testColumn < 0)
+            if (testRow >= Constants.SCENE_SIZE || testRow < 0 || testColumn >= Constants.SCENE_SIZE || testColumn < 0)
             {
                 continue;
             }

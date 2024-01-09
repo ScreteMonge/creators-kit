@@ -95,6 +95,9 @@ public class CreatorsOverlay extends Overlay
                 if (coordinates[i] == null)
                     continue;
 
+                if (!comp.isPathFound())
+                    continue;
+
                 LocalPoint lpStart = LocalPoint.fromScene(coordinates[i].getColumn(), coordinates[i].getRow());
                 LocalPoint lpEnd = LocalPoint.fromScene(coordinates[i + 1].getColumn(), coordinates[i + 1].getRow());
                 Point startPoint = Perspective.localToCanvas(client, lpStart, client.getPlane());
@@ -159,6 +162,9 @@ public class CreatorsOverlay extends Overlay
             for (int i = 0; i < coordinates.length - 1; i++)
             {
                 if (coordinates[i] == null)
+                    continue;
+
+                if (!comp.isPathFound())
                     continue;
 
                 LocalPoint lpStart = LocalPoint.fromScene(coordinates[i].getColumn(), coordinates[i].getRow());

@@ -1981,11 +1981,11 @@ public class CreatorsPlugin extends Plugin {
 				if (!gameStateChanged)
 					sendChatMessage("A path could not be found.");
 
-				comp.setPathLP(new LocalPoint[0]);
-				comp.setCoordinates(new Coordinate[0]);
+				comp.setPathFound(false);
 				return;
 			}
 
+			comp.setPathFound(true);
 			allCoordinates = ArrayUtils.addAll(allCoordinates, coordinates);
 
 			Direction direction = Direction.UNSET;
@@ -2033,16 +2033,15 @@ public class CreatorsPlugin extends Plugin {
 			Coordinate[] coordinates;
 			coordinates = pathFinder.getPath(stepsWP[i], stepsWP[i + 1], comp.getMovementType());
 
-			if (coordinates == null)
-			{
+			if (coordinates == null) {
 				if (!gameStateChanged)
 					sendChatMessage("A path could not be found.");
 
-				comp.setPathWP(new WorldPoint[0]);
-				comp.setCoordinates(new Coordinate[0]);
+				comp.setPathFound(false);
 				return;
 			}
 
+			comp.setPathFound(true);
 			allCoordinates = ArrayUtils.addAll(allCoordinates, coordinates);
 
 			Direction direction = Direction.UNSET;
@@ -2276,6 +2275,10 @@ public class CreatorsPlugin extends Plugin {
 				if (tile == null)
 					return;
 
+				LocalPoint localPoint = tile.getLocalLocation();
+				if (localPoint == null)
+					return;
+
 				Program program = selectedCharacter.getProgram();
 				boolean isInScene = isInScene(selectedCharacter);
 
@@ -2288,7 +2291,17 @@ public class CreatorsPlugin extends Plugin {
 						setLocation(selectedCharacter, true, false, true, false);
 					}
 
-					steps = ArrayUtils.add(steps, tile.getLocalLocation());
+					if (steps.length > 0)
+					{
+						Coordinate[] coordinates = pathFinder.getPath(steps[steps.length - 1], localPoint, program.getComp().getMovementType());
+						if (coordinates == null)
+						{
+							sendChatMessage("A path could not be found to this tile");
+							return;
+						}
+					}
+
+					steps = ArrayUtils.add(steps, localPoint);
 					program.getComp().setStepsLP(steps);
 					updateProgramPath(program, false, selectedCharacter.isInInstance());
 					return;
@@ -2296,7 +2309,7 @@ public class CreatorsPlugin extends Plugin {
 
 				if (!isInScene && client.isInInstancedRegion())
 				{
-					program.getComp().setStepsLP(new LocalPoint[]{tile.getLocalLocation()});
+					program.getComp().setStepsLP(new LocalPoint[]{localPoint});
 					program.getComp().setStepsWP(new WorldPoint[0]);
 					setLocation(selectedCharacter, true, false, true, false);
 					updateProgramPath(program, false, selectedCharacter.isInInstance());
@@ -2312,7 +2325,18 @@ public class CreatorsPlugin extends Plugin {
 						setLocation(selectedCharacter, true, false, true, false);
 					}
 
-					WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, tile.getLocalLocation());
+					WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
+
+					if (steps.length > 0)
+					{
+						Coordinate[] coordinates = pathFinder.getPath(steps[steps.length - 1], worldPoint, program.getComp().getMovementType());
+						if (coordinates == null)
+						{
+							sendChatMessage("A path could not be found to this tile");
+							return;
+						}
+					}
+
 					steps = ArrayUtils.add(steps, worldPoint);
 					program.getComp().setStepsWP(steps);
 					updateProgramPath(program, false, selectedCharacter.isInInstance());
@@ -2321,7 +2345,7 @@ public class CreatorsPlugin extends Plugin {
 
 				if (!isInScene && !client.isInInstancedRegion())
 				{
-					WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, tile.getLocalLocation());
+					WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
 					program.getComp().setStepsWP(new WorldPoint[]{worldPoint});
 					program.getComp().setStepsLP(new LocalPoint[0]);
 					setLocation(selectedCharacter, true, false, true, false);
