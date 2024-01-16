@@ -147,6 +147,7 @@ public class CreatorsPanel extends PluginPanel
         JButton saveButton = new JButton(new ImageIcon(SAVE));
         saveButton.setFocusable(false);
         saveButton.setToolTipText("Save this setup");
+        saveButton.setPreferredSize(new Dimension(30, 25));
         add(saveButton, c);
         saveButton.addActionListener(this::actionPerformed);
 
@@ -157,6 +158,7 @@ public class CreatorsPanel extends PluginPanel
         JButton switchAllButton = new JButton(new ImageIcon(SWITCH_ALL));
         switchAllButton.setFocusable(false);
         switchAllButton.setToolTipText("Send all Objects from this Side Panel to the currently open folder in the Manager");
+        switchAllButton.setPreferredSize(new Dimension(30, 25));
         add(switchAllButton, c);
         switchAllButton.addActionListener(e -> {
             ObjectPanel[] objectPanels = sideObjectPanels.toArray(new ObjectPanel[sideObjectPanels.size()]);
@@ -171,6 +173,7 @@ public class CreatorsPanel extends PluginPanel
         JButton loadCustomModelButton = new JButton(new ImageIcon(CUSTOM_MODEL));
         loadCustomModelButton.setFocusable(false);
         loadCustomModelButton.setToolTipText("Load a previously saved Custom Model");
+        loadCustomModelButton.setPreferredSize(new Dimension(30, 25));
         add(loadCustomModelButton, c);
         loadCustomModelButton.addActionListener(e -> openLoadCustomModelDialog());
 
@@ -179,6 +182,7 @@ public class CreatorsPanel extends PluginPanel
         JButton clearButton = new JButton(new ImageIcon(CLEAR));
         clearButton.setFocusable(false);
         clearButton.setToolTipText("Clears all Objects");
+        clearButton.setPreferredSize(new Dimension(30, 25));
         add(clearButton, c);
         clearButton.addActionListener(e -> clearSidePanels(true));
 
@@ -300,6 +304,7 @@ public class CreatorsPanel extends PluginPanel
         modelButton.setText(modelButtonText);
         modelButton.setText("Custom");
         modelButton.setToolTipText("Toggle between Custom Model and Model ID");
+        modelButton.setPreferredSize(new Dimension(90, 25));
         modelButton.setFocusable(false);
         objectPanel.add(modelButton, c);
 
@@ -308,6 +313,7 @@ public class CreatorsPanel extends PluginPanel
         spawnButton.setFont(FontManager.getRunescapeFont());
         spawnButton.setText("Spawn");
         spawnButton.setToolTipText("Toggle the NPC on or off");
+        spawnButton.setPreferredSize(new Dimension(90, 25));
         spawnButton.setFocusable(false);
         objectPanel.add(spawnButton, c);
 
@@ -316,6 +322,7 @@ public class CreatorsPanel extends PluginPanel
         relocateButton.setFont(FontManager.getRunescapeFont());
         relocateButton.setText("Relocate");
         relocateButton.setToolTipText("Set the object's location to the selected tile");
+        relocateButton.setPreferredSize(new Dimension(90, 25));
         relocateButton.setFocusable(false);
         objectPanel.add(relocateButton, c);
 
@@ -324,6 +331,7 @@ public class CreatorsPanel extends PluginPanel
         animationButton.setFont(FontManager.getRunescapeFont());
         animationButton.setText("Anim Off");
         animationButton.setToolTipText("Toggle the playing animation");
+        animationButton.setPreferredSize(new Dimension(90, 25));
         animationButton.setFocusable(false);
         objectPanel.add(animationButton, c);
 
@@ -744,8 +752,6 @@ public class CreatorsPanel extends PluginPanel
     {
         removePanel(objectPanel.getParentPanel(), objectPanel);
         allObjectPanels.remove(objectPanel);
-        SwingUtilities.invokeLater(() ->
-                programmerPanel.removeProgramPanel(objectPanel.getProgramPanel()));
 
         ArrayList<Character> characters = plugin.getCharacters();
         for (Character character : characters)

@@ -40,16 +40,17 @@ public class ProgrammerPanel extends JPanel
         this.clientThread = clientThread;
         this.plugin = plugin;
 
-        setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new GridBagLayout());
 
         c.fill = GridBagConstraints.BOTH;
+        c.insets = new Insets(4, 4, 4, 4);
         c.gridx = 0;
         c.gridy = 0;
         c.gridwidth = 3;
         JPanel headerPanel = new JPanel();
         headerPanel.setLayout(new GridBagLayout());
-        headerPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        headerPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         add(headerPanel, c);
 
         c.gridx = 0;
@@ -131,14 +132,15 @@ public class ProgrammerPanel extends JPanel
         c.gridwidth = 2;
         tabbedPane.addTab("Side Panel Objects", sideScrollPane);
         tabbedPane.addTab("Manager Objects", managerScrollPane);
+        tabbedPane.setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 1));
         add(tabbedPane, c);
 
-        managerProgramHolder.setBackground(Color.BLACK);
+        managerProgramHolder.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         managerProgramHolder.setBorder(new EmptyBorder(4, 4, 4, 4));
         managerProgramHolder.setLayout(new GridBagLayout());
         managerScrollPane.setViewportView(managerProgramHolder);
 
-        sideProgramHolder.setBackground(Color.BLACK);
+        sideProgramHolder.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         sideProgramHolder.setBorder(new EmptyBorder(4, 4, 4, 4));
         sideProgramHolder.setLayout(new GridBagLayout());
         sideScrollPane.setViewportView(sideProgramHolder);
@@ -167,7 +169,7 @@ public class ProgrammerPanel extends JPanel
         c.gridwidth = 2;
         nameLabel.setText(character.getName());
         nameLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        nameLabel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        nameLabel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         programPanel.add(nameLabel, c);
 
         c.gridx = 0;
@@ -278,12 +280,6 @@ public class ProgrammerPanel extends JPanel
                 });
         programPanel.add(colourButton, c);
 
-        repaint();
-        revalidate();
-    }
-
-    public void removeProgramPanel(JPanel panel)
-    {
         repaint();
         revalidate();
     }

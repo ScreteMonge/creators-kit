@@ -56,10 +56,10 @@ public class ModelOrganizer extends JPanel
         JScrollPane scrollPane = new JScrollPane();
         JPanel headerPanel = new JPanel();
         headerPanel.setLayout(new GridBagLayout());
-        headerPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        headerPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         scrollPane.setColumnHeaderView(headerPanel);
 
-        modelPanel.setBackground(Color.BLACK);
+        modelPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         modelPanel.setLayout(new GridLayout(0, 8, 8, 8));
         modelPanel.setBorder(new EmptyBorder(6, 4, 6, 4));
         scrollPane.setViewportView(modelPanel);

@@ -17,6 +17,7 @@ import java.util.Enumeration;
 import javax.inject.Inject;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.*;
@@ -44,13 +45,13 @@ public class FolderTree extends JScrollPane
     {
         this.plugin = plugin;
         this.managerPanel = managerPanel;
-
+        setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 1));
         setMinimumSize(new Dimension(250, 0));
         rootNode = new DefaultMutableTreeNode("Master Folder                                           ");
         treeModel = new CreatorTreeModel(rootNode, plugin);
         tree = new JTree(treeModel);
         tree.setBorder(new EmptyBorder(new Insets(5, 5, 5, 5)));
-        tree.setBackground(Color.BLACK);
+        tree.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         tree.putClientProperty("JTree.lineStyle", "Angled");
         tree.setEditable(true);
         tree.setRowHeight(20);
@@ -77,7 +78,7 @@ public class FolderTree extends JScrollPane
     {
         JPanel folderHeader = new JPanel();
         folderHeader.setLayout(new GridBagLayout());
-        folderHeader.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        folderHeader.setBackground(ColorScheme.DARK_GRAY_COLOR);
 
         c.fill = GridBagConstraints.BOTH;
         c.gridx = 0;

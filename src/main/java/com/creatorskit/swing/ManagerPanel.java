@@ -14,6 +14,7 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 import javax.swing.tree.DefaultMutableTreeNode;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -39,7 +40,7 @@ public class ManagerPanel extends JPanel
         this.client = client;
         this.folderTree = new FolderTree(this, plugin);
 
-        setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new GridBagLayout());
 
         c.fill = GridBagConstraints.BOTH;
@@ -94,10 +95,11 @@ public class ManagerPanel extends JPanel
         c.gridwidth = 1;
         c.gridheight = 1;
         JScrollPane objectScrollPane = new JScrollPane();
+        objectScrollPane.setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 1));
         add(objectScrollPane, c);
 
         JPanel objectHeader = new JPanel();
-        objectHeader.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        objectHeader.setBackground(ColorScheme.DARK_GRAY_COLOR);
         objectHeader.setLayout(new GridBagLayout());
         objectScrollPane.setColumnHeaderView(objectHeader);
 
@@ -141,8 +143,7 @@ public class ManagerPanel extends JPanel
         });
         objectHeader.add(switchPanelsButton, c);
 
-        objectHolder.setBackground(Color.BLACK);
-        objectHolder.setBorder(new EmptyBorder(4, 4, 4, 4));
+        objectHolder.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         objectHolder.setLayout(new GridBagLayout());
         objectScrollPane.setViewportView(objectHolder);
 

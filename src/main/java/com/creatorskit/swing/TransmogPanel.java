@@ -63,7 +63,7 @@ public class TransmogPanel extends JPanel
         this.clientThread = clientThread;
         this.plugin = plugin;
 
-        setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new BorderLayout());
 
         JScrollPane scrollPane = new JScrollPane();
@@ -71,7 +71,7 @@ public class TransmogPanel extends JPanel
 
         JPanel rowHeaderPanel = new JPanel();
         rowHeaderPanel.setLayout(new GridBagLayout());
-        rowHeaderPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        rowHeaderPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         scrollPane.setRowHeaderView(rowHeaderPanel);
 
         c.fill = GridBagConstraints.BOTH;
@@ -279,7 +279,7 @@ public class TransmogPanel extends JPanel
         rowHeaderPanel.add(addButton, c);
 
         JPanel columnHeaderPanel = new JPanel();
-        columnHeaderPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        columnHeaderPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         scrollPane.setColumnHeaderView(columnHeaderPanel);
 
         JButton saveButton = new JButton("Save");
@@ -307,7 +307,7 @@ public class TransmogPanel extends JPanel
         });
 
         scrollPane.setViewportView(animationSwapsPanel);
-        animationSwapsPanel.setBackground(Color.BLACK);
+        animationSwapsPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         animationSwapsPanel.setLayout(new GridLayout(0, 8, 8, 8));
         animationSwapsPanel.setBorder(new EmptyBorder(4, 6, 4, 6));
         revalidate();

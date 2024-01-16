@@ -117,12 +117,12 @@ public class ModelAnvil extends JPanel
 
         scrollPane.setViewportView(complexMode);
         complexMode.setLayout(new GridLayout(0, COMPLEX_GRID_COLUMNS, 8, 8));
-        complexMode.setBackground(Color.BLACK);
+        complexMode.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         complexMode.setBorder(new LineBorder(ColorScheme.DARK_GRAY_COLOR, 8));
         tabbedPane.addTab("Anvil", scrollPane);
 
         JPanel headerPanel = new JPanel();
-        headerPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        headerPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         scrollPane.setColumnHeaderView(headerPanel);
 
         JButton addButton = new JButton("Add");
@@ -183,7 +183,7 @@ public class ModelAnvil extends JPanel
         JPanel cacheSearcherPanel = new JPanel();
         cacheSearcherPanel.setLayout(new GridLayout(0, 1, 4, 4));
         cacheSearcherPanel.setBorder(new EmptyBorder(4, 20, 4, 20));
-        cacheSearcherPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        cacheSearcherPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         sidePanel.add(cacheSearcherPanel, BorderLayout.PAGE_START);
 
         JPanel groupPanel = new GroupPanel(client, plugin, clientThread);
@@ -289,28 +289,24 @@ public class ModelAnvil extends JPanel
 
         JButton arrowUpButton = new JButton(new ImageIcon(ARROW_UP));
         arrowUpButton.setFocusable(false);
-        arrowUpButton.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
         arrowUpButton.setToolTipText("Move panel up");
         arrowUpButton.addActionListener(e -> setPanelIndex(complexModePanel, -COMPLEX_GRID_COLUMNS));
         arrowPanel.add(arrowUpButton, BorderLayout.PAGE_START);
 
         JButton arrowLeftButton = new JButton(new ImageIcon(ARROW_LEFT));
         arrowLeftButton.setFocusable(false);
-        arrowLeftButton.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
         arrowLeftButton.setToolTipText("Move panel left");
         arrowLeftButton.addActionListener(e -> setPanelIndex(complexModePanel, -1));
         arrowPanel.add(arrowLeftButton, BorderLayout.LINE_START);
 
         JButton arrowRightButton = new JButton(new ImageIcon(ARROW_RIGHT));
         arrowRightButton.setFocusable(false);
-        arrowRightButton.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
         arrowRightButton.setToolTipText("Move panel right");
         arrowRightButton.addActionListener(e -> setPanelIndex(complexModePanel, 1));
         arrowPanel.add(arrowRightButton, BorderLayout.LINE_END);
 
         JButton arrowDownButton = new JButton(new ImageIcon(ARROW_DOWN));
         arrowDownButton.setFocusable(false);
-        arrowDownButton.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
         arrowDownButton.setToolTipText("Move panel up");
         arrowDownButton.addActionListener(e -> setPanelIndex(complexModePanel, COMPLEX_GRID_COLUMNS));
         arrowPanel.add(arrowDownButton, BorderLayout.PAGE_END);
@@ -486,7 +482,7 @@ public class ModelAnvil extends JPanel
         c.gridy = 2;
         c.gridwidth = 2;
         JPanel rotatePanel = new JPanel();
-        rotatePanel.setBackground(Color.BLACK);
+        rotatePanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         rotatePanel.setLayout(new GridLayout(3, 0));
         complexModePanel.add(rotatePanel, c);
 

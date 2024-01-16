@@ -41,7 +41,7 @@ public class GroupPanel extends JPanel
         this.plugin = plugin;
         this.clientThread = clientThread;
 
-        setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new GridBagLayout());
 
         c.fill = GridBagConstraints.BOTH;
@@ -99,7 +99,7 @@ public class GroupPanel extends JPanel
         JPanel adjustPanel = new JPanel();
         adjustPanel.setLayout(new GridBagLayout());
         adjustPanel.setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1));
-        adjustPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        adjustPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
 
         JTextField colourNewField = new JTextField();
         JTextField colourOldField = new JTextField();
@@ -291,7 +291,7 @@ public class GroupPanel extends JPanel
         c.gridy = 8;
         c.gridwidth = 2;
         JPanel rotatePanel = new JPanel();
-        rotatePanel.setBackground(Color.BLACK);
+        rotatePanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         adjustPanel.add(rotatePanel, c);
 
         rotatePanel.add(rotateBox);
@@ -310,7 +310,7 @@ public class GroupPanel extends JPanel
         c.gridy = 9;
         c.gridwidth = 2;
         JPanel invertPanel = new JPanel();
-        invertPanel.setBackground(Color.BLACK);
+        invertPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         adjustPanel.add(invertPanel, c);
 
         invertPanel.add(invertButton);
@@ -463,7 +463,7 @@ public class GroupPanel extends JPanel
         JPanel setPanel = new JPanel();
         setPanel.setLayout(new GridBagLayout());
         setPanel.setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1));
-        setPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        setPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
 
         JTextField colourNewField = new JTextField();
         JTextField colourOldField = new JTextField();
@@ -664,7 +664,7 @@ public class GroupPanel extends JPanel
         c.gridy = 8;
         c.gridwidth = 2;
         JPanel rotatePanel = new JPanel();
-        rotatePanel.setBackground(Color.BLACK);
+        rotatePanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         setPanel.add(rotatePanel, c);
 
         rotatePanel.add(rotateBox);
@@ -684,7 +684,7 @@ public class GroupPanel extends JPanel
         c.gridy = 9;
         c.gridwidth = 2;
         JPanel invertPanel = new JPanel();
-        invertPanel.setBackground(Color.BLACK);
+        invertPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         setPanel.add(invertPanel, c);
 
         invertPanel.add(invertButton);
@@ -814,7 +814,7 @@ public class GroupPanel extends JPanel
     private JPanel createXYZPanel()
     {
         JPanel xyzPanel = new JPanel();
-        xyzPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        xyzPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         xyzPanel.setLayout(new GridLayout(3, 0));
 
         JLabel xLabel = new JLabel("x:");
