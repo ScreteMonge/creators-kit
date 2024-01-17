@@ -115,6 +115,7 @@ public class ModelAnvil extends JPanel
         tabbedPane.setBorder(new LineBorder(ColorScheme.LIGHT_GRAY_COLOR, 1));
         add(tabbedPane, c);
 
+        scrollPane.setBackground(ColorScheme.DARK_GRAY_COLOR);
         scrollPane.setViewportView(complexMode);
         complexMode.setLayout(new GridLayout(0, COMPLEX_GRID_COLUMNS, 8, 8));
         complexMode.setBackground(ColorScheme.DARKER_GRAY_COLOR);
@@ -376,6 +377,7 @@ public class ModelAnvil extends JPanel
         JButton duplicateButton = new JButton(new ImageIcon(DUPLICATE));
         duplicateButton.setFocusable(false);
         duplicateButton.setToolTipText("Duplicate panel");
+        duplicateButton.setPreferredSize(new Dimension(30, 25));
         complexModePanel.add(duplicateButton, c);
 
         c.gridx = 9;
@@ -384,6 +386,7 @@ public class ModelAnvil extends JPanel
         JButton removeButton = new JButton(new ImageIcon(CLOSE));
         removeButton.setFocusable(false);
         removeButton.setToolTipText("Remove panel");
+        removeButton.setPreferredSize(new Dimension(30, 25));
         complexModePanel.add(removeButton, c);
 
         c.gridx = 2;
@@ -686,12 +689,11 @@ public class ModelAnvil extends JPanel
         c.gridx = 8;
         c.gridy = 3;
         c.gridwidth = 1;
-        checkInvertFaces.setText("Inv");
+        checkInvertFaces.setText("Invert");
         checkInvertFaces.setToolTipText("Inverts all faces. Should be used with scaling the x or y dimensions in the negative direction");
         checkInvertFaces.setSelected(invertFaces);
         checkInvertFaces.setHorizontalAlignment(SwingConstants.LEFT);
         checkInvertFaces.setFocusable(false);
-        checkInvertFaces.setPreferredSize(BUTTON_DIMENSION);
         complexModePanel.add(checkInvertFaces, c);
 
         duplicateButton.addActionListener(e ->

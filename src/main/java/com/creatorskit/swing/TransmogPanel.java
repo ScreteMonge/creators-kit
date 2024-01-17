@@ -307,6 +307,7 @@ public class TransmogPanel extends JPanel
         });
 
         scrollPane.setViewportView(animationSwapsPanel);
+        scrollPane.setBackground(ColorScheme.DARK_GRAY_COLOR);
         animationSwapsPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         animationSwapsPanel.setLayout(new GridLayout(0, 8, 8, 8));
         animationSwapsPanel.setBorder(new EmptyBorder(4, 6, 4, 6));
