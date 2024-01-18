@@ -13,7 +13,6 @@ import org.apache.commons.lang3.ArrayUtils;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.tree.DefaultMutableTreeNode;
 import java.awt.*;
@@ -82,18 +81,9 @@ public class ManagerPanel extends JPanel
         c.gridx = 1;
         c.gridy = 2;
         c.weightx = 0.8;
-        c.weighty = 0;
-        c.gridwidth = 1;
-        c.gridheight = 1;
-        JLabel emptyLabel = new JLabel();
-        add(emptyLabel, c);
-
-        c.gridx = 1;
-        c.gridy = 3;
-        c.weightx = 0.8;
         c.weighty = 1;
         c.gridwidth = 1;
-        c.gridheight = 1;
+        c.gridheight = 2;
         JScrollPane objectScrollPane = new JScrollPane();
         objectScrollPane.setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 1));
         add(objectScrollPane, c);

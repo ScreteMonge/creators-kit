@@ -88,6 +88,8 @@ public class FolderTree extends JScrollPane
         c.weighty = 0;
         JLabel folderLabel = new JLabel("Folders");
         folderLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        folderLabel.setVerticalAlignment(SwingConstants.CENTER);
+        folderLabel.setPreferredSize(new Dimension(50, 25));
         folderLabel.setFont(FontManager.getRunescapeBoldFont());
         folderHeader.add(folderLabel, c);
 
@@ -96,14 +98,15 @@ public class FolderTree extends JScrollPane
         c.gridy = 1;
         JButton addFolderButton = new JButton(new ImageIcon(ADD));
         addFolderButton.setToolTipText("Add a new Folder to the currently selected Folder");
-        addFolderButton.addActionListener(e ->
-                addNode("New Folder"));
+        addFolderButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        addFolderButton.addActionListener(e -> addNode("New Folder"));
         folderHeader.add(addFolderButton, c);
 
         c.gridx = 1;
         c.gridy = 1;
         JButton removeFolderButton = new JButton(new ImageIcon(CLOSE));
         removeFolderButton.setToolTipText("Remove the currently selected Object or Folder and all children");
+        removeFolderButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
         removeFolderButton.addActionListener(e ->
         {
             TreePath[] treePaths = tree.getSelectionPaths();
@@ -118,6 +121,7 @@ public class FolderTree extends JScrollPane
         c.gridy = 1;
         JButton clearFolderButton = new JButton(new ImageIcon(CLEAR));
         clearFolderButton.setToolTipText("Remove all Folders and all Objects in them");
+        clearFolderButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
         clearFolderButton.addActionListener(e -> removeAllNodes());
         folderHeader.add(clearFolderButton, c);
 
