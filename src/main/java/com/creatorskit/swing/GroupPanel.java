@@ -101,8 +101,6 @@ public class GroupPanel extends JPanel
         adjustPanel.setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1));
         adjustPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
 
-        JTextField colourNewField = new JTextField();
-        JTextField colourOldField = new JTextField();
         JSpinner xTileSpinner = new JSpinner();
         JSpinner yTileSpinner = new JSpinner();
         JSpinner zTileSpinner = new JSpinner();
@@ -172,7 +170,7 @@ public class GroupPanel extends JPanel
         c.gridwidth = 1;
         c.weightx = 1;
         JPanel tilePanel = new JPanel();
-        tilePanel.setLayout(new GridLayout(3, 0));
+        tilePanel.setLayout(new GridLayout(3, 0, 0, 1));
         adjustPanel.add(tilePanel, c);
 
         xTileSpinner.setToolTipText("E/W");
@@ -214,7 +212,7 @@ public class GroupPanel extends JPanel
         c.gridwidth = 1;
         c.weightx = 1;
         JPanel translatePanel = new JPanel();
-        translatePanel.setLayout(new GridLayout(3, 0));
+        translatePanel.setLayout(new GridLayout(3, 0, 0, 1));
         adjustPanel.add(translatePanel, c);
 
         xSpinner.setToolTipText("E/W");
@@ -256,7 +254,7 @@ public class GroupPanel extends JPanel
         c.gridwidth = 2;
         c.weightx = 0;
         JPanel scalePanel = new JPanel();
-        scalePanel.setLayout(new GridLayout(3, 0));
+        scalePanel.setLayout(new GridLayout(3, 0, 0, 1));
         adjustPanel.add(scalePanel, c);
 
         xScaleSpinner.setPreferredSize(SPINNER_DIMENSION);
@@ -290,11 +288,7 @@ public class GroupPanel extends JPanel
         c.gridx = 2;
         c.gridy = 8;
         c.gridwidth = 2;
-        JPanel rotatePanel = new JPanel();
-        rotatePanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        adjustPanel.add(rotatePanel, c);
-
-        rotatePanel.add(rotateBox);
+        adjustPanel.add(rotateBox, c);
         rotateBox.addItem("Rot");
         rotateBox.addItem("90");
         rotateBox.addItem("180");
@@ -309,11 +303,7 @@ public class GroupPanel extends JPanel
         c.gridx = 2;
         c.gridy = 9;
         c.gridwidth = 2;
-        JPanel invertPanel = new JPanel();
-        invertPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        adjustPanel.add(invertPanel, c);
-
-        invertPanel.add(invertButton);
+        adjustPanel.add(invertButton, c);
         invertButton.addActionListener(e ->
         {
             adjustValueInvert();
@@ -536,7 +526,7 @@ public class GroupPanel extends JPanel
         c.gridwidth = 1;
         c.weightx = 0;
         JPanel tilePanel = new JPanel();
-        tilePanel.setLayout(new GridLayout(3, 0));
+        tilePanel.setLayout(new GridLayout(3, 0, 0, 1));
         setPanel.add(tilePanel, c);
 
         xTileSpinner.setToolTipText("E/W");
@@ -581,7 +571,7 @@ public class GroupPanel extends JPanel
         c.gridwidth = 1;
         c.weightx = 1;
         JPanel translatePanel = new JPanel();
-        translatePanel.setLayout(new GridLayout(3, 0));
+        translatePanel.setLayout(new GridLayout(3, 0, 0, 1));
         setPanel.add(translatePanel, c);
 
         xSpinner.setToolTipText("E/W");
@@ -626,7 +616,7 @@ public class GroupPanel extends JPanel
         c.gridwidth = 1;
         c.weightx = 0;
         JPanel scalePanel = new JPanel();
-        scalePanel.setLayout(new GridLayout(3, 0));
+        scalePanel.setLayout(new GridLayout(3, 0, 0, 1));
         setPanel.add(scalePanel, c);
 
         xScaleSpinner.setPreferredSize(SPINNER_DIMENSION);
@@ -663,11 +653,7 @@ public class GroupPanel extends JPanel
         c.gridx = 2;
         c.gridy = 8;
         c.gridwidth = 2;
-        JPanel rotatePanel = new JPanel();
-        rotatePanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        setPanel.add(rotatePanel, c);
-
-        rotatePanel.add(rotateBox);
+        setPanel.add(rotateBox, c);
         rotateBox.addItem("Rot");
         rotateBox.addItem("0");
         rotateBox.addItem("90");
@@ -683,11 +669,7 @@ public class GroupPanel extends JPanel
         c.gridx = 2;
         c.gridy = 9;
         c.gridwidth = 2;
-        JPanel invertPanel = new JPanel();
-        invertPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        setPanel.add(invertPanel, c);
-
-        invertPanel.add(invertButton);
+        setPanel.add(invertButton, c);
         invertButton.addActionListener(e ->
         {
             setValueInvert(invertButton);

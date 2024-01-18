@@ -81,32 +81,31 @@ public class ModelOrganizer extends JPanel
         c.weightx = 0.1;
         c.gridx = 2;
         c.gridy = 0;
-        c.gridheight = 1;
+        c.gridheight = 4;
+        JPanel cacheSearcherPanel = new JPanel();
+        cacheSearcherPanel.setLayout(new GridLayout(0, 1, 4, 4));
+        cacheSearcherPanel.setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 1));
+        headerPanel.add(cacheSearcherPanel, c);
+
         JLabel searcherLabel = new JLabel("Cache Searcher");
         searcherLabel.setHorizontalAlignment(SwingConstants.CENTER);
         searcherLabel.setFont(FontManager.getRunescapeBoldFont());
-        headerPanel.add(searcherLabel, c);
+        cacheSearcherPanel.add(searcherLabel);
 
-        c.gridx = 2;
-        c.gridy = 1;
         JSpinner idSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 99999, 1));
         idSpinner.setToolTipText("Choose the NPC or Object Id to find");
-        headerPanel.add(idSpinner, c);
+        cacheSearcherPanel.add(idSpinner);
 
-        c.gridx = 2;
-        c.gridy = 2;
         JComboBox<CustomModelType> modelTypeComboBox = new JComboBox<>();
         modelTypeComboBox.addItem(CustomModelType.CACHE_NPC);
         modelTypeComboBox.addItem(CustomModelType.CACHE_OBJECT);
         modelTypeComboBox.setFocusable(false);
         modelTypeComboBox.setToolTipText("Pick which part of the cache to search");
-        headerPanel.add(modelTypeComboBox, c);
+        cacheSearcherPanel.add(modelTypeComboBox);
 
-        c.gridx = 2;
-        c.gridy = 3;
         JButton addCustomModelButton = new JButton("Add Custom Model");
         addCustomModelButton.setToolTipText("Add the chosen NPC or Object as a Custom Model");
-        headerPanel.add(addCustomModelButton, c);
+        cacheSearcherPanel.add(addCustomModelButton);
         addCustomModelButton.addActionListener(e ->
         {
             CustomModelType type = (CustomModelType) modelTypeComboBox.getSelectedItem();

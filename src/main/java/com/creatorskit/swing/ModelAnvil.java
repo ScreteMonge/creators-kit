@@ -179,13 +179,14 @@ public class ModelAnvil extends JPanel
 
         JPanel sidePanel = new JPanel();
         sidePanel.setLayout(new BorderLayout());
+        sidePanel.setBorder(new EmptyBorder(0, 7, 0, 0));
         scrollPane.setRowHeaderView(sidePanel);
 
         JPanel cacheSearcherPanel = new JPanel();
         cacheSearcherPanel.setLayout(new GridLayout(0, 1, 4, 4));
-        cacheSearcherPanel.setBorder(new EmptyBorder(4, 20, 4, 20));
+        cacheSearcherPanel.setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 1));
         cacheSearcherPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        sidePanel.add(cacheSearcherPanel, BorderLayout.PAGE_START);
+        sidePanel.add(cacheSearcherPanel, BorderLayout.NORTH);
 
         JPanel groupPanel = new GroupPanel(client, plugin, clientThread);
         sidePanel.add(groupPanel, BorderLayout.CENTER);
