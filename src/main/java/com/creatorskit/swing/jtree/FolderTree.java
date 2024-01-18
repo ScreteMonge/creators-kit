@@ -185,34 +185,38 @@ public class FolderTree extends JScrollPane
     {
         ArrayList<DefaultMutableTreeNode> panelsToRemove = new ArrayList<>();
         ArrayList<DefaultMutableTreeNode> foldersToRemove = new ArrayList<>();
-        boolean folderSelected = false;
 
         for (TreePath path : paths)
         {
             DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
             if (node.getUserObject() instanceof ObjectPanel)
-                panelsToRemove.add(node);
-
-            if (!folderSelected && node.getUserObject() instanceof String)
             {
-                folderSelected = true;
-                int result = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete all the selected Folders and their Objects?");
-                if (result != JOptionPane.YES_OPTION)
-                    return;
+                panelsToRemove.add(node);
+                continue;
             }
 
             foldersToRemove.add(node);
             getNodeChildren(node, panelsToRemove, foldersToRemove);
         }
 
+        if (foldersToRemove.isEmpty() && panelsToRemove.isEmpty())
+            return;
+
+        if (!foldersToRemove.isEmpty() && !panelsToRemove.isEmpty())
+        {
+            int result = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete all the selected Folders and their Objects?");
+            if (result != JOptionPane.YES_OPTION)
+                return;
+        }
+
         for (DefaultMutableTreeNode node : panelsToRemove)
             plugin.getCreatorsPanel().onDeleteButtonPressed((ObjectPanel) node.getUserObject());
 
         for (DefaultMutableTreeNode node : foldersToRemove)
-            removeNode(node.getUserObject());
+            removeNode(node);
     }
 
-    public void removeNode(Object child)
+    public void removeNode(ObjectPanel child)
     {
         DefaultMutableTreeNode node = findNode(child);
         if (node == null)
@@ -223,49 +227,30 @@ public class FolderTree extends JScrollPane
             treeModel.removeNodeFromParent(node);
     }
 
-    public void getNodeChildren(DefaultMutableTreeNode parent, ArrayList<DefaultMutableTreeNode> panelsToRemove, ArrayList<DefaultMutableTreeNode> nodesToRemove)
+    public void removeNode(DefaultMutableTreeNode folderNode)
+    {
+        MutableTreeNode parent = (MutableTreeNode) folderNode.getParent();
+        if (parent != null)
+            treeModel.removeNodeFromParent(folderNode);
+    }
+
+    public void getNodeChildren(DefaultMutableTreeNode parent, ArrayList<DefaultMutableTreeNode> panelsToRemove, ArrayList<DefaultMutableTreeNode> foldersToRemove)
     {
         Enumeration<TreeNode> children = parent.children();
         while (children.hasMoreElements())
         {
             DefaultMutableTreeNode node = (DefaultMutableTreeNode) children.nextElement();
             if (node.getUserObject() instanceof ObjectPanel)
-                panelsToRemove.add(node);
-
-            nodesToRemove.add(node);
-
-            if (!node.isLeaf())
-                getNodeChildren(node, panelsToRemove, nodesToRemove);
-        }
-    }
-
-    /*
-    public FolderNodeSave[] getFolders()
-    {
-        ArrayList<FolderNodeSave> folderNodeSaves = new ArrayList<>();
-        FolderNodeSave folderNodeSave = new FolderNodeSave(0, "Master Panel", null);
-        getFolderChildren(folderNodeSaves, folderNodeSave);
-        return folderNodeSaves.toArray(new FolderNodeSave[folderNodeSaves.size()]);
-    }
-
-    public void getFolderChildren(ArrayList<FolderNodeSave> folderNodeSaves, FolderNodeSave parent)
-    {
-        Enumeration<TreeNode> children = rootNode.children();
-        while (children.hasMoreElements())
-        {
-            DefaultMutableTreeNode node = (DefaultMutableTreeNode) children.nextElement();
-            if (node.getUserObject() instanceof String)
             {
-                FolderNodeSave folderNodeSave = new FolderNodeSave(folderNodeSaves.size(), (String) node.getUserObject(), parent);
-                folderNodeSaves.add(folderNodeSave);
-
-                if (!node.isLeaf())
-                    getFolderChildren(folderNodeSaves, folderNodeSave);
+                panelsToRemove.add(node);
+                continue;
             }
+
+            foldersToRemove.add(node);
+            if (!node.isLeaf())
+                getNodeChildren(node, panelsToRemove, foldersToRemove);
         }
     }
-
-     */
 
     public void getObjectPanelChildren(DefaultMutableTreeNode parent, ArrayList<ObjectPanel> objectPanels)
     {

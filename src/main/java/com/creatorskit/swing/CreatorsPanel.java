@@ -786,6 +786,9 @@ public class CreatorsPanel extends PluginPanel
 
     public void clearSidePanels(boolean warning)
     {
+        if (plugin.getCharacters().size() == 0)
+            return;
+
         if (warning)
         {
             int result = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete all Objects from the Side Panel?");
