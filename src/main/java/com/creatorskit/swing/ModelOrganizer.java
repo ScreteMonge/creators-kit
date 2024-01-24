@@ -3,6 +3,7 @@ package com.creatorskit.swing;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
+import com.creatorskit.models.ModelImporter;
 import com.creatorskit.models.*;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
@@ -23,7 +24,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 
 @Slf4j
@@ -32,6 +32,7 @@ public class ModelOrganizer extends JPanel
     private final Client client;
     private final CreatorsPlugin plugin;
     private final ClientThread clientThread;
+    private final ModelImporter modelImporter;
     private final CreatorsConfig config;
     private final BufferedImage CLEAR = ImageUtil.loadImageResource(getClass(), "/Clear.png");
     private final BufferedImage ANVIL = ImageUtil.loadImageResource(getClass(), "/Anvil.png");
@@ -43,11 +44,12 @@ public class ModelOrganizer extends JPanel
     public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
 
     @Inject
-    public ModelOrganizer(Client client, CreatorsPlugin plugin, ClientThread clientThread, CreatorsConfig config)
+    public ModelOrganizer(Client client, CreatorsPlugin plugin, ClientThread clientThread, ModelImporter modelImporter, CreatorsConfig config)
     {
         this.client = client;
         this.plugin = plugin;
         this.clientThread = clientThread;
+        this.modelImporter = modelImporter;
         this.config = config;
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -118,12 +120,19 @@ public class ModelOrganizer extends JPanel
 
         c.gridx = 3;
         c.gridy = 0;
-        c.gridheight = 2;
-        JButton loadButton = new JButton("Load Custom Model");
-        loadButton.setToolTipText("Loads a previously forged and saved Custom Model");
-        headerPanel.add(loadButton, c);
-        loadButton.addActionListener(e ->
-                openLoadDialog());
+        c.gridheight = 1;
+        JButton loadCustomButton = new JButton("Load Custom Model");
+        loadCustomButton.setToolTipText("Loads a previously forged and saved Custom Model");
+        headerPanel.add(loadCustomButton, c);
+        loadCustomButton.addActionListener(e -> openLoadDialog());
+
+        c.gridx = 3;
+        c.gridy = 1;
+        c.gridheight = 1;
+        JButton loadBlenderButton = new JButton("Load Blender Model");
+        loadBlenderButton.setToolTipText("Loads a model exported from Blender");
+        headerPanel.add(loadBlenderButton, c);
+        loadBlenderButton.addActionListener(e -> modelImporter.openLoadDialog());
 
         c.gridx = 3;
         c.gridy = 2;

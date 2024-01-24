@@ -818,7 +818,7 @@ public class ModelAnvil extends JPanel
                 return;
             }
 
-            CustomModelComp comp = new CustomModelComp(plugin.getStoredModels().size(), CustomModelType.FORGED, -1, null, null, detailedModels, lightingStyle, setPriority, nameField.getText());
+            CustomModelComp comp = new CustomModelComp(plugin.getStoredModels().size(), CustomModelType.FORGED, -1, null, null, detailedModels, null, lightingStyle, setPriority, nameField.getText());
             CustomModel customModel = new CustomModel(model, comp);
             plugin.addCustomModel(customModel, forgeAndSet);
         });
@@ -932,7 +932,7 @@ public class ModelAnvil extends JPanel
             FileWriter writer = new FileWriter(file, false);
 
             DetailedModel[] detailedModels = panelsToDetailedModels();
-            CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, lightingStyle, priority, name);
+            CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, null, lightingStyle, priority, name);
             String string = plugin.getGson().toJson(comp);
             writer.write(string);
             writer.close();

@@ -9,7 +9,8 @@ public enum CustomModelType
     CACHE_NPC("NPC"),
     CACHE_OBJECT("Object"),
     CACHE_PLAYER("Player"),
-    CACHE_GROUND_ITEM("Ground Item")
+    CACHE_GROUND_ITEM("Ground Item"),
+    BLENDER("Blender")
 
     ;
 

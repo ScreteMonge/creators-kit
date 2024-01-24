@@ -6,7 +6,6 @@ import com.creatorskit.saves.TransmogLoadOption;
 import com.creatorskit.saves.TransmogSave;
 import com.creatorskit.swing.*;
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.inject.Provides;
 import javax.inject.Inject;
 import javax.swing.*;
@@ -173,7 +172,6 @@ public class CreatorsPlugin extends Plugin {
 				autoSetupPathFound = false;
 			}
 		}
-
 
 		if (config.autoTransmog())
 		{
@@ -793,8 +791,8 @@ public class CreatorsPlugin extends Plugin {
 		{
 			if (tile.getLocalLocation().equals(localPlayer.getLocalLocation()))
 			{
-				modelGetter.addPlayerGetter(-1, localPlayer.getName(), "Store", localPlayer, false, false);
-				modelGetter.addPlayerGetter(-2, localPlayer.getName(), "Anvil", localPlayer, true, false);
+				modelGetter.addPlayerGetter(-1, "Local Player", "Store", localPlayer, false, false);
+				modelGetter.addPlayerGetter(-2, "Local Player", "Anvil", localPlayer, true, false);
 			}
 		}
 	}
@@ -1526,13 +1524,13 @@ public class CreatorsPlugin extends Plugin {
 				case CACHE_NPC:
 					modelStats = modelFinder.findModelsForNPC(id);
 					name = modelFinder.getLastFound();
-					comp = new CustomModelComp(0, CustomModelType.CACHE_NPC, id, modelStats, null, null, LightingStyle.ACTOR, false, name);
+					comp = new CustomModelComp(0, CustomModelType.CACHE_NPC, id, modelStats, null, null, null, LightingStyle.ACTOR, false, name);
 					break;
 				default:
 				case CACHE_OBJECT:
 					modelStats = modelFinder.findModelsForObject(id);
 					name = modelFinder.getLastFound();
-					comp = new CustomModelComp(0, CustomModelType.CACHE_OBJECT, id, modelStats, null, null, LightingStyle.DEFAULT, false, name);
+					comp = new CustomModelComp(0, CustomModelType.CACHE_OBJECT, id, modelStats, null, null, null, LightingStyle.DEFAULT, false, name);
 			}
 
 			clientThread.invokeLater(() ->
@@ -1576,6 +1574,12 @@ public class CreatorsPlugin extends Plugin {
 
 	public void customModelToAnvil(CustomModel customModel)
 	{
+		if (customModel.getComp().getType() == CustomModelType.BLENDER)
+		{
+			sendChatMessage("Blender models cannot currently be used in the Anvil.");
+			return;
+		}
+
 		SwingUtilities.invokeLater(() ->
 		{
 			CustomModelComp comp = customModel.getComp();
@@ -1644,7 +1648,7 @@ public class CreatorsPlugin extends Plugin {
 			});
 			reader.close();
 
-			CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, lightingStyle, priority, name);
+			CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, null, lightingStyle, priority, name);
 			try
 			{
 				file.delete();
@@ -1695,7 +1699,7 @@ public class CreatorsPlugin extends Plugin {
 		{
 			Reader reader = Files.newBufferedReader(file.toPath());
 			DetailedModel[] detailedModels = gson.fromJson(reader, DetailedModel[].class);
-			CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, lightingStyle, priority, name);
+			CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, null, lightingStyle, priority, name);
 
 			clientThread.invokeLater(() -> {
 				Model model = createComplexModel(detailedModels, priority, lightingStyle);
@@ -1863,7 +1867,7 @@ public class CreatorsPlugin extends Plugin {
 				File newFile = new File(fileName + ".json");
 				FileWriter writer = new FileWriter(newFile, false);
 				DetailedModel[] detailedModels = (DetailedModel[]) list.toArray();
-				CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, lightingStyle, priority, customModelName);
+				CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, null, lightingStyle, priority, customModelName);
 				String string = gson.toJson(comp);
 				writer.write(string);
 				writer.close();

@@ -45,7 +45,7 @@ public class ModelGetter
                         clientThread.invokeLater(() ->
                         {
                             Model model = plugin.constructModelFromCache(modelStats, new int[0], false, true);
-                            CustomModelComp comp = new CustomModelComp(0, CustomModelType.CACHE_NPC, npc.getId(), modelStats, null, null, LightingStyle.ACTOR, false, npc.getName());
+                            CustomModelComp comp = new CustomModelComp(0, CustomModelType.CACHE_NPC, npc.getId(), modelStats, null, null, null, LightingStyle.ACTOR, false, npc.getName());
                             CustomModel customModel = new CustomModel(model, comp);
                             plugin.addCustomModel(customModel, false);
                             plugin.sendChatMessage("Model stored: " + npc.getName());
@@ -121,7 +121,7 @@ public class ModelGetter
                         clientThread.invokeLater(() ->
                         {
                             Model model = plugin.constructModelFromCache(modelStats, comp.getColors(), true, true);
-                            CustomModelComp composition = new CustomModelComp(0, CustomModelType.CACHE_PLAYER, -1, modelStats, comp.getColors(), null, LightingStyle.ACTOR, false, finalName);
+                            CustomModelComp composition = new CustomModelComp(0, CustomModelType.CACHE_PLAYER, -1, modelStats, comp.getColors(), null, null, LightingStyle.ACTOR, false, finalName);
                             CustomModel customModel = new CustomModel(model, composition);
                             plugin.addCustomModel(customModel, false);
                             plugin.sendChatMessage("Model stored: " + finalName);
@@ -147,7 +147,7 @@ public class ModelGetter
                     Thread thread = new Thread(() ->
                     {
                         ModelStats[] modelStats = modelFinder.findModelsForObject(objectId);
-                        CustomModelComp comp = new CustomModelComp(0, type, objectId, modelStats, null, null, LightingStyle.DEFAULT, false, name);
+                        CustomModelComp comp = new CustomModelComp(0, type, objectId, modelStats, null, null, null, LightingStyle.DEFAULT, false, name);
                         CustomModel customModel = new CustomModel(model, comp);
                         plugin.addCustomModel(customModel, false);
                         plugin.sendChatMessage("Model stored: " + name);
