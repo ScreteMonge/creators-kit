@@ -2,6 +2,7 @@ package com.creatorskit.models;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.Item;
 import net.runelite.client.util.Text;
 import okhttp3.*;
 
@@ -593,6 +594,142 @@ public class ModelFinder
         {
             log.debug("CountDownLatch failed to await at findModelsForObject");
         }
+
+        short[] rf = new short[recolourFrom.size()];
+        short[] rt = new short[recolourTo.size()];
+        for (int i = 0; i < recolourFrom.size(); i++)
+        {
+            rf[i] = recolourFrom.get(i);
+            rt[i] = recolourTo.get(i);
+        }
+
+        ModelStats[] modelStats = new ModelStats[modelIds.size()];
+        for (int i = 0; i < modelIds.size(); i++)
+            modelStats[i] = new ModelStats(modelIds.get(i), BodyPart.NA, rf, rt);
+
+        return modelStats;
+    }
+
+    public ModelStats[] findModelsForGroundItem(int itemId, CustomModelType modelType)
+    {
+        Pattern recolFrom = Pattern.compile("recol\\ds=.+");
+        Pattern recolTo = Pattern.compile("recol\\dd=.+");
+
+        ArrayList<Integer> modelIds = new ArrayList<>();
+        ArrayList<Short> recolourFrom = new ArrayList<>();
+        ArrayList<Short> recolourTo = new ArrayList<>();
+
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+        Request request = new Request.Builder()
+                .url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.obj")
+                .build();
+        Call call = httpClient.newCall(request);
+        call.enqueue(new Callback()
+        {
+            @Override
+            public void onFailure(Call call, IOException e)
+            {
+                log.debug("Failed to access URL: https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.obj");
+                countDownLatch.countDown();
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException
+            {
+                if (!response.isSuccessful() || response.body() == null)
+                    return;
+
+                InputStream inputStream = response.body().byteStream();
+                Scanner scanner = new Scanner(inputStream);
+                Pattern npcPattern = Pattern.compile("\\[.+_" + itemId + "]");
+
+                while (scanner.hasNextLine())
+                {
+                    String string = scanner.nextLine();
+                    Matcher match = npcPattern.matcher(string);
+                    if (match.matches())
+                    {
+                        lastFound = string;
+                        while (!string.isEmpty())
+                        {
+                            string = scanner.nextLine();
+                            String searchName;
+                            switch (modelType)
+                            {
+                                default:
+                                case CACHE_GROUND_ITEM:
+                                    searchName = "model";
+                                    break;
+                                case CACHE_MAN_WEAR:
+                                    searchName = "manwear";
+                                    break;
+                                case CACHE_WOMAN_WEAR:
+                                    searchName = "womanwear";
+                            }
+
+                            if (string.startsWith(searchName))
+                            {
+                                String[] split = string.split("_");
+                                if (split[split.length - 1].contains(","))
+                                {
+                                    String split2 = split[split.length - 1].split(",")[0];
+                                    modelIds.add(Integer.parseInt(split2));
+                                }
+                                else
+                                {
+                                    modelIds.add(Integer.parseInt(split[split.length - 1]));
+                                }
+                            }
+
+                            if (string.startsWith("name="))
+                            {
+                                lastFound = string.replaceAll("name=", "");
+                            }
+
+                            match = recolFrom.matcher(string);
+
+                            if (match.matches())
+                            {
+                                String[] split = string.split("=");
+                                int i = Integer.parseInt(split[1]);
+                                if (i > 32767)
+                                {
+                                    i -= 65536;
+                                }
+                                recolourFrom.add((short) i);
+                            }
+
+                            match = recolTo.matcher(string);
+
+                            if (match.matches())
+                            {
+                                String[] split = string.split("=");
+                                int i = Integer.parseInt(split[1]);
+                                if (i > 32767)
+                                {
+                                    i -= 65536;
+                                }
+                                recolourTo.add((short) i);
+                            }
+                        }
+                    }
+                }
+                countDownLatch.countDown();
+                response.body().close();
+            }
+        });
+
+        try
+        {
+            countDownLatch.await();
+        }
+        catch (Exception e)
+        {
+            log.debug("CountDownLatch failed to await at findModelsForGroundItem");
+        }
+
+        if (modelIds.isEmpty())
+            return null;
 
         short[] rf = new short[recolourFrom.size()];
         short[] rt = new short[recolourTo.size()];

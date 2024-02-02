@@ -95,18 +95,21 @@ public class ModelOrganizer extends JPanel
         cacheSearcherPanel.add(searcherLabel);
 
         JSpinner idSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 99999, 1));
-        idSpinner.setToolTipText("Choose the NPC or Object Id to find");
+        idSpinner.setToolTipText("Choose the NPC, Object, or Item Id to find all its associated models");
         cacheSearcherPanel.add(idSpinner);
 
         JComboBox<CustomModelType> modelTypeComboBox = new JComboBox<>();
         modelTypeComboBox.addItem(CustomModelType.CACHE_NPC);
         modelTypeComboBox.addItem(CustomModelType.CACHE_OBJECT);
+        modelTypeComboBox.addItem(CustomModelType.CACHE_GROUND_ITEM);
+        modelTypeComboBox.addItem(CustomModelType.CACHE_MAN_WEAR);
+        modelTypeComboBox.addItem(CustomModelType.CACHE_WOMAN_WEAR);
         modelTypeComboBox.setFocusable(false);
         modelTypeComboBox.setToolTipText("Pick which part of the cache to search");
         cacheSearcherPanel.add(modelTypeComboBox);
 
         JButton addCustomModelButton = new JButton("Add Custom Model");
-        addCustomModelButton.setToolTipText("Add the chosen NPC or Object as a Custom Model");
+        addCustomModelButton.setToolTipText("Add the chosen NPC, Object, or Item as a Custom Model");
         cacheSearcherPanel.add(addCustomModelButton);
         addCustomModelButton.addActionListener(e ->
         {

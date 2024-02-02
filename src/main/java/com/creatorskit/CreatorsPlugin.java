@@ -37,6 +37,7 @@ import net.runelite.client.util.ImageUtil;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.awt.*;
+import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.file.Files;
@@ -1503,6 +1504,28 @@ public class CreatorsPlugin extends Plugin {
 				case CACHE_OBJECT:
 					modelStats = modelFinder.findModelsForObject(id);
 					name = modelFinder.getLastFound();
+					break;
+				case CACHE_GROUND_ITEM:
+					modelStats = modelFinder.findModelsForGroundItem(id, CustomModelType.CACHE_GROUND_ITEM);
+					name = modelFinder.getLastFound();
+					break;
+				case CACHE_MAN_WEAR:
+					modelStats = modelFinder.findModelsForGroundItem(id, CustomModelType.CACHE_MAN_WEAR);
+					name = modelFinder.getLastFound();
+					break;
+				case CACHE_WOMAN_WEAR:
+					modelStats = modelFinder.findModelsForGroundItem(id, CustomModelType.CACHE_WOMAN_WEAR);
+					name = modelFinder.getLastFound();
+			}
+
+			if (modelStats == null)
+			{
+				String idType = type.toString();
+				if (type == CustomModelType.CACHE_MAN_WEAR || type == CustomModelType.CACHE_WOMAN_WEAR || type == CustomModelType.CACHE_GROUND_ITEM)
+					idType = "Item";
+
+				sendChatMessage("Could not find any associated Models for the given " + idType + " Id.");
+				return;
 			}
 
 			cacheToAnvil(modelStats, new int[0], false);
@@ -1531,6 +1554,31 @@ public class CreatorsPlugin extends Plugin {
 					modelStats = modelFinder.findModelsForObject(id);
 					name = modelFinder.getLastFound();
 					comp = new CustomModelComp(0, CustomModelType.CACHE_OBJECT, id, modelStats, null, null, null, LightingStyle.DEFAULT, false, name);
+					break;
+				case CACHE_GROUND_ITEM:
+					modelStats = modelFinder.findModelsForGroundItem(id, CustomModelType.CACHE_GROUND_ITEM);
+					name = modelFinder.getLastFound();
+					comp = new CustomModelComp(0, CustomModelType.CACHE_GROUND_ITEM, id, modelStats, null, null, null, LightingStyle.DEFAULT, false, name);
+					break;
+				case CACHE_MAN_WEAR:
+					modelStats = modelFinder.findModelsForGroundItem(id, CustomModelType.CACHE_MAN_WEAR);
+					name = modelFinder.getLastFound();
+					comp = new CustomModelComp(0, CustomModelType.CACHE_MAN_WEAR, id, modelStats, null, null, null, LightingStyle.DEFAULT, false, name);
+					break;
+				case CACHE_WOMAN_WEAR:
+					modelStats = modelFinder.findModelsForGroundItem(id, CustomModelType.CACHE_WOMAN_WEAR);
+					name = modelFinder.getLastFound();
+					comp = new CustomModelComp(0, CustomModelType.CACHE_WOMAN_WEAR, id, modelStats, null, null, null, LightingStyle.DEFAULT, false, name);
+			}
+
+			if (modelStats == null)
+			{
+				String idType = type.toString();
+				if (type == CustomModelType.CACHE_MAN_WEAR || type == CustomModelType.CACHE_WOMAN_WEAR || type == CustomModelType.CACHE_GROUND_ITEM)
+					idType = "Item";
+
+				sendChatMessage("Could not find any associated Models for the given " + idType + " Id.");
+				return;
 			}
 
 			clientThread.invokeLater(() ->
@@ -1604,6 +1652,8 @@ public class CreatorsPlugin extends Plugin {
 				case CACHE_NPC:
 				case CACHE_OBJECT:
 				case CACHE_GROUND_ITEM:
+				case CACHE_MAN_WEAR:
+				case CACHE_WOMAN_WEAR:
 					cacheToAnvil(comp.getModelStats(), comp.getKitRecolours(), false);
 					break;
 				case CACHE_PLAYER:
@@ -2165,7 +2215,7 @@ public class CreatorsPlugin extends Plugin {
 	private final HotkeyListener orbSpeedListener = new HotkeyListener(() -> config.setOrbSpeedHotkey())
 	{
 		@Override
-		public void hotkeyPressed()
+		public void hotkeyReleased()
 		{
 			SwingUtilities.invokeLater(() ->
 			{
@@ -2176,7 +2226,7 @@ public class CreatorsPlugin extends Plugin {
 					client.setOculusOrbNormalSpeed(value);
 					oculusOrbSpeed = value;
 				}
-				catch (Exception e)
+				catch (Exception f)
 				{
 					sendChatMessage("Invalid input; enter a number to set the Oculus Orb speed.");
 				}

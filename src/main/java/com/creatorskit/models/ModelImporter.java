@@ -58,24 +58,45 @@ public class ModelImporter
         if (option == JFileChooser.APPROVE_OPTION)
         {
             File selectedFile = fileChooser.getSelectedFile();
+            if (!selectedFile.exists())
+            {
+                selectedFile = new File(selectedFile.getPath() + ".json");
+                if (!selectedFile.exists())
+                {
+                    selectedFile = new File(selectedFile.getPath().replaceAll("/", "\\\\"));
+                    if (!selectedFile.exists())
+                    {
+                        selectedFile = new File(selectedFile.getPath().replaceAll("/", "\\\\") + ".json");
+                    }
+                }
+            }
+
+            if (!selectedFile.exists())
+            {
+                plugin.sendChatMessage("Failed to find file.");
+                return;
+            }
+
             String name = selectedFile.getName();
             if (name.endsWith(".json"))
                 name = replaceLast(name);
 
             String finalName = name;
+            File finalSelectedFile = selectedFile;
             clientThread.invokeLater(() ->
             {
                 BlenderModel blenderModel = null;
 
                 try
                 {
-                    Reader reader = Files.newBufferedReader(selectedFile.toPath());
+                    Reader reader = Files.newBufferedReader(finalSelectedFile.toPath());
                     blenderModel = plugin.getGson().fromJson(reader, BlenderModel.class);
                     reader.close();
                 }
                 catch (Exception e)
                 {
-                    plugin.sendChatMessage("Failed to find file");
+                    plugin.sendChatMessage("Failed to find file.");
+                    return;
                 }
 
                 if (blenderModel == null)
