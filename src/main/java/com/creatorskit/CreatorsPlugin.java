@@ -132,6 +132,9 @@ public class CreatorsPlugin extends Plugin {
 		keyManager.registerKeyListener(overlayKeyListener);
 		keyManager.registerKeyListener(oculusOrbListener);
 		keyManager.registerKeyListener(orbSpeedListener);
+		keyManager.registerKeyListener(orbPreset1Listener);
+		keyManager.registerKeyListener(orbPreset2Listener);
+		keyManager.registerKeyListener(orbPreset3Listener);
 		keyManager.registerKeyListener(quickSpawnListener);
 		keyManager.registerKeyListener(quickLocationListener);
 		keyManager.registerKeyListener(quickRotateCWListener);
@@ -213,6 +216,9 @@ public class CreatorsPlugin extends Plugin {
 		keyManager.unregisterKeyListener(overlayKeyListener);
 		keyManager.unregisterKeyListener(oculusOrbListener);
 		keyManager.unregisterKeyListener(orbSpeedListener);
+		keyManager.unregisterKeyListener(orbPreset1Listener);
+		keyManager.unregisterKeyListener(orbPreset2Listener);
+		keyManager.unregisterKeyListener(orbPreset3Listener);
 		keyManager.unregisterKeyListener(quickSpawnListener);
 		keyManager.unregisterKeyListener(quickLocationListener);
 		keyManager.unregisterKeyListener(quickRotateCWListener);
@@ -2215,7 +2221,7 @@ public class CreatorsPlugin extends Plugin {
 	private final HotkeyListener orbSpeedListener = new HotkeyListener(() -> config.setOrbSpeedHotkey())
 	{
 		@Override
-		public void hotkeyReleased()
+		public void hotkeyPressed()
 		{
 			SwingUtilities.invokeLater(() ->
 			{
@@ -2234,6 +2240,35 @@ public class CreatorsPlugin extends Plugin {
 		}
 	};
 
+	private final HotkeyListener orbPreset1Listener = new HotkeyListener(() -> config.orbSpeedHotkey1())
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			client.setOculusOrbNormalSpeed(config.speedHotkey1());
+			sendChatMessage("Oculus Orb set to speed: " + config.speedHotkey1());
+		}
+	};
+
+	private final HotkeyListener orbPreset2Listener = new HotkeyListener(() -> config.orbSpeedHotkey2())
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			client.setOculusOrbNormalSpeed(config.speedHotkey2());
+			sendChatMessage("Oculus Orb set to speed: " + config.speedHotkey2());
+		}
+	};
+
+	private final HotkeyListener orbPreset3Listener = new HotkeyListener(() -> config.orbSpeedHotkey3())
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			client.setOculusOrbNormalSpeed(config.speedHotkey3());
+			sendChatMessage("Oculus Orb set to speed: " + config.speedHotkey3());
+		}
+	};
 	private final HotkeyListener quickSpawnListener = new HotkeyListener(() -> config.quickSpawnHotkey())
 	{
 		@Override

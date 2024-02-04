@@ -10,8 +10,8 @@ public enum CustomModelType
     CACHE_OBJECT("Object"),
     CACHE_PLAYER("Player"),
     CACHE_GROUND_ITEM("Ground Item"),
-    CACHE_MAN_WEAR("Man Wear"),
-    CACHE_WOMAN_WEAR("Woman Wear"),
+    CACHE_MAN_WEAR("Male Worn Item"),
+    CACHE_WOMAN_WEAR("Female Worn Item"),
     BLENDER("Blender")
 
     ;
