@@ -603,9 +603,12 @@ public class TransmogPanel extends JPanel
 
         clearSwapPanels();
         animationSwaps = transmogSave.getAnimationSwaps();
-        for (int[] swap : animationSwaps)
+        if (animationSwaps != null)
         {
-            addSwapPanel(swap[0], swap[1]);
+            for (int[] swap : animationSwaps)
+            {
+                addSwapPanel(swap[0], swap[1]);
+            }
         }
     }
 }

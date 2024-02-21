@@ -55,6 +55,10 @@ public class ToolBoxFrame extends JFrame
             String[] dimensions = string.split(",");
             int width = Integer.parseInt(dimensions[0]);
             int height = Integer.parseInt(dimensions[1]);
+            if (width < 150)
+                width = 150;
+            if (height < 150)
+                height = 150;
             setPreferredSize(new Dimension(width, height));
         }
         catch (Exception e)
