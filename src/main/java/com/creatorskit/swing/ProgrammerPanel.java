@@ -220,7 +220,7 @@ public class ProgrammerPanel extends JPanel
         optionsPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         programPanel.add(optionsPanel, c);
 
-        idleAnimSpinner.setModel(new SpinnerNumberModel(comp.getIdleAnim(), -1, 9999, 1));
+        idleAnimSpinner.setModel(new SpinnerNumberModel(comp.getIdleAnim(), -1, 99999, 1));
         idleAnimSpinner.addChangeListener(e ->
         {
             int idleAnim = (int) idleAnimSpinner.getValue();
@@ -229,7 +229,7 @@ public class ProgrammerPanel extends JPanel
         });
         optionsPanel.add(idleAnimSpinner);
 
-        JSpinner walkAnimSpinner = new JSpinner(new SpinnerNumberModel(comp.getWalkAnim(), -1, 9999, 1));
+        JSpinner walkAnimSpinner = new JSpinner(new SpinnerNumberModel(comp.getWalkAnim(), -1, 99999, 1));
         walkAnimSpinner.addChangeListener(e ->
                 comp.setWalkAnim((int) walkAnimSpinner.getValue()));
         optionsPanel.add(walkAnimSpinner);
