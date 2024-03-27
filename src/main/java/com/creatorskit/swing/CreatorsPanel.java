@@ -1193,7 +1193,6 @@ public class CreatorsPanel extends PluginPanel
             }
             catch (Exception e)
             {
-                e.printStackTrace();
                 plugin.sendChatMessage("An error occurred while attempting to read this file.");
             }
         }

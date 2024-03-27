@@ -59,6 +59,8 @@ public class ModelAnvil extends JPanel
     @Getter
     private final JComboBox<LightingStyle> lightingComboBox = new JComboBox<>();
     @Getter
+    private final JSpinner[] lightingSpinners = new JSpinner[5];
+    @Getter
     private final JTextField nameField = new JTextField();
     private final GridBagConstraints c = new GridBagConstraints();
     private HashMap<Short, Short> copiedColourMap = new HashMap<>();
@@ -158,6 +160,36 @@ public class ModelAnvil extends JPanel
 
         headerPanel.add(saveButton);
 
+        JPanel lightPanelLeft = new JPanel();
+        JPanel lightPanelRight = new JPanel();
+        lightPanelLeft.setLayout(new GridLayout(0, 1, 2, 2));
+        lightPanelRight.setLayout(new GridLayout(0, 1, 2, 2));
+        headerPanel.add(lightPanelLeft);
+        headerPanel.add(lightPanelRight);
+
+        JSpinner ambSpinner = new JSpinner(new SpinnerNumberModel(ModelData.DEFAULT_AMBIENT, 1, 9999, 1));
+        JSpinner conSpinner = new JSpinner(new SpinnerNumberModel(ModelData.DEFAULT_CONTRAST, 1, 9999, 1));
+        JSpinner lightXSpinner = new JSpinner(new SpinnerNumberModel(ModelData.DEFAULT_X, -9999, 9999, 1));
+        JSpinner lightYSpinner = new JSpinner((new SpinnerNumberModel(ModelData.DEFAULT_Y, -9999, 9999, 1)));
+        JSpinner lightZSpinner = new JSpinner((new SpinnerNumberModel(ModelData.DEFAULT_Z, -9999, 9999, 1)));
+        lightingSpinners[0] = ambSpinner;
+        lightingSpinners[1] = conSpinner;
+        lightingSpinners[2] = lightXSpinner;
+        lightingSpinners[3] = lightYSpinner;
+        lightingSpinners[4] = lightZSpinner;
+
+        lightPanelLeft.add(new JLabel("Ambient"));
+        lightPanelLeft.add(ambSpinner);
+        lightPanelLeft.add(new JLabel("Contrast"));
+        lightPanelLeft.add(conSpinner);
+
+        lightPanelRight.add(new JLabel("X"));
+        lightPanelRight.add(lightXSpinner);
+        lightPanelRight.add(new JLabel("Y"));
+        lightPanelRight.add(lightYSpinner);
+        lightPanelRight.add(new JLabel("Z"));
+        lightPanelRight.add(lightZSpinner);
+
         lightingComboBox.addItem(LightingStyle.DEFAULT);
         lightingComboBox.addItem(LightingStyle.ACTOR);
         lightingComboBox.addItem(LightingStyle.NONE);
@@ -165,7 +197,7 @@ public class ModelAnvil extends JPanel
         lightingComboBox.setToolTipText("Sets the lighting style. Use Actor for NPCs or Players");
         headerPanel.add(lightingComboBox);
 
-        priorityCheckBox.setToolTipText("Use an oversimplified method of resolving render order issues (useful when merging models but not for NPCs/Players)");
+        priorityCheckBox.setToolTipText("Use an oversimplified method of resolving render order issues (can be useful when merging many models)");
         priorityCheckBox.setFocusable(false);
         headerPanel.add(priorityCheckBox);
 

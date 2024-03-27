@@ -2,20 +2,14 @@ package com.creatorskit.models;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.Item;
-import net.runelite.client.util.Text;
+import net.runelite.api.ModelData;
 import okhttp3.*;
 
 import javax.inject.Inject;
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Scanner;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -26,7 +20,9 @@ public class ModelFinder
     @Inject
     OkHttpClient httpClient;
     @Getter
-    String lastFound;
+    private String lastFound;
+    @Getter
+    private int lastAnim;
 
     public ModelStats[] findModelsForPlayer(boolean groundItem, boolean maleItem, int[] items)
     {
@@ -162,68 +158,56 @@ public class ModelFinder
                             String[] split = string.split("_");
                             modelIds[0] = Integer.parseInt(split[split.length - 1]);
                         }
-                        else
+                        else if (maleItem && string.startsWith("manwear="))
                         {
-                            if (maleItem && string.startsWith("manwear="))
-                            {
-                                String replaced = string.replace(",", "_");
-                                String[] split = replaced.split("_");
-                                modelIds[0] = Integer.parseInt(split[split.length - 2]);
-                                continue;
-                            }
-
-                            if (maleItem && string.startsWith("manwear2="))
-                            {
-                                String[] split = string.split("_");
-                                modelIds[1] = Integer.parseInt(split[split.length - 1]);
-                                continue;
-                            }
-
-                            if (maleItem && string.startsWith("manwear3="))
-                            {
-                                String[] split = string.split("_");
-                                modelIds[2] = Integer.parseInt(split[split.length - 1]);
-                                continue;
-                            }
-
-                            if (!maleItem && string.startsWith("womanwear="))
-                            {
-                                String replaced = string.replace(",", "_");
-                                String[] split = replaced.split("_");
-                                modelIds[0] = Integer.parseInt(split[split.length - 2]);
-                                continue;
-                            }
-
-                            if (!maleItem && string.startsWith("womanwear2="))
-                            {
-                                String[] split = string.split("_");
-                                modelIds[1] = Integer.parseInt(split[split.length - 1]);
-                                continue;
-                            }
-
-                            if (!maleItem && string.startsWith("womanwear3="))
-                            {
-                                String[] split = string.split("_");
-                                modelIds[2] = Integer.parseInt(split[split.length - 1]);
-                                continue;
-                            }
+                            String replaced = string.replace(",", "_");
+                            String[] split = replaced.split("_");
+                            modelIds[0] = Integer.parseInt(split[split.length - 2]);
                         }
-
-                        matcher = recolFrom.matcher(string);
-
-                        if (matcher.matches())
+                        else if (maleItem && string.startsWith("manwear2="))
                         {
-                            String[] split = string.split("=");
-                            recolourFrom.add(Integer.parseInt(split[1]));
-                            continue;
+                            String[] split = string.split("_");
+                            modelIds[1] = Integer.parseInt(split[split.length - 1]);
                         }
-
-                        matcher = recolTo.matcher(string);
-
-                        if (matcher.matches())
+                        else if (maleItem && string.startsWith("manwear3="))
                         {
-                            String[] split = string.split("=");
-                            recolourTo.add(Integer.parseInt(split[1]));
+                            String[] split = string.split("_");
+                            modelIds[2] = Integer.parseInt(split[split.length - 1]);
+                        }
+                        else if (!maleItem && string.startsWith("womanwear="))
+                        {
+                            String replaced = string.replace(",", "_");
+                            String[] split = replaced.split("_");
+                            modelIds[0] = Integer.parseInt(split[split.length - 2]);
+                        }
+                        else if (!maleItem && string.startsWith("womanwear2="))
+                        {
+                            String[] split = string.split("_");
+                            modelIds[1] = Integer.parseInt(split[split.length - 1]);
+                        }
+                        else if (!maleItem && string.startsWith("womanwear3="))
+                        {
+                            String[] split = string.split("_");
+                            modelIds[2] = Integer.parseInt(split[split.length - 1]);
+                        }
+                        else if (string.startsWith("recol"))
+                        {
+                            matcher = recolFrom.matcher(string);
+
+                            if (matcher.matches())
+                            {
+                                String[] split = string.split("=");
+                                recolourFrom.add(Integer.parseInt(split[1]));
+                                continue;
+                            }
+
+                            matcher = recolTo.matcher(string);
+
+                            if (matcher.matches())
+                            {
+                                String[] split = string.split("=");
+                                recolourTo.add(Integer.parseInt(split[1]));
+                            }
                         }
                     }
 
@@ -247,7 +231,15 @@ public class ModelFinder
                     {
                         if (id > 0)
                         {
-                            modelStatsArray.add(new ModelStats(id, BodyPart.NA, recolourFromArray, recolourToArray));
+                            modelStatsArray.add(new ModelStats(
+                                    id,
+                                    BodyPart.NA,
+                                    recolourFromArray,
+                                    recolourToArray,
+                                    128,
+                                    128,
+                                    128,
+                                    new Lighting(64, 850, -30, -50, -30)));
                         }
                     }
 
@@ -295,53 +287,48 @@ public class ModelFinder
                         {
                             String[] split = string.split("_");
                             modelIds[0] = Integer.parseInt(split[split.length - 1]);
-                            continue;
                         }
-
-                        if (string.startsWith("model2="))
+                        else if (string.startsWith("model2="))
                         {
                             String[] split = string.split("_");
                             modelIds[1] = Integer.parseInt(split[split.length - 1]);
-                            continue;
                         }
-
-                        if (string.endsWith("hair"))
-                            bodyPart = BodyPart.HAIR;
-
-                        if (string.endsWith("jaw"))
-                            bodyPart = BodyPart.JAW;
-
-                        if (string.endsWith("torso"))
-                            bodyPart = BodyPart.TORSO;
-
-                        if (string.endsWith("arms"))
-                            bodyPart = BodyPart.ARMS;
-
-                        if (string.endsWith("hands"))
-                            bodyPart = BodyPart.HANDS;
-
-                        if (string.endsWith("legs"))
-                            bodyPart = BodyPart.LEGS;
-
-                        if (string.endsWith("feet"))
-                            bodyPart = BodyPart.FEET;
-
-                        //recolour if a recol1s and recol1d are present with the kitId
-                        matcher = recolFrom.matcher(string);
-
-                        if (matcher.matches())
+                        else if (string.startsWith("bodypart"))
                         {
-                            String[] split = string.split("=");
-                            recolourFrom.add(Integer.parseInt(split[1]));
-                            continue;
+                            if (string.endsWith("hair"))
+                                bodyPart = BodyPart.HAIR;
+                            else if (string.endsWith("jaw"))
+                                bodyPart = BodyPart.JAW;
+                            else if (string.endsWith("torso"))
+                                bodyPart = BodyPart.TORSO;
+                            else if (string.endsWith("arms"))
+                                bodyPart = BodyPart.ARMS;
+                            else if (string.endsWith("hands"))
+                                bodyPart = BodyPart.HANDS;
+                            else if (string.endsWith("legs"))
+                                bodyPart = BodyPart.LEGS;
+                            else if (string.endsWith("feet"))
+                                bodyPart = BodyPart.FEET;
                         }
-
-                        matcher = recolTo.matcher(string);
-
-                        if (matcher.matches())
+                        else if (string.startsWith("recol"))
                         {
-                            String[] split = string.split("=");
-                            recolourTo.add(Integer.parseInt(split[1]));
+                            //recolour if a recol1s and recol1d are present with the kitId
+                            matcher = recolFrom.matcher(string);
+
+                            if (matcher.matches())
+                            {
+                                String[] split = string.split("=");
+                                recolourFrom.add(Integer.parseInt(split[1]));
+                                continue;
+                            }
+
+                            matcher = recolTo.matcher(string);
+
+                            if (matcher.matches())
+                            {
+                                String[] split = string.split("=");
+                                recolourTo.add(Integer.parseInt(split[1]));
+                            }
                         }
                     }
 
@@ -365,7 +352,15 @@ public class ModelFinder
                     {
                         if (id > 0)
                         {
-                            modelStatsArray.add(new ModelStats(id, bodyPart, recolourFromArray, recolourToArray));
+                            modelStatsArray.add(new ModelStats(
+                                    id,
+                                    bodyPart,
+                                    recolourFromArray,
+                                    recolourToArray,
+                                    128,
+                                    128,
+                                    128,
+                                    new Lighting(64, 850, -30, -50, -30)));
                         }
                     }
 
@@ -376,7 +371,156 @@ public class ModelFinder
                 }
             }
         }
+    }
 
+    public ModelStats[] findSpotAnim(int spotAnimId)
+    {
+        Pattern recolFrom = Pattern.compile("recol\\ds=.+");
+        Pattern recolTo = Pattern.compile("recol\\dd=.+");
+
+        ArrayList<Integer> modelIds = new ArrayList<>();
+        final int[] resize = new int[]{128, 128, 128};
+        ArrayList<Short> recolourFrom = new ArrayList<>();
+        ArrayList<Short> recolourTo = new ArrayList<>();
+        Lighting lighting = new Lighting(ModelData.DEFAULT_AMBIENT, ModelData.DEFAULT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
+
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+        Request request = new Request.Builder()
+                .url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.spotanim?ref_type=heads")
+                .build();
+        Call call = httpClient.newCall(request);
+        call.enqueue(new Callback()
+        {
+            @Override
+            public void onFailure(Call call, IOException e)
+            {
+                log.debug("Failed to access URL: https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.spotanim?ref_type=heads");
+                countDownLatch.countDown();
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException
+            {
+                if (!response.isSuccessful() || response.body() == null)
+                    return;
+
+                InputStream inputStream = response.body().byteStream();
+                Scanner scanner = new Scanner(inputStream);
+                Pattern npcPattern = Pattern.compile("\\[.+_" + spotAnimId + "]");
+
+                while (scanner.hasNextLine())
+                {
+                    String string = scanner.nextLine();
+                    Matcher match = npcPattern.matcher(string);
+                    if (match.matches())
+                    {
+                        lastFound = "SpotAnim " + spotAnimId;
+                        lastAnim = -1;
+                        while (!string.isEmpty())
+                        {
+                            string = scanner.nextLine();
+                            if (string.startsWith("model"))
+                            {
+                                String[] split = string.split("_");
+                                modelIds.add(Integer.parseInt(split[split.length - 1]));
+                            }
+                            else if (string.startsWith("anim"))
+                            {
+                                String[] split = string.split("_");
+                                lastAnim = Integer.parseInt(split[split.length - 1]);
+                            }
+                            else if (string.startsWith("amb"))
+                            {
+                                String[] split = string.split("=");
+                                int ambient = Integer.parseInt(split[split.length - 1]);
+                                if (ambient >= 128)
+                                    ambient -= 256;
+
+                                lighting.setAmbient(64 + ambient);
+                            }
+                            else if (string.startsWith("con"))
+                            {
+                                String[] split = string.split("=");
+                                int contrast = Integer.parseInt(split[split.length - 1]);
+                                if (contrast >= 128)
+                                    contrast -= 128;
+
+                                lighting.setContrast(768 + contrast);
+                            }
+                            else if (string.startsWith("resizeh"))
+                            {
+                                String[] split = string.split("=");
+                                int resizeH = Integer.parseInt(split[split.length - 1]);
+                                resize[0] = resizeH;
+                                resize[1] = resizeH;
+                            }
+                            else if (string.startsWith("resizev"))
+                            {
+                                String[] split = string.split("=");
+                                resize[2] = Integer.parseInt(split[split.length - 1]);
+                            }
+                            else
+                            {
+                                match = recolFrom.matcher(string);
+
+                                if (match.matches())
+                                {
+                                    String[] split = string.split("=");
+                                    int i = Integer.parseInt(split[1]);
+                                    if (i > 32767)
+                                    {
+                                        i -= 65536;
+                                    }
+                                    recolourFrom.add((short) i);
+                                }
+
+                                match = recolTo.matcher(string);
+
+                                if (match.matches())
+                                {
+                                    String[] split = string.split("=");
+                                    int i = Integer.parseInt(split[1]);
+                                    if (i > 32767)
+                                    {
+                                        i -= 65536;
+                                    }
+                                    recolourTo.add((short) i);
+                                }
+                            }
+                        }
+                    }
+                }
+                countDownLatch.countDown();
+                response.body().close();
+            }
+        });
+
+        try
+        {
+            countDownLatch.await();
+        }
+        catch (Exception e)
+        {
+            log.debug("CountDownLatch failed to await at findModelsForNPCs");
+        }
+
+        short[] rf = new short[recolourFrom.size()];
+        short[] rt = new short[recolourTo.size()];
+        for (int i = 0; i < recolourFrom.size(); i++)
+        {
+            rf[i] = recolourFrom.get(i);
+            rt[i] = recolourTo.get(i);
+        }
+
+        return new ModelStats[]{new ModelStats(
+                modelIds.get(0),
+                BodyPart.NA,
+                rf,
+                rt,
+                resize[0],
+                resize[1],
+                resize[2],
+                lighting)};
     }
 
     public ModelStats[] findModelsForNPC(int npcId)
@@ -385,6 +529,7 @@ public class ModelFinder
         Pattern recolTo = Pattern.compile("recol\\dd=.+");
 
         ArrayList<Integer> modelIds = new ArrayList<>();
+        final int[] resize = new int[]{128, 128, 128};
         ArrayList<Short> recolourFrom = new ArrayList<>();
         ArrayList<Short> recolourTo = new ArrayList<>();
 
@@ -422,43 +567,59 @@ public class ModelFinder
                         while (!string.isEmpty())
                         {
                             string = scanner.nextLine();
-                            if (string.startsWith("model"))
-                            {
-                                String[] split = string.split("_");
-                                modelIds.add(Integer.parseInt(split[split.length - 1]));
-                            }
 
                             if (string.startsWith("name="))
                             {
                                 lastFound = string.replaceAll("name=", "");
                             }
+                            else if (string.startsWith("model"))
+                            {
+                                String[] split = string.split("_");
+                                modelIds.add(Integer.parseInt(split[split.length - 1]));
+                            }
+                            else if (string.startsWith("recol"))
+                            {
+                                match = recolFrom.matcher(string);
 
-                            match = recolFrom.matcher(string);
+                                if (match.matches())
+                                {
+                                    String[] split = string.split("=");
+                                    int i = Integer.parseInt(split[1]);
+                                    if (i > 32767)
+                                    {
+                                        i -= 65536;
+                                    }
+                                    recolourFrom.add((short) i);
+                                }
 
-                            if (match.matches())
+                                match = recolTo.matcher(string);
+
+                                if (match.matches())
+                                {
+                                    String[] split = string.split("=");
+                                    int i = Integer.parseInt(split[1]);
+                                    if (i > 32767)
+                                    {
+                                        i -= 65536;
+                                    }
+                                    recolourTo.add((short) i);
+                                }
+                            }
+                            else if (string.startsWith("resizex"))
                             {
                                 String[] split = string.split("=");
-                                int i = Integer.parseInt(split[1]);
-                                if (i > 32767)
-                                {
-                                    i -= 65536;
-                                }
-                                recolourFrom.add((short) i);
+                                resize[0] = Integer.parseInt(split[1]);
                             }
-
-                            match = recolTo.matcher(string);
-
-                            if (match.matches())
+                            else if (string.startsWith("resizey"))
                             {
                                 String[] split = string.split("=");
-                                int i = Integer.parseInt(split[1]);
-                                if (i > 32767)
-                                {
-                                    i -= 65536;
-                                }
-                                recolourTo.add((short) i);
+                                resize[2] = Integer.parseInt(split[1]);
                             }
-
+                            else if (string.startsWith("resizez"))
+                            {
+                                String[] split = string.split("=");
+                                resize[1] = Integer.parseInt(split[1]);
+                            }
                         }
                     }
                 }
@@ -486,7 +647,15 @@ public class ModelFinder
 
         ModelStats[] modelStats = new ModelStats[modelIds.size()];
         for (int i = 0; i < modelIds.size(); i++)
-            modelStats[i] = new ModelStats(modelIds.get(i), BodyPart.NA, rf, rt);
+            modelStats[i] = new ModelStats(
+                    modelIds.get(i),
+                    BodyPart.NA,
+                    rf,
+                    rt,
+                    resize[0],
+                    resize[1],
+                    resize[2],
+                    new Lighting(64, 850, -30, -50, -30));
 
         return modelStats;
     }
@@ -497,6 +666,7 @@ public class ModelFinder
         Pattern recolTo = Pattern.compile("recol\\dd=.+");
 
         ArrayList<Integer> modelIds = new ArrayList<>();
+        final int[] resize = new int[]{128, 128, 128};
         ArrayList<Short> recolourFrom = new ArrayList<>();
         ArrayList<Short> recolourTo = new ArrayList<>();
 
@@ -534,7 +704,11 @@ public class ModelFinder
                         while (!string.isEmpty())
                         {
                             string = scanner.nextLine();
-                            if (string.startsWith("model"))
+                            if (string.startsWith("name"))
+                            {
+                                lastFound = string.replaceAll("name=", "");
+                            }
+                            else if (string.startsWith("model"))
                             {
                                 String[] split = string.split("_");
                                 if (split[split.length - 1].contains(","))
@@ -547,36 +721,48 @@ public class ModelFinder
                                     modelIds.add(Integer.parseInt(split[split.length - 1]));
                                 }
                             }
-
-                            if (string.startsWith("name="))
+                            else if (string.startsWith("recol"))
                             {
-                                lastFound = string.replaceAll("name=", "");
+                                match = recolFrom.matcher(string);
+
+                                if (match.matches())
+                                {
+                                    String[] split = string.split("=");
+                                    int i = Integer.parseInt(split[1]);
+                                    if (i > 32767)
+                                    {
+                                        i -= 65536;
+                                    }
+                                    recolourFrom.add((short) i);
+                                }
+
+                                match = recolTo.matcher(string);
+
+                                if (match.matches())
+                                {
+                                    String[] split = string.split("=");
+                                    int i = Integer.parseInt(split[1]);
+                                    if (i > 32767)
+                                    {
+                                        i -= 65536;
+                                    }
+                                    recolourTo.add((short) i);
+                                }
                             }
-
-                            match = recolFrom.matcher(string);
-
-                            if (match.matches())
+                            else if (string.startsWith("resizex"))
                             {
                                 String[] split = string.split("=");
-                                int i = Integer.parseInt(split[1]);
-                                if (i > 32767)
-                                {
-                                    i -= 65536;
-                                }
-                                recolourFrom.add((short) i);
+                                resize[0] = Integer.parseInt(split[1]);
                             }
-
-                            match = recolTo.matcher(string);
-
-                            if (match.matches())
+                            else if (string.startsWith("resizey"))
                             {
                                 String[] split = string.split("=");
-                                int i = Integer.parseInt(split[1]);
-                                if (i > 32767)
-                                {
-                                    i -= 65536;
-                                }
-                                recolourTo.add((short) i);
+                                resize[2] = Integer.parseInt(split[1]);
+                            }
+                            else if (string.startsWith("resizez"))
+                            {
+                                String[] split = string.split("=");
+                                resize[1] = Integer.parseInt(split[1]);
                             }
                         }
                     }
@@ -605,7 +791,15 @@ public class ModelFinder
 
         ModelStats[] modelStats = new ModelStats[modelIds.size()];
         for (int i = 0; i < modelIds.size(); i++)
-            modelStats[i] = new ModelStats(modelIds.get(i), BodyPart.NA, rf, rt);
+            modelStats[i] = new ModelStats(
+                    modelIds.get(i),
+                    BodyPart.NA,
+                    rf,
+                    rt,
+                    resize[0],
+                    resize[1],
+                    resize[2],
+                    new Lighting(ModelData.DEFAULT_AMBIENT, ModelData.DEFAULT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z));
 
         return modelStats;
     }
@@ -667,7 +861,11 @@ public class ModelFinder
                                     searchName = "womanwear";
                             }
 
-                            if (string.startsWith(searchName))
+                            if (string.startsWith("name="))
+                            {
+                                lastFound = string.replaceAll("name=", "");
+                            }
+                            else if (string.startsWith(searchName))
                             {
                                 String[] split = string.split("_");
                                 if (split[split.length - 1].contains(","))
@@ -680,36 +878,33 @@ public class ModelFinder
                                     modelIds.add(Integer.parseInt(split[split.length - 1]));
                                 }
                             }
-
-                            if (string.startsWith("name="))
+                            else
                             {
-                                lastFound = string.replaceAll("name=", "");
-                            }
+                                match = recolFrom.matcher(string);
 
-                            match = recolFrom.matcher(string);
-
-                            if (match.matches())
-                            {
-                                String[] split = string.split("=");
-                                int i = Integer.parseInt(split[1]);
-                                if (i > 32767)
+                                if (match.matches())
                                 {
-                                    i -= 65536;
+                                    String[] split = string.split("=");
+                                    int i = Integer.parseInt(split[1]);
+                                    if (i > 32767)
+                                    {
+                                        i -= 65536;
+                                    }
+                                    recolourFrom.add((short) i);
                                 }
-                                recolourFrom.add((short) i);
-                            }
 
-                            match = recolTo.matcher(string);
+                                match = recolTo.matcher(string);
 
-                            if (match.matches())
-                            {
-                                String[] split = string.split("=");
-                                int i = Integer.parseInt(split[1]);
-                                if (i > 32767)
+                                if (match.matches())
                                 {
-                                    i -= 65536;
+                                    String[] split = string.split("=");
+                                    int i = Integer.parseInt(split[1]);
+                                    if (i > 32767)
+                                    {
+                                        i -= 65536;
+                                    }
+                                    recolourTo.add((short) i);
                                 }
-                                recolourTo.add((short) i);
                             }
                         }
                     }
@@ -741,7 +936,15 @@ public class ModelFinder
 
         ModelStats[] modelStats = new ModelStats[modelIds.size()];
         for (int i = 0; i < modelIds.size(); i++)
-            modelStats[i] = new ModelStats(modelIds.get(i), BodyPart.NA, rf, rt);
+            modelStats[i] = new ModelStats(
+                    modelIds.get(i),
+                    BodyPart.NA,
+                    rf,
+                    rt,
+                    128,
+                    128,
+                    128,
+                    new Lighting(ModelData.DEFAULT_AMBIENT, ModelData.DEFAULT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z));
 
         return modelStats;
     }

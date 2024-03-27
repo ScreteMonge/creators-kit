@@ -107,10 +107,6 @@ public class CreatorsPlugin extends Plugin {
 	private AutoRotate autoRotateYaw = AutoRotate.OFF;
 	private AutoRotate autoRotatePitch = AutoRotate.OFF;
 	private int oculusOrbSpeed = 36;
-	private final int BRIGHT_AMBIENT = 64;
-	private final int BRIGHT_CONTRAST = 850;
-	private final int DARK_AMBIENT = 128;
-	private final int DARK_CONTRAST = 4000;
 	private boolean pauseMode = true;
 	private boolean autoSetupPathFound = true;
 	private boolean autoTransmogFound = true;
@@ -681,7 +677,7 @@ public class CreatorsPlugin extends Plugin {
 	@Subscribe
 	public void onMenuEntryAdded(MenuEntryAdded event)
 	{
-		if (!config.rightClick())
+		if (!config.rightClick() && !config.transmogRightClick() && !config.rightSpotAnim())
 			return;
 
 		String target = event.getTarget();
@@ -692,9 +688,14 @@ public class CreatorsPlugin extends Plugin {
 		NPC npc = event.getMenuEntry().getNpc();
 		if (npc != null && option.equals("Examine"))
 		{
-			modelGetter.storeNPC(-1, target, npc, "Store", false);
-			modelGetter.sendToAnvilNPC(-2, target, npc);
-			modelGetter.storeNPC(-3, target, npc, "Transmog", true);
+			if (config.rightClick())
+			{
+				modelGetter.storeNPC(-1, target, npc, "Store", false);
+				modelGetter.sendToAnvilNPC(-2, target, npc);
+			}
+
+			if (config.transmogRightClick())
+				modelGetter.storeNPC(-3, target, npc, "Transmog", true);
 		}
 
 		if (tile != null)
@@ -708,9 +709,14 @@ public class CreatorsPlugin extends Plugin {
 					if (renderable instanceof Model)
 					{
 						Model model = (Model) groundObject.getRenderable();
-						modelGetter.addGameObjectGetter(-1, "Store", "<col=FFFF>GroundObject", "GroundObject", model, groundObject.getId(), CustomModelType.CACHE_OBJECT, false);
-						modelGetter.addObjectGetterToAnvil("<col=FFFF>GroundObject", "GroundObject", groundObject.getId());
-						modelGetter.addGameObjectGetter(-3, "Transmog", "<col=FFFF>GroundObject", "GroundObject", model, groundObject.getId(), CustomModelType.CACHE_OBJECT, true);
+						if (config.rightClick())
+						{
+							modelGetter.addGameObjectGetter(-1, "Store", "<col=FFFF>GroundObject", "GroundObject", model, groundObject.getId(), CustomModelType.CACHE_OBJECT, false);
+							modelGetter.addObjectGetterToAnvil("<col=FFFF>GroundObject", "GroundObject", groundObject.getId());
+						}
+
+						if (config.transmogRightClick())
+							modelGetter.addGameObjectGetter(-3, "Transmog", "<col=FFFF>GroundObject", "GroundObject", model, groundObject.getId(), CustomModelType.CACHE_OBJECT, true);
 					}
 				}
 
@@ -721,9 +727,14 @@ public class CreatorsPlugin extends Plugin {
 					if (renderable instanceof Model)
 					{
 						Model model = (Model) decorativeObject.getRenderable();
-						modelGetter.addGameObjectGetter(-1, "Store", "<col=FFFF>DecorativeObject", "DecorativeObject", model, decorativeObject.getId(), CustomModelType.CACHE_OBJECT, false);
-						modelGetter.addObjectGetterToAnvil("<col=FFFF>DecorativeObject", "DecorativeObject", decorativeObject.getId());
-						modelGetter.addGameObjectGetter(-3, "Transmog", "<col=FFFF>DecorativeObject", "DecorativeObject", model, decorativeObject.getId(), CustomModelType.CACHE_OBJECT, true);
+						if (config.rightClick())
+						{
+							modelGetter.addGameObjectGetter(-1, "Store", "<col=FFFF>DecorativeObject", "DecorativeObject", model, decorativeObject.getId(), CustomModelType.CACHE_OBJECT, false);
+							modelGetter.addObjectGetterToAnvil("<col=FFFF>DecorativeObject", "DecorativeObject", decorativeObject.getId());
+						}
+
+						if (config.transmogRightClick())
+							modelGetter.addGameObjectGetter(-3, "Transmog", "<col=FFFF>DecorativeObject", "DecorativeObject", model, decorativeObject.getId(), CustomModelType.CACHE_OBJECT, true);
 					}
 				}
 
@@ -734,9 +745,14 @@ public class CreatorsPlugin extends Plugin {
 					if (renderable instanceof Model)
 					{
 						Model model = (Model) renderable;
-						modelGetter.addGameObjectGetter(-1, "Store", "<col=FFFF>WallObject", "WallObject", model, wallObject.getId(), CustomModelType.CACHE_OBJECT, false);
-						modelGetter.addObjectGetterToAnvil("<col=FFFF>WallObject", "WallObject", wallObject.getId());
-						modelGetter.addGameObjectGetter(-3, "Transmog", "<col=FFFF>WallObject", "WallObject", model, wallObject.getId(), CustomModelType.CACHE_OBJECT, true);
+						if (config.rightClick())
+						{
+							modelGetter.addGameObjectGetter(-1, "Store", "<col=FFFF>WallObject", "WallObject", model, wallObject.getId(), CustomModelType.CACHE_OBJECT, false);
+							modelGetter.addObjectGetterToAnvil("<col=FFFF>WallObject", "WallObject", wallObject.getId());
+						}
+
+						if (config.transmogRightClick())
+							modelGetter.addGameObjectGetter(-3, "Transmog", "<col=FFFF>WallObject", "WallObject", model, wallObject.getId(), CustomModelType.CACHE_OBJECT, true);
 					}
 				}
 
@@ -746,9 +762,14 @@ public class CreatorsPlugin extends Plugin {
 					for (TileItem tileItem : tileItems)
 					{
 						Model model = tileItem.getModel();
-						modelGetter.addGameObjectGetter(-1, "Store", "<col=FFFF>Item", "Item", model, tileItem.getId(), CustomModelType.CACHE_GROUND_ITEM, false);
-						modelGetter.addObjectGetterToAnvil("<col=FFFF>Item", "Item", tileItem.getId());
-						modelGetter.addGameObjectGetter(-3, "Transmog", "<col=FFFF>Item", "Item", model, tileItem.getId(), CustomModelType.CACHE_GROUND_ITEM, true);
+						if (config.rightClick())
+						{
+							modelGetter.addGameObjectGetter(-1, "Store", "<col=FFFF>Item", "Item", model, tileItem.getId(), CustomModelType.CACHE_GROUND_ITEM, false);
+							modelGetter.addObjectGetterToAnvil("<col=FFFF>Item", "Item", tileItem.getId());
+						}
+
+						if (config.transmogRightClick())
+							modelGetter.addGameObjectGetter(-3, "Transmog", "<col=FFFF>Item", "Item", model, tileItem.getId(), CustomModelType.CACHE_GROUND_ITEM, true);
 					}
 				}
 
@@ -765,9 +786,14 @@ public class CreatorsPlugin extends Plugin {
 					if (renderable instanceof Model)
 					{
 						Model model = (Model) renderable;
-						modelGetter.addGameObjectGetter(-1, "Store", "<col=FFFF>GameObject", "GameObject", model, gameObject.getId(), CustomModelType.CACHE_OBJECT, false);
-						modelGetter.addObjectGetterToAnvil("<col=FFFF>GameObject", "GameObject", gameObject.getId());
-						modelGetter.addGameObjectGetter(-3, "Transmog", "<col=FFFF>GameObject", "GameObject", model, gameObject.getId(), CustomModelType.CACHE_OBJECT, true);
+						if (config.rightClick())
+						{
+							modelGetter.addGameObjectGetter(-1, "Store", "<col=FFFF>GameObject", "GameObject", model, gameObject.getId(), CustomModelType.CACHE_OBJECT, false);
+							modelGetter.addObjectGetterToAnvil("<col=FFFF>GameObject", "GameObject", gameObject.getId());
+						}
+
+						if (config.transmogRightClick())
+							modelGetter.addGameObjectGetter(-3, "Transmog", "<col=FFFF>GameObject", "GameObject", model, gameObject.getId(), CustomModelType.CACHE_OBJECT, true);
 					}
 				}
 
@@ -788,9 +814,20 @@ public class CreatorsPlugin extends Plugin {
 		Player player = event.getMenuEntry().getPlayer();
 		if (player != null && option.equals("Trade with"))
 		{
-			modelGetter.addPlayerGetter(-1, target, "Store", player, false, false);
-			modelGetter.addPlayerGetter(-2, target, "Anvil", player, true, false);
-			modelGetter.addPlayerGetter(-3, target, "Transmog", player, false, true);
+			if (config.rightClick())
+			{
+				modelGetter.addPlayerGetter(-1, target, "Store", player, false, false);
+				modelGetter.addPlayerGetter(-2, target, "Anvil", player, true, false);
+			}
+
+			if (config.transmogRightClick())
+				modelGetter.addPlayerGetter(-3, target, "Transmog", player, false, true);
+
+			if (config.rightSpotAnim())
+			{
+				modelGetter.addSpotAnimGetter(-4, target, "SpotAnim Store", player, false);
+				modelGetter.addSpotAnimGetter(-5, target, "SpotAnim Anvil", player, true);
+			}
 		}
 
 		Player localPlayer = client.getLocalPlayer();
@@ -798,8 +835,17 @@ public class CreatorsPlugin extends Plugin {
 		{
 			if (tile.getLocalLocation().equals(localPlayer.getLocalLocation()))
 			{
-				modelGetter.addPlayerGetter(-1, "Local Player", "Store", localPlayer, false, false);
-				modelGetter.addPlayerGetter(-2, "Local Player", "Anvil", localPlayer, true, false);
+				if (config.rightClick())
+				{
+					modelGetter.addPlayerGetter(-1, "Local Player", "Store", localPlayer, false, false);
+					modelGetter.addPlayerGetter(-2, "Local Player", "Anvil", localPlayer, true, false);
+				}
+
+				if (config.rightSpotAnim())
+				{
+					modelGetter.addSpotAnimGetter(-3, "Local Player", "SpotAnim Store", localPlayer, false);
+					modelGetter.addSpotAnimGetter(-4, "Local Player", "SpotAnim Anvil", localPlayer, true);
+				}
 			}
 		}
 	}
@@ -1401,10 +1447,10 @@ public class CreatorsPlugin extends Plugin {
 				model =  modelData.light();
 				break;
 			case ACTOR:
-				model = modelData.light(BRIGHT_AMBIENT, BRIGHT_CONTRAST, -30, -50, -30);
+				model = modelData.light(64, 850, -30, -50, -30);
 				break;
 			case NONE:
-				model = modelData.light(DARK_AMBIENT, DARK_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
+				model = modelData.light(128, 4000, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
 		}
 
 		if (model == null)
@@ -1469,7 +1515,7 @@ public class CreatorsPlugin extends Plugin {
 							9,
 							0, 0, 0,
 							0, 0, 0,
-							128, 128, 128,
+							modelStats.getResizeX(), modelStats.getResizeY(), modelStats.getResizeZ(),
 							0,
 							recolourNew.toString(),
 							recolourOld.toString(),
@@ -1484,7 +1530,7 @@ public class CreatorsPlugin extends Plugin {
 						8,
 						0, 0, 0,
 						0, 0, 0,
-						128, 128, 128,
+						modelStats.getResizeX(), modelStats.getResizeY(), modelStats.getResizeZ(),
 						0,
 						ModelFinder.shortArrayToString(modelStats.getRecolourTo()),
 						ModelFinder.shortArrayToString(modelStats.getRecolourFrom()),
@@ -1614,6 +1660,8 @@ public class CreatorsPlugin extends Plugin {
 			for (short s = 0; s < modelStats.getRecolourFrom().length; s++)
 				modelData.recolor(modelStats.getRecolourFrom()[s], modelStats.getRecolourTo()[s]);
 
+			modelData.scale(modelStats.getResizeX(), modelStats.getResizeZ(), modelStats.getResizeY());
+
 			if (player)
 				KitRecolourer.recolourKitModel(modelData, modelStats.getBodyPart(), kitRecolours);
 
@@ -1621,7 +1669,7 @@ public class CreatorsPlugin extends Plugin {
 		}
 
 		if (actorLighting)
-			return client.mergeModels(mds).light(BRIGHT_AMBIENT, BRIGHT_CONTRAST, -30, -50, -30);
+			return client.mergeModels(mds).light(64, 850, -30, -50, -30);
 
 		return client.mergeModels(mds).light();
 	}
