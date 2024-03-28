@@ -23,7 +23,6 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -160,54 +159,81 @@ public class ModelAnvil extends JPanel
 
         headerPanel.add(saveButton);
 
-        JPanel lightPanelLeft = new JPanel();
-        JPanel lightPanelRight = new JPanel();
-        lightPanelLeft.setLayout(new GridLayout(0, 1, 2, 2));
-        lightPanelRight.setLayout(new GridLayout(0, 1, 2, 2));
-        headerPanel.add(lightPanelLeft);
-        headerPanel.add(lightPanelRight);
+        priorityCheckBox.setToolTipText("Use an oversimplified method of resolving render order issues (can be useful when merging many models)");
+        priorityCheckBox.setFocusable(false);
+        headerPanel.add(priorityCheckBox);
 
-        JSpinner ambSpinner = new JSpinner(new SpinnerNumberModel(ModelData.DEFAULT_AMBIENT, 1, 9999, 1));
-        JSpinner conSpinner = new JSpinner(new SpinnerNumberModel(ModelData.DEFAULT_CONTRAST, 1, 9999, 1));
-        JSpinner lightXSpinner = new JSpinner(new SpinnerNumberModel(ModelData.DEFAULT_X, -9999, 9999, 1));
-        JSpinner lightYSpinner = new JSpinner((new SpinnerNumberModel(ModelData.DEFAULT_Y, -9999, 9999, 1)));
-        JSpinner lightZSpinner = new JSpinner((new SpinnerNumberModel(ModelData.DEFAULT_Z, -9999, 9999, 1)));
+        JPanel lightPanel = new JPanel();
+        lightPanel.setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1));
+        headerPanel.add(lightPanel);
+
+        JSpinner ambSpinner = new JSpinner(new SpinnerNumberModel(LightingStyle.DEFAULT.getAmbient(), -1000, 1000, 1));
+        JSpinner conSpinner = new JSpinner(new SpinnerNumberModel(LightingStyle.DEFAULT.getContrast(), 100, 9999, 1));
+        JSpinner lightXSpinner = new JSpinner(new SpinnerNumberModel(LightingStyle.DEFAULT.getX(), -1000, 1000, 1));
+        JSpinner lightYSpinner = new JSpinner((new SpinnerNumberModel(LightingStyle.DEFAULT.getY(), -1000, 1000, 1)));
+        JSpinner lightZSpinner = new JSpinner((new SpinnerNumberModel(LightingStyle.DEFAULT.getZ(), -1000, 1000, 1)));
         lightingSpinners[0] = ambSpinner;
         lightingSpinners[1] = conSpinner;
         lightingSpinners[2] = lightXSpinner;
         lightingSpinners[3] = lightYSpinner;
         lightingSpinners[4] = lightZSpinner;
 
-        lightPanelLeft.add(new JLabel("Ambient"));
-        lightPanelLeft.add(ambSpinner);
-        lightPanelLeft.add(new JLabel("Contrast"));
-        lightPanelLeft.add(conSpinner);
+        ambSpinner.setToolTipText("Set the ambient lighting level");
+        conSpinner.setToolTipText("Set the lighting contrast (higher is lower)");
+        lightXSpinner.setToolTipText("Set the sun's x coordinate relative to the player");
+        lightYSpinner.setToolTipText("Set the sun's y coordinate relative to the player");
+        lightZSpinner.setToolTipText("Set the sun's z coordinate relative to the player");
 
-        lightPanelRight.add(new JLabel("X"));
-        lightPanelRight.add(lightXSpinner);
-        lightPanelRight.add(new JLabel("Y"));
-        lightPanelRight.add(lightYSpinner);
-        lightPanelRight.add(new JLabel("Z"));
-        lightPanelRight.add(lightZSpinner);
+        lightPanel.add(new JLabel("Ambient"));
+        lightPanel.add(ambSpinner);
+        lightPanel.add(new JLabel("Contrast"));
+        lightPanel.add(conSpinner);
 
-        lightingComboBox.addItem(LightingStyle.DEFAULT);
-        lightingComboBox.addItem(LightingStyle.ACTOR);
-        lightingComboBox.addItem(LightingStyle.NONE);
-        lightingComboBox.setFocusable(false);
-        lightingComboBox.setToolTipText("Sets the lighting style. Use Actor for NPCs or Players");
-        headerPanel.add(lightingComboBox);
+        lightPanel.add(new JLabel("x/y/z"));
+        lightPanel.add(lightXSpinner);
+        lightPanel.add(lightYSpinner);
+        lightPanel.add(lightZSpinner);
 
-        priorityCheckBox.setToolTipText("Use an oversimplified method of resolving render order issues (can be useful when merging many models)");
-        priorityCheckBox.setFocusable(false);
-        headerPanel.add(priorityCheckBox);
+        JComboBox<LightingStyle> presetComboBox = new JComboBox<>();
+        presetComboBox.addItem(LightingStyle.PRESET);
+        presetComboBox.addItem(LightingStyle.DEFAULT);
+        presetComboBox.addItem(LightingStyle.ACTOR);
+        presetComboBox.addItem(LightingStyle.SPOTANIM);
+        presetComboBox.addItem(LightingStyle.NONE);
+        presetComboBox.setFocusable(false);
+        presetComboBox.setToolTipText("Quick lighting presets for common cases. Actor = NPCs/Players, SpotAnim = Spells/Effects");
+        lightPanel.add(presetComboBox);
 
-        forgeButton.addActionListener(e ->
-                forgeModel(client, nameField, priorityCheckBox.isSelected(), (LightingStyle) lightingComboBox.getSelectedItem(), false));
+        presetComboBox.addItemListener(e ->
+        {
+            LightingStyle preset = (LightingStyle) presetComboBox.getSelectedItem();
+            if (preset == null)
+                return;
 
-        forgeSetButton.addActionListener(e ->
-                forgeModel(client, nameField, priorityCheckBox.isSelected(), (LightingStyle) lightingComboBox.getSelectedItem(), true));
+            if (preset == LightingStyle.PRESET)
+                return;
 
-        saveButton.addActionListener(e -> openSaveDialog(nameField.getText(), priorityCheckBox.isSelected(), (LightingStyle) lightingComboBox.getSelectedItem()));
+            lightingSpinners[0].setValue(preset.getAmbient());
+            lightingSpinners[1].setValue(preset.getContrast());
+            lightingSpinners[2].setValue(preset.getX());
+            lightingSpinners[3].setValue(preset.getY());
+            lightingSpinners[4].setValue(preset.getZ());
+        });
+
+        forgeButton.addActionListener(e -> onForgeButtonPressed(client, nameField, false));
+        forgeSetButton.addActionListener(e -> onForgeButtonPressed(client, nameField, true));
+
+        saveButton.addActionListener(e ->
+        {
+            CustomLighting lighting = new CustomLighting(
+                    (int) lightingSpinners[0].getValue(),
+                    (int) lightingSpinners[1].getValue(),
+                    (int) lightingSpinners[2].getValue(),
+                    (int) lightingSpinners[3].getValue(),
+                    (int) lightingSpinners[4].getValue());
+
+            openSaveDialog(nameField.getText(), priorityCheckBox.isSelected(), LightingStyle.CUSTOM, lighting);
+        });
 
         JPanel sidePanel = new JPanel();
         sidePanel.setLayout(new BorderLayout());
@@ -834,7 +860,22 @@ public class ModelAnvil extends JPanel
         revalidate();
     }
 
-    private void forgeModel(Client client, JTextField nameField, boolean setPriority, LightingStyle lightingStyle, boolean forgeAndSet)
+    private void onForgeButtonPressed(Client client, JTextField nameField, boolean forgeAndSet)
+    {
+        CustomLighting lighting = new CustomLighting(
+                (int) lightingSpinners[0].getValue(),
+                (int) lightingSpinners[1].getValue(),
+                (int) lightingSpinners[2].getValue(),
+                (int) lightingSpinners[3].getValue(),
+                (int) lightingSpinners[4].getValue());
+
+        if (lighting.getX() == 0 && lighting.getY() == 0 && lighting.getZ() == 0)
+            lighting.setZ(1);
+
+        forgeModel(client, nameField, priorityCheckBox.isSelected(), lighting, forgeAndSet);
+    }
+
+    private void forgeModel(Client client, JTextField nameField, boolean setPriority, CustomLighting lighting, boolean forgeAndSet)
     {
         if (client == null)
         {
@@ -847,21 +888,21 @@ public class ModelAnvil extends JPanel
         clientThread.invokeLater(() ->
         {
             DetailedModel[] detailedModels = panelsToDetailedModels();
-            Model model = forgeComplexModel(setPriority, detailedModels, lightingStyle);
+            Model model = forgeComplexModel(setPriority, detailedModels, LightingStyle.CUSTOM, lighting);
             if (model == null)
             {
                 return;
             }
 
-            CustomModelComp comp = new CustomModelComp(plugin.getStoredModels().size(), CustomModelType.FORGED, -1, null, null, detailedModels, null, lightingStyle, setPriority, nameField.getText());
+            CustomModelComp comp = new CustomModelComp(plugin.getStoredModels().size(), CustomModelType.FORGED, -1, null, null, detailedModels, null, LightingStyle.CUSTOM, lighting, setPriority, nameField.getText());
             CustomModel customModel = new CustomModel(model, comp);
             plugin.addCustomModel(customModel, forgeAndSet);
         });
     }
 
-    public Model forgeComplexModel(boolean setPriority, DetailedModel[] detailedModels, LightingStyle lightingStyle)
+    public Model forgeComplexModel(boolean setPriority, DetailedModel[] detailedModels, LightingStyle lightingStyle, CustomLighting lighting)
     {
-        return plugin.createComplexModel(detailedModels, setPriority, lightingStyle);
+        return plugin.createComplexModel(detailedModels, setPriority, lightingStyle, lighting);
     }
 
     private DetailedModel[] panelsToDetailedModels()
@@ -907,7 +948,7 @@ public class ModelAnvil extends JPanel
         return detailedModels;
     }
 
-    private void openSaveDialog(String name, boolean priority, LightingStyle lightingStyle)
+    private void openSaveDialog(String name, boolean priority, LightingStyle lightingStyle, CustomLighting lighting)
     {
         File outputDir = MODELS_DIR;
         outputDir.mkdirs();
@@ -957,17 +998,17 @@ public class ModelAnvil extends JPanel
             {
                 selectedFile = new File(selectedFile.getPath() + ".json");
             }
-            saveToFile(selectedFile, name, priority, lightingStyle);
+            saveToFile(selectedFile, name, priority, lightingStyle, lighting);
         }
     }
 
-    public void saveToFile(File file, String name, boolean priority, LightingStyle lightingStyle)
+    public void saveToFile(File file, String name, boolean priority, LightingStyle lightingStyle, CustomLighting lighting)
     {
         try {
             FileWriter writer = new FileWriter(file, false);
 
             DetailedModel[] detailedModels = panelsToDetailedModels();
-            CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, null, lightingStyle, priority, name);
+            CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, null, lightingStyle, lighting, priority, name);
             String string = plugin.getGson().toJson(comp);
             writer.write(string);
             writer.close();
@@ -999,7 +1040,7 @@ public class ModelAnvil extends JPanel
                 }
             }
 
-            plugin.loadCustomModelToAnvil(selectedFile, priorityCheckBox.isSelected(), (LightingStyle) lightingComboBox.getSelectedItem(), nameField.getText());
+            plugin.loadCustomModelToAnvil(selectedFile, priorityCheckBox.isSelected(), nameField.getText());
         }
     }
 

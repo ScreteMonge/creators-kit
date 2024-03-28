@@ -2,10 +2,8 @@ package com.creatorskit.models;
 
 import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
-import com.creatorskit.swing.ModelOrganizer;
 import net.runelite.api.*;
 import net.runelite.client.callback.ClientThread;
-import net.runelite.client.util.Text;
 
 import javax.inject.Inject;
 import java.util.concurrent.CountDownLatch;
@@ -28,7 +26,7 @@ public class ModelGetter
         this.config = config;
     }
 
-    public void storeNPC(int index, String target, NPC npc, String option, boolean setTransmog)
+    public void storeNPC(int index, String target, String option, NPC npc, boolean setTransmog)
     {
         if (setTransmog && !config.transmogRightClick())
             return;
@@ -45,7 +43,8 @@ public class ModelGetter
                         clientThread.invokeLater(() ->
                         {
                             Model model = plugin.constructModelFromCache(modelStats, new int[0], false, true);
-                            CustomModelComp comp = new CustomModelComp(0, CustomModelType.CACHE_NPC, npc.getId(), modelStats, null, null, null, LightingStyle.ACTOR, false, npc.getName());
+                            CustomLighting lighting = new CustomLighting(64, 850, -30, -30, 50);
+                            CustomModelComp comp = new CustomModelComp(0, CustomModelType.CACHE_NPC, npc.getId(), modelStats, null, null, null, LightingStyle.ACTOR, lighting, false, npc.getName());
                             CustomModel customModel = new CustomModel(model, comp);
                             plugin.addCustomModel(customModel, false);
                             plugin.sendChatMessage("Model stored: " + npc.getName());
@@ -79,7 +78,7 @@ public class ModelGetter
                 });
     }
 
-    public void addSpotAnimGetter(int index, String target, String option, Player player, boolean sendToAnvil)
+    public void addSpotAnimGetter(int index, String target, String option, IterableHashTable<ActorSpotAnim> spotAnims, boolean sendToAnvil)
     {
         client.createMenuEntry(index)
                 .setOption(option)
@@ -90,15 +89,16 @@ public class ModelGetter
                     //For "Anvil" option on SpotAnims
                     if (sendToAnvil)
                     {
-                        for (ActorSpotAnim spotAnim : player.getSpotAnims())
+                        for (ActorSpotAnim spotAnim : spotAnims)
                         {
                             Thread thread = new Thread(() ->
                             {
                                 ModelStats[] modelStats = modelFinder.findSpotAnim(spotAnim.getId());
                                 clientThread.invokeLater(() ->
                                 {
+                                    CustomLighting lighting = modelStats[0].getLighting();
                                     plugin.cacheToAnvil(modelStats, new int[0], false);
-                                    plugin.sendChatMessage("Model sent to Anvil: " + spotAnim.getId() + "; Animation: " + modelFinder.getLastAnim());
+                                    plugin.sendChatMessage("Model sent to Anvil: " + spotAnim.getId() + "; Anim: " + modelFinder.getLastAnim() + "; Ambient/Contrast: " + lighting.getAmbient() + "/" + lighting.getContrast());
                                 });
                             });
                             thread.start();
@@ -107,7 +107,7 @@ public class ModelGetter
                     }
 
                     //For "Store" option on SpotAnims
-                    for (ActorSpotAnim spotAnim : player.getSpotAnims())
+                    for (ActorSpotAnim spotAnim : spotAnims)
                     {
                         Thread thread = new Thread(() ->
                         {
@@ -115,7 +115,8 @@ public class ModelGetter
                             clientThread.invokeLater(() ->
                             {
                                 String name = "SpotAnim " + spotAnim.getId();
-                                CustomModelComp comp = new CustomModelComp(0, CustomModelType.CACHE_OBJECT, spotAnim.getId(), modelStats, null, null, null, LightingStyle.ACTOR, false, name);
+                                CustomLighting lighting = modelStats[0].getLighting();
+                                CustomModelComp comp = new CustomModelComp(0, CustomModelType.CACHE_OBJECT, spotAnim.getId(), modelStats, null, null, null, LightingStyle.CUSTOM, lighting, false, name);
 
                                 ModelData modelData = client.loadModelData(modelStats[0].getModelId()).cloneColors().cloneVertices();
                                 short[] recolFrom = modelStats[0].getRecolourFrom();
@@ -124,11 +125,10 @@ public class ModelGetter
                                     modelData.recolor(recolFrom[i], recolTo[i]);
                                 modelData.scale(modelStats[0].getResizeX(), modelStats[0].getResizeZ(), modelStats[0].getResizeY());
 
-                                Lighting lighting = modelStats[0].getLighting();
-                                Model model = modelData.light(lighting.getAmbient(), lighting.getContrast(), lighting.getX(), lighting.getY(), lighting.getZ());
+                                Model model = modelData.light(lighting.getAmbient(), lighting.getContrast(), lighting.getX(), lighting.getZ() * -1, lighting.getY());
                                 CustomModel customModel = new CustomModel(model, comp);
                                 plugin.addCustomModel(customModel, false);
-                                plugin.sendChatMessage("Model stored: " + name + "; Animation: " + modelFinder.getLastAnim());
+                                plugin.sendChatMessage("Model stored: " + name + "; Anim: " + modelFinder.getLastAnim() + "; Ambient/Contrast: " + lighting.getAmbient() + "/" + lighting.getContrast());
                             });
                         });
                         thread.start();
@@ -177,7 +177,8 @@ public class ModelGetter
                         clientThread.invokeLater(() ->
                         {
                             Model model = plugin.constructModelFromCache(modelStats, comp.getColors(), true, true);
-                            CustomModelComp composition = new CustomModelComp(0, CustomModelType.CACHE_PLAYER, -1, modelStats, comp.getColors(), null, null, LightingStyle.ACTOR, false, finalName);
+                            CustomLighting lighting = new CustomLighting(64, 850, -30, -30, 50);
+                            CustomModelComp composition = new CustomModelComp(0, CustomModelType.CACHE_PLAYER, -1, modelStats, comp.getColors(), null, null, LightingStyle.ACTOR, lighting, false, finalName);
                             CustomModel customModel = new CustomModel(model, composition);
                             plugin.addCustomModel(customModel, false);
                             plugin.sendChatMessage("Model stored: " + finalName);
@@ -203,7 +204,8 @@ public class ModelGetter
                     Thread thread = new Thread(() ->
                     {
                         ModelStats[] modelStats = modelFinder.findModelsForObject(objectId);
-                        CustomModelComp comp = new CustomModelComp(0, type, objectId, modelStats, null, null, null, LightingStyle.DEFAULT, false, name);
+                        CustomLighting lighting = new CustomLighting(64, 768, -50, -50, 10);
+                        CustomModelComp comp = new CustomModelComp(0, type, objectId, modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, name);
                         CustomModel customModel = new CustomModel(model, comp);
                         plugin.addCustomModel(customModel, false);
                         plugin.sendChatMessage("Model stored: " + name);

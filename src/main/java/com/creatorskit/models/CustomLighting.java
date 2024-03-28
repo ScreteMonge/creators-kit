@@ -7,7 +7,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Getter
 @Setter
-public class Lighting
+public class CustomLighting
 {
     private int ambient;
     private int contrast;

@@ -239,7 +239,7 @@ public class ModelFinder
                                     128,
                                     128,
                                     128,
-                                    new Lighting(64, 850, -30, -50, -30)));
+                                    new CustomLighting(64, 850, -30, -50, -30)));
                         }
                     }
 
@@ -360,7 +360,7 @@ public class ModelFinder
                                     128,
                                     128,
                                     128,
-                                    new Lighting(64, 850, -30, -50, -30)));
+                                    new CustomLighting(64, 850, -30, -50, -30)));
                         }
                     }
 
@@ -382,7 +382,7 @@ public class ModelFinder
         final int[] resize = new int[]{128, 128, 128};
         ArrayList<Short> recolourFrom = new ArrayList<>();
         ArrayList<Short> recolourTo = new ArrayList<>();
-        Lighting lighting = new Lighting(ModelData.DEFAULT_AMBIENT, ModelData.DEFAULT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
+        CustomLighting lighting = new CustomLighting(64, 850, -50, -50, 75);
 
         CountDownLatch countDownLatch = new CountDownLatch(1);
         Request request = new Request.Builder()
@@ -605,17 +605,14 @@ public class ModelFinder
                                     recolourTo.add((short) i);
                                 }
                             }
-                            else if (string.startsWith("resizex"))
+                            else if (string.startsWith("resizeh"))
                             {
                                 String[] split = string.split("=");
-                                resize[0] = Integer.parseInt(split[1]);
+                                int resizeH = Integer.parseInt(split[1]);
+                                resize[0] = resizeH;
+                                resize[2] = resizeH;
                             }
-                            else if (string.startsWith("resizey"))
-                            {
-                                String[] split = string.split("=");
-                                resize[2] = Integer.parseInt(split[1]);
-                            }
-                            else if (string.startsWith("resizez"))
+                            else if (string.startsWith("resizev"))
                             {
                                 String[] split = string.split("=");
                                 resize[1] = Integer.parseInt(split[1]);
@@ -655,7 +652,7 @@ public class ModelFinder
                     resize[0],
                     resize[1],
                     resize[2],
-                    new Lighting(64, 850, -30, -50, -30));
+                    new CustomLighting(64, 850, -30, -50, -30));
 
         return modelStats;
     }
@@ -799,7 +796,7 @@ public class ModelFinder
                     resize[0],
                     resize[1],
                     resize[2],
-                    new Lighting(ModelData.DEFAULT_AMBIENT, ModelData.DEFAULT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z));
+                    new CustomLighting(ModelData.DEFAULT_AMBIENT, ModelData.DEFAULT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z));
 
         return modelStats;
     }
@@ -944,7 +941,7 @@ public class ModelFinder
                     128,
                     128,
                     128,
-                    new Lighting(ModelData.DEFAULT_AMBIENT, ModelData.DEFAULT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z));
+                    new CustomLighting(ModelData.DEFAULT_AMBIENT, ModelData.DEFAULT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z));
 
         return modelStats;
     }

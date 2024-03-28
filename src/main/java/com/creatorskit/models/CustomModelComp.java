@@ -17,6 +17,7 @@ public class CustomModelComp
     private DetailedModel[] detailedModels;
     private BlenderModel blenderModel;
     private LightingStyle lightingStyle;
+    private CustomLighting customLighting;
     private boolean priority;
     private String name;
 }

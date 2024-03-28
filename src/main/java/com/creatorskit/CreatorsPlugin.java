@@ -37,7 +37,6 @@ import net.runelite.client.util.ImageUtil;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.awt.*;
-import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.file.Files;
@@ -690,12 +689,18 @@ public class CreatorsPlugin extends Plugin {
 		{
 			if (config.rightClick())
 			{
-				modelGetter.storeNPC(-1, target, npc, "Store", false);
+				modelGetter.storeNPC(-1, target, "Store", npc, false);
 				modelGetter.sendToAnvilNPC(-2, target, npc);
 			}
 
 			if (config.transmogRightClick())
-				modelGetter.storeNPC(-3, target, npc, "Transmog", true);
+				modelGetter.storeNPC(-3, target, "Transmog", npc, true);
+
+			if (config.rightSpotAnim())
+			{
+				modelGetter.addSpotAnimGetter(-4, target, "SpotAnim Store", npc.getSpotAnims(), false);
+				modelGetter.addSpotAnimGetter(-4, target, "SpotAnim Anvil", npc.getSpotAnims(), true);
+			}
 		}
 
 		if (tile != null)
@@ -825,8 +830,8 @@ public class CreatorsPlugin extends Plugin {
 
 			if (config.rightSpotAnim())
 			{
-				modelGetter.addSpotAnimGetter(-4, target, "SpotAnim Store", player, false);
-				modelGetter.addSpotAnimGetter(-5, target, "SpotAnim Anvil", player, true);
+				modelGetter.addSpotAnimGetter(-4, target, "SpotAnim Store", player.getSpotAnims(), false);
+				modelGetter.addSpotAnimGetter(-5, target, "SpotAnim Anvil", player.getSpotAnims(), true);
 			}
 		}
 
@@ -843,8 +848,8 @@ public class CreatorsPlugin extends Plugin {
 
 				if (config.rightSpotAnim())
 				{
-					modelGetter.addSpotAnimGetter(-3, "Local Player", "SpotAnim Store", localPlayer, false);
-					modelGetter.addSpotAnimGetter(-4, "Local Player", "SpotAnim Anvil", localPlayer, true);
+					modelGetter.addSpotAnimGetter(-3, "Local Player", "SpotAnim Store", localPlayer.getSpotAnims(), false);
+					modelGetter.addSpotAnimGetter(-4, "Local Player", "SpotAnim Anvil", localPlayer.getSpotAnims(), true);
 				}
 			}
 		}
@@ -1353,7 +1358,7 @@ public class CreatorsPlugin extends Plugin {
 		chatMessageManager.queue(QueuedMessage.builder().type(ChatMessageType.GAMEMESSAGE).runeLiteFormattedMessage(message).build());
 	}
 
-	public Model createComplexModel(DetailedModel[] detailedModels, boolean setPriority, LightingStyle lightingStyle)
+	public Model createComplexModel(DetailedModel[] detailedModels, boolean setPriority, LightingStyle lightingStyle, CustomLighting lighting)
 	{
 		ModelData[] models = new ModelData[detailedModels.length];
 		boolean[] facesToInvert = new boolean[0];
@@ -1439,19 +1444,27 @@ public class CreatorsPlugin extends Plugin {
 			}
 		}
 
-		Model model;
-		switch (lightingStyle)
+		if (lighting == null)
 		{
-			default:
-			case DEFAULT:
-				model =  modelData.light();
-				break;
-			case ACTOR:
-				model = modelData.light(64, 850, -30, -50, -30);
-				break;
-			case NONE:
-				model = modelData.light(128, 4000, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
+			lighting = new CustomLighting(lightingStyle.getAmbient(), lightingStyle.getContrast(), lightingStyle.getX(), lightingStyle.getY(), lightingStyle.getZ());
 		}
+
+		CustomLighting finalLighting;
+		if (lightingStyle == LightingStyle.CUSTOM)
+		{
+			finalLighting = lighting;
+		}
+		else
+		{
+			finalLighting = new CustomLighting(lightingStyle.getAmbient(), lightingStyle.getContrast(), lightingStyle.getX(), lightingStyle.getY(), lightingStyle.getZ());
+		}
+
+		Model model = modelData.light(
+				finalLighting.getAmbient(),
+				finalLighting.getContrast(),
+				finalLighting.getX(),
+				finalLighting.getZ() * -1,
+				finalLighting.getY());
 
 		if (model == null)
 			return null;
@@ -1593,34 +1606,40 @@ public class CreatorsPlugin extends Plugin {
 			ModelStats[] modelStats;
 			String name;
 			CustomModelComp comp;
+			CustomLighting lighting;
 
 			switch (type)
 			{
 				case CACHE_NPC:
 					modelStats = modelFinder.findModelsForNPC(id);
 					name = modelFinder.getLastFound();
-					comp = new CustomModelComp(0, CustomModelType.CACHE_NPC, id, modelStats, null, null, null, LightingStyle.ACTOR, false, name);
+					lighting = new CustomLighting(64, 850, -30, -30, 50);
+					comp = new CustomModelComp(0, CustomModelType.CACHE_NPC, id, modelStats, null, null, null, LightingStyle.ACTOR, lighting, false, name);
 					break;
 				default:
 				case CACHE_OBJECT:
 					modelStats = modelFinder.findModelsForObject(id);
 					name = modelFinder.getLastFound();
-					comp = new CustomModelComp(0, CustomModelType.CACHE_OBJECT, id, modelStats, null, null, null, LightingStyle.DEFAULT, false, name);
+					lighting = new CustomLighting(64, 768, -50, -50, 10);
+					comp = new CustomModelComp(0, CustomModelType.CACHE_OBJECT, id, modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, name);
 					break;
 				case CACHE_GROUND_ITEM:
 					modelStats = modelFinder.findModelsForGroundItem(id, CustomModelType.CACHE_GROUND_ITEM);
 					name = modelFinder.getLastFound();
-					comp = new CustomModelComp(0, CustomModelType.CACHE_GROUND_ITEM, id, modelStats, null, null, null, LightingStyle.DEFAULT, false, name);
+					lighting = new CustomLighting(64, 768, -50, -50, 10);
+					comp = new CustomModelComp(0, CustomModelType.CACHE_GROUND_ITEM, id, modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, name);
 					break;
 				case CACHE_MAN_WEAR:
 					modelStats = modelFinder.findModelsForGroundItem(id, CustomModelType.CACHE_MAN_WEAR);
 					name = modelFinder.getLastFound();
-					comp = new CustomModelComp(0, CustomModelType.CACHE_MAN_WEAR, id, modelStats, null, null, null, LightingStyle.DEFAULT, false, name);
+					lighting = new CustomLighting(64, 768, -50, -50, 10);
+					comp = new CustomModelComp(0, CustomModelType.CACHE_MAN_WEAR, id, modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, name);
 					break;
 				case CACHE_WOMAN_WEAR:
 					modelStats = modelFinder.findModelsForGroundItem(id, CustomModelType.CACHE_WOMAN_WEAR);
 					name = modelFinder.getLastFound();
-					comp = new CustomModelComp(0, CustomModelType.CACHE_WOMAN_WEAR, id, modelStats, null, null, null, LightingStyle.DEFAULT, false, name);
+					lighting = new CustomLighting(64, 768, -50, -50, 10);
+					comp = new CustomModelComp(0, CustomModelType.CACHE_WOMAN_WEAR, id, modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, name);
 			}
 
 			if (modelStats == null)
@@ -1716,7 +1735,7 @@ public class CreatorsPlugin extends Plugin {
 		});
 	}
 
-	public void loadCustomModelToAnvil(File file, boolean priority, LightingStyle lightingStyle, String name)
+	public void loadCustomModelToAnvil(File file, boolean priority, String name)
 	{
 		try
 		{
@@ -1752,7 +1771,8 @@ public class CreatorsPlugin extends Plugin {
 			});
 			reader.close();
 
-			CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, null, lightingStyle, priority, name);
+			CustomLighting lighting = new CustomLighting(64, 768, -50, -50, 10);
+			CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, null, LightingStyle.DEFAULT, lighting, priority, name);
 			try
 			{
 				file.delete();
@@ -1774,20 +1794,18 @@ public class CreatorsPlugin extends Plugin {
 		}
 		catch (Exception e)
 		{
-			sendChatMessage("The file chosen is possibly an older v1.0 file. Attempting conversion...");
+			sendChatMessage("The file chosen is possibly an older v1.0 file. Please see ScreteMonge for help adapting this.");
 		}
-
-		convertTextToJson(file, priority, lightingStyle, name);
 	}
 
-	public void loadCustomModel(File file, boolean priority, LightingStyle lightingStyle, String name)
+	public void loadCustomModel(File file, boolean priority, String name)
 	{
 		try
 		{
 			Reader reader = Files.newBufferedReader(file.toPath());
 			CustomModelComp comp = gson.fromJson(reader, CustomModelComp.class);
 			clientThread.invokeLater(() -> {
-				Model model = createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle());
+				Model model = createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle(), comp.getCustomLighting());
 				CustomModel customModel = new CustomModel(model, comp);
 				addCustomModel(customModel, false);
 			});
@@ -1803,10 +1821,11 @@ public class CreatorsPlugin extends Plugin {
 		{
 			Reader reader = Files.newBufferedReader(file.toPath());
 			DetailedModel[] detailedModels = gson.fromJson(reader, DetailedModel[].class);
-			CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, null, lightingStyle, priority, name);
+			CustomLighting lighting = new CustomLighting(64, 768, -50, -50, 10);
+			CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, null, LightingStyle.DEFAULT, lighting, priority, name);
 
 			clientThread.invokeLater(() -> {
-				Model model = createComplexModel(detailedModels, priority, lightingStyle);
+				Model model = createComplexModel(detailedModels, priority, LightingStyle.DEFAULT, lighting);
 				CustomModel customModel = new CustomModel(model, comp);
 				addCustomModel(customModel, false);
 			});
@@ -1834,160 +1853,7 @@ public class CreatorsPlugin extends Plugin {
 		}
 		catch (Exception e)
 		{
-			sendChatMessage("The file chosen is possibly an older v1.0 file. Attempting conversion...");
-		}
-
-		convertTextToJson(file, priority, lightingStyle, name);
-	}
-
-	private void convertTextToJson(File file, boolean priority, LightingStyle lightingStyle, String customModelName)
-	{
-		ArrayList<DetailedModel> list = new ArrayList<>();
-
-		try
-		{
-			Scanner myReader = new Scanner(file);
-			myReader.nextLine();
-			String s = "";
-
-			while ((s = myReader.nextLine()) != null) {
-				String name = "";
-				int modelId = 0;
-				int group = 1;
-				int xTile = 0;
-				int yTile = 0;
-				int zTile = 0;
-				int xTranslate = 0;
-				int yTranslate = 0;
-				int zTranslate = 0;
-				int xScale = 0;
-				int yScale = 0;
-				int zScale = 0;
-				int rotate = 0;
-				String newColours = "";
-				String oldColours = "";
-				boolean setBreak = false;
-
-				String data = "";
-				try
-				{
-					while (!(data = myReader.nextLine()).equals(""))
-					{
-						if (data.startsWith("name="))
-						{
-							String[] split = data.split("=");
-							if (split.length > 1)
-								name = split[1];
-						}
-
-						if (data.startsWith("modelid="))
-							modelId = Integer.parseInt(data.split("=")[1]);
-
-						if (data.startsWith("group="))
-							group = Integer.parseInt(data.split("=")[1]);
-
-						if (data.startsWith("xtile="))
-							xTile = Integer.parseInt(data.split("=")[1]);
-
-						if (data.startsWith("ytile="))
-							yTile = Integer.parseInt(data.split("=")[1]);
-
-						if (data.startsWith("ztile="))
-							zTile = Integer.parseInt(data.split("=")[1]);
-
-						if (data.startsWith("xt="))
-							xTranslate = Integer.parseInt(data.split("=")[1]);
-
-						if (data.startsWith("yt="))
-							yTranslate = Integer.parseInt(data.split("=")[1]);
-
-						if (data.startsWith("zt="))
-							zTranslate = Integer.parseInt(data.split("=")[1]);
-
-						if (data.startsWith("xs="))
-							xScale = Integer.parseInt(data.split("=")[1]);
-
-						if (data.startsWith("ys="))
-							yScale = Integer.parseInt(data.split("=")[1]);
-
-						if (data.startsWith("zs="))
-							zScale = Integer.parseInt(data.split("=")[1]);
-
-						if (data.startsWith("r="))
-							rotate = Integer.parseInt(data.split("=")[1]);
-
-						if (data.startsWith("n="))
-							newColours = data.replaceAll("n=", "");
-
-						if (data.startsWith("o="))
-							oldColours = data.replaceAll("o=", "");
-					}
-				}
-				catch (NoSuchElementException e)
-				{
-					setBreak = true;
-				}
-
-				DetailedModel detailedModel = new DetailedModel(name, modelId, group, xTile, yTile, zTile, xTranslate, yTranslate, zTranslate, xScale, yScale, zScale, rotate, newColours, oldColours, false);
-				list.add(detailedModel);
-				if (setBreak)
-					break;
-			}
-
-			myReader.close();
-
-			SwingUtilities.invokeLater(() ->
-			{
-				for (DetailedModel detailedModel : list)
-				{
-					creatorsPanel.getModelAnvil().createComplexPanel(
-							detailedModel.getName(),
-							detailedModel.getModelId(),
-							detailedModel.getGroup(),
-							detailedModel.getXTile(),
-							detailedModel.getYTile(),
-							detailedModel.getZTile(),
-							detailedModel.getXTranslate(),
-							detailedModel.getYTranslate(),
-							detailedModel.getZTranslate(),
-							detailedModel.getXScale(),
-							detailedModel.getYScale(),
-							detailedModel.getZScale(),
-							detailedModel.getRotate(),
-							detailedModel.getRecolourNew(),
-							detailedModel.getRecolourOld(),
-							detailedModel.isInvertFaces());
-				}
-			});
-
-			try
-			{
-				String fileName = file.getPath();
-				if (fileName.endsWith(".txt"))
-				{
-					fileName = fileName.substring(0, fileName.length() - 4);
-				}
-
-				File newFile = new File(fileName + ".json");
-				FileWriter writer = new FileWriter(newFile, false);
-				DetailedModel[] detailedModels = (DetailedModel[]) list.toArray();
-				CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, null, lightingStyle, priority, customModelName);
-				String string = gson.toJson(comp);
-				writer.write(string);
-				writer.close();
-				file.delete();
-				sendChatMessage("The chosen v1.0 file has been successfully updated to v1.3 for future use.");
-			}
-			catch (IOException e)
-			{
-				e.printStackTrace();
-				sendChatMessage("An error occurred while trying to convert this file from a v1.0 to a v1.3 file.");
-			}
-		}
-		catch (FileNotFoundException e)
-		{
-			sendChatMessage("An error occurred while trying to convert this file from a v1.0 to a v1.3 file.");
-			e.printStackTrace();
+			sendChatMessage("The file chosen is possibly an older v1.0 file. Please see ScreteMonge for help adapting this.");
 		}
 	}
 
@@ -2029,7 +1895,7 @@ public class CreatorsPlugin extends Plugin {
 			if (loadCustomModel)
 			{
 				clientThread.invokeLater(() -> {
-					Model model = createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle());
+					Model model = createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle(), comp.getCustomLighting());
 					CustomModel customModel = new CustomModel(model, comp);
 					addCustomModel(customModel, false);
 					creatorsPanel.getModelOrganizer().setTransmog(customModel);

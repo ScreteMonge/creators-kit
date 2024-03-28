@@ -1230,7 +1230,7 @@ public class CreatorsPanel extends PluginPanel
             switch (comp.getType())
             {
                 case FORGED:
-                    model = plugin.createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle());
+                    model = plugin.createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle(), comp.getCustomLighting());
                     customModel = new CustomModel(model, comp);
                     break;
                 case CACHE_NPC:
@@ -1350,17 +1350,9 @@ public class CreatorsPanel extends PluginPanel
         JCheckBox priorityCheckbox = new JCheckBox("Set Priority?");
         priorityCheckbox.setToolTipText("May resolve some rendering issues by setting all faces to the same priority. Leave off if you're unsure");
 
-        JComboBox<LightingStyle> comboBox = new JComboBox<>();
-        comboBox.setToolTipText("Sets the lighting style");
-        comboBox.addItem(LightingStyle.DEFAULT);
-        comboBox.addItem(LightingStyle.ACTOR);
-        comboBox.addItem(LightingStyle.NONE);
-        comboBox.setFocusable(false);
-
         JPanel accessory = new JPanel();
         accessory.setLayout(new GridLayout(0, 1));
         accessory.add(priorityCheckbox);
-        accessory.add(comboBox);
 
         fileChooser.setAccessory(accessory);
 
@@ -1375,7 +1367,7 @@ public class CreatorsPanel extends PluginPanel
             if (name.endsWith(".txt"))
                 name = replaceLast(name, ".txt");
 
-            plugin.loadCustomModel(selectedFile, priorityCheckbox.isSelected(), (LightingStyle) comboBox.getSelectedItem(), name);
+            plugin.loadCustomModel(selectedFile, priorityCheckbox.isSelected(), name);
         }
     }
 

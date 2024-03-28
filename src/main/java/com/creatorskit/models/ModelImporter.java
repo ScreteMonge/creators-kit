@@ -1,7 +1,6 @@
 package com.creatorskit.models;
 
 import com.creatorskit.CreatorsPlugin;
-import com.creatorskit.models.*;
 import net.runelite.api.*;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
@@ -125,7 +124,9 @@ public class ModelImporter
         if (model == null)
             return;
 
-        CustomModelComp comp = new CustomModelComp(0, CustomModelType.BLENDER, -1, null, null, null, blenderModel, LightingStyle.DEFAULT, false, name);
+        CustomLighting lighting = new CustomLighting(lightingStyle.getAmbient(), lightingStyle.getContrast(), lightingStyle.getX(), lightingStyle.getY(), lightingStyle.getZ());
+
+        CustomModelComp comp = new CustomModelComp(0, CustomModelType.BLENDER, -1, null, null, null, blenderModel, lightingStyle, lighting, false, name);
         CustomModel customModel = new CustomModel(model, comp);
         plugin.addCustomModel(customModel, false);
     }

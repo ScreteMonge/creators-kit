@@ -260,23 +260,6 @@ public class ModelOrganizer extends JPanel
         JFileChooser fileChooser = new JFileChooser(MODELS_DIR);
         fileChooser.setDialogTitle("Choose a model to load");
 
-        JCheckBox priorityCheckbox = new JCheckBox("Set Priority?");
-        priorityCheckbox.setToolTipText("May resolve some rendering issues by setting all faces to the same priority. Leave off if you're unsure");
-
-        JComboBox<LightingStyle> comboBox = new JComboBox<>();
-        comboBox.setToolTipText("Sets the lighting style");
-        comboBox.addItem(LightingStyle.DEFAULT);
-        comboBox.addItem(LightingStyle.ACTOR);
-        comboBox.addItem(LightingStyle.NONE);
-        comboBox.setFocusable(false);
-
-        JPanel accessory = new JPanel();
-        accessory.setLayout(new GridLayout(0, 1));
-        accessory.add(priorityCheckbox);
-        accessory.add(comboBox);
-
-        fileChooser.setAccessory(accessory);
-
         int option = fileChooser.showOpenDialog(fileChooser);
         if (option == JFileChooser.APPROVE_OPTION)
         {
@@ -298,7 +281,7 @@ public class ModelOrganizer extends JPanel
                 }
             }
 
-            plugin.loadCustomModel(selectedFile, priorityCheckbox.isSelected(), (LightingStyle) comboBox.getSelectedItem(), name);
+            plugin.loadCustomModel(selectedFile, false, name);
         }
     }
 

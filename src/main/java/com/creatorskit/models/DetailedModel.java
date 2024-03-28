@@ -9,20 +9,20 @@ import lombok.Setter;
 @Setter
 public class DetailedModel
 {
-    String name;
-    int modelId;
-    int group;
-    int xTile;
-    int yTile;
-    int zTile;
-    int xTranslate;
-    int yTranslate;
-    int zTranslate;
-    int xScale;
-    int yScale;
-    int zScale;
-    int rotate;
-    String recolourNew;
-    String recolourOld;
-    boolean invertFaces;
+    private String name;
+    private int modelId;
+    private int group;
+    private int xTile;
+    private int yTile;
+    private int zTile;
+    private int xTranslate;
+    private int yTranslate;
+    private int zTranslate;
+    private int xScale;
+    private int yScale;
+    private int zScale;
+    private int rotate;
+    private String recolourNew;
+    private String recolourOld;
+    private boolean invertFaces;
 }
