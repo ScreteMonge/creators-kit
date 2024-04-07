@@ -41,6 +41,7 @@ public class ModelOrganizer extends JPanel
     private final BufferedImage ANVIL = ImageUtil.loadImageResource(getClass(), "/Anvil.png");
     private final BufferedImage SAVE = ImageUtil.loadImageResource(getClass(), "/Save.png");
     private final BufferedImage TRANSMOG = ImageUtil.loadImageResource(getClass(), "/Transmog.png");
+    private final Dimension buttonDimension = new Dimension(45, 25);
     private final HashMap<CustomModel, JPanel> panelMap = new HashMap<>();
     private final JPanel modelPanel = new JPanel();
     private final GridBagConstraints c = new GridBagConstraints();
@@ -76,7 +77,7 @@ public class ModelOrganizer extends JPanel
         c.gridx = 0;
         c.gridy = 0;
         modelPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        modelPanel.setLayout(new GridLayout(0, 11, 8, 8));
+        modelPanel.setLayout(new GridLayout(0, 8, 8, 8));
         viewport.add(modelPanel, c);
 
         c.gridx = 0;
@@ -244,32 +245,28 @@ public class ModelOrganizer extends JPanel
         panel.add(buttonsPanel, c);
 
         JButton deleteButton = new JButton(new ImageIcon(CLEAR));
-        deleteButton.setFocusable(false);
+        deleteButton.setPreferredSize(buttonDimension);
         deleteButton.setToolTipText("Remove this model from all Objects and dropdown menus");
-        deleteButton.addActionListener(e ->
-                plugin.removeCustomModel(model));
+        deleteButton.addActionListener(e -> plugin.removeCustomModel(model));
         buttonsPanel.add(deleteButton);
 
         JButton anvilButton = new JButton(new ImageIcon(ANVIL));
-        anvilButton.setFocusable(false);
+        anvilButton.setPreferredSize(buttonDimension);
         anvilButton.setToolTipText("Send this model to the Anvil");
         buttonsPanel.add(anvilButton);
-        anvilButton.addActionListener(e ->
-                plugin.customModelToAnvil(model));
+        anvilButton.addActionListener(e -> plugin.customModelToAnvil(model));
 
         JButton saveButton = new JButton(new ImageIcon(SAVE));
-        saveButton.setFocusable(false);
+        saveButton.setPreferredSize(buttonDimension);
         saveButton.setToolTipText("Save this model for future use");
         buttonsPanel.add(saveButton);
-        saveButton.addActionListener(e ->
-                openSaveDialog(model, textField.getText()));
+        saveButton.addActionListener(e -> openSaveDialog(model, textField.getText()));
 
         JButton transmogButton = new JButton(new ImageIcon(TRANSMOG));
-        transmogButton.setFocusable(false);
+        transmogButton.setPreferredSize(buttonDimension);
         transmogButton.setToolTipText("Set this as your player transmog");
         buttonsPanel.add(transmogButton);
-        transmogButton.addActionListener(e ->
-                setTransmog(model));
+        transmogButton.addActionListener(e -> setTransmog(model));
 
         revalidate();
         repaint();
