@@ -24,5 +24,9 @@ public class DetailedModel
     private int rotate;
     private String recolourNew;
     private String recolourOld;
+    private short[] coloursFrom;
+    private short[] coloursTo;
+    private short[] texturesFrom;
+    private short[] texturesTo;
     private boolean invertFaces;
 }

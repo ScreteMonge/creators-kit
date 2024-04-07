@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ModelData;
 import okhttp3.*;
+import org.apache.commons.lang3.ArrayUtils;
 
 import javax.inject.Inject;
 import java.io.IOException;
@@ -23,6 +24,10 @@ public class ModelFinder
     private String lastFound;
     @Getter
     private int lastAnim;
+    private static final Pattern recolFrom = Pattern.compile("recol\\ds=.+");
+    private static final Pattern recolTo = Pattern.compile("recol\\dd=.+");
+    private static final Pattern retexFrom = Pattern.compile("retex\\ds=.+");
+    private static final Pattern retexTo = Pattern.compile("retex\\dd=.+");
 
     public ModelStats[] findModelsForPlayer(boolean groundItem, boolean maleItem, int[] items)
     {
@@ -41,9 +46,6 @@ public class ModelFinder
             if (item > 256)
                 itemList.add(item - 512);
         }
-
-        Pattern recolFrom = Pattern.compile("recol\\ds=.+");
-        Pattern recolTo = Pattern.compile("recol\\dd=.+");
 
         ArrayList<ModelStats> modelStatsArray = new ArrayList<>();
 
@@ -74,7 +76,7 @@ public class ModelFinder
                 if (!response.isSuccessful() || response.body() == null)
                     return;
 
-                getPlayerItems(response, modelStatsArray, groundItem, maleItem, itemId, recolFrom, recolTo);
+                getPlayerItems(response, modelStatsArray, groundItem, maleItem, itemId);
                 countDownLatch.countDown();
                 response.body().close();
             }
@@ -105,7 +107,7 @@ public class ModelFinder
                 if (!response.isSuccessful() || response.body() == null)
                     return;
 
-                getPlayerKit(response, modelStatsArray, kitId, recolFrom, recolTo);
+                getPlayerKit(response, modelStatsArray, kitId);
                 countDownLatch.countDown();
                 response.body().close();
             }
@@ -124,7 +126,7 @@ public class ModelFinder
         return modelStatsArray.toArray(new ModelStats[0]);
     }
 
-    public static void getPlayerItems(Response response, ArrayList<ModelStats> modelStatsArray, boolean groundItem, boolean maleItem, int[] itemId, Pattern recolFrom, Pattern recolTo)
+    public static void getPlayerItems(Response response, ArrayList<ModelStats> modelStatsArray, boolean groundItem, boolean maleItem, int[] itemId)
     {
         InputStream inputStream = response.body().byteStream();
         Scanner scanner = new Scanner(inputStream);
@@ -149,6 +151,8 @@ public class ModelFinder
                     int[] modelIds = new int[3];
                     ArrayList<Integer> recolourFrom = new ArrayList<>();
                     ArrayList<Integer> recolourTo = new ArrayList<>();
+                    short[] retextureFrom = new short[0];
+                    short[] retextureTo = new short[0];
 
                     while (!string.isEmpty())
                     {
@@ -209,6 +213,25 @@ public class ModelFinder
                                 recolourTo.add(Integer.parseInt(split[1]));
                             }
                         }
+                        else if (string.startsWith("retex"))
+                        {
+                            matcher = retexFrom.matcher(string);
+
+                            if (matcher.matches())
+                            {
+                                String[] split = string.split("_");
+                                retextureFrom = ArrayUtils.add(retextureFrom, Short.parseShort(split[1]));
+                                continue;
+                            }
+
+                            matcher = retexTo.matcher(string);
+
+                            if (matcher.matches())
+                            {
+                                String[] split = string.split("_");
+                                retextureTo = ArrayUtils.add(retextureTo, Short.parseShort(split[1]));
+                            }
+                        }
                     }
 
                     int size = recolourFrom.size();
@@ -236,6 +259,8 @@ public class ModelFinder
                                     BodyPart.NA,
                                     recolourFromArray,
                                     recolourToArray,
+                                    retextureFrom,
+                                    retextureTo,
                                     128,
                                     128,
                                     128,
@@ -252,7 +277,7 @@ public class ModelFinder
         }
     }
 
-    public static void getPlayerKit(Response response, ArrayList<ModelStats> modelStatsArray, int[] kitId, Pattern recolFrom, Pattern recolTo)
+    public static void getPlayerKit(Response response, ArrayList<ModelStats> modelStatsArray, int[] kitId)
     {
         InputStream inputStream = response.body().byteStream();
         Scanner scanner = new Scanner(inputStream);
@@ -357,6 +382,8 @@ public class ModelFinder
                                     bodyPart,
                                     recolourFromArray,
                                     recolourToArray,
+                                    new short[0],
+                                    new short[0],
                                     128,
                                     128,
                                     128,
@@ -375,9 +402,6 @@ public class ModelFinder
 
     public ModelStats[] findSpotAnim(int spotAnimId)
     {
-        Pattern recolFrom = Pattern.compile("recol\\ds=.+");
-        Pattern recolTo = Pattern.compile("recol\\dd=.+");
-
         ArrayList<Integer> modelIds = new ArrayList<>();
         final int[] resize = new int[]{128, 128, 128};
         ArrayList<Short> recolourFrom = new ArrayList<>();
@@ -517,6 +541,8 @@ public class ModelFinder
                 BodyPart.NA,
                 rf,
                 rt,
+                new short[0],
+                new short[0],
                 resize[0],
                 resize[1],
                 resize[2],
@@ -525,13 +551,12 @@ public class ModelFinder
 
     public ModelStats[] findModelsForNPC(int npcId)
     {
-        Pattern recolFrom = Pattern.compile("recol\\ds=.+");
-        Pattern recolTo = Pattern.compile("recol\\dd=.+");
-
         ArrayList<Integer> modelIds = new ArrayList<>();
         final int[] resize = new int[]{128, 128, 128};
         ArrayList<Short> recolourFrom = new ArrayList<>();
         ArrayList<Short> recolourTo = new ArrayList<>();
+        short[] retextureFrom = new short[0];
+        short[] retextureTo = new short[0];
 
         CountDownLatch countDownLatch = new CountDownLatch(1);
         Request request = new Request.Builder()
@@ -642,6 +667,14 @@ public class ModelFinder
             rt[i] = recolourTo.get(i);
         }
 
+        //Currently the only npc in dump.npc that has a retexture
+        //Less costly (unless more retextured npcs are added) to manually enter that npc in rather than search for retex on every npc
+        if (npcId == 2702)
+        {
+            retextureFrom = ArrayUtils.add(retextureFrom, (short) 2);
+            retextureTo = ArrayUtils.add(retextureTo, (short) 0);
+        }
+
         ModelStats[] modelStats = new ModelStats[modelIds.size()];
         for (int i = 0; i < modelIds.size(); i++)
             modelStats[i] = new ModelStats(
@@ -649,6 +682,8 @@ public class ModelFinder
                     BodyPart.NA,
                     rf,
                     rt,
+                    retextureFrom,
+                    retextureTo,
                     resize[0],
                     resize[1],
                     resize[2],
@@ -659,13 +694,14 @@ public class ModelFinder
 
     public ModelStats[] findModelsForObject(int objectId)
     {
-        Pattern recolFrom = Pattern.compile("recol\\ds=.+");
-        Pattern recolTo = Pattern.compile("recol\\dd=.+");
-
         ArrayList<Integer> modelIds = new ArrayList<>();
         final int[] resize = new int[]{128, 128, 128};
         ArrayList<Short> recolourFrom = new ArrayList<>();
         ArrayList<Short> recolourTo = new ArrayList<>();
+        ArrayList<Short> retextureFrom = new ArrayList<>();
+        ArrayList<Short> retextureTo = new ArrayList<>();
+        CustomLighting lighting = new CustomLighting(ModelData.DEFAULT_AMBIENT, ModelData.DEFAULT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
+        final LightingStyle[] lightingStyle = {LightingStyle.DEFAULT};
 
         CountDownLatch countDownLatch = new CountDownLatch(1);
         Request request = new Request.Builder()
@@ -694,8 +730,8 @@ public class ModelFinder
                 while (scanner.hasNextLine())
                 {
                     String string = scanner.nextLine();
-                    Matcher match = npcPattern.matcher(string);
-                    if (match.matches())
+                    Matcher matcher = npcPattern.matcher(string);
+                    if (matcher.matches())
                     {
                         lastFound = string;
                         while (!string.isEmpty())
@@ -718,11 +754,29 @@ public class ModelFinder
                                     modelIds.add(Integer.parseInt(split[split.length - 1]));
                                 }
                             }
+                            else if (string.startsWith("amb"))
+                            {
+                                String[] split = string.split("=");
+                                int ambient = Integer.parseInt(split[split.length - 1]);
+                                if (ambient >= 128)
+                                    ambient -= 256;
+
+                                lighting.setAmbient(LightingStyle.DEFAULT.getAmbient() + ambient);
+                            }
+                            else if (string.startsWith("con"))
+                            {
+                                String[] split = string.split("=");
+                                int contrast = Integer.parseInt(split[split.length - 1]);
+                                if (contrast >= 128)
+                                    contrast -= 128;
+
+                                lighting.setContrast(LightingStyle.DEFAULT.getContrast() + contrast);
+                            }
                             else if (string.startsWith("recol"))
                             {
-                                match = recolFrom.matcher(string);
+                                matcher = recolFrom.matcher(string);
 
-                                if (match.matches())
+                                if (matcher.matches())
                                 {
                                     String[] split = string.split("=");
                                     int i = Integer.parseInt(split[1]);
@@ -733,9 +787,9 @@ public class ModelFinder
                                     recolourFrom.add((short) i);
                                 }
 
-                                match = recolTo.matcher(string);
+                                matcher = recolTo.matcher(string);
 
-                                if (match.matches())
+                                if (matcher.matches())
                                 {
                                     String[] split = string.split("=");
                                     int i = Integer.parseInt(split[1]);
@@ -744,6 +798,25 @@ public class ModelFinder
                                         i -= 65536;
                                     }
                                     recolourTo.add((short) i);
+                                }
+                            }
+                            else if (string.startsWith("retex"))
+                            {
+                                matcher = retexFrom.matcher(string);
+
+                                if (matcher.matches())
+                                {
+                                    String[] split = string.split("_");
+                                    retextureFrom.add(Short.parseShort(split[1]));
+                                    continue;
+                                }
+
+                                matcher = retexTo.matcher(string);
+
+                                if (matcher.matches())
+                                {
+                                    String[] split = string.split("_");
+                                    retextureTo.add(Short.parseShort(split[1]));
                                 }
                             }
                             else if (string.startsWith("resizex"))
@@ -786,6 +859,14 @@ public class ModelFinder
             rt[i] = recolourTo.get(i);
         }
 
+        short[] rtFrom = new short[retextureFrom.size()];
+        short[] rtTo = new short[retextureTo.size()];
+        for (int i = 0; i < retextureFrom.size(); i++)
+        {
+            rtFrom[i] = retextureFrom.get(i);
+            rtTo[i] = retextureTo.get(i);
+        }
+
         ModelStats[] modelStats = new ModelStats[modelIds.size()];
         for (int i = 0; i < modelIds.size(); i++)
             modelStats[i] = new ModelStats(
@@ -793,22 +874,23 @@ public class ModelFinder
                     BodyPart.NA,
                     rf,
                     rt,
+                    rtFrom,
+                    rtTo,
                     resize[0],
                     resize[1],
                     resize[2],
-                    new CustomLighting(ModelData.DEFAULT_AMBIENT, ModelData.DEFAULT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z));
+                    lighting);
 
         return modelStats;
     }
 
     public ModelStats[] findModelsForGroundItem(int itemId, CustomModelType modelType)
     {
-        Pattern recolFrom = Pattern.compile("recol\\ds=.+");
-        Pattern recolTo = Pattern.compile("recol\\dd=.+");
-
         ArrayList<Integer> modelIds = new ArrayList<>();
         ArrayList<Short> recolourFrom = new ArrayList<>();
         ArrayList<Short> recolourTo = new ArrayList<>();
+        ArrayList<Short> retextureFrom = new ArrayList<>();
+        ArrayList<Short> retextureTo = new ArrayList<>();
 
         CountDownLatch countDownLatch = new CountDownLatch(1);
         Request request = new Request.Builder()
@@ -837,8 +919,8 @@ public class ModelFinder
                 while (scanner.hasNextLine())
                 {
                     String string = scanner.nextLine();
-                    Matcher match = npcPattern.matcher(string);
-                    if (match.matches())
+                    Matcher matcher = npcPattern.matcher(string);
+                    if (matcher.matches())
                     {
                         lastFound = string;
                         while (!string.isEmpty())
@@ -875,11 +957,11 @@ public class ModelFinder
                                     modelIds.add(Integer.parseInt(split[split.length - 1]));
                                 }
                             }
-                            else
+                            else if (string.startsWith("recol"))
                             {
-                                match = recolFrom.matcher(string);
+                                matcher = recolFrom.matcher(string);
 
-                                if (match.matches())
+                                if (matcher.matches())
                                 {
                                     String[] split = string.split("=");
                                     int i = Integer.parseInt(split[1]);
@@ -890,9 +972,9 @@ public class ModelFinder
                                     recolourFrom.add((short) i);
                                 }
 
-                                match = recolTo.matcher(string);
+                                matcher = recolTo.matcher(string);
 
-                                if (match.matches())
+                                if (matcher.matches())
                                 {
                                     String[] split = string.split("=");
                                     int i = Integer.parseInt(split[1]);
@@ -901,6 +983,25 @@ public class ModelFinder
                                         i -= 65536;
                                     }
                                     recolourTo.add((short) i);
+                                }
+                            }
+                            else if (string.startsWith("retex"))
+                            {
+                                matcher = retexFrom.matcher(string);
+
+                                if (matcher.matches())
+                                {
+                                    String[] split = string.split("_");
+                                    retextureFrom.add(Short.parseShort(split[1]));
+                                    continue;
+                                }
+
+                                matcher = retexTo.matcher(string);
+
+                                if (matcher.matches())
+                                {
+                                    String[] split = string.split("_");
+                                    retextureTo.add(Short.parseShort(split[1]));
                                 }
                             }
                         }
@@ -931,6 +1032,14 @@ public class ModelFinder
             rt[i] = recolourTo.get(i);
         }
 
+        short[] rtFrom = new short[retextureFrom.size()];
+        short[] rtTo = new short[retextureTo.size()];
+        for (int i = 0; i < retextureFrom.size(); i++)
+        {
+            rtFrom[i] = retextureFrom.get(i);
+            rtTo[i] = retextureTo.get(i);
+        }
+
         ModelStats[] modelStats = new ModelStats[modelIds.size()];
         for (int i = 0; i < modelIds.size(); i++)
             modelStats[i] = new ModelStats(
@@ -938,25 +1047,13 @@ public class ModelFinder
                     BodyPart.NA,
                     rf,
                     rt,
+                    rtFrom,
+                    rtTo,
                     128,
                     128,
                     128,
                     new CustomLighting(ModelData.DEFAULT_AMBIENT, ModelData.DEFAULT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z));
 
         return modelStats;
-    }
-
-    public static String shortArrayToString(short[] array)
-    {
-        StringBuilder stringBuilder = new StringBuilder();
-        for (int i = 0; i < array.length; i++)
-        {
-            short s = array[i];
-            stringBuilder.append(s);
-            if (i < array.length - 1)
-                stringBuilder.append(",");
-        }
-
-        return stringBuilder.toString();
     }
 }

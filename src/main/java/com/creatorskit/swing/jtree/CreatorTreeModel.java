@@ -3,13 +3,14 @@ package com.creatorskit.swing.jtree;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.swing.ObjectPanel;
+import com.creatorskit.swing.StringHandler;
 
 import javax.inject.Inject;
 import javax.swing.tree.*;
 
 public class CreatorTreeModel extends DefaultTreeModel
 {
-    private CreatorsPlugin plugin;
+    private final CreatorsPlugin plugin;
 
     @Inject
     public CreatorTreeModel(TreeNode root, CreatorsPlugin plugin)
@@ -28,7 +29,8 @@ public class CreatorTreeModel extends DefaultTreeModel
         //Check if node being modified is a Folder
         if (node.getUserObject() instanceof String)
         {
-            String folderName = (String) newValue;
+            String folderName = StringHandler.cleanString((String) newValue);
+            node.setUserObject(folderName);
             plugin.getCreatorsPanel().getToolBox().getManagerPanel().getObjectLabel().setText("Current Folder: " + folderName);
         }
 
@@ -36,7 +38,7 @@ public class CreatorTreeModel extends DefaultTreeModel
         if (node.getUserObject() instanceof ObjectPanel)
         {
             ObjectPanel objectPanel = (ObjectPanel) node.getUserObject();
-            String name = (String) newValue;
+            String name = StringHandler.cleanString((String) newValue);
             objectPanel.setName(name);
             node.setUserObject(objectPanel);
             for (Character character : plugin.getCharacters())
@@ -49,9 +51,6 @@ public class CreatorTreeModel extends DefaultTreeModel
                     return;
                 }
             }
-            return;
         }
-
-        node.setUserObject(newValue);
     }
 }

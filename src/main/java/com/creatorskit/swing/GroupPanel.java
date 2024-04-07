@@ -22,9 +22,9 @@ import java.util.HashMap;
 
 public class GroupPanel extends JPanel
 {
-    private CreatorsPlugin plugin;
+    private final CreatorsPlugin plugin;
     private Client client;
-    private ClientThread clientThread;
+    private final ClientThread clientThread;
     private final GridBagConstraints c = new GridBagConstraints();
 
     private final BufferedImage ICON = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
@@ -42,6 +42,7 @@ public class GroupPanel extends JPanel
         this.clientThread = clientThread;
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
+        setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 1));
         setLayout(new GridBagLayout());
 
         c.fill = GridBagConstraints.BOTH;
@@ -304,10 +305,7 @@ public class GroupPanel extends JPanel
         c.gridy = 9;
         c.gridwidth = 2;
         adjustPanel.add(invertButton, c);
-        invertButton.addActionListener(e ->
-        {
-            adjustValueInvert();
-        });
+        invertButton.addActionListener(e -> adjustValueInvert());
 
         JFrame swapperFrame = new JFrame("Colour Swapper");
         swapperFrame.setVisible(false);
@@ -670,10 +668,7 @@ public class GroupPanel extends JPanel
         c.gridy = 9;
         c.gridwidth = 2;
         setPanel.add(invertButton, c);
-        invertButton.addActionListener(e ->
-        {
-            setValueInvert(invertButton);
-        });
+        invertButton.addActionListener(e -> setValueInvert(invertButton));
 
         HashMap<Short, Short> colourMap = new HashMap<>();
 

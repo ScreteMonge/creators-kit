@@ -802,15 +802,18 @@ public class CreatorsPlugin extends Plugin {
 					}
 				}
 
-				for (Character character : characters)
+				if (config.rightSelect())
 				{
-					if (character.isActive() && character.getRuneLiteObject().getLocation().equals(tile.getLocalLocation()))
+					for (Character character : characters)
 					{
-						client.createMenuEntry(-1)
-								.setOption("Select")
-								.setTarget(ColorUtil.colorTag(Color.GREEN) + character.getName())
-								.setType(MenuAction.RUNELITE)
-								.onClick(e -> creatorsPanel.setSelectedCharacter(character, character.getObjectPanel()));
+						if (character.isActive() && character.getRuneLiteObject().getLocation().equals(tile.getLocalLocation()))
+						{
+							client.createMenuEntry(-1)
+									.setOption("Select")
+									.setTarget(ColorUtil.colorTag(Color.GREEN) + character.getName())
+									.setType(MenuAction.RUNELITE)
+									.onClick(e -> creatorsPanel.setSelectedCharacter(character, character.getObjectPanel()));
+						}
 					}
 				}
 			}
@@ -1303,19 +1306,6 @@ public class CreatorsPlugin extends Plugin {
 		return character;
 	}
 
-	public void removeCharacters()
-	{
-		clientThread.invokeLater(() -> {
-			for (Character character : characters)
-			{
-				RuneLiteObject runeLiteObject = character.getRuneLiteObject();
-				runeLiteObject.setActive(false);
-			}
-
-			characters.clear();
-		});
-	}
-
 	public void removeCharacters(Character[] charactersToRemove)
 	{
 		clientThread.invokeLater(() -> {
@@ -1358,7 +1348,7 @@ public class CreatorsPlugin extends Plugin {
 		chatMessageManager.queue(QueuedMessage.builder().type(ChatMessageType.GAMEMESSAGE).runeLiteFormattedMessage(message).build());
 	}
 
-	public Model createComplexModel(DetailedModel[] detailedModels, boolean setPriority, LightingStyle lightingStyle, CustomLighting lighting)
+	public Model createComplexModel(DetailedModel[] detailedModels, boolean setPriority, LightingStyle lightingStyle, CustomLighting cl)
 	{
 		ModelData[] models = new ModelData[detailedModels.length];
 		boolean[] facesToInvert = new boolean[0];
@@ -1394,37 +1384,59 @@ public class CreatorsPlugin extends Plugin {
 			Arrays.fill(faceInvert, detailedModel.isInvertFaces());
 			facesToInvert = ArrayUtils.addAll(facesToInvert, faceInvert);
 
-			String[] newColoursArray = detailedModel.getRecolourNew().split(",");
-			short[] newColours = new short[newColoursArray.length];
-			String[] oldColoursArray = detailedModel.getRecolourOld().split(",");
-			short[] oldColours = new short[oldColoursArray.length];
+			short[] coloursFrom = detailedModel.getColoursFrom();
+			short[] coloursTo = detailedModel.getColoursTo();
 
-			if (!detailedModel.getRecolourNew().isEmpty() && !detailedModel.getRecolourOld().isEmpty())
+			if (coloursFrom == null || coloursTo == null)
 			{
-				if (newColoursArray.length != oldColoursArray.length)
+				if (!detailedModel.getRecolourNew().isEmpty() && !detailedModel.getRecolourOld().isEmpty())
 				{
-					clientThread.invokeLater(() -> sendChatMessage("Please ensure that each model has the same number of New Colours as Old Colours"));
-					return null;
-				}
+					String[] newColoursArray = detailedModel.getRecolourNew().split(",");
+					coloursTo = new short[newColoursArray.length];
+					String[] oldColoursArray = detailedModel.getRecolourOld().split(",");
+					coloursFrom = new short[oldColoursArray.length];
 
-				try
-				{
-					for (int i = 0; i < oldColours.length; i++)
+					for (int i = 0; i < coloursFrom.length; i++)
 					{
-						oldColours[i] = Short.parseShort(oldColoursArray[i]);
-						newColours[i] = Short.parseShort(newColoursArray[i]);
+						coloursFrom[i] = Short.parseShort(oldColoursArray[i]);
+						coloursTo[i] = Short.parseShort(newColoursArray[i]);
 					}
 				}
-				catch (Exception exception)
+				else
 				{
-					clientThread.invokeLater(() -> sendChatMessage("Please reformat your colour entry to CSV format (ex. 123,987,456"));
-					return null;
+					coloursFrom = new short[0];
+					coloursTo = new short[0];
 				}
+
+				detailedModel.setColoursFrom(coloursFrom);
+				detailedModel.setColoursTo(coloursTo);
 			}
 
-			for (int i = 0; i < newColours.length; i++)
+			for (int i = 0; i < coloursTo.length; i++)
 			{
-				modelData.recolor(oldColours[i], newColours[i]);
+				modelData.recolor(coloursFrom[i], coloursTo[i]);
+			}
+
+			short[] texturesFrom = detailedModel.getTexturesFrom();
+			short[] texturesTo = detailedModel.getTexturesTo();
+			if (texturesFrom != null && texturesTo != null)
+			{
+				try
+				{
+					modelData.cloneTextures();
+					for (int i = 0; i < texturesTo.length; i++)
+					{
+						modelData.retexture(texturesFrom[i], texturesTo[i]);
+					}
+				}
+				catch (Exception f)
+				{
+				}
+			}
+			else
+			{
+				detailedModel.setTexturesFrom(new short[0]);
+				detailedModel.setTexturesFrom(new short[0]);
 			}
 
 			models[e] = modelData;
@@ -1444,15 +1456,15 @@ public class CreatorsPlugin extends Plugin {
 			}
 		}
 
-		if (lighting == null)
+		if (cl == null)
 		{
-			lighting = new CustomLighting(lightingStyle.getAmbient(), lightingStyle.getContrast(), lightingStyle.getX(), lightingStyle.getY(), lightingStyle.getZ());
+			cl = new CustomLighting(lightingStyle.getAmbient(), lightingStyle.getContrast(), lightingStyle.getX(), lightingStyle.getY(), lightingStyle.getZ());
 		}
 
 		CustomLighting finalLighting;
 		if (lightingStyle == LightingStyle.CUSTOM)
 		{
-			finalLighting = lighting;
+			finalLighting = cl;
 		}
 		else
 		{
@@ -1495,32 +1507,13 @@ public class CreatorsPlugin extends Plugin {
 					if (modelStats.getBodyPart() != BodyPart.NA)
 						name = modelStats.getBodyPart().toString();
 
-					StringBuilder recolourNew = new StringBuilder();
-					StringBuilder recolourOld = new StringBuilder();
+					short[] itemRecolourTo = modelStats.getRecolourTo();
+					short[] itemRecolourFrom = modelStats.getRecolourFrom();
+					short[] kitRecolourTo = KitRecolourer.getKitRecolourTo(modelStats.getBodyPart(), kitRecolours);
+					short[] kitRecolourFrom = KitRecolourer.getKitRecolourFrom(modelStats.getBodyPart());
 
-					String itemRecolourNew = ModelFinder.shortArrayToString(modelStats.getRecolourTo());
-					String itemRecolourOld = ModelFinder.shortArrayToString(modelStats.getRecolourFrom());
-					String kitRecolourNew = KitRecolourer.getKitRecolourNew(modelStats.getBodyPart(), kitRecolours);
-					String kitRecolourOld = KitRecolourer.getKitRecolourOld(modelStats.getBodyPart());
-
-					recolourNew.append(itemRecolourNew);
-					recolourOld.append(itemRecolourOld);
-
-					if (!kitRecolourNew.equals(""))
-					{
-						if (!itemRecolourNew.equals(""))
-							recolourNew.append(",");
-
-						recolourNew.append(kitRecolourNew);
-					}
-
-					if (!kitRecolourOld.equals(""))
-					{
-						if (!itemRecolourOld.equals(""))
-							recolourOld.append(",");
-
-						recolourOld.append(kitRecolourOld);
-					}
+					itemRecolourTo = ArrayUtils.addAll(itemRecolourTo, kitRecolourTo);
+					itemRecolourFrom = ArrayUtils.addAll(itemRecolourFrom, kitRecolourFrom);
 
 					creatorsPanel.getModelAnvil().createComplexPanel(
 							name,
@@ -1530,8 +1523,9 @@ public class CreatorsPlugin extends Plugin {
 							0, 0, 0,
 							modelStats.getResizeX(), modelStats.getResizeY(), modelStats.getResizeZ(),
 							0,
-							recolourNew.toString(),
-							recolourOld.toString(),
+							"", "",
+							itemRecolourFrom, itemRecolourTo,
+							modelStats.getTextureFrom(), modelStats.getTextureTo(),
 							false);
 
 					continue;
@@ -1545,8 +1539,9 @@ public class CreatorsPlugin extends Plugin {
 						0, 0, 0,
 						modelStats.getResizeX(), modelStats.getResizeY(), modelStats.getResizeZ(),
 						0,
-						ModelFinder.shortArrayToString(modelStats.getRecolourTo()),
-						ModelFinder.shortArrayToString(modelStats.getRecolourFrom()),
+						"", "",
+						modelStats.getRecolourFrom(), modelStats.getRecolourTo(),
+						modelStats.getTextureFrom(), modelStats.getTextureTo(),
 						false);
 			}
 		});
@@ -1620,8 +1615,8 @@ public class CreatorsPlugin extends Plugin {
 				case CACHE_OBJECT:
 					modelStats = modelFinder.findModelsForObject(id);
 					name = modelFinder.getLastFound();
-					lighting = new CustomLighting(64, 768, -50, -50, 10);
-					comp = new CustomModelComp(0, CustomModelType.CACHE_OBJECT, id, modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, name);
+					lighting = modelStats[0].getLighting();
+					comp = new CustomModelComp(0, CustomModelType.CACHE_OBJECT, id, modelStats, null, null, null, LightingStyle.CUSTOM, lighting, false, name);
 					break;
 				case CACHE_GROUND_ITEM:
 					modelStats = modelFinder.findModelsForGroundItem(id, CustomModelType.CACHE_GROUND_ITEM);
@@ -1675,14 +1670,42 @@ public class CreatorsPlugin extends Plugin {
 			if (modelData == null)
 				continue;
 
-			modelData.cloneColors();
+			modelData.cloneColors().cloneVertices();
+
 			for (short s = 0; s < modelStats.getRecolourFrom().length; s++)
 				modelData.recolor(modelStats.getRecolourFrom()[s], modelStats.getRecolourTo()[s]);
 
-			modelData.scale(modelStats.getResizeX(), modelStats.getResizeZ(), modelStats.getResizeY());
-
 			if (player)
 				KitRecolourer.recolourKitModel(modelData, modelStats.getBodyPart(), kitRecolours);
+
+			short[] textureFrom = modelStats.getTextureFrom();
+			short[] textureTo = modelStats.getTextureTo();
+
+			if (textureFrom == null || textureTo == null)
+			{
+				modelStats.setTextureFrom(new short[0]);
+				modelStats.setTextureTo(new short[0]);
+			}
+
+			textureFrom = modelStats.getTextureFrom();
+			textureTo = modelStats.getTextureTo();
+
+			if (textureFrom.length > 0 && textureTo.length > 0)
+			{
+				for (int e = 0; e < textureFrom.length; e++)
+				{
+					modelData.retexture(textureFrom[e], textureTo[e]);
+				}
+			}
+
+			if (modelStats.getResizeX() == 0 && modelStats.getResizeY() == 0 && modelStats.getResizeZ() == 0)
+			{
+				modelStats.setResizeX(128);
+				modelStats.setResizeY(128);
+				modelStats.setResizeZ(128);
+			}
+
+			modelData.scale(modelStats.getResizeX(), modelStats.getResizeZ(), modelStats.getResizeY());
 
 			mds[i] = modelData;
 		}
@@ -1706,8 +1729,32 @@ public class CreatorsPlugin extends Plugin {
 			CustomModelComp comp = customModel.getComp();
 			sendChatMessage("Model sent to Anvil: " + comp.getName());
 			ModelAnvil modelAnvil = creatorsPanel.getModelAnvil();
+
+			CustomLighting cl;
+			LightingStyle lightingStyle = comp.getLightingStyle();
+			if (lightingStyle == LightingStyle.CUSTOM)
+			{
+				cl = comp.getCustomLighting();
+			}
+			else
+			{
+				cl = new CustomLighting(
+						lightingStyle.getAmbient(),
+						lightingStyle.getContrast(),
+						lightingStyle.getX(),
+						lightingStyle.getY(),
+						lightingStyle.getZ());
+			}
+
+			modelAnvil.setLightingSettings(
+					comp.getLightingStyle(),
+					cl.getAmbient(),
+					cl.getContrast(),
+					cl.getX(),
+					cl.getY(),
+					cl.getZ());
+
 			modelAnvil.getPriorityCheckBox().setSelected(comp.isPriority());
-			modelAnvil.getLightingComboBox().setSelectedItem(comp.getLightingStyle());
 			modelAnvil.getNameField().setText(comp.getName());
 
 			if (comp.getModelStats() == null)
@@ -1737,18 +1784,33 @@ public class CreatorsPlugin extends Plugin {
 
 	public void loadCustomModelToAnvil(File file, boolean priority, String name)
 	{
+		ModelAnvil modelAnvil = creatorsPanel.getModelAnvil();
 		try
 		{
 			Reader reader = Files.newBufferedReader(file.toPath());
 			CustomModelComp comp = gson.fromJson(reader, CustomModelComp.class);
-			ModelAnvil modelAnvil = creatorsPanel.getModelAnvil();
-			SwingUtilities.invokeLater(() -> {
+
+			SwingUtilities.invokeLater(() ->
+			{
 				for (DetailedModel detailedModel : comp.getDetailedModels())
 				{
 					modelAnvil.createComplexPanel(detailedModel);
 				}
 			});
-			modelAnvil.getLightingComboBox().setSelectedItem(comp.getLightingStyle());
+
+			LightingStyle ls = comp.getLightingStyle();
+			CustomLighting cl = comp.getCustomLighting();
+			if (cl == null)
+				cl = new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getY(), ls.getZ());
+
+			modelAnvil.setLightingSettings(
+					comp.getLightingStyle(),
+					cl.getAmbient(),
+					cl.getContrast(),
+					cl.getX(),
+					cl.getY(),
+					cl.getZ());
+
 			modelAnvil.getPriorityCheckBox().setSelected(comp.isPriority());
 			modelAnvil.getNameField().setText(comp.getName());
 			reader.close();
@@ -1763,7 +1825,8 @@ public class CreatorsPlugin extends Plugin {
 		{
 			Reader reader = Files.newBufferedReader(file.toPath());
 			DetailedModel[] detailedModels = gson.fromJson(reader, DetailedModel[].class);
-			SwingUtilities.invokeLater(() -> {
+			SwingUtilities.invokeLater(() ->
+			{
 				for (DetailedModel detailedModel : detailedModels)
 				{
 					creatorsPanel.getModelAnvil().createComplexPanel(detailedModel);
@@ -1773,6 +1836,9 @@ public class CreatorsPlugin extends Plugin {
 
 			CustomLighting lighting = new CustomLighting(64, 768, -50, -50, 10);
 			CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, null, LightingStyle.DEFAULT, lighting, priority, name);
+			modelAnvil.getPriorityCheckBox().setSelected(comp.isPriority());
+			modelAnvil.getNameField().setText(comp.getName());
+
 			try
 			{
 				file.delete();
@@ -1789,8 +1855,6 @@ public class CreatorsPlugin extends Plugin {
 				e.printStackTrace();
 				sendChatMessage("An error occurred while trying to convert this file to a .json file.");
 			}
-
-			return;
 		}
 		catch (Exception e)
 		{
@@ -1804,8 +1868,14 @@ public class CreatorsPlugin extends Plugin {
 		{
 			Reader reader = Files.newBufferedReader(file.toPath());
 			CustomModelComp comp = gson.fromJson(reader, CustomModelComp.class);
-			clientThread.invokeLater(() -> {
-				Model model = createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle(), comp.getCustomLighting());
+			clientThread.invokeLater(() ->
+			{
+				LightingStyle ls = comp.getLightingStyle();
+				CustomLighting cl = comp.getCustomLighting();
+				if (cl == null)
+					cl = new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getY(), ls.getZ());
+
+				Model model = createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle(), cl);
 				CustomModel customModel = new CustomModel(model, comp);
 				addCustomModel(customModel, false);
 			});
@@ -1824,7 +1894,8 @@ public class CreatorsPlugin extends Plugin {
 			CustomLighting lighting = new CustomLighting(64, 768, -50, -50, 10);
 			CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, null, LightingStyle.DEFAULT, lighting, priority, name);
 
-			clientThread.invokeLater(() -> {
+			clientThread.invokeLater(() ->
+			{
 				Model model = createComplexModel(detailedModels, priority, LightingStyle.DEFAULT, lighting);
 				CustomModel customModel = new CustomModel(model, comp);
 				addCustomModel(customModel, false);
@@ -1848,8 +1919,6 @@ public class CreatorsPlugin extends Plugin {
 				e.printStackTrace();
 				sendChatMessage("An error occurred while trying to convert this v1.2 file to a v1.3 file.");
 			}
-
-			return;
 		}
 		catch (Exception e)
 		{
@@ -1894,8 +1963,13 @@ public class CreatorsPlugin extends Plugin {
 
 			if (loadCustomModel)
 			{
-				clientThread.invokeLater(() -> {
-					Model model = createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle(), comp.getCustomLighting());
+				clientThread.invokeLater(() ->
+				{
+					LightingStyle ls = comp.getLightingStyle();
+					CustomLighting cl = comp.getCustomLighting();
+					if (cl == null)
+						cl = new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getY(), ls.getZ());
+					Model model = createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle(), cl);
 					CustomModel customModel = new CustomModel(model, comp);
 					addCustomModel(customModel, false);
 					creatorsPanel.getModelOrganizer().setTransmog(customModel);

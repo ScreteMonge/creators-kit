@@ -155,8 +155,8 @@ There's also a few camera features like Oculus Orb mode which can be found in th
 - Rotation Speed: Sets the speed of AutoRotation
 
 ## Credits
-Special thanks go to Craig Wood for the [JTree Drag and Drop functionality](https://coderanch.com/t/346509/java/JTree-drag-drop-tree-Java) as well as Albert Hendriks for the [improved version.](https://gitlab.com/alberthendriks/jtree-drag-drop)
-
+Special thanks to Craig Wood for the [JTree Drag and Drop functionality](https://coderanch.com/t/346509/java/JTree-drag-drop-tree-Java) as well as Albert Hendriks for the [improved version.](https://gitlab.com/alberthendriks/jtree-drag-drop)
+Special thanks to Yona-Appletree for the [HSLColor functions](https://gist.github.com/Yona-Appletree/0c4b58763f070ae8cdff7db583c82563)
 
 
 

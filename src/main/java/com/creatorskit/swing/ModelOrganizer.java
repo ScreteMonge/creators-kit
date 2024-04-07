@@ -13,12 +13,15 @@ import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
+import org.apache.commons.lang3.ArrayUtils;
 
 import javax.inject.Inject;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileWriter;
@@ -200,10 +203,23 @@ public class ModelOrganizer extends JPanel
         panelMap.put(model, panel);
         textField.addActionListener(e ->
         {
-            String text = textField.getText();
+            String text = StringHandler.cleanString(textField.getText());
+            textField.setText(text);
             model.getComp().setName(text);
             plugin.updatePanelComboBoxes();
             plugin.getCreatorsPanel().getTransmogPanel().getTransmogLabel().setText(text);
+        });
+        textField.addFocusListener(new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e) {
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                String text = StringHandler.cleanString(textField.getText());
+                textField.setText(text);
+                model.getComp().setName(text);
+            }
         });
 
         c.gridx = 0;
@@ -393,35 +409,13 @@ public class ModelOrganizer extends JPanel
         {
             ModelStats modelStat = modelStats[i];
 
-            String recolFrom;
-            String recolTo;
+            short[] colourFrom = modelStat.getRecolourFrom();
+            short[] colourTo = modelStat.getRecolourTo();
+
             if (type == CustomModelType.CACHE_PLAYER && modelStat.getBodyPart() != BodyPart.NA)
             {
-                String modelStatFrom = ModelFinder.shortArrayToString(modelStat.getRecolourFrom());
-                String modelStatTo = ModelFinder.shortArrayToString(modelStat.getRecolourTo());
-                String kitRecolourOld = KitRecolourer.getKitRecolourOld(modelStat.getBodyPart());
-                String kitRecolourNew = KitRecolourer.getKitRecolourNew(modelStat.getBodyPart(), comp.getKitRecolours());
-
-                if (modelStatFrom.isEmpty() || modelStatTo.isEmpty())
-                {
-                    recolFrom = KitRecolourer.getKitRecolourOld(modelStat.getBodyPart());
-                    recolTo = KitRecolourer.getKitRecolourNew(modelStat.getBodyPart(), comp.getKitRecolours());
-                }
-                else if (kitRecolourOld.isEmpty() || kitRecolourNew.isEmpty())
-                {
-                    recolFrom = modelStatFrom;
-                    recolTo = modelStatTo;
-                }
-                else
-                {
-                    recolFrom = modelStatFrom + "," + kitRecolourOld;
-                    recolTo = modelStatTo + "," + kitRecolourNew;
-                }
-            }
-            else
-            {
-                recolFrom = ModelFinder.shortArrayToString(modelStat.getRecolourFrom());
-                recolTo = ModelFinder.shortArrayToString(modelStat.getRecolourTo());
+                colourFrom = ArrayUtils.addAll(colourFrom, KitRecolourer.getKitRecolourFrom(modelStat.getBodyPart()));
+                colourTo = ArrayUtils.addAll(colourTo, KitRecolourer.getKitRecolourTo(modelStat.getBodyPart(), comp.getKitRecolours()));
             }
 
             String bodyPart = "Name";
@@ -431,7 +425,20 @@ public class ModelOrganizer extends JPanel
             if (modelStat.getBodyPart() != BodyPart.NA)
                 bodyPart = modelStat.getBodyPart().toString();
 
-            DetailedModel detailedModel = new DetailedModel(bodyPart, modelStat.getModelId(), group, 0, 0, 0, 0, 0, 0, modelStat.getResizeX(), modelStat.getResizeY(), modelStat.getResizeZ(), 0, recolTo, recolFrom, false);
+            DetailedModel detailedModel = new DetailedModel(
+                    bodyPart,
+                    modelStat.getModelId(),
+                    group,
+                    0, 0, 0,
+                    0, 0, 0,
+                    modelStat.getResizeX(),
+                    modelStat.getResizeY(),
+                    modelStat.getResizeZ(),
+                    0,
+                    "", "",
+                    colourFrom, colourTo,
+                    modelStat.getTextureFrom(), modelStat.getTextureTo(),
+                    false);
             detailedModels[i] = detailedModel;
         }
 

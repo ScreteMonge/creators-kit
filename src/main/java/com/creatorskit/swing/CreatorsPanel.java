@@ -28,7 +28,6 @@ import org.apache.commons.lang3.ArrayUtils;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreeNode;
@@ -70,6 +69,7 @@ public class CreatorsPanel extends PluginPanel
     private final ArrayList<ObjectPanel> sideObjectPanels = new ArrayList<>();
     private final ArrayList<JComboBox<CustomModel>> comboBoxes = new ArrayList<>();
     private final Dimension spinnerSize = new Dimension(72, 30);
+    private final Dimension BUTTON_SIZE = new Dimension(25, 25);
     private final int DEFAULT_TURN_SPEED = 68;
     private final BufferedImage MAXIMIZE = ImageUtil.loadImageResource(getClass(), "/Maximize.png");
     private final BufferedImage MINIMIZE = ImageUtil.loadImageResource(getClass(), "/Minimize.png");
@@ -100,16 +100,16 @@ public class CreatorsPanel extends PluginPanel
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new GridBagLayout());
-        setBorder(new EmptyBorder(4, 4, 4, 4));
 
         GridBagConstraints c = new GridBagConstraints();
-        c.fill = GridBagConstraints.HORIZONTAL;
+        c.fill = GridBagConstraints.BOTH;
         c.insets = new Insets(2, 2, 2, 2);
 
+        c.gridwidth = 3;
+        c.weightx = 1;
+        c.weighty = 0;
         c.gridx = 0;
         c.gridy = 0;
-        c.weightx = 1;
-        c.gridwidth = 5;
         JButton toolBoxButton = new JButton("Toolbox");
         toolBoxButton.setToolTipText("Opens an interface for organizing Objects, creating Custom Models, programming, and more");
         toolBoxButton.setFocusable(false);
@@ -122,13 +122,12 @@ public class CreatorsPanel extends PluginPanel
         add(toolBoxButton, c);
 
 
+        c.gridwidth = 1;
+        c.gridheight = 2;
+        c.weightx = 5;
+        c.weighty = 0;
         c.gridx = 0;
         c.gridy = 1;
-        c.gridwidth = 3;
-        c.gridheight = 2;
-        c.weightx = 3;
-        c.weighty = 1;
-        c.fill = GridBagConstraints.BOTH;
         addObjectButton.setText("Add Object");
         addObjectButton.setToolTipText("Add an new Object to the palette");
         addObjectButton.setFocusable(false);
@@ -139,30 +138,25 @@ public class CreatorsPanel extends PluginPanel
                 });
         add(addObjectButton, c);
 
-        c.fill = GridBagConstraints.HORIZONTAL;
-
         c.gridwidth = 1;
         c.gridheight = 1;
-        c.weightx = 0;
+        c.weightx = 2;
         c.weighty = 0;
-
-        c.gridx = 3;
+        c.gridx = 1;
         c.gridy = 1;
         JButton saveButton = new JButton(new ImageIcon(SAVE));
         saveButton.setFocusable(false);
         saveButton.setToolTipText("Save this setup");
-        saveButton.setPreferredSize(new Dimension(30, 25));
         //add(saveButton, c);
         saveButton.addActionListener(e ->
         {
         });
 
-        c.gridx = 4;
+        c.gridx = 2;
         c.gridy = 1;
         JButton switchAllButton = new JButton(new ImageIcon(SWITCH_ALL));
         switchAllButton.setFocusable(false);
         switchAllButton.setToolTipText("Send all Objects from this Side Panel to the currently open folder in the Manager");
-        switchAllButton.setPreferredSize(new Dimension(30, 25));
         add(switchAllButton, c);
         switchAllButton.addActionListener(e -> {
             ObjectPanel[] objectPanels = sideObjectPanels.toArray(new ObjectPanel[sideObjectPanels.size()]);
@@ -172,42 +166,38 @@ public class CreatorsPanel extends PluginPanel
             }
         });
 
-        c.gridx = 3;
+        c.gridx = 1;
         c.gridy = 2;
         JButton loadCustomModelButton = new JButton(new ImageIcon(CUSTOM_MODEL));
         loadCustomModelButton.setFocusable(false);
         loadCustomModelButton.setToolTipText("Load a previously saved Custom Model");
-        loadCustomModelButton.setPreferredSize(new Dimension(30, 25));
         add(loadCustomModelButton, c);
         loadCustomModelButton.addActionListener(e -> openLoadCustomModelDialog());
 
-        c.gridx = 4;
+        c.gridx = 2;
         c.gridy = 2;
         JButton clearButton = new JButton(new ImageIcon(CLEAR));
         clearButton.setFocusable(false);
         clearButton.setToolTipText("Clears all Objects");
-        clearButton.setPreferredSize(new Dimension(30, 25));
         add(clearButton, c);
         clearButton.addActionListener(e -> clearSidePanels(true));
 
-        c.gridwidth = 5;
+        c.gridwidth = 3;
         c.gridx = 0;
         c.gridy = 3;
+        c.weightx = 1;
         c.weighty = 1;
-        c.fill = GridBagConstraints.HORIZONTAL;
         sidePanel.setLayout(new GridBagLayout());
         sidePanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         add(sidePanel, c);
 
-        cNPC.fill = GridBagConstraints.HORIZONTAL;
-        cNPC.insets = new Insets(2, 2, 2, 2);
+        cNPC.insets = new Insets(1, 2, 1, 2);
         cNPC.gridx = 0;
         cNPC.gridy = GridBagConstraints.RELATIVE;
         cNPC.weightx = 1;
         cNPC.weighty = 1;
 
-        cManager.fill = GridBagConstraints.NONE;
-        cManager.insets = new Insets(2, 2, 2, 2);
+        cManager.insets = new Insets(1, 2, 1, 2);
         cManager.gridx = 0;
         cManager.gridy = 0;
         cManager.anchor = GridBagConstraints.FIRST_LINE_START;
@@ -252,6 +242,10 @@ public class CreatorsPanel extends PluginPanel
         c.gridy = 0;
         c.weightx = 1;
         JTextField textField = new JTextField(name);
+        Dimension textDimension = new Dimension(140, 30);
+        textField.setMaximumSize(textDimension);
+        textField.setPreferredSize(textDimension);
+        textField.setMinimumSize(textDimension);
         objectPanel.add(textField, c);
 
         c.fill = GridBagConstraints.BOTH;
@@ -295,11 +289,11 @@ public class CreatorsPanel extends PluginPanel
 
         //Buttons
 
-        c.fill = GridBagConstraints.VERTICAL;
-        c.anchor = GridBagConstraints.CENTER;
+        c.fill = GridBagConstraints.BOTH;
         c.ipadx = 0;
         c.ipady = 5;
         c.gridwidth = 1;
+        c.weightx = 1;
         c.gridx = 0;
         c.gridy = 1;
         JButton modelButton = new JButton();
@@ -308,7 +302,6 @@ public class CreatorsPanel extends PluginPanel
         modelButton.setText(modelButtonText);
         modelButton.setText("Custom");
         modelButton.setToolTipText("Toggle between Custom Model and Model ID");
-        modelButton.setPreferredSize(new Dimension(90, 25));
         modelButton.setFocusable(false);
         objectPanel.add(modelButton, c);
 
@@ -317,7 +310,6 @@ public class CreatorsPanel extends PluginPanel
         spawnButton.setFont(FontManager.getRunescapeFont());
         spawnButton.setText("Spawn");
         spawnButton.setToolTipText("Toggle the NPC on or off");
-        spawnButton.setPreferredSize(new Dimension(90, 25));
         spawnButton.setFocusable(false);
         objectPanel.add(spawnButton, c);
 
@@ -326,7 +318,6 @@ public class CreatorsPanel extends PluginPanel
         relocateButton.setFont(FontManager.getRunescapeFont());
         relocateButton.setText("Relocate");
         relocateButton.setToolTipText("Set the object's location to the selected tile");
-        relocateButton.setPreferredSize(new Dimension(90, 25));
         relocateButton.setFocusable(false);
         objectPanel.add(relocateButton, c);
 
@@ -346,6 +337,7 @@ public class CreatorsPanel extends PluginPanel
         c.ipadx = 0;
         c.ipady = 0;
         c.gridwidth = 1;
+        c.weightx = 0;
         c.gridx = 1;
         c.gridy = 1;
         JLabel modelLabel = new JLabel("Model ID:");
@@ -380,21 +372,21 @@ public class CreatorsPanel extends PluginPanel
         c.gridx = 2;
         c.gridy = 1;
         JSpinner modelSpinner = new JSpinner();
+        modelSpinner.setPreferredSize(topButtonsPanelSize);
+        modelSpinner.setMaximumSize(topButtonsPanelSize);
+        modelSpinner.setMinimumSize(topButtonsPanelSize);
         modelSpinner.setValue(modelId);
         modelSpinner.setVisible(!customMode[0]);
-        modelSpinner.setMaximumSize(spinnerSize);
-        modelSpinner.setPreferredSize(spinnerSize);
-        modelSpinner.setMinimumSize(spinnerSize);
         objectPanel.add(modelSpinner, c);
 
         JComboBox<CustomModel> modelComboBox = new JComboBox<>();
+        modelComboBox.setPreferredSize(topButtonsPanelSize);
+        modelComboBox.setMaximumSize(topButtonsPanelSize);
+        modelComboBox.setMinimumSize(topButtonsPanelSize);
         modelComboBox.setFont(FontManager.getRunescapeFont());
         modelComboBox.setVisible(customMode[0]);
         modelComboBox.setFocusable(false);
         modelComboBox.setName("modelComboBox");
-        modelComboBox.setMaximumSize(spinnerSize);
-        modelComboBox.setPreferredSize(spinnerSize);
-        modelComboBox.setMinimumSize(spinnerSize);
         for (CustomModel model : plugin.getStoredModels())
         {
             modelComboBox.addItem(model);
@@ -407,25 +399,16 @@ public class CreatorsPanel extends PluginPanel
         SpinnerModel orientationRange = new SpinnerNumberModel(orientation, 0, 2048, 1);
         JSpinner orientationSpinner = new JSpinner(orientationRange);
         orientationSpinner.setName("orientationSpinner");
-        orientationSpinner.setMaximumSize(spinnerSize);
-        orientationSpinner.setPreferredSize(spinnerSize);
-        orientationSpinner.setMinimumSize(spinnerSize);
         objectPanel.add(orientationSpinner, c);
 
         c.gridy++;
         JSpinner radiusSpinner = new JSpinner();
         radiusSpinner.setValue(radius);
-        radiusSpinner.setMaximumSize(spinnerSize);
-        radiusSpinner.setPreferredSize(spinnerSize);
-        radiusSpinner.setMinimumSize(spinnerSize);
         objectPanel.add(radiusSpinner, c);
 
         c.gridy++;
         JSpinner animationSpinner = new JSpinner();
         animationSpinner.setValue(animationId);
-        animationSpinner.setMaximumSize(spinnerSize);
-        animationSpinner.setPreferredSize(spinnerSize);
-        animationSpinner.setMinimumSize(spinnerSize);
         objectPanel.add(animationSpinner, c);
 
         if (setMinimized)
@@ -489,9 +472,11 @@ public class CreatorsPanel extends PluginPanel
 
             textField.addActionListener(e ->
             {
-                character.setName(textField.getText());
-                objectPanel.setName(textField.getText());
-                character.getProgram().getNameLabel().setText(textField.getText());
+                String text = StringHandler.cleanString(textField.getText());
+                textField.setText(text);
+                character.setName(text);
+                objectPanel.setName(text);
+                character.getProgram().getNameLabel().setText(text);
                 toolBox.getManagerPanel().revalidate();
                 toolBox.getManagerPanel().repaint();
             });
@@ -503,24 +488,20 @@ public class CreatorsPanel extends PluginPanel
                 @Override
                 public void focusLost(FocusEvent e)
                 {
-                    character.setName(textField.getText());
-                    objectPanel.setName(textField.getText());
-                    character.getProgram().getNameLabel().setText(textField.getText());
+                    String text = StringHandler.cleanString(textField.getText());
+                    textField.setText(text);
+                    character.setName(text);
+                    objectPanel.setName(text);
+                    character.getProgram().getNameLabel().setText(text);
                     toolBox.getManagerPanel().revalidate();
                     toolBox.getManagerPanel().repaint();
                 }
             });
 
 
-            switchButton.addActionListener(e ->
-            {
-                switchPanel(objectPanel);
-            });
+            switchButton.addActionListener(e -> switchPanel(objectPanel));
 
-            deleteButton.addActionListener(e ->
-            {
-                onDeleteButtonPressed(objectPanel);
-            });
+            deleteButton.addActionListener(e -> onDeleteButtonPressed(objectPanel));
 
             duplicateButton.addActionListener(e ->
             {
@@ -984,7 +965,7 @@ public class CreatorsPanel extends PluginPanel
         return new Color(r, g, b);
     }
 
-    private Program createEmptyProgram()
+    public Program createEmptyProgram()
     {
         Color color = getRandomColor();
         ProgramComp comp = new ProgramComp(new WorldPoint[0], new WorldPoint[0], new LocalPoint[0], new LocalPoint[0], new Coordinate[0], false, 0, 1, DEFAULT_TURN_SPEED, -1, -1, MovementType.NORMAL, color.getRGB(), false, false);
@@ -1193,6 +1174,7 @@ public class CreatorsPanel extends PluginPanel
             }
             catch (Exception e)
             {
+                e.printStackTrace();
                 plugin.sendChatMessage("An error occurred while attempting to read this file.");
             }
         }
@@ -1209,6 +1191,7 @@ public class CreatorsPanel extends PluginPanel
         }
         catch (Exception e)
         {
+            e.printStackTrace();
             plugin.sendChatMessage("An error occurred while attempting to read this file.");
         }
     }

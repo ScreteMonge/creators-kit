@@ -7,7 +7,6 @@ import lombok.Getter;
 @Getter
 public enum LightingStyle
 {
-    PRESET("---", 100, 100, 100, 100, 100),
     NONE("None", 128, 4000, -50, -50, 10),
     ACTOR("Actor", 64, 850, -30, -30, 50),
     DEFAULT("Default", 64, 768, -50, -50, 10),
