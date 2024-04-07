@@ -133,12 +133,30 @@ public class ModelAnvil extends JPanel
         tabbedPane.setBorder(new LineBorder(ColorScheme.LIGHT_GRAY_COLOR, 1));
         add(tabbedPane, c);
 
+        JPanel viewport = new JPanel();
+        viewport.setLayout(new GridBagLayout());
+        viewport.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+
         scrollPane.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        scrollPane.setViewportView(complexMode);
+        scrollPane.setViewportView(viewport);
         scrollPane.setViewportBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 8));
+        tabbedPane.addTab("Model Anvil", scrollPane);
+
+        c.insets = new Insets(0, 0, 0, 0);
+        c.weightx = 1;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 0;
         complexMode.setLayout(new GridLayout(0, COMPLEX_GRID_COLUMNS, 8, 8));
         complexMode.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        tabbedPane.addTab("Model Anvil", scrollPane);
+        viewport.add(complexMode, c);
+
+        c.gridx = 0;
+        c.gridy = 1;
+        c.weightx = 1;
+        c.weighty = 1;
+        JLabel emptyLabel = new JLabel("");
+        viewport.add(emptyLabel, c);
 
         colourSwapPanel = new ColourSwapPanel(client, clientThread);
         tabbedPane.addTab("Colour/Texture Swapper", colourSwapPanel);
@@ -224,6 +242,7 @@ public class ModelAnvil extends JPanel
             lightingSpinners[4].setValue(preset.getZ());
         });
 
+        c.weightx = 1;
         c.weighty = 0;
         c.insets = new Insets(4, 0, 4, 0);
 

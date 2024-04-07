@@ -306,11 +306,27 @@ public class TransmogPanel extends JPanel
             clearSwapPanels();
         });
 
-        scrollPane.setViewportView(animationSwapsPanel);
+        c.insets = new Insets(0, 0, 0, 0);
+        c.weightx = 1;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 0;
+        JPanel viewport = new JPanel();
+        viewport.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        viewport.setBorder(new EmptyBorder(4, 6, 4, 6));
+        viewport.add(animationSwapsPanel, c);
+
+        c.gridx = 0;
+        c.gridy = 1;
+        c.weightx = 1;
+        c.weighty = 1;
+        JLabel emptyLabel = new JLabel("");
+        viewport.add(emptyLabel, c);
+
+        scrollPane.setViewportView(viewport);
         scrollPane.setBackground(ColorScheme.DARK_GRAY_COLOR);
         animationSwapsPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         animationSwapsPanel.setLayout(new GridLayout(0, 8, 8, 8));
-        animationSwapsPanel.setBorder(new EmptyBorder(4, 6, 4, 6));
         revalidate();
     }
 
@@ -326,6 +342,7 @@ public class TransmogPanel extends JPanel
         swap.setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1, true));
 
         c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(4, 4, 4, 4);
         c.weightx = 1;
         c.weighty = 0;
         c.gridwidth = 1;

@@ -63,12 +63,28 @@ public class ModelOrganizer extends JPanel
         headerPanel.setLayout(new GridBagLayout());
         headerPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         scrollPane.setColumnHeaderView(headerPanel);
-
-        modelPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        modelPanel.setLayout(new GridLayout(0, 8, 8, 8));
-        modelPanel.setBorder(new EmptyBorder(6, 4, 6, 4));
-        scrollPane.setViewportView(modelPanel);
         add(scrollPane);
+
+        JPanel viewport = new JPanel();
+        viewport.setBorder(new EmptyBorder(6, 4, 6, 4));
+        viewport.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        viewport.setLayout(new GridBagLayout());
+        scrollPane.setViewportView(viewport);
+
+        c.weightx = 1;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 0;
+        modelPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        modelPanel.setLayout(new GridLayout(0, 11, 8, 8));
+        viewport.add(modelPanel, c);
+
+        c.gridx = 0;
+        c.gridy = 1;
+        c.weightx = 1;
+        c.weighty = 1;
+        JLabel emptyLabel = new JLabel("");
+        viewport.add(emptyLabel, c);
 
         c.fill = GridBagConstraints.BOTH;
         c.insets = new Insets(4, 4, 4, 4);
