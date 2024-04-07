@@ -186,10 +186,18 @@ public class CreatorsPanel extends PluginPanel
         c.gridx = 0;
         c.gridy = 3;
         c.weightx = 1;
-        c.weighty = 1;
+        c.weighty = 0;
         sidePanel.setLayout(new GridBagLayout());
         sidePanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         add(sidePanel, c);
+
+        c.gridwidth = 3;
+        c.gridx = 0;
+        c.gridy = 4;
+        c.weightx = 1;
+        c.weighty = 1;
+        JLabel emptyLabel = new JLabel("");
+        add(emptyLabel, c);
 
         cNPC.insets = new Insets(1, 2, 1, 2);
         cNPC.gridx = 0;
