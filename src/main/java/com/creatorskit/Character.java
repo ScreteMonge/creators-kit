@@ -37,6 +37,7 @@ public class Character
     private JSpinner modelSpinner;
     private JSpinner animationSpinner;
     private JSpinner orientationSpinner;
+    private JSpinner radiusSpinner;
     private JLabel programmerLabel;
     private JSpinner programmerIdleSpinner;
     private RuneLiteObject runeLiteObject;

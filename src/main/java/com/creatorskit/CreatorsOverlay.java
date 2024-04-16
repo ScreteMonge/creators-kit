@@ -28,7 +28,6 @@ public class CreatorsOverlay extends Overlay
     private static final Color WALL_OBJECT_COLOUR = new Color(255, 70, 70);
     private static final Color DECORATIVE_OBJECT_COLOUR = new Color(183, 126, 255);
     private static final Color PROJECTILE_COLOUR = new Color(255, 222, 2);
-    private static final Color GRAPHICS_OBJECT_COLOUR = new Color(117, 113, 252);
     private static final Color NPC_COLOUR = new Color(188, 198, 255);
     private static final Color PLAYER_COLOUR = new Color(221, 133, 255);
     private static final int MAX_DISTANCE = 2400;
@@ -46,10 +45,24 @@ public class CreatorsOverlay extends Overlay
     @Override
     public Dimension render(Graphics2D graphics)
     {
-        if (client.getGameState() != GameState.LOGGED_IN || !plugin.isOverlaysActive())
+        if (client.getGameState() != GameState.LOGGED_IN)
+        {
             return null;
+        }
 
-        renderObjectsOverlay(graphics);
+        boolean keyHeld = false;
+        if (config.enableCtrlHotkeys() && client.isKeyPressed(KeyCode.KC_CONTROL))
+        {
+            renderSelectedObject(graphics);
+            keyHeld = true;
+        }
+
+        if (!plugin.isOverlaysActive())
+        {
+            return null;
+        }
+
+        renderObjectsOverlay(graphics, keyHeld);
 
         if (config.pathOverlay())
         {
@@ -247,7 +260,7 @@ public class CreatorsOverlay extends Overlay
         }
     }
 
-    public void renderObjectsOverlay(Graphics2D graphics)
+    public void renderObjectsOverlay(Graphics2D graphics, boolean keyHeld)
     {
         Scene scene = client.getScene();
         Tile[][][] tiles = scene.getTiles();
@@ -272,7 +285,7 @@ public class CreatorsOverlay extends Overlay
 
                 if (config.gameObjectOverlay() || config.myObjectOverlay())
                 {
-                    renderGameObjects(graphics, tile);
+                    renderGameObjects(graphics, tile, keyHeld);
                 }
 
                 if (config.groundObjectOverlay())
@@ -293,7 +306,72 @@ public class CreatorsOverlay extends Overlay
         }
     }
 
-    public void renderGameObjects(Graphics2D graphics, Tile tile)
+    public void renderSelectedObject(Graphics2D graphics)
+    {
+        Character character = plugin.getSelectedCharacter();
+        if (character == null)
+        {
+            return;
+        }
+
+        RuneLiteObject runeLiteObject = character.getRuneLiteObject();
+        if (runeLiteObject == null)
+        {
+            return;
+        }
+
+        LocalPoint lp = runeLiteObject.getLocation();
+        if (lp == null || !plugin.isInScene(character))
+        {
+            return;
+        }
+
+        Scene scene = client.getScene();
+        Tile[][][] tiles = scene.getTiles();
+        int z = client.getPlane();
+        Tile tile = tiles[z][lp.getSceneX()][lp.getSceneY()];
+
+        if (tile == null)
+        {
+            return;
+        }
+
+        GameObject[] gameObjects = tile.getGameObjects();
+        if (gameObjects == null)
+        {
+            return;
+        }
+
+        for (GameObject gameObject : gameObjects)
+        {
+            if (gameObject == null)
+            {
+                continue;
+            }
+
+            Renderable renderable = gameObject.getRenderable();
+            if (renderable instanceof RuneLiteObject)
+            {
+                if (renderable == runeLiteObject)
+                {
+                    if (plugin.isOverlaysActive() && !plugin.isMousePressed())
+                    {
+                        OverlayUtil.renderTileOverlay(graphics, gameObject, character.getName(), SELECTED_COLOUR);
+                        return;
+                    }
+
+                    Point p = Perspective.getCanvasTextLocation(client, graphics, lp, character.getName(), 0);
+                    if (p != null)
+                    {
+                        OverlayUtil.renderTextLocation(graphics, p, character.getName(), SELECTED_COLOUR);
+                    }
+                    return;
+                }
+            }
+        }
+    }
+
+    public void renderGameObjects(Graphics2D graphics, Tile tile, boolean keyHeld)
     {
         GameObject[] gameObjects = tile.getGameObjects();
         if (gameObjects != null)
@@ -320,6 +398,11 @@ public class CreatorsOverlay extends Overlay
                                 stringBuilder.append(character.getName());
                                 if (plugin.getSelectedCharacter() == character)
                                 {
+                                    if (keyHeld)
+                                    {
+                                        continue;
+                                    }
+
                                     OverlayUtil.renderTileOverlay(graphics, gameObject, stringBuilder.toString(), SELECTED_COLOUR);
                                     continue;
                                 }

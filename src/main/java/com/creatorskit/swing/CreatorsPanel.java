@@ -13,6 +13,7 @@ import com.creatorskit.programming.ProgramComp;
 import com.creatorskit.swing.jtree.FolderTree;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.Animation;
 import net.runelite.api.Client;
 import net.runelite.api.Model;
 import net.runelite.api.coords.LocalPoint;
@@ -40,7 +41,6 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.file.Files;
 import java.util.*;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -70,7 +70,7 @@ public class CreatorsPanel extends PluginPanel
     private final ArrayList<JComboBox<CustomModel>> comboBoxes = new ArrayList<>();
     private final Dimension spinnerSize = new Dimension(72, 30);
     private final Dimension BUTTON_SIZE = new Dimension(25, 25);
-    private final int DEFAULT_TURN_SPEED = 68;
+    private final int DEFAULT_TURN_SPEED = 40;
     private final BufferedImage MAXIMIZE = ImageUtil.loadImageResource(getClass(), "/Maximize.png");
     private final BufferedImage MINIMIZE = ImageUtil.loadImageResource(getClass(), "/Minimize.png");
     private final BufferedImage DUPLICATE = ImageUtil.loadImageResource(getClass(), "/Duplicate.png");
@@ -128,14 +128,14 @@ public class CreatorsPanel extends PluginPanel
         c.weighty = 0;
         c.gridx = 0;
         c.gridy = 1;
+        addObjectButton.setFocusable(false);
         addObjectButton.setText("Add Object");
         addObjectButton.setToolTipText("Add an new Object to the palette");
-        addObjectButton.setFocusable(false);
         addObjectButton.addActionListener(e ->
-                {
-                    ObjectPanel panel = createPanel(sideObjectPanels, sidePanel);
-                    addPanel(sideObjectPanels, sidePanel, panel);
-                });
+        {
+            ObjectPanel panel = createPanel(sidePanel);
+            SwingUtilities.invokeLater(() -> addPanel(sideObjectPanels, sidePanel, panel));
+        });
         add(addObjectButton, c);
 
         c.gridwidth = 1;
@@ -155,15 +155,13 @@ public class CreatorsPanel extends PluginPanel
         c.gridx = 2;
         c.gridy = 1;
         JButton switchAllButton = new JButton(new ImageIcon(SWITCH_ALL));
-        switchAllButton.setFocusable(false);
         switchAllButton.setToolTipText("Send all Objects from this Side Panel to the currently open folder in the Manager");
+        switchAllButton.setFocusable(false);
         add(switchAllButton, c);
-        switchAllButton.addActionListener(e -> {
+        switchAllButton.addActionListener(e ->
+        {
             ObjectPanel[] objectPanels = sideObjectPanels.toArray(new ObjectPanel[sideObjectPanels.size()]);
-            for (ObjectPanel objectPanel : objectPanels)
-            {
-                switchPanel(objectPanel);
-            }
+            switchPanels(sidePanel, objectPanels);
         });
 
         c.gridx = 1;
@@ -213,12 +211,12 @@ public class CreatorsPanel extends PluginPanel
         cManager.weighty = 0;
     }
 
-    public ObjectPanel createPanel(ArrayList<ObjectPanel> panelArray, JPanel parentPanel)
+    public ObjectPanel createPanel(JPanel parentPanel)
     {
-        return createPanel(panelArray, parentPanel, "Object (" + npcPanels + ")", 7699, null, false, false, 0,  -1, 60, createEmptyProgram(), false, null, null, new int[0], -1, false);
+        return createPanel(parentPanel, "Object (" + npcPanels + ")", 7699, null, false, false, 0,  -1, 60, createEmptyProgram(-1, -1), false, null, null, new int[0], -1, false, false);
     }
 
-    public ObjectPanel createPanel(ArrayList<ObjectPanel> panelArray,
+    public ObjectPanel createPanel(
                               JPanel parentPanel,
                               String name,
                               int modelId,
@@ -234,194 +232,120 @@ public class CreatorsPanel extends PluginPanel
                               LocalPoint localPoint,
                               int[] localPointRegion,
                               int localPointPlane,
-                              boolean inInstance)
+                              boolean inInstance,
+                              boolean setHoveredLocation)
     {
         JPanel programPanel = program.getProgramPanel();
         ObjectPanel objectPanel = new ObjectPanel(name, programPanel, parentPanel);
-        objectPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        objectPanel.setBorder(defaultBorder);
         objectPanel.setLayout(new GridBagLayout());
 
-        GridBagConstraints c = new GridBagConstraints();
-        c.fill = GridBagConstraints.BOTH;
-        c.insets = new Insets(1, 1, 1, 1);
-        c.gridwidth = 2;
-        c.gridx = 0;
-        c.gridy = 0;
-        c.weightx = 1;
         JTextField textField = new JTextField(name);
         Dimension textDimension = new Dimension(140, 30);
         textField.setMaximumSize(textDimension);
         textField.setPreferredSize(textDimension);
         textField.setMinimumSize(textDimension);
-        objectPanel.add(textField, c);
 
-        c.fill = GridBagConstraints.BOTH;
-        c.gridwidth = 1;
-        c.gridx = 2;
-        c.gridy = 0;
-        c.weightx = 0;
         JPanel topButtonsPanel = new JPanel();
         Dimension topButtonsPanelSize = new Dimension(81, 30);
         topButtonsPanel.setMaximumSize(topButtonsPanelSize);
         topButtonsPanel.setPreferredSize(topButtonsPanelSize);
         topButtonsPanel.setMinimumSize(topButtonsPanelSize);
         topButtonsPanel.setLayout(new GridLayout(1, 3, 0, 0));
-        objectPanel.add(topButtonsPanel, c);
 
         JButton switchButton = new JButton(new ImageIcon(SWITCH));
-        switchButton.setName("Switch");
         switchButton.setToolTipText("Switch this Object between the Manager and Side Panel");
         switchButton.setFocusable(false);
-        topButtonsPanel.add(switchButton);
 
         JButton duplicateButton = new JButton(new ImageIcon(DUPLICATE));
-        duplicateButton.setName("Duplicate");
         duplicateButton.setToolTipText("Duplicate object");
         duplicateButton.setFocusable(false);
-        topButtonsPanel.add(duplicateButton);
 
-        final boolean[] minimized = {setMinimized};
         ImageIcon minimize = new ImageIcon(MINIMIZE);
         ImageIcon maximize = new ImageIcon(MAXIMIZE);
         JButton minimizeButton = new JButton(minimize);
         minimizeButton.setToolTipText("Minimize");
         minimizeButton.setFocusable(false);
-        topButtonsPanel.add(minimizeButton);
 
         JButton deleteButton = new JButton(new ImageIcon(CLOSE));
-        deleteButton.setName("Delete");
         deleteButton.setToolTipText("Delete object");
         deleteButton.setFocusable(false);
-        topButtonsPanel.add(deleteButton);
 
         //Buttons
-
-        c.fill = GridBagConstraints.BOTH;
-        c.ipadx = 0;
-        c.ipady = 5;
-        c.gridwidth = 1;
-        c.weightx = 1;
-        c.gridx = 0;
-        c.gridy = 1;
         JButton modelButton = new JButton();
         modelButton.setFont(FontManager.getRunescapeFont());
         String modelButtonText = customModeActive ? "Custom" : "Id";
         modelButton.setText(modelButtonText);
-        modelButton.setText("Custom");
         modelButton.setToolTipText("Toggle between Custom Model and Model ID");
         modelButton.setFocusable(false);
-        objectPanel.add(modelButton, c);
 
-        c.gridy++;
         JButton spawnButton = new JButton();
         spawnButton.setFont(FontManager.getRunescapeFont());
-        spawnButton.setText("Spawn");
+        spawnButton.setText(active ? "Spawn" : "Despawn");
         spawnButton.setToolTipText("Toggle the NPC on or off");
         spawnButton.setFocusable(false);
-        objectPanel.add(spawnButton, c);
 
-        c.gridy++;
         JButton relocateButton = new JButton();
         relocateButton.setFont(FontManager.getRunescapeFont());
         relocateButton.setText("Relocate");
         relocateButton.setToolTipText("Set the object's location to the selected tile");
         relocateButton.setFocusable(false);
-        objectPanel.add(relocateButton, c);
 
-        c.gridy++;
         JButton animationButton = new JButton();
         animationButton.setFont(FontManager.getRunescapeFont());
         animationButton.setText("Anim Off");
         animationButton.setToolTipText("Toggle the playing animation");
         animationButton.setPreferredSize(new Dimension(90, 25));
         animationButton.setFocusable(false);
-        objectPanel.add(animationButton, c);
 
         //Labels
-
-        c.fill = GridBagConstraints.NONE;
-        c.anchor = GridBagConstraints.LINE_END;
-        c.ipadx = 0;
-        c.ipady = 0;
-        c.gridwidth = 1;
-        c.weightx = 0;
-        c.gridx = 1;
-        c.gridy = 1;
         JLabel modelLabel = new JLabel("Model ID:");
         modelLabel.setToolTipText("The ID number of the model to spawn");
         modelLabel.setFont(FontManager.getRunescapeSmallFont());
-        objectPanel.add(modelLabel, c);
 
-        c.gridy++;
         JLabel orientationLabel = new JLabel("Rotation:");
         orientationLabel.setToolTipText("0 = South, 512 = West, 1024 = North, 1536 = East, 2048 = Max");
         orientationLabel.setFont(FontManager.getRunescapeSmallFont());
-        objectPanel.add(orientationLabel, c);
 
-        c.gridy++;
         JLabel radiusLabel = new JLabel("Radius:");
         radiusLabel.setToolTipText("Increasing the radius may prevent clipping issues with the ground");
         radiusLabel.setFont(FontManager.getRunescapeSmallFont());
-        objectPanel.add(radiusLabel, c);
 
-        c.gridy++;
         JLabel animationLabel = new JLabel("Anim ID:");
         animationLabel.setToolTipText("The animation ID number. -1 gives no animation");
         animationLabel.setFont(FontManager.getRunescapeSmallFont());
-        objectPanel.add(animationLabel, c);
 
         //Spinners
-
-        final boolean[] customMode = {customModeActive};
-        c.fill = GridBagConstraints.BOTH;
-        c.anchor = GridBagConstraints.CENTER;
-        c.gridwidth = 1;
-        c.gridx = 2;
-        c.gridy = 1;
         JSpinner modelSpinner = new JSpinner();
         modelSpinner.setPreferredSize(topButtonsPanelSize);
         modelSpinner.setMaximumSize(topButtonsPanelSize);
         modelSpinner.setMinimumSize(topButtonsPanelSize);
         modelSpinner.setValue(modelId);
-        modelSpinner.setVisible(!customMode[0]);
-        objectPanel.add(modelSpinner, c);
+        modelSpinner.setVisible(!customModeActive);
 
         JComboBox<CustomModel> modelComboBox = new JComboBox<>();
         modelComboBox.setPreferredSize(topButtonsPanelSize);
         modelComboBox.setMaximumSize(topButtonsPanelSize);
         modelComboBox.setMinimumSize(topButtonsPanelSize);
         modelComboBox.setFont(FontManager.getRunescapeFont());
-        modelComboBox.setVisible(customMode[0]);
-        modelComboBox.setFocusable(false);
-        modelComboBox.setName("modelComboBox");
+        modelComboBox.setVisible(customModeActive);
         for (CustomModel model : plugin.getStoredModels())
         {
             modelComboBox.addItem(model);
         }
         if (customModel != null)
             modelComboBox.setSelectedItem(customModel);
-        objectPanel.add(modelComboBox, c);
 
-        c.gridy++;
         SpinnerModel orientationRange = new SpinnerNumberModel(orientation, 0, 2048, 1);
         JSpinner orientationSpinner = new JSpinner(orientationRange);
-        orientationSpinner.setName("orientationSpinner");
-        objectPanel.add(orientationSpinner, c);
 
-        c.gridy++;
         JSpinner radiusSpinner = new JSpinner();
         radiusSpinner.setValue(radius);
-        objectPanel.add(radiusSpinner, c);
 
-        c.gridy++;
         JSpinner animationSpinner = new JSpinner();
         animationSpinner.setValue(animationId);
-        objectPanel.add(animationSpinner, c);
 
         if (setMinimized)
         {
-            customMode[0] = modelComboBox.isVisible();
             relocateButton.setVisible(false);
             modelButton.setVisible(false);
             modelLabel.setVisible(false);
@@ -437,271 +361,430 @@ public class CreatorsPanel extends PluginPanel
             radiusSpinner.setVisible(false);
             minimizeButton.setIcon(maximize);
             minimizeButton.setToolTipText("Maximize");
-            objectPanel.updateUI();
         }
+
+        SwingUtilities.invokeLater(() ->
+        {
+            GridBagConstraints c = new GridBagConstraints();
+            c.fill = GridBagConstraints.BOTH;
+            c.insets = new Insets(1, 1, 1, 1);
+            c.gridwidth = 2;
+            c.gridx = 0;
+            c.gridy = 0;
+            c.weightx = 1;
+            objectPanel.add(textField, c);
+
+            c.gridwidth = 1;
+            c.gridx = 2;
+            c.gridy = 0;
+            c.weightx = 0;
+            objectPanel.add(topButtonsPanel, c);
+            topButtonsPanel.add(switchButton);
+            topButtonsPanel.add(duplicateButton);
+            topButtonsPanel.add(minimizeButton);
+            topButtonsPanel.add(deleteButton);
+
+            c.ipadx = 0;
+            c.ipady = 5;
+            c.gridwidth = 1;
+            c.weightx = 1;
+            c.gridx = 0;
+            c.gridy = 1;
+            objectPanel.add(modelButton, c);
+
+            c.gridy++;
+            objectPanel.add(spawnButton, c);
+
+            c.gridy++;
+            objectPanel.add(relocateButton, c);
+
+            c.gridy++;
+            objectPanel.add(animationButton, c);
+
+            c.fill = GridBagConstraints.NONE;
+            c.anchor = GridBagConstraints.LINE_END;
+            c.ipadx = 0;
+            c.ipady = 0;
+            c.gridwidth = 1;
+            c.weightx = 0;
+            c.gridx = 1;
+            c.gridy = 1;
+            objectPanel.add(modelLabel, c);
+
+            c.gridy++;
+            objectPanel.add(orientationLabel, c);
+
+            c.gridy++;
+            objectPanel.add(radiusLabel, c);
+
+            c.gridy++;
+            objectPanel.add(animationLabel, c);
+
+            c.fill = GridBagConstraints.BOTH;
+            c.anchor = GridBagConstraints.CENTER;
+            c.gridwidth = 1;
+            c.gridx = 2;
+            c.gridy = 1;
+            objectPanel.add(modelSpinner, c);
+            objectPanel.add(modelComboBox, c);
+
+            c.gridy++;
+            objectPanel.add(orientationSpinner, c);
+
+            c.gridy++;
+            objectPanel.add(radiusSpinner, c);
+
+            c.gridy++;
+            objectPanel.add(animationSpinner, c);
+        });
 
         JLabel programmerNameLabel = program.getNameLabel();
         programmerNameLabel.setText(name);
         JSpinner programmerIdleSpinner = program.getIdleAnimSpinner();
 
-        clientThread.invokeLater(() ->
+        Character character = new Character(
+                textField.getText(),
+                active,
+                worldPoint != null || localPoint != null,
+                setMinimized,
+                program,
+                worldPoint,
+                localPoint,
+                localPointRegion,
+                localPointPlane,
+                inInstance,
+                (CustomModel) modelComboBox.getSelectedItem(),
+                objectPanel,
+                customModeActive,
+                textField,
+                modelComboBox,
+                spawnButton,
+                modelButton,
+                modelSpinner,
+                animationSpinner,
+                orientationSpinner,
+                radiusSpinner,
+                programmerNameLabel,
+                programmerIdleSpinner,
+                null,
+                0);
+
+        SwingUtilities.invokeLater(() -> programmerPanel.createProgramPanel(character, programPanel, programmerNameLabel, programmerIdleSpinner));
+
+        textField.addActionListener(e ->
         {
-            Character character = plugin.buildCharacter(
-                    textField.getText(),
-                    objectPanel,
-                    textField,
-                    relocateButton,
-                    spawnButton,
-                    animationButton,
-                    modelButton,
-                    modelId,
-                    modelSpinner,
-                    modelComboBox,
-                    customMode[0],
-                    minimized[0],
-                    orientation,
-                    orientationSpinner,
-                    radius,
-                    radiusSpinner,
-                    animationId,
-                    animationSpinner,
-                    program,
-                    programmerNameLabel,
-                    programmerIdleSpinner,
-                    active,
-                    worldPoint,
-                    localPoint,
-                    localPointRegion,
-                    localPointPlane,
-                    inInstance);
+            String text = StringHandler.cleanString(textField.getText());
+            textField.setText(text);
+            character.setName(text);
+            objectPanel.setName(text);
+            character.getProgram().getNameLabel().setText(text);
+            toolBox.getManagerPanel().revalidate();
+            toolBox.getManagerPanel().repaint();
+        });
 
-            SwingUtilities.invokeLater(() ->
-                    programmerPanel.createProgramPanel(character, programPanel, programmerNameLabel, programmerIdleSpinner));
+        textField.addFocusListener(new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e) {}
 
-            textField.addActionListener(e ->
+            @Override
+            public void focusLost(FocusEvent e)
             {
                 String text = StringHandler.cleanString(textField.getText());
                 textField.setText(text);
-                character.setName(text);
                 objectPanel.setName(text);
-                character.getProgram().getNameLabel().setText(text);
+                character.setName(text);
+                programmerNameLabel.setText(text);
                 toolBox.getManagerPanel().revalidate();
                 toolBox.getManagerPanel().repaint();
-            });
+            }
+        });
 
-            textField.addFocusListener(new FocusListener() {
-                @Override
-                public void focusGained(FocusEvent e) {}
+        switchButton.addActionListener(e -> switchPanel(objectPanel));
 
-                @Override
-                public void focusLost(FocusEvent e)
-                {
-                    String text = StringHandler.cleanString(textField.getText());
-                    textField.setText(text);
-                    character.setName(text);
-                    objectPanel.setName(text);
-                    character.getProgram().getNameLabel().setText(text);
-                    toolBox.getManagerPanel().revalidate();
-                    toolBox.getManagerPanel().repaint();
-                }
-            });
+        deleteButton.addActionListener(e ->
+        {
+            onDeleteButtonPressed(objectPanel);
+            objectPanel.getParentPanel().repaint();
+            objectPanel.getParentPanel().revalidate();
+        });
 
+        duplicateButton.addActionListener(e -> onDuplicatePressed(character, false));
 
-            switchButton.addActionListener(e -> switchPanel(objectPanel));
-
-            deleteButton.addActionListener(e -> onDeleteButtonPressed(objectPanel));
-
-            duplicateButton.addActionListener(e ->
+        minimizeButton.addActionListener(e ->
+        {
+            if (!character.isMinimized())
             {
-                ProgramComp comp = program.getComp();
-
-                WorldPoint[] newSteps = ArrayUtils.clone(comp.getStepsWP());
-                WorldPoint[] newPath = ArrayUtils.clone(comp.getPathWP());
-                LocalPoint[] newStepsLP = ArrayUtils.clone(comp.getStepsLP());
-                LocalPoint[] newPathLP = ArrayUtils.clone(comp.getPathLP());
-                Coordinate[] newCoordinates = ArrayUtils.clone(comp.getCoordinates());
-                Color newColor = getRandomColor();
-                ProgramComp newComp = new ProgramComp(
-                        newSteps,
-                        newPath,
-                        newStepsLP,
-                        newPathLP,
-                        newCoordinates,
-                        comp.isPathFound(),
-                        0,
-                        comp.getSpeed(),
-                        comp.getTurnSpeed(),
-                        comp.getIdleAnim(),
-                        comp.getWalkAnim(),
-                        comp.getMovementType(),
-                        newColor.getRGB(),
-                        comp.isLoop(),
-                        comp.isProgramActive());
-
-                String newName = textField.getText();
-                Matcher matcher = pattern.matcher(newName);
-                if (matcher.find())
-                {
-                    String duplicate = matcher.group();
-                    duplicate = duplicate.replace("(", "");
-                    duplicate = duplicate.replace(")", "");
-
-                    int duplicateNumber = Integer.parseInt(duplicate) + 1;
-                    newName = newName.replaceFirst("(?s)" + duplicate + "(?!.*?" + duplicate + ")", "" + duplicateNumber);
-                }
-                else
-                {
-                    newName = newName + " (1)";
-                }
-
-                Program newProgram = new Program(newComp, new JPanel(), new JLabel(), new JSpinner(), newColor);
-                ObjectPanel panel = createPanel(
-                        panelArray,
-                        objectPanel.getParentPanel(),
-                        newName,
-                        (int) modelSpinner.getValue(),
-                        (CustomModel) modelComboBox.getSelectedItem(),
-                        character.isCustomMode(), minimized[0],
-                        (int) orientationSpinner.getValue(),
-                        (int) animationSpinner.getValue(),
-                        (int) radiusSpinner.getValue(),
-                        newProgram,
-                        character.getRuneLiteObject().isActive(),
-                        character.getNonInstancedPoint(),
-                        character.getInstancedPoint(),
-                        character.getInstancedRegions(),
-                        character.getInstancedPlane(),
-                        character.isInInstance());
-                addPanel(panelArray, objectPanel.getParentPanel(), panel);
-            });
-
-            minimizeButton.addActionListener(e ->
-            {
-                if (!character.isMinimized())
-                {
-                    customMode[0] = modelComboBox.isVisible();
-                    relocateButton.setVisible(false);
-                    modelButton.setVisible(false);
-                    modelLabel.setVisible(false);
-                    modelSpinner.setVisible(false);
-                    modelComboBox.setVisible(false);
-                    spawnButton.setVisible(false);
-                    orientationLabel.setVisible(false);
-                    orientationSpinner.setVisible(false);
-                    animationButton.setVisible(false);
-                    animationLabel.setVisible(false);
-                    animationSpinner.setVisible(false);
-                    radiusLabel.setVisible(false);
-                    radiusSpinner.setVisible(false);
-                    minimizeButton.setIcon(maximize);
-                    character.setMinimized(true);
-                    minimizeButton.setToolTipText("Maximize");
-                    objectPanel.updateUI();
-                    return;
-                }
-
-                relocateButton.setVisible(true);
-                modelButton.setVisible(true);
-                modelLabel.setVisible(true);
-                if (customMode[0])
-                {
-                    modelComboBox.setVisible(true);
-                }
-                else
-                {
-                    modelSpinner.setVisible(true);
-                }
-
-                spawnButton.setVisible(true);
-                orientationLabel.setVisible(true);
-                orientationSpinner.setVisible(true);
-                animationButton.setVisible(true);
-                animationLabel.setVisible(true);
-                animationSpinner.setVisible(true);
-                radiusLabel.setVisible(true);
-                radiusSpinner.setVisible(true);
-                minimizeButton.setIcon(minimize);
-                character.setMinimized(false);
-                minimizeButton.setToolTipText("Minimize");
+                relocateButton.setVisible(false);
+                modelButton.setVisible(false);
+                modelLabel.setVisible(false);
+                modelSpinner.setVisible(false);
+                modelComboBox.setVisible(false);
+                spawnButton.setVisible(false);
+                orientationLabel.setVisible(false);
+                orientationSpinner.setVisible(false);
+                animationButton.setVisible(false);
+                animationLabel.setVisible(false);
+                animationSpinner.setVisible(false);
+                radiusLabel.setVisible(false);
+                radiusSpinner.setVisible(false);
+                minimizeButton.setIcon(maximize);
+                character.setMinimized(true);
+                minimizeButton.setToolTipText("Maximize");
                 objectPanel.updateUI();
-            });
+                return;
+            }
 
-            objectPanel.addMouseListener(new MouseAdapter() {
+            relocateButton.setVisible(true);
+            modelButton.setVisible(true);
+            modelLabel.setVisible(true);
+            if (character.isCustomMode())
+            {
+                modelComboBox.setVisible(true);
+            }
+            else
+            {
+                modelSpinner.setVisible(true);
+            }
+
+            spawnButton.setVisible(true);
+            orientationLabel.setVisible(true);
+            orientationSpinner.setVisible(true);
+            animationButton.setVisible(true);
+            animationLabel.setVisible(true);
+            animationSpinner.setVisible(true);
+            radiusLabel.setVisible(true);
+            radiusSpinner.setVisible(true);
+            minimizeButton.setIcon(minimize);
+            character.setMinimized(false);
+            minimizeButton.setToolTipText("Minimize");
+            objectPanel.updateUI();
+        });
+
+
+        objectPanel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                setSelectedCharacter(character, objectPanel);
+            }
+        });
+
+        objectPanel.addMouseListener(new MouseAdapter()
+        {
+            @Override
+            public void mouseEntered (MouseEvent e)
+            {
+                setHoveredCharacter(character, objectPanel);
+            }
+
+            @Override
+            public void mouseExited (MouseEvent e)
+            {
+                unsetHoveredCharacter(character, objectPanel);
+            }
+        });
+
+        relocateButton.addActionListener(e -> plugin.setLocation(character, !character.isLocationSet(), false, false, false));
+
+        spawnButton.addActionListener(e -> plugin.toggleSpawn(spawnButton, character));
+
+        animationButton.addActionListener(e ->
+        {
+            Animation anim = character.getRuneLiteObject().getAnimation();
+
+            if (anim == null)
+            {
+                animationButton.setText("Anim Off");
+                programmerIdleSpinner.setValue((int) animationSpinner.getValue());
+                plugin.setAnimation(character, (int) animationSpinner.getValue());
+                return;
+            }
+
+            int animId = anim.getId();
+
+            if (animId == -1)
+            {
+                animationButton.setText("Anim Off");
+                programmerIdleSpinner.setValue((int) animationSpinner.getValue());
+                plugin.setAnimation(character, (int) animationSpinner.getValue());
+                return;
+            }
+
+            animationButton.setText("Anim On");
+            plugin.unsetAnimation(character);
+        });
+
+        modelButton.addActionListener(e ->
+        {
+            if (character.isCustomMode())
+            {
+                character.setCustomMode(false);
+                modelButton.setText("Id");
+                modelSpinner.setVisible(true);
+                modelComboBox.setVisible(false);
+                plugin.setModel(character, false, (int) modelSpinner.getValue());
+            }
+            else
+            {
+                character.setCustomMode(true);
+                modelButton.setText("Custom");
+                modelSpinner.setVisible(false);
+                modelComboBox.setVisible(true);
+                plugin.setModel(character, true, -1);
+            }
+        });
+
+        modelSpinner.addChangeListener(e ->
+        {
+            int modelNumber = (int) modelSpinner.getValue();
+            plugin.setModel(character, false, modelNumber);
+        });
+
+        modelComboBox.addItemListener(e ->
+        {
+            CustomModel m = (CustomModel) modelComboBox.getSelectedItem();
+            character.setStoredModel(m);
+            if (modelComboBox.isVisible() && character == plugin.getSelectedCharacter())
+                plugin.setModel(character, true, -1);
+        });
+
+        orientationSpinner.addChangeListener(e ->
+        {
+            int orient = (int) orientationSpinner.getValue();
+            plugin.setOrientation(character, orient);
+        });
+
+        animationSpinner.addChangeListener(e ->
+        {
+            animationButton.setText("Anim Off");
+            int animationNumber = (int) animationSpinner.getValue();
+            plugin.setAnimation(character, animationNumber);
+            programmerIdleSpinner.setValue(animationNumber);
+        });
+
+        radiusSpinner.addChangeListener(e ->
+        {
+            int rad = (int) radiusSpinner.getValue();
+            plugin.setRadius(character, rad);
+        });
+
+        addAllSelectListeners(
+                character,
+                objectPanel,
+                textField,
+                switchButton,
+                topButtonsPanel,
+                duplicateButton,
+                minimizeButton,
+                deleteButton,
+                modelButton,
+                spawnButton,
+                relocateButton,
+                animationButton,
+                modelLabel,
+                orientationLabel,
+                radiusLabel,
+                animationLabel,
+                modelSpinner,
+                modelComboBox,
+                orientationSpinner,
+                radiusSpinner,
+                animationSpinner
+        );
+
+        setSelectedCharacter(character, objectPanel);
+
+        plugin.setupRLObject(character, setHoveredLocation);
+        plugin.getCharacters().add(character);
+
+        comboBoxes.add(modelComboBox);
+        return objectPanel;
+    }
+
+    private void addAllSelectListeners(
+            Character character,
+            ObjectPanel objectPanel,
+            JTextField textField,
+            JButton switchButton,
+            JPanel topButtonsPanel,
+            JButton duplicateButton,
+            JButton minimizeButton,
+            JButton deleteButton,
+            JButton modelButton,
+            JButton spawnButton,
+            JButton relocateButton,
+            JButton animationButton,
+            JLabel modelLabel,
+            JLabel orientationLabel,
+            JLabel radiusLabel,
+            JLabel animationLabel,
+            JSpinner modelSpinner,
+            JComboBox<CustomModel> modelComboBox,
+            JSpinner orientationSpinner,
+            JSpinner radiusSpinner,
+            JSpinner animationSpinner)
+    {
+        addSelectListeners(objectPanel, character, objectPanel, true);
+        addSelectListeners(textField, character, objectPanel, true);
+        addSelectListeners(switchButton, character, objectPanel, true);
+        addSelectListeners(topButtonsPanel, character, objectPanel, true);
+        addSelectListeners(duplicateButton, character, objectPanel, false);
+        addSelectListeners(minimizeButton, character, objectPanel, true);
+        addSelectListeners(deleteButton, character, objectPanel, false);
+        addSelectListeners(modelButton, character, objectPanel, true);
+        addSelectListeners(spawnButton, character, objectPanel, true);
+        addSelectListeners(relocateButton, character, objectPanel, true);
+        addSelectListeners(animationButton, character, objectPanel, true);
+        addSelectListeners(modelLabel, character, objectPanel, true);
+        addSelectListeners(orientationLabel, character, objectPanel, true);
+        addSelectListeners(radiusLabel, character, objectPanel, true);
+        addSelectListeners(animationLabel, character, objectPanel, true);
+        addSelectListeners(modelComboBox, character, objectPanel, true);
+
+        for (Component c : modelSpinner.getEditor().getComponents())
+        {
+            addSelectListeners(c, character, objectPanel, true);
+        }
+
+        for (Component c : orientationSpinner.getEditor().getComponents())
+        {
+            addSelectListeners(c, character, objectPanel, true);
+        }
+
+        for (Component c : radiusSpinner.getEditor().getComponents())
+        {
+            addSelectListeners(c, character, objectPanel, true);
+        }
+
+        for (Component c : animationSpinner.getEditor().getComponents())
+        {
+            addSelectListeners(c, character, objectPanel, true);
+        }
+    }
+
+    private void addSelectListeners(Component component, Character character, ObjectPanel objectPanel, boolean pressedListener)
+    {
+        component.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered (MouseEvent e)
+            {
+                setHoveredCharacter(character, objectPanel);
+            }
+            @Override
+            public void mouseExited (MouseEvent e)
+            {
+                unsetHoveredCharacter(character, objectPanel);
+            }
+        });
+
+        if (pressedListener)
+        {
+            component.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mousePressed(MouseEvent e) {
                     setSelectedCharacter(character, objectPanel);
                 }
             });
-
-            objectPanel.addMouseListener(new MouseAdapter()
-            {
-                @Override
-                public void mouseEntered (MouseEvent e)
-                {
-                    setHoveredCharacter(character, objectPanel);
-                }
-
-                @Override
-                public void mouseExited (MouseEvent e)
-                {
-                    unsetHoveredCharacter(character, objectPanel);
-                }
-            });
-
-            ArrayList<Component> list = new ArrayList<>();
-            for (Component component : objectPanel.getComponents())
-            {
-                list.add(component);
-
-                if (component instanceof Container)
-                {
-                    Container container = (Container) component;
-                    list.addAll(List.of(container.getComponents()));
-
-                    for (Component comp : container.getComponents())
-                    {
-                        if (comp instanceof Container)
-                        {
-                            Container container1 = (Container) comp;
-                            list.addAll(List.of(container1.getComponents()));
-                        }
-                    }
-                }
-            }
-
-            for (Component component : list)
-            {
-                component.addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseEntered (MouseEvent e)
-                    {
-                        setHoveredCharacter(character, objectPanel);
-                    }
-                    @Override
-                    public void mouseExited (MouseEvent e)
-                    {
-                        unsetHoveredCharacter(character, objectPanel);
-                    }
-                });
-
-                String compName = component.getName();
-                if (compName == null || (!compName.equals("Duplicate") && !compName.equals("Delete")))
-                {
-                    component.addMouseListener(new MouseAdapter() {
-                        @Override
-                        public void mousePressed(MouseEvent e) {
-                            setSelectedCharacter(character, objectPanel);
-                        }
-                    });
-                }
-            }
-
-            setSelectedCharacter(character, objectPanel);
-        });
-
-        allObjectPanels.add(objectPanel);
-        comboBoxes.add(modelComboBox);
-        return objectPanel;
+        }
     }
 
     public void addPanel(ArrayList<ObjectPanel> panelArray, JPanel parentPanel, ObjectPanel childPanel)
@@ -712,6 +795,7 @@ public class CreatorsPanel extends PluginPanel
     public void addPanel(ArrayList<ObjectPanel> panelArray, JPanel parentPanel, DefaultMutableTreeNode parentNode, ObjectPanel childPanel)
     {
         panelArray.add(childPanel);
+        allObjectPanels.add(childPanel);
 
         if (parentPanel == sidePanel)
         {
@@ -741,10 +825,91 @@ public class CreatorsPanel extends PluginPanel
         npcPanels++;
     }
 
+    public void onDuplicatePressed(Character character, boolean setLocation)
+    {
+        ProgramComp comp = character.getProgram().getComp();
+
+        WorldPoint[] newSteps = ArrayUtils.clone(comp.getStepsWP());
+        WorldPoint[] newPath = ArrayUtils.clone(comp.getPathWP());
+        LocalPoint[] newStepsLP = ArrayUtils.clone(comp.getStepsLP());
+        LocalPoint[] newPathLP = ArrayUtils.clone(comp.getPathLP());
+        Coordinate[] newCoordinates = ArrayUtils.clone(comp.getCoordinates());
+        Color newColor = getRandomColor();
+        ProgramComp newComp = new ProgramComp(
+                newSteps,
+                newPath,
+                newStepsLP,
+                newPathLP,
+                newCoordinates,
+                comp.isPathFound(),
+                0,
+                comp.getSpeed(),
+                comp.getTurnSpeed(),
+                comp.getIdleAnim(),
+                comp.getWalkAnim(),
+                comp.getMovementType(),
+                newColor.getRGB(),
+                comp.isLoop(),
+                comp.isProgramActive());
+
+        String newName = character.getName();
+        Matcher matcher = pattern.matcher(newName);
+        if (matcher.find())
+        {
+            String duplicate = matcher.group();
+            duplicate = duplicate.replace("(", "");
+            duplicate = duplicate.replace(")", "");
+
+            int duplicateNumber = Integer.parseInt(duplicate) + 1;
+            newName = newName.replaceFirst("(?s)" + duplicate + "(?!.*?" + duplicate + ")", "" + duplicateNumber);
+        }
+        else
+        {
+            newName = newName + " (1)";
+        }
+
+        Program newProgram = new Program(newComp, new JPanel(), new JLabel(), new JSpinner(), newColor);
+
+        JPanel parentPanel = character.getObjectPanel().getParentPanel();
+        ArrayList<ObjectPanel> panelArray;
+        if (parentPanel == sidePanel)
+        {
+            panelArray = sideObjectPanels;
+        }
+        else
+        {
+            panelArray = toolBox.getManagerPanel().getManagerObjectPanels();
+        }
+
+        String finalNewName = newName;
+        Thread thread = new Thread(() ->
+        {
+            ObjectPanel panel = createPanel(
+                    character.getObjectPanel().getParentPanel(),
+                    finalNewName,
+                    (int) character.getModelSpinner().getValue(),
+                    (CustomModel) character.getComboBox().getSelectedItem(),
+                    character.isCustomMode(), character.isMinimized(),
+                    (int) character.getOrientationSpinner().getValue(),
+                    (int) character.getAnimationSpinner().getValue(),
+                    (int) character.getRadiusSpinner().getValue(),
+                    newProgram,
+                    character.getRuneLiteObject().isActive(),
+                    character.getNonInstancedPoint(),
+                    character.getInstancedPoint(),
+                    character.getInstancedRegions(),
+                    character.getInstancedPlane(),
+                    character.isInInstance(),
+                    setLocation);
+
+            SwingUtilities.invokeLater(() -> addPanel(panelArray, parentPanel, panel));
+        });
+        thread.start();
+    }
+
     public void onDeleteButtonPressed(ObjectPanel objectPanel)
     {
-        removePanel(objectPanel.getParentPanel(), objectPanel);
-        allObjectPanels.remove(objectPanel);
+        removePanel(objectPanel);
 
         ArrayList<Character> characters = plugin.getCharacters();
         for (Character character : characters)
@@ -756,31 +921,89 @@ public class CreatorsPanel extends PluginPanel
                 characters.remove(character);
                 if (plugin.getSelectedCharacter() == character)
                     plugin.setSelectedCharacter(null);
-                objectPanel.getParentPanel().repaint();
-                objectPanel.getParentPanel().revalidate();
                 return;
             }
         }
     }
 
-    public void removePanel(JPanel parentPanel, ObjectPanel childPanel)
+    public void deletePanels(ObjectPanel[] objectPanels)
     {
-        if (parentPanel == sidePanel)
+        Thread thread = new Thread(() ->
         {
-            parentPanel.remove(childPanel);
-            programmerPanel.removeSideProgram(childPanel.getProgramPanel());
-            sideObjectPanels.remove(childPanel);
+            removePanels(objectPanels);
+
+            ArrayList<Character> characters = plugin.getCharacters();
+            for (ObjectPanel objectPanel : objectPanels)
+            {
+                for (int i = 0; i < characters.size(); i++)
+                {
+                    Character character = characters.get(i);
+                    if (character.getObjectPanel() == objectPanel)
+                    {
+                        clientThread.invokeLater(() -> character.getRuneLiteObject().setActive(false));
+                        characters.remove(character);
+                        plugin.setSelectedCharacter(null);
+                    }
+                }
+            }
+        });
+
+        thread.start();
+    }
+
+    public void removePanels(ObjectPanel[] objectPanels)
+    {
+        ManagerPanel managerPanel = toolBox.getManagerPanel();
+        JPanel objectHolder = managerPanel.getObjectHolder();
+        ArrayList<ObjectPanel> managerObjectPanels = managerPanel.getManagerObjectPanels();
+        FolderTree folderTree = managerPanel.getFolderTree();
+
+        for (ObjectPanel objectPanel : objectPanels)
+        {
+            allObjectPanels.remove(objectPanel);
+            JPanel parentPanel = objectPanel.getParentPanel();
+            if (objectPanel.getParentPanel() == sidePanel)
+            {
+                parentPanel.remove(objectPanel);
+                programmerPanel.removeSideProgram(objectPanel.getProgramPanel());
+                sideObjectPanels.remove(objectPanel);
+            }
+
+            if (parentPanel == objectHolder)
+            {
+                parentPanel.remove(objectPanel);
+                folderTree.removeNode(objectPanel);
+                managerObjectPanels.remove(objectPanel);
+            }
+        }
+
+        sidePanel.repaint();
+        sidePanel.revalidate();
+        objectHolder.repaint();
+        objectHolder.revalidate();
+        folderTree.resetObjectHolder();
+    }
+
+    public void removePanel(ObjectPanel objectPanel)
+    {
+        allObjectPanels.remove(objectPanel);
+        JPanel parentPanel = objectPanel.getParentPanel();
+        if (objectPanel.getParentPanel() == sidePanel)
+        {
+            parentPanel.remove(objectPanel);
+            programmerPanel.removeSideProgram(objectPanel.getProgramPanel());
+            sideObjectPanels.remove(objectPanel);
         }
 
         ManagerPanel managerPanel = toolBox.getManagerPanel();
         JPanel objectHolder = managerPanel.getObjectHolder();
         if (parentPanel == objectHolder)
         {
-            parentPanel.remove(childPanel);
+            parentPanel.remove(objectPanel);
             FolderTree folderTree = managerPanel.getFolderTree();
-            folderTree.removeNode(childPanel);
+            folderTree.removeNode(objectPanel);
             folderTree.resetObjectHolder();
-            managerPanel.getManagerObjectPanels().remove(childPanel);
+            managerPanel.getManagerObjectPanels().remove(objectPanel);
         }
 
         parentPanel.repaint();
@@ -845,27 +1068,108 @@ public class CreatorsPanel extends PluginPanel
         programmerPanel.revalidate();
     }
 
+    public void switchPanels(JPanel switchFrom, ObjectPanel[] objectPanels)
+    {
+        ManagerPanel managerPanel = toolBox.getManagerPanel();
+        FolderTree folderTree = managerPanel.getFolderTree();
+        JPanel objectHolder = toolBox.getManagerPanel().getObjectHolder();
+
+        JPanel newParent;
+        ArrayList<ObjectPanel> arrayFrom;
+        ArrayList<ObjectPanel> arrayTo;
+        if (switchFrom == sidePanel)
+        {
+            newParent = managerPanel.getObjectHolder();
+            arrayFrom = sideObjectPanels;
+            arrayTo = managerPanel.getManagerObjectPanels();
+        }
+        else
+        {
+            newParent = sidePanel;
+            arrayFrom = managerPanel.getManagerObjectPanels();
+            arrayTo = sideObjectPanels;
+        }
+
+        Thread thread = new Thread(() ->
+        {
+            for (ObjectPanel objectPanel : objectPanels)
+            {
+                //remove
+                switchFrom.remove(objectPanel);
+                if (switchFrom == sidePanel)
+                {
+                    programmerPanel.removeSideProgram(objectPanel.getProgramPanel());
+                }
+                else
+                {
+                    folderTree.removeNode(objectPanel);
+                }
+
+                arrayFrom.remove(objectPanel);
+                objectPanel.setParentPanel(newParent);
+
+                //re-add
+                if (newParent == sidePanel)
+                {
+                    sidePanel.add(objectPanel, cNPC);
+                    programmerPanel.addSideProgram(objectPanel.getProgramPanel());
+                }
+                else
+                {
+                    objectHolder.add(objectPanel, cManager);
+                    folderTree.addNode(objectPanel);
+                }
+
+                arrayTo.add(objectPanel);
+            }
+
+            folderTree.resetObjectHolder();
+            sidePanel.revalidate();
+            objectHolder.revalidate();
+        });
+        thread.start();
+    }
+
     public void switchPanel(ObjectPanel objectPanel)
     {
-        npcPanels--;
         ManagerPanel managerPanel = toolBox.getManagerPanel();
         JPanel objectHolder = managerPanel.getObjectHolder();
         ArrayList<ObjectPanel> managerObjectPanels = managerPanel.getManagerObjectPanels();
+        FolderTree folderTree = managerPanel.getFolderTree();
 
-        if (objectPanel.getParentPanel() == sidePanel)
+        JPanel parentPanel = objectPanel.getParentPanel();
+
+        parentPanel.remove(objectPanel);
+        if (parentPanel == sidePanel)
         {
-            removePanel(sidePanel, objectPanel);
-            objectPanel.setParentPanel(objectHolder);
-            addPanel(managerObjectPanels, objectHolder, objectPanel);
-            return;
+            programmerPanel.removeSideProgram(objectPanel.getProgramPanel());
+            sideObjectPanels.remove(objectPanel);
+        }
+        else
+        {
+            folderTree.removeNode(objectPanel);
+            managerObjectPanels.remove(objectPanel);
         }
 
-        if (objectPanel.getParentPanel() == objectHolder)
+        JPanel newParent = parentPanel == sidePanel ? objectHolder : sidePanel;
+        objectPanel.setParentPanel(newParent);
+
+        if (newParent == sidePanel)
         {
-            removePanel(objectHolder, objectPanel);
-            objectPanel.setParentPanel(sidePanel);
-            addPanel(sideObjectPanels, sidePanel, objectPanel);
+            sidePanel.add(objectPanel, cNPC);
+            programmerPanel.addSideProgram(objectPanel.getProgramPanel());
+            sideObjectPanels.add(objectPanel);
         }
+        else
+        {
+            objectHolder.add(objectPanel, cManager);
+            folderTree.addNode(objectPanel);
+            managerObjectPanels.add(objectPanel);
+        }
+
+        folderTree.resetObjectHolder();
+        sidePanel.revalidate();
+        objectHolder.revalidate();
     }
 
     public void setSelectedCharacter(ObjectPanel objectPanel)
@@ -890,6 +1194,62 @@ public class CreatorsPanel extends PluginPanel
 
         objectPanel.setBorder(selectedBorder);
         plugin.setSelectedCharacter(selected);
+    }
+
+    public void scrollSelectedCharacter(Character selected, int clicks)
+    {
+        int sidePanelSize = sideObjectPanels.size();
+        ObjectPanel[] managerArray = toolBox.getManagerPanel().getShownObjectPanels();
+        int managerSize = managerArray.length;
+
+        boolean selectionFound = false;
+
+        if (selected != null)
+        {
+            JPanel selectedParent = selected.getObjectPanel().getParentPanel();
+            ObjectPanel[] list = selectedParent == sidePanel ? sideObjectPanels.toArray(new ObjectPanel[sideObjectPanels.size()]) : managerArray;
+            int length = list.length;
+            for (int i = 0; i < length; i++)
+            {
+                if (selected.getObjectPanel() == list[i])
+                {
+                    int index = clicks + i;
+                    while (index >= length)
+                    {
+                        index -= length;
+                    }
+
+                    while (index < 0)
+                    {
+                        index += length;
+                    }
+
+                    unsetSelectedCharacter();
+                    setSelectedCharacter(list[index]);
+                    selectionFound = true;
+                    break;
+                }
+            }
+        }
+
+        if (!selectionFound)
+        {
+            if (toolBox.isFocused())
+            {
+                if (managerSize > 0)
+                {
+                    unsetSelectedCharacter();
+                    setSelectedCharacter(managerArray[0]);
+                    return;
+                }
+            }
+
+            if (sidePanelSize > 0)
+            {
+                unsetSelectedCharacter();
+                setSelectedCharacter(sideObjectPanels.get(0));
+            }
+        }
     }
 
     public void unsetSelectedCharacter()
@@ -973,10 +1333,10 @@ public class CreatorsPanel extends PluginPanel
         return new Color(r, g, b);
     }
 
-    public Program createEmptyProgram()
+    public Program createEmptyProgram(int poseAnim, int walkAnim)
     {
         Color color = getRandomColor();
-        ProgramComp comp = new ProgramComp(new WorldPoint[0], new WorldPoint[0], new LocalPoint[0], new LocalPoint[0], new Coordinate[0], false, 0, 1, DEFAULT_TURN_SPEED, -1, -1, MovementType.NORMAL, color.getRGB(), false, false);
+        ProgramComp comp = new ProgramComp(new WorldPoint[0], new WorldPoint[0], new LocalPoint[0], new LocalPoint[0], new Coordinate[0], false, 0, 1, DEFAULT_TURN_SPEED, poseAnim, walkAnim, MovementType.NORMAL, color.getRGB(), false, false);
         return new Program(comp, new JPanel(), new JLabel(), new JSpinner(), color);
     }
 
@@ -1182,7 +1542,6 @@ public class CreatorsPanel extends PluginPanel
             }
             catch (Exception e)
             {
-                e.printStackTrace();
                 plugin.sendChatMessage("An error occurred while attempting to read this file.");
             }
         }
@@ -1262,27 +1621,28 @@ public class CreatorsPanel extends PluginPanel
                 openFolderNodeSave(folderTree, rootNode, folderNodeSave, customModels);
         });
 
-
-        for (CharacterSave save : characterSaves)
+        Thread thread = new Thread(() ->
         {
-            SwingUtilities.invokeLater(() ->
+            for (CharacterSave save : characterSaves)
             {
+
                 Color color = new Color(save.getProgramComp().getRgb());
                 Program program = new Program(save.getProgramComp(), new JPanel(), new JLabel(), new JSpinner(), color);
                 ObjectPanel objectPanel;
 
                 if (customModels.length == 0)
                 {
-                    objectPanel = createPanel(sideObjectPanels, sidePanel, save.getName(), save.getModelId(), null, save.isCustomMode(), save.isMinimized(), save.getRotation(), save.getAnimationId(), save.getRadius(), program, save.isActive(), save.getNonInstancedPoint(), save.getInstancedPoint(), save.getInstancedRegions(), save.getInstancedPlane(), save.isInInstance());
+                    objectPanel = createPanel(sidePanel, save.getName(), save.getModelId(), null, save.isCustomMode(), save.isMinimized(), save.getRotation(), save.getAnimationId(), save.getRadius(), program, save.isActive(), save.getNonInstancedPoint(), save.getInstancedPoint(), save.getInstancedRegions(), save.getInstancedPlane(), save.isInInstance(), false);
                 }
                 else
                 {
-                    objectPanel = createPanel(sideObjectPanels, sidePanel, save.getName(), save.getModelId(), customModels[save.getCompId()], save.isCustomMode(), save.isMinimized(), save.getRotation(), save.getAnimationId(), save.getRadius(), program, save.isActive(), save.getNonInstancedPoint(), save.getInstancedPoint(), save.getInstancedRegions(), save.getInstancedPlane(), save.isInInstance());
+                    objectPanel = createPanel(sidePanel, save.getName(), save.getModelId(), customModels[save.getCompId()], save.isCustomMode(), save.isMinimized(), save.getRotation(), save.getAnimationId(), save.getRadius(), program, save.isActive(), save.getNonInstancedPoint(), save.getInstancedPoint(), save.getInstancedRegions(), save.getInstancedPlane(), save.isInInstance(), false);
                 }
 
-                addPanel(sideObjectPanels, sidePanel, objectPanel);
-            });
-        }
+                SwingUtilities.invokeLater(() -> addPanel(sideObjectPanels, sidePanel, objectPanel));
+            }
+        });
+        thread.start();
 
         if (v1_2Save)
         {
@@ -1314,11 +1674,11 @@ public class CreatorsPanel extends PluginPanel
 
             if (customModels.length == 0)
             {
-                objectPanel = createPanel(managerObjectPanels, objectHolder, save.getName(), save.getModelId(), null, save.isCustomMode(), save.isMinimized(), save.getRotation(), save.getAnimationId(), save.getRadius(), program, save.isActive(), save.getNonInstancedPoint(), save.getInstancedPoint(), save.getInstancedRegions(), save.getInstancedPlane(), save.isInInstance());
+                objectPanel = createPanel(objectHolder, save.getName(), save.getModelId(), null, save.isCustomMode(), save.isMinimized(), save.getRotation(), save.getAnimationId(), save.getRadius(), program, save.isActive(), save.getNonInstancedPoint(), save.getInstancedPoint(), save.getInstancedRegions(), save.getInstancedPlane(), save.isInInstance(), false);
             }
             else
             {
-                objectPanel = createPanel(managerObjectPanels, objectHolder, save.getName(), save.getModelId(), customModels[save.getCompId()], save.isCustomMode(), save.isMinimized(), save.getRotation(), save.getAnimationId(), save.getRadius(), program, save.isActive(), save.getNonInstancedPoint(), save.getInstancedPoint(), save.getInstancedRegions(), save.getInstancedPlane(), save.isInInstance());
+                objectPanel = createPanel(objectHolder, save.getName(), save.getModelId(), customModels[save.getCompId()], save.isCustomMode(), save.isMinimized(), save.getRotation(), save.getAnimationId(), save.getRadius(), program, save.isActive(), save.getNonInstancedPoint(), save.getInstancedPoint(), save.getInstancedRegions(), save.getInstancedPlane(), save.isInInstance(), false);
             }
 
             addPanel(managerObjectPanels, objectHolder, node, objectPanel);

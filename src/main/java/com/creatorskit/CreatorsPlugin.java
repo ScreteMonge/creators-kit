@@ -14,6 +14,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
+import net.runelite.api.Point;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.*;
@@ -26,6 +27,8 @@ import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.input.KeyManager;
+import net.runelite.client.input.MouseListener;
+import net.runelite.client.input.MouseManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
@@ -37,6 +40,8 @@ import net.runelite.client.util.ImageUtil;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.awt.*;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.file.Files;
@@ -51,7 +56,7 @@ import java.util.List;
 		description = "A suite of tools for creators",
 		tags = {"tool", "creator", "content", "kit", "camera", "immersion"}
 )
-public class CreatorsPlugin extends Plugin {
+public class CreatorsPlugin extends Plugin implements MouseListener {
 	@Inject
 	private Client client;
 
@@ -77,6 +82,9 @@ public class CreatorsPlugin extends Plugin {
 	private KeyManager keyManager;
 
 	@Inject
+	private MouseManager mouseManager;
+
+	@Inject
 	private ChatMessageManager chatMessageManager;
 
 	@Inject
@@ -100,15 +108,23 @@ public class CreatorsPlugin extends Plugin {
 	private Character selectedCharacter;
 	private Character hoveredCharacter;
 	private RuneLiteObject transmog;
+	private RuneLiteObject previewObject;
+	private Model previewArrow;
 	private CustomModel transmogModel;
 	private int savedRegion = -1;
 	private int savedPlane = -1;
 	private AutoRotate autoRotateYaw = AutoRotate.OFF;
 	private AutoRotate autoRotatePitch = AutoRotate.OFF;
 	private int oculusOrbSpeed = 36;
+	private double clickX;
+	private double clickY;
+	private double mouseX;
+	private double mouseY;
+	private boolean mousePressed = false;
 	private boolean pauseMode = true;
 	private boolean autoSetupPathFound = true;
 	private boolean autoTransmogFound = true;
+	private boolean controlDown = false;
 
 	@Override
 	protected void startUp() throws Exception
@@ -132,6 +148,7 @@ public class CreatorsPlugin extends Plugin {
 		keyManager.registerKeyListener(orbPreset3Listener);
 		keyManager.registerKeyListener(quickSpawnListener);
 		keyManager.registerKeyListener(quickLocationListener);
+		keyManager.registerKeyListener(quickDuplicateListener);
 		keyManager.registerKeyListener(quickRotateCWListener);
 		keyManager.registerKeyListener(quickRotateCCWListener);
 		keyManager.registerKeyListener(autoLeftListener);
@@ -145,6 +162,8 @@ public class CreatorsPlugin extends Plugin {
 		keyManager.registerKeyListener(playPauseListener);
 		keyManager.registerKeyListener(playPauseAllListener);
 		keyManager.registerKeyListener(resetAllListener);
+		mouseManager.registerMouseWheelListener(this::mouseWheelMoved);
+		mouseManager.registerMouseListener(this);
 
 		if (config.autoSetup())
 		{
@@ -216,6 +235,7 @@ public class CreatorsPlugin extends Plugin {
 		keyManager.unregisterKeyListener(orbPreset3Listener);
 		keyManager.unregisterKeyListener(quickSpawnListener);
 		keyManager.unregisterKeyListener(quickLocationListener);
+		keyManager.unregisterKeyListener(quickDuplicateListener);
 		keyManager.unregisterKeyListener(quickRotateCWListener);
 		keyManager.unregisterKeyListener(quickRotateCCWListener);
 		keyManager.unregisterKeyListener(autoLeftListener);
@@ -229,6 +249,8 @@ public class CreatorsPlugin extends Plugin {
 		keyManager.unregisterKeyListener(playPauseListener);
 		keyManager.unregisterKeyListener(playPauseAllListener);
 		keyManager.unregisterKeyListener(resetAllListener);
+		mouseManager.unregisterMouseWheelListener(this::mouseWheelMoved);
+		mouseManager.unregisterMouseListener(this);
 	}
 
 	@Subscribe
@@ -266,8 +288,9 @@ public class CreatorsPlugin extends Plugin {
 		if (savedPlane != plane)
 		{
 			savedPlane = plane;
-			for (Character character : characters)
+			for (int i = 0; i < characters.size(); i++)
 			{
+				Character character = characters.get(i);
 				boolean active = character.isActive();
 				setLocation(character, false, false, false, true);
 				resetProgram(character, character.getProgram().getComp().isProgramActive());
@@ -282,6 +305,8 @@ public class CreatorsPlugin extends Plugin {
 	{
 		if (client.getGameState() != GameState.LOGGED_IN)
 			return;
+
+		updatePreviewObject(client.getSelectedSceneTile());
 
 		switch (autoRotateYaw)
 		{
@@ -303,12 +328,16 @@ public class CreatorsPlugin extends Plugin {
 
 		Player player = client.getLocalPlayer();
 
-		for (Character character : characters)
+		for (int i = 0; i < characters.size(); i++)
 		{
+			Character character = characters.get(i);
 			Program program = character.getProgram();
 			ProgramComp comp = program.getComp();
 			RuneLiteObject runeLiteObject = character.getRuneLiteObject();
 			boolean instance = client.isInInstancedRegion();
+
+			if (runeLiteObject == null)
+				continue;
 
 			if (!isInScene(character))
 				continue;
@@ -674,6 +703,27 @@ public class CreatorsPlugin extends Plugin {
 	}
 
 	@Subscribe
+	public void onPostMenuSort(PostMenuSort event)
+	{
+		if (!config.enableCtrlHotkeys())
+		{
+			return;
+		}
+
+		if (client.isKeyPressed(KeyCode.KC_CONTROL))
+		{
+			if (selectedCharacter != null)
+			{
+				client.createMenuEntry(-1)
+						.setOption(ColorUtil.prependColorTag("Relocate", Color.ORANGE))
+						.setTarget(ColorUtil.colorTag(Color.GREEN) + selectedCharacter.getName())
+						.setType(MenuAction.RUNELITE)
+						.onClick(e -> setLocation(selectedCharacter, true, false, true, false));
+			}
+		}
+	}
+
+	@Subscribe
 	public void onMenuEntryAdded(MenuEntryAdded event)
 	{
 		if (!config.rightClick() && !config.transmogRightClick() && !config.rightSpotAnim())
@@ -689,17 +739,33 @@ public class CreatorsPlugin extends Plugin {
 		{
 			if (config.rightClick())
 			{
-				modelGetter.storeNPC(-1, target, "Store", npc, false);
+				if (client.isKeyPressed(KeyCode.KC_CONTROL))
+				{
+					modelGetter.storeNPC(-1, target, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), npc, ModelMenuOption.STORE_AND_ADD);
+				}
+				else
+				{
+					modelGetter.storeNPC(-1, target, ColorUtil.prependColorTag("Store", Color.ORANGE), npc, ModelMenuOption.STORE);
+				}
 				modelGetter.sendToAnvilNPC(-2, target, npc);
 			}
 
 			if (config.transmogRightClick())
-				modelGetter.storeNPC(-3, target, "Transmog", npc, true);
+			{
+				modelGetter.storeNPC(-3, target, ColorUtil.prependColorTag("Transmog", Color.ORANGE), npc, ModelMenuOption.TRANSMOG);
+			}
 
 			if (config.rightSpotAnim())
 			{
-				modelGetter.addSpotAnimGetter(-4, target, "SpotAnim Store", npc.getSpotAnims(), false);
-				modelGetter.addSpotAnimGetter(-4, target, "SpotAnim Anvil", npc.getSpotAnims(), true);
+				if (client.isKeyPressed(KeyCode.KC_CONTROL))
+				{
+					modelGetter.addSpotAnimGetter(-4, target, ColorUtil.prependColorTag("SpotAnim-Store-Add", Color.ORANGE), npc.getSpotAnims(), ModelMenuOption.STORE_AND_ADD);
+				}
+				else
+				{
+					modelGetter.addSpotAnimGetter(-4, target, ColorUtil.prependColorTag("SpotAnim-Store", Color.ORANGE), npc.getSpotAnims(), ModelMenuOption.STORE);
+				}
+				modelGetter.addSpotAnimGetter(-4, target, ColorUtil.prependColorTag("SpotAnim-Anvil", Color.ORANGE), npc.getSpotAnims(), ModelMenuOption.ANVIL);
 			}
 		}
 
@@ -714,14 +780,30 @@ public class CreatorsPlugin extends Plugin {
 					if (renderable instanceof Model)
 					{
 						Model model = (Model) groundObject.getRenderable();
+						int animationId = -1;
+						if (renderable instanceof DynamicObject)
+						{
+							animationId = ((DynamicObject) renderable).getAnimation().getId();
+						}
+
 						if (config.rightClick())
 						{
-							modelGetter.addGameObjectGetter(-1, "Store", "<col=FFFF>GroundObject", "GroundObject", model, groundObject.getId(), CustomModelType.CACHE_OBJECT, false);
+							if (client.isKeyPressed(KeyCode.KC_CONTROL))
+							{
+								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), "<col=FFFF>GroundObject", "GroundObject", model, groundObject.getId(), CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE_AND_ADD);
+							}
+							else
+							{
+								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store", Color.ORANGE), "<col=FFFF>GroundObject", "GroundObject", model, groundObject.getId(), CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE);
+
+							}
 							modelGetter.addObjectGetterToAnvil("<col=FFFF>GroundObject", "GroundObject", groundObject.getId());
 						}
 
 						if (config.transmogRightClick())
-							modelGetter.addGameObjectGetter(-3, "Transmog", "<col=FFFF>GroundObject", "GroundObject", model, groundObject.getId(), CustomModelType.CACHE_OBJECT, true);
+						{
+							modelGetter.addGameObjectGetter(-3, ColorUtil.prependColorTag("Transmog", Color.ORANGE), "<col=FFFF>GroundObject", "GroundObject", model, groundObject.getId(), CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.TRANSMOG);
+						}
 					}
 				}
 
@@ -732,14 +814,30 @@ public class CreatorsPlugin extends Plugin {
 					if (renderable instanceof Model)
 					{
 						Model model = (Model) decorativeObject.getRenderable();
+						int animationId = -1;
+						if (renderable instanceof DynamicObject)
+						{
+							animationId = ((DynamicObject) renderable).getAnimation().getId();
+						}
+
 						if (config.rightClick())
 						{
-							modelGetter.addGameObjectGetter(-1, "Store", "<col=FFFF>DecorativeObject", "DecorativeObject", model, decorativeObject.getId(), CustomModelType.CACHE_OBJECT, false);
+							if (client.isKeyPressed(KeyCode.KC_CONTROL))
+							{
+								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), "<col=FFFF>DecorativeObject", "DecorativeObject", model, decorativeObject.getId(), CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE_AND_ADD);
+							}
+							else
+							{
+								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store", Color.ORANGE), "<col=FFFF>DecorativeObject", "DecorativeObject", model, decorativeObject.getId(), CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE);
+
+							}
 							modelGetter.addObjectGetterToAnvil("<col=FFFF>DecorativeObject", "DecorativeObject", decorativeObject.getId());
 						}
 
 						if (config.transmogRightClick())
-							modelGetter.addGameObjectGetter(-3, "Transmog", "<col=FFFF>DecorativeObject", "DecorativeObject", model, decorativeObject.getId(), CustomModelType.CACHE_OBJECT, true);
+						{
+							modelGetter.addGameObjectGetter(-3, ColorUtil.prependColorTag("Transmog", Color.ORANGE), "<col=FFFF>DecorativeObject", "DecorativeObject", model, decorativeObject.getId(), CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.TRANSMOG);
+						}
 					}
 				}
 
@@ -750,14 +848,29 @@ public class CreatorsPlugin extends Plugin {
 					if (renderable instanceof Model)
 					{
 						Model model = (Model) renderable;
+						int animationId = -1;
+						if (renderable instanceof DynamicObject)
+						{
+							animationId = ((DynamicObject) renderable).getAnimation().getId();
+						}
+
 						if (config.rightClick())
 						{
-							modelGetter.addGameObjectGetter(-1, "Store", "<col=FFFF>WallObject", "WallObject", model, wallObject.getId(), CustomModelType.CACHE_OBJECT, false);
+							if (client.isKeyPressed(KeyCode.KC_CONTROL))
+							{
+								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), "<col=FFFF>WallObject", "WallObject", model, wallObject.getId(), CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE_AND_ADD);
+							}
+							else
+							{
+								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store", Color.ORANGE), "<col=FFFF>WallObject", "WallObject", model, wallObject.getId(), CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE);
+							}
 							modelGetter.addObjectGetterToAnvil("<col=FFFF>WallObject", "WallObject", wallObject.getId());
 						}
 
 						if (config.transmogRightClick())
-							modelGetter.addGameObjectGetter(-3, "Transmog", "<col=FFFF>WallObject", "WallObject", model, wallObject.getId(), CustomModelType.CACHE_OBJECT, true);
+						{
+							modelGetter.addGameObjectGetter(-3, ColorUtil.prependColorTag("Transmog", Color.ORANGE), "<col=FFFF>WallObject", "WallObject", model, wallObject.getId(), CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.TRANSMOG);
+						}
 					}
 				}
 
@@ -769,12 +882,21 @@ public class CreatorsPlugin extends Plugin {
 						Model model = tileItem.getModel();
 						if (config.rightClick())
 						{
-							modelGetter.addGameObjectGetter(-1, "Store", "<col=FFFF>Item", "Item", model, tileItem.getId(), CustomModelType.CACHE_GROUND_ITEM, false);
+							if (client.isKeyPressed(KeyCode.KC_CONTROL))
+							{
+								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), "<col=FFFF>Item", "Item", model, tileItem.getId(), CustomModelType.CACHE_GROUND_ITEM, -1, 0, ModelMenuOption.STORE_AND_ADD);
+							}
+							else
+							{
+								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store", Color.ORANGE), "<col=FFFF>Item", "Item", model, tileItem.getId(), CustomModelType.CACHE_GROUND_ITEM, -1, 0, ModelMenuOption.STORE);
+							}
 							modelGetter.addObjectGetterToAnvil("<col=FFFF>Item", "Item", tileItem.getId());
 						}
 
 						if (config.transmogRightClick())
-							modelGetter.addGameObjectGetter(-3, "Transmog", "<col=FFFF>Item", "Item", model, tileItem.getId(), CustomModelType.CACHE_GROUND_ITEM, true);
+						{
+							modelGetter.addGameObjectGetter(-3, ColorUtil.prependColorTag("Transmog", Color.ORANGE), "<col=FFFF>Item", "Item", model, tileItem.getId(), CustomModelType.CACHE_GROUND_ITEM, -1, 0, ModelMenuOption.TRANSMOG);
+						}
 					}
 				}
 
@@ -790,29 +912,48 @@ public class CreatorsPlugin extends Plugin {
 
 					if (renderable instanceof Model)
 					{
+						int animationId = -1;
+						if (renderable instanceof DynamicObject)
+						{
+							animationId = ((DynamicObject) renderable).getAnimation().getId();
+						}
+
 						Model model = (Model) renderable;
 						if (config.rightClick())
 						{
-							modelGetter.addGameObjectGetter(-1, "Store", "<col=FFFF>GameObject", "GameObject", model, gameObject.getId(), CustomModelType.CACHE_OBJECT, false);
+							if (client.isKeyPressed(KeyCode.KC_CONTROL))
+							{
+								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), "<col=FFFF>GameObject", "GameObject", model, gameObject.getId(), CustomModelType.CACHE_OBJECT, animationId, gameObject.getOrientation(), ModelMenuOption.STORE_AND_ADD);
+							}
+							else
+							{
+								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store", Color.ORANGE), "<col=FFFF>GameObject", "GameObject", model, gameObject.getId(), CustomModelType.CACHE_OBJECT, animationId, gameObject.getOrientation(), ModelMenuOption.STORE);
+							}
 							modelGetter.addObjectGetterToAnvil("<col=FFFF>GameObject", "GameObject", gameObject.getId());
 						}
 
 						if (config.transmogRightClick())
-							modelGetter.addGameObjectGetter(-3, "Transmog", "<col=FFFF>GameObject", "GameObject", model, gameObject.getId(), CustomModelType.CACHE_OBJECT, true);
+							modelGetter.addGameObjectGetter(-3, ColorUtil.prependColorTag("Transmog", Color.ORANGE), "<col=FFFF>GameObject", "GameObject", model, gameObject.getId(), CustomModelType.CACHE_OBJECT, animationId, gameObject.getOrientation(), ModelMenuOption.TRANSMOG);
 					}
 				}
 
 				if (config.rightSelect())
 				{
-					for (Character character : characters)
+					for (int i = 0; i < characters.size(); i++)
 					{
-						if (character.isActive() && character.getRuneLiteObject().getLocation().equals(tile.getLocalLocation()))
+						Character character = characters.get(i);
+						RuneLiteObject runeLiteObject = character.getRuneLiteObject();
+						if (character.isActive() && runeLiteObject != null)
 						{
-							client.createMenuEntry(-1)
-									.setOption("Select")
-									.setTarget(ColorUtil.colorTag(Color.GREEN) + character.getName())
-									.setType(MenuAction.RUNELITE)
-									.onClick(e -> creatorsPanel.setSelectedCharacter(character, character.getObjectPanel()));
+							LocalPoint localPoint = runeLiteObject.getLocation();
+							if (localPoint != null && localPoint.equals(tile.getLocalLocation()))
+							{
+								client.createMenuEntry(-1)
+										.setOption(ColorUtil.prependColorTag("Select", Color.ORANGE))
+										.setTarget(ColorUtil.colorTag(Color.GREEN) + character.getName())
+										.setType(MenuAction.RUNELITE)
+										.onClick(e -> creatorsPanel.setSelectedCharacter(character, character.getObjectPanel()));
+							}
 						}
 					}
 				}
@@ -824,17 +965,34 @@ public class CreatorsPlugin extends Plugin {
 		{
 			if (config.rightClick())
 			{
-				modelGetter.addPlayerGetter(-1, target, "Store", player, false, false);
-				modelGetter.addPlayerGetter(-2, target, "Anvil", player, true, false);
+				if (client.isKeyPressed(KeyCode.KC_CONTROL))
+				{
+					modelGetter.addPlayerGetter(-1, target, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), player, ModelMenuOption.STORE_AND_ADD);
+				}
+				else
+				{
+					modelGetter.addPlayerGetter(-1, target, ColorUtil.prependColorTag("Store", Color.ORANGE), player, ModelMenuOption.STORE);
+				}
+
+				modelGetter.addPlayerGetter(-2, target, ColorUtil.prependColorTag("Anvil", Color.ORANGE), player, ModelMenuOption.ANVIL);
 			}
 
 			if (config.transmogRightClick())
-				modelGetter.addPlayerGetter(-3, target, "Transmog", player, false, true);
+			{
+				modelGetter.addPlayerGetter(-3, target, ColorUtil.prependColorTag("Transmog", Color.ORANGE), player, ModelMenuOption.TRANSMOG);
+			}
 
 			if (config.rightSpotAnim())
 			{
-				modelGetter.addSpotAnimGetter(-4, target, "SpotAnim Store", player.getSpotAnims(), false);
-				modelGetter.addSpotAnimGetter(-5, target, "SpotAnim Anvil", player.getSpotAnims(), true);
+				if (client.isKeyPressed(KeyCode.KC_CONTROL))
+				{
+					modelGetter.addSpotAnimGetter(-4, target, ColorUtil.prependColorTag("SpotAnim-Store-Add", Color.ORANGE), player.getSpotAnims(), ModelMenuOption.STORE_AND_ADD);
+				}
+				else
+				{
+					modelGetter.addSpotAnimGetter(-4, target, ColorUtil.prependColorTag("SpotAnim-Store", Color.ORANGE), player.getSpotAnims(), ModelMenuOption.STORE);
+				}
+				modelGetter.addSpotAnimGetter(-5, target, ColorUtil.prependColorTag("SpotAnim-Anvil", Color.ORANGE), player.getSpotAnims(), ModelMenuOption.ANVIL);
 			}
 		}
 
@@ -845,14 +1003,28 @@ public class CreatorsPlugin extends Plugin {
 			{
 				if (config.rightClick())
 				{
-					modelGetter.addPlayerGetter(-1, "Local Player", "Store", localPlayer, false, false);
-					modelGetter.addPlayerGetter(-2, "Local Player", "Anvil", localPlayer, true, false);
+					if (client.isKeyPressed(KeyCode.KC_CONTROL))
+					{
+						modelGetter.addPlayerGetter(-1, "Local Player", ColorUtil.prependColorTag("Store-Add", Color.ORANGE), localPlayer, ModelMenuOption.STORE_AND_ADD);
+					}
+					else
+					{
+						modelGetter.addPlayerGetter(-1, "Local Player", ColorUtil.prependColorTag("Store", Color.ORANGE), localPlayer, ModelMenuOption.STORE);
+					}
+					modelGetter.addPlayerGetter(-2, "Local Player", ColorUtil.prependColorTag("Anvil", Color.ORANGE), localPlayer, ModelMenuOption.ANVIL);
 				}
 
 				if (config.rightSpotAnim())
 				{
-					modelGetter.addSpotAnimGetter(-3, "Local Player", "SpotAnim Store", localPlayer.getSpotAnims(), false);
-					modelGetter.addSpotAnimGetter(-4, "Local Player", "SpotAnim Anvil", localPlayer.getSpotAnims(), true);
+					if (client.isKeyPressed(KeyCode.KC_CONTROL))
+					{
+						modelGetter.addSpotAnimGetter(-3, "Local Player", ColorUtil.prependColorTag("SpotAnim-Store-Add", Color.ORANGE), localPlayer.getSpotAnims(), ModelMenuOption.STORE_AND_ADD);
+					}
+					else
+					{
+						modelGetter.addSpotAnimGetter(-3, "Local Player", ColorUtil.prependColorTag("SpotAnim-Store", Color.ORANGE), localPlayer.getSpotAnims(), ModelMenuOption.STORE);
+					}
+					modelGetter.addSpotAnimGetter(-4, "Local Player", ColorUtil.prependColorTag("SpotAnim-Anvil", Color.ORANGE), localPlayer.getSpotAnims(), ModelMenuOption.ANVIL);
 				}
 			}
 		}
@@ -933,7 +1105,7 @@ public class CreatorsPlugin extends Plugin {
 			runeLiteObject.setActive(true);
 			runeLiteObject.setOrientation((int) character.getOrientationSpinner().getValue());
 			character.setActive(true);
-			character.getSpawnButton().setText("Despawn");
+			character.getSpawnButton().setText("Spawn");
 		});
 	}
 
@@ -981,7 +1153,7 @@ public class CreatorsPlugin extends Plugin {
 			runeLiteObject.setActive(true);
 			runeLiteObject.setOrientation((int) character.getOrientationSpinner().getValue());
 			character.setActive(true);
-			character.getSpawnButton().setText("Despawn");
+			character.getSpawnButton().setText("Spawn");
 		});
 	}
 
@@ -996,7 +1168,7 @@ public class CreatorsPlugin extends Plugin {
 			if (character.getInstancedPlane() != client.getPlane())
 				return false;
 
-			//This function is finnicky with larger instances, in that only an exact region:region map will load
+			//This function is finicky with larger instances, in that only an exact region:region map will load
 			//The alternative of finding any match will otherwise make spawns off if the regions don't match because the scenes won't exactly match
 			Object[] mapRegionsObjects = {mapRegions};
 			Object[] instancedRegionObjects = {character.getInstancedRegions()};
@@ -1020,12 +1192,12 @@ public class CreatorsPlugin extends Plugin {
 		if (character.getRuneLiteObject().isActive())
 		{
 			despawnCharacter(character);
-			spawnButton.setText("Spawn");
+			spawnButton.setText("Depawn");
 			return;
 		}
 
 		spawnCharacter(character);
-		spawnButton.setText("Despawn");
+		spawnButton.setText("Spawn");
 
 		if (!character.isLocationSet())
 		{
@@ -1037,20 +1209,20 @@ public class CreatorsPlugin extends Plugin {
 	{
 		RuneLiteObject runeLiteObject = character.getRuneLiteObject();
 		character.setActive(true);
-		clientThread.invoke(() -> runeLiteObject.setActive(true));
+		clientThread.invokeLater(() -> runeLiteObject.setActive(true));
 	}
 
 	public void despawnCharacter(Character character)
 	{
 		RuneLiteObject runeLiteObject = character.getRuneLiteObject();
 		character.setActive(false);
-		clientThread.invoke(() -> runeLiteObject.setActive(false));
+		clientThread.invokeLater(() -> runeLiteObject.setActive(false));
 	}
 
 	public void setModel(Character character, boolean modelMode, int modelId)
 	{
 		RuneLiteObject runeLiteObject = character.getRuneLiteObject();
-		clientThread.invoke(() -> {
+		clientThread.invokeLater(() -> {
 			if (modelMode)
 			{
 				CustomModel customModel = character.getStoredModel();
@@ -1119,191 +1291,44 @@ public class CreatorsPlugin extends Plugin {
 			orientation += 2048;
 
 		setOrientation(character, orientation);
-		JPanel masterPanel = character.getObjectPanel();
-		for (Component component : masterPanel.getComponents())
-		{
-			if (component instanceof JSpinner)
-			{
-				JSpinner spinner = (JSpinner) component;
-				if (spinner.getName() != null && spinner.getName().equals("orientationSpinner"))
-				{
-					spinner.setValue(orientation);
-					return;
-				}
-			}
-		}
 	}
 
 	public void setOrientation(Character character, int orientation)
 	{
 		RuneLiteObject runeLiteObject = character.getRuneLiteObject();
-		clientThread.invoke(() -> runeLiteObject.setOrientation(orientation));
+		character.getOrientationSpinner().setValue(orientation);
+		clientThread.invokeLater(() -> runeLiteObject.setOrientation(orientation));
 	}
 
-	public Character buildCharacter(String name,
-									ObjectPanel objectPanel,
-									JTextField nameTextField,
-									JButton setLocationButton,
-									JButton spawnButton,
-									JButton animationButton,
-									JButton modelButton,
-									int modelId,
-									JSpinner modelSpinner,
-									JComboBox<CustomModel> modelComboBox,
-									boolean customModelMode,
-									boolean minimized,
-									int orientation,
-									JSpinner orientationSpinner,
-									int radius,
-									JSpinner radiusSpinner,
-									int animationId,
-									JSpinner animationSpinner,
-									Program program,
-									JLabel programmerNameLabel,
-									JSpinner programmerIdleSpinner,
-									boolean active,
-									WorldPoint savedWorldPoint,
-									LocalPoint savedLocalPoint,
-									int[] localPointRegion,
-									int localPointPlane,
-									boolean locatedInInstance)
+	public void setupRLObject(Character character, boolean setHoveredTile)
 	{
-		RuneLiteObject runeLiteObject = client.createRuneLiteObject();
-		runeLiteObject.setRadius(radius);
-		runeLiteObject.setOrientation(orientation);
-
-		CustomModel customModel = (CustomModel) modelComboBox.getSelectedItem();
-
-		Character character = new Character(
-				name,
-				active,
-				savedWorldPoint != null || savedLocalPoint != null,
-				minimized,
-				program,
-				savedWorldPoint,
-				savedLocalPoint,
-				localPointRegion,
-				localPointPlane,
-				locatedInInstance,
-				customModel,
-				objectPanel,
-				customModelMode,
-				nameTextField,
-				modelComboBox,
-				spawnButton,
-				modelButton,
-				modelSpinner,
-				animationSpinner,
-				orientationSpinner,
-				programmerNameLabel,
-				programmerIdleSpinner,
-				runeLiteObject,
-				0);
-
-		characters.add(character);
-
-		runeLiteObject.setDrawFrontTilesFirst(true);
-		runeLiteObject.setShouldLoop(true);
-		setAnimation(character, animationId);
-		setModel(character, customModelMode, modelId);
-
-		setLocation(character, !character.isLocationSet(), false, false, false);
-		runeLiteObject.setActive(active);
-		character.setActive(active);
-
-		nameTextField.addActionListener(e ->
+		clientThread.invoke(() ->
 		{
-			character.setName(nameTextField.getText());
-			programmerNameLabel.setText(nameTextField.getText());
-		});
+			RuneLiteObject runeLiteObject = client.createRuneLiteObject();
+			character.setRuneLiteObject(runeLiteObject);
 
-		setLocationButton.addActionListener(e ->
-				setLocation(character, !character.isLocationSet(), false, false, false));
+			runeLiteObject.setRadius((int) character.getRadiusSpinner().getValue());
+			runeLiteObject.setOrientation((int) character.getOrientationSpinner().getValue());
+			runeLiteObject.setDrawFrontTilesFirst(true);
+			runeLiteObject.setShouldLoop(true);
 
-		spawnButton.addActionListener(e ->
-				toggleSpawn(spawnButton, character));
+			boolean active = character.isActive();
 
-		animationButton.addActionListener(e ->
-		{
-			Animation anim = runeLiteObject.getAnimation();
+			setModel(character, character.isCustomMode(), (int) character.getModelSpinner().getValue());
+			setAnimation(character, (int) character.getAnimationSpinner().getValue());
 
-			if (anim == null)
+			if (setHoveredTile)
 			{
-				animationButton.setText("Anim Off");
-				programmerIdleSpinner.setValue((int) animationSpinner.getValue());
-				setAnimation(character, (int) animationSpinner.getValue());
-				return;
-			}
-
-			int animId = anim.getId();
-
-			if (animId == -1)
-			{
-				animationButton.setText("Anim Off");
-				programmerIdleSpinner.setValue((int) animationSpinner.getValue());
-				setAnimation(character, (int) animationSpinner.getValue());
-				return;
-			}
-
-			animationButton.setText("Anim On");
-			unsetAnimation(character);
-		});
-
-		modelButton.addActionListener(e ->
-		{
-			if (character.isCustomMode())
-			{
-				character.setCustomMode(false);
-				modelButton.setText("Custom");
-				modelSpinner.setVisible(true);
-				modelComboBox.setVisible(false);
-				setModel(character, false, (int) modelSpinner.getValue());
+				setLocation(character, !character.isLocationSet(), false, true, false);
 			}
 			else
 			{
-				character.setCustomMode(true);
-				modelButton.setText("Id");
-				modelSpinner.setVisible(false);
-				modelComboBox.setVisible(true);
-				setModel(character, true, -1);
+				setLocation(character, !character.isLocationSet(), false, false, false);
 			}
-		});
 
-		modelSpinner.addChangeListener(e ->
-		{
-			int modelNumber = (int) modelSpinner.getValue();
-			setModel(character, false, modelNumber);
+			runeLiteObject.setActive(active);
+			character.setActive(active);
 		});
-
-		modelComboBox.addItemListener(e ->
-		{
-			CustomModel m = (CustomModel) modelComboBox.getSelectedItem();
-			character.setStoredModel(m);
-			if (modelComboBox.isVisible() && character == selectedCharacter)
-				setModel(character, true, -1);
-		});
-
-		orientationSpinner.addChangeListener(e ->
-		{
-			int orient = (int) orientationSpinner.getValue();
-			setOrientation(character, orient);
-		});
-
-		animationSpinner.addChangeListener(e ->
-		{
-			animationButton.setText("Anim Off");
-			int animationNumber = (int) animationSpinner.getValue();
-			setAnimation(character, animationNumber);
-			programmerIdleSpinner.setValue(animationNumber);
-		});
-
-		radiusSpinner.addChangeListener(e ->
-		{
-			int rad = (int) radiusSpinner.getValue();
-			setRadius(character, rad);
-		});
-
-		return character;
 	}
 
 	public void removeCharacters(Character[] charactersToRemove)
@@ -1990,12 +2015,17 @@ public class CreatorsPlugin extends Plugin {
 
 	public void removeCustomModel(CustomModel customModel)
 	{
-		SwingUtilities.invokeLater(() -> creatorsPanel.removeModelOption(customModel));
+		creatorsPanel.removeModelOption(customModel);
 		storedModels.remove(customModel);
 	}
 
 	public void updateProgramPath(Program program, boolean gameStateChanged, boolean instanced)
 	{
+		if (client.getGameState() != GameState.LOGGED_IN)
+		{
+			return;
+		}
+
 		if (instanced)
 		{
 			updateInstancedProgramPath(program, gameStateChanged);
@@ -2175,6 +2205,158 @@ public class CreatorsPlugin extends Plugin {
 		});
 	}
 
+	private void updatePreviewObject(Tile tile)
+	{
+		if (previewObject == null)
+		{
+			clientThread.invokeLater(() ->
+			{
+				previewObject = client.createRuneLiteObject();
+				previewObject.setActive(false);
+
+				ModelData arrow = client.loadModelData(4852);
+				ModelData transparent = client.loadModelData(9925);
+				if (arrow == null || transparent == null)
+				{
+					return;
+				}
+
+				transparent.cloneVertices();
+				int[] tx = transparent.getVerticesX();
+				int[] ty = transparent.getVerticesY();
+				int[] tz = transparent.getVerticesZ();
+				for (int i = 0; i < tx.length; i++)
+				{
+					tx[i] = 0;
+					ty[i] = 0;
+					tz[i] = 0;
+				}
+
+				arrow.cloneVertices().rotateY180Ccw().scale(256, 256, 256);
+				ModelData merge = client.mergeModels(arrow, transparent);
+				merge.cloneTransparencies();
+				byte[] transparencies = merge.getFaceTransparencies();
+				for (byte b = 0; b < merge.getFaceCount(); b++)
+				{
+					transparencies[b] = 115;
+				}
+
+				previewArrow = merge.light();
+			});
+			return;
+		}
+
+		if (!config.enableCtrlHotkeys())
+		{
+			previewObject.setActive(false);
+			return;
+		}
+
+		if (!client.isKeyPressed(KeyCode.KC_CONTROL)
+			|| client.isMenuOpen()
+			|| tile == null
+			|| selectedCharacter == null)
+		{
+			previewObject.setActive(false);
+			return;
+		}
+
+		RuneLiteObject rlObject = selectedCharacter.getRuneLiteObject();
+		if (rlObject == null)
+		{
+			return;
+		}
+
+		boolean allowArrow = false;
+		int orientation;
+		if (mousePressed)
+		{
+			final int yaw = client.getCameraYaw();
+			final int pitch = client.getCameraPitch();
+			Point p = client.getMouseCanvasPosition();
+			double x = p.getX() - clickX;
+			double y = -1 * (p.getY() - clickY);
+			if (Math.sqrt(x * x + y * y) < 40)
+			{
+				orientation = Rotation.roundRotation(rlObject.getOrientation());
+			}
+			else
+			{
+				allowArrow = true;
+				orientation = Rotation.getJagexDegrees(p.getX() - clickX, (p.getY() - clickY) * -1, yaw, pitch);
+			}
+		}
+		else
+		{
+			orientation = rlObject.getOrientation();
+		}
+
+		Model model;
+		if (mousePressed && previewArrow != null && allowArrow)
+		{
+			model = previewArrow;
+		}
+		else
+		{
+			if (selectedCharacter.isCustomMode())
+			{
+				if (selectedCharacter.getStoredModel() == null)
+				{
+					model = client.loadModel(29757);
+				}
+				else
+				{
+					model = selectedCharacter.getStoredModel().getModel();
+				}
+			}
+			else
+			{
+				model = client.loadModel((int) selectedCharacter.getModelSpinner().getValue());
+			}
+		}
+
+		LocalPoint lp;
+		if (mousePressed)
+		{
+			lp = rlObject.getLocation();
+			if (lp == null)
+			{
+				lp = tile.getLocalLocation();
+			}
+		}
+		else
+		{
+			lp = tile.getLocalLocation();
+			if (lp == null)
+			{
+				lp = rlObject.getLocation();
+			}
+		}
+
+		if (lp == null)
+		{
+			return;
+		}
+
+		Animation animation;
+		if (allowArrow)
+		{
+			animation = client.loadAnimation(-1);
+		}
+		else
+		{
+			animation = rlObject.getAnimation();
+		}
+
+		previewObject.setModel(model);
+		previewObject.setOrientation(orientation);
+		previewObject.setAnimation(animation);
+		previewObject.setDrawFrontTilesFirst(true);
+		previewObject.setLocation(lp, client.getPlane());
+		previewObject.setRadius(rlObject.getRadius());
+		previewObject.setActive(true);
+	}
+
 	public ArrayList<ComplexPanel> getComplexPanels()
 	{
 		return creatorsPanel.getModelAnvil().getComplexPanels();
@@ -2281,6 +2463,18 @@ public class CreatorsPlugin extends Plugin {
 		}
 	};
 
+	private final HotkeyListener quickDuplicateListener = new HotkeyListener(() -> config.quickDuplicateHotkey())
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			if (selectedCharacter != null)
+			{
+				creatorsPanel.onDuplicatePressed(selectedCharacter, true);
+			}
+		}
+	};
+
 	private final HotkeyListener quickRotateCWListener = new HotkeyListener(() -> config.quickRotateCWHotkey())
 	{
 		@Override
@@ -2346,146 +2540,161 @@ public class CreatorsPlugin extends Plugin {
 		@Override
 		public void hotkeyPressed()
 		{
-			if (selectedCharacter != null)
-			{
-				Tile tile = client.getSelectedSceneTile();
-				if (tile == null)
-					return;
-
-				LocalPoint localPoint = tile.getLocalLocation();
-				if (localPoint == null)
-					return;
-
-				Program program = selectedCharacter.getProgram();
-				boolean isInScene = isInScene(selectedCharacter);
-
-				if (isInScene && client.isInInstancedRegion())
-				{
-					LocalPoint[] steps = program.getComp().getStepsLP();
-
-					if (steps.length == 0)
-					{
-						setLocation(selectedCharacter, true, false, true, false);
-					}
-
-					if (steps.length > 0)
-					{
-						Coordinate[] coordinates = pathFinder.getPath(steps[steps.length - 1], localPoint, program.getComp().getMovementType());
-						if (coordinates == null)
-						{
-							sendChatMessage("A path could not be found to this tile");
-							return;
-						}
-					}
-
-					steps = ArrayUtils.add(steps, localPoint);
-					program.getComp().setStepsLP(steps);
-					updateProgramPath(program, false, selectedCharacter.isInInstance());
-					return;
-				}
-
-				if (!isInScene && client.isInInstancedRegion())
-				{
-					program.getComp().setStepsLP(new LocalPoint[]{localPoint});
-					program.getComp().setStepsWP(new WorldPoint[0]);
-					setLocation(selectedCharacter, true, false, true, false);
-					updateProgramPath(program, false, selectedCharacter.isInInstance());
-					return;
-				}
-
-				if (isInScene && !client.isInInstancedRegion())
-				{
-					WorldPoint[] steps = program.getComp().getStepsWP();
-
-					if (steps.length == 0)
-					{
-						setLocation(selectedCharacter, true, false, true, false);
-					}
-
-					WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
-
-					if (steps.length > 0)
-					{
-						Coordinate[] coordinates = pathFinder.getPath(steps[steps.length - 1], worldPoint, program.getComp().getMovementType());
-						if (coordinates == null)
-						{
-							sendChatMessage("A path could not be found to this tile");
-							return;
-						}
-					}
-
-					steps = ArrayUtils.add(steps, worldPoint);
-					program.getComp().setStepsWP(steps);
-					updateProgramPath(program, false, selectedCharacter.isInInstance());
-					return;
-				}
-
-				if (!isInScene && !client.isInInstancedRegion())
-				{
-					WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
-					program.getComp().setStepsWP(new WorldPoint[]{worldPoint});
-					program.getComp().setStepsLP(new LocalPoint[0]);
-					setLocation(selectedCharacter, true, false, true, false);
-					updateProgramPath(program, false, selectedCharacter.isInInstance());
-				}
-			}
+			addProgramStep();
 		}
 	};
+
+	private void addProgramStep()
+	{
+		if (selectedCharacter != null)
+		{
+			Tile tile = client.getSelectedSceneTile();
+			if (tile == null)
+				return;
+
+			LocalPoint localPoint = tile.getLocalLocation();
+			if (localPoint == null)
+				return;
+
+			Program program = selectedCharacter.getProgram();
+			boolean isInScene = isInScene(selectedCharacter);
+
+			if (isInScene && client.isInInstancedRegion())
+			{
+				LocalPoint[] steps = program.getComp().getStepsLP();
+
+				if (steps.length == 0)
+				{
+					setLocation(selectedCharacter, true, false, true, false);
+				}
+
+				if (steps.length > 0)
+				{
+					Coordinate[] coordinates = pathFinder.getPath(steps[steps.length - 1], localPoint, program.getComp().getMovementType());
+					if (coordinates == null)
+					{
+						sendChatMessage("A path could not be found to this tile");
+						return;
+					}
+				}
+
+				steps = ArrayUtils.add(steps, localPoint);
+				program.getComp().setStepsLP(steps);
+				updateProgramPath(program, false, selectedCharacter.isInInstance());
+				return;
+			}
+
+			if (!isInScene && client.isInInstancedRegion())
+			{
+				program.getComp().setStepsLP(new LocalPoint[]{localPoint});
+				program.getComp().setStepsWP(new WorldPoint[0]);
+				setLocation(selectedCharacter, true, false, true, false);
+				updateProgramPath(program, false, selectedCharacter.isInInstance());
+				return;
+			}
+
+			if (isInScene && !client.isInInstancedRegion())
+			{
+				WorldPoint[] steps = program.getComp().getStepsWP();
+
+				if (steps.length == 0)
+				{
+					setLocation(selectedCharacter, true, false, true, false);
+				}
+
+				WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
+
+				if (steps.length > 0)
+				{
+					Coordinate[] coordinates = pathFinder.getPath(steps[steps.length - 1], worldPoint, program.getComp().getMovementType());
+					if (coordinates == null)
+					{
+						sendChatMessage("A path could not be found to this tile");
+						return;
+					}
+				}
+
+				steps = ArrayUtils.add(steps, worldPoint);
+				program.getComp().setStepsWP(steps);
+				updateProgramPath(program, false, selectedCharacter.isInInstance());
+				return;
+			}
+
+			if (!isInScene && !client.isInInstancedRegion())
+			{
+				WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
+				program.getComp().setStepsWP(new WorldPoint[]{worldPoint});
+				program.getComp().setStepsLP(new LocalPoint[0]);
+				setLocation(selectedCharacter, true, false, true, false);
+				updateProgramPath(program, false, selectedCharacter.isInInstance());
+			}
+		}
+	}
 
 	private final HotkeyListener removeProgramStepListener = new HotkeyListener(() -> config.removeProgramStepHotkey())
 	{
 		@Override
 		public void hotkeyPressed()
 		{
-			if (selectedCharacter != null)
-			{
-				if (!isInScene(selectedCharacter))
-					return;
-
-				Tile tile = client.getSelectedSceneTile();
-				if (tile == null)
-					return;
-
-				Program program = selectedCharacter.getProgram();
-				ProgramComp comp = program.getComp();
-
-				if (client.isInInstancedRegion())
-				{
-					LocalPoint[] steps = comp.getStepsLP();
-					steps = ArrayUtils.removeElement(steps, tile.getLocalLocation());
-					comp.setStepsLP(steps);
-				}
-				else
-				{
-					WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, tile.getLocalLocation());
-					WorldPoint[] steps = comp.getStepsWP();
-					steps = ArrayUtils.removeElement(steps, worldPoint);
-					comp.setStepsWP(steps);
-				}
-
-				comp.setCurrentStep(0);
-				updateProgramPath(program, false, selectedCharacter.isInInstance());
-				setLocation(selectedCharacter, false, false, false, true);
-			}
+			removeProgramStep();
 		}
 	};
+
+	private void removeProgramStep()
+	{
+		if (selectedCharacter != null)
+		{
+			if (!isInScene(selectedCharacter))
+				return;
+
+			Tile tile = client.getSelectedSceneTile();
+			if (tile == null)
+				return;
+
+			Program program = selectedCharacter.getProgram();
+			ProgramComp comp = program.getComp();
+
+			if (client.isInInstancedRegion())
+			{
+				LocalPoint[] steps = comp.getStepsLP();
+				steps = ArrayUtils.removeElement(steps, tile.getLocalLocation());
+				comp.setStepsLP(steps);
+			}
+			else
+			{
+				WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, tile.getLocalLocation());
+				WorldPoint[] steps = comp.getStepsWP();
+				steps = ArrayUtils.removeElement(steps, worldPoint);
+				comp.setStepsWP(steps);
+			}
+
+			comp.setCurrentStep(0);
+			updateProgramPath(program, false, selectedCharacter.isInInstance());
+			setLocation(selectedCharacter, false, false, false, true);
+		}
+	}
 
 	private final HotkeyListener clearProgramStepListener = new HotkeyListener(() -> config.clearProgramStepHotkey())
 	{
 		@Override
 		public void hotkeyPressed()
 		{
-			if (selectedCharacter != null)
-			{
-				Program program = selectedCharacter.getProgram();
-				program.getComp().setStepsWP(new WorldPoint[0]);
-				program.getComp().setStepsLP(new LocalPoint[0]);
-				program.getComp().setProgramActive(false);
-				updateProgramPath(program, false, selectedCharacter.isInInstance());
-				setLocation(selectedCharacter, false, false, false, false);
-			}
+			clearProgramSteps();
 		}
 	};
+
+	private void clearProgramSteps()
+	{
+		if (selectedCharacter != null)
+		{
+			Program program = selectedCharacter.getProgram();
+			program.getComp().setStepsWP(new WorldPoint[0]);
+			program.getComp().setStepsLP(new LocalPoint[0]);
+			program.getComp().setProgramActive(false);
+			updateProgramPath(program, false, selectedCharacter.isInInstance());
+			setLocation(selectedCharacter, false, false, false, false);
+		}
+	}
 
 	private final HotkeyListener playPauseListener = new HotkeyListener(() -> config.playPauseHotkey())
 	{
@@ -2531,6 +2740,85 @@ public class CreatorsPlugin extends Plugin {
 				resetProgram(character, false);
 		}
 	};
+
+	public MouseWheelEvent mouseWheelMoved(MouseWheelEvent event)
+	{
+		if (config.enableCtrlHotkeys() && event.isControlDown())
+		{
+			creatorsPanel.scrollSelectedCharacter(selectedCharacter, event.getWheelRotation());
+			event.consume();
+		}
+
+		return event;
+	}
+
+	@Override
+	public MouseEvent mousePressed(MouseEvent e)
+	{
+		if (config.enableCtrlHotkeys()
+				&& e.getButton() == MouseEvent.BUTTON1
+				&& client.isKeyPressed(KeyCode.KC_CONTROL))
+		{
+			mousePressed = true;
+			clickX = e.getPoint().getX();
+			clickY = e.getPoint().getY();
+		}
+
+		return e;
+	}
+
+	@Override
+	public MouseEvent mouseReleased(MouseEvent e)
+	{
+		mousePressed = false;
+
+		if (config.enableCtrlHotkeys() &&
+				e.getButton() == MouseEvent.BUTTON1 &&
+				client.isKeyPressed(KeyCode.KC_CONTROL) &&
+				selectedCharacter != null)
+		{
+			double x = e.getX() - clickX;
+			double y = -1 * (e.getY() - clickY);
+			if (Math.sqrt(x * x + y * y) < 40)
+			{
+				return e;
+			}
+
+			final int yaw = client.getCameraYaw();
+			final int pitch = client.getCameraPitch();
+			int jUnit = Rotation.getJagexDegrees(x, y, yaw, pitch);
+			setOrientation(selectedCharacter, jUnit);
+		}
+
+		return e;
+	}
+
+	@Override
+	public MouseEvent mouseDragged(MouseEvent e)
+	{
+		return e;
+	}
+
+	@Override
+	public MouseEvent mouseClicked(MouseEvent e) {
+		return e;
+	}
+
+	@Override
+	public MouseEvent mouseEntered(MouseEvent e) {
+		return e;
+	}
+
+	@Override
+	public MouseEvent mouseExited(MouseEvent e) {
+		return e;
+	}
+
+	@Override
+	public MouseEvent mouseMoved(MouseEvent e)
+	{
+		return e;
+	}
 
 	@Provides
 	CreatorsConfig provideConfig(ConfigManager configManager)

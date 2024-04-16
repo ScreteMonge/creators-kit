@@ -28,6 +28,11 @@ public class ModelFinder
     private static final Pattern recolTo = Pattern.compile("recol\\dd=.+");
     private static final Pattern retexFrom = Pattern.compile("retex\\ds=.+");
     private static final Pattern retexTo = Pattern.compile("retex\\dd=.+");
+    private final Request objRequest = new Request.Builder().url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.obj").build();
+    private final Request spotAnimRequest = new Request.Builder().url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.spotanim?ref_type=heads").build();
+    private final Request npcRequest = new Request.Builder().url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.npc").build();
+    private final Request locRequest = new Request.Builder().url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.loc").build();
+
 
     public ModelStats[] findModelsForPlayer(boolean groundItem, boolean maleItem, int[] items)
     {
@@ -58,10 +63,7 @@ public class ModelFinder
 
         CountDownLatch countDownLatch = new CountDownLatch(2);
 
-        Request itemRequest = new Request.Builder()
-                .url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.obj")
-                .build();
-        Call itemCall = httpClient.newCall(itemRequest);
+        Call itemCall = httpClient.newCall(objRequest);
         itemCall.enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e)
@@ -409,10 +411,8 @@ public class ModelFinder
         CustomLighting lighting = new CustomLighting(64, 850, -50, -50, 75);
 
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        Request request = new Request.Builder()
-                .url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.spotanim?ref_type=heads")
-                .build();
-        Call call = httpClient.newCall(request);
+
+        Call call = httpClient.newCall(spotAnimRequest);
         call.enqueue(new Callback()
         {
             @Override
@@ -559,10 +559,8 @@ public class ModelFinder
         short[] retextureTo = new short[0];
 
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        Request request = new Request.Builder()
-                .url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.npc")
-                .build();
-        Call call = httpClient.newCall(request);
+
+        Call call = httpClient.newCall(npcRequest);
         call.enqueue(new Callback()
         {
             @Override
@@ -701,13 +699,10 @@ public class ModelFinder
         ArrayList<Short> retextureFrom = new ArrayList<>();
         ArrayList<Short> retextureTo = new ArrayList<>();
         CustomLighting lighting = new CustomLighting(ModelData.DEFAULT_AMBIENT, ModelData.DEFAULT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
-        final LightingStyle[] lightingStyle = {LightingStyle.DEFAULT};
 
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        Request request = new Request.Builder()
-                .url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.loc")
-                .build();
-        Call call = httpClient.newCall(request);
+
+        Call call = httpClient.newCall(locRequest);
         call.enqueue(new Callback()
         {
             @Override
@@ -893,10 +888,7 @@ public class ModelFinder
         ArrayList<Short> retextureTo = new ArrayList<>();
 
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        Request request = new Request.Builder()
-                .url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.obj")
-                .build();
-        Call call = httpClient.newCall(request);
+        Call call = httpClient.newCall(objRequest);
         call.enqueue(new Callback()
         {
             @Override

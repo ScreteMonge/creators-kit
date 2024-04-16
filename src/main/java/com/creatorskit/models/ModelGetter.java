@@ -2,11 +2,15 @@ package com.creatorskit.models;
 
 import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
+import com.creatorskit.swing.CreatorsPanel;
+import com.creatorskit.swing.ObjectPanel;
 import net.runelite.api.*;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.util.ColorUtil;
 
 import javax.inject.Inject;
-import java.util.concurrent.CountDownLatch;
+import javax.swing.*;
+import java.awt.*;
 
 public class ModelGetter
 {
@@ -26,11 +30,8 @@ public class ModelGetter
         this.config = config;
     }
 
-    public void storeNPC(int index, String target, String option, NPC npc, boolean setTransmog)
+    public void storeNPC(int index, String target, String option, NPC npc, ModelMenuOption menuOption)
     {
-        if (setTransmog && !config.transmogRightClick())
-            return;
-
         client.createMenuEntry(index)
                 .setOption(option)
                 .setTarget(target)
@@ -48,8 +49,36 @@ public class ModelGetter
                             CustomModel customModel = new CustomModel(model, comp);
                             plugin.addCustomModel(customModel, false);
                             plugin.sendChatMessage("Model stored: " + npc.getName());
-                            if (setTransmog)
-                                plugin.getCreatorsPanel().getModelOrganizer().setTransmog(customModel);
+                            CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
+
+                            if (menuOption == ModelMenuOption.TRANSMOG)
+                            {
+                                creatorsPanel.getModelOrganizer().setTransmog(customModel);
+                            }
+
+                            if (menuOption == ModelMenuOption.STORE_AND_ADD)
+                            {
+                                ObjectPanel objectPanel = creatorsPanel.createPanel(
+                                        creatorsPanel.getSidePanel(),
+                                        npc.getName(),
+                                        7699,
+                                        customModel,
+                                        true,
+                                        false,
+                                        npc.getOrientation(),
+                                        npc.getPoseAnimation(),
+                                        60,
+                                        creatorsPanel.createEmptyProgram(npc.getPoseAnimation(), npc.getWalkAnimation()),
+                                        false,
+                                        null,
+                                        null,
+                                        new int[0],
+                                        -1,
+                                        false,
+                                        false);
+
+                                SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(creatorsPanel.getSideObjectPanels(), creatorsPanel.getSidePanel(), objectPanel));
+                            }
                         });
                     });
                     thread.start();
@@ -59,7 +88,7 @@ public class ModelGetter
     public void sendToAnvilNPC(int index, String target, NPC npc)
     {
         client.createMenuEntry(index)
-                .setOption("Anvil")
+                .setOption(ColorUtil.prependColorTag("Anvil", Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
                 .onClick(e ->
@@ -78,7 +107,7 @@ public class ModelGetter
                 });
     }
 
-    public void addSpotAnimGetter(int index, String target, String option, IterableHashTable<ActorSpotAnim> spotAnims, boolean sendToAnvil)
+    public void addSpotAnimGetter(int index, String target, String option, IterableHashTable<ActorSpotAnim> spotAnims, ModelMenuOption menuOption)
     {
         client.createMenuEntry(index)
                 .setOption(option)
@@ -87,7 +116,7 @@ public class ModelGetter
                 .onClick(e ->
                 {
                     //For "Anvil" option on SpotAnims
-                    if (sendToAnvil)
+                    if (menuOption == ModelMenuOption.ANVIL)
                     {
                         for (ActorSpotAnim spotAnim : spotAnims)
                         {
@@ -125,10 +154,37 @@ public class ModelGetter
                                     modelData.recolor(recolFrom[i], recolTo[i]);
                                 modelData.scale(modelStats[0].getResizeX(), modelStats[0].getResizeZ(), modelStats[0].getResizeY());
 
+                                int anim = modelFinder.getLastAnim();
                                 Model model = modelData.light(lighting.getAmbient(), lighting.getContrast(), lighting.getX(), lighting.getZ() * -1, lighting.getY());
                                 CustomModel customModel = new CustomModel(model, comp);
                                 plugin.addCustomModel(customModel, false);
-                                plugin.sendChatMessage("Model stored: " + name + "; Anim: " + modelFinder.getLastAnim() + "; Ambient/Contrast: " + lighting.getAmbient() + "/" + lighting.getContrast());
+                                plugin.sendChatMessage("Model stored: " + name + "; Anim: " + anim + "; Ambient/Contrast: " + lighting.getAmbient() + "/" + lighting.getContrast());
+
+                                if (menuOption == ModelMenuOption.STORE_AND_ADD)
+                                {
+                                    CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
+
+                                    ObjectPanel objectPanel = creatorsPanel.createPanel(
+                                            creatorsPanel.getSidePanel(),
+                                            name,
+                                            7699,
+                                            customModel,
+                                            true,
+                                            false,
+                                            0,
+                                            anim,
+                                            60,
+                                            creatorsPanel.createEmptyProgram(anim, anim),
+                                            false,
+                                            null,
+                                            null,
+                                            new int[0],
+                                            -1,
+                                            false,
+                                            false);
+
+                                    SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(creatorsPanel.getSideObjectPanels(), creatorsPanel.getSidePanel(), objectPanel));
+                                }
                             });
                         });
                         thread.start();
@@ -136,11 +192,8 @@ public class ModelGetter
                 });
     }
 
-    public void addPlayerGetter(int index, String target, String option, Player player, boolean sendToAnvil, boolean setTransmog)
+    public void addPlayerGetter(int index, String target, String option, Player player, ModelMenuOption menuOption)
     {
-        if (setTransmog && !config.transmogRightClick())
-            return;
-
         client.createMenuEntry(index)
                 .setOption(option)
                 .setTarget(target)
@@ -155,7 +208,7 @@ public class ModelGetter
                     String finalName = name;
 
                     //For "Anvil" option on players
-                    if (sendToAnvil)
+                    if (menuOption == ModelMenuOption.ANVIL)
                     {
                         Thread thread = new Thread(() ->
                         {
@@ -182,19 +235,44 @@ public class ModelGetter
                             CustomModel customModel = new CustomModel(model, composition);
                             plugin.addCustomModel(customModel, false);
                             plugin.sendChatMessage("Model stored: " + finalName);
-                            if (setTransmog)
-                                plugin.getCreatorsPanel().getModelOrganizer().setTransmog(customModel);
+
+                            CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
+                            if (menuOption == ModelMenuOption.TRANSMOG)
+                            {
+                                creatorsPanel.getModelOrganizer().setTransmog(customModel);
+                            }
+
+                            if (menuOption == ModelMenuOption.STORE_AND_ADD)
+                            {
+                                ObjectPanel objectPanel = creatorsPanel.createPanel(
+                                        creatorsPanel.getSidePanel(),
+                                        finalName,
+                                        7699,
+                                        customModel,
+                                        true,
+                                        false,
+                                        player.getCurrentOrientation(),
+                                        player.getPoseAnimation(),
+                                        60,
+                                        creatorsPanel.createEmptyProgram(player.getPoseAnimation(), player.getWalkAnimation()),
+                                        false,
+                                        null,
+                                        null,
+                                        new int[0],
+                                        -1,
+                                        false,
+                                        false);
+
+                                SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(creatorsPanel.getSideObjectPanels(), creatorsPanel.getSidePanel(), objectPanel));
+                            }
                         });
                     });
                     thread.start();
                 });
     }
 
-    public void addGameObjectGetter(int index, String option, String target, String name, Model model, int objectId, CustomModelType type, boolean setTransmog)
+    public void addGameObjectGetter(int index, String option, String target, String name, Model model, int objectId, CustomModelType type, int animationId, int orientation, ModelMenuOption menuOption)
     {
-        if (setTransmog && !config.transmogRightClick())
-            return;
-
         client.createMenuEntry(index)
                 .setOption(option)
                 .setTarget(target)
@@ -209,8 +287,36 @@ public class ModelGetter
                         CustomModel customModel = new CustomModel(model, comp);
                         plugin.addCustomModel(customModel, false);
                         plugin.sendChatMessage("Model stored: " + name);
-                        if (setTransmog)
-                            plugin.getCreatorsPanel().getModelOrganizer().setTransmog(customModel);
+
+                        CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
+                        if (menuOption == ModelMenuOption.TRANSMOG)
+                        {
+                            creatorsPanel.getModelOrganizer().setTransmog(customModel);
+                        }
+
+                        if (menuOption == ModelMenuOption.STORE_AND_ADD)
+                        {
+                            ObjectPanel objectPanel = creatorsPanel.createPanel(
+                                    creatorsPanel.getSidePanel(),
+                                    name,
+                                    7699,
+                                    customModel,
+                                    true,
+                                    false,
+                                    orientation,
+                                    animationId,
+                                    60,
+                                    creatorsPanel.createEmptyProgram(animationId, animationId),
+                                    false,
+                                    null,
+                                    null,
+                                    new int[0],
+                                    -1,
+                                    false,
+                                    false);
+
+                            SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(creatorsPanel.getSideObjectPanels(), creatorsPanel.getSidePanel(), objectPanel));
+                        }
                     });
                     thread.start();
                 });
@@ -219,14 +325,13 @@ public class ModelGetter
     public void addObjectGetterToAnvil(String target, String name, int objectId)
     {
         client.createMenuEntry(-2)
-                .setOption("Anvil")
+                .setOption(ColorUtil.prependColorTag("Anvil", Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
                 .onClick(e ->
                 {
                     Thread thread = new Thread(() ->
                     {
-                        CountDownLatch countDownLatch = new CountDownLatch(1);
                         ModelStats[] modelStats = modelFinder.findModelsForObject(objectId);
                         clientThread.invokeLater(() ->
                         {

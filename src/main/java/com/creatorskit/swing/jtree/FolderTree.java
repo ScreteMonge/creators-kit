@@ -122,7 +122,11 @@ public class FolderTree extends JScrollPane
         JButton clearFolderButton = new JButton(new ImageIcon(CLEAR));
         clearFolderButton.setToolTipText("Remove all Folders and all Objects in them");
         clearFolderButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        clearFolderButton.addActionListener(e -> removeAllNodes());
+        clearFolderButton.addActionListener(e ->
+        {
+            Thread thread = new Thread(this::removeAllNodes);
+            thread.start();
+        });
         folderHeader.add(clearFolderButton, c);
 
         headerButtons[0] = addFolderButton;
@@ -209,8 +213,14 @@ public class FolderTree extends JScrollPane
                 return;
         }
 
-        for (DefaultMutableTreeNode node : panelsToRemove)
-            plugin.getCreatorsPanel().onDeleteButtonPressed((ObjectPanel) node.getUserObject());
+        ObjectPanel[] objectPanels = new ObjectPanel[panelsToRemove.size()];
+        for (int i = 0; i < objectPanels.length; i++)
+        {
+            ObjectPanel objectPanel = (ObjectPanel) panelsToRemove.get(i).getUserObject();
+            objectPanels[i] = objectPanel;
+        }
+
+        plugin.getCreatorsPanel().deletePanels(objectPanels);
 
         for (DefaultMutableTreeNode node : foldersToRemove)
             removeNode(node);
@@ -275,29 +285,6 @@ public class FolderTree extends JScrollPane
             if (!node.isLeaf())
                 getObjectPanelChildren(node, objectPanels);
         }
-    }
-
-    public void clearObjects()
-    {
-        int result = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete all Folders and Objects from the Manager?");
-        if (result != JOptionPane.YES_OPTION)
-            return;
-
-        ArrayList<DefaultMutableTreeNode> panelsToRemove = new ArrayList<>();
-        ArrayList<DefaultMutableTreeNode> nodesToRemove = new ArrayList<>();
-
-        getNodeChildren(rootNode, panelsToRemove, nodesToRemove);
-
-        for (DefaultMutableTreeNode node : panelsToRemove)
-            managerPanel.removeObject(node);
-
-        for (DefaultMutableTreeNode node : nodesToRemove)
-        {
-            MutableTreeNode parent = (MutableTreeNode) (node.getParent());
-            if (parent != null)
-                treeModel.removeNodeFromParent(node);
-        }
-        treeModel.reload();
     }
 
     public DefaultMutableTreeNode findNode(Object child)

@@ -115,7 +115,7 @@ public class ManagerPanel extends JPanel
         addObjectButton.addActionListener(e ->
         {
             CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
-            ObjectPanel panel = creatorsPanel.createPanel(managerObjectPanels, objectHolder);
+            ObjectPanel panel = creatorsPanel.createPanel(objectHolder);
             creatorsPanel.addPanel(managerObjectPanels, objectHolder, panel);
         });
         objectHeader.add(addObjectButton, c);
@@ -128,8 +128,7 @@ public class ManagerPanel extends JPanel
         switchPanelsButton.addActionListener(e ->
         {
             CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
-            for (ObjectPanel objectPanel : getShownObjectPanels())
-                creatorsPanel.switchPanel(objectPanel);
+            creatorsPanel.switchPanels(objectHolder, getShownObjectPanels());
         });
         objectHeader.add(switchPanelsButton, c);
 
@@ -139,11 +138,6 @@ public class ManagerPanel extends JPanel
 
         repaint();
         revalidate();
-    }
-
-    public void removeObject(DefaultMutableTreeNode node)
-    {
-        plugin.getCreatorsPanel().removePanel(objectHolder, (ObjectPanel) node.getUserObject());
     }
 
     public ObjectPanel[] getShownObjectPanels()

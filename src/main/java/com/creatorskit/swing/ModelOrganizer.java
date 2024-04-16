@@ -276,7 +276,6 @@ public class ModelOrganizer extends JPanel
     {
         JPanel panel = panelMap.get(model);
         modelPanel.remove(panel);
-        modelPanel.updateUI();
         panelMap.remove(model);
         revalidate();
         repaint();
