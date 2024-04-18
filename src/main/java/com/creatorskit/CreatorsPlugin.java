@@ -1496,12 +1496,21 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			finalLighting = new CustomLighting(lightingStyle.getAmbient(), lightingStyle.getContrast(), lightingStyle.getX(), lightingStyle.getY(), lightingStyle.getZ());
 		}
 
-		Model model = modelData.light(
-				finalLighting.getAmbient(),
-				finalLighting.getContrast(),
-				finalLighting.getX(),
-				finalLighting.getZ() * -1,
-				finalLighting.getY());
+		Model model;
+		try
+		{
+			model = modelData.light(
+					finalLighting.getAmbient(),
+					finalLighting.getContrast(),
+					finalLighting.getX(),
+					finalLighting.getZ() * -1,
+					finalLighting.getY());
+		}
+		catch (Exception e)
+		{
+			sendChatMessage("Could not Forge this model with the chosen Lighting Settings. Please adjust them and try again.");
+			return null;
+		}
 
 		if (model == null)
 			return null;

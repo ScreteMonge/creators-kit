@@ -27,6 +27,7 @@ public class ModelImporter
     public static final File BLENDER_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/blender-models");
     private final int BASIC_MODEL = 823;
     private final int TRANSPARENT_MODEL = 18871;
+    private final int PRIORITY_MODEL = 6733;
     private final int BASIC_MODEL_2_4 = 15166;
     private final int BASIC_MODEL_3_7 = 21140;
     private final int ANIMATED_MODEL_2_5 = 21201;
@@ -170,22 +171,11 @@ public class ModelImporter
             colours = ArrayUtils.add(colours, jagexColor);
         }
 
-        byte[] transparencies = blenderModel.getTransparencies();
-        boolean transparency = false;
-        for (double t : transparencies)
-        {
-            if (t != -1)
-            {
-                transparency = true;
-                break;
-            }
-        }
-
-        //                 {2_6, 1_3, 1_2, 1_0)
-        int[] polys = new int[]{1, 0, 0, 0};
+        //{2_6 priority, 1_3, 1_2, 1_0, 1_3 transparent}
+        int[] polys = new int[]{1, 0, 0, 0, 1};
         try
         {
-            polys = getPolyCount(polys, faces1.length - 2, verticesX.length - 3);
+            polys = getPolyCount(polys, faces1.length - 3, verticesX.length - 3);
         }
         catch (Exception e)
         {
@@ -195,8 +185,8 @@ public class ModelImporter
 
         //int[] polys = new int[]{0, 1, 0, 0, 0};
         //polys = getPolyCountAnimated(polys, faces1.length - 2, verticesX.length - 4);
-        //System.out.println(polys[0] + "," + polys[1] + "," + polys[2] + "," + polys[3]);
-        ModelData modelData = constructModel(polys, false);
+        //System.out.println(polys[0] + "," + polys[1] + "," + polys[2] + "," + polys[3] + "," + polys[4]);
+        ModelData modelData = constructModel(polys);
         if (modelData == null)
             return null;
 
@@ -226,16 +216,12 @@ public class ModelImporter
             cols[i] = colours[i];
         }
 
-        /*
-        if (transparency)
+        byte[] transparencies = blenderModel.getTransparencies();
+        byte[] tp = modelData.getFaceTransparencies();
+        for (int i = 0; i < modelData.getFaceCount(); i++)
         {
-            byte[] tp = modelData.getFaceTransparencies();
-            for (int i = 0; i < modelData.getFaceCount(); i++)
-            {
-                tp[i] = transparencies[i];
-            }
+            tp[i] = transparencies[i];
         }
-         */
 
         Model model;
         switch (lightingStyle)
@@ -263,7 +249,7 @@ public class ModelImporter
 
     public int[] getPolyCount(int[] polys, int facesRemaining, int verticesRemaining)
     {
-        //int[2_6, 1_3, 1_2, 1_0] for [face_vertices]
+        //int[2_6 priority, 1_3, 1_2, 1_0, 1_3 transparent] for [face_vertices]
         //System.out.println("FacesRemaining " + facesRemaining + ", verticesRemaining: " + verticesRemaining);
         if (facesRemaining == 0 && verticesRemaining == 0)
             return polys;
@@ -283,10 +269,12 @@ public class ModelImporter
             return polys;
         }
 
+        //Effectively while-loop till face count drops below vertex count
         if (facesRemaining + 2 > verticesRemaining)
         {
-            polys[3] += 1;
-            facesRemaining--;
+            int change = facesRemaining + 2 - verticesRemaining;
+            polys[3] += change;
+            facesRemaining -= change;
             return getPolyCount(polys, facesRemaining, verticesRemaining);
         }
 
@@ -307,68 +295,92 @@ public class ModelImporter
         return getPolyCount(polys, facesRemaining, verticesRemaining);
     }
 
-    private ModelData constructModel(int[] polys, boolean transparency)
+    private ModelData constructModel(int[] polys)
     {
-        int modelId = transparency ? TRANSPARENT_MODEL : BASIC_MODEL;
         ModelData[] modelsToMerge = new ModelData[]{};
 
-        ModelData poly_2_3 = client.loadModelData(6733);
-        if (poly_2_3 == null)
+        ModelData polyPriority = client.loadModelData(PRIORITY_MODEL);
+        if (polyPriority != null)
+        {
+            polyPriority.cloneColors().cloneVertices();
+            int[] vX = polyPriority.getVerticesX();
+            int[] vY = polyPriority.getVerticesY();
+            int[] vZ = polyPriority.getVerticesZ();
+
+            vX[0] = vX[1] = 64;
+            vY[0] = vY[1] = 0;
+            vZ[0] = vZ[1] = -64;
+
+            vX[2] = vX[3] = -64;
+            vY[2] = vY[3] = 0;
+            vZ[2] = vZ[3] = 64;
+
+            vX[4] = vX[5] = -64;
+            vY[4] = vY[5] = 0;
+            vZ[4] = vZ[5] = -64;
+
+            modelsToMerge = ArrayUtils.add(modelsToMerge, polyPriority);
+        }
+        else
+        {
             return null;
+        }
 
-        poly_2_3.cloneColors().cloneVertices();
-        int[] vX = poly_2_3.getVerticesX();
-        int[] vY = poly_2_3.getVerticesY();
-        int[] vZ = poly_2_3.getVerticesZ();
+        ModelData poly_transparent = client.loadModelData(TRANSPARENT_MODEL);
+        if (poly_transparent != null)
+        {
+            poly_transparent.cloneColors().cloneVertices().cloneTransparencies();
+            int[] vX = poly_transparent.getVerticesX();
+            int[] vY = poly_transparent.getVerticesY();
+            int[] vZ = poly_transparent.getVerticesZ();
 
-        vX[0] = vX[1] = 64;
-        vY[0] = vY[1] = 0;
-        vZ[0] = vZ[1] = -64;
+            vX[0] = 64;
+            vY[0] = 0;
+            vZ[0] = -64;
 
-        vX[2] = vX[3] = -64;
-        vY[2] = vY[3] = 0;
-        vZ[2] = vZ[3] = 64;
+            vX[1] = -64;
+            vY[1] = 0;
+            vZ[1] = 64;
 
-        vX[4] = vX[5] = -64;
-        vY[4] = vY[5] = 0;
-        vZ[4] = vZ[5] = -64;
+            vX[2] = -64;
+            vY[2] = 0;
+            vZ[2] = -64;
 
-        modelsToMerge = ArrayUtils.add(modelsToMerge, poly_2_3);
+            modelsToMerge = ArrayUtils.add(modelsToMerge, poly_transparent);
+        }
+        else
+        {
+            return null;
+        }
 
         for (int i = 0; i < polys[1]; i++)
         {
-            ModelData poly_1_3 = client.loadModelData(modelId);
+            ModelData poly_1_3 = client.loadModelData(BASIC_MODEL);
             if (poly_1_3 == null)
                 return null;
 
             poly_1_3.cloneColors().cloneVertices().translate(i + 1, i + 1, i + 1);
-            if (transparency)
-                poly_1_3.cloneTransparencies();
             modelsToMerge = ArrayUtils.add(modelsToMerge, poly_1_3);
         }
 
-        int translateBy = transparency ? 20 : 128;
+        int translateBy = 128;
         for (int i = 0; i < polys[2]; i++)
         {
-            ModelData poly_1_2 = client.loadModelData(modelId);
+            ModelData poly_1_2 = client.loadModelData(BASIC_MODEL);
             if (poly_1_2 == null)
                 return null;
 
             poly_1_2.cloneColors().cloneVertices().translate((i + 1) * translateBy, 0, 0);
-            if (transparency)
-                poly_1_2.cloneTransparencies();
             modelsToMerge = ArrayUtils.add(modelsToMerge, poly_1_2);
         }
 
         for (int i = 0; i < polys[3]; i++)
         {
-            ModelData poly_1_0 = client.loadModelData(modelId);
+            ModelData poly_1_0 = client.loadModelData(BASIC_MODEL);
             if (poly_1_0 == null)
                 return null;
 
             poly_1_0.cloneColors().cloneVertices();
-            if (transparency)
-                poly_1_0.cloneTransparencies();
             modelsToMerge = ArrayUtils.add(modelsToMerge, poly_1_0);
         }
 

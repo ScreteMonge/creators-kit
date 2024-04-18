@@ -6,9 +6,7 @@ import com.creatorskit.swing.colours.ColourSwapPanel;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
-import net.runelite.api.JagexColor;
 import net.runelite.api.Model;
-import net.runelite.api.ModelData;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
@@ -19,15 +17,12 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import javax.inject.Inject;
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 @Slf4j
 public class ModelAnvil extends JPanel
@@ -158,7 +153,7 @@ public class ModelAnvil extends JPanel
         JLabel emptyLabel = new JLabel("");
         viewport.add(emptyLabel, c);
 
-        colourSwapPanel = new ColourSwapPanel(client, clientThread);
+        colourSwapPanel = new ColourSwapPanel(client, clientThread, complexPanels);
         tabbedPane.addTab("Colour/Texture Swapper", colourSwapPanel);
 
         JPanel headerPanel = new JPanel();
@@ -216,11 +211,11 @@ public class ModelAnvil extends JPanel
         lightingSpinners[3] = lightYSpinner;
         lightingSpinners[4] = lightZSpinner;
 
-        ambSpinner.setToolTipText("Set the ambient lighting level");
-        conSpinner.setToolTipText("Set the lighting contrast (higher is lower)");
-        lightXSpinner.setToolTipText("Set the sun's x coordinate relative to the player");
-        lightYSpinner.setToolTipText("Set the sun's y coordinate relative to the player");
-        lightZSpinner.setToolTipText("Set the sun's z coordinate relative to the player");
+        ambSpinner.setToolTipText("<html>Set the ambient lighting level<br>Range: -1000 to 1000</html>");
+        conSpinner.setToolTipText("<html>Set the lighting contrast (higher is lower)<br>Range: 100 to 9999</html>");
+        lightXSpinner.setToolTipText("<html>Set the sun's x coordinate relative to the player<br>Range: -1000 to 1000</html>");
+        lightYSpinner.setToolTipText("<html>Set the sun's y coordinate relative to the player<br>Range: -1000 to 1000</html>");
+        lightZSpinner.setToolTipText("<html>Set the sun's z coordinate relative to the player<br>Range: -1000 to 1000</html>");
 
         presetComboBox.addItem(LightingStyle.DEFAULT);
         presetComboBox.addItem(LightingStyle.ACTOR);
@@ -991,13 +986,18 @@ public class ModelAnvil extends JPanel
 
     private DetailedModel[] panelsToDetailedModels()
     {
-        DetailedModel[] detailedModels = new DetailedModel[complexPanels.size()];
+        DetailedModel[] detailedModels = new DetailedModel[0];
 
         for (int i = 0; i < complexPanels.size(); i++)
         {
             ComplexPanel complexModePanel = complexPanels.get(i);
             String name = complexModePanel.getNameField().getText();
             int modelId = (int) complexModePanel.getModelIdSpinner().getValue();
+            if (modelId == -1)
+            {
+                continue;
+            }
+
             int group = (int) complexModePanel.getGroupSpinner().getValue();
             int xTile = (int) complexModePanel.getXTileSpinner().getValue();
             int yTile = (int) complexModePanel.getYTileSpinner().getValue();
@@ -1038,7 +1038,7 @@ public class ModelAnvil extends JPanel
                     coloursFrom, coloursTo,
                     texturesFrom, texturesTo,
                     invertFaces);
-            detailedModels[i] = detailedModel;
+            detailedModels = ArrayUtils.add(detailedModels, detailedModel);
         }
 
         return detailedModels;

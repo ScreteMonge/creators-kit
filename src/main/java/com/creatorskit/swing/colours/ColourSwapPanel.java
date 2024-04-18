@@ -1,6 +1,7 @@
 package com.creatorskit.swing.colours;
 
 import com.creatorskit.swing.ComplexPanel;
+import com.creatorskit.swing.CreatorsPanel;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.Client;
@@ -19,12 +20,15 @@ import javax.swing.border.LineBorder;
 import javax.swing.colorchooser.AbstractColorChooserPanel;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 
 public class ColourSwapPanel extends JPanel
 {
     private final Client client;
     private final ClientThread clientThread;
+    private final ArrayList<ComplexPanel> complexPanels;
     private final GridBagConstraints c = new GridBagConstraints();
     private final Dimension LABEL_DIMENSION = new Dimension(250, 30);
     private final Dimension TOP_BAR_DIMENSION = new Dimension(100, 25);
@@ -49,10 +53,11 @@ public class ColourSwapPanel extends JPanel
     private short[][] copiedColoursTextures = new short[4][0];
 
     @Inject
-    public ColourSwapPanel(Client client, ClientThread clientThread)
+    public ColourSwapPanel(Client client, ClientThread clientThread, ArrayList<ComplexPanel> complexPanels)
     {
         this.client = client;
         this.clientThread = clientThread;
+        this.complexPanels = complexPanels;
 
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
         setLayout(new GridBagLayout());
@@ -96,6 +101,12 @@ public class ColourSwapPanel extends JPanel
         clearAllButton.setPreferredSize(TOP_BAR_DIMENSION);
         clearAllButton.addActionListener(e -> clearColoursTextures(currentComplexPanel));
         comboPane.add(clearAllButton);
+
+        JButton setAllModelColours = new JButton("Set Everything");
+        setAllModelColours.setToolTipText("Sets colours for every model in the Anvil to the colour currently selected in the Colour Picker");
+        setAllModelColours.setPreferredSize(new Dimension(120, 25));
+        setAllModelColours.addActionListener(e -> setColoursEverything());
+        comboPane.add(setAllModelColours);
 
         c.weightx = 0;
         c.gridx = 1;
@@ -182,7 +193,7 @@ public class ColourSwapPanel extends JPanel
         c.gridx = 1;
         c.gridy = 1;
         JPanel colourHeader = new JPanel();
-        colourHeader.setLayout(new GridLayout(1, 0, 1, 1));
+        colourHeader.setLayout(new GridLayout(2, 0, 1, 1));
         swapPanel.add(colourHeader, c);
 
         JLabel oldColourLabel = new JLabel("Old", SwingConstants.CENTER);
@@ -202,6 +213,18 @@ public class ColourSwapPanel extends JPanel
             revalidate();
         });
         colourHeader.add(clearColours);
+
+        colourHeader.add(new JLabel(""));
+        colourHeader.add(new JLabel(""));
+
+        JButton setAllButton = new JButton("Set All");
+        setAllButton.setToolTipText("Sets all colours for this model to the colour currently selected in the Colour Picker");
+        setAllButton.addActionListener(e -> {
+            setAllColoursHere();
+            repaint();
+            revalidate();
+        });
+        colourHeader.add(setAllButton);
 
         c.gridx = 0;
         c.gridy = 2;
@@ -371,6 +394,7 @@ public class ColourSwapPanel extends JPanel
         oldColourLabel.setBackground(ColorScheme.DARK_GRAY_COLOR);
 
         JButton newColourButton = new JButton("" + (isColourSet ? newColour : "Set"));
+        newColourButton.setToolTipText("Swap this Old colour to the colour currently selected in the Colour Picker");
         newColourButton.setFont(FontManager.getRunescapeSmallFont());
         newColourButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
         if (isColourSet)
@@ -423,6 +447,60 @@ public class ColourSwapPanel extends JPanel
         colourHolder.add(colourPanel);
         colourPanels = ArrayUtils.add(colourPanels, colourPanel);
         return colourPanel;
+    }
+
+    private void setAllColoursHere()
+    {
+        short colour = shortFromColour(colourChooser.getColor());
+
+        for (ColourPanel colourPanel : colourPanels)
+        {
+            if (colourPanel.isColourSet())
+            {
+                replaceColour(colourPanel, colour);
+                replaceColourSwap(colourPanel.getOldColour(), colour);
+                continue;
+            }
+
+            setColour(colourPanel, colour);
+            addColourSwap(colourPanel.getOldColour(), colourPanel.getNewColour());
+        }
+    }
+
+    public void setColoursEverything()
+    {
+        short colour = shortFromColour(colourChooser.getColor());
+        clientThread.invokeLater(() ->
+        {
+            for (ComplexPanel complexPanel : complexPanels)
+            {
+                int modelId = (int) complexPanel.getModelIdSpinner().getValue();
+                if (modelId == -1)
+                {
+                    continue;
+                }
+
+                ModelData modelData = client.loadModelData(modelId);
+                if (modelData == null)
+                    continue;
+
+                short[] coloursFrom = new short[0];
+                for (short s : modelData.getFaceColors())
+                {
+                    if (!ArrayUtils.contains(coloursFrom, s))
+                    {
+                        coloursFrom = ArrayUtils.add(coloursFrom, s);
+                    }
+                }
+
+                short[] coloursTo = new short[coloursFrom.length];
+                Arrays.fill(coloursTo, colour);
+                complexPanel.setColoursFrom(coloursFrom);
+                complexPanel.setColoursTo(coloursTo);
+            }
+
+            onSwapperPressed((ComplexPanel) comboBox.getSelectedItem());
+        });
     }
 
     private void setColour(ColourPanel colourPanel, Color rgbColour)
