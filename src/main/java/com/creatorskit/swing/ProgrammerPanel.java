@@ -6,7 +6,6 @@ import com.creatorskit.programming.MovementType;
 import com.creatorskit.programming.Program;
 import com.creatorskit.programming.ProgramComp;
 import lombok.Getter;
-import lombok.Setter;
 import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
@@ -19,6 +18,7 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.Random;
 
 @Getter
@@ -93,33 +93,23 @@ public class ProgrammerPanel extends JPanel
         headerPanel.add(syncShownButton, c);
         syncShownButton.addActionListener(e ->
         {
+            ArrayList<Character> characters = plugin.getCharacters();
             Component component = tabbedPane.getSelectedComponent();
             if (component == sideScrollPane)
             {
-                for (ObjectPanel objectPanel : plugin.getCreatorsPanel().getSideObjectPanels())
+                for (int i = 0; i < characters.size(); i++)
                 {
-                    for (Character character : plugin.getCharacters())
-                    {
-                        if (character.getObjectPanel() == objectPanel)
-                        {
-                            plugin.setAnimation(character, (int) character.getAnimationSpinner().getValue());
-                        }
-                    }
+                    Character character = characters.get(i);
+                    plugin.setAnimation(character, (int) character.getAnimationSpinner().getValue());
                 }
             }
 
             if (component == managerScrollPane)
             {
-                ObjectPanel[] objectPanels = plugin.getCreatorsPanel().getToolBox().getManagerPanel().getShownObjectPanels();
-                for (ObjectPanel objectPanel : objectPanels)
+                Character[] shownCharacters = plugin.getCreatorsPanel().getToolBox().getManagerPanel().getShownCharacters();
+                for (Character character : shownCharacters)
                 {
-                    for (Character character : plugin.getCharacters())
-                    {
-                        if (character.getObjectPanel() == objectPanel)
-                        {
-                            plugin.setAnimation(character, (int) character.getAnimationSpinner().getValue());
-                        }
-                    }
+                    plugin.setAnimation(character, (int) character.getAnimationSpinner().getValue());
                 }
             }
         });

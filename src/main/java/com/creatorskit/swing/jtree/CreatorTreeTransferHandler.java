@@ -1,6 +1,6 @@
 package com.creatorskit.swing.jtree;
 
-import com.creatorskit.swing.ObjectPanel;
+import com.creatorskit.Character;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.swing.*;
@@ -71,7 +71,7 @@ class CreatorTreeTransferHandler extends TransferHandler
         int childIndex = dl.getChildIndex();
         TreePath dest = dl.getPath();
         DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) dest.getLastPathComponent();
-        if (childIndex == -1 && parentNode.getUserObject() instanceof ObjectPanel)
+        if (childIndex == -1 && parentNode.getUserObject() instanceof Character)
             return false;
 
         return true;

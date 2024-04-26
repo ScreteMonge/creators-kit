@@ -2,7 +2,7 @@ package com.creatorskit.swing.jtree;
 
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
-import com.creatorskit.swing.ObjectPanel;
+import com.creatorskit.swing.Folder;
 import com.creatorskit.swing.StringHandler;
 
 import javax.inject.Inject;
@@ -27,30 +27,24 @@ public class CreatorTreeModel extends DefaultTreeModel
             return;
 
         //Check if node being modified is a Folder
-        if (node.getUserObject() instanceof String)
+        if (node.getUserObject() instanceof Folder)
         {
-            String folderName = StringHandler.cleanString((String) newValue);
-            node.setUserObject(folderName);
-            plugin.getCreatorsPanel().getToolBox().getManagerPanel().getObjectLabel().setText("Current Folder: " + folderName);
+            Folder folder = (Folder) node.getUserObject();
+            String name = StringHandler.cleanString((String) newValue);
+            folder.setName(name);
+            node.setUserObject(folder);
+            plugin.getCreatorsPanel().getToolBox().getManagerPanel().getObjectLabel().setText("Current Folder: " + name);
         }
 
         //Check if node being modified is an ObjectPanel
-        if (node.getUserObject() instanceof ObjectPanel)
+        if (node.getUserObject() instanceof Character)
         {
-            ObjectPanel objectPanel = (ObjectPanel) node.getUserObject();
+            Character character = (Character) node.getUserObject();
             String name = StringHandler.cleanString((String) newValue);
-            objectPanel.setName(name);
-            node.setUserObject(objectPanel);
-            for (Character character : plugin.getCharacters())
-            {
-                if (character.getObjectPanel() == objectPanel)
-                {
-                    character.setName(name);
-                    character.getNameField().setText(name);
-                    character.getProgram().getNameLabel().setText(name);
-                    return;
-                }
-            }
+            character.setName(name);
+            character.getNameField().setText(name);
+            character.getProgram().getNameLabel().setText(name);
+            node.setUserObject(character);
         }
     }
 }

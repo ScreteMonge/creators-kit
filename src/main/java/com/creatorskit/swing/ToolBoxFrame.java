@@ -2,6 +2,8 @@ package com.creatorskit.swing;
 
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.swing.jtree.FolderTree;
+import com.creatorskit.swing.timesheet.TimeSheetPanel;
+import com.creatorskit.swing.timesheet.TimeTree;
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
@@ -12,6 +14,7 @@ import net.runelite.client.util.ImageUtil;
 
 import javax.inject.Inject;
 import javax.swing.*;
+import javax.swing.tree.DefaultMutableTreeNode;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
@@ -29,10 +32,11 @@ public class ToolBoxFrame extends JFrame
     private final ModelAnvil modelAnvil;
     private final ProgrammerPanel programPanel;
     private final TransmogPanel transmogPanel;
+    private final TimeSheetPanel timeSheetPanel;
     private final BufferedImage ICON = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
 
     @Inject
-    public ToolBoxFrame(Client client, ClientThread clientThread, CreatorsPlugin plugin, ConfigManager configManager, ManagerPanel managerPanel, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, ProgrammerPanel programPanel, TransmogPanel transmogPanel)
+    public ToolBoxFrame(Client client, ClientThread clientThread, CreatorsPlugin plugin, ConfigManager configManager, ManagerPanel managerPanel, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, ProgrammerPanel programPanel, TransmogPanel transmogPanel, TimeSheetPanel timeSheetPanel, TimeTree timeTree, FolderTree folderTree)
     {
         this.client = client;
         this.clientThread = clientThread;
@@ -43,6 +47,7 @@ public class ToolBoxFrame extends JFrame
         this.modelAnvil = modelAnvil;
         this.programPanel = programPanel;
         this.transmogPanel = transmogPanel;
+        this.timeSheetPanel = timeSheetPanel;
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new BorderLayout());
@@ -82,6 +87,7 @@ public class ToolBoxFrame extends JFrame
         tabbedPane.addTab("Model Anvil", modelAnvil);
         tabbedPane.addTab("Programmer", programPanel);
         tabbedPane.addTab("Transmogger", transmogPanel);
+        tabbedPane.addTab("Timesheet", timeSheetPanel);
         tabbedPane.setToolTipTextAt(0, "Manage and organize all your Objects");
         tabbedPane.setToolTipTextAt(1, "Organize Custom Models you've loaded from the cache or Forged");
         tabbedPane.setToolTipTextAt(2, "Create Custom Models by modifying and merging different models together");
@@ -95,7 +101,6 @@ public class ToolBoxFrame extends JFrame
                 JTabbedPane jTabbedPane = (JTabbedPane) e.getSource();
                 if (jTabbedPane.getSelectedComponent() == managerPanel)
                 {
-                    FolderTree folderTree = managerPanel.getFolderTree();
                     GridBagConstraints c = managerPanel.getC();
                     c.fill = GridBagConstraints.BOTH;
                     c.gridx = 0;
@@ -110,7 +115,6 @@ public class ToolBoxFrame extends JFrame
 
                 if (jTabbedPane.getSelectedComponent() == programPanel)
                 {
-                    FolderTree folderTree = managerPanel.getFolderTree();
                     GridBagConstraints c = programPanel.getC();
                     c.fill = GridBagConstraints.BOTH;
                     c.gridx = 0;

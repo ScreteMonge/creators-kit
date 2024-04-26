@@ -952,7 +952,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 										.setOption(ColorUtil.prependColorTag("Select", Color.ORANGE))
 										.setTarget(ColorUtil.colorTag(Color.GREEN) + character.getName())
 										.setType(MenuAction.RUNELITE)
-										.onClick(e -> creatorsPanel.setSelectedCharacter(character, character.getObjectPanel()));
+										.onClick(e -> creatorsPanel.setSelectedCharacter(character));
 							}
 						}
 					}
@@ -1316,15 +1316,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			setModel(character, character.isCustomMode(), (int) character.getModelSpinner().getValue());
 			setAnimation(character, (int) character.getAnimationSpinner().getValue());
-
-			if (setHoveredTile)
-			{
-				setLocation(character, !character.isLocationSet(), false, true, false);
-			}
-			else
-			{
-				setLocation(character, !character.isLocationSet(), false, false, false);
-			}
+			setLocation(character, !character.isLocationSet(), false, setHoveredTile, false);
 
 			runeLiteObject.setActive(active);
 			character.setActive(active);
@@ -1340,27 +1332,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				runeLiteObject.setActive(false);
 				characters.remove(character);
 			}
-		});
-	}
-
-	public void removeCharacter(ObjectPanel objectPanel)
-	{
-		for (Character character : characters)
-		{
-			if (character.getObjectPanel() == objectPanel)
-			{
-				removeCharacter(character);
-				return;
-			}
-		}
-	}
-
-	public void removeCharacter(Character character)
-	{
-		clientThread.invokeLater(() -> {
-				RuneLiteObject runeLiteObject = character.getRuneLiteObject();
-				runeLiteObject.setActive(false);
-				characters.remove(character);
 		});
 	}
 

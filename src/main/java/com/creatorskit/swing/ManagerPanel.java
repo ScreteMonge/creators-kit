@@ -1,20 +1,20 @@
 package com.creatorskit.swing;
 
+import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.swing.jtree.FolderTree;
+import com.creatorskit.swing.timesheet.TimeTree;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
-import org.apache.commons.lang3.ArrayUtils;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.*;
 import javax.swing.border.LineBorder;
-import javax.swing.tree.DefaultMutableTreeNode;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
@@ -27,7 +27,7 @@ public class ManagerPanel extends JPanel
     private final Client client;
     private final GridBagConstraints c = new GridBagConstraints();
     private final JPanel objectHolder = new JPanel();
-    private final ArrayList<ObjectPanel> managerObjectPanels = new ArrayList<>();
+    private final ArrayList<Character> managerCharacters = new ArrayList<>();
     private final FolderTree folderTree;
     private final BufferedImage SWITCH_ALL = ImageUtil.loadImageResource(getClass(), "/Switch All.png");
     private final JLabel objectLabel = new JLabel("Current Folder: Master Folder");
@@ -115,8 +115,8 @@ public class ManagerPanel extends JPanel
         addObjectButton.addActionListener(e ->
         {
             CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
-            ObjectPanel panel = creatorsPanel.createPanel(objectHolder);
-            creatorsPanel.addPanel(managerObjectPanels, objectHolder, panel);
+            Character character = creatorsPanel.createCharacter(objectHolder);
+            creatorsPanel.addPanel(managerCharacters, objectHolder, character);
         });
         objectHeader.add(addObjectButton, c);
 
@@ -128,7 +128,7 @@ public class ManagerPanel extends JPanel
         switchPanelsButton.addActionListener(e ->
         {
             CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
-            creatorsPanel.switchPanels(objectHolder, getShownObjectPanels());
+            creatorsPanel.switchPanels(objectHolder, getShownCharacters());
         });
         objectHeader.add(switchPanelsButton, c);
 
@@ -140,18 +140,8 @@ public class ManagerPanel extends JPanel
         revalidate();
     }
 
-    public ObjectPanel[] getShownObjectPanels()
+    public Character[] getShownCharacters()
     {
-        ObjectPanel[] objectPanels = new ObjectPanel[0];
-        for (Component component : objectHolder.getComponents())
-        {
-            if (component instanceof ObjectPanel)
-            {
-                ObjectPanel objectPanel = (ObjectPanel) component;
-                objectPanels = ArrayUtils.add(objectPanels, objectPanel);
-            }
-        }
-
-        return objectPanels;
+        return folderTree.getShownCharacters();
     }
 }
