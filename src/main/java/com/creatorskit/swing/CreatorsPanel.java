@@ -33,6 +33,7 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.*;
 import javax.swing.border.LineBorder;
+import javax.swing.filechooser.FileFilter;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreeNode;
 import java.awt.*;
@@ -1563,6 +1564,28 @@ public class CreatorsPanel extends PluginPanel
 
         JFileChooser fileChooser = new JFileChooser(outputDir);
         fileChooser.setDialogTitle("Choose a setup to load");
+        fileChooser.setFileFilter(new FileFilter()
+        {
+            @Override
+            public String getDescription()
+            {
+                return "Json File (*.json)";
+            }
+
+            @Override
+            public boolean accept(File f)
+            {
+                if (f.isDirectory())
+                {
+                    return true;
+                }
+                else
+                {
+                    String filename = f.getName().toLowerCase();
+                    return filename.endsWith(".json");
+                }
+            }
+        });
 
         int option = fileChooser.showOpenDialog(this);
         if (option == JFileChooser.APPROVE_OPTION)

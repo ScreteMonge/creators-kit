@@ -19,6 +19,7 @@ import javax.inject.Inject;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
+import javax.swing.filechooser.FileFilter;
 import java.awt.*;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
@@ -89,21 +90,21 @@ public class ModelOrganizer extends JPanel
 
         c.fill = GridBagConstraints.BOTH;
         c.insets = new Insets(4, 4, 4, 4);
-        c.weightx = 1;
         c.weighty = 0;
 
         c.gridx = 0;
         c.gridy = 0;
         c.gridheight = 4;
+        c.weightx = 10;
         JLabel organizerLabel = new JLabel("Model Organizer");
         organizerLabel.setHorizontalAlignment(SwingConstants.CENTER);
         organizerLabel.setFont(FontManager.getRunescapeBoldFont());
         headerPanel.add(organizerLabel, c);
 
-        c.weightx = 0.1;
         c.gridx = 2;
         c.gridy = 0;
         c.gridheight = 4;
+        c.weightx = 1;
         JPanel cacheSearcherPanel = new JPanel();
         cacheSearcherPanel.setLayout(new GridLayout(0, 1, 4, 4));
         cacheSearcherPanel.setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 1));
@@ -144,6 +145,8 @@ public class ModelOrganizer extends JPanel
         c.gridx = 3;
         c.gridy = 0;
         c.gridheight = 1;
+        c.gridwidth = 2;
+        c.weightx = 0.5;
         JButton loadCustomButton = new JButton("Load Custom Model");
         loadCustomButton.setToolTipText("Loads a previously forged and saved Custom Model");
         headerPanel.add(loadCustomButton, c);
@@ -152,14 +155,28 @@ public class ModelOrganizer extends JPanel
         c.gridx = 3;
         c.gridy = 1;
         c.gridheight = 1;
+        c.gridwidth = 1;
+        c.weightx = 0.5;
         JButton loadBlenderButton = new JButton("Load Blender Model");
         loadBlenderButton.setToolTipText("Loads a model exported from Blender");
         headerPanel.add(loadBlenderButton, c);
         loadBlenderButton.addActionListener(e -> modelImporter.openLoadDialog());
 
+        c.gridx = 4;
+        c.gridy = 1;
+        c.gridheight = 1;
+        c.gridwidth = 1;
+        c.weightx = 0;
+        JButton quickLoadBlenderButton = new JButton("Quick");
+        quickLoadBlenderButton.setToolTipText("Loads the latest model exported from Blender in the " + RuneLite.RUNELITE_DIR + "\\creatorskit\\blender-models folder");
+        headerPanel.add(quickLoadBlenderButton, c);
+        quickLoadBlenderButton.addActionListener(e -> modelImporter.openLatestFile());
+
         c.gridx = 3;
         c.gridy = 2;
         c.gridheight = 2;
+        c.gridwidth = 2;
+        c.weightx = 0.5;
         JButton clearButton = new JButton("Clear Unused Models");
         clearButton.setToolTipText("Clears all unused models from Custom Model dropdown menus");
         headerPanel.add(clearButton, c);
@@ -287,29 +304,52 @@ public class ModelOrganizer extends JPanel
 
         JFileChooser fileChooser = new JFileChooser(MODELS_DIR);
         fileChooser.setDialogTitle("Choose a model to load");
+        fileChooser.setMultiSelectionEnabled(true);
+        fileChooser.setFileFilter(new FileFilter()
+        {
+            @Override
+            public String getDescription()
+            {
+                return "Json File (*.json)";
+            }
+
+            @Override
+            public boolean accept(File f)
+            {
+                if (f.isDirectory())
+                {
+                    return true;
+                }
+                else
+                {
+                    String filename = f.getName().toLowerCase();
+                    return filename.endsWith(".json");
+                }
+            }
+        });
 
         int option = fileChooser.showOpenDialog(fileChooser);
         if (option == JFileChooser.APPROVE_OPTION)
         {
-            File selectedFile = fileChooser.getSelectedFile();
-            String name = selectedFile.getName();
-            if (name.endsWith(".json"))
-                name = replaceLast(name, ".json");
-
-            if (name.endsWith(".txt"))
-                name = replaceLast(name, ".txt");
-
-            if (!selectedFile.exists())
+            File[] files = fileChooser.getSelectedFiles();
+            for (File selectedFile : files)
             {
-                selectedFile = new File(selectedFile.getPath() + ".json");
+                String name = selectedFile.getName();
+                if (name.endsWith(".json"))
+                    name = replaceLast(name, ".json");
+
                 if (!selectedFile.exists())
                 {
-                    plugin.sendChatMessage("Could not find the requested Custom Model file.");
-                    return;
+                    selectedFile = new File(selectedFile.getPath() + ".json");
+                    if (!selectedFile.exists())
+                    {
+                        plugin.sendChatMessage("Could not find the requested Custom Model file.");
+                        continue;
+                    }
                 }
-            }
 
-            plugin.loadCustomModel(selectedFile, false, name);
+                plugin.loadCustomModel(selectedFile, false, name);
+            }
         }
     }
 

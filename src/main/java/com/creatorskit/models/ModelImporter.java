@@ -8,6 +8,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import javax.inject.Inject;
 import javax.swing.*;
+import javax.swing.filechooser.FileFilter;
 import java.awt.*;
 import java.io.File;
 import java.io.Reader;
@@ -43,8 +44,8 @@ public class ModelImporter
 
         JComboBox<LightingStyle> comboBox = new JComboBox<>();
         comboBox.setToolTipText("Sets the lighting style");
-        comboBox.addItem(LightingStyle.DEFAULT);
         comboBox.addItem(LightingStyle.ACTOR);
+        comboBox.addItem(LightingStyle.DEFAULT);
         comboBox.addItem(LightingStyle.NONE);
         comboBox.setFocusable(false);
 
@@ -53,61 +54,125 @@ public class ModelImporter
         accessory.add(comboBox);
 
         fileChooser.setAccessory(accessory);
+        fileChooser.setMultiSelectionEnabled(true);
+        fileChooser.setFileFilter(new FileFilter()
+        {
+            @Override
+            public String getDescription()
+            {
+                return "Json File (*.json)";
+            }
+
+            @Override
+            public boolean accept(File f)
+            {
+                if (f.isDirectory())
+                {
+                    return true;
+                }
+                else
+                {
+                    String filename = f.getName().toLowerCase();
+                    return filename.endsWith(".json");
+                }
+            }
+        });
 
         int option = fileChooser.showOpenDialog(fileChooser);
         if (option == JFileChooser.APPROVE_OPTION)
         {
-            File selectedFile = fileChooser.getSelectedFile();
-            if (!selectedFile.exists())
+            File[] files = fileChooser.getSelectedFiles();
+            for (File selectedFile : files)
             {
-                selectedFile = new File(selectedFile.getPath() + ".json");
-                if (!selectedFile.exists())
+                loadBlenderModel(selectedFile, (LightingStyle) comboBox.getSelectedItem());
+            }
+        }
+    }
+
+    public void openLatestFile()
+    {
+        File directory = new File(BLENDER_DIR.getPath());
+        File[] files = directory.listFiles(File::isFile);
+
+        long lastModifiedTime = Long.MIN_VALUE;
+        File chosenFile = null;
+        if (files != null)
+        {
+            for (File file : files)
+            {
+                if (!file.getName().endsWith(".json"))
                 {
-                    selectedFile = new File(selectedFile.getPath().replaceAll("/", "\\\\"));
-                    if (!selectedFile.exists())
-                    {
-                        selectedFile = new File(selectedFile.getPath().replaceAll("/", "\\\\") + ".json");
-                    }
+                    continue;
+                }
+
+                if (file.lastModified() > lastModifiedTime)
+                {
+                    chosenFile = file;
+                    lastModifiedTime = file.lastModified();
                 }
             }
+        }
 
-            if (!selectedFile.exists())
+        if (chosenFile == null)
+        {
+            plugin.sendChatMessage("Could not find the latest .json file in the " + RuneLite.RUNELITE_DIR + "\\creatorskit\\blender-models folder.");
+            return;
+        }
+
+        loadBlenderModel(chosenFile, LightingStyle.ACTOR);
+    }
+
+    private void loadBlenderModel(File file, LightingStyle lightingStyle)
+    {
+        if (!file.exists())
+        {
+            file = new File(file.getPath() + ".json");
+            if (!file.exists())
             {
-                plugin.sendChatMessage("Failed to find file.");
+                file = new File(file.getPath().replaceAll("/", "\\\\"));
+                if (!file.exists())
+                {
+                    file = new File(file.getPath().replaceAll("/", "\\\\") + ".json");
+                }
+            }
+        }
+
+        if (!file.exists())
+        {
+            plugin.sendChatMessage("Failed to find file.");
+            return;
+        }
+
+        String name = file.getName();
+        if (name.endsWith(".json"))
+            name = replaceLast(name);
+
+        String finalName = name;
+        File finalSelectedFile = file;
+        clientThread.invokeLater(() ->
+        {
+            BlenderModel blenderModel;
+
+            try
+            {
+                Reader reader = Files.newBufferedReader(finalSelectedFile.toPath());
+                blenderModel = plugin.getGson().fromJson(reader, BlenderModel.class);
+                reader.close();
+            }
+            catch (Exception e)
+            {
+                plugin.sendChatMessage("The file found was unreadable as a BlenderModel.");
                 return;
             }
 
-            String name = selectedFile.getName();
-            if (name.endsWith(".json"))
-                name = replaceLast(name);
-
-            String finalName = name;
-            File finalSelectedFile = selectedFile;
-            clientThread.invokeLater(() ->
+            if (blenderModel == null)
             {
-                BlenderModel blenderModel = null;
+                plugin.sendChatMessage("File was found but is incompatible or empty.");
+                return;
+            }
 
-                try
-                {
-                    Reader reader = Files.newBufferedReader(finalSelectedFile.toPath());
-                    blenderModel = plugin.getGson().fromJson(reader, BlenderModel.class);
-                    reader.close();
-                }
-                catch (Exception e)
-                {
-                    plugin.sendChatMessage("Failed to find file.");
-                    return;
-                }
-
-                if (blenderModel == null)
-                {
-                    plugin.sendChatMessage("File was found but is incompatible or empty.");
-                    return;
-                }
-
-                addModel(blenderModel, (LightingStyle) comboBox.getSelectedItem(), finalName);
-            });
-        }
+            addModel(blenderModel, lightingStyle, finalName);
+        });
     }
 
     private String replaceLast(String string)
