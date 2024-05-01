@@ -1,9 +1,9 @@
-package com.creatorskit.swing;
+package com.creatorskit.swing.manager;
 
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
-import com.creatorskit.swing.jtree.FolderTree;
-import com.creatorskit.swing.timesheet.TimeTree;
+import com.creatorskit.swing.CreatorsPanel;
+import com.creatorskit.swing.manager.ManagerTree;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
@@ -27,17 +27,18 @@ public class ManagerPanel extends JPanel
     private final Client client;
     private final GridBagConstraints c = new GridBagConstraints();
     private final JPanel objectHolder = new JPanel();
+    private final JPanel scrollPanel = new JPanel();
     private final ArrayList<Character> managerCharacters = new ArrayList<>();
-    private final FolderTree folderTree;
+    private final ManagerTree managerTree;
     private final BufferedImage SWITCH_ALL = ImageUtil.loadImageResource(getClass(), "/Switch All.png");
     private final JLabel objectLabel = new JLabel("Current Folder: Master Folder");
 
     @Inject
-    public ManagerPanel(@Nullable Client client, CreatorsPlugin plugin)
+    public ManagerPanel(@Nullable Client client, CreatorsPlugin plugin, ManagerTree managerTree)
     {
         this.plugin = plugin;
         this.client = client;
-        this.folderTree = new FolderTree(this, plugin);
+        this.managerTree = managerTree;
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new GridBagLayout());
@@ -49,7 +50,6 @@ public class ManagerPanel extends JPanel
         c.gridy = 0;
         c.weightx = 1;
         c.weighty = 0;
-        c.gridwidth = 2;
         JLabel titleLabel = new JLabel("Manager");
         titleLabel.setFont(FontManager.getRunescapeBoldFont());
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -72,42 +72,30 @@ public class ManagerPanel extends JPanel
 
         c.gridx = 0;
         c.gridy = 2;
-        c.weightx = 0;
+        c.weightx = 1;
         c.weighty = 1;
-        c.gridwidth = 1;
-        c.gridheight = 2;
-        add(folderTree, c);
+        BorderLayout borderLayout = new BorderLayout();
+        borderLayout.setHgap(4);
+        scrollPanel.setLayout(borderLayout);
+        add(scrollPanel, c);
 
-        c.gridx = 1;
-        c.gridy = 2;
-        c.weightx = 0.8;
-        c.weighty = 1;
-        c.gridwidth = 1;
-        c.gridheight = 2;
+        scrollPanel.add(managerTree, BorderLayout.LINE_START);
+
         JScrollPane objectScrollPane = new JScrollPane();
         objectScrollPane.setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 1));
-        add(objectScrollPane, c);
+        scrollPanel.add(objectScrollPane, BorderLayout.CENTER);
 
         JPanel objectHeader = new JPanel();
         objectHeader.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        objectHeader.setLayout(new GridBagLayout());
+        objectHeader.setLayout(new BorderLayout());
         objectScrollPane.setColumnHeaderView(objectHeader);
 
-        c.anchor = GridBagConstraints.LINE_START;
-        c.gridx = 0;
-        c.gridy = 0;
-        c.weightx = 1;
-        c.weighty = 0;
-        c.gridwidth = 1;
-        c.gridheight = 1;
         objectLabel.setFont(FontManager.getRunescapeBoldFont());
-        objectHeader.add(objectLabel, c);
+        objectHeader.add(objectLabel, BorderLayout.LINE_START);
 
-        c.anchor = GridBagConstraints.LINE_END;
-        c.gridx = 1;
-        c.gridy = 0;
-        c.weightx = 0;
-        c.weighty = 0;
+        JPanel rightButtons = new JPanel();
+        objectHeader.add(rightButtons, BorderLayout.LINE_END);
+
         JButton addObjectButton = new JButton("Add Object");
         addObjectButton.setToolTipText("Add an new Object to the palette");
         addObjectButton.setFocusable(false);
@@ -118,23 +106,44 @@ public class ManagerPanel extends JPanel
             Character character = creatorsPanel.createCharacter(objectHolder);
             creatorsPanel.addPanel(managerCharacters, objectHolder, character);
         });
-        objectHeader.add(addObjectButton, c);
+        rightButtons.add(addObjectButton);
 
-        c.gridx = 2;
-        c.gridy = 0;
         JButton switchPanelsButton = new JButton(new ImageIcon(SWITCH_ALL));
         switchPanelsButton.setToolTipText("Send all shown Objects to the Side Panel");
         switchPanelsButton.setFocusable(false);
+        switchPanelsButton.setPreferredSize(new Dimension(40, 30));
         switchPanelsButton.addActionListener(e ->
         {
             CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
             creatorsPanel.switchPanels(objectHolder, getShownCharacters());
         });
-        objectHeader.add(switchPanelsButton, c);
+        rightButtons.add(switchPanelsButton);
 
+        JPanel viewport = new JPanel();
+        viewport.setLayout(new GridBagLayout());
+        viewport.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+
+        c.gridx = 0;
+        c.gridy = 0;
+        c.weightx = 0;
+        c.weighty = 0;
         objectHolder.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        objectHolder.setLayout(new GridBagLayout());
-        objectScrollPane.setViewportView(objectHolder);
+        viewport.add(objectHolder, c);
+
+        c.gridx = 1;
+        c.gridy = 0;
+        c.weightx = 1;
+        c.weighty = 0;
+        viewport.add(new JLabel(""), c);
+
+        c.gridx = 0;
+        c.gridy = 1;
+        c.weightx = 0;
+        c.weighty = 1;
+        viewport.add(new JLabel(""), c);
+
+        objectHolder.setLayout(new GridLayout(0, 5, 4, 4));
+        objectScrollPane.setViewportView(viewport);
 
         repaint();
         revalidate();
@@ -142,6 +151,6 @@ public class ManagerPanel extends JPanel
 
     public Character[] getShownCharacters()
     {
-        return folderTree.getShownCharacters();
+        return managerTree.getShownCharacters();
     }
 }

@@ -1,6 +1,9 @@
-package com.creatorskit.swing.jtree;
+package com.creatorskit.swing.manager;
 
 import com.creatorskit.Character;
+import com.creatorskit.swing.Folder;
+import com.creatorskit.swing.FolderType;
+import com.creatorskit.swing.timesheet.TimeTree;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.swing.*;
@@ -14,14 +17,16 @@ import java.awt.datatransfer.UnsupportedFlavorException;
 import java.util.*;
 
 @Slf4j
-class CreatorTreeTransferHandler extends TransferHandler
+class ManagerTreeTransferHandler extends TransferHandler
 {
+    private final TimeTree timeTree;
     private DataFlavor nodesFlavor;
     private DataFlavor[] flavors = new DataFlavor[1];
     private DefaultMutableTreeNode[] nodesToRemove;
 
-    public CreatorTreeTransferHandler()
+    public ManagerTreeTransferHandler(TimeTree timeTree)
     {
+        this.timeTree = timeTree;
         try
         {
             String mimeType = DataFlavor.javaJVMLocalObjectMimeType +
@@ -74,6 +79,15 @@ class CreatorTreeTransferHandler extends TransferHandler
         if (childIndex == -1 && parentNode.getUserObject() instanceof Character)
             return false;
 
+        if (parentNode.getUserObject() instanceof Folder)
+        {
+            Folder folder = (Folder) parentNode.getUserObject();
+            if (folder.getFolderType() == FolderType.MASTER)
+            {
+                return false;
+            }
+        }
+
         return true;
     }
 
@@ -117,8 +131,24 @@ class CreatorTreeTransferHandler extends TransferHandler
                 doneItems.add(next);
             }
             DefaultMutableTreeNode[] nodes = copies.toArray(new DefaultMutableTreeNode[copies.size()]);
+
+            for (DefaultMutableTreeNode n : nodes)
+            {
+                if (n.getUserObject() instanceof Folder)
+                {
+                    Folder folder = (Folder) n.getUserObject();
+                    folder.setLinkedManagerNode(n);
+                }
+                
+                if (n.getUserObject() instanceof Character)
+                {
+                    Character character = (Character) n.getUserObject();
+                    character.setLinkedManagerNode(n);
+                }
+            }
+
             nodesToRemove = toRemove.toArray(new DefaultMutableTreeNode[toRemove.size()]);
-            return new CreatorTreeTransferHandler.NodesTransferable(nodes);
+            return new ManagerTreeTransferHandler.NodesTransferable(nodes);
         }
         return null;
     }
@@ -180,6 +210,22 @@ class CreatorTreeTransferHandler extends TransferHandler
         TreePath dest = dl.getPath();
         DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) (dest.getLastPathComponent());
 
+        // Prevent Protected folders from being transferred
+        for (DefaultMutableTreeNode node : nodes)
+        {
+            if (node.getUserObject() instanceof Folder)
+            {
+                Folder folder = (Folder) node.getUserObject();
+                FolderType type = folder.getFolderType();
+                if (type == FolderType.MANAGER
+                        || type == FolderType.MASTER
+                        || type == FolderType.SIDE_PANEL)
+                {
+                    return false;
+                }
+            }
+        }
+
         JTree tree = (JTree) support.getComponent();
         DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
         // Configure for drop mode.
@@ -192,8 +238,27 @@ class CreatorTreeTransferHandler extends TransferHandler
         // Add data to model.
         for(int i = 0; i < nodes.length; i++)
         {
-            model.insertNodeInto(nodes[i], parentNode, index++);
+            DefaultMutableTreeNode node = nodes[i];
+            model.insertNodeInto(node, parentNode, index++);
+
+            Folder parentFolder = (Folder) parentNode.getUserObject();
+
+            if (node.getUserObject() instanceof Folder)
+            {
+                Folder folder = (Folder) node.getUserObject();
+                folder.setParentManagerNode(parentNode);
+                folder.setParentTimeSheetNode(parentFolder.getLinkedTimeSheetNode());
+            }
+
+            if (node.getUserObject() instanceof Character)
+            {
+                Character character = (Character) node.getUserObject();
+                character.setParentManagerNode(parentNode);
+                character.setParentTimeSheetNode(parentFolder.getLinkedTimeSheetNode());
+            }
         }
+
+        timeTree.moveNodes(nodes, parentNode);
 
         tree.expandPath(dest);
         return true;

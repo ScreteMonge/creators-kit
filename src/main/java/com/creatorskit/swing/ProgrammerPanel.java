@@ -30,6 +30,7 @@ public class ProgrammerPanel extends JPanel
     private final GridBagConstraints c = new GridBagConstraints();
     private final JPanel managerProgramHolder = new JPanel();
     private final JPanel sideProgramHolder = new JPanel();
+    private final JPanel scrollPanel = new JPanel();
     private JPanel[] sidePrograms = new JPanel[0];
     private final Random random = new Random();
 
@@ -79,6 +80,10 @@ public class ProgrammerPanel extends JPanel
             }
         });
 
+        BorderLayout borderLayout = new BorderLayout();
+        borderLayout.setHgap(4);
+        scrollPanel.setLayout(borderLayout);
+
         JTabbedPane tabbedPane = new JTabbedPane();
         JScrollPane managerScrollPane = new JScrollPane();
         JScrollPane sideScrollPane = new JScrollPane();
@@ -117,13 +122,14 @@ public class ProgrammerPanel extends JPanel
         c.fill = GridBagConstraints.BOTH;
         c.gridx = 1;
         c.gridy = 1;
-        c.weightx = 0.8;
+        c.weightx = 1;
         c.weighty = 1;
         c.gridwidth = 2;
         tabbedPane.addTab("Side Panel Objects", sideScrollPane);
         tabbedPane.addTab("Manager Objects", managerScrollPane);
         tabbedPane.setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 1));
-        add(tabbedPane, c);
+        scrollPanel.add(tabbedPane, BorderLayout.CENTER);
+        add(scrollPanel, c);
 
         managerProgramHolder.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         managerProgramHolder.setBorder(new EmptyBorder(4, 4, 4, 4));

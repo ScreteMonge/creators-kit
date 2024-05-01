@@ -21,13 +21,13 @@ import java.awt.image.BufferedImage;
 public class TimeTree extends JScrollPane
 {
     private TimeSheetPanel timeSheetPanel;
-    private TimeSheet timeSheet;
-    private final DefaultMutableTreeNode rootNode;
+    private final TimeSheet timeSheet;
     private final JTree tree;
     private final DefaultTreeModel treeModel;
     private final JPanel viewPort = new JPanel();
-    private final DefaultMutableTreeNode sidePanelNode = new DefaultMutableTreeNode();
-    private final DefaultMutableTreeNode managerNode = new DefaultMutableTreeNode();
+    private final DefaultMutableTreeNode rootNode;
+    private final DefaultMutableTreeNode sidePanelNode;
+    private final DefaultMutableTreeNode managerNode;
 
     private final BufferedImage FOLDER_OPEN = ImageUtil.loadImageResource(getClass(), "/Folder_Open.png");
     private final BufferedImage FOLDER_CLOSED = ImageUtil.loadImageResource(getClass(), "/Folder_Closed.png");
@@ -36,18 +36,15 @@ public class TimeTree extends JScrollPane
     private final int BLOCK_HEIGHT = 24;
 
     @Inject
-    public TimeTree(TimeSheetPanel timeSheetPanel, TimeSheet timeSheet)
+    public TimeTree(TimeSheet timeSheet, DefaultMutableTreeNode rootNode, DefaultMutableTreeNode sidePanelNode, DefaultMutableTreeNode managerNode)
     {
-        this.timeSheetPanel = timeSheetPanel;
         this.timeSheet = timeSheet;
+        this.rootNode = rootNode;
+        this.sidePanelNode = sidePanelNode;
+        this.managerNode = managerNode;
 
-        setPreferredSize(new Dimension(170, 0));
         viewPort.setLayout(new BorderLayout());
         viewPort.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-
-        rootNode = new DefaultMutableTreeNode("Folders");
-
-
 
         treeModel = new TimeTreeModel(rootNode);
         tree = new JTree(treeModel);
@@ -100,14 +97,44 @@ public class TimeTree extends JScrollPane
         renderer.setLeafIcon(new ImageIcon(OBJECT));
         tree.setCellRenderer(renderer);
 
-        treeModel.insertNodeInto(this.sidePanelNode, rootNode, rootNode.getChildCount());
-        treeModel.insertNodeInto(managerNode, rootNode, rootNode.getChildCount());
+        rootNode.add(sidePanelNode);
+        rootNode.add(managerNode);
 
         viewPort.add(tree, BorderLayout.CENTER);
         setViewportView(viewPort);
         JScrollBar scrollBar = getVerticalScrollBar();
         scrollBar.addAdjustmentListener(e -> onPanelScrolled(scrollBar.getValue()));
 
+    }
+
+    public void moveNodes(DefaultMutableTreeNode[] managerNodes, DefaultMutableTreeNode newParent)
+    {
+        for (DefaultMutableTreeNode managerNode : managerNodes)
+        {
+            DefaultMutableTreeNode timeSheetParent = null;
+            DefaultMutableTreeNode linkedTimeSheetNode = null;
+            if (managerNode.getUserObject() instanceof Folder)
+            {
+                Folder folder = (Folder) managerNode.getUserObject();
+                linkedTimeSheetNode = folder.getLinkedTimeSheetNode();
+                timeSheetParent = folder.getParentTimeSheetNode();
+            }
+
+            if (managerNode.getUserObject() instanceof Character)
+            {
+                Character character = (Character) managerNode.getUserObject();
+                linkedTimeSheetNode = character.getLinkedTimeSheetNode();
+                timeSheetParent = character.getParentTimeSheetNode();
+            }
+
+            if (linkedTimeSheetNode == null || timeSheetParent == null)
+            {
+                continue;
+            }
+
+            treeModel.removeNodeFromParent(linkedTimeSheetNode);
+            treeModel.insertNodeInto(linkedTimeSheetNode, timeSheetParent, timeSheetParent.getChildCount());
+        }
     }
 
     public void addFolderNode(DefaultMutableTreeNode parent, Folder folder)
@@ -118,7 +145,7 @@ public class TimeTree extends JScrollPane
 
     public void addCharacterNode(DefaultMutableTreeNode parent, Character character)
     {
-        DefaultMutableTreeNode node = character.getTimeTreeNode();
+        DefaultMutableTreeNode node = character.getLinkedTimeSheetNode();
         parent.add(node);
         addKeyFrameNodes(node, character);
         updateTreeSelectionIndex();

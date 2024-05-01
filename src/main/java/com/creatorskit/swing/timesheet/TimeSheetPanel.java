@@ -17,15 +17,17 @@ public class TimeSheetPanel extends JPanel
     private final CreatorsPlugin plugin;
     private final GridBagConstraints c = new GridBagConstraints();
     @Getter
-    private TimeSheet timeSheet;
+    private final TimeSheet timeSheet;
     @Getter
-    private TimeTree timeTree;
+    private final TimeTree timeTree;
 
     @Inject
-    public TimeSheetPanel(@Nullable Client client, CreatorsPlugin plugin, ClientThread clientThread)
+    public TimeSheetPanel(@Nullable Client client, CreatorsPlugin plugin, ClientThread clientThread, TimeSheet timeSheet, TimeTree timeTree)
     {
         this.plugin = plugin;
         this.clientThread = clientThread;
+        this.timeSheet = timeSheet;
+        this.timeTree = timeTree;
 
         setLayout(new GridBagLayout());
         setupManager();
@@ -33,9 +35,6 @@ public class TimeSheetPanel extends JPanel
 
     private void setupManager()
     {
-        timeSheet = new TimeSheet();
-        timeTree = new TimeTree(this, timeSheet);
-
         c.fill = GridBagConstraints.BOTH;
         c.weightx = 1;
         c.weighty = 0;
@@ -56,23 +55,4 @@ public class TimeSheetPanel extends JPanel
         c.gridy = 1;
         add(timeSheet, c);
     }
-
-    public void addFolder(DefaultMutableTreeNode node)
-    {
-    }
-
-    public void removeFolder(DefaultMutableTreeNode node)
-    {
-    }
-
-    public void addCharacter(TimeSheetComp timeSheetComp)
-    {
-        add(timeSheetComp.getPanel());
-    }
-
-    public void removeCharacter(TimeSheetComp timeSheetComp)
-    {
-        remove(timeSheetComp.getPanel());
-    }
-
 }

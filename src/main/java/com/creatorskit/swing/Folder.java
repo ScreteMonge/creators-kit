@@ -12,6 +12,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
 public class Folder
 {
     private String name;
+    private FolderType folderType;
     private DefaultMutableTreeNode linkedManagerNode;
     private DefaultMutableTreeNode linkedTimeSheetNode;
     private DefaultMutableTreeNode parentManagerNode;

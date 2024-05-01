@@ -24,10 +24,10 @@ public class Character
     private boolean locationSet;
     private boolean minimized;
     private KeyFrame[][] frames;
-    private DefaultMutableTreeNode managerNode;
-    private DefaultMutableTreeNode timeTreeNode;
-    private DefaultMutableTreeNode managerParent;
-    private DefaultMutableTreeNode timeTreeParent;
+    private DefaultMutableTreeNode linkedManagerNode;
+    private DefaultMutableTreeNode linkedTimeSheetNode;
+    private DefaultMutableTreeNode parentManagerNode;
+    private DefaultMutableTreeNode parentTimeSheetNode;
     private DefaultMutableTreeNode[] timeTreeNodes;
     private Program program;
     private WorldPoint nonInstancedPoint;

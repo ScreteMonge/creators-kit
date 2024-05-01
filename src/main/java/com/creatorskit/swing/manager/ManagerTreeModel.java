@@ -1,4 +1,4 @@
-package com.creatorskit.swing.jtree;
+package com.creatorskit.swing.manager;
 
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
@@ -8,23 +8,31 @@ import com.creatorskit.swing.StringHandler;
 import javax.inject.Inject;
 import javax.swing.tree.*;
 
-public class CreatorTreeModel extends DefaultTreeModel
+public class ManagerTreeModel extends DefaultTreeModel
 {
     private final CreatorsPlugin plugin;
+    private final DefaultMutableTreeNode sidePanelNode;
+    private final DefaultMutableTreeNode managerNode;
 
     @Inject
-    public CreatorTreeModel(TreeNode root, CreatorsPlugin plugin)
+    public ManagerTreeModel(TreeNode root, DefaultMutableTreeNode sidePanelNode, DefaultMutableTreeNode managerNode, CreatorsPlugin plugin)
     {
         super(root);
         this.plugin = plugin;
+        this.sidePanelNode = sidePanelNode;
+        this.managerNode = managerNode;
     }
 
     @Override
     public void valueForPathChanged(TreePath path, Object newValue)
     {
         DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
-        if (node == root)
+        if (node == root
+        || node == sidePanelNode
+        || node == managerNode)
+        {
             return;
+        }
 
         //Check if node being modified is a Folder
         if (node.getUserObject() instanceof Folder)
