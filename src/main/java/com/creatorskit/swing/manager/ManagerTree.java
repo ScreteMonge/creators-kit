@@ -4,6 +4,7 @@ import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.swing.*;
 import com.creatorskit.swing.timesheet.TimeTree;
+import com.formdev.flatlaf.FlatClientProperties;
 import lombok.Getter;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
@@ -26,6 +27,7 @@ public class ManagerTree extends JScrollPane
 {
     private final ToolBoxFrame toolBox;
     private final CreatorsPlugin plugin;
+    private final JPanel objectHolder;
     private final DefaultMutableTreeNode rootNode;
     private final DefaultMutableTreeNode sidePanelNode;
     private final DefaultMutableTreeNode managerNode;
@@ -34,6 +36,7 @@ public class ManagerTree extends JScrollPane
     private final JButton[] headerButtons = new JButton[3];
     private final JTree tree;
     private final GridBagConstraints c = new GridBagConstraints();
+    private Folder[] selectedFolders = new Folder[0];
 
     private final BufferedImage CLOSE = ImageUtil.loadImageResource(getClass(), "/Close.png");
     private final BufferedImage ADD = ImageUtil.loadImageResource(getClass(), "/Add.png");
@@ -43,10 +46,11 @@ public class ManagerTree extends JScrollPane
     private final BufferedImage OBJECT = ImageUtil.loadImageResource(getClass(), "/Object.png");
 
     @Inject
-    public ManagerTree(ToolBoxFrame toolBox, CreatorsPlugin plugin, DefaultMutableTreeNode rootNode, DefaultMutableTreeNode sidePanelNode, DefaultMutableTreeNode managerNode, TimeTree timeTree)
+    public ManagerTree(ToolBoxFrame toolBox, CreatorsPlugin plugin, JPanel objectHolder, DefaultMutableTreeNode rootNode, DefaultMutableTreeNode sidePanelNode, DefaultMutableTreeNode managerNode, TimeTree timeTree)
     {
         this.toolBox = toolBox;
         this.plugin = plugin;
+        this.objectHolder = objectHolder;
         this.rootNode = rootNode;
         this.sidePanelNode = sidePanelNode;
         this.managerNode = managerNode;
@@ -55,18 +59,21 @@ public class ManagerTree extends JScrollPane
         setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 1));
         setPreferredSize(new Dimension(300, 0));
 
+        rootNode.add(sidePanelNode);
+        rootNode.add(managerNode);
+
         treeModel = new ManagerTreeModel(rootNode, sidePanelNode, managerNode, plugin);
         tree = new JTree(treeModel);
+        tree.expandRow(0);
         tree.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        tree.putClientProperty("JTree.lineStyle", "Angled");
         tree.setEditable(true);
         tree.setRowHeight(20);
         tree.getSelectionModel().setSelectionMode(TreeSelectionModel.CONTIGUOUS_TREE_SELECTION);
         tree.setShowsRootHandles(true);
-        tree.setRootVisible(true);
+        tree.setRootVisible(false);
         tree.setDragEnabled(true);
         tree.setDropMode(DropMode.ON_OR_INSERT);
-        tree.setTransferHandler(new ManagerTreeTransferHandler(timeTree));
+        tree.setTransferHandler(new ManagerTreeTransferHandler(plugin, toolBox, timeTree));
         tree.addTreeSelectionListener(new MyTreeSelectionListener());
         DefaultTreeCellRenderer renderer = new DefaultTreeCellRenderer();
         renderer.setOpenIcon(new ImageIcon(FOLDER_OPEN));
@@ -74,9 +81,6 @@ public class ManagerTree extends JScrollPane
         renderer.setLeafIcon(new ImageIcon(OBJECT));
         renderer.setBackground(ColorScheme.DARK_GRAY_COLOR);
         tree.setCellRenderer(renderer);
-
-        rootNode.add(sidePanelNode);
-        rootNode.add(managerNode);
 
         setViewportView(tree);
 
@@ -108,7 +112,26 @@ public class ManagerTree extends JScrollPane
         JButton addFolderButton = new JButton(new ImageIcon(ADD));
         addFolderButton.setToolTipText("Add a new Folder to the currently selected Folder");
         addFolderButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        addFolderButton.addActionListener(e -> addFolderNode("New Folder"));
+        addFolderButton.addActionListener(e ->
+        {
+            TreePath path = tree.getSelectionPath();
+            DefaultMutableTreeNode folderNode;
+            if (path == null)
+            {
+                folderNode = addFolderNode("New Folder", ParentPanel.MANAGER);
+            }
+            else
+            {
+                DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+                ParentPanel parentPanel = treeContainsSidePanel(node) ? ParentPanel.SIDE_PANEL : ParentPanel.MANAGER;
+                folderNode = addFolderNode("New Folder", parentPanel);
+            }
+
+            TreePath treePath = new TreePath(folderNode.getPath());
+            int row = tree.getRowForPath(new TreePath(folderNode.getPath()));
+            tree.expandRow(row);
+            tree.setSelectionPath(treePath);
+        });
         folderHeader.add(addFolderButton, c);
 
         c.gridx = 1;
@@ -145,14 +168,15 @@ public class ManagerTree extends JScrollPane
         return folderHeader;
     }
 
-    public DefaultMutableTreeNode getParentNode()
+    public DefaultMutableTreeNode getParentNode(ParentPanel parentPanel)
     {
+        DefaultMutableTreeNode defaultNode = parentPanel == ParentPanel.MANAGER ? managerNode : sidePanelNode;
         DefaultMutableTreeNode parentNode;
         TreePath parentPath = tree.getSelectionPath();
 
         if (parentPath == null)
         {
-            parentNode = managerNode;
+            parentNode = defaultNode;
         }
         else
         {
@@ -161,21 +185,20 @@ public class ManagerTree extends JScrollPane
             {
                 Character character = (Character) parentNode.getUserObject();
                 parentNode = character.getParentManagerNode();
-                System.out.println("Character");
             }
 
             if (parentNode == null)
             {
-                parentNode = managerNode;
+                parentNode = defaultNode;
             }
         }
 
         return parentNode;
     }
 
-    public DefaultMutableTreeNode addFolderNode(String name)
+    public DefaultMutableTreeNode addFolderNode(String name, ParentPanel parentPanel)
     {
-        return addFolderNode(getParentNode(), name, true);
+        return addFolderNode(getParentNode(parentPanel), name, true);
     }
 
     public DefaultMutableTreeNode addFolderNode(DefaultMutableTreeNode parent, String name)
@@ -185,7 +208,7 @@ public class ManagerTree extends JScrollPane
 
     public DefaultMutableTreeNode addFolderNode(DefaultMutableTreeNode managerParent, String name, boolean shouldBeVisible)
     {
-        if (managerParent == rootNode || managerParent == sidePanelNode)
+        if (managerParent == rootNode)
         {
             managerParent = managerNode;
         }
@@ -208,19 +231,31 @@ public class ManagerTree extends JScrollPane
         return linkedManagerNode;
     }
 
-    public DefaultMutableTreeNode addCharacterNode(Character character)
+    // Gets the currently selected Folder and adds the character to it
+    public DefaultMutableTreeNode addCharacterNode(Character character, ParentPanel parentPanel, boolean shouldBeVisible)
     {
-        return addCharacterNode(getParentNode(), character, true);
+        return addCharacterNode(getParentNode(parentPanel), character, parentPanel, shouldBeVisible);
     }
 
-    public DefaultMutableTreeNode addCharacterNode(DefaultMutableTreeNode parent, Character character)
+    // Adds the character to a previously indicated parent
+    public DefaultMutableTreeNode addCharacterNode(DefaultMutableTreeNode parent, Character character, ParentPanel parentPanel)
     {
-        return addCharacterNode(parent, character, false);
+        return addCharacterNode(parent, character, parentPanel, false);
     }
 
-    public DefaultMutableTreeNode addCharacterNode(DefaultMutableTreeNode managerParent, Character character, boolean shouldBeVisible)
+    public DefaultMutableTreeNode addCharacterNode(DefaultMutableTreeNode managerParent, Character character, ParentPanel parentPanel, boolean shouldBeVisible)
     {
-        if (managerParent == rootNode || managerParent == sidePanelNode)
+        if (managerParent == rootNode)
+        {
+            managerParent = parentPanel == ParentPanel.MANAGER ? managerNode : sidePanelNode;
+        }
+
+        if (managerParent == managerNode && parentPanel == ParentPanel.SIDE_PANEL)
+        {
+            managerParent = sidePanelNode;
+        }
+
+        if (managerParent == sidePanelNode && parentPanel == ParentPanel.MANAGER)
         {
             managerParent = managerNode;
         }
@@ -243,9 +278,158 @@ public class ManagerTree extends JScrollPane
         return linkedManagerNode;
     }
 
+    public void switchFolders(Character character)
+    {
+        DefaultMutableTreeNode newParent;
+
+        if (character.getParentPanel() == ParentPanel.MANAGER)
+        {
+            newParent = sidePanelNode;
+        }
+        else
+        {
+            TreePath treePath = tree.getSelectionPath();
+            if (treePath == null)
+            {
+                newParent = managerNode;
+            }
+            else
+            {
+                newParent = (DefaultMutableTreeNode) treePath.getLastPathComponent();
+                if (treeContainsSidePanel(newParent))
+                {
+                    newParent = managerNode;
+                }
+                else if (newParent.getUserObject() instanceof Character)
+                {
+                    TreePath parentPath = treePath.getParentPath();
+                    if (parentPath == null)
+                    {
+                        return;
+                    }
+
+                    newParent = (DefaultMutableTreeNode) parentPath.getLastPathComponent();
+                }
+            }
+        }
+
+        DefaultMutableTreeNode linkedManagerNode = character.getLinkedManagerNode();
+
+        ArrayList<Character> listFrom;
+        ParentPanel parentPanelFrom = character.getParentPanel();
+        if (parentPanelFrom == ParentPanel.MANAGER)
+        {
+            listFrom = toolBox.getManagerPanel().getManagerCharacters();
+        }
+        else
+        {
+            listFrom = plugin.getCreatorsPanel().getSidePanelCharacters();
+        }
+
+        ParentPanel parentPanelTo = treeContainsSidePanel(newParent) ? ParentPanel.SIDE_PANEL : ParentPanel.MANAGER;
+
+        ArrayList<Character> listTo;
+        if (parentPanelTo == ParentPanel.MANAGER)
+        {
+            listTo = toolBox.getManagerPanel().getManagerCharacters();
+        }
+        else
+        {
+            listTo = plugin.getCreatorsPanel().getSidePanelCharacters();
+        }
+
+        listFrom.remove(character);
+        listTo.add(character);
+
+        character.setParentPanel(parentPanelTo);
+        character.setParentManagerNode(newParent);
+        treeModel.removeNodeFromParent(linkedManagerNode);
+        treeModel.insertNodeInto(linkedManagerNode, newParent, linkedManagerNode.getChildCount());
+    }
+
+    public void switchFolders(Character[] characters, ParentPanel parentPanelFrom)
+    {
+        DefaultMutableTreeNode newParent;
+
+        if (parentPanelFrom == ParentPanel.MANAGER)
+        {
+            newParent = sidePanelNode;
+        }
+        else
+        {
+            TreePath treePath = tree.getSelectionPath();
+            if (treePath == null)
+            {
+                newParent = managerNode;
+            }
+            else
+            {
+                newParent = (DefaultMutableTreeNode) treePath.getLastPathComponent();
+                if (treeContainsSidePanel(newParent))
+                {
+                    newParent = managerNode;
+                }
+                else if (newParent.getUserObject() instanceof Character)
+                {
+                    TreePath parentPath = treePath.getParentPath();
+                    if (parentPath == null)
+                    {
+                        return;
+                    }
+
+                    newParent = (DefaultMutableTreeNode) parentPath.getLastPathComponent();
+                }
+            }
+        }
+
+
+        ArrayList<Character> listFrom;
+        if (parentPanelFrom == ParentPanel.MANAGER)
+        {
+            listFrom = toolBox.getManagerPanel().getManagerCharacters();
+        }
+        else
+        {
+            listFrom = plugin.getCreatorsPanel().getSidePanelCharacters();
+        }
+
+        ParentPanel parentPanelTo = treeContainsSidePanel(newParent) ? ParentPanel.SIDE_PANEL : ParentPanel.MANAGER;
+        ArrayList<Character> listTo;
+        if (parentPanelTo == ParentPanel.MANAGER)
+        {
+            listTo = toolBox.getManagerPanel().getManagerCharacters();
+        }
+        else
+        {
+            listTo = plugin.getCreatorsPanel().getSidePanelCharacters();
+        }
+
+        DefaultMutableTreeNode finalNewParent = newParent;
+        Thread thread = new Thread(() ->
+        {
+            for (int i = characters.length - 1; i >= 0; i--)
+            {
+                Character character = characters[i];
+                DefaultMutableTreeNode linkedManagerNode = character.getLinkedManagerNode();
+
+                listFrom.remove(character);
+                listTo.add(character);
+
+                character.setParentPanel(parentPanelTo);
+                character.setParentManagerNode(finalNewParent);
+                treeModel.removeNodeFromParent(linkedManagerNode);
+                treeModel.insertNodeInto(linkedManagerNode, finalNewParent, linkedManagerNode.getChildCount());
+            }
+
+            toolBox.getManagerPanel().getManagerTree().resetObjectHolder();
+            plugin.getCreatorsPanel().resetSidePanel();
+        });
+        thread.start();
+    }
+
     public void removeAllNodes()
     {
-        TreePath[] treePaths = new TreePath[]{tree.getPathForRow(0)};
+        TreePath[] treePaths = new TreePath[]{new TreePath(rootNode.getPath())};
         removeNodes(treePaths);
     }
 
@@ -276,13 +460,17 @@ public class ManagerTree extends JScrollPane
         }
 
         if (foldersToRemove.isEmpty() && charactersToRemove.isEmpty())
+        {
             return;
+        }
 
-        if (!foldersToRemove.isEmpty() && !charactersToRemove.isEmpty())
+        if (foldersToRemove.size() + charactersToRemove.size() > 1)
         {
             int result = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete all the selected Folders and their Objects?");
             if (result != JOptionPane.YES_OPTION)
+            {
                 return;
+            }
         }
 
         Character[] characters = new Character[charactersToRemove.size()];
@@ -292,10 +480,15 @@ public class ManagerTree extends JScrollPane
             characters[i] = character;
         }
 
-        plugin.getCreatorsPanel().deleteCharacters(characters);
-
-        for (DefaultMutableTreeNode node : foldersToRemove)
-            removeFolderNode(node);
+        Thread thread = new Thread(() ->
+        {
+            plugin.getCreatorsPanel().deleteCharacters(characters);
+            for (DefaultMutableTreeNode node : foldersToRemove)
+            {
+                removeFolderNode(node);
+            }
+        });
+        thread.start();
     }
 
     public void removeCharacterNode(Character child)
@@ -338,6 +531,28 @@ public class ManagerTree extends JScrollPane
         }
     }
 
+    public void getSidePanelChildren(ArrayList<Character> characters)
+    {
+        getCharacterNodeChildren(sidePanelNode, characters);
+    }
+
+    private void getCharacterNodeChildren(DefaultMutableTreeNode parent, ArrayList<Character> characters)
+    {
+        Enumeration<TreeNode> children = parent.children();
+        while (children.hasMoreElements())
+        {
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode) children.nextElement();
+            if (node.getUserObject() instanceof Character)
+            {
+                characters.add((Character) node.getUserObject());
+                continue;
+            }
+
+            if (!node.isLeaf())
+                getCharacterNodeChildren(node, characters);
+        }
+    }
+
     public void getObjectPanelChildren(DefaultMutableTreeNode parent, ArrayList<Character> characters)
     {
         if (parent.getUserObject() instanceof Character)
@@ -363,18 +578,6 @@ public class ManagerTree extends JScrollPane
         }
     }
 
-    public DefaultMutableTreeNode findNode(Object child)
-    {
-        Enumeration<?> e = rootNode.preorderEnumeration();
-        while(e.hasMoreElements())
-        {
-            DefaultMutableTreeNode node = (DefaultMutableTreeNode) e.nextElement();
-            if (node.getUserObject() == child)
-                return node;
-        }
-        return null;
-    }
-
     class MyTreeSelectionListener implements TreeSelectionListener
     {
         @Override
@@ -384,7 +587,28 @@ public class ManagerTree extends JScrollPane
             if (treePaths == null)
                 return;
 
+            JPanel objectHolder = toolBox.getManagerPanel().getObjectHolder();
+
+            for (TreePath treePath : treePaths)
+            {
+                if (treePath.getLastPathComponent() == rootNode)
+                {
+                    objectHolder.removeAll();
+                    objectHolder.revalidate();
+                    return;
+                }
+
+                boolean containsSidePanel = treeContainsSidePanel((TreeNode) treePath.getLastPathComponent());
+                if (containsSidePanel)
+                {
+                    objectHolder.removeAll();
+                    objectHolder.revalidate();
+                    return;
+                }
+            }
+
             ArrayList<Character> panelsToAdd = new ArrayList<>();
+            Folder[] folders = new Folder[0];
 
             boolean folderSelected = false;
             String folderName = "";
@@ -393,9 +617,14 @@ public class ManagerTree extends JScrollPane
                 DefaultMutableTreeNode node = (DefaultMutableTreeNode) treePath.getLastPathComponent();
                 if (node.getUserObject() instanceof Folder)
                 {
+                    Folder folder = (Folder) node.getUserObject();
                     if (folderName.isEmpty())
-                        folderName = ((Folder) node.getUserObject()).getName();
+                    {
+                        folderName = folder.getName();
+                    }
+
                     folderSelected = true;
+                    folders = ArrayUtils.add(folders, folder);
                 }
             }
 
@@ -413,13 +642,38 @@ public class ManagerTree extends JScrollPane
                     return;
 
                 DefaultMutableTreeNode folderNode = (DefaultMutableTreeNode) parentPath.getLastPathComponent();
-                folderName = ((Folder) folderNode.getUserObject()).getName();
+                Folder folder = (Folder) folderNode.getUserObject();
+                folderName = folder.getName();
                 getObjectPanelChildren(folderNode, panelsToAdd);
+                folders = ArrayUtils.add(folders, folder);
             }
+
+            selectedFolders = folders;
 
             toolBox.getManagerPanel().getObjectLabel().setText("Current Folder: " + folderName);
             resetObjectHolder(panelsToAdd);
         }
+    }
+
+    public boolean treeContainsSidePanel(TreeNode node)
+    {
+        if (node == sidePanelNode)
+        {
+            return true;
+        }
+
+        TreeNode parent = node.getParent();
+        if (parent == null || parent == managerNode || parent == rootNode)
+        {
+            return false;
+        }
+
+        if (parent == sidePanelNode)
+        {
+            return true;
+        }
+
+        return treeContainsSidePanel(parent);
     }
 
     public Character[] getShownCharacters()
@@ -440,14 +694,19 @@ public class ManagerTree extends JScrollPane
 
     public void resetObjectHolder()
     {
-        ObjectPanel[] objectPanels = new ObjectPanel[0];
-        JPanel objectHolder = toolBox.getManagerPanel().getObjectHolder();
-        for (Component component : objectHolder.getComponents())
+        ArrayList<Character> list = new ArrayList<>();
+        for (Folder folder : selectedFolders)
         {
-            if (component instanceof ObjectPanel)
+            DefaultMutableTreeNode node = folder.getLinkedManagerNode();
+            getCharacterNodeChildren(node, list);
+        }
+
+        ObjectPanel[] objectPanels = new ObjectPanel[0];
+        for (Character character : list)
+        {
+            if (character.getParentPanel() == ParentPanel.MANAGER)
             {
-                ObjectPanel objectPanel = (ObjectPanel) component;
-                objectPanels = ArrayUtils.add(objectPanels, objectPanel);
+                objectPanels = ArrayUtils.add(objectPanels, character.getObjectPanel());
             }
         }
 
@@ -462,6 +721,7 @@ public class ManagerTree extends JScrollPane
     public void resetObjectHolder(Character[] charactersToAdd)
     {
         ObjectPanel[] panelsToAdd = new ObjectPanel[charactersToAdd.length];
+
         for (int i = 0; i < charactersToAdd.length; i++)
         {
             panelsToAdd[i] = charactersToAdd[i].getObjectPanel();

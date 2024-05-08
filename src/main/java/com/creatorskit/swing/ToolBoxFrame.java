@@ -28,6 +28,7 @@ public class ToolBoxFrame extends JFrame
     private ClientThread clientThread;
     private final Client client;
     private final CreatorsPlugin plugin;
+    private final CreatorsPanel creatorsPanel;
     private final ConfigManager configManager;
     private final ManagerPanel managerPanel;
     private final ModelOrganizer modelOrganizer;
@@ -43,6 +44,7 @@ public class ToolBoxFrame extends JFrame
         this.client = client;
         this.clientThread = clientThread;
         this.plugin = plugin;
+        this.creatorsPanel = plugin.getCreatorsPanel();
         this.configManager = configManager;
         this.modelOrganizer = modelOrganizer;
         this.modelAnvil = modelAnvil;
@@ -70,8 +72,9 @@ public class ToolBoxFrame extends JFrame
         TimeTree timeTree = new TimeTree(timeSheet, timeRootNode, timeSideNode, timeManagerNode);
         this.timeSheetPanel = new TimeSheetPanel(client, plugin, clientThread, timeSheet, timeTree);
 
-        ManagerTree managerTree = new ManagerTree(this, plugin, managerRootNode, managerSideNode, managerManagerNode, timeTree);
-        this.managerPanel = new ManagerPanel(client, plugin, managerTree);
+        JPanel objectHolder = new JPanel();
+        ManagerTree managerTree = new ManagerTree(this, plugin, objectHolder, managerRootNode, managerSideNode, managerManagerNode, timeTree);
+        this.managerPanel = new ManagerPanel(client, plugin, objectHolder, managerTree);
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setTitle("Creator's Kit Toolbox");

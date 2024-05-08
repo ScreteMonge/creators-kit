@@ -4,6 +4,7 @@ import com.creatorskit.Character;
 import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.swing.CreatorsPanel;
+import com.creatorskit.swing.ParentPanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import net.runelite.api.*;
 import net.runelite.client.callback.ClientThread;
@@ -60,7 +61,7 @@ public class ModelGetter
                             if (menuOption == ModelMenuOption.STORE_AND_ADD)
                             {
                                 Character character = creatorsPanel.createCharacter(
-                                        creatorsPanel.getSidePanel(),
+                                        ParentPanel.SIDE_PANEL,
                                         npc.getName(),
                                         7699,
                                         customModel,
@@ -79,7 +80,7 @@ public class ModelGetter
                                         false,
                                         false);
 
-                                SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(creatorsPanel.getSidePanelCharacters(), creatorsPanel.getSidePanel(), character));
+                                SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character));
                             }
                         });
                     });
@@ -167,7 +168,7 @@ public class ModelGetter
                                     CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
 
                                     Character character = creatorsPanel.createCharacter(
-                                            creatorsPanel.getSidePanel(),
+                                            ParentPanel.SIDE_PANEL,
                                             name,
                                             7699,
                                             customModel,
@@ -186,7 +187,7 @@ public class ModelGetter
                                             false,
                                             false);
 
-                                    SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(creatorsPanel.getSidePanelCharacters(), creatorsPanel.getSidePanel(), character));
+                                    SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character));
                                 }
                             });
                         });
@@ -248,7 +249,7 @@ public class ModelGetter
                             if (menuOption == ModelMenuOption.STORE_AND_ADD)
                             {
                                 Character character = creatorsPanel.createCharacter(
-                                        creatorsPanel.getSidePanel(),
+                                        ParentPanel.SIDE_PANEL,
                                         finalName,
                                         7699,
                                         customModel,
@@ -267,7 +268,7 @@ public class ModelGetter
                                         false,
                                         false);
 
-                                SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(creatorsPanel.getSidePanelCharacters(), creatorsPanel.getSidePanel(), character));
+                                SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character));
                             }
                         });
                     });
@@ -301,7 +302,7 @@ public class ModelGetter
                         if (menuOption == ModelMenuOption.STORE_AND_ADD)
                         {
                             Character character = creatorsPanel.createCharacter(
-                                    creatorsPanel.getSidePanel(),
+                                    ParentPanel.SIDE_PANEL,
                                     name,
                                     7699,
                                     customModel,
@@ -320,7 +321,7 @@ public class ModelGetter
                                     false,
                                     false);
 
-                            SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(creatorsPanel.getSidePanelCharacters(), creatorsPanel.getSidePanel(), character));
+                            SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character));
                         }
                     });
                     thread.start();

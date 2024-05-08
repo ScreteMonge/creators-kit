@@ -3,7 +3,7 @@ package com.creatorskit.swing.manager;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.swing.CreatorsPanel;
-import com.creatorskit.swing.manager.ManagerTree;
+import com.creatorskit.swing.ParentPanel;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
@@ -15,6 +15,8 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.*;
 import javax.swing.border.LineBorder;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
@@ -26,7 +28,7 @@ public class ManagerPanel extends JPanel
     private final CreatorsPlugin plugin;
     private final Client client;
     private final GridBagConstraints c = new GridBagConstraints();
-    private final JPanel objectHolder = new JPanel();
+    private final JPanel objectHolder;
     private final JPanel scrollPanel = new JPanel();
     private final ArrayList<Character> managerCharacters = new ArrayList<>();
     private final ManagerTree managerTree;
@@ -34,10 +36,11 @@ public class ManagerPanel extends JPanel
     private final JLabel objectLabel = new JLabel("Current Folder: Master Folder");
 
     @Inject
-    public ManagerPanel(@Nullable Client client, CreatorsPlugin plugin, ManagerTree managerTree)
+    public ManagerPanel(@Nullable Client client, CreatorsPlugin plugin, JPanel objectHolder, ManagerTree managerTree)
     {
         this.plugin = plugin;
         this.client = client;
+        this.objectHolder = objectHolder;
         this.managerTree = managerTree;
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -103,8 +106,19 @@ public class ManagerPanel extends JPanel
         addObjectButton.addActionListener(e ->
         {
             CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
-            Character character = creatorsPanel.createCharacter(objectHolder);
-            creatorsPanel.addPanel(managerCharacters, objectHolder, character);
+            TreePath path = managerTree.getTree().getSelectionPath();
+
+            if (path == null)
+            {
+                Character character = creatorsPanel.createCharacter(ParentPanel.MANAGER);
+                creatorsPanel.addPanel(ParentPanel.MANAGER, character);
+                return;
+            }
+
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+            ParentPanel parentPanel = managerTree.treeContainsSidePanel(node) ? ParentPanel.SIDE_PANEL : ParentPanel.MANAGER;
+            Character character = creatorsPanel.createCharacter(parentPanel);
+            creatorsPanel.addPanel(parentPanel, character);
         });
         rightButtons.add(addObjectButton);
 
@@ -115,7 +129,7 @@ public class ManagerPanel extends JPanel
         switchPanelsButton.addActionListener(e ->
         {
             CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
-            creatorsPanel.switchPanels(objectHolder, getShownCharacters());
+            creatorsPanel.onSwitchAllButtonPressed(ParentPanel.MANAGER, getShownCharacters());
         });
         rightButtons.add(switchPanelsButton);
 
@@ -127,8 +141,8 @@ public class ManagerPanel extends JPanel
         c.gridy = 0;
         c.weightx = 0;
         c.weighty = 0;
-        objectHolder.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        viewport.add(objectHolder, c);
+        this.objectHolder.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        viewport.add(this.objectHolder, c);
 
         c.gridx = 1;
         c.gridy = 0;
@@ -142,7 +156,7 @@ public class ManagerPanel extends JPanel
         c.weighty = 1;
         viewport.add(new JLabel(""), c);
 
-        objectHolder.setLayout(new GridLayout(0, 5, 4, 4));
+        this.objectHolder.setLayout(new GridLayout(0, 5, 4, 4));
         objectScrollPane.setViewportView(viewport);
 
         repaint();

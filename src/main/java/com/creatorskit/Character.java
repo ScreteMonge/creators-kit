@@ -3,6 +3,7 @@ package com.creatorskit;
 import com.creatorskit.models.CustomModel;
 import com.creatorskit.programming.Program;
 import com.creatorskit.swing.ObjectPanel;
+import com.creatorskit.swing.ParentPanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -36,7 +37,7 @@ public class Character
     private int instancedPlane;
     private boolean inInstance;
     private CustomModel storedModel;
-    private JPanel parentPanel;
+    private ParentPanel parentPanel;
     private ObjectPanel objectPanel;
     private boolean customMode;
     private JTextField nameField;
