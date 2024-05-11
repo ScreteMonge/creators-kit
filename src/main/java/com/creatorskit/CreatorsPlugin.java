@@ -97,6 +97,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private ModelFinder modelFinder;
 
 	@Inject
+	private ModelExporter modelExporter;
+
+	@Inject
 	private Gson gson;
 	
 	private CreatorsPanel creatorsPanel;
@@ -726,7 +729,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	@Subscribe
 	public void onMenuEntryAdded(MenuEntryAdded event)
 	{
-		if (!config.rightClick() && !config.transmogRightClick() && !config.rightSpotAnim())
+		if (!config.rightClick() && !config.transmogRightClick() && !config.rightSpotAnim() && !config.exportRightClick())
 			return;
 
 		String target = event.getTarget();
@@ -767,6 +770,13 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				}
 				modelGetter.addSpotAnimGetter(-4, target, ColorUtil.prependColorTag("SpotAnim-Anvil", Color.ORANGE), npc.getSpotAnims(), ModelMenuOption.ANVIL);
 			}
+
+			if (config.exportRightClick())
+			{
+				modelGetter.addSpotAnimExporter(-5, target, npc.getSpotAnims());
+				modelGetter.addNPCExporter(-5, target, npc, ExportMenuOption.CURRENT);
+				modelGetter.addNPCExporter(-5, target, npc, ExportMenuOption.T_POSE);
+			}
 		}
 
 		if (tile != null)
@@ -804,6 +814,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 						{
 							modelGetter.addGameObjectGetter(-3, ColorUtil.prependColorTag("Transmog", Color.ORANGE), "<col=FFFF>GroundObject", "GroundObject", model, groundObject.getId(), CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.TRANSMOG);
 						}
+
+						if (config.exportRightClick())
+						{
+							modelGetter.addObjectExporter(-4, "<col=FFFF>GroundObject", "GroundObject " + groundObject.getId(), groundObject.getId(), model, ExportMenuOption.DEFAULT);
+						}
 					}
 				}
 
@@ -838,6 +853,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 						{
 							modelGetter.addGameObjectGetter(-3, ColorUtil.prependColorTag("Transmog", Color.ORANGE), "<col=FFFF>DecorativeObject", "DecorativeObject", model, decorativeObject.getId(), CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.TRANSMOG);
 						}
+
+						if (config.exportRightClick())
+						{
+							modelGetter.addObjectExporter(-4, "<col=FFFF>DecorativeObject", "DecorativeObject " + decorativeObject.getId(), decorativeObject.getId(), model, ExportMenuOption.DEFAULT);
+						}
 					}
 				}
 
@@ -871,6 +891,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 						{
 							modelGetter.addGameObjectGetter(-3, ColorUtil.prependColorTag("Transmog", Color.ORANGE), "<col=FFFF>WallObject", "WallObject", model, wallObject.getId(), CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.TRANSMOG);
 						}
+
+						if (config.exportRightClick())
+						{
+							modelGetter.addObjectExporter(-4, "<col=FFFF>WallObject", "WallObject " + wallObject.getId(), wallObject.getId(), model, ExportMenuOption.DEFAULT);
+						}
 					}
 				}
 
@@ -896,6 +921,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 						if (config.transmogRightClick())
 						{
 							modelGetter.addGameObjectGetter(-3, ColorUtil.prependColorTag("Transmog", Color.ORANGE), "<col=FFFF>Item", "Item", model, tileItem.getId(), CustomModelType.CACHE_GROUND_ITEM, -1, 0, ModelMenuOption.TRANSMOG);
+						}
+
+						if (config.exportRightClick())
+						{
+							modelGetter.addObjectExporter(-4, "<col=FFFF>Item", "Item " + tileItem.getId(), tileItem.getId(), model, ExportMenuOption.DEFAULT);
 						}
 					}
 				}
@@ -934,6 +964,12 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 						if (config.transmogRightClick())
 							modelGetter.addGameObjectGetter(-3, ColorUtil.prependColorTag("Transmog", Color.ORANGE), "<col=FFFF>GameObject", "GameObject", model, gameObject.getId(), CustomModelType.CACHE_OBJECT, animationId, gameObject.getOrientation(), ModelMenuOption.TRANSMOG);
+
+						if (config.exportRightClick())
+						{
+							modelGetter.addObjectExporter(-4, "<col=FFFF>GameObject", "GameObject " + gameObject.getId(), gameObject.getId(), model, ExportMenuOption.CURRENT);
+							modelGetter.addObjectExporter(-4, "<col=FFFF>GameObject", "GameObject " + gameObject.getId(), gameObject.getId(), model, ExportMenuOption.T_POSE);
+						}
 					}
 				}
 
@@ -994,6 +1030,12 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				}
 				modelGetter.addSpotAnimGetter(-5, target, ColorUtil.prependColorTag("SpotAnim-Anvil", Color.ORANGE), player.getSpotAnims(), ModelMenuOption.ANVIL);
 			}
+
+			if (config.exportRightClick())
+			{
+				modelGetter.addPlayerExporter(-6, target, player, ExportMenuOption.CURRENT);
+				modelGetter.addPlayerExporter(-6, target, player, ExportMenuOption.T_POSE);
+			}
 		}
 
 		Player localPlayer = client.getLocalPlayer();
@@ -1025,6 +1067,12 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 						modelGetter.addSpotAnimGetter(-3, "Local Player", ColorUtil.prependColorTag("SpotAnim-Store", Color.ORANGE), localPlayer.getSpotAnims(), ModelMenuOption.STORE);
 					}
 					modelGetter.addSpotAnimGetter(-4, "Local Player", ColorUtil.prependColorTag("SpotAnim-Anvil", Color.ORANGE), localPlayer.getSpotAnims(), ModelMenuOption.ANVIL);
+				}
+
+				if (config.exportRightClick())
+				{
+					modelGetter.addPlayerExporter(-5, "Local Player", localPlayer, ExportMenuOption.CURRENT);
+					modelGetter.addPlayerExporter(-5, "Local Player", localPlayer, ExportMenuOption.T_POSE);
 				}
 			}
 		}

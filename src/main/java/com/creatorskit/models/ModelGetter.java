@@ -1,16 +1,17 @@
 package com.creatorskit.models;
 
-import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.swing.CreatorsPanel;
 import com.creatorskit.swing.ObjectPanel;
 import net.runelite.api.*;
+import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.util.ColorUtil;
 
 import javax.inject.Inject;
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
 
 public class ModelGetter
 {
@@ -18,16 +19,17 @@ public class ModelGetter
     private final ClientThread clientThread;
     private final CreatorsPlugin plugin;
     private final ModelFinder modelFinder;
-    private final CreatorsConfig config;
+    private final ModelExporter modelExporter;
+    public final File BLENDER_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/blender-models");
 
     @Inject
-    public ModelGetter(Client client, ClientThread clientThread, CreatorsPlugin plugin, ModelFinder modelFinder, CreatorsConfig config)
+    public ModelGetter(Client client, ClientThread clientThread, CreatorsPlugin plugin, ModelFinder modelFinder, ModelExporter modelExporter)
     {
         this.client = client;
         this.clientThread = clientThread;
         this.plugin = plugin;
         this.modelFinder = modelFinder;
-        this.config = config;
+        this.modelExporter = modelExporter;
     }
 
     public void storeNPC(int index, String target, String option, NPC npc, ModelMenuOption menuOption)
@@ -100,6 +102,39 @@ public class ModelGetter
                         {
                             plugin.cacheToAnvil(modelStats, new int[0], false);
                             plugin.sendChatMessage("Model sent to Anvil: " + npc.getName());
+                        });
+                    });
+                    thread.start();
+
+                });
+    }
+
+    public void addNPCExporter(int index, String target, NPC npc, ExportMenuOption menuOption)
+    {
+        client.createMenuEntry(index)
+                .setOption(ColorUtil.prependColorTag("Export " + menuOption.toString(), Color.ORANGE))
+                .setTarget(target)
+                .setType(MenuAction.RUNELITE)
+                .onClick(e ->
+                {
+                    Thread thread = new Thread(() ->
+                    {
+                        ModelStats[] modelStats = modelFinder.findModelsForNPC(npc.getId());
+                        clientThread.invokeLater(() ->
+                        {
+                            BlenderModel blenderModel;
+                            switch (menuOption)
+                            {
+                                default:
+                                case T_POSE:
+                                    blenderModel = modelExporter.blenderModelFromCache(modelStats, null, false, npc.getModel().getFaceRenderPriorities());
+                                    break;
+                                case CURRENT:
+                                    blenderModel = modelExporter.blenderModelFromGame(modelStats, null, false, npc.getModel().getFaceRenderPriorities(), npc.getModel());
+                            }
+
+                            modelExporter.saveToFile(npc.getName(), blenderModel);
+                            plugin.sendChatMessage("Exported " + npc.getName() + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                         });
                     });
                     thread.start();
@@ -192,6 +227,32 @@ public class ModelGetter
                 });
     }
 
+    public void addSpotAnimExporter(int index, String target, IterableHashTable<ActorSpotAnim> spotAnims)
+    {
+        client.createMenuEntry(index)
+                .setOption(ColorUtil.prependColorTag("Export SpotAnim", Color.ORANGE))
+                .setTarget(target)
+                .setType(MenuAction.RUNELITE)
+                .onClick(e ->
+                {
+                    for (ActorSpotAnim spotAnim : spotAnims)
+                    {
+                        Thread thread = new Thread(() ->
+                        {
+                            ModelStats[] modelStats = modelFinder.findSpotAnim(spotAnim.getId());
+                            clientThread.invokeLater(() ->
+                            {
+                                String name = "SpotAnim " + spotAnim.getId();
+                                BlenderModel blenderModel = modelExporter.blenderModelFromCache(modelStats, null, false, null);
+                                modelExporter.saveToFile(name, blenderModel);
+                                plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                            });
+                        });
+                        thread.start();
+                    }
+                });
+    }
+
     public void addPlayerGetter(int index, String target, String option, Player player, ModelMenuOption menuOption)
     {
         client.createMenuEntry(index)
@@ -271,6 +332,46 @@ public class ModelGetter
                 });
     }
 
+    public void addPlayerExporter(int index, String target, Player player, ExportMenuOption menuOption)
+    {
+        client.createMenuEntry(index)
+                .setOption(ColorUtil.prependColorTag("Export " + menuOption.toString(), Color.ORANGE))
+                .setTarget(target)
+                .setType(MenuAction.RUNELITE)
+                .onClick(e ->
+                {
+                    PlayerComposition comp = player.getPlayerComposition();
+                    int[] items = comp.getEquipmentIds();
+                    String name = player.getName();
+                    if (player == client.getLocalPlayer())
+                        name = "Local Player";
+                    String finalName = name;
+
+                    Thread thread = new Thread(() ->
+                    {
+                        ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items);
+                        clientThread.invokeLater(() ->
+                        {
+                            BlenderModel blenderModel;
+                            switch (menuOption)
+                            {
+                                default:
+                                case T_POSE:
+                                    blenderModel = modelExporter.blenderModelFromCache(modelStats, comp.getColors(), true, player.getModel().getFaceRenderPriorities());
+                                    break;
+                                case CURRENT:
+                                    blenderModel = modelExporter.blenderModelFromGame(modelStats, comp.getColors(), true, player.getModel().getFaceRenderPriorities(), player.getModel());
+                            }
+
+                            modelExporter.saveToFile(finalName, blenderModel);
+                            plugin.sendChatMessage("Exported " + finalName + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                        });
+                    });
+                    thread.start();
+
+                });
+    }
+
     public void addGameObjectGetter(int index, String option, String target, String name, Model model, int objectId, CustomModelType type, int animationId, int orientation, ModelMenuOption menuOption)
     {
         client.createMenuEntry(index)
@@ -340,6 +441,48 @@ public class ModelGetter
                         });
                     });
                     thread.start();
+                });
+    }
+
+    public void addObjectExporter(int index, String target, String name, int objectId, Model model, ExportMenuOption menuOption)
+    {
+        String option = "Export " + menuOption.toString();
+        if (menuOption == ExportMenuOption.DEFAULT)
+        {
+            option = "Export";
+        }
+
+        option = ColorUtil.prependColorTag(option, Color.ORANGE);
+
+        client.createMenuEntry(index)
+                .setOption(option)
+                .setTarget(target)
+                .setType(MenuAction.RUNELITE)
+                .onClick(e ->
+                {
+                    Thread thread = new Thread(() ->
+                    {
+                        ModelStats[] modelStats = modelFinder.findModelsForObject(objectId);
+                        clientThread.invokeLater(() ->
+                        {
+                            BlenderModel blenderModel;
+                            switch (menuOption)
+                            {
+                                default:
+                                case DEFAULT:
+                                case T_POSE:
+                                    blenderModel = modelExporter.blenderModelFromCache(modelStats, null, false, model.getFaceRenderPriorities());
+                                    break;
+                                case CURRENT:
+                                    blenderModel = modelExporter.blenderModelFromGame(modelStats, null, false, model.getFaceRenderPriorities(), model);
+                            }
+
+                            modelExporter.saveToFile(name, blenderModel);
+                            plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                        });
+                    });
+                    thread.start();
+
                 });
     }
 }
