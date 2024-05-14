@@ -1,5 +1,6 @@
 package com.creatorskit.models;
 
+import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.swing.CreatorsPanel;
 import com.creatorskit.swing.ObjectPanel;
@@ -17,16 +18,18 @@ public class ModelGetter
 {
     private final Client client;
     private final ClientThread clientThread;
+    private final CreatorsConfig config;
     private final CreatorsPlugin plugin;
     private final ModelFinder modelFinder;
     private final ModelExporter modelExporter;
     public final File BLENDER_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/blender-models");
 
     @Inject
-    public ModelGetter(Client client, ClientThread clientThread, CreatorsPlugin plugin, ModelFinder modelFinder, ModelExporter modelExporter)
+    public ModelGetter(Client client, ClientThread clientThread, CreatorsConfig config, CreatorsPlugin plugin, ModelFinder modelFinder, ModelExporter modelExporter)
     {
         this.client = client;
         this.clientThread = clientThread;
+        this.config = config;
         this.plugin = plugin;
         this.modelFinder = modelFinder;
         this.modelExporter = modelExporter;
@@ -109,36 +112,35 @@ public class ModelGetter
                 });
     }
 
-    public void addNPCExporter(int index, String target, NPC npc, ExportMenuOption menuOption)
+    public void addNPCExporter(int index, String target, NPC npc)
     {
         client.createMenuEntry(index)
-                .setOption(ColorUtil.prependColorTag("Export " + menuOption.toString(), Color.ORANGE))
+                .setOption(ColorUtil.prependColorTag("Export", Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
                 .onClick(e ->
                 {
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = modelFinder.findModelsForNPC(npc.getId());
-                        clientThread.invokeLater(() ->
+                        if (config.vertexColours())
                         {
-                            BlenderModel blenderModel;
-                            switch (menuOption)
-                            {
-                                default:
-                                case T_POSE:
-                                    blenderModel = modelExporter.blenderModelFromCache(modelStats, null, false, npc.getModel().getFaceRenderPriorities());
-                                    break;
-                                case CURRENT:
-                                    blenderModel = modelExporter.blenderModelFromGame(modelStats, null, false, npc.getModel().getFaceRenderPriorities(), npc.getModel());
-                            }
-
+                            BlenderModel blenderModel = modelExporter.bmVertexColours(npc.getModel());
                             modelExporter.saveToFile(npc.getName(), blenderModel);
                             plugin.sendChatMessage("Exported " + npc.getName() + " to " + BLENDER_DIR.getAbsolutePath() + ".");
-                        });
+                        }
+                        else
+                        {
+                            ModelStats[] modelStats = modelFinder.findModelsForNPC(npc.getId());
+
+                            clientThread.invokeLater(() ->
+                            {
+                                BlenderModel blenderModel = modelExporter.bmFaceColours(modelStats, null, false, npc.getModel());
+                                modelExporter.saveToFile(npc.getName(), blenderModel);
+                                plugin.sendChatMessage("Exported " + npc.getName() + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                            });
+                        }
                     });
                     thread.start();
-
                 });
     }
 
@@ -230,7 +232,7 @@ public class ModelGetter
     public void addSpotAnimExporter(int index, String target, IterableHashTable<ActorSpotAnim> spotAnims)
     {
         client.createMenuEntry(index)
-                .setOption(ColorUtil.prependColorTag("Export SpotAnim", Color.ORANGE))
+                .setOption(ColorUtil.prependColorTag("Export SpotAnims", Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
                 .onClick(e ->
@@ -240,10 +242,11 @@ public class ModelGetter
                         Thread thread = new Thread(() ->
                         {
                             ModelStats[] modelStats = modelFinder.findSpotAnim(spotAnim.getId());
+
                             clientThread.invokeLater(() ->
                             {
+                                BlenderModel blenderModel = modelExporter.bmFaceColours(modelStats, null, false, null);
                                 String name = "SpotAnim " + spotAnim.getId();
-                                BlenderModel blenderModel = modelExporter.blenderModelFromCache(modelStats, null, false, null);
                                 modelExporter.saveToFile(name, blenderModel);
                                 plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                             });
@@ -332,10 +335,10 @@ public class ModelGetter
                 });
     }
 
-    public void addPlayerExporter(int index, String target, Player player, ExportMenuOption menuOption)
+    public void addPlayerExporter(int index, String target, Player player)
     {
         client.createMenuEntry(index)
-                .setOption(ColorUtil.prependColorTag("Export " + menuOption.toString(), Color.ORANGE))
+                .setOption(ColorUtil.prependColorTag("Export", Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
                 .onClick(e ->
@@ -349,26 +352,25 @@ public class ModelGetter
 
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items);
-                        clientThread.invokeLater(() ->
+                        if (config.vertexColours())
                         {
-                            BlenderModel blenderModel;
-                            switch (menuOption)
-                            {
-                                default:
-                                case T_POSE:
-                                    blenderModel = modelExporter.blenderModelFromCache(modelStats, comp.getColors(), true, player.getModel().getFaceRenderPriorities());
-                                    break;
-                                case CURRENT:
-                                    blenderModel = modelExporter.blenderModelFromGame(modelStats, comp.getColors(), true, player.getModel().getFaceRenderPriorities(), player.getModel());
-                            }
-
+                            BlenderModel blenderModel = modelExporter.bmVertexColours(player.getModel());
                             modelExporter.saveToFile(finalName, blenderModel);
                             plugin.sendChatMessage("Exported " + finalName + " to " + BLENDER_DIR.getAbsolutePath() + ".");
-                        });
+                        }
+                        else
+                        {
+                            ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items);
+
+                            clientThread.invokeLater(() ->
+                            {
+                                BlenderModel blenderModel = modelExporter.bmFaceColours(modelStats, comp.getColors(), true, player.getModel());
+                                modelExporter.saveToFile(finalName, blenderModel);
+                                plugin.sendChatMessage("Exported " + finalName + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                            });
+                        }
                     });
                     thread.start();
-
                 });
     }
 
@@ -444,45 +446,35 @@ public class ModelGetter
                 });
     }
 
-    public void addObjectExporter(int index, String target, String name, int objectId, Model model, ExportMenuOption menuOption)
+    public void addObjectExporter(int index, String target, String name, int objectId, Model model)
     {
-        String option = "Export " + menuOption.toString();
-        if (menuOption == ExportMenuOption.DEFAULT)
-        {
-            option = "Export";
-        }
-
-        option = ColorUtil.prependColorTag(option, Color.ORANGE);
-
         client.createMenuEntry(index)
-                .setOption(option)
+                .setOption(ColorUtil.prependColorTag("Export", Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
                 .onClick(e ->
                 {
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = modelFinder.findModelsForObject(objectId);
-                        clientThread.invokeLater(() ->
+                        if (config.vertexColours())
                         {
-                            BlenderModel blenderModel;
-                            switch (menuOption)
-                            {
-                                default:
-                                case DEFAULT:
-                                case T_POSE:
-                                    blenderModel = modelExporter.blenderModelFromCache(modelStats, null, false, model.getFaceRenderPriorities());
-                                    break;
-                                case CURRENT:
-                                    blenderModel = modelExporter.blenderModelFromGame(modelStats, null, false, model.getFaceRenderPriorities(), model);
-                            }
-
+                            BlenderModel blenderModel = modelExporter.bmVertexColours(model);
                             modelExporter.saveToFile(name, blenderModel);
                             plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
-                        });
+                        }
+                        else
+                        {
+                            ModelStats[] modelStats = modelFinder.findModelsForObject(objectId);
+
+                            clientThread.invokeLater(() ->
+                            {
+                                BlenderModel blenderModel = modelExporter.bmFaceColours(modelStats, null, false, model);
+                                modelExporter.saveToFile(name, blenderModel);
+                                plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                            });
+                        }
                     });
                     thread.start();
-
                 });
     }
 }

@@ -631,4 +631,23 @@ public interface CreatorsConfig extends Config
 	{
 		return 3;
 	}
+
+	@ConfigSection(
+			name = "Model Exporter",
+			description = "Settings for changing how Models are Exported to 3D model formats",
+			position = 54
+	)
+	String modelExporter = "modelExporter";
+
+	@ConfigItem(
+			keyName = "vertexColours",
+			name = "Vertex Colours",
+			description = "Makes Blender Model .json files export with Vertex Colours instead of Face Colours",
+			section = modelExporter,
+			position = 55
+	)
+	default boolean vertexColours()
+	{
+		return true;
+	}
 }

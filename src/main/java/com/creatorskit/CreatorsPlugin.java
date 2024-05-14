@@ -774,8 +774,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			if (config.exportRightClick())
 			{
 				modelGetter.addSpotAnimExporter(-5, target, npc.getSpotAnims());
-				modelGetter.addNPCExporter(-5, target, npc, ExportMenuOption.CURRENT);
-				modelGetter.addNPCExporter(-5, target, npc, ExportMenuOption.T_POSE);
+				modelGetter.addNPCExporter(-5, target, npc);
 			}
 		}
 
@@ -817,7 +816,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 						if (config.exportRightClick())
 						{
-							modelGetter.addObjectExporter(-4, "<col=FFFF>GroundObject", "GroundObject " + groundObject.getId(), groundObject.getId(), model, ExportMenuOption.DEFAULT);
+							modelGetter.addObjectExporter(-4, "<col=FFFF>GroundObject", "GroundObject " + groundObject.getId(), groundObject.getId(), model);
 						}
 					}
 				}
@@ -856,7 +855,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 						if (config.exportRightClick())
 						{
-							modelGetter.addObjectExporter(-4, "<col=FFFF>DecorativeObject", "DecorativeObject " + decorativeObject.getId(), decorativeObject.getId(), model, ExportMenuOption.DEFAULT);
+							modelGetter.addObjectExporter(-4, "<col=FFFF>DecorativeObject", "DecorativeObject " + decorativeObject.getId(), decorativeObject.getId(), model);
 						}
 					}
 				}
@@ -894,7 +893,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 						if (config.exportRightClick())
 						{
-							modelGetter.addObjectExporter(-4, "<col=FFFF>WallObject", "WallObject " + wallObject.getId(), wallObject.getId(), model, ExportMenuOption.DEFAULT);
+							modelGetter.addObjectExporter(-4, "<col=FFFF>WallObject", "WallObject " + wallObject.getId(), wallObject.getId(), model);
 						}
 					}
 				}
@@ -925,7 +924,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 						if (config.exportRightClick())
 						{
-							modelGetter.addObjectExporter(-4, "<col=FFFF>Item", "Item " + tileItem.getId(), tileItem.getId(), model, ExportMenuOption.DEFAULT);
+							modelGetter.addObjectExporter(-4, "<col=FFFF>Item", "Item " + tileItem.getId(), tileItem.getId(), model);
 						}
 					}
 				}
@@ -967,8 +966,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 						if (config.exportRightClick())
 						{
-							modelGetter.addObjectExporter(-4, "<col=FFFF>GameObject", "GameObject " + gameObject.getId(), gameObject.getId(), model, ExportMenuOption.CURRENT);
-							modelGetter.addObjectExporter(-4, "<col=FFFF>GameObject", "GameObject " + gameObject.getId(), gameObject.getId(), model, ExportMenuOption.T_POSE);
+							modelGetter.addObjectExporter(-4, "<col=FFFF>GameObject", "GameObject " + gameObject.getId(), gameObject.getId(), model);
 						}
 					}
 				}
@@ -1033,8 +1031,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			if (config.exportRightClick())
 			{
-				modelGetter.addPlayerExporter(-6, target, player, ExportMenuOption.CURRENT);
-				modelGetter.addPlayerExporter(-6, target, player, ExportMenuOption.T_POSE);
+				modelGetter.addPlayerExporter(-6, target, player);
 			}
 		}
 
@@ -1071,8 +1068,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 				if (config.exportRightClick())
 				{
-					modelGetter.addPlayerExporter(-5, "Local Player", localPlayer, ExportMenuOption.CURRENT);
-					modelGetter.addPlayerExporter(-5, "Local Player", localPlayer, ExportMenuOption.T_POSE);
+					modelGetter.addPlayerExporter(-5, "Local Player", localPlayer);
 				}
 			}
 		}
