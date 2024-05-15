@@ -10,6 +10,7 @@ import javax.inject.Inject;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Scanner;
 import java.util.concurrent.CountDownLatch;
 import java.util.regex.Matcher;
@@ -24,6 +25,21 @@ public class ModelFinder
     private String lastFound;
     @Getter
     private int lastAnim;
+    private static final BodyPart[] bodyParts = new BodyPart[]{
+            BodyPart.HEAD,
+            BodyPart.CAPE,
+            BodyPart.AMULET,
+            BodyPart.WEAPON,
+            BodyPart.TORSO,
+            BodyPart.SHIELD,
+            BodyPart.ARMS,
+            BodyPart.LEGS,
+            BodyPart.HAIR,
+            BodyPart.HANDS,
+            BodyPart.FEET,
+            BodyPart.JAW};
+    private static final int WEAPON_IDX = 3;
+    private static final int SHIELD_IDX = 5;
     private static final Pattern recolFrom = Pattern.compile("recol\\ds=.+");
     private static final Pattern recolTo = Pattern.compile("recol\\dd=.+");
     private static final Pattern retexFrom = Pattern.compile("retex\\ds=.+");
@@ -32,44 +48,54 @@ public class ModelFinder
     private final Request spotAnimRequest = new Request.Builder().url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.spotanim?ref_type=heads").build();
     private final Request npcRequest = new Request.Builder().url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.npc").build();
     private final Request locRequest = new Request.Builder().url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.loc").build();
+    private final Request seqRequest = new Request.Builder().url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.seq?ref_type=heads").build();
 
-
-    public ModelStats[] findModelsForPlayer(boolean groundItem, boolean maleItem, int[] items)
+    public ModelStats[] findModelsForPlayer(boolean groundItem, boolean maleItem, int[] items, int animId)
     {
         //Convert equipmentId to itemId or kitId as appropriate
         int[] ids = new int[items.length];
-        ArrayList<Integer> itemList = new ArrayList<>();
-        ArrayList<Integer> kitList = new ArrayList<>();
+
+        int[] itemShortList = new int[items.length];
+        int[] kitShortList = new int[items.length];
 
         for (int i = 0; i < ids.length; i++)
         {
             int item = items[i];
 
             if (item >= 256 && item <= 512)
-                kitList.add(item - 256);
+            {
+                kitShortList[i] = item - 256;
+            }
+            else
+            {
+                kitShortList[i] = -1;
+            }
 
-            if (item > 256)
-                itemList.add(item - 512);
+            if (item > 512)
+            {
+                itemShortList[i] = item - 512;
+            }
+            else
+            {
+                itemShortList[i] = -1;
+            }
         }
 
-        ArrayList<ModelStats> modelStatsArray = new ArrayList<>();
+        CountDownLatch countDownLatch1 = new CountDownLatch(1);
 
-        //for modelIds
-        int[] itemId = new int[itemList.size()];
-        for (int i = 0; i < itemList.size(); i++)
-        {
-            itemId[i] = itemList.get(i);
-        }
+        AnimSequence animSequence = new AnimSequence(
+                AnimSequenceData.UNALTERED,
+                AnimSequenceData.UNALTERED,
+                -1,
+                -1);
 
-        CountDownLatch countDownLatch = new CountDownLatch(2);
-
-        Call itemCall = httpClient.newCall(objRequest);
-        itemCall.enqueue(new Callback() {
+        Call call = httpClient.newCall(seqRequest);
+        call.enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e)
             {
-                log.debug("Failed to access URL: https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.obj");
-                countDownLatch.countDown();
+                log.debug("Failed to access URL: https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.seq?ref_type=heads");
+                countDownLatch1.countDown();
             }
 
             @Override
@@ -78,18 +104,50 @@ public class ModelFinder
                 if (!response.isSuccessful() || response.body() == null)
                     return;
 
-                getPlayerItems(response, modelStatsArray, groundItem, maleItem, itemId);
-                countDownLatch.countDown();
+                removePlayerItems(response, animSequence, animId);
+                countDownLatch1.countDown();
                 response.body().close();
             }
         });
 
-        //for KitIds
-        int[] kitId = new int[kitList.size()];
-        for (int i = 0; i < kitList.size(); i++)
+        try
         {
-            kitId[i] = kitList.get(i);
+            countDownLatch1.await();
         }
+        catch (Exception e)
+        {
+            log.debug("CountDownLatch failed to wait at findModelsForPlayers, AnimSeq");
+        }
+
+        CountDownLatch countDownLatch2 = new CountDownLatch(2);
+
+        ArrayList<ModelStats> itemArray = new ArrayList<>();
+        System.out.println(animSequence.getMainHandData() + "," + animSequence.getOffHandData());
+
+        Call itemCall = httpClient.newCall(objRequest);
+        itemCall.enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e)
+            {
+                log.debug("Failed to access URL: https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.obj");
+                countDownLatch2.countDown();
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException
+            {
+                if (!response.isSuccessful() || response.body() == null)
+                    return;
+
+                getPlayerItems(response, itemArray, groundItem, maleItem, itemShortList, animSequence);
+                countDownLatch2.countDown();
+                response.body().close();
+            }
+        });
+
+        ArrayList<ModelStats> kitArray = new ArrayList<>();
+
+        //for KitIds
 
         Request kitRequest = new Request.Builder()
                 .url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.idk")
@@ -100,7 +158,7 @@ public class ModelFinder
             public void onFailure(Call call, IOException e)
             {
                 log.debug("Failed to access URL: https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.idk");
-                countDownLatch.countDown();
+                countDownLatch2.countDown();
             }
 
             @Override
@@ -109,36 +167,165 @@ public class ModelFinder
                 if (!response.isSuccessful() || response.body() == null)
                     return;
 
-                getPlayerKit(response, modelStatsArray, kitId);
-                countDownLatch.countDown();
+                getPlayerKit(response, kitArray, kitShortList);
+                countDownLatch2.countDown();
                 response.body().close();
             }
         });
 
         try
         {
-            countDownLatch.await();
+            countDownLatch2.await();
         }
         catch (Exception e)
         {
-            log.debug("CountDownLatch failed to wait at findModelsForPlayers");
+            log.debug("CountDownLatch failed to wait at findModelsForPlayers, Item/Kits");
         }
 
+        itemArray.addAll(kitArray);
+        ArrayList<ModelStats> orderedItems = new ArrayList<>();
+        for (int e = 0; e < bodyParts.length; e++)
+        {
+            for (int i = 0; i < itemArray.size(); i++)
+            {
+                ModelStats modelStats = itemArray.get(i);
+                if (modelStats.getBodyPart() == bodyParts[e])
+                {
+                    if (!orderedItems.contains(modelStats))
+                    {
+                        orderedItems.add(modelStats);
+                    }
+                }
+            }
+        }
 
-        return modelStatsArray.toArray(new ModelStats[0]);
+        return orderedItems.toArray(new ModelStats[0]);
     }
 
-    public static void getPlayerItems(Response response, ArrayList<ModelStats> modelStatsArray, boolean groundItem, boolean maleItem, int[] itemId)
+    public void removePlayerItems(Response response, AnimSequence animSequence, int animId)
+    {
+        InputStream inputStream = response.body().byteStream();
+        Scanner scanner = new Scanner(inputStream);
+        Pattern seqPattern = Pattern.compile("\\[.+_" + animId + "]");
+
+        while (scanner.hasNextLine())
+        {
+            String string = scanner.nextLine();
+            Matcher match = seqPattern.matcher(string);
+            if (match.matches())
+            {
+                System.out.println("Match found");
+                while (!string.isEmpty())
+                {
+                    string = scanner.nextLine();
+                    if (string.startsWith("mainhand"))
+                    {
+                        String[] split = string.split("=");
+                        if (split[1].equals("hide"))
+                        {
+                            System.out.println("setMainHandData hide");
+                            animSequence.setMainHandData(AnimSequenceData.HIDE);
+                        }
+                        else
+                        {
+                            animSequence.setMainHandData(AnimSequenceData.SWAP);
+                            String[] modelSplit = split[1].split("_");
+                            animSequence.setMainHandItemId(Integer.parseInt(modelSplit[modelSplit.length - 1]));
+                        }
+                    }
+                    else if (string.startsWith("offhand"))
+                    {
+                        String[] split = string.split("=");
+                        if (split[1].equals("hide"))
+                        {
+                            System.out.println("setOffHandData hide");
+                            animSequence.setOffHandData(AnimSequenceData.HIDE);
+                        }
+                        else
+                        {
+                            animSequence.setOffHandData(AnimSequenceData.SWAP);
+                            String[] modelSplit = split[1].split("_");
+                            animSequence.setOffHandItemId(Integer.parseInt(modelSplit[modelSplit.length - 1]));
+                        }
+                    }
+                }
+                return;
+            }
+        }
+    }
+
+    public static void getPlayerItems(Response response, ArrayList<ModelStats> modelStatsArray, boolean groundItem, boolean maleItem, int[] itemId, AnimSequence animSequence)
     {
         InputStream inputStream = response.body().byteStream();
         Scanner scanner = new Scanner(inputStream);
         Pattern[] patterns = new Pattern[itemId.length];
 
-        for (int i = 0; i < itemId.length; i++)
+        AnimSequenceData mainHand = animSequence.getMainHandData();
+        AnimSequenceData offHand = animSequence.getOffHandData();
+
+        int[] updatedItemIds = Arrays.copyOf(itemId, itemId.length);
+
+        switch (mainHand)
         {
-            int item = itemId[i];
+            case UNALTERED:
+                switch (offHand)
+                {
+                    case UNALTERED:
+                        break;
+                    case HIDE:
+                        updatedItemIds[SHIELD_IDX] = -1;
+                        break;
+                    case SWAP:
+                        updatedItemIds[SHIELD_IDX] = animSequence.getOffHandItemId();
+                }
+                break;
+            case SWAP:
+                switch (offHand)
+                {
+                    case UNALTERED:
+                        updatedItemIds[WEAPON_IDX] = animSequence.getMainHandItemId();
+                        break;
+                    case HIDE:
+                        updatedItemIds[WEAPON_IDX] = -1;
+                        updatedItemIds[SHIELD_IDX] = animSequence.getMainHandItemId();
+                        break;
+                    case SWAP:
+                        updatedItemIds[WEAPON_IDX] = animSequence.getMainHandItemId();
+                        updatedItemIds[SHIELD_IDX] = animSequence.getOffHandItemId();
+                }
+                break;
+            case HIDE:
+                switch (offHand)
+                {
+                    case UNALTERED:
+                        updatedItemIds[WEAPON_IDX] = -1;
+                        break;
+                    case HIDE:
+                        updatedItemIds[WEAPON_IDX] = -1;
+                        updatedItemIds[SHIELD_IDX] = -1;
+                        break;
+                    case SWAP:
+                        updatedItemIds[WEAPON_IDX] = animSequence.getOffHandItemId();
+                        updatedItemIds[SHIELD_IDX] = -1;
+                }
+                break;
+        }
+
+        for (int i = 0; i < updatedItemIds.length; i++)
+        {
+            int item = updatedItemIds[i];
+            if (item == -1)
+            {
+                continue;
+            }
+
             Pattern itemPattern = Pattern.compile("\\[.+_" + item + "]");
             patterns[i] = itemPattern;
+        }
+
+        for (int id : updatedItemIds)
+        {
+            System.out.println(id);
         }
 
         while (scanner.hasNextLine())
@@ -146,6 +333,11 @@ public class ModelFinder
             String string = scanner.nextLine();
             for (int i = 0; i < patterns.length; i++)
             {
+                if (updatedItemIds[i] == -1)
+                {
+                    continue;
+                }
+
                 Pattern pattern = patterns[i];
                 Matcher matcher = pattern.matcher(string);
                 if (matcher.matches())
@@ -258,7 +450,7 @@ public class ModelFinder
                         {
                             modelStatsArray.add(new ModelStats(
                                     id,
-                                    BodyPart.NA,
+                                    bodyParts[i],
                                     recolourFromArray,
                                     recolourToArray,
                                     retextureFrom,
@@ -289,8 +481,11 @@ public class ModelFinder
         {
             //Create a pattern to match the format [idk_XXX] per kitId
             int item = kitId[i];
-            Pattern kitPattern = Pattern.compile("\\[.+_" + item + "]");
-            patterns[i] = kitPattern;
+            if (item != -1)
+            {
+                Pattern kitPattern = Pattern.compile("\\[.+_" + item + "]");
+                patterns[i] = kitPattern;
+            }
         }
 
         while (scanner.hasNextLine())
@@ -298,6 +493,11 @@ public class ModelFinder
             String string = scanner.nextLine();
             for (int i = 0; i < patterns.length; i++)
             {
+                if (kitId[i] == -1)
+                {
+                    continue;
+                }
+
                 Pattern pattern = patterns[i];
                 Matcher matcher = pattern.matcher(string);
                 if (matcher.matches())
@@ -305,7 +505,6 @@ public class ModelFinder
                     int[] modelIds = new int[2];
                     ArrayList<Integer> recolourFrom = new ArrayList<>();
                     ArrayList<Integer> recolourTo = new ArrayList<>();
-                    BodyPart bodyPart = BodyPart.NA;
 
                     while (!string.isEmpty())
                     {
@@ -319,23 +518,6 @@ public class ModelFinder
                         {
                             String[] split = string.split("_");
                             modelIds[1] = Integer.parseInt(split[split.length - 1]);
-                        }
-                        else if (string.startsWith("bodypart"))
-                        {
-                            if (string.endsWith("hair"))
-                                bodyPart = BodyPart.HAIR;
-                            else if (string.endsWith("jaw"))
-                                bodyPart = BodyPart.JAW;
-                            else if (string.endsWith("torso"))
-                                bodyPart = BodyPart.TORSO;
-                            else if (string.endsWith("arms"))
-                                bodyPart = BodyPart.ARMS;
-                            else if (string.endsWith("hands"))
-                                bodyPart = BodyPart.HANDS;
-                            else if (string.endsWith("legs"))
-                                bodyPart = BodyPart.LEGS;
-                            else if (string.endsWith("feet"))
-                                bodyPart = BodyPart.FEET;
                         }
                         else if (string.startsWith("recol"))
                         {
@@ -381,7 +563,7 @@ public class ModelFinder
                         {
                             modelStatsArray.add(new ModelStats(
                                     id,
-                                    bodyPart,
+                                    bodyParts[i],
                                     recolourFromArray,
                                     recolourToArray,
                                     new short[0],

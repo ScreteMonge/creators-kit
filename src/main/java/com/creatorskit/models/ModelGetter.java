@@ -5,6 +5,7 @@ import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.swing.CreatorsPanel;
 import com.creatorskit.swing.ObjectPanel;
 import net.runelite.api.*;
+import net.runelite.api.kit.KitType;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.util.ColorUtil;
@@ -13,6 +14,7 @@ import javax.inject.Inject;
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
+import java.util.Arrays;
 
 public class ModelGetter
 {
@@ -120,15 +122,15 @@ public class ModelGetter
                 .setType(MenuAction.RUNELITE)
                 .onClick(e ->
                 {
-                    Thread thread = new Thread(() ->
+                    if (config.vertexColours())
                     {
-                        if (config.vertexColours())
-                        {
-                            BlenderModel blenderModel = modelExporter.bmVertexColours(npc.getModel());
-                            modelExporter.saveToFile(npc.getName(), blenderModel);
-                            plugin.sendChatMessage("Exported " + npc.getName() + " to " + BLENDER_DIR.getAbsolutePath() + ".");
-                        }
-                        else
+                        BlenderModel blenderModel = modelExporter.bmVertexColours(npc.getModel());
+                        modelExporter.saveToFile(npc.getName(), blenderModel);
+                        plugin.sendChatMessage("Exported " + npc.getName() + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                    }
+                    else
+                    {
+                        Thread thread = new Thread(() ->
                         {
                             ModelStats[] modelStats = modelFinder.findModelsForNPC(npc.getId());
 
@@ -138,9 +140,9 @@ public class ModelGetter
                                 modelExporter.saveToFile(npc.getName(), blenderModel);
                                 plugin.sendChatMessage("Exported " + npc.getName() + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                             });
-                        }
-                    });
-                    thread.start();
+                        });
+                        thread.start();
+                    }
                 });
     }
 
@@ -237,10 +239,10 @@ public class ModelGetter
                 .setType(MenuAction.RUNELITE)
                 .onClick(e ->
                 {
-                    for (ActorSpotAnim spotAnim : spotAnims)
+                    Thread thread = new Thread(() ->
                     {
-                        Thread thread = new Thread(() ->
-                        {
+                        for (ActorSpotAnim spotAnim : spotAnims) {
+
                             ModelStats[] modelStats = modelFinder.findSpotAnim(spotAnim.getId());
 
                             clientThread.invokeLater(() ->
@@ -250,9 +252,9 @@ public class ModelGetter
                                 modelExporter.saveToFile(name, blenderModel);
                                 plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                             });
-                        });
-                        thread.start();
-                    }
+                        }
+                    });
+                    thread.start();
                 });
     }
 
@@ -276,7 +278,7 @@ public class ModelGetter
                     {
                         Thread thread = new Thread(() ->
                         {
-                            ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items);
+                            ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items, player.getAnimation());
                             clientThread.invokeLater(() ->
                             {
                                 plugin.cacheToAnvil(modelStats, comp.getColors(), true);
@@ -290,7 +292,7 @@ public class ModelGetter
                     //For "Store" option on players
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items);
+                        ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items, player.getAnimation());
                         clientThread.invokeLater(() ->
                         {
                             Model model = plugin.constructModelFromCache(modelStats, comp.getColors(), true, true);
@@ -344,33 +346,123 @@ public class ModelGetter
                 .onClick(e ->
                 {
                     PlayerComposition comp = player.getPlayerComposition();
+/*
+                    int amulet = comp.getEquipmentId(KitType.AMULET);
+                    int amuletKit = comp.getKitId(KitType.AMULET);
+                    int arms = comp.getEquipmentId(KitType.ARMS);
+                    int armsKit = comp.getKitId(KitType.ARMS);
+                    int cape = comp.getEquipmentId(KitType.CAPE);
+                    int capeKit = comp.getKitId(KitType.CAPE);
+                    int boots = comp.getEquipmentId(KitType.BOOTS);
+                    int bootsKit = comp.getKitId(KitType.BOOTS);
+                    int hair = comp.getEquipmentId(KitType.HAIR);
+                    int hairKit = comp.getKitId(KitType.HAIR);
+                    int jaw = comp.getEquipmentId(KitType.JAW);
+                    int jawKit = comp.getKitId(KitType.JAW);
+                    int legs = comp.getEquipmentId(KitType.LEGS);
+                    int legsKit = comp.getKitId(KitType.LEGS);
+                    int shield = comp.getEquipmentId(KitType.SHIELD);
+                    int shieldKit = comp.getKitId(KitType.SHIELD);
+                    int weapon = comp.getEquipmentId(KitType.WEAPON);
+                    int weaponKit = comp.getKitId(KitType.WEAPON);
+                    int hands = comp.getEquipmentId(KitType.HANDS);
+                    int handsKit = comp.getKitId(KitType.HANDS);
+                    int head = comp.getEquipmentId(KitType.HEAD);
+                    int headKit = comp.getKitId(KitType.HEAD);
+                    int torso = comp.getEquipmentId(KitType.TORSO);
+                    int torsoKit = comp.getKitId(KitType.TORSO);
+                    System.out.println("Ammy: " + amulet);
+                    System.out.println("AmmyKit: " + amuletKit);
+                    System.out.println("Arms: " + arms);
+                    System.out.println("ArmsKit: " + armsKit);
+                    System.out.println("Cape: " + cape);
+                    System.out.println("CapeKit: " + capeKit);
+                    System.out.println("Boots: " + boots);
+                    System.out.println("BootsKit: " + bootsKit);
+                    System.out.println("Hair: " + hair);
+                    System.out.println("HairKit: " + hairKit);
+                    System.out.println("Jaw: " + jaw);
+                    System.out.println("JawKit: " + jawKit);
+                    System.out.println("Legs: " + legs);
+                    System.out.println("LegsKit: " + legsKit);
+                    System.out.println("Shield: " + shield);
+                    System.out.println("ShieldKit: " + shieldKit);
+                    System.out.println("Weapon: " + weapon);
+                    System.out.println("WeaponKit: " + weaponKit);
+                    System.out.println("Hands: " + hands);
+                    System.out.println("HandsKit: " + handsKit);
+                    System.out.println("Head: " + head);
+                    System.out.println("HeadKit: " + headKit);
+                    System.out.println("Torso: " + torso);
+                    System.out.println("TorsoKit: " + torsoKit);
+
+
+ */
                     int[] items = comp.getEquipmentIds();
+                    for (int i : items)
+                    {
+                        System.out.println("Item: " + i);
+                    }
+
+                    Model model = player.getModel();
+                    int vCount = model.getVerticesCount();
+                    int fCount = model.getFaceCount();
+                    int[] vX = Arrays.copyOf(model.getVerticesX(), vCount);
+                    int[] vY = Arrays.copyOf(model.getVerticesY(), vCount);
+                    int[] vZ = Arrays.copyOf(model.getVerticesZ(), vCount);
+                    int[] f1 = Arrays.copyOf(model.getFaceIndices1(), fCount);
+                    int[] f2 = Arrays.copyOf(model.getFaceIndices2(), fCount);
+                    int[] f3 = Arrays.copyOf(model.getFaceIndices3(), fCount);
+                    byte[] renderPriorities;
+                    if (model.getFaceRenderPriorities() == null)
+                    {
+                        renderPriorities = new byte[fCount];
+                        Arrays.fill(renderPriorities, (byte) 0);
+                    }
+                    else
+                    {
+                        renderPriorities = model.getFaceRenderPriorities();
+                    }
+                    int animId = player.getAnimation();
+
+                    System.out.println("True model FaceCount: " + model.getFaceCount());
+
                     String name = player.getName();
                     if (player == client.getLocalPlayer())
                         name = "Local Player";
                     String finalName = name;
 
-                    Thread thread = new Thread(() ->
+                    if (config.vertexColours())
                     {
-                        if (config.vertexColours())
+                        BlenderModel blenderModel = modelExporter.bmVertexColours(model);
+                        modelExporter.saveToFile(finalName, blenderModel);
+                        plugin.sendChatMessage("Exported " + finalName + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                    }
+                    else
+                    {
+                        Thread thread = new Thread(() ->
                         {
-                            BlenderModel blenderModel = modelExporter.bmVertexColours(player.getModel());
-                            modelExporter.saveToFile(finalName, blenderModel);
-                            plugin.sendChatMessage("Exported " + finalName + " to " + BLENDER_DIR.getAbsolutePath() + ".");
-                        }
-                        else
-                        {
-                            ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items);
+                            ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items, animId);
 
                             clientThread.invokeLater(() ->
                             {
-                                BlenderModel blenderModel = modelExporter.bmFaceColours(modelStats, comp.getColors(), true, player.getModel());
-                                modelExporter.saveToFile(finalName, blenderModel);
+                                BlenderModel bm = modelExporter.bmFaceColoursForPlayer(
+                                        modelStats,
+                                        comp.getColors(),
+                                        true,
+                                        vX,
+                                        vY,
+                                        vZ,
+                                        f1,
+                                        f2,
+                                        f3,
+                                        renderPriorities);
+                                modelExporter.saveToFile(finalName, bm);
                                 plugin.sendChatMessage("Exported " + finalName + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                             });
-                        }
-                    });
-                    thread.start();
+                        });
+                        thread.start();
+                    }
                 });
     }
 
@@ -454,15 +546,15 @@ public class ModelGetter
                 .setType(MenuAction.RUNELITE)
                 .onClick(e ->
                 {
-                    Thread thread = new Thread(() ->
+                    if (config.vertexColours())
                     {
-                        if (config.vertexColours())
-                        {
-                            BlenderModel blenderModel = modelExporter.bmVertexColours(model);
-                            modelExporter.saveToFile(name, blenderModel);
-                            plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
-                        }
-                        else
+                        BlenderModel blenderModel = modelExporter.bmVertexColours(model);
+                        modelExporter.saveToFile(name, blenderModel);
+                        plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                    }
+                    else
+                    {
+                        Thread thread = new Thread(() ->
                         {
                             ModelStats[] modelStats = modelFinder.findModelsForObject(objectId);
 
@@ -472,9 +564,10 @@ public class ModelGetter
                                 modelExporter.saveToFile(name, blenderModel);
                                 plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                             });
-                        }
-                    });
-                    thread.start();
+                        });
+                        thread.start();
+
+                    }
                 });
     }
 }

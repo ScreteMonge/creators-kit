@@ -3,11 +3,16 @@ package com.creatorskit.models;
 public enum BodyPart
 {
     NA,
-    HAIR,
-    JAW,
+    HEAD,
+    CAPE,
+    AMULET,
+    WEAPON,
     TORSO,
+    SHIELD,
     ARMS,
-    HANDS,
     LEGS,
-    FEET
+    HAIR,
+    HANDS,
+    FEET,
+    JAW
 }

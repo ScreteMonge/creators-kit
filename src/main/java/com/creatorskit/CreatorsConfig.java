@@ -648,6 +648,6 @@ public interface CreatorsConfig extends Config
 	)
 	default boolean vertexColours()
 	{
-		return true;
+		return false;
 	}
 }
