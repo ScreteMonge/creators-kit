@@ -346,63 +346,7 @@ public class ModelGetter
                 .onClick(e ->
                 {
                     PlayerComposition comp = player.getPlayerComposition();
-/*
-                    int amulet = comp.getEquipmentId(KitType.AMULET);
-                    int amuletKit = comp.getKitId(KitType.AMULET);
-                    int arms = comp.getEquipmentId(KitType.ARMS);
-                    int armsKit = comp.getKitId(KitType.ARMS);
-                    int cape = comp.getEquipmentId(KitType.CAPE);
-                    int capeKit = comp.getKitId(KitType.CAPE);
-                    int boots = comp.getEquipmentId(KitType.BOOTS);
-                    int bootsKit = comp.getKitId(KitType.BOOTS);
-                    int hair = comp.getEquipmentId(KitType.HAIR);
-                    int hairKit = comp.getKitId(KitType.HAIR);
-                    int jaw = comp.getEquipmentId(KitType.JAW);
-                    int jawKit = comp.getKitId(KitType.JAW);
-                    int legs = comp.getEquipmentId(KitType.LEGS);
-                    int legsKit = comp.getKitId(KitType.LEGS);
-                    int shield = comp.getEquipmentId(KitType.SHIELD);
-                    int shieldKit = comp.getKitId(KitType.SHIELD);
-                    int weapon = comp.getEquipmentId(KitType.WEAPON);
-                    int weaponKit = comp.getKitId(KitType.WEAPON);
-                    int hands = comp.getEquipmentId(KitType.HANDS);
-                    int handsKit = comp.getKitId(KitType.HANDS);
-                    int head = comp.getEquipmentId(KitType.HEAD);
-                    int headKit = comp.getKitId(KitType.HEAD);
-                    int torso = comp.getEquipmentId(KitType.TORSO);
-                    int torsoKit = comp.getKitId(KitType.TORSO);
-                    System.out.println("Ammy: " + amulet);
-                    System.out.println("AmmyKit: " + amuletKit);
-                    System.out.println("Arms: " + arms);
-                    System.out.println("ArmsKit: " + armsKit);
-                    System.out.println("Cape: " + cape);
-                    System.out.println("CapeKit: " + capeKit);
-                    System.out.println("Boots: " + boots);
-                    System.out.println("BootsKit: " + bootsKit);
-                    System.out.println("Hair: " + hair);
-                    System.out.println("HairKit: " + hairKit);
-                    System.out.println("Jaw: " + jaw);
-                    System.out.println("JawKit: " + jawKit);
-                    System.out.println("Legs: " + legs);
-                    System.out.println("LegsKit: " + legsKit);
-                    System.out.println("Shield: " + shield);
-                    System.out.println("ShieldKit: " + shieldKit);
-                    System.out.println("Weapon: " + weapon);
-                    System.out.println("WeaponKit: " + weaponKit);
-                    System.out.println("Hands: " + hands);
-                    System.out.println("HandsKit: " + handsKit);
-                    System.out.println("Head: " + head);
-                    System.out.println("HeadKit: " + headKit);
-                    System.out.println("Torso: " + torso);
-                    System.out.println("TorsoKit: " + torsoKit);
-
-
- */
                     int[] items = comp.getEquipmentIds();
-                    for (int i : items)
-                    {
-                        System.out.println("Item: " + i);
-                    }
 
                     Model model = player.getModel();
                     int vCount = model.getVerticesCount();
@@ -424,8 +368,6 @@ public class ModelGetter
                         renderPriorities = model.getFaceRenderPriorities();
                     }
                     int animId = player.getAnimation();
-
-                    System.out.println("True model FaceCount: " + model.getFaceCount());
 
                     String name = player.getName();
                     if (player == client.getLocalPlayer())
@@ -466,8 +408,9 @@ public class ModelGetter
                 });
     }
 
-    public void addGameObjectGetter(int index, String option, String target, String name, Model model, int objectId, CustomModelType type, int animationId, int orientation, ModelMenuOption menuOption)
+    public void addGameObjectGetter(int index, String option, String name, Model model, int objectId, CustomModelType type, int animationId, int orientation, ModelMenuOption menuOption)
     {
+        String target = ColorUtil.prependColorTag(name, Color.CYAN);
         client.createMenuEntry(index)
                 .setOption(option)
                 .setTarget(target)
@@ -517,8 +460,9 @@ public class ModelGetter
                 });
     }
 
-    public void addObjectGetterToAnvil(String target, String name, int objectId)
+    public void addObjectGetterToAnvil(String name, int objectId)
     {
+        String target = ColorUtil.prependColorTag(name, Color.CYAN);
         client.createMenuEntry(-2)
                 .setOption(ColorUtil.prependColorTag("Anvil", Color.ORANGE))
                 .setTarget(target)
@@ -538,8 +482,9 @@ public class ModelGetter
                 });
     }
 
-    public void addObjectExporter(int index, String target, String name, int objectId, Model model)
+    public void addObjectExporter(int index, String name, int objectId, Model model)
     {
+        String target = ColorUtil.prependColorTag(name, Color.CYAN);
         client.createMenuEntry(index)
                 .setOption(ColorUtil.prependColorTag("Export", Color.ORANGE))
                 .setTarget(target)
@@ -550,7 +495,7 @@ public class ModelGetter
                     {
                         BlenderModel blenderModel = modelExporter.bmVertexColours(model);
                         modelExporter.saveToFile(name, blenderModel);
-                        plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                        plugin.sendChatMessage("Exported " + name + " " + objectId + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                     }
                     else
                     {
@@ -562,7 +507,7 @@ public class ModelGetter
                             {
                                 BlenderModel blenderModel = modelExporter.bmFaceColours(modelStats, null, false, model);
                                 modelExporter.saveToFile(name, blenderModel);
-                                plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                                plugin.sendChatMessage("Exported " + name + " " + objectId + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                             });
                         });
                         thread.start();

@@ -89,40 +89,42 @@ public class ModelFinder
                 -1,
                 -1);
 
-        Call call = httpClient.newCall(seqRequest);
-        call.enqueue(new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e)
-            {
-                log.debug("Failed to access URL: https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.seq?ref_type=heads");
-                countDownLatch1.countDown();
-            }
-
-            @Override
-            public void onResponse(Call call, Response response) throws IOException
-            {
-                if (!response.isSuccessful() || response.body() == null)
-                    return;
-
-                removePlayerItems(response, animSequence, animId);
-                countDownLatch1.countDown();
-                response.body().close();
-            }
-        });
-
-        try
+        if (animId != -1)
         {
-            countDownLatch1.await();
-        }
-        catch (Exception e)
-        {
-            log.debug("CountDownLatch failed to wait at findModelsForPlayers, AnimSeq");
+            Call call = httpClient.newCall(seqRequest);
+            call.enqueue(new Callback() {
+                @Override
+                public void onFailure(Call call, IOException e)
+                {
+                    log.debug("Failed to access URL: https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.seq?ref_type=heads");
+                    countDownLatch1.countDown();
+                }
+
+                @Override
+                public void onResponse(Call call, Response response) throws IOException
+                {
+                    if (!response.isSuccessful() || response.body() == null)
+                        return;
+
+                    removePlayerItems(response, animSequence, animId);
+                    countDownLatch1.countDown();
+                    response.body().close();
+                }
+            });
+
+            try
+            {
+                countDownLatch1.await();
+            }
+            catch (Exception e)
+            {
+                log.debug("CountDownLatch failed to wait at findModelsForPlayers, AnimSeq");
+            }
         }
 
         CountDownLatch countDownLatch2 = new CountDownLatch(2);
 
         ArrayList<ModelStats> itemArray = new ArrayList<>();
-        System.out.println(animSequence.getMainHandData() + "," + animSequence.getOffHandData());
 
         Call itemCall = httpClient.newCall(objRequest);
         itemCall.enqueue(new Callback() {
@@ -214,7 +216,6 @@ public class ModelFinder
             Matcher match = seqPattern.matcher(string);
             if (match.matches())
             {
-                System.out.println("Match found");
                 while (!string.isEmpty())
                 {
                     string = scanner.nextLine();
@@ -223,7 +224,6 @@ public class ModelFinder
                         String[] split = string.split("=");
                         if (split[1].equals("hide"))
                         {
-                            System.out.println("setMainHandData hide");
                             animSequence.setMainHandData(AnimSequenceData.HIDE);
                         }
                         else
@@ -238,7 +238,6 @@ public class ModelFinder
                         String[] split = string.split("=");
                         if (split[1].equals("hide"))
                         {
-                            System.out.println("setOffHandData hide");
                             animSequence.setOffHandData(AnimSequenceData.HIDE);
                         }
                         else
@@ -321,11 +320,6 @@ public class ModelFinder
 
             Pattern itemPattern = Pattern.compile("\\[.+_" + item + "]");
             patterns[i] = itemPattern;
-        }
-
-        for (int id : updatedItemIds)
-        {
-            System.out.println(id);
         }
 
         while (scanner.hasNextLine())

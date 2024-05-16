@@ -795,28 +795,35 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 							animationId = ((DynamicObject) renderable).getAnimation().getId();
 						}
 
+						int objectId = groundObject.getId();
+						String name = client.getObjectDefinition(objectId).getName();
+						if (name.equals("null"))
+						{
+							name = "GroundObj";
+						}
+
 						if (config.rightClick())
 						{
 							if (client.isKeyPressed(KeyCode.KC_CONTROL))
 							{
-								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), "<col=FFFF>GroundObject", "GroundObject", model, groundObject.getId(), CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE_AND_ADD);
+								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), name, model, objectId, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE_AND_ADD);
 							}
 							else
 							{
-								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store", Color.ORANGE), "<col=FFFF>GroundObject", "GroundObject", model, groundObject.getId(), CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE);
+								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store", Color.ORANGE), name, model, objectId, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE);
 
 							}
-							modelGetter.addObjectGetterToAnvil("<col=FFFF>GroundObject", "GroundObject", groundObject.getId());
+							modelGetter.addObjectGetterToAnvil(name, objectId);
 						}
 
 						if (config.transmogRightClick())
 						{
-							modelGetter.addGameObjectGetter(-3, ColorUtil.prependColorTag("Transmog", Color.ORANGE), "<col=FFFF>GroundObject", "GroundObject", model, groundObject.getId(), CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.TRANSMOG);
+							modelGetter.addGameObjectGetter(-3, ColorUtil.prependColorTag("Transmog", Color.ORANGE), name, model, objectId, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.TRANSMOG);
 						}
 
 						if (config.exportRightClick())
 						{
-							modelGetter.addObjectExporter(-4, "<col=FFFF>GroundObject", "GroundObject " + groundObject.getId(), groundObject.getId(), model);
+							modelGetter.addObjectExporter(-4, name, objectId, model);
 						}
 					}
 				}
@@ -834,28 +841,35 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 							animationId = ((DynamicObject) renderable).getAnimation().getId();
 						}
 
+						int objectId = decorativeObject.getId();
+						String name = client.getObjectDefinition(objectId).getName();
+						if (name.equals("null"))
+						{
+							name = "DecorativeObj";
+						}
+
 						if (config.rightClick())
 						{
 							if (client.isKeyPressed(KeyCode.KC_CONTROL))
 							{
-								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), "<col=FFFF>DecorativeObject", "DecorativeObject", model, decorativeObject.getId(), CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE_AND_ADD);
+								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), name, model, objectId, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE_AND_ADD);
 							}
 							else
 							{
-								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store", Color.ORANGE), "<col=FFFF>DecorativeObject", "DecorativeObject", model, decorativeObject.getId(), CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE);
+								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store", Color.ORANGE), name, model, objectId, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE);
 
 							}
-							modelGetter.addObjectGetterToAnvil("<col=FFFF>DecorativeObject", "DecorativeObject", decorativeObject.getId());
+							modelGetter.addObjectGetterToAnvil(name, objectId);
 						}
 
 						if (config.transmogRightClick())
 						{
-							modelGetter.addGameObjectGetter(-3, ColorUtil.prependColorTag("Transmog", Color.ORANGE), "<col=FFFF>DecorativeObject", "DecorativeObject", model, decorativeObject.getId(), CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.TRANSMOG);
+							modelGetter.addGameObjectGetter(-3, ColorUtil.prependColorTag("Transmog", Color.ORANGE), name, model, objectId, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.TRANSMOG);
 						}
 
 						if (config.exportRightClick())
 						{
-							modelGetter.addObjectExporter(-4, "<col=FFFF>DecorativeObject", "DecorativeObject " + decorativeObject.getId(), decorativeObject.getId(), model);
+							modelGetter.addObjectExporter(-4, name, objectId, model);
 						}
 					}
 				}
@@ -873,27 +887,34 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 							animationId = ((DynamicObject) renderable).getAnimation().getId();
 						}
 
+						int objectId = wallObject.getId();
+						String name = client.getObjectDefinition(objectId).getName();
+						if (name.equals("null"))
+						{
+							name = "WallObj";
+						}
+
 						if (config.rightClick())
 						{
 							if (client.isKeyPressed(KeyCode.KC_CONTROL))
 							{
-								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), "<col=FFFF>WallObject", "WallObject", model, wallObject.getId(), CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE_AND_ADD);
+								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), name, model, objectId, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE_AND_ADD);
 							}
 							else
 							{
-								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store", Color.ORANGE), "<col=FFFF>WallObject", "WallObject", model, wallObject.getId(), CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE);
+								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store", Color.ORANGE), name, model, objectId, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE);
 							}
-							modelGetter.addObjectGetterToAnvil("<col=FFFF>WallObject", "WallObject", wallObject.getId());
+							modelGetter.addObjectGetterToAnvil(name, objectId);
 						}
 
 						if (config.transmogRightClick())
 						{
-							modelGetter.addGameObjectGetter(-3, ColorUtil.prependColorTag("Transmog", Color.ORANGE), "<col=FFFF>WallObject", "WallObject", model, wallObject.getId(), CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.TRANSMOG);
+							modelGetter.addGameObjectGetter(-3, ColorUtil.prependColorTag("Transmog", Color.ORANGE), name, model, objectId, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.TRANSMOG);
 						}
 
 						if (config.exportRightClick())
 						{
-							modelGetter.addObjectExporter(-4, "<col=FFFF>WallObject", "WallObject " + wallObject.getId(), wallObject.getId(), model);
+							modelGetter.addObjectExporter(-4, name, objectId, model);
 						}
 					}
 				}
@@ -903,28 +924,35 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				{
 					for (TileItem tileItem : tileItems)
 					{
+						int itemId = tileItem.getId();
+						String name = client.getItemDefinition(tileItem.getId()).getName();
+						if (name.equals("null"))
+						{
+							name = "Item";
+						}
+
 						Model model = tileItem.getModel();
 						if (config.rightClick())
 						{
 							if (client.isKeyPressed(KeyCode.KC_CONTROL))
 							{
-								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), "<col=FFFF>Item", "Item", model, tileItem.getId(), CustomModelType.CACHE_GROUND_ITEM, -1, 0, ModelMenuOption.STORE_AND_ADD);
+								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), name, model, itemId, CustomModelType.CACHE_GROUND_ITEM, -1, 0, ModelMenuOption.STORE_AND_ADD);
 							}
 							else
 							{
-								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store", Color.ORANGE), "<col=FFFF>Item", "Item", model, tileItem.getId(), CustomModelType.CACHE_GROUND_ITEM, -1, 0, ModelMenuOption.STORE);
+								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store", Color.ORANGE), name, model, itemId, CustomModelType.CACHE_GROUND_ITEM, -1, 0, ModelMenuOption.STORE);
 							}
-							modelGetter.addObjectGetterToAnvil("<col=FFFF>Item", "Item", tileItem.getId());
+							modelGetter.addObjectGetterToAnvil(name, itemId);
 						}
 
 						if (config.transmogRightClick())
 						{
-							modelGetter.addGameObjectGetter(-3, ColorUtil.prependColorTag("Transmog", Color.ORANGE), "<col=FFFF>Item", "Item", model, tileItem.getId(), CustomModelType.CACHE_GROUND_ITEM, -1, 0, ModelMenuOption.TRANSMOG);
+							modelGetter.addGameObjectGetter(-3, ColorUtil.prependColorTag("Transmog", Color.ORANGE), name, model, itemId, CustomModelType.CACHE_GROUND_ITEM, -1, 0, ModelMenuOption.TRANSMOG);
 						}
 
 						if (config.exportRightClick())
 						{
-							modelGetter.addObjectExporter(-4, "<col=FFFF>Item", "Item " + tileItem.getId(), tileItem.getId(), model);
+							modelGetter.addObjectExporter(-4, name, itemId, model);
 						}
 					}
 				}
@@ -947,26 +975,33 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 							animationId = ((DynamicObject) renderable).getAnimation().getId();
 						}
 
+						int objectId = gameObject.getId();
+						String name = client.getObjectDefinition(objectId).getName();
+						if (name.equals("null"))
+						{
+							name = "GameObj";
+						}
+
 						Model model = (Model) renderable;
 						if (config.rightClick())
 						{
 							if (client.isKeyPressed(KeyCode.KC_CONTROL))
 							{
-								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), "<col=FFFF>GameObject", "GameObject", model, gameObject.getId(), CustomModelType.CACHE_OBJECT, animationId, gameObject.getOrientation(), ModelMenuOption.STORE_AND_ADD);
+								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), name, model, objectId, CustomModelType.CACHE_OBJECT, animationId, gameObject.getOrientation(), ModelMenuOption.STORE_AND_ADD);
 							}
 							else
 							{
-								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store", Color.ORANGE), "<col=FFFF>GameObject", "GameObject", model, gameObject.getId(), CustomModelType.CACHE_OBJECT, animationId, gameObject.getOrientation(), ModelMenuOption.STORE);
+								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store", Color.ORANGE), name, model, objectId, CustomModelType.CACHE_OBJECT, animationId, gameObject.getOrientation(), ModelMenuOption.STORE);
 							}
-							modelGetter.addObjectGetterToAnvil("<col=FFFF>GameObject", "GameObject", gameObject.getId());
+							modelGetter.addObjectGetterToAnvil(name, gameObject.getId());
 						}
 
 						if (config.transmogRightClick())
-							modelGetter.addGameObjectGetter(-3, ColorUtil.prependColorTag("Transmog", Color.ORANGE), "<col=FFFF>GameObject", "GameObject", model, gameObject.getId(), CustomModelType.CACHE_OBJECT, animationId, gameObject.getOrientation(), ModelMenuOption.TRANSMOG);
+							modelGetter.addGameObjectGetter(-3, ColorUtil.prependColorTag("Transmog", Color.ORANGE), name, model, objectId, CustomModelType.CACHE_OBJECT, animationId, gameObject.getOrientation(), ModelMenuOption.TRANSMOG);
 
 						if (config.exportRightClick())
 						{
-							modelGetter.addObjectExporter(-4, "<col=FFFF>GameObject", "GameObject " + gameObject.getId(), gameObject.getId(), model);
+							modelGetter.addObjectExporter(-4, name, objectId, model);
 						}
 					}
 				}

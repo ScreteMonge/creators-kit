@@ -1,11 +1,9 @@
 package com.creatorskit.models;
 
-import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.client.RuneLite;
-import org.apache.commons.lang3.ArrayUtils;
 
 import javax.inject.Inject;
 import java.io.File;
@@ -18,20 +16,19 @@ public class ModelExporter
 {
     private final Client client;
     private final CreatorsPlugin plugin;
-    private final CreatorsConfig config;
     public final File BLENDER_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/blender-models");
 
     @Inject
-    public ModelExporter(Client client, CreatorsPlugin plugin, CreatorsConfig config)
+    public ModelExporter(Client client, CreatorsPlugin plugin)
     {
         this.client = client;
         this.plugin = plugin;
-        this.config = config;
     }
 
     public void saveToFile(String name, BlenderModel blenderModel)
     {
-        try {
+        try
+        {
             BLENDER_DIR.mkdirs();
 
             String path = BLENDER_DIR.getPath() + "\\\\" + name;
