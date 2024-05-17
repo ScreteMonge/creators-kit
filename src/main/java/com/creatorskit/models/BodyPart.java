@@ -14,5 +14,6 @@ public enum BodyPart
     HAIR,
     HANDS,
     FEET,
-    JAW
+    JAW,
+    SPOTANIM
 }

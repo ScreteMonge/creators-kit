@@ -9,6 +9,7 @@ import net.runelite.api.kit.KitType;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.util.ColorUtil;
+import org.apache.commons.lang3.ArrayUtils;
 
 import javax.inject.Inject;
 import javax.swing.*;
@@ -124,6 +125,11 @@ public class ModelGetter
                 {
                     if (config.vertexColours())
                     {
+                        if (config.exportTPose())
+                        {
+                            npc.setAnimation(-1);
+                            npc.setPoseAnimation(-1);
+                        }
                         BlenderModel blenderModel = modelExporter.bmVertexColours(npc.getModel());
                         modelExporter.saveToFile(npc.getName(), blenderModel);
                         plugin.sendChatMessage("Exported " + npc.getName() + " to " + BLENDER_DIR.getAbsolutePath() + ".");
@@ -136,6 +142,12 @@ public class ModelGetter
 
                             clientThread.invokeLater(() ->
                             {
+                                if (config.exportTPose())
+                                {
+                                    npc.setAnimation(-1);
+                                    npc.setPoseAnimation(-1);
+                                }
+
                                 BlenderModel blenderModel = modelExporter.bmFaceColours(modelStats, null, false, npc.getModel());
                                 modelExporter.saveToFile(npc.getName(), blenderModel);
                                 plugin.sendChatMessage("Exported " + npc.getName() + " to " + BLENDER_DIR.getAbsolutePath() + ".");
@@ -241,13 +253,13 @@ public class ModelGetter
                 {
                     Thread thread = new Thread(() ->
                     {
-                        for (ActorSpotAnim spotAnim : spotAnims) {
-
+                        for (ActorSpotAnim spotAnim : spotAnims)
+                        {
                             ModelStats[] modelStats = modelFinder.findSpotAnim(spotAnim.getId());
 
                             clientThread.invokeLater(() ->
                             {
-                                BlenderModel blenderModel = modelExporter.bmFaceColours(modelStats, null, false, null);
+                                BlenderModel blenderModel = modelExporter.bmSpotAnimFromCache(modelStats);
                                 String name = "SpotAnim " + spotAnim.getId();
                                 modelExporter.saveToFile(name, blenderModel);
                                 plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
@@ -268,6 +280,15 @@ public class ModelGetter
                 {
                     PlayerComposition comp = player.getPlayerComposition();
                     int[] items = comp.getEquipmentIds();
+
+                    IterableHashTable<ActorSpotAnim> actorSpotAnims = player.getSpotAnims();
+                    int[] spotAnims = new int[0];
+                    for (ActorSpotAnim actorSpotAnim : actorSpotAnims)
+                    {
+                        spotAnims = ArrayUtils.add(spotAnims, actorSpotAnim.getId());
+                    }
+                    final int[] fSpotAnims = Arrays.copyOf(spotAnims, spotAnims.length);
+
                     String name = player.getName();
                     if (player == client.getLocalPlayer())
                         name = "Local Player";
@@ -278,7 +299,7 @@ public class ModelGetter
                     {
                         Thread thread = new Thread(() ->
                         {
-                            ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items, player.getAnimation());
+                            ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items, player.getAnimation(), fSpotAnims);
                             clientThread.invokeLater(() ->
                             {
                                 plugin.cacheToAnvil(modelStats, comp.getColors(), true);
@@ -292,7 +313,7 @@ public class ModelGetter
                     //For "Store" option on players
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items, player.getAnimation());
+                        ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items, player.getAnimation(), fSpotAnims);
                         clientThread.invokeLater(() ->
                         {
                             Model model = plugin.constructModelFromCache(modelStats, comp.getColors(), true, true);
@@ -348,6 +369,12 @@ public class ModelGetter
                     PlayerComposition comp = player.getPlayerComposition();
                     int[] items = comp.getEquipmentIds();
 
+                    if (config.exportTPose())
+                    {
+                        player.setAnimation(-1);
+                        player.setPoseAnimation(-1);
+                    }
+
                     Model model = player.getModel();
                     int vCount = model.getVerticesCount();
                     int fCount = model.getFaceCount();
@@ -369,6 +396,25 @@ public class ModelGetter
                     }
                     int animId = player.getAnimation();
 
+                    byte[] transparencies;
+                    if (model.getFaceTransparencies() == null)
+                    {
+                        transparencies = new byte[fCount];
+                        Arrays.fill(transparencies, (byte) 0);
+                    }
+                    else
+                    {
+                        transparencies = model.getFaceTransparencies();
+                    }
+
+                    IterableHashTable<ActorSpotAnim> actorSpotAnims = player.getSpotAnims();
+                    int[] spotAnims = new int[0];
+                    for (ActorSpotAnim actorSpotAnim : actorSpotAnims)
+                    {
+                        spotAnims = ArrayUtils.add(spotAnims, actorSpotAnim.getId());
+                    }
+                    final int[] fSpotAnims = Arrays.copyOf(spotAnims, spotAnims.length);
+
                     String name = player.getName();
                     if (player == client.getLocalPlayer())
                         name = "Local Player";
@@ -384,7 +430,7 @@ public class ModelGetter
                     {
                         Thread thread = new Thread(() ->
                         {
-                            ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items, animId);
+                            ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items, animId, fSpotAnims);
 
                             clientThread.invokeLater(() ->
                             {
@@ -398,6 +444,7 @@ public class ModelGetter
                                         f1,
                                         f2,
                                         f3,
+                                        transparencies,
                                         renderPriorities);
                                 modelExporter.saveToFile(finalName, bm);
                                 plugin.sendChatMessage("Exported " + finalName + " to " + BLENDER_DIR.getAbsolutePath() + ".");

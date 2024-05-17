@@ -2,6 +2,8 @@ package com.creatorskit.models;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.ActorSpotAnim;
+import net.runelite.api.IterableHashTable;
 import net.runelite.api.ModelData;
 import okhttp3.*;
 import org.apache.commons.lang3.ArrayUtils;
@@ -37,7 +39,8 @@ public class ModelFinder
             BodyPart.HAIR,
             BodyPart.HANDS,
             BodyPart.FEET,
-            BodyPart.JAW};
+            BodyPart.JAW,
+            BodyPart.SPOTANIM};
     private static final int WEAPON_IDX = 3;
     private static final int SHIELD_IDX = 5;
     private static final Pattern recolFrom = Pattern.compile("recol\\ds=.+");
@@ -50,7 +53,7 @@ public class ModelFinder
     private final Request locRequest = new Request.Builder().url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.loc").build();
     private final Request seqRequest = new Request.Builder().url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.seq?ref_type=heads").build();
 
-    public ModelStats[] findModelsForPlayer(boolean groundItem, boolean maleItem, int[] items, int animId)
+    public ModelStats[] findModelsForPlayer(boolean groundItem, boolean maleItem, int[] items, int animId, int[] spotAnims)
     {
         //Convert equipmentId to itemId or kitId as appropriate
         int[] ids = new int[items.length];
@@ -81,8 +84,6 @@ public class ModelFinder
             }
         }
 
-        CountDownLatch countDownLatch1 = new CountDownLatch(1);
-
         AnimSequence animSequence = new AnimSequence(
                 AnimSequenceData.UNALTERED,
                 AnimSequenceData.UNALTERED,
@@ -91,6 +92,8 @@ public class ModelFinder
 
         if (animId != -1)
         {
+            CountDownLatch countDownLatch1 = new CountDownLatch(1);
+
             Call call = httpClient.newCall(seqRequest);
             call.enqueue(new Callback() {
                 @Override
@@ -122,7 +125,7 @@ public class ModelFinder
             }
         }
 
-        CountDownLatch countDownLatch2 = new CountDownLatch(2);
+        CountDownLatch countDownLatch2 = new CountDownLatch(3);
 
         ArrayList<ModelStats> itemArray = new ArrayList<>();
 
@@ -175,6 +178,37 @@ public class ModelFinder
             }
         });
 
+        ArrayList<ModelStats> spotAnimArray = new ArrayList<>();
+
+        if (spotAnims.length == 0)
+        {
+            countDownLatch2.countDown();
+        }
+        else
+        {
+            Call call = httpClient.newCall(spotAnimRequest);
+            call.enqueue(new Callback()
+            {
+                @Override
+                public void onFailure(Call call, IOException e)
+                {
+                    log.debug("Failed to access URL: https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.spotanim?ref_type=heads");
+                    countDownLatch2.countDown();
+                }
+
+                @Override
+                public void onResponse(Call call, Response response) throws IOException
+                {
+                    if (!response.isSuccessful() || response.body() == null)
+                        return;
+
+                    getPlayerSpotAnims(response, spotAnims, spotAnimArray);
+                    countDownLatch2.countDown();
+                    response.body().close();
+                }
+            });
+        }
+
         try
         {
             countDownLatch2.await();
@@ -185,6 +219,7 @@ public class ModelFinder
         }
 
         itemArray.addAll(kitArray);
+        itemArray.addAll(spotAnimArray);
         ArrayList<ModelStats> orderedItems = new ArrayList<>();
         for (int e = 0; e < bodyParts.length; e++)
         {
@@ -568,6 +603,132 @@ public class ModelFinder
                                     new CustomLighting(64, 850, -30, -50, -30)));
                         }
                     }
+
+                    if (i == patterns.length - 1)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    public static void getPlayerSpotAnims(Response response, int[] spotAnims, ArrayList<ModelStats> spotAnimList)
+    {
+        InputStream inputStream = response.body().byteStream();
+        Scanner scanner = new Scanner(inputStream);
+        Pattern[] patterns = new Pattern[spotAnims.length];
+
+        for (int i = 0; i < spotAnims.length; i++)
+        {
+            //Create a pattern to match the format [idk_XXX] per kitId
+            int spotAnimId = spotAnims[i];
+            Pattern kitPattern = Pattern.compile("\\[.+_" + spotAnimId + "]");
+            patterns[i] = kitPattern;
+        }
+
+        while (scanner.hasNextLine())
+        {
+            String string = scanner.nextLine();
+            for (int i = 0; i < patterns.length; i++)
+            {
+                Pattern pattern = patterns[i];
+                Matcher matcher = pattern.matcher(string);
+                if (matcher.matches())
+                {
+                    int modelId = 0;
+                    CustomLighting lighting = new CustomLighting(64, 850, -50, -50, 75);
+                    int[] resize = new int[]{128, 128, 128};
+                    ArrayList<Integer> recolourFrom = new ArrayList<>();
+                    ArrayList<Integer> recolourTo = new ArrayList<>();
+
+                    while (!string.isEmpty())
+                    {
+                        string = scanner.nextLine();
+                        if (string.startsWith("model"))
+                        {
+                            String[] split = string.split("_");
+                            modelId = Integer.parseInt(split[split.length - 1]);
+                        }
+                        else if (string.startsWith("amb"))
+                        {
+                            String[] split = string.split("=");
+                            int ambient = Integer.parseInt(split[split.length - 1]);
+                            if (ambient >= 128)
+                                ambient -= 256;
+
+                            lighting.setAmbient(64 + ambient);
+                        }
+                        else if (string.startsWith("con"))
+                        {
+                            String[] split = string.split("=");
+                            int contrast = Integer.parseInt(split[split.length - 1]);
+                            if (contrast >= 128)
+                                contrast -= 128;
+
+                            lighting.setContrast(768 + contrast);
+                        }
+                        else if (string.startsWith("resizeh"))
+                        {
+                            String[] split = string.split("=");
+                            int resizeH = Integer.parseInt(split[split.length - 1]);
+                            resize[0] = resizeH;
+                            resize[1] = resizeH;
+                        }
+                        else if (string.startsWith("resizev"))
+                        {
+                            String[] split = string.split("=");
+                            resize[2] = Integer.parseInt(split[split.length - 1]);
+                        }
+                        else
+                        {
+                            matcher = recolFrom.matcher(string);
+
+                            if (matcher.matches())
+                            {
+                                String[] split = string.split("=");
+                                int e = Integer.parseInt(split[1]);
+                                recolourFrom.add(e);
+                            }
+
+                            matcher = recolTo.matcher(string);
+
+                            if (matcher.matches())
+                            {
+                                String[] split = string.split("=");
+                                int e = Integer.parseInt(split[1]);
+                                recolourTo.add(e);
+                            }
+                        }
+                    }
+
+                    int size = recolourFrom.size();
+                    short[] recolourFromArray = new short[size];
+                    short[] recolourToArray = new short[size];
+                    for (int e = 0; e < size; e++)
+                    {
+                        int from = recolourFrom.get(e);
+                        if (from > 32767)
+                            from -= 65536;
+                        recolourFromArray[e] = (short) from;
+
+                        int to = recolourTo.get(e);
+                        if (to > 32767)
+                            to -= 65536;
+                        recolourToArray[e] = (short) to;
+                    }
+
+                    spotAnimList.add(new ModelStats(
+                            modelId,
+                            BodyPart.SPOTANIM,
+                            recolourFromArray,
+                            recolourToArray,
+                            new short[0],
+                            new short[0],
+                            resize[0],
+                            resize[1],
+                            resize[2],
+                            lighting));
 
                     if (i == patterns.length - 1)
                     {

@@ -650,4 +650,16 @@ public interface CreatorsConfig extends Config
 	{
 		return false;
 	}
+
+	@ConfigItem(
+			keyName = "exportTPose",
+			name = "Export T-Pose",
+			description = "Puts the Model into T-pose (disables animations) for exporting",
+			section = modelExporter,
+			position = 55
+	)
+	default boolean exportTPose()
+	{
+		return false;
+	}
 }
