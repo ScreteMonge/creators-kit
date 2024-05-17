@@ -7,10 +7,11 @@ import lombok.Getter;
 @AllArgsConstructor
 public class BlenderModel
 {
-    boolean vertexColours;
+    boolean useVertexColours;
     int[][] vertices;
     int[][] faces;
-    double[][] colours;
-    byte[] transparencies;
+    double[][] vertexColours;
+    double[][] faceColours;
+    int[] faceColourIndex;
     byte[] priorities;
 }

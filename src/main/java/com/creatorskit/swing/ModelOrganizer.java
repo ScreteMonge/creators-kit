@@ -464,6 +464,7 @@ public class ModelOrganizer extends JPanel
             short[] colourFrom = modelStat.getRecolourFrom();
             short[] colourTo = modelStat.getRecolourTo();
 
+            BodyPart bp = modelStat.getBodyPart();
             if (type == CustomModelType.CACHE_PLAYER && modelStat.getBodyPart() != BodyPart.NA)
             {
                 colourFrom = ArrayUtils.addAll(colourFrom, KitRecolourer.getKitRecolourFrom(modelStat.getBodyPart()));
@@ -474,7 +475,7 @@ public class ModelOrganizer extends JPanel
             if (type == CustomModelType.CACHE_PLAYER)
                 bodyPart = "Item";
 
-            if (modelStat.getBodyPart() != BodyPart.NA)
+            if (bp != BodyPart.NA)
                 bodyPart = modelStat.getBodyPart().toString();
 
             DetailedModel detailedModel = new DetailedModel(

@@ -225,7 +225,7 @@ public class ModelImporter
             faces3[i] = f[2];
         }
 
-        double[][] blenderColours = blenderModel.getColours();
+        double[][] blenderColours = blenderModel.getVertexColours();
         short[] colours = new short[0];
         for (double[] colour : blenderColours)
         {
@@ -281,7 +281,7 @@ public class ModelImporter
             cols[i] = colours[i];
         }
 
-        byte[] transparencies = blenderModel.getTransparencies();
+        byte[] transparencies = new byte[modelData.getFaceCount()];
         byte[] tp = modelData.getFaceTransparencies();
         for (int i = 0; i < modelData.getFaceCount(); i++)
         {

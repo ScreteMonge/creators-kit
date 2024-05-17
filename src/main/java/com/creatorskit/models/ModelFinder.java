@@ -875,7 +875,7 @@ public class ModelFinder
 
         return new ModelStats[]{new ModelStats(
                 modelIds.get(0),
-                BodyPart.NA,
+                BodyPart.SPOTANIM,
                 rf,
                 rt,
                 new short[0],
