@@ -1,11 +1,11 @@
 package com.creatorskit.models;
 
+import com.creatorskit.Character;
 import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.swing.CreatorsPanel;
 import com.creatorskit.swing.ObjectPanel;
 import net.runelite.api.*;
-import net.runelite.api.kit.KitType;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.util.ColorUtil;
@@ -136,6 +136,37 @@ public class ModelGetter
                     }
                     else
                     {
+                        Model model = npc.getModel();
+                        int vCount = model.getVerticesCount();
+                        int fCount = model.getFaceCount();
+                        int[] vX = Arrays.copyOf(model.getVerticesX(), vCount);
+                        int[] vY = Arrays.copyOf(model.getVerticesY(), vCount);
+                        int[] vZ = Arrays.copyOf(model.getVerticesZ(), vCount);
+                        int[] f1 = Arrays.copyOf(model.getFaceIndices1(), fCount);
+                        int[] f2 = Arrays.copyOf(model.getFaceIndices2(), fCount);
+                        int[] f3 = Arrays.copyOf(model.getFaceIndices3(), fCount);
+                        byte[] renderPriorities;
+                        if (model.getFaceRenderPriorities() == null)
+                        {
+                            renderPriorities = new byte[fCount];
+                            Arrays.fill(renderPriorities, (byte) 0);
+                        }
+                        else
+                        {
+                            renderPriorities = model.getFaceRenderPriorities();
+                        }
+
+                        byte[] transparencies;
+                        if (model.getFaceTransparencies() == null)
+                        {
+                            transparencies = new byte[fCount];
+                            Arrays.fill(transparencies, (byte) 0);
+                        }
+                        else
+                        {
+                            transparencies = model.getFaceTransparencies();
+                        }
+
                         Thread thread = new Thread(() ->
                         {
                             ModelStats[] modelStats = modelFinder.findModelsForNPC(npc.getId());
@@ -148,7 +179,18 @@ public class ModelGetter
                                     npc.setPoseAnimation(-1);
                                 }
 
-                                BlenderModel blenderModel = modelExporter.bmFaceColours(modelStats, null, false, npc.getModel());
+                                BlenderModel blenderModel = modelExporter.bmFaceColours(
+                                        modelStats,
+                                        new int[0],
+                                        false,
+                                        vX,
+                                        vY,
+                                        vZ,
+                                        f1,
+                                        f2,
+                                        f3,
+                                        transparencies,
+                                        renderPriorities);
                                 modelExporter.saveToFile(npc.getName(), blenderModel);
                                 plugin.sendChatMessage("Exported " + npc.getName() + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                             });
@@ -434,7 +476,7 @@ public class ModelGetter
 
                             clientThread.invokeLater(() ->
                             {
-                                BlenderModel bm = modelExporter.bmFaceColoursForPlayer(
+                                BlenderModel bm = modelExporter.bmFaceColours(
                                         modelStats,
                                         comp.getColors(),
                                         true,
@@ -546,15 +588,357 @@ public class ModelGetter
                     }
                     else
                     {
+                        int vCount = model.getVerticesCount();
+                        int fCount = model.getFaceCount();
+                        int[] vX = Arrays.copyOf(model.getVerticesX(), vCount);
+                        int[] vY = Arrays.copyOf(model.getVerticesY(), vCount);
+                        int[] vZ = Arrays.copyOf(model.getVerticesZ(), vCount);
+                        int[] f1 = Arrays.copyOf(model.getFaceIndices1(), fCount);
+                        int[] f2 = Arrays.copyOf(model.getFaceIndices2(), fCount);
+                        int[] f3 = Arrays.copyOf(model.getFaceIndices3(), fCount);
+                        byte[] renderPriorities;
+                        if (model.getFaceRenderPriorities() == null)
+                        {
+                            renderPriorities = new byte[fCount];
+                            Arrays.fill(renderPriorities, (byte) 0);
+                        }
+                        else
+                        {
+                            renderPriorities = model.getFaceRenderPriorities();
+                        }
+
+                        byte[] transparencies;
+                        if (model.getFaceTransparencies() == null)
+                        {
+                            transparencies = new byte[fCount];
+                            Arrays.fill(transparencies, (byte) 0);
+                        }
+                        else
+                        {
+                            transparencies = model.getFaceTransparencies();
+                        }
+
                         Thread thread = new Thread(() ->
                         {
                             ModelStats[] modelStats = modelFinder.findModelsForObject(objectId);
 
                             clientThread.invokeLater(() ->
                             {
-                                BlenderModel blenderModel = modelExporter.bmFaceColours(modelStats, null, false, model);
+                                BlenderModel blenderModel = modelExporter.bmFaceColours(
+                                        modelStats,
+                                        new int[0],
+                                        false,
+                                        vX,
+                                        vY,
+                                        vZ,
+                                        f1,
+                                        f2,
+                                        f3,
+                                        transparencies,
+                                        renderPriorities);
                                 modelExporter.saveToFile(name, blenderModel);
                                 plugin.sendChatMessage("Exported " + name + " " + objectId + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                            });
+                        });
+                        thread.start();
+
+                    }
+                });
+    }
+
+    public void addRLObjectExporter(int index, Character character)
+    {
+        String name = character.getName();
+        String target = ColorUtil.prependColorTag(name, Color.GREEN);
+
+        client.createMenuEntry(index)
+                .setOption(ColorUtil.prependColorTag("Export", Color.ORANGE))
+                .setTarget(target)
+                .setType(MenuAction.RUNELITE)
+                .onClick(e ->
+                {
+                    final Model model = character.getRuneLiteObject().getModel();
+                    if (config.vertexColours())
+                    {
+                        BlenderModel blenderModel = modelExporter.bmVertexColours(model);
+                        modelExporter.saveToFile(name, blenderModel);
+                        plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                    }
+                    else
+                    {
+                        int vCount = model.getVerticesCount();
+                        int fCount = model.getFaceCount();
+                        int[] vX = Arrays.copyOf(model.getVerticesX(), vCount);
+                        int[] vY = Arrays.copyOf(model.getVerticesY(), vCount);
+                        int[] vZ = Arrays.copyOf(model.getVerticesZ(), vCount);
+                        int[] f1 = Arrays.copyOf(model.getFaceIndices1(), fCount);
+                        int[] f2 = Arrays.copyOf(model.getFaceIndices2(), fCount);
+                        int[] f3 = Arrays.copyOf(model.getFaceIndices3(), fCount);
+                        byte[] renderPriorities;
+                        if (model.getFaceRenderPriorities() == null)
+                        {
+                            renderPriorities = new byte[fCount];
+                            Arrays.fill(renderPriorities, (byte) 0);
+                        }
+                        else
+                        {
+                            renderPriorities = model.getFaceRenderPriorities();
+                        }
+
+                        byte[] transparencies;
+                        if (model.getFaceTransparencies() == null)
+                        {
+                            transparencies = new byte[fCount];
+                            Arrays.fill(transparencies, (byte) 0);
+                        }
+                        else
+                        {
+                            transparencies = model.getFaceTransparencies();
+                        }
+
+                        if (character.isCustomMode())
+                        {
+                            CustomModelComp comp = character.getStoredModel().getComp();
+
+                            clientThread.invokeLater(() ->
+                            {
+                                BlenderModel blenderModel;
+                                switch (comp.getType())
+                                {
+                                    case FORGED:
+                                        ModelData modelData = plugin.createComplexModelData(comp.getDetailedModels());
+                                        blenderModel = modelExporter.bmFaceColoursForForgedModel(
+                                                modelData,
+                                                new int[0],
+                                                false,
+                                                vX,
+                                                vY,
+                                                vZ,
+                                                f1,
+                                                f2,
+                                                f3,
+                                                transparencies,
+                                                renderPriorities);
+                                        break;
+                                    default:
+                                    case CACHE_NPC:
+                                    case CACHE_OBJECT:
+                                    case CACHE_GROUND_ITEM:
+                                    case CACHE_MAN_WEAR:
+                                    case CACHE_WOMAN_WEAR:
+                                        blenderModel = modelExporter.bmFaceColours(
+                                                comp.getModelStats(),
+                                                new int[0],
+                                                false,
+                                                vX,
+                                                vY,
+                                                vZ,
+                                                f1,
+                                                f2,
+                                                f3,
+                                                transparencies,
+                                                renderPriorities);
+                                        break;
+                                    case CACHE_PLAYER:
+                                        blenderModel = modelExporter.bmFaceColours(
+                                                comp.getModelStats(),
+                                                comp.getKitRecolours(),
+                                                true,
+                                                vX,
+                                                vY,
+                                                vZ,
+                                                f1,
+                                                f2,
+                                                f3,
+                                                transparencies,
+                                                renderPriorities);
+                                        break;
+                                    case BLENDER:
+                                        blenderModel = comp.getBlenderModel();
+                                }
+
+                                modelExporter.saveToFile(name, blenderModel);
+                                plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                            });
+                        }
+                        else
+                        {
+                            int modelId = (int) character.getModelSpinner().getValue();
+                            ModelStats[] modelStats = new ModelStats[]{new ModelStats(
+                                    modelId,
+                                    BodyPart.NA,
+                                    new short[0],
+                                    new short[0],
+                                    new short[0],
+                                    new short[0],
+                                    128,
+                                    128,
+                                    128,
+                                    new CustomLighting(64, 768, -50, -50, 10))};
+
+                            clientThread.invokeLater(() ->
+                            {
+                                BlenderModel blenderModel = modelExporter.bmFaceColours(
+                                        modelStats,
+                                        new int[0],
+                                        false,
+                                        vX,
+                                        vY,
+                                        vZ,
+                                        f1,
+                                        f2,
+                                        f3,
+                                        transparencies,
+                                        renderPriorities);
+                                modelExporter.saveToFile(name, blenderModel);
+                                plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                            });
+                        }
+                    }
+                });
+    }
+
+    public void addGroundItemGetter(int index, String option, String name, Model model, int itemId, int orientation, ModelMenuOption menuOption)
+    {
+        String target = ColorUtil.prependColorTag(name, Color.CYAN);
+        client.createMenuEntry(index)
+                .setOption(option)
+                .setTarget(target)
+                .setType(MenuAction.RUNELITE)
+                .onClick(e ->
+                {
+                    Thread thread = new Thread(() ->
+                    {
+                        ModelStats[] modelStats = modelFinder.findModelsForGroundItem(itemId, CustomModelType.CACHE_GROUND_ITEM);
+                        CustomLighting lighting = new CustomLighting(64, 768, -50, -50, 10);
+                        CustomModelComp comp = new CustomModelComp(0, CustomModelType.CACHE_GROUND_ITEM, itemId, modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, name);
+                        CustomModel customModel = new CustomModel(model, comp);
+                        plugin.addCustomModel(customModel, false);
+                        plugin.sendChatMessage("Model stored: " + name);
+
+                        CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
+                        if (menuOption == ModelMenuOption.TRANSMOG)
+                        {
+                            creatorsPanel.getModelOrganizer().setTransmog(customModel);
+                        }
+
+                        if (menuOption == ModelMenuOption.STORE_AND_ADD)
+                        {
+                            ObjectPanel objectPanel = creatorsPanel.createPanel(
+                                    creatorsPanel.getSidePanel(),
+                                    name,
+                                    7699,
+                                    customModel,
+                                    true,
+                                    false,
+                                    orientation,
+                                    -1,
+                                    60,
+                                    creatorsPanel.createEmptyProgram(-1, -1),
+                                    false,
+                                    null,
+                                    null,
+                                    new int[0],
+                                    -1,
+                                    false,
+                                    false);
+
+                            SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(creatorsPanel.getSideObjectPanels(), creatorsPanel.getSidePanel(), objectPanel));
+                        }
+                    });
+                    thread.start();
+                });
+    }
+
+    public void addGroundItemGetterToAnvil(String name, int itemId)
+    {
+        String target = ColorUtil.prependColorTag(name, Color.CYAN);
+        client.createMenuEntry(-2)
+                .setOption(ColorUtil.prependColorTag("Anvil", Color.ORANGE))
+                .setTarget(target)
+                .setType(MenuAction.RUNELITE)
+                .onClick(e ->
+                {
+                    Thread thread = new Thread(() ->
+                    {
+                        ModelStats[] modelStats = modelFinder.findModelsForGroundItem(itemId, CustomModelType.CACHE_GROUND_ITEM);
+                        clientThread.invokeLater(() ->
+                        {
+                            plugin.cacheToAnvil(modelStats, new int[0], false);
+                            plugin.sendChatMessage("Model sent to Anvil: " + name);
+                        });
+                    });
+                    thread.start();
+                });
+    }
+
+    public void addGroundItemExporter(int index, String name, int itemId, Model model)
+    {
+        String target = ColorUtil.prependColorTag(name, Color.CYAN);
+        client.createMenuEntry(index)
+                .setOption(ColorUtil.prependColorTag("Export", Color.ORANGE))
+                .setTarget(target)
+                .setType(MenuAction.RUNELITE)
+                .onClick(e ->
+                {
+                    if (config.vertexColours())
+                    {
+                        BlenderModel blenderModel = modelExporter.bmVertexColours(model);
+                        modelExporter.saveToFile(name, blenderModel);
+                        plugin.sendChatMessage("Exported " + name + " " + itemId + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                    }
+                    else
+                    {
+                        int vCount = model.getVerticesCount();
+                        int fCount = model.getFaceCount();
+                        int[] vX = Arrays.copyOf(model.getVerticesX(), vCount);
+                        int[] vY = Arrays.copyOf(model.getVerticesY(), vCount);
+                        int[] vZ = Arrays.copyOf(model.getVerticesZ(), vCount);
+                        int[] f1 = Arrays.copyOf(model.getFaceIndices1(), fCount);
+                        int[] f2 = Arrays.copyOf(model.getFaceIndices2(), fCount);
+                        int[] f3 = Arrays.copyOf(model.getFaceIndices3(), fCount);
+                        byte[] renderPriorities;
+                        if (model.getFaceRenderPriorities() == null)
+                        {
+                            renderPriorities = new byte[fCount];
+                            Arrays.fill(renderPriorities, (byte) 0);
+                        }
+                        else
+                        {
+                            renderPriorities = model.getFaceRenderPriorities();
+                        }
+
+                        byte[] transparencies;
+                        if (model.getFaceTransparencies() == null)
+                        {
+                            transparencies = new byte[fCount];
+                            Arrays.fill(transparencies, (byte) 0);
+                        }
+                        else
+                        {
+                            transparencies = model.getFaceTransparencies();
+                        }
+
+                        Thread thread = new Thread(() ->
+                        {
+                            ModelStats[] modelStats = modelFinder.findModelsForGroundItem(itemId, CustomModelType.CACHE_GROUND_ITEM);
+
+                            clientThread.invokeLater(() ->
+                            {
+                                BlenderModel blenderModel = modelExporter.bmFaceColours(
+                                        modelStats,
+                                        new int[0],
+                                        false,
+                                        vX,
+                                        vY,
+                                        vZ,
+                                        f1,
+                                        f2,
+                                        f3,
+                                        transparencies,
+                                        renderPriorities);
+                                modelExporter.saveToFile(name, blenderModel);
+                                plugin.sendChatMessage("Exported " + name + " " + itemId + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                             });
                         });
                         thread.start();

@@ -324,8 +324,8 @@ public class ModelFinder
                         updatedItemIds[SHIELD_IDX] = animSequence.getMainHandItemId();
                         break;
                     case SWAP:
-                        updatedItemIds[WEAPON_IDX] = animSequence.getMainHandItemId();
-                        updatedItemIds[SHIELD_IDX] = animSequence.getOffHandItemId();
+                        updatedItemIds[SHIELD_IDX] = animSequence.getMainHandItemId();
+                        updatedItemIds[WEAPON_IDX] = animSequence.getOffHandItemId();
                 }
                 break;
             case HIDE:

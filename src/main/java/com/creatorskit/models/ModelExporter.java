@@ -7,7 +7,6 @@ import net.runelite.client.RuneLite;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.inject.Inject;
-import java.awt.*;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -182,7 +181,7 @@ public class ModelExporter
         );
     }
 
-    public BlenderModel bmFaceColoursForPlayer(
+    public BlenderModel bmFaceColours(
             ModelStats[] modelStatsArray,
             int[] kitRecolours,
             boolean player,
@@ -334,79 +333,23 @@ public class ModelExporter
         );
     }
 
-    public BlenderModel bmFaceColours(ModelStats[] modelStatsArray, int[] kitRecolours, boolean player, Renderable renderable)
+    public BlenderModel bmFaceColoursForForgedModel(
+            ModelData md,
+            int[] kitRecolours,
+            boolean player,
+            int[] vX,
+            int[] vY,
+            int[] vZ,
+            int[] f1,
+            int[] f2,
+            int[] f3,
+            byte[] transparencies,
+            byte[] renderPriorities)
     {
-        Model model;
-        if (renderable instanceof Model)
-        {
-            model = (Model) renderable;
-        }
-        else
-        {
-            model = renderable.getModel();
-        }
-
-        ModelData[] mds = new ModelData[modelStatsArray.length];
-
-        for (int i = 0; i < modelStatsArray.length; i++)
-        {
-            ModelStats modelStats = modelStatsArray[i];
-            ModelData modelData = client.loadModelData(modelStats.getModelId());
-
-            if (modelData == null)
-                continue;
-
-            modelData.cloneColors().cloneVertices();
-            if (modelData.getFaceTransparencies() != null)
-            {
-                modelData.cloneTransparencies();
-            }
-
-            for (short s = 0; s < modelStats.getRecolourFrom().length; s++)
-                modelData.recolor(modelStats.getRecolourFrom()[s], modelStats.getRecolourTo()[s]);
-
-            if (player)
-                KitRecolourer.recolourKitModel(modelData, modelStats.getBodyPart(), kitRecolours);
-
-            short[] textureFrom = modelStats.getTextureFrom();
-            short[] textureTo = modelStats.getTextureTo();
-
-            if (textureFrom == null || textureTo == null)
-            {
-                modelStats.setTextureFrom(new short[0]);
-                modelStats.setTextureTo(new short[0]);
-            }
-
-            textureFrom = modelStats.getTextureFrom();
-            textureTo = modelStats.getTextureTo();
-
-            if (textureFrom.length > 0 && textureTo.length > 0)
-            {
-                for (int e = 0; e < textureFrom.length; e++)
-                {
-                    modelData.retexture(textureFrom[e], textureTo[e]);
-                }
-            }
-
-            if (modelStats.getResizeX() == 0 && modelStats.getResizeY() == 0 && modelStats.getResizeZ() == 0)
-            {
-                modelStats.setResizeX(128);
-                modelStats.setResizeY(128);
-                modelStats.setResizeZ(128);
-            }
-
-            modelData.scale(modelStats.getResizeX(), modelStats.getResizeZ(), modelStats.getResizeY());
-
-            mds[i] = modelData;
-        }
-
-        ModelData md = client.mergeModels(mds);
+        System.out.println("ModelData FC: " + md.getFaceCount());
+        System.out.println(f1.length + "," + f2.length + "," + f3.length);
 
         int[][] verts = new int[md.getVerticesCount()][3];
-        int[] vX = model.getVerticesX();
-        int[] vY = model.getVerticesY();
-        int[] vZ = model.getVerticesZ();
-
         for (int i = 0; i < verts.length; i++)
         {
             int[] v = verts[i];
@@ -416,11 +359,6 @@ public class ModelExporter
         }
 
         int[][] faces = new int[md.getFaceCount()][3];
-        int[] f1 = model.getFaceIndices1();
-        int[] f2 = model.getFaceIndices2();
-        int[] f3 = model.getFaceIndices3();
-        System.out.println(md.getFaceCount());
-        System.out.println(f1.length + "," + f2.length + "," + f3.length);
 
         for (int i = 0; i < faces.length; i++)
         {
@@ -428,16 +366,6 @@ public class ModelExporter
             f[0] = f1[i];
             f[1] = f2[i];
             f[2] = f3[i];
-        }
-
-        byte[] transparencies = new byte[md.getFaceCount()];
-        if (md.getFaceTransparencies() == null)
-        {
-            Arrays.fill(transparencies, (byte) 0);
-        }
-        else
-        {
-            transparencies = md.getFaceTransparencies();
         }
 
         short[] mdFaceColours = md.getFaceColors();
@@ -467,7 +395,7 @@ public class ModelExporter
             faceColourIndex[i] = fcShortList.length - 1;
         }
 
-        int shortListSize = faceColourIndex.length;
+        int shortListSize = fcShortList.length;
         double[][] faceColours = new double[shortListSize][4];
         for (int i = 0; i < shortListSize; i++)
         {
@@ -488,17 +416,6 @@ public class ModelExporter
             array[1] = l;
             array[2] = s;
             array[3] = a;
-        }
-
-        byte[] renderPriorities;
-        if (model.getFaceRenderPriorities() == null)
-        {
-            renderPriorities = new byte[md.getFaceCount()];
-            Arrays.fill(renderPriorities, (byte) 0);
-        }
-        else
-        {
-            renderPriorities = model.getFaceRenderPriorities();
         }
 
         return new BlenderModel(

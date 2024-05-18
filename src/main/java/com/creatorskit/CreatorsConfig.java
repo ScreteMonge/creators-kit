@@ -1,5 +1,6 @@
 package com.creatorskit;
 
+import com.creatorskit.models.ExportFileFormat;
 import net.runelite.client.config.*;
 
 import java.awt.event.KeyEvent;
@@ -640,11 +641,25 @@ public interface CreatorsConfig extends Config
 	String modelExporter = "modelExporter";
 
 	@ConfigItem(
+			keyName = "exportFileFormat",
+			name = "Export File Format",
+			description = "Pick the file format for exported Models" +
+					"<br>Blender json files are intended to be used with the associated Runescape Import addon" +
+					"<br>See ScreteMonge for more details",
+			section = modelExporter,
+			position = 55
+	)
+	default ExportFileFormat exportFileFormat()
+	{
+		return ExportFileFormat.BLENDER;
+	}
+
+	@ConfigItem(
 			keyName = "vertexColours",
 			name = "Vertex Colours",
 			description = "Makes Blender Model .json files export with Vertex Colours instead of Face Colours",
 			section = modelExporter,
-			position = 55
+			position = 56
 	)
 	default boolean vertexColours()
 	{
@@ -656,7 +671,7 @@ public interface CreatorsConfig extends Config
 			name = "Export T-Pose",
 			description = "Puts the Model into T-pose (disables animations) for exporting",
 			section = modelExporter,
-			position = 55
+			position = 57
 	)
 	default boolean exportTPose()
 	{

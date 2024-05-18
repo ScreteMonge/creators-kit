@@ -925,7 +925,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					for (TileItem tileItem : tileItems)
 					{
 						int itemId = tileItem.getId();
-						String name = client.getItemDefinition(tileItem.getId()).getName();
+						String name = client.getItemDefinition(itemId).getName();
 						if (name.equals("null"))
 						{
 							name = "Item";
@@ -936,23 +936,23 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 						{
 							if (client.isKeyPressed(KeyCode.KC_CONTROL))
 							{
-								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), name, model, itemId, CustomModelType.CACHE_GROUND_ITEM, -1, 0, ModelMenuOption.STORE_AND_ADD);
+								modelGetter.addGroundItemGetter(-1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), name, model, itemId, 0, ModelMenuOption.STORE_AND_ADD);
 							}
 							else
 							{
-								modelGetter.addGameObjectGetter(-1, ColorUtil.prependColorTag("Store", Color.ORANGE), name, model, itemId, CustomModelType.CACHE_GROUND_ITEM, -1, 0, ModelMenuOption.STORE);
+								modelGetter.addGroundItemGetter(-1, ColorUtil.prependColorTag("Store", Color.ORANGE), name, model, itemId, 0, ModelMenuOption.STORE);
 							}
-							modelGetter.addObjectGetterToAnvil(name, itemId);
+							modelGetter.addGroundItemGetterToAnvil(name, itemId);
 						}
 
 						if (config.transmogRightClick())
 						{
-							modelGetter.addGameObjectGetter(-3, ColorUtil.prependColorTag("Transmog", Color.ORANGE), name, model, itemId, CustomModelType.CACHE_GROUND_ITEM, -1, 0, ModelMenuOption.TRANSMOG);
+							modelGetter.addGroundItemGetter(-3, ColorUtil.prependColorTag("Transmog", Color.ORANGE), name, model, itemId, 0, ModelMenuOption.TRANSMOG);
 						}
 
 						if (config.exportRightClick())
 						{
-							modelGetter.addObjectExporter(-4, name, itemId, model);
+							modelGetter.addGroundItemExporter(-4, name, itemId, model);
 						}
 					}
 				}
@@ -1006,7 +1006,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					}
 				}
 
-				if (config.rightSelect())
+				if (config.rightSelect() || config.exportRightClick())
 				{
 					for (int i = 0; i < characters.size(); i++)
 					{
@@ -1017,11 +1017,19 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 							LocalPoint localPoint = runeLiteObject.getLocation();
 							if (localPoint != null && localPoint.equals(tile.getLocalLocation()))
 							{
-								client.createMenuEntry(-1)
-										.setOption(ColorUtil.prependColorTag("Select", Color.ORANGE))
-										.setTarget(ColorUtil.colorTag(Color.GREEN) + character.getName())
-										.setType(MenuAction.RUNELITE)
-										.onClick(e -> creatorsPanel.setSelectedCharacter(character, character.getObjectPanel()));
+								if (config.exportRightClick())
+								{
+									modelGetter.addRLObjectExporter(-1, character);
+								}
+
+								if (config.rightSelect())
+								{
+									client.createMenuEntry(-1)
+											.setOption(ColorUtil.prependColorTag("Select", Color.ORANGE))
+											.setTarget(ColorUtil.colorTag(Color.GREEN) + character.getName())
+											.setType(MenuAction.RUNELITE)
+											.onClick(e -> creatorsPanel.setSelectedCharacter(character, character.getObjectPanel()));
+								}
 							}
 						}
 					}
@@ -1454,6 +1462,58 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 	public Model createComplexModel(DetailedModel[] detailedModels, boolean setPriority, LightingStyle lightingStyle, CustomLighting cl)
 	{
+		ModelData modelData = createComplexModelData(detailedModels);
+
+		if (cl == null)
+		{
+			cl = new CustomLighting(lightingStyle.getAmbient(), lightingStyle.getContrast(), lightingStyle.getX(), lightingStyle.getY(), lightingStyle.getZ());
+		}
+
+		CustomLighting finalLighting;
+		if (lightingStyle == LightingStyle.CUSTOM)
+		{
+			finalLighting = cl;
+		}
+		else
+		{
+			finalLighting = new CustomLighting(lightingStyle.getAmbient(), lightingStyle.getContrast(), lightingStyle.getX(), lightingStyle.getY(), lightingStyle.getZ());
+		}
+
+		Model model;
+		try
+		{
+			model = modelData.light(
+					finalLighting.getAmbient(),
+					finalLighting.getContrast(),
+					finalLighting.getX(),
+					finalLighting.getZ() * -1,
+					finalLighting.getY());
+		}
+		catch (Exception e)
+		{
+			sendChatMessage("Could not Forge this model with the chosen Lighting Settings. Please adjust them and try again.");
+			return null;
+		}
+
+		if (model == null)
+			return null;
+
+		if (setPriority)
+		{
+			byte[] renderPriorities = model.getFaceRenderPriorities();
+			if (renderPriorities != null && renderPriorities.length > 0)
+				Arrays.fill(renderPriorities, (byte) 0);
+		}
+
+		sendChatMessage("Model forged. Faces: " + model.getFaceCount() + ", Vertices: " + model.getVerticesCount());
+		if (model.getFaceCount() >= 6200 && model.getVerticesCount() >= 3900)
+			sendChatMessage("You've exceeded the max face count of 6200 or vertex count of 3900 in this model; any additional faces or vertices will not render");
+
+		return model;
+	}
+
+	public ModelData createComplexModelData(DetailedModel[] detailedModels)
+	{
 		ModelData[] models = new ModelData[detailedModels.length];
 		boolean[] facesToInvert = new boolean[0];
 
@@ -1560,52 +1620,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			}
 		}
 
-		if (cl == null)
-		{
-			cl = new CustomLighting(lightingStyle.getAmbient(), lightingStyle.getContrast(), lightingStyle.getX(), lightingStyle.getY(), lightingStyle.getZ());
-		}
-
-		CustomLighting finalLighting;
-		if (lightingStyle == LightingStyle.CUSTOM)
-		{
-			finalLighting = cl;
-		}
-		else
-		{
-			finalLighting = new CustomLighting(lightingStyle.getAmbient(), lightingStyle.getContrast(), lightingStyle.getX(), lightingStyle.getY(), lightingStyle.getZ());
-		}
-
-		Model model;
-		try
-		{
-			model = modelData.light(
-					finalLighting.getAmbient(),
-					finalLighting.getContrast(),
-					finalLighting.getX(),
-					finalLighting.getZ() * -1,
-					finalLighting.getY());
-		}
-		catch (Exception e)
-		{
-			sendChatMessage("Could not Forge this model with the chosen Lighting Settings. Please adjust them and try again.");
-			return null;
-		}
-
-		if (model == null)
-			return null;
-
-		if (setPriority)
-		{
-			byte[] renderPriorities = model.getFaceRenderPriorities();
-			if (renderPriorities != null && renderPriorities.length > 0)
-				Arrays.fill(renderPriorities, (byte) 0);
-		}
-
-		sendChatMessage("Model forged. Faces: " + model.getFaceCount() + ", Vertices: " + model.getVerticesCount());
-		if (model.getFaceCount() >= 6200 && model.getVerticesCount() >= 3900)
-			sendChatMessage("You've exceeded the max face count of 6200 or vertex count of 3900 in this model; any additional faces or vertices will not render");
-
-		return model;
+		return modelData;
 	}
 
 	public void cacheToAnvil(ModelStats[] modelStatsArray, int[] kitRecolours, boolean player)
