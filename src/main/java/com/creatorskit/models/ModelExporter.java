@@ -335,8 +335,6 @@ public class ModelExporter
 
     public BlenderModel bmFaceColoursForForgedModel(
             ModelData md,
-            int[] kitRecolours,
-            boolean player,
             int[] vX,
             int[] vY,
             int[] vZ,
@@ -427,6 +425,139 @@ public class ModelExporter
                 faceColourIndex,
                 renderPriorities
         );
+    }
+
+    public BlenderModel bmFromCustomModel(CustomModel customModel)
+    {
+        CustomModelComp comp = customModel.getComp();
+        Model model = customModel.getModel();
+
+        BlenderModel blenderModel;
+        ModelData md;
+        int fCount;
+        byte[] renderPriorities;
+        byte[] transparencies;
+        switch (comp.getType())
+        {
+            case FORGED:
+                md = plugin.createComplexModelData(comp.getDetailedModels());
+                fCount = md.getFaceCount();
+
+                if (model.getFaceRenderPriorities() == null)
+                {
+                    renderPriorities = new byte[fCount];
+                    Arrays.fill(renderPriorities, (byte) 0);
+                }
+                else
+                {
+                    renderPriorities = model.getFaceRenderPriorities();
+                }
+
+                if (model.getFaceTransparencies() == null)
+                {
+                    transparencies = new byte[fCount];
+                    Arrays.fill(transparencies, (byte) 0);
+                }
+                else
+                {
+                    transparencies = model.getFaceTransparencies();
+                }
+
+                blenderModel = bmFaceColoursForForgedModel(
+                        md,
+                        md.getVerticesX(),
+                        md.getVerticesY(),
+                        md.getVerticesZ(),
+                        md.getFaceIndices1(),
+                        md.getFaceIndices2(),
+                        md.getFaceIndices3(),
+                        transparencies,
+                        renderPriorities);
+                break;
+            default:
+            case CACHE_NPC:
+            case CACHE_OBJECT:
+            case CACHE_GROUND_ITEM:
+            case CACHE_MAN_WEAR:
+            case CACHE_WOMAN_WEAR:
+                md = plugin.constructModelDataFromCache(comp.getModelStats(), new int[0], false);
+                fCount = md.getFaceCount();
+
+                if (model.getFaceRenderPriorities() == null)
+                {
+                    renderPriorities = new byte[fCount];
+                    Arrays.fill(renderPriorities, (byte) 0);
+                }
+                else
+                {
+                    renderPriorities = model.getFaceRenderPriorities();
+                }
+
+                if (model.getFaceTransparencies() == null)
+                {
+                    transparencies = new byte[fCount];
+                    Arrays.fill(transparencies, (byte) 0);
+                }
+                else
+                {
+                    transparencies = model.getFaceTransparencies();
+                }
+
+                blenderModel = bmFaceColours(
+                        comp.getModelStats(),
+                        new int[0],
+                        false,
+                        md.getVerticesX(),
+                        md.getVerticesY(),
+                        md.getVerticesZ(),
+                        md.getFaceIndices1(),
+                        md.getFaceIndices2(),
+                        md.getFaceIndices3(),
+                        transparencies,
+                        renderPriorities);
+                break;
+            case CACHE_PLAYER:
+                md = plugin.constructModelDataFromCache(comp.getModelStats(), comp.getKitRecolours(), true);
+                fCount = md.getFaceCount();
+
+                if (model.getFaceRenderPriorities() == null)
+                {
+                    renderPriorities = new byte[fCount];
+                    Arrays.fill(renderPriorities, (byte) 0);
+                }
+                else
+                {
+                    renderPriorities = model.getFaceRenderPriorities();
+                }
+
+                if (model.getFaceTransparencies() == null)
+                {
+                    transparencies = new byte[fCount];
+                    Arrays.fill(transparencies, (byte) 0);
+                }
+                else
+                {
+                    transparencies = model.getFaceTransparencies();
+                }
+
+                blenderModel = bmFaceColours(
+                        comp.getModelStats(),
+                        comp.getKitRecolours(),
+                        true,
+                        md.getVerticesX(),
+                        md.getVerticesY(),
+                        md.getVerticesZ(),
+                        md.getFaceIndices1(),
+                        md.getFaceIndices2(),
+                        md.getFaceIndices3(),
+                        transparencies,
+                        renderPriorities);
+                break;
+            case BLENDER:
+                blenderModel = comp.getBlenderModel();
+        }
+
+        return blenderModel;
     }
 
     public BlenderModel bmSpotAnimFromCache(ModelStats[] modelStatsArray)

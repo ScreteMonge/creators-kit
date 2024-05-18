@@ -1788,6 +1788,16 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 	public Model constructModelFromCache(ModelStats[] modelStatsArray, int[] kitRecolours, boolean player, boolean actorLighting)
 	{
+		ModelData md = constructModelDataFromCache(modelStatsArray, kitRecolours, player);
+
+		if (actorLighting)
+			return client.mergeModels(md).light(64, 850, -30, -50, -30);
+
+		return client.mergeModels(md).light();
+	}
+
+	public ModelData constructModelDataFromCache(ModelStats[] modelStatsArray, int[] kitRecolours, boolean player)
+	{
 		ModelData[] mds = new ModelData[modelStatsArray.length];
 
 		for (int i = 0; i < modelStatsArray.length; i++)
@@ -1838,10 +1848,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			mds[i] = modelData;
 		}
 
-		if (actorLighting)
-			return client.mergeModels(mds).light(64, 850, -30, -50, -30);
-
-		return client.mergeModels(mds).light();
+		return client.mergeModels(mds);
 	}
 
 	public void customModelToAnvil(CustomModel customModel)

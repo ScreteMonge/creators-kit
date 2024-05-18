@@ -709,8 +709,6 @@ public class ModelGetter
                                         ModelData modelData = plugin.createComplexModelData(comp.getDetailedModels());
                                         blenderModel = modelExporter.bmFaceColoursForForgedModel(
                                                 modelData,
-                                                new int[0],
-                                                false,
                                                 vX,
                                                 vY,
                                                 vZ,

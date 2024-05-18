@@ -37,24 +37,28 @@ public class ModelOrganizer extends JPanel
     private final CreatorsPlugin plugin;
     private final ClientThread clientThread;
     private final ModelImporter modelImporter;
+    private final ModelExporter modelExporter;
     private final CreatorsConfig config;
     private final BufferedImage CLEAR = ImageUtil.loadImageResource(getClass(), "/Clear.png");
     private final BufferedImage ANVIL = ImageUtil.loadImageResource(getClass(), "/Anvil.png");
     private final BufferedImage SAVE = ImageUtil.loadImageResource(getClass(), "/Save.png");
     private final BufferedImage TRANSMOG = ImageUtil.loadImageResource(getClass(), "/Transmog.png");
-    private final Dimension buttonDimension = new Dimension(45, 25);
+    private final BufferedImage EXPORT = ImageUtil.loadImageResource(getClass(), "/Export.png");
+    private final Dimension buttonDimension = new Dimension(30, 25);
     private final HashMap<CustomModel, JPanel> panelMap = new HashMap<>();
     private final JPanel modelPanel = new JPanel();
     private final GridBagConstraints c = new GridBagConstraints();
     public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
+    public final File BLENDER_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/blender-models");
 
     @Inject
-    public ModelOrganizer(Client client, CreatorsPlugin plugin, ClientThread clientThread, ModelImporter modelImporter, CreatorsConfig config)
+    public ModelOrganizer(Client client, CreatorsPlugin plugin, ClientThread clientThread, ModelImporter modelImporter, ModelExporter modelExporter, CreatorsConfig config)
     {
         this.client = client;
         this.plugin = plugin;
         this.clientThread = clientThread;
         this.modelImporter = modelImporter;
+        this.modelExporter = modelExporter;
         this.config = config;
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -284,6 +288,21 @@ public class ModelOrganizer extends JPanel
         transmogButton.setToolTipText("Set this as your player transmog");
         buttonsPanel.add(transmogButton);
         transmogButton.addActionListener(e -> setTransmog(model));
+
+        JButton exportButton = new JButton(new ImageIcon(EXPORT));
+        exportButton.setPreferredSize(buttonDimension);
+        exportButton.setToolTipText("Export this model to a 3D format based on the Model Exporter settings in the config");
+        buttonsPanel.add(exportButton);
+        exportButton.addActionListener(e ->
+        {
+            clientThread.invokeLater(() ->
+            {
+                String name = model.getComp().getName();
+                BlenderModel blenderModel = modelExporter.bmFromCustomModel(model);
+                modelExporter.saveToFile(name, blenderModel);
+                plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+            });
+        });
 
         revalidate();
         repaint();
