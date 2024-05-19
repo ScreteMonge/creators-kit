@@ -143,7 +143,7 @@ public class ModelOrganizer extends JPanel
                 return;
 
             int id = (int) idSpinner.getValue();
-            plugin.cacheToCustomModel(type, id);
+            plugin.cacheToCustomModel(type, id, -1);
         });
 
         c.gridx = 3;

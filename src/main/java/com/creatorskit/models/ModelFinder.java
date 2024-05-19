@@ -1027,7 +1027,7 @@ public class ModelFinder
         return modelStats;
     }
 
-    public ModelStats[] findModelsForObject(int objectId)
+    public ModelStats[] findModelsForObject(int objectId, int modelType)
     {
         ArrayList<Integer> modelIds = new ArrayList<>();
         final int[] resize = new int[]{128, 128, 128};
@@ -1038,6 +1038,7 @@ public class ModelFinder
         CustomLighting lighting = new CustomLighting(ModelData.DEFAULT_AMBIENT, ModelData.DEFAULT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
 
         CountDownLatch countDownLatch = new CountDownLatch(1);
+        final char cacheValueToFind = ModelType.findCacheValue(modelType);
 
         Call call = httpClient.newCall(locRequest);
         call.enqueue(new Callback()
@@ -1059,6 +1060,15 @@ public class ModelFinder
                 Scanner scanner = new Scanner(inputStream);
                 Pattern npcPattern = Pattern.compile("\\[.+_" + objectId + "]");
 
+                boolean cacheValueFound = false;
+
+                //In the case where Cache Searcher is used and the objectId has multiple ModelType variants, get the first variant only
+                boolean getFirstModelType = false;
+                if (cacheValueToFind == 'o')
+                {
+                    getFirstModelType = true;
+                }
+
                 while (scanner.hasNextLine())
                 {
                     String string = scanner.nextLine();
@@ -1073,13 +1083,25 @@ public class ModelFinder
                             {
                                 lastFound = string.replaceAll("name=", "");
                             }
-                            else if (string.startsWith("model"))
+                            else if (!cacheValueFound && string.startsWith("model"))
                             {
                                 String[] split = string.split("_");
                                 if (split[split.length - 1].contains(","))
                                 {
-                                    String split2 = split[split.length - 1].split(",")[0];
-                                    modelIds.add(Integer.parseInt(split2));
+                                    String split2 = split[split.length - 1];
+                                    String[] splitCacheValue = split2.split(",");
+                                    char cacheValue = splitCacheValue[1].charAt(0);
+                                    if (cacheValueToFind == cacheValue)
+                                    {
+                                        modelIds.add(Integer.parseInt(splitCacheValue[0]));
+                                        cacheValueFound = true;
+                                    }
+
+                                    if (getFirstModelType)
+                                    {
+                                        modelIds.add(Integer.parseInt(splitCacheValue[0]));
+                                        cacheValueFound = true;
+                                    }
                                 }
                                 else
                                 {

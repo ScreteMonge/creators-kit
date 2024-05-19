@@ -497,7 +497,7 @@ public class ModelGetter
                 });
     }
 
-    public void addGameObjectGetter(int index, String option, String name, Model model, int objectId, CustomModelType type, int animationId, int orientation, ModelMenuOption menuOption)
+    public void addGameObjectGetter(int index, String option, String name, Model model, int objectId, int modelType, CustomModelType type, int animationId, int orientation, ModelMenuOption menuOption)
     {
         String target = ColorUtil.prependColorTag(name, Color.CYAN);
         client.createMenuEntry(index)
@@ -508,7 +508,7 @@ public class ModelGetter
                 {
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = modelFinder.findModelsForObject(objectId);
+                        ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType);
                         CustomLighting lighting = new CustomLighting(64, 768, -50, -50, 10);
                         CustomModelComp comp = new CustomModelComp(0, type, objectId, modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, name);
                         CustomModel customModel = new CustomModel(model, comp);
@@ -549,7 +549,7 @@ public class ModelGetter
                 });
     }
 
-    public void addObjectGetterToAnvil(String name, int objectId)
+    public void addObjectGetterToAnvil(String name, int objectId, int modelType)
     {
         String target = ColorUtil.prependColorTag(name, Color.CYAN);
         client.createMenuEntry(-2)
@@ -560,7 +560,7 @@ public class ModelGetter
                 {
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = modelFinder.findModelsForObject(objectId);
+                        ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType);
                         clientThread.invokeLater(() ->
                         {
                             plugin.cacheToAnvil(modelStats, new int[0], false);
@@ -571,7 +571,7 @@ public class ModelGetter
                 });
     }
 
-    public void addObjectExporter(int index, String name, int objectId, Model model)
+    public void addObjectExporter(int index, String name, int objectId, int modelType, Model model)
     {
         String target = ColorUtil.prependColorTag(name, Color.CYAN);
         client.createMenuEntry(index)
@@ -620,7 +620,7 @@ public class ModelGetter
 
                         Thread thread = new Thread(() ->
                         {
-                            ModelStats[] modelStats = modelFinder.findModelsForObject(objectId);
+                            ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType);
 
                             clientThread.invokeLater(() ->
                             {
