@@ -1063,11 +1063,7 @@ public class ModelFinder
                 boolean cacheValueFound = false;
 
                 //In the case where Cache Searcher is used and the objectId has multiple ModelType variants, get the first variant only
-                boolean getFirstModelType = false;
-                if (cacheValueToFind == 'o')
-                {
-                    getFirstModelType = true;
-                }
+                boolean getFirstModelType = cacheValueToFind == '/';
 
                 while (scanner.hasNextLine())
                 {

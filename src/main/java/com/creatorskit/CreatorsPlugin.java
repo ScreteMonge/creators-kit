@@ -1002,7 +1002,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 						DynamicObject dynamicObject = (DynamicObject) renderable;
 						if (comp.getImpostorIds() != null)
 						{
-							comp = comp.getImpostor();
+							if (comp.getImpostor() != null)
+							{
+								comp = comp.getImpostor();
+							}
 						}
 
 						objectId = comp.getId();
@@ -1040,7 +1043,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 						if (config.exportRightClick())
 						{
-							modelGetter.addDynamicObjectExporter(1, name, objectId, modelType, dynamicObject.getModel());
+							Model model = dynamicObject.getModel();
+							if (model != null)
+							{
+								modelGetter.addDynamicObjectExporter(1, name, objectId, modelType, dynamicObject.getModel());
+							}
 						}
 					}
 				}
