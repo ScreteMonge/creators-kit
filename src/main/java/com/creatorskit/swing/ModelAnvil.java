@@ -220,6 +220,7 @@ public class ModelAnvil extends JPanel
         presetComboBox.addItem(LightingStyle.DEFAULT);
         presetComboBox.addItem(LightingStyle.ACTOR);
         presetComboBox.addItem(LightingStyle.SPOTANIM);
+        presetComboBox.addItem(LightingStyle.DYNAMIC);
         presetComboBox.addItem(LightingStyle.NONE);
         presetComboBox.setFocusable(false);
         presetComboBox.setToolTipText("Quick lighting presets for common cases. Actor = NPCs/Players, SpotAnim = Spells/Effects");

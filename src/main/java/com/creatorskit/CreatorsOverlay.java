@@ -24,6 +24,7 @@ public class CreatorsOverlay extends Overlay
     private static final Color SELECTED_COLOUR = new Color(220, 253, 245);
     private static final Color MY_OBJECT_COLOUR = new Color(35, 208, 187);
     private static final Color GAME_OBJECT_COLOUR = new Color(255, 138, 18);
+    private static final Color DYNAMIC_OBJECT_COLOUR = new Color(255, 190, 130);
     private static final Color GROUND_OBJECT_COLOUR = new Color(73, 255, 0);
     private static final Color WALL_OBJECT_COLOUR = new Color(255, 70, 70);
     private static final Color DECORATIVE_OBJECT_COLOUR = new Color(183, 126, 255);
@@ -428,6 +429,7 @@ public class CreatorsOverlay extends Overlay
                         }
 
                         stringBuilder.append("ID: ").append(gameObject.getId());
+                        Color color = GAME_OBJECT_COLOUR;
                         if (gameObject.getRenderable() instanceof DynamicObject)
                         {
                             Animation animation = ((DynamicObject) gameObject.getRenderable()).getAnimation();
@@ -439,13 +441,15 @@ public class CreatorsOverlay extends Overlay
                             {
                                 stringBuilder.append(" A: -1");
                             }
+
+                            color = DYNAMIC_OBJECT_COLOUR;
                         }
                         else
                         {
                             stringBuilder.append(" A: -1");
                         }
 
-                        OverlayUtil.renderTileOverlay(graphics, gameObject, stringBuilder.toString(), GAME_OBJECT_COLOUR);
+                        OverlayUtil.renderTileOverlay(graphics, gameObject, stringBuilder.toString(), color);
                     }
                 }
             }

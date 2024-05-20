@@ -1027,7 +1027,7 @@ public class ModelFinder
         return modelStats;
     }
 
-    public ModelStats[] findModelsForObject(int objectId, int modelType)
+    public ModelStats[] findModelsForObject(int objectId, int modelType, LightingStyle ls)
     {
         ArrayList<Integer> modelIds = new ArrayList<>();
         final int[] resize = new int[]{128, 128, 128};
@@ -1035,7 +1035,7 @@ public class ModelFinder
         ArrayList<Short> recolourTo = new ArrayList<>();
         ArrayList<Short> retextureFrom = new ArrayList<>();
         ArrayList<Short> retextureTo = new ArrayList<>();
-        CustomLighting lighting = new CustomLighting(ModelData.DEFAULT_AMBIENT, ModelData.DEFAULT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z);
+        CustomLighting lighting = new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getY(), ls.getZ());
 
         CountDownLatch countDownLatch = new CountDownLatch(1);
         final char cacheValueToFind = ModelType.findCacheValue(modelType);

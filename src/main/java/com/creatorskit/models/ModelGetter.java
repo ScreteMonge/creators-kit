@@ -508,7 +508,7 @@ public class ModelGetter
                 {
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType);
+                        ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DEFAULT);
                         CustomLighting lighting = new CustomLighting(64, 768, -50, -50, 10);
                         CustomModelComp comp = new CustomModelComp(0, type, objectId, modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, name);
                         CustomModel customModel = new CustomModel(model, comp);
@@ -549,10 +549,67 @@ public class ModelGetter
                 });
     }
 
-    public void addObjectGetterToAnvil(String name, int objectId, int modelType)
+    public void addDynamicObjectGetter(int index, String option, String name, int objectId, int modelType, CustomModelType type, int animationId, int orientation, ModelMenuOption menuOption)
     {
         String target = ColorUtil.prependColorTag(name, Color.CYAN);
-        client.createMenuEntry(-2)
+        client.createMenuEntry(index)
+                .setOption(option)
+                .setTarget(target)
+                .setType(MenuAction.RUNELITE)
+                .onClick(e ->
+                {
+                    Thread thread = new Thread(() ->
+                    {
+                        ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DYNAMIC);
+                        LightingStyle ls = LightingStyle.DYNAMIC;
+                        CustomLighting lighting = new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getY(), ls.getZ());
+                        CustomModelComp comp = new CustomModelComp(0, type, objectId, modelStats, null, null, null, ls, lighting, false, name);
+                        clientThread.invokeLater(() ->
+                        {
+                            Model model = plugin.constructModelFromCache(modelStats, new int[0], false, false);
+                            CustomModel customModel = new CustomModel(model, comp);
+                            plugin.addCustomModel(customModel, false);
+                            plugin.sendChatMessage("Model stored: " + name);
+
+                            CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
+                            if (menuOption == ModelMenuOption.TRANSMOG)
+                            {
+                                creatorsPanel.getModelOrganizer().setTransmog(customModel);
+                            }
+
+                            if (menuOption == ModelMenuOption.STORE_AND_ADD)
+                            {
+                                ObjectPanel objectPanel = creatorsPanel.createPanel(
+                                        creatorsPanel.getSidePanel(),
+                                        name,
+                                        7699,
+                                        customModel,
+                                        true,
+                                        false,
+                                        orientation,
+                                        animationId,
+                                        60,
+                                        creatorsPanel.createEmptyProgram(animationId, animationId),
+                                        false,
+                                        null,
+                                        null,
+                                        new int[0],
+                                        -1,
+                                        false,
+                                        false);
+
+                                SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(creatorsPanel.getSideObjectPanels(), creatorsPanel.getSidePanel(), objectPanel));
+                            }
+                        });
+                    });
+                    thread.start();
+                });
+    }
+
+    public void addObjectGetterToAnvil(int index, String name, int objectId, int modelType, LightingStyle lightingStyle)
+    {
+        String target = ColorUtil.prependColorTag(name, Color.CYAN);
+        client.createMenuEntry(index)
                 .setOption(ColorUtil.prependColorTag("Anvil", Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
@@ -560,7 +617,7 @@ public class ModelGetter
                 {
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType);
+                        ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, lightingStyle);
                         clientThread.invokeLater(() ->
                         {
                             plugin.cacheToAnvil(modelStats, new int[0], false);
@@ -620,7 +677,82 @@ public class ModelGetter
 
                         Thread thread = new Thread(() ->
                         {
-                            ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType);
+                            ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DEFAULT);
+
+                            clientThread.invokeLater(() ->
+                            {
+                                BlenderModel blenderModel = modelExporter.bmFaceColours(
+                                        modelStats,
+                                        new int[0],
+                                        false,
+                                        vX,
+                                        vY,
+                                        vZ,
+                                        f1,
+                                        f2,
+                                        f3,
+                                        transparencies,
+                                        renderPriorities);
+                                modelExporter.saveToFile(name, blenderModel);
+                                plugin.sendChatMessage("Exported " + name + " " + objectId + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                            });
+                        });
+                        thread.start();
+
+                    }
+                });
+    }
+
+    public void addDynamicObjectExporter(int index, String name, int objectId, int modelType, Model model)
+    {
+        int vCount = model.getVerticesCount();
+        int fCount = model.getFaceCount();
+        int[] vX = Arrays.copyOf(model.getVerticesX(), vCount);
+        int[] vY = Arrays.copyOf(model.getVerticesY(), vCount);
+        int[] vZ = Arrays.copyOf(model.getVerticesZ(), vCount);
+        int[] f1 = Arrays.copyOf(model.getFaceIndices1(), fCount);
+        int[] f2 = Arrays.copyOf(model.getFaceIndices2(), fCount);
+        int[] f3 = Arrays.copyOf(model.getFaceIndices3(), fCount);
+        byte[] renderPriorities;
+        if (model.getFaceRenderPriorities() == null)
+        {
+            renderPriorities = new byte[fCount];
+            Arrays.fill(renderPriorities, (byte) 0);
+        }
+        else
+        {
+            renderPriorities = model.getFaceRenderPriorities();
+        }
+
+        byte[] transparencies;
+        if (model.getFaceTransparencies() == null)
+        {
+            transparencies = new byte[fCount];
+            Arrays.fill(transparencies, (byte) 0);
+        }
+        else
+        {
+            transparencies = model.getFaceTransparencies();
+        }
+
+        String target = ColorUtil.prependColorTag(name, Color.CYAN);
+        client.createMenuEntry(index)
+                .setOption(ColorUtil.prependColorTag("Export", Color.ORANGE))
+                .setTarget(target)
+                .setType(MenuAction.RUNELITE)
+                .onClick(e ->
+                {
+                    if (config.vertexColours())
+                    {
+                        BlenderModel blenderModel = modelExporter.bmVertexColours(model);
+                        modelExporter.saveToFile(name, blenderModel);
+                        plugin.sendChatMessage("Exported " + name + " " + objectId + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                    }
+                    else
+                    {
+                        Thread thread = new Thread(() ->
+                        {
+                            ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DYNAMIC);
 
                             clientThread.invokeLater(() ->
                             {
@@ -848,10 +980,10 @@ public class ModelGetter
                 });
     }
 
-    public void addGroundItemGetterToAnvil(String name, int itemId)
+    public void addGroundItemGetterToAnvil(int index, String name, int itemId)
     {
         String target = ColorUtil.prependColorTag(name, Color.CYAN);
-        client.createMenuEntry(-2)
+        client.createMenuEntry(index)
                 .setOption(ColorUtil.prependColorTag("Anvil", Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)

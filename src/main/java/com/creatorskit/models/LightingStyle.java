@@ -11,6 +11,7 @@ public enum LightingStyle
     ACTOR("Actor", 64, 850, -30, -30, 50),
     DEFAULT("Default", 64, 768, -50, -50, 10),
     SPOTANIM("SpotAnim", 64, 850, -50, -50, 75),
+    DYNAMIC("Dynamic", 100, 850, -10, -10, 10),
     CUSTOM("Custom", 64, 768, -50, -50, 10)
     ;
 
