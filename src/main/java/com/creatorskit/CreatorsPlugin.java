@@ -708,12 +708,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	@Subscribe
 	public void onPostMenuSort(PostMenuSort event)
 	{
-		if (!config.enableCtrlHotkeys())
-		{
-			return;
-		}
-
-		if (client.isKeyPressed(KeyCode.KC_CONTROL))
+		if (config.enableCtrlHotkeys() && client.isKeyPressed(KeyCode.KC_CONTROL))
 		{
 			if (selectedCharacter != null)
 			{
@@ -724,6 +719,33 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 						.onClick(e -> setLocation(selectedCharacter, true, false, true, false));
 			}
 		}
+
+		Tile tile = client.getSelectedSceneTile();
+		if (tile == null)
+		{
+			return;
+		}
+
+		MenuEntry[] menuEntries = client.getMenuEntries();
+		boolean hoveringTile = false;
+		for (MenuEntry menuEntry : menuEntries)
+		{
+			if (menuEntry.getOption().equals("Walk here"))
+			{
+				hoveringTile = true;
+				break;
+			}
+		}
+
+		if (!hoveringTile)
+		{
+			return;
+		}
+
+		modelGetter.addCharacterMenuEntries(tile);
+		modelGetter.addLocalPlayerMenuEntries(tile);
+		modelGetter.addTileItemMenuEntries(tile);
+		modelGetter.addTileObjectMenuEntries(tile);
 	}
 
 	@Subscribe
@@ -735,7 +757,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		String target = event.getTarget();
 		String option = event.getOption();
 
-		Tile tile = client.getSelectedSceneTile();
 		NPC npc = event.getMenuEntry().getNpc();
 		if (npc != null && option.equals("Examine"))
 		{
@@ -777,312 +798,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			}
 		}
 
-		if (tile != null)
-		{
-			if (option.equals("Walk here"))
-			{
-				GroundObject groundObject = tile.getGroundObject();
-				if (groundObject != null)
-				{
-					Renderable renderable = groundObject.getRenderable();
-					if (renderable instanceof Model)
-					{
-						Model model = (Model) groundObject.getRenderable();
-
-						int objectId = groundObject.getId();
-						int animationId = -1;
-						int modelType = 22;
-						String name = client.getObjectDefinition(objectId).getName();
-						if (name.equals("null"))
-						{
-							name = "GroundObj";
-						}
-
-						if (config.rightClick())
-						{
-							if (client.isKeyPressed(KeyCode.KC_CONTROL))
-							{
-								modelGetter.addGameObjectGetter(1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE_AND_ADD);
-							}
-							else
-							{
-								modelGetter.addGameObjectGetter(1, ColorUtil.prependColorTag("Store", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE);
-
-							}
-							modelGetter.addObjectGetterToAnvil(1, name, objectId, modelType, LightingStyle.DEFAULT);
-						}
-
-						if (config.transmogRightClick())
-						{
-							modelGetter.addGameObjectGetter(1, ColorUtil.prependColorTag("Transmog", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.TRANSMOG);
-						}
-
-						if (config.exportRightClick())
-						{
-							modelGetter.addObjectExporter(1, name, objectId, modelType,  model);
-						}
-					}
-				}
-
-				DecorativeObject decorativeObject = tile.getDecorativeObject();
-				if (decorativeObject != null)
-				{
-					Renderable renderable = decorativeObject.getRenderable();
-					if (renderable instanceof Model)
-					{
-						Model model = (Model) decorativeObject.getRenderable();
-
-						int objectId = decorativeObject.getId();
-						int animationId = -1;
-						int modelType = 4;
-						String name = client.getObjectDefinition(objectId).getName();
-						if (name.equals("null"))
-						{
-							name = "DecorativeObj";
-						}
-
-						if (config.rightClick())
-						{
-							if (client.isKeyPressed(KeyCode.KC_CONTROL))
-							{
-								modelGetter.addGameObjectGetter(1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE_AND_ADD);
-							}
-							else
-							{
-								modelGetter.addGameObjectGetter(1, ColorUtil.prependColorTag("Store", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE);
-
-							}
-							modelGetter.addObjectGetterToAnvil(1, name, objectId, modelType, LightingStyle.DEFAULT);
-						}
-
-						if (config.transmogRightClick())
-						{
-							modelGetter.addGameObjectGetter(1, ColorUtil.prependColorTag("Transmog", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.TRANSMOG);
-						}
-
-						if (config.exportRightClick())
-						{
-							modelGetter.addObjectExporter(1, name, objectId, modelType, model);
-						}
-					}
-				}
-
-				WallObject wallObject = tile.getWallObject();
-				if (wallObject != null)
-				{
-					Renderable renderable = wallObject.getRenderable1();
-					if (renderable instanceof Model)
-					{
-						Model model = (Model) renderable;
-
-						int objectId = wallObject.getId();
-						int animationId = -1;
-						int modelType = tile.getWallObject().getConfig() & 31;
-						String name = client.getObjectDefinition(objectId).getName();
-						if (name.equals("null"))
-						{
-							name = "WallObj";
-						}
-
-						if (config.rightClick())
-						{
-							if (client.isKeyPressed(KeyCode.KC_CONTROL))
-							{
-								modelGetter.addGameObjectGetter(1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE_AND_ADD);
-							}
-							else
-							{
-								modelGetter.addGameObjectGetter(1, ColorUtil.prependColorTag("Store", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE);
-							}
-							modelGetter.addObjectGetterToAnvil(1, name, objectId, modelType, LightingStyle.DEFAULT);
-						}
-
-						if (config.transmogRightClick())
-						{
-							modelGetter.addGameObjectGetter(1, ColorUtil.prependColorTag("Transmog", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.TRANSMOG);
-						}
-
-						if (config.exportRightClick())
-						{
-							modelGetter.addObjectExporter(1, name, objectId, modelType, model);
-						}
-					}
-				}
-
-				List<TileItem> tileItems = tile.getGroundItems();
-				if (tileItems != null)
-				{
-					for (TileItem tileItem : tileItems)
-					{
-						int itemId = tileItem.getId();
-						String name = client.getItemDefinition(itemId).getName();
-						if (name.equals("null"))
-						{
-							name = "Item";
-						}
-
-						Model model = tileItem.getModel();
-						if (config.rightClick())
-						{
-							if (client.isKeyPressed(KeyCode.KC_CONTROL))
-							{
-								modelGetter.addGroundItemGetter(1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), name, model, itemId, 0, ModelMenuOption.STORE_AND_ADD);
-							}
-							else
-							{
-								modelGetter.addGroundItemGetter(1, ColorUtil.prependColorTag("Store", Color.ORANGE), name, model, itemId, 0, ModelMenuOption.STORE);
-							}
-
-							modelGetter.addGroundItemGetterToAnvil(1, name, itemId);
-						}
-
-						if (config.transmogRightClick())
-						{
-							modelGetter.addGroundItemGetter(1, ColorUtil.prependColorTag("Transmog", Color.ORANGE), name, model, itemId, 0, ModelMenuOption.TRANSMOG);
-						}
-
-						if (config.exportRightClick())
-						{
-							modelGetter.addGroundItemExporter(1, name, itemId, model);
-						}
-					}
-				}
-
-				GameObject[] gameObjects = tile.getGameObjects();
-				for (GameObject gameObject : gameObjects)
-				{
-					if (gameObject == null)
-						continue;
-
-					Renderable renderable = gameObject.getRenderable();
-					if (renderable == null)
-						continue;
-
-					int objectId = gameObject.getId();
-					int modelType = gameObject.getConfig() & 31;
-
-					if (renderable instanceof Model)
-					{
-						ObjectComposition comp = client.getObjectDefinition(objectId);
-						String name = comp.getName();
-						if (name.equals("null"))
-						{
-							name = "GameObj";
-						}
-						int animationId = -1;
-
-						Model model = (Model) renderable;
-						if (config.rightClick())
-						{
-							if (client.isKeyPressed(KeyCode.KC_CONTROL))
-							{
-								modelGetter.addGameObjectGetter(1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, gameObject.getOrientation(), ModelMenuOption.STORE_AND_ADD);
-							}
-							else
-							{
-								modelGetter.addGameObjectGetter(1, ColorUtil.prependColorTag("Store", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, gameObject.getOrientation(), ModelMenuOption.STORE);
-							}
-							modelGetter.addObjectGetterToAnvil(1, name, gameObject.getId(), modelType, LightingStyle.DEFAULT);
-						}
-
-						if (config.transmogRightClick())
-						{
-							modelGetter.addGameObjectGetter(1, ColorUtil.prependColorTag("Transmog", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, gameObject.getOrientation(), ModelMenuOption.TRANSMOG);
-						}
-
-						if (config.exportRightClick())
-						{
-							modelGetter.addObjectExporter(1, name, objectId, modelType, model);
-						}
-					}
-
-					if (renderable instanceof DynamicObject)
-					{
-						ObjectComposition comp = client.getObjectDefinition(objectId);
-						DynamicObject dynamicObject = (DynamicObject) renderable;
-						if (comp.getImpostorIds() != null)
-						{
-							if (comp.getImpostor() != null)
-							{
-								comp = comp.getImpostor();
-							}
-						}
-
-						objectId = comp.getId();
-						Animation animation = dynamicObject.getAnimation();
-						int animationId = -1;
-						if (animation != null)
-						{
-							animationId = animation.getId();
-						}
-
-						String name = comp.getName();
-						if (name.equals("null"))
-						{
-							name = "GameObj";
-						}
-
-						if (config.rightClick())
-						{
-							if (client.isKeyPressed(KeyCode.KC_CONTROL))
-							{
-								modelGetter.addDynamicObjectGetter(1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), name, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, gameObject.getOrientation(), ModelMenuOption.STORE_AND_ADD);
-							}
-							else
-							{
-								modelGetter.addDynamicObjectGetter(1, ColorUtil.prependColorTag("Store", Color.ORANGE), name, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, gameObject.getOrientation(), ModelMenuOption.STORE);
-							}
-
-							modelGetter.addObjectGetterToAnvil(1, name, objectId, modelType, LightingStyle.DYNAMIC);
-						}
-
-						if (config.transmogRightClick())
-						{
-							modelGetter.addDynamicObjectGetter(1, ColorUtil.prependColorTag("Transmog", Color.ORANGE), name, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, gameObject.getOrientation(), ModelMenuOption.TRANSMOG);
-						}
-
-						if (config.exportRightClick())
-						{
-							Model model = dynamicObject.getModel();
-							if (model != null)
-							{
-								modelGetter.addDynamicObjectExporter(1, name, objectId, modelType, dynamicObject.getModel());
-							}
-						}
-					}
-				}
-
-				if (config.rightSelect() || config.exportRightClick())
-				{
-					for (int i = 0; i < characters.size(); i++)
-					{
-						Character character = characters.get(i);
-						RuneLiteObject runeLiteObject = character.getRuneLiteObject();
-						if (character.isActive() && runeLiteObject != null)
-						{
-							LocalPoint localPoint = runeLiteObject.getLocation();
-							if (localPoint != null && localPoint.equals(tile.getLocalLocation()))
-							{
-								if (config.rightSelect())
-								{
-									client.createMenuEntry(1)
-											.setOption(ColorUtil.prependColorTag("Select", Color.ORANGE))
-											.setTarget(ColorUtil.colorTag(Color.GREEN) + character.getName())
-											.setType(MenuAction.RUNELITE)
-											.onClick(e -> creatorsPanel.setSelectedCharacter(character, character.getObjectPanel()));
-								}
-
-								if (config.exportRightClick())
-								{
-									modelGetter.addRLObjectExporter(1, character);
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-
 		Player player = event.getMenuEntry().getPlayer();
 		if (player != null && option.equals("Trade with"))
 		{
@@ -1121,44 +836,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			if (config.exportRightClick())
 			{
 				modelGetter.addPlayerExporter(1, target, player);
-			}
-		}
-
-		Player localPlayer = client.getLocalPlayer();
-		if (localPlayer != null && tile != null && option.equals("Walk here"))
-		{
-			if (tile.getLocalLocation().equals(localPlayer.getLocalLocation()))
-			{
-				if (config.rightClick())
-				{
-					if (client.isKeyPressed(KeyCode.KC_CONTROL))
-					{
-						modelGetter.addPlayerGetter(1, "Local Player", ColorUtil.prependColorTag("Store-Add", Color.ORANGE), localPlayer, ModelMenuOption.STORE_AND_ADD);
-					}
-					else
-					{
-						modelGetter.addPlayerGetter(1, "Local Player", ColorUtil.prependColorTag("Store", Color.ORANGE), localPlayer, ModelMenuOption.STORE);
-					}
-					modelGetter.addPlayerGetter(1, "Local Player", ColorUtil.prependColorTag("Anvil", Color.ORANGE), localPlayer, ModelMenuOption.ANVIL);
-				}
-
-				if (config.rightSpotAnim())
-				{
-					if (client.isKeyPressed(KeyCode.KC_CONTROL))
-					{
-						modelGetter.addSpotAnimGetter(1, "Local Player", ColorUtil.prependColorTag("SpotAnim-Store-Add", Color.ORANGE), localPlayer.getSpotAnims(), ModelMenuOption.STORE_AND_ADD);
-					}
-					else
-					{
-						modelGetter.addSpotAnimGetter(1, "Local Player", ColorUtil.prependColorTag("SpotAnim-Store", Color.ORANGE), localPlayer.getSpotAnims(), ModelMenuOption.STORE);
-					}
-					modelGetter.addSpotAnimGetter(1, "Local Player", ColorUtil.prependColorTag("SpotAnim-Anvil", Color.ORANGE), localPlayer.getSpotAnims(), ModelMenuOption.ANVIL);
-				}
-
-				if (config.exportRightClick())
-				{
-					modelGetter.addPlayerExporter(1, "Local Player", localPlayer);
-				}
 			}
 		}
 	}

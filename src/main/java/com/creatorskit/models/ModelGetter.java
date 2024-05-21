@@ -6,6 +6,7 @@ import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.swing.CreatorsPanel;
 import com.creatorskit.swing.ObjectPanel;
 import net.runelite.api.*;
+import net.runelite.api.coords.LocalPoint;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.util.ColorUtil;
@@ -15,11 +16,14 @@ import javax.inject.Inject;
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class ModelGetter
 {
     private final Client client;
+    private final CreatorsPanel creatorsPanel;
     private final ClientThread clientThread;
     private final CreatorsConfig config;
     private final CreatorsPlugin plugin;
@@ -28,14 +32,369 @@ public class ModelGetter
     public final File BLENDER_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/blender-models");
 
     @Inject
-    public ModelGetter(Client client, ClientThread clientThread, CreatorsConfig config, CreatorsPlugin plugin, ModelFinder modelFinder, ModelExporter modelExporter)
+    public ModelGetter(Client client, CreatorsPanel creatorsPanel, ClientThread clientThread, CreatorsConfig config, CreatorsPlugin plugin, ModelFinder modelFinder, ModelExporter modelExporter)
     {
         this.client = client;
+        this.creatorsPanel = creatorsPanel;
         this.clientThread = clientThread;
         this.config = config;
         this.plugin = plugin;
         this.modelFinder = modelFinder;
         this.modelExporter = modelExporter;
+    }
+
+    public void addCharacterMenuEntries(Tile tile)
+    {
+        if (!config.rightSelect() && !config.exportRightClick())
+        {
+            return;
+        }
+
+        ArrayList<Character> characters = plugin.getCharacters();
+        for (int i = 0; i < characters.size(); i++)
+        {
+            Character character = characters.get(i);
+            RuneLiteObject runeLiteObject = character.getRuneLiteObject();
+            if (character.isActive() && runeLiteObject != null)
+            {
+                LocalPoint localPoint = runeLiteObject.getLocation();
+                if (localPoint != null && localPoint.equals(tile.getLocalLocation()))
+                {
+                    if (config.rightSelect())
+                    {
+                        client.createMenuEntry(1)
+                                .setOption(ColorUtil.prependColorTag("Select", Color.ORANGE))
+                                .setTarget(ColorUtil.colorTag(Color.GREEN) + character.getName())
+                                .setType(MenuAction.RUNELITE)
+                                .onClick(e -> creatorsPanel.setSelectedCharacter(character, character.getObjectPanel()));
+                    }
+
+                    if (config.exportRightClick())
+                    {
+                        addRLObjectExporter(1, character);
+                    }
+                }
+            }
+        }
+    }
+
+    public void addLocalPlayerMenuEntries(Tile tile)
+    {
+        Player localPlayer = client.getLocalPlayer();
+        if (localPlayer != null)
+        {
+            if (tile.getLocalLocation().equals(localPlayer.getLocalLocation()))
+            {
+                if (config.rightClick())
+                {
+                    if (client.isKeyPressed(KeyCode.KC_CONTROL))
+                    {
+                        addPlayerGetter(1, "Local Player", ColorUtil.prependColorTag("Store-Add", Color.ORANGE), localPlayer, ModelMenuOption.STORE_AND_ADD);
+                    }
+                    else
+                    {
+                        addPlayerGetter(1, "Local Player", ColorUtil.prependColorTag("Store", Color.ORANGE), localPlayer, ModelMenuOption.STORE);
+                    }
+                    addPlayerGetter(1, "Local Player", ColorUtil.prependColorTag("Anvil", Color.ORANGE), localPlayer, ModelMenuOption.ANVIL);
+                }
+
+                if (config.rightSpotAnim())
+                {
+                    if (client.isKeyPressed(KeyCode.KC_CONTROL))
+                    {
+                        addSpotAnimGetter(1, "Local Player", ColorUtil.prependColorTag("SpotAnim-Store-Add", Color.ORANGE), localPlayer.getSpotAnims(), ModelMenuOption.STORE_AND_ADD);
+                    }
+                    else
+                    {
+                        addSpotAnimGetter(1, "Local Player", ColorUtil.prependColorTag("SpotAnim-Store", Color.ORANGE), localPlayer.getSpotAnims(), ModelMenuOption.STORE);
+                    }
+                    addSpotAnimGetter(1, "Local Player", ColorUtil.prependColorTag("SpotAnim-Anvil", Color.ORANGE), localPlayer.getSpotAnims(), ModelMenuOption.ANVIL);
+                }
+
+                if (config.exportRightClick())
+                {
+                    addPlayerExporter(1, "Local Player", localPlayer);
+                }
+            }
+        }
+    }
+
+    public void addTileItemMenuEntries(Tile tile)
+    {
+        List<TileItem> tileItems = tile.getGroundItems();
+        if (tileItems != null)
+        {
+            for (TileItem tileItem : tileItems)
+            {
+                int itemId = tileItem.getId();
+                String name = client.getItemDefinition(itemId).getName();
+                if (name.equals("null"))
+                {
+                    name = "Item";
+                }
+
+                Model model = tileItem.getModel();
+                if (config.rightClick())
+                {
+                    if (client.isKeyPressed(KeyCode.KC_CONTROL))
+                    {
+                        addGroundItemGetter(1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), name, model, itemId, 0, ModelMenuOption.STORE_AND_ADD);
+                    }
+                    else
+                    {
+                        addGroundItemGetter(1, ColorUtil.prependColorTag("Store", Color.ORANGE), name, model, itemId, 0, ModelMenuOption.STORE);
+                    }
+
+                    addGroundItemGetterToAnvil(1, name, itemId);
+                }
+
+                if (config.transmogRightClick())
+                {
+                    addGroundItemGetter(1, ColorUtil.prependColorTag("Transmog", Color.ORANGE), name, model, itemId, 0, ModelMenuOption.TRANSMOG);
+                }
+
+                if (config.exportRightClick())
+                {
+                    addGroundItemExporter(1, name, itemId, model);
+                }
+            }
+        }
+    }
+
+    public void addTileObjectMenuEntries(Tile tile)
+    {
+
+        GameObject[] gameObjects = tile.getGameObjects();
+        for (GameObject gameObject : gameObjects)
+        {
+            if (gameObject == null)
+                continue;
+
+            Renderable renderable = gameObject.getRenderable();
+            if (renderable == null)
+                continue;
+
+            int objectId = gameObject.getId();
+            int modelType = gameObject.getConfig() & 31;
+
+            if (renderable instanceof Model)
+            {
+                ObjectComposition comp = client.getObjectDefinition(objectId);
+                String name = comp.getName();
+                if (name.equals("null"))
+                {
+                    name = "GameObj";
+                }
+                int animationId = -1;
+
+                Model model = (Model) renderable;
+                if (config.rightClick())
+                {
+                    if (client.isKeyPressed(KeyCode.KC_CONTROL))
+                    {
+                        addGameObjectGetter(1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, gameObject.getOrientation(), ModelMenuOption.STORE_AND_ADD);
+                    }
+                    else
+                    {
+                        addGameObjectGetter(1, ColorUtil.prependColorTag("Store", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, gameObject.getOrientation(), ModelMenuOption.STORE);
+                    }
+                    addObjectGetterToAnvil(1, name, gameObject.getId(), modelType, LightingStyle.DEFAULT);
+                }
+
+                if (config.transmogRightClick())
+                {
+                    addGameObjectGetter(1, ColorUtil.prependColorTag("Transmog", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, gameObject.getOrientation(), ModelMenuOption.TRANSMOG);
+                }
+
+                if (config.exportRightClick())
+                {
+                    addObjectExporter(1, name, objectId, modelType, model);
+                }
+            }
+
+            if (renderable instanceof DynamicObject)
+            {
+                ObjectComposition comp = client.getObjectDefinition(objectId);
+                DynamicObject dynamicObject = (DynamicObject) renderable;
+                if (comp.getImpostorIds() != null)
+                {
+                    if (comp.getImpostor() != null)
+                    {
+                        comp = comp.getImpostor();
+                    }
+                }
+
+                objectId = comp.getId();
+                Animation animation = dynamicObject.getAnimation();
+                int animationId = -1;
+                if (animation != null)
+                {
+                    animationId = animation.getId();
+                }
+
+                String name = comp.getName();
+                if (name.equals("null"))
+                {
+                    name = "GameObj";
+                }
+
+                if (config.rightClick())
+                {
+                    if (client.isKeyPressed(KeyCode.KC_CONTROL))
+                    {
+                        addDynamicObjectGetter(1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), name, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, gameObject.getOrientation(), ModelMenuOption.STORE_AND_ADD);
+                    }
+                    else
+                    {
+                        addDynamicObjectGetter(1, ColorUtil.prependColorTag("Store", Color.ORANGE), name, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, gameObject.getOrientation(), ModelMenuOption.STORE);
+                    }
+
+                    addObjectGetterToAnvil(1, name, objectId, modelType, LightingStyle.DYNAMIC);
+                }
+
+                if (config.transmogRightClick())
+                {
+                    addDynamicObjectGetter(1, ColorUtil.prependColorTag("Transmog", Color.ORANGE), name, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, gameObject.getOrientation(), ModelMenuOption.TRANSMOG);
+                }
+
+                if (config.exportRightClick())
+                {
+                    Model model = dynamicObject.getModel();
+                    if (model != null)
+                    {
+                        addDynamicObjectExporter(1, name, objectId, modelType, dynamicObject.getModel());
+                    }
+                }
+            }
+        }
+
+        GroundObject groundObject = tile.getGroundObject();
+        if (groundObject != null)
+        {
+            Renderable renderable = groundObject.getRenderable();
+            if (renderable instanceof Model)
+            {
+                Model model = (Model) groundObject.getRenderable();
+
+                int objectId = groundObject.getId();
+                int animationId = -1;
+                int modelType = 22;
+                String name = client.getObjectDefinition(objectId).getName();
+                if (name.equals("null"))
+                {
+                    name = "GroundObj";
+                }
+
+                if (config.rightClick())
+                {
+                    if (client.isKeyPressed(KeyCode.KC_CONTROL))
+                    {
+                        addGameObjectGetter(1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE_AND_ADD);
+                    }
+                    else
+                    {
+                        addGameObjectGetter(1, ColorUtil.prependColorTag("Store", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE);
+
+                    }
+                    addObjectGetterToAnvil(1, name, objectId, modelType, LightingStyle.DEFAULT);
+                }
+
+                if (config.transmogRightClick())
+                {
+                    addGameObjectGetter(1, ColorUtil.prependColorTag("Transmog", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.TRANSMOG);
+                }
+
+                if (config.exportRightClick())
+                {
+                    addObjectExporter(1, name, objectId, modelType,  model);
+                }
+            }
+        }
+
+        DecorativeObject decorativeObject = tile.getDecorativeObject();
+        if (decorativeObject != null)
+        {
+            Renderable renderable = decorativeObject.getRenderable();
+            if (renderable instanceof Model)
+            {
+                Model model = (Model) decorativeObject.getRenderable();
+
+                int objectId = decorativeObject.getId();
+                int animationId = -1;
+                int modelType = 4;
+                String name = client.getObjectDefinition(objectId).getName();
+                if (name.equals("null"))
+                {
+                    name = "DecorativeObj";
+                }
+
+                if (config.rightClick())
+                {
+                    if (client.isKeyPressed(KeyCode.KC_CONTROL))
+                    {
+                        addGameObjectGetter(1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE_AND_ADD);
+                    }
+                    else
+                    {
+                        addGameObjectGetter(1, ColorUtil.prependColorTag("Store", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE);
+
+                    }
+                    addObjectGetterToAnvil(1, name, objectId, modelType, LightingStyle.DEFAULT);
+                }
+
+                if (config.transmogRightClick())
+                {
+                    addGameObjectGetter(1, ColorUtil.prependColorTag("Transmog", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.TRANSMOG);
+                }
+
+                if (config.exportRightClick())
+                {
+                    addObjectExporter(1, name, objectId, modelType, model);
+                }
+            }
+        }
+
+        WallObject wallObject = tile.getWallObject();
+        if (wallObject != null)
+        {
+            Renderable renderable = wallObject.getRenderable1();
+            if (renderable instanceof Model)
+            {
+                Model model = (Model) renderable;
+
+                int objectId = wallObject.getId();
+                int animationId = -1;
+                int modelType = tile.getWallObject().getConfig() & 31;
+                String name = client.getObjectDefinition(objectId).getName();
+                if (name.equals("null"))
+                {
+                    name = "WallObj";
+                }
+
+                if (config.rightClick())
+                {
+                    if (client.isKeyPressed(KeyCode.KC_CONTROL))
+                    {
+                        addGameObjectGetter(1, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE_AND_ADD);
+                    }
+                    else
+                    {
+                        addGameObjectGetter(1, ColorUtil.prependColorTag("Store", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.STORE);
+                    }
+                    addObjectGetterToAnvil(1, name, objectId, modelType, LightingStyle.DEFAULT);
+                }
+
+                if (config.transmogRightClick())
+                {
+                    addGameObjectGetter(1, ColorUtil.prependColorTag("Transmog", Color.ORANGE), name, model, objectId, modelType, CustomModelType.CACHE_OBJECT, animationId, 0, ModelMenuOption.TRANSMOG);
+                }
+
+                if (config.exportRightClick())
+                {
+                    addObjectExporter(1, name, objectId, modelType, model);
+                }
+            }
+        }
     }
 
     public void storeNPC(int index, String target, String option, NPC npc, ModelMenuOption menuOption)
