@@ -79,7 +79,8 @@ public class ModelGetter
 
                     if (config.exportRightClick())
                     {
-                        addRLObjectExporter(1, character);
+                        addRLObjectExporter(1, character, false);
+                        addRLObjectExporter(1, character, true);
                     }
                 }
             }
@@ -270,7 +271,8 @@ public class ModelGetter
                     Model model = dynamicObject.getModel();
                     if (model != null)
                     {
-                        addDynamicObjectExporter(1, name, objectId, modelType, dynamicObject.getModel());
+                        addDynamicObjectExporter(1, name, objectId, modelType, animationId, dynamicObject.getModel(), false);
+                        addDynamicObjectExporter(1, name, objectId, modelType, animationId, dynamicObject.getModel(), true);
                     }
                 }
             }
@@ -482,24 +484,65 @@ public class ModelGetter
                 });
     }
 
-    public void addNPCExporter(int index, String target, NPC npc)
+    public void addNPCExporter(int index, String target, NPC npc, boolean exportAnimation)
     {
+        String option = "Export Model";
+        if (exportAnimation)
+        {
+            option = "Export Animation";
+        }
+
         client.createMenuEntry(index)
-                .setOption(ColorUtil.prependColorTag("Export", Color.ORANGE))
+                .setOption(ColorUtil.prependColorTag(option, Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
                 .onClick(e ->
                 {
+                    if (exportAnimation && continueAnimExport)
+                    {
+                        plugin.sendChatMessage("Please wait for the current animation export to finish before trying again.");
+                        return;
+                    }
+
+                    int npcId = npc.getId();
+
+                    int animId = npc.getAnimation();
+                    int poseAnimId = npc.getPoseAnimation();
+                    if (animId == -1)
+                    {
+                        animId = poseAnimId;
+                    }
+                    int finalAnimId = animId;
+
+                    String name = npc.getName();
+
                     if (config.vertexColours())
                     {
-                        if (config.exportTPose())
+                        BlenderModel bm = modelExporter.bmVertexColours(npc.getModel());
+
+                        if (exportAnimation)
                         {
-                            npc.setAnimation(-1);
-                            npc.setPoseAnimation(-1);
+                            Thread thread = new Thread(() ->
+                            {
+                                ModelStats[] modelStats = modelFinder.findModelsForNPC(npcId);
+                                clientThread.invokeLater(() ->
+                                {
+                                    initiateAnimationExport(finalAnimId, name, bm, modelStats, new int[0], false, true);
+                                });
+                            });
+                            thread.start();
                         }
-                        BlenderModel blenderModel = modelExporter.bmVertexColours(npc.getModel());
-                        modelExporter.saveToFile(npc.getName(), blenderModel);
-                        plugin.sendChatMessage("Exported " + npc.getName() + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                        else
+                        {
+                            if (config.exportTPose())
+                            {
+                                npc.setAnimation(-1);
+                                npc.setPoseAnimation(-1);
+                            }
+
+                            modelExporter.saveToFile(name, bm);
+                            plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                        }
                     }
                     else
                     {
@@ -536,17 +579,17 @@ public class ModelGetter
 
                         Thread thread = new Thread(() ->
                         {
-                            ModelStats[] modelStats = modelFinder.findModelsForNPC(npc.getId());
+                            ModelStats[] modelStats = modelFinder.findModelsForNPC(npcId);
 
                             clientThread.invokeLater(() ->
                             {
-                                if (config.exportTPose())
+                                if (config.exportTPose() && !exportAnimation)
                                 {
                                     npc.setAnimation(-1);
                                     npc.setPoseAnimation(-1);
                                 }
 
-                                BlenderModel blenderModel = modelExporter.bmFaceColours(
+                                BlenderModel bm = modelExporter.bmFaceColours(
                                         modelStats,
                                         new int[0],
                                         false,
@@ -558,8 +601,16 @@ public class ModelGetter
                                         f3,
                                         transparencies,
                                         renderPriorities);
-                                modelExporter.saveToFile(npc.getName(), blenderModel);
-                                plugin.sendChatMessage("Exported " + npc.getName() + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+
+                                if (exportAnimation)
+                                {
+                                    initiateAnimationExport(finalAnimId, name, bm, modelStats, new int[0], false, true);
+                                }
+                                else
+                                {
+                                    modelExporter.saveToFile(name, bm);
+                                    plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                                }
                             });
                         });
                         thread.start();
@@ -769,7 +820,7 @@ public class ModelGetter
 
     public void addPlayerExporter(int index, String target, Player player, boolean exportAnimation)
     {
-        String option = "Export";
+        String option = "Export Model";
         if (exportAnimation)
         {
             option = "Export Animation";
@@ -781,6 +832,12 @@ public class ModelGetter
                 .setType(MenuAction.RUNELITE)
                 .onClick(e ->
                 {
+                    if (exportAnimation && continueAnimExport)
+                    {
+                        plugin.sendChatMessage("Please wait for the current animation export to finish before trying again.");
+                        return;
+                    }
+
                     PlayerComposition comp = player.getPlayerComposition();
                     int[] items = comp.getEquipmentIds();
 
@@ -815,6 +872,7 @@ public class ModelGetter
                     {
                         animId = poseAnimId;
                     }
+                    int finalAnimId = animId;
 
                     byte[] transparencies;
                     if (model.getFaceTransparencies() == null)
@@ -842,13 +900,27 @@ public class ModelGetter
 
                     if (config.vertexColours())
                     {
-                        BlenderModel blenderModel = modelExporter.bmVertexColours(model);
-                        modelExporter.saveToFile(finalName, blenderModel);
-                        plugin.sendChatMessage("Exported " + finalName + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                        BlenderModel bm = modelExporter.bmVertexColours(model);
+                        if (exportAnimation)
+                        {
+                            Thread thread = new Thread(() ->
+                            {
+                                ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items, finalAnimId, fSpotAnims);
+                                clientThread.invokeLater(() ->
+                                {
+                                    initiateAnimationExport(finalAnimId, finalName, bm, modelStats, comp.getColors(), true, true);
+                                });
+                            });
+                            thread.start();
+                        }
+                        else
+                        {
+                            modelExporter.saveToFile(finalName, bm);
+                            plugin.sendChatMessage("Exported " + finalName + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                        }
                     }
                     else
                     {
-                        int finalAnimId = animId;
                         Thread thread = new Thread(() ->
                         {
                             ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items, finalAnimId, fSpotAnims);
@@ -868,25 +940,9 @@ public class ModelGetter
                                         transparencies,
                                         renderPriorities);
 
-                                if (exportAnimation && !continueAnimExport)
+                                if (exportAnimation)
                                 {
-                                    if (finalAnimId == -1)
-                                    {
-                                        return;
-                                    }
-
-                                    plugin.sendChatMessage("Exporting " + finalName + ", please stand by...");
-                                    Model exportModel = plugin.constructModelFromCache(modelStats, comp.getColors(), true, true);
-                                    blenderModelExport = bm;
-                                    exportName = finalName;
-
-                                    exportObject = client.createRuneLiteObject();
-                                    exportObject.setAnimation(client.loadAnimation(finalAnimId));
-                                    exportObject.setModel(exportModel);
-                                    exportObject.setLocation(client.getLocalPlayer().getLocalLocation(), client.getPlane());
-                                    exportObject.setActive(true);
-                                    continueAnimExport = true;
-                                    initiateExport = true;
+                                    initiateAnimationExport(finalAnimId, finalName, bm, modelStats, comp.getColors(), true, true);
                                 }
                                 else
                                 {
@@ -1106,7 +1162,7 @@ public class ModelGetter
                 });
     }
 
-    public void addDynamicObjectExporter(int index, String name, int objectId, int modelType, Model model)
+    public void addDynamicObjectExporter(int index, String name, int objectId, int modelType, int animId, Model model, boolean exportAnimation)
     {
         int vCount = model.getVerticesCount();
         int fCount = model.getFaceCount();
@@ -1145,11 +1201,33 @@ public class ModelGetter
                 .setType(MenuAction.RUNELITE)
                 .onClick(e ->
                 {
+                    if (exportAnimation && continueAnimExport)
+                    {
+                        plugin.sendChatMessage("Please wait for the current animation export to finish before trying again.");
+                        return;
+                    }
+
                     if (config.vertexColours())
                     {
-                        BlenderModel blenderModel = modelExporter.bmVertexColours(model);
-                        modelExporter.saveToFile(name, blenderModel);
-                        plugin.sendChatMessage("Exported " + name + " " + objectId + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                        BlenderModel bm = modelExporter.bmVertexColours(model);
+
+                        if (exportAnimation)
+                        {
+                            Thread thread = new Thread(() ->
+                            {
+                                ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DYNAMIC);
+                                clientThread.invokeLater(() ->
+                                {
+                                    initiateAnimationExport(animId, name, bm, modelStats, new int[0], false, false);
+                                });
+                            });
+                            thread.start();
+                        }
+                        else
+                        {
+                            modelExporter.saveToFile(name, bm);
+                            plugin.sendChatMessage("Exported " + name + " " + objectId + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                        }
                     }
                     else
                     {
@@ -1159,7 +1237,7 @@ public class ModelGetter
 
                             clientThread.invokeLater(() ->
                             {
-                                BlenderModel blenderModel = modelExporter.bmFaceColours(
+                                BlenderModel bm = modelExporter.bmFaceColours(
                                         modelStats,
                                         new int[0],
                                         false,
@@ -1171,8 +1249,16 @@ public class ModelGetter
                                         f3,
                                         transparencies,
                                         renderPriorities);
-                                modelExporter.saveToFile(name, blenderModel);
-                                plugin.sendChatMessage("Exported " + name + " " + objectId + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+
+                                if (exportAnimation)
+                                {
+                                    initiateAnimationExport(animId, name, bm, modelStats, new int[0], false, false);
+                                }
+                                else
+                                {
+                                    modelExporter.saveToFile(name, bm);
+                                    plugin.sendChatMessage("Exported " + name + " " + objectId + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                                }
                             });
                         });
                         thread.start();
@@ -1181,17 +1267,30 @@ public class ModelGetter
                 });
     }
 
-    public void addRLObjectExporter(int index, Character character)
+    public void addRLObjectExporter(int index, Character character, boolean exportAnimation)
     {
         String name = character.getName();
         String target = ColorUtil.prependColorTag(name, Color.GREEN);
+        String option = "Export Model";
+        if (exportAnimation)
+        {
+            option = "Export Animation";
+        }
 
         client.createMenuEntry(index)
-                .setOption(ColorUtil.prependColorTag("Export", Color.ORANGE))
+                .setOption(ColorUtil.prependColorTag(option, Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
                 .onClick(e ->
                 {
+                    if (exportAnimation && continueAnimExport)
+                    {
+                        plugin.sendChatMessage("Please wait for the current animation export to finish before trying again.");
+                        return;
+                    }
+
+                    int animId = (int) character.getAnimationSpinner().getValue();
+
                     final Model model = character.getRuneLiteObject().getModel();
                     if (config.vertexColours())
                     {
@@ -1237,12 +1336,13 @@ public class ModelGetter
 
                             clientThread.invokeLater(() ->
                             {
-                                BlenderModel blenderModel;
+                                BlenderModel bm;
+                                ModelData modelData = null;
                                 switch (comp.getType())
                                 {
                                     case FORGED:
-                                        ModelData modelData = plugin.createComplexModelData(comp.getDetailedModels());
-                                        blenderModel = modelExporter.bmFaceColoursForForgedModel(
+                                        modelData = plugin.createComplexModelData(comp.getDetailedModels());
+                                        bm = modelExporter.bmFaceColoursForForgedModel(
                                                 modelData,
                                                 vX,
                                                 vY,
@@ -1259,7 +1359,7 @@ public class ModelGetter
                                     case CACHE_GROUND_ITEM:
                                     case CACHE_MAN_WEAR:
                                     case CACHE_WOMAN_WEAR:
-                                        blenderModel = modelExporter.bmFaceColours(
+                                        bm = modelExporter.bmFaceColours(
                                                 comp.getModelStats(),
                                                 new int[0],
                                                 false,
@@ -1273,7 +1373,7 @@ public class ModelGetter
                                                 renderPriorities);
                                         break;
                                     case CACHE_PLAYER:
-                                        blenderModel = modelExporter.bmFaceColours(
+                                        bm = modelExporter.bmFaceColours(
                                                 comp.getModelStats(),
                                                 comp.getKitRecolours(),
                                                 true,
@@ -1287,12 +1387,43 @@ public class ModelGetter
                                                 renderPriorities);
                                         break;
                                     case BLENDER:
-                                        blenderModel = comp.getBlenderModel();
+                                        bm = comp.getBlenderModel();
                                 }
 
-                                modelExporter.saveToFile(name, blenderModel);
-                                plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                                if (exportAnimation)
+                                {
+                                    switch (comp.getType())
+                                    {
+                                        case FORGED:
+                                            if (modelData != null)
+                                            {
+                                                initiateAnimationExport(animId, name, modelData.light(), bm);
+                                            }
+                                            break;
+                                        default:
+                                        case CACHE_NPC:
+                                        case CACHE_OBJECT:
+                                        case CACHE_GROUND_ITEM:
+                                        case CACHE_MAN_WEAR:
+                                        case CACHE_WOMAN_WEAR:
+                                            initiateAnimationExport(animId, name, bm, comp.getModelStats(), new int[0], false, false);
+                                            break;
+                                        case CACHE_PLAYER:
+                                            initiateAnimationExport(animId, name, bm, comp.getModelStats(), comp.getKitRecolours(), true, true);
+                                            break;
+                                        case BLENDER:
+                                            plugin.sendChatMessage("This model already came from Blender.");
+                                            break;
+                                    }
+                                }
+                                else
+                                {
+                                    modelExporter.saveToFile(name, bm);
+                                    plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                                }
+
                             });
+
                         }
                         else
                         {
@@ -1311,7 +1442,7 @@ public class ModelGetter
 
                             clientThread.invokeLater(() ->
                             {
-                                BlenderModel blenderModel = modelExporter.bmFaceColours(
+                                BlenderModel bm = modelExporter.bmFaceColours(
                                         modelStats,
                                         new int[0],
                                         false,
@@ -1323,8 +1454,16 @@ public class ModelGetter
                                         f3,
                                         transparencies,
                                         renderPriorities);
-                                modelExporter.saveToFile(name, blenderModel);
-                                plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+
+                                if (exportAnimation)
+                                {
+                                    initiateAnimationExport(animId, name, bm, modelStats, new int[0], false, false);
+                                }
+                                else
+                                {
+                                    modelExporter.saveToFile(name, bm);
+                                    plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                                }
                             });
                         }
                     }
@@ -1478,6 +1617,33 @@ public class ModelGetter
 
                     }
                 });
+    }
+
+    private void initiateAnimationExport(int animId, String name, BlenderModel bm, ModelStats[] modelStats, int[] kitRecolours, boolean player, boolean actorLighting)
+    {
+        if (animId == -1)
+        {
+            plugin.sendChatMessage("There is no animation currently playing to export.");
+            return;
+        }
+
+        Model model = plugin.constructModelFromCache(modelStats, kitRecolours, player, actorLighting);
+        initiateAnimationExport(animId, name, model, bm);
+    }
+
+    private void initiateAnimationExport(int animId, String name, Model model, BlenderModel bm)
+    {
+        plugin.sendChatMessage("Exporting " + name + ", please stand by as the animation plays...");
+        blenderModelExport = bm;
+        exportName = name;
+
+        exportObject = client.createRuneLiteObject();
+        exportObject.setAnimation(client.loadAnimation(animId));
+        exportObject.setModel(model);
+        exportObject.setLocation(client.getLocalPlayer().getLocalLocation(), client.getPlane());
+        exportObject.setActive(true);
+        continueAnimExport = true;
+        initiateExport = true;
     }
 
     public void handleAnimationExport(int clientTick)

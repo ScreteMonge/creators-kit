@@ -795,7 +795,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			if (config.exportRightClick())
 			{
 				modelGetter.addSpotAnimExporter(1, target, npc.getSpotAnims());
-				modelGetter.addNPCExporter(1, target, npc);
+				modelGetter.addNPCExporter(1, target, npc, false);
+				modelGetter.addNPCExporter(1, target, npc, true);
 			}
 		}
 
