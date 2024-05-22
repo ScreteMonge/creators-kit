@@ -16,6 +16,7 @@ public class BlenderModel
     double[][] faceColours;
     int[] faceColourIndex;
     byte[] priorities;
+    int[] clientTicks;
     int[] animFrames;
     int[][][] animVertices;
 }

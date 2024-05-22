@@ -1721,14 +1721,15 @@ public class ModelGetter
 
         if (!exportObject.isActive())
         {
-            int[] frames = new int[clientTicks.length];
+            int[] ticks = new int[clientTicks.length];
             int baseLine = clientTicks[0];
             for (int i = 0; i < clientTicks.length; i++)
             {
-                frames[i] = clientTicks[i] - baseLine;
+                ticks[i] = clientTicks[i] - baseLine;
             }
 
-            blenderModelExport.setAnimFrames(frames);
+            blenderModelExport.setClientTicks(ticks);
+            blenderModelExport.setAnimFrames(animFrames);
             blenderModelExport.setAnimVertices(animVerts);
             continueAnimExport = false;
             modelExporter.saveToFile(exportName, blenderModelExport);
@@ -1779,6 +1780,17 @@ public class ModelGetter
         if (frame == animFrames[animFrames.length - 1])
         {
             return;
+        }
+
+        for (int i = 0; i < animFrames.length; i++)
+        {
+            if (frame == animFrames[i])
+            {
+                animVerts = ArrayUtils.add(animVerts, animVerts[i]);
+                animFrames = ArrayUtils.add(animFrames, frame);
+                clientTicks = ArrayUtils.add(clientTicks, clientTick);
+                return;
+            }
         }
 
         int[][] verts = new int[model.getVerticesCount()][3];

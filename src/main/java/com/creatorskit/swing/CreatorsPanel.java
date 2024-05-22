@@ -64,6 +64,7 @@ public class CreatorsPanel extends PluginPanel
     private final GridBagConstraints cManager = new GridBagConstraints();
     private final Random random = new Random();
     public static final File SETUP_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit-setups");
+    public static final File CREATORS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
     private final Pattern pattern = Pattern.compile("\\(\\d+\\)\\Z");
     private int npcPanels = 0;
     private final ArrayList<ObjectPanel> allObjectPanels = new ArrayList<>();
@@ -81,6 +82,7 @@ public class CreatorsPanel extends PluginPanel
     private final BufferedImage CLEAR = ImageUtil.loadImageResource(getClass(), "/Clear.png");
     private final BufferedImage LOAD = ImageUtil.loadImageResource(getClass(), "/Load.png");
     private final BufferedImage SAVE = ImageUtil.loadImageResource(getClass(), "/Save.png");
+    private final BufferedImage FIND = ImageUtil.loadImageResource(getClass(), "/Find.png");
     private final BufferedImage CUSTOM_MODEL = ImageUtil.loadImageResource(getClass(), "/Custom model.png");
     public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
     private final LineBorder defaultBorder = new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1);
@@ -145,12 +147,19 @@ public class CreatorsPanel extends PluginPanel
         c.weighty = 0;
         c.gridx = 1;
         c.gridy = 1;
-        JButton saveButton = new JButton(new ImageIcon(SAVE));
-        saveButton.setFocusable(false);
-        saveButton.setToolTipText("Save this setup");
-        //add(saveButton, c);
-        saveButton.addActionListener(e ->
+        JButton findButton = new JButton(new ImageIcon(FIND));
+        findButton.setFocusable(false);
+        findButton.setToolTipText("Open the File Explorer and navigate to the Creator's Kit directory");
+        add(findButton, c);
+        findButton.addActionListener(e ->
         {
+            try
+            {
+                Runtime.getRuntime().exec("explorer.exe /select," + CREATORS_DIR.getAbsolutePath());
+            }
+            catch (Exception exception)
+            {
+            }
         });
 
         c.gridx = 2;

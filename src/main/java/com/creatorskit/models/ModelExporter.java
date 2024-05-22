@@ -202,6 +202,7 @@ public class ModelExporter
                 new int[0],
                 renderPriorities,
                 new int[0],
+                new int[0],
                 new int[0][][]
         );
     }
@@ -356,6 +357,7 @@ public class ModelExporter
                 faceColourIndex,
                 renderPriorities,
                 new int[0],
+                new int[0],
                 new int[0][][]
 
         );
@@ -452,6 +454,7 @@ public class ModelExporter
                 faceColours,
                 faceColourIndex,
                 renderPriorities,
+                new int[0],
                 new int[0],
                 new int[0][][]
         );
@@ -721,6 +724,7 @@ public class ModelExporter
                 faceColours,
                 faceColourIndex,
                 renderPriorities,
+                new int[0],
                 new int[0],
                 new int[0][][]
         );
