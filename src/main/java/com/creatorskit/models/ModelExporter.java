@@ -199,7 +199,9 @@ public class ModelExporter
                 vertexColours,
                 new double[0][],
                 new int[0],
-                renderPriorities
+                renderPriorities,
+                new int[0],
+                new int[0][][]
         );
     }
 
@@ -351,7 +353,10 @@ public class ModelExporter
                 new double[0][],
                 faceColours,
                 faceColourIndex,
-                renderPriorities
+                renderPriorities,
+                new int[0],
+                new int[0][][]
+
         );
     }
 
@@ -445,7 +450,9 @@ public class ModelExporter
                 new double[0][],
                 faceColours,
                 faceColourIndex,
-                renderPriorities
+                renderPriorities,
+                new int[0],
+                new int[0][][]
         );
     }
 
@@ -712,7 +719,9 @@ public class ModelExporter
                 new double[0][],
                 faceColours,
                 faceColourIndex,
-                renderPriorities
+                renderPriorities,
+                new int[0],
+                new int[0][][]
         );
     }
 }

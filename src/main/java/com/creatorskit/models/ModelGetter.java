@@ -30,6 +30,14 @@ public class ModelGetter
     private final ModelFinder modelFinder;
     private final ModelExporter modelExporter;
     public final File BLENDER_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/blender-models");
+    private boolean initiateExport = false;
+    private boolean continueAnimExport = false;
+    private RuneLiteObject exportObject;
+    private String exportName;
+    private BlenderModel blenderModelExport;
+    private int[] animFrames;
+    private int[] clientTicks;
+    private int[][][] animVerts;
 
     @Inject
     public ModelGetter(Client client, CreatorsPanel creatorsPanel, ClientThread clientThread, CreatorsConfig config, CreatorsPlugin plugin, ModelFinder modelFinder, ModelExporter modelExporter)
@@ -113,7 +121,8 @@ public class ModelGetter
 
                 if (config.exportRightClick())
                 {
-                    addPlayerExporter(1, "Local Player", localPlayer);
+                    addPlayerExporter(1, "Local Player", localPlayer, false);
+                    addPlayerExporter(1, "Local Player", localPlayer, true);
                 }
             }
         }
@@ -163,7 +172,6 @@ public class ModelGetter
 
     public void addTileObjectMenuEntries(Tile tile)
     {
-
         GameObject[] gameObjects = tile.getGameObjects();
         for (GameObject gameObject : gameObjects)
         {
@@ -759,10 +767,16 @@ public class ModelGetter
                 });
     }
 
-    public void addPlayerExporter(int index, String target, Player player)
+    public void addPlayerExporter(int index, String target, Player player, boolean exportAnimation)
     {
+        String option = "Export";
+        if (exportAnimation)
+        {
+            option = "Export Animation";
+        }
+
         client.createMenuEntry(index)
-                .setOption(ColorUtil.prependColorTag("Export", Color.ORANGE))
+                .setOption(ColorUtil.prependColorTag(option, Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
                 .onClick(e ->
@@ -770,7 +784,7 @@ public class ModelGetter
                     PlayerComposition comp = player.getPlayerComposition();
                     int[] items = comp.getEquipmentIds();
 
-                    if (config.exportTPose())
+                    if (config.exportTPose() && !exportAnimation)
                     {
                         player.setAnimation(-1);
                         player.setPoseAnimation(-1);
@@ -796,6 +810,11 @@ public class ModelGetter
                         renderPriorities = model.getFaceRenderPriorities();
                     }
                     int animId = player.getAnimation();
+                    int poseAnimId = player.getPoseAnimation();
+                    if (animId == -1)
+                    {
+                        animId = poseAnimId;
+                    }
 
                     byte[] transparencies;
                     if (model.getFaceTransparencies() == null)
@@ -829,9 +848,10 @@ public class ModelGetter
                     }
                     else
                     {
+                        int finalAnimId = animId;
                         Thread thread = new Thread(() ->
                         {
-                            ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items, animId, fSpotAnims);
+                            ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items, finalAnimId, fSpotAnims);
 
                             clientThread.invokeLater(() ->
                             {
@@ -847,8 +867,32 @@ public class ModelGetter
                                         f3,
                                         transparencies,
                                         renderPriorities);
-                                modelExporter.saveToFile(finalName, bm);
-                                plugin.sendChatMessage("Exported " + finalName + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+
+                                if (exportAnimation && !continueAnimExport)
+                                {
+                                    if (finalAnimId == -1)
+                                    {
+                                        return;
+                                    }
+
+                                    plugin.sendChatMessage("Exporting " + finalName + ", please stand by...");
+                                    Model exportModel = plugin.constructModelFromCache(modelStats, comp.getColors(), true, true);
+                                    blenderModelExport = bm;
+                                    exportName = finalName;
+
+                                    exportObject = client.createRuneLiteObject();
+                                    exportObject.setAnimation(client.loadAnimation(finalAnimId));
+                                    exportObject.setModel(exportModel);
+                                    exportObject.setLocation(client.getLocalPlayer().getLocalLocation(), client.getPlane());
+                                    exportObject.setActive(true);
+                                    continueAnimExport = true;
+                                    initiateExport = true;
+                                }
+                                else
+                                {
+                                    modelExporter.saveToFile(finalName, bm);
+                                    plugin.sendChatMessage("Exported " + finalName + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                                }
                             });
                         });
                         thread.start();
@@ -1434,5 +1478,101 @@ public class ModelGetter
 
                     }
                 });
+    }
+
+    public void handleAnimationExport(int clientTick)
+    {
+        if (!continueAnimExport)
+        {
+            initiateExport = false;
+            return;
+        }
+
+        if (blenderModelExport == null || exportObject == null)
+        {
+            initiateExport = false;
+            continueAnimExport = false;
+            return;
+        }
+
+        if (!exportObject.isActive())
+        {
+            int[] frames = new int[clientTicks.length];
+            int baseLine = clientTicks[0];
+            for (int i = 0; i < clientTicks.length; i++)
+            {
+                frames[i] = clientTicks[i] - baseLine;
+            }
+
+            blenderModelExport.setAnimFrames(frames);
+            blenderModelExport.setAnimVertices(animVerts);
+            continueAnimExport = false;
+            modelExporter.saveToFile(exportName, blenderModelExport);
+            plugin.sendChatMessage("Exported " + exportName + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+            return;
+        }
+
+        if (exportObject.getAnimation() == null)
+        {
+            initiateExport = false;
+            continueAnimExport = false;
+            return;
+        }
+
+        Animation animation = exportObject.getAnimation();
+        if (animation.getId() == -1)
+        {
+            initiateExport = false;
+            continueAnimExport = false;
+            return;
+        }
+
+        Model model = exportObject.getModel();
+        int frame = exportObject.getAnimationFrame();
+
+        if (initiateExport)
+        {
+            initiateExport = false;
+            animFrames = new int[]{0};
+            clientTicks = new int[]{clientTick};
+
+            animVerts = new int[1][model.getVerticesCount()][3];
+            int[][] verts = animVerts[0];
+            int[] vX = model.getVerticesX();
+            int[] vY = model.getVerticesY();
+            int[] vZ = model.getVerticesZ();
+
+            for (int i = 0; i < verts.length; i++)
+            {
+                int[] v = verts[i];
+                v[0] = vX[i];
+                v[1] = vY[i];
+                v[2] = vZ[i];
+            }
+
+            return;
+        }
+
+        if (frame == animFrames[animFrames.length - 1])
+        {
+            return;
+        }
+
+        int[][] verts = new int[model.getVerticesCount()][3];
+        int[] vX = model.getVerticesX();
+        int[] vY = model.getVerticesY();
+        int[] vZ = model.getVerticesZ();
+
+        for (int i = 0; i < verts.length; i++)
+        {
+            int[] v = verts[i];
+            v[0] = vX[i];
+            v[1] = vY[i];
+            v[2] = vZ[i];
+        }
+
+        animFrames = ArrayUtils.add(animFrames, frame);
+        clientTicks = ArrayUtils.add(clientTicks, clientTick);
+        animVerts = ArrayUtils.add(animVerts, verts);
     }
 }

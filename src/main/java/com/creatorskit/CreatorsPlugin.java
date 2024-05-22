@@ -38,6 +38,7 @@ import net.runelite.client.util.ColorUtil;
 import net.runelite.client.util.HotkeyListener;
 import net.runelite.client.util.ImageUtil;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.awt.*;
 import java.awt.event.MouseEvent;
@@ -46,7 +47,6 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.file.Files;
 import java.util.*;
-import java.util.List;
 
 @Slf4j
 @Getter
@@ -310,6 +310,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 
 		updatePreviewObject(client.getSelectedSceneTile());
+		modelGetter.handleAnimationExport(client.getGameCycle());
 
 		switch (autoRotateYaw)
 		{
@@ -835,7 +836,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			if (config.exportRightClick())
 			{
-				modelGetter.addPlayerExporter(1, target, player);
+				modelGetter.addPlayerExporter(1, target, player, false);
+				modelGetter.addPlayerExporter(1, target, player, true);
 			}
 		}
 	}

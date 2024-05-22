@@ -2,8 +2,10 @@ package com.creatorskit.models;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.Setter;
 
 @Getter
+@Setter
 @AllArgsConstructor
 public class BlenderModel
 {
@@ -14,4 +16,6 @@ public class BlenderModel
     double[][] faceColours;
     int[] faceColourIndex;
     byte[] priorities;
+    int[] animFrames;
+    int[][][] animVertices;
 }
