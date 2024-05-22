@@ -29,7 +29,6 @@ public class ModelGetter
     private final CreatorsPlugin plugin;
     private final ModelFinder modelFinder;
     private final ModelExporter modelExporter;
-    public final File BLENDER_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/blender-models");
     private boolean initiateExport = false;
     private boolean continueAnimExport = false;
     private RuneLiteObject exportObject;
@@ -504,8 +503,6 @@ public class ModelGetter
                         return;
                     }
 
-                    int npcId = npc.getId();
-
                     int animId = npc.getAnimation();
                     int poseAnimId = npc.getPoseAnimation();
                     if (animId == -1)
@@ -513,6 +510,14 @@ public class ModelGetter
                         animId = poseAnimId;
                     }
                     int finalAnimId = animId;
+
+                    if (exportAnimation && animId == -1)
+                    {
+                        plugin.sendChatMessage("There is no animation currently playing to export.");
+                        return;
+                    }
+
+                    int npcId = npc.getId();
 
                     String name = npc.getName();
 
@@ -541,7 +546,6 @@ public class ModelGetter
                             }
 
                             modelExporter.saveToFile(name, bm);
-                            plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                         }
                     }
                     else
@@ -609,7 +613,6 @@ public class ModelGetter
                                 else
                                 {
                                     modelExporter.saveToFile(name, bm);
-                                    plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                                 }
                             });
                         });
@@ -722,7 +725,6 @@ public class ModelGetter
                                 BlenderModel blenderModel = modelExporter.bmSpotAnimFromCache(modelStats);
                                 String name = "SpotAnim " + spotAnim.getId();
                                 modelExporter.saveToFile(name, blenderModel);
-                                plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                             });
                         }
                     });
@@ -838,6 +840,20 @@ public class ModelGetter
                         return;
                     }
 
+                    int animId = player.getAnimation();
+                    int poseAnimId = player.getPoseAnimation();
+                    if (animId == -1)
+                    {
+                        animId = poseAnimId;
+                    }
+                    int finalAnimId = animId;
+
+                    if (exportAnimation && animId == -1)
+                    {
+                        plugin.sendChatMessage("There is no animation currently playing to export.");
+                        return;
+                    }
+
                     PlayerComposition comp = player.getPlayerComposition();
                     int[] items = comp.getEquipmentIds();
 
@@ -866,13 +882,6 @@ public class ModelGetter
                     {
                         renderPriorities = model.getFaceRenderPriorities();
                     }
-                    int animId = player.getAnimation();
-                    int poseAnimId = player.getPoseAnimation();
-                    if (animId == -1)
-                    {
-                        animId = poseAnimId;
-                    }
-                    int finalAnimId = animId;
 
                     byte[] transparencies;
                     if (model.getFaceTransparencies() == null)
@@ -916,7 +925,6 @@ public class ModelGetter
                         else
                         {
                             modelExporter.saveToFile(finalName, bm);
-                            plugin.sendChatMessage("Exported " + finalName + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                         }
                     }
                     else
@@ -947,7 +955,6 @@ public class ModelGetter
                                 else
                                 {
                                     modelExporter.saveToFile(finalName, bm);
-                                    plugin.sendChatMessage("Exported " + finalName + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                                 }
                             });
                         });
@@ -1100,7 +1107,6 @@ public class ModelGetter
                     {
                         BlenderModel blenderModel = modelExporter.bmVertexColours(model);
                         modelExporter.saveToFile(name, blenderModel);
-                        plugin.sendChatMessage("Exported " + name + " " + objectId + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                     }
                     else
                     {
@@ -1153,7 +1159,6 @@ public class ModelGetter
                                         transparencies,
                                         renderPriorities);
                                 modelExporter.saveToFile(name, blenderModel);
-                                plugin.sendChatMessage("Exported " + name + " " + objectId + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                             });
                         });
                         thread.start();
@@ -1207,6 +1212,12 @@ public class ModelGetter
                         return;
                     }
 
+                    if (exportAnimation && animId == -1)
+                    {
+                        plugin.sendChatMessage("There is no animation currently playing to export.");
+                        return;
+                    }
+
                     if (config.vertexColours())
                     {
                         BlenderModel bm = modelExporter.bmVertexColours(model);
@@ -1226,7 +1237,6 @@ public class ModelGetter
                         else
                         {
                             modelExporter.saveToFile(name, bm);
-                            plugin.sendChatMessage("Exported " + name + " " + objectId + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                         }
                     }
                     else
@@ -1257,7 +1267,6 @@ public class ModelGetter
                                 else
                                 {
                                     modelExporter.saveToFile(name, bm);
-                                    plugin.sendChatMessage("Exported " + name + " " + objectId + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                                 }
                             });
                         });
@@ -1291,12 +1300,73 @@ public class ModelGetter
 
                     int animId = (int) character.getAnimationSpinner().getValue();
 
+                    if (exportAnimation && animId == -1)
+                    {
+                        plugin.sendChatMessage("There is no animation currently playing to export.");
+                        return;
+                    }
+
+                    CustomModelComp comp = character.getStoredModel().getComp();
+
                     final Model model = character.getRuneLiteObject().getModel();
                     if (config.vertexColours())
                     {
-                        BlenderModel blenderModel = modelExporter.bmVertexColours(model);
-                        modelExporter.saveToFile(name, blenderModel);
-                        plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+                        BlenderModel bm = modelExporter.bmVertexColours(model);
+
+                        if (exportAnimation)
+                        {
+                            if (character.isCustomMode())
+                            {
+                                clientThread.invokeLater(() ->
+                                {
+                                    switch (comp.getType())
+                                    {
+                                        case FORGED:
+                                            ModelData modelData = plugin.createComplexModelData(comp.getDetailedModels());
+                                            initiateAnimationExport(animId, name, modelData.light(), bm);
+                                            break;
+                                        default:
+                                        case CACHE_NPC:
+                                        case CACHE_OBJECT:
+                                        case CACHE_GROUND_ITEM:
+                                        case CACHE_MAN_WEAR:
+                                        case CACHE_WOMAN_WEAR:
+                                            initiateAnimationExport(animId, name, bm, comp.getModelStats(), new int[0], false, false);
+                                            break;
+                                        case CACHE_PLAYER:
+                                            initiateAnimationExport(animId, name, bm, comp.getModelStats(), comp.getKitRecolours(), true, true);
+                                            break;
+                                        case BLENDER:
+                                            plugin.sendChatMessage("This model already came from Blender.");
+                                            break;
+                                    }
+                                });
+                            }
+                            else
+                            {
+                                int modelId = (int) character.getModelSpinner().getValue();
+                                ModelStats[] modelStats = new ModelStats[]{new ModelStats(
+                                        modelId,
+                                        BodyPart.NA,
+                                        new short[0],
+                                        new short[0],
+                                        new short[0],
+                                        new short[0],
+                                        128,
+                                        128,
+                                        128,
+                                        new CustomLighting(64, 768, -50, -50, 10))};
+
+                                clientThread.invokeLater(() ->
+                                {
+                                    initiateAnimationExport(animId, name, bm, modelStats, new int[0], false, false);
+                                });
+                            }
+                        }
+                        else
+                        {
+                            modelExporter.saveToFile(name, bm);
+                        }
                     }
                     else
                     {
@@ -1332,8 +1402,6 @@ public class ModelGetter
 
                         if (character.isCustomMode())
                         {
-                            CustomModelComp comp = character.getStoredModel().getComp();
-
                             clientThread.invokeLater(() ->
                             {
                                 BlenderModel bm;
@@ -1419,7 +1487,6 @@ public class ModelGetter
                                 else
                                 {
                                     modelExporter.saveToFile(name, bm);
-                                    plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                                 }
 
                             });
@@ -1462,7 +1529,6 @@ public class ModelGetter
                                 else
                                 {
                                     modelExporter.saveToFile(name, bm);
-                                    plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                                 }
                             });
                         }
@@ -1557,7 +1623,6 @@ public class ModelGetter
                     {
                         BlenderModel blenderModel = modelExporter.bmVertexColours(model);
                         modelExporter.saveToFile(name, blenderModel);
-                        plugin.sendChatMessage("Exported " + name + " " + itemId + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                     }
                     else
                     {
@@ -1610,7 +1675,6 @@ public class ModelGetter
                                         transparencies,
                                         renderPriorities);
                                 modelExporter.saveToFile(name, blenderModel);
-                                plugin.sendChatMessage("Exported " + name + " " + itemId + " to " + BLENDER_DIR.getAbsolutePath() + ".");
                             });
                         });
                         thread.start();
@@ -1621,12 +1685,6 @@ public class ModelGetter
 
     private void initiateAnimationExport(int animId, String name, BlenderModel bm, ModelStats[] modelStats, int[] kitRecolours, boolean player, boolean actorLighting)
     {
-        if (animId == -1)
-        {
-            plugin.sendChatMessage("There is no animation currently playing to export.");
-            return;
-        }
-
         Model model = plugin.constructModelFromCache(modelStats, kitRecolours, player, actorLighting);
         initiateAnimationExport(animId, name, model, bm);
     }
@@ -1674,7 +1732,6 @@ public class ModelGetter
             blenderModelExport.setAnimVertices(animVerts);
             continueAnimExport = false;
             modelExporter.saveToFile(exportName, blenderModelExport);
-            plugin.sendChatMessage("Exported " + exportName + " to " + BLENDER_DIR.getAbsolutePath() + ".");
             return;
         }
 
