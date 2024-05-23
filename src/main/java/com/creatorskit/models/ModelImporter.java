@@ -46,6 +46,8 @@ public class ModelImporter
         comboBox.setToolTipText("Sets the lighting style");
         comboBox.addItem(LightingStyle.ACTOR);
         comboBox.addItem(LightingStyle.DEFAULT);
+        comboBox.addItem(LightingStyle.SPOTANIM);
+        comboBox.addItem(LightingStyle.DYNAMIC);
         comboBox.addItem(LightingStyle.NONE);
         comboBox.setFocusable(false);
 
@@ -225,17 +227,6 @@ public class ModelImporter
             faces3[i] = f[2];
         }
 
-        double[][] blenderColours = blenderModel.getVertexColours();
-        short[] colours = new short[0];
-        for (double[] colour : blenderColours)
-        {
-            int colorHInt = (int) (63 - (colour[0] * 63));
-            int colorLInt = (int) (colour[1] * 127);
-            int colorSInt = (int) (colour[2] * 7);
-            short jagexColor = JagexColor.packHSL(colorHInt, colorSInt, colorLInt);
-            colours = ArrayUtils.add(colours, jagexColor);
-        }
-
         //{2_6 priority, 1_3, 1_2, 1_0, 1_3 transparent}
         int[] polys = new int[]{1, 0, 0, 0, 1};
         try
@@ -265,6 +256,7 @@ public class ModelImporter
         int[] f2 = modelData.getFaceIndices2();
         int[] f3 = modelData.getFaceIndices3();
         short[] cols = modelData.getFaceColors();
+        byte[] tps = modelData.getFaceTransparencies();
 
         for (int i = 0; i < modelData.getVerticesCount(); i++)
         {
@@ -278,28 +270,68 @@ public class ModelImporter
             f1[i] = faces1[i];
             f2[i] = faces2[i];
             f3[i] = faces3[i];
-            cols[i] = colours[i];
         }
 
-        byte[] transparencies = new byte[modelData.getFaceCount()];
-        byte[] tp = modelData.getFaceTransparencies();
-        for (int i = 0; i < modelData.getFaceCount(); i++)
+        if (!blenderModel.isUseVertexColours())
         {
-            tp[i] = transparencies[i];
+            double[][] faceColours = blenderModel.getFaceColours();
+            short[] colours = new short[faceColours.length];
+            byte[] transparencies = new byte[faceColours.length];
+            for (int i = 0; i < faceColours.length; i++)
+            {
+                double[] colour = faceColours[i];
+                int colorHInt = (int) (63 - (colour[0] * 63));
+                int colorLInt = (int) (colour[1] * 127);
+                int colorSInt = (int) (colour[2] * 7);
+                short jagexColor = JagexColor.packHSL(colorHInt, colorSInt, colorLInt);
+                transparencies[i] = (byte) colour[3];
+                colours[i] = jagexColor;
+            }
+
+            int[] faceIndices = blenderModel.faceColourIndex;
+
+            for (int i = 0; i < modelData.getFaceCount(); i++)
+            {
+                int index = faceIndices[i];
+                cols[i] = colours[index];
+                tps[i] = transparencies[index];
+            }
         }
 
-        Model model;
-        switch (lightingStyle)
+        Model model = modelData.light(
+                lightingStyle.getAmbient(),
+                lightingStyle.getContrast(),
+                lightingStyle.getX(),
+                lightingStyle.getY(),
+                lightingStyle.getZ());
+
+        if (blenderModel.isUseVertexColours())
         {
-            default:
-            case DEFAULT:
-                model = modelData.light();
-                break;
-            case ACTOR:
-                model = modelData.light(64, 850, -30, -50, -30);
-                break;
-            case NONE:
-                model = modelData.getModel();
+            int[] fc1 = model.getFaceColors1();
+            int[] fc2 = model.getFaceColors2();
+            int[] fc3 = model.getFaceColors3();
+
+            double[][] vertexColours = blenderModel.getVertexColours();
+            short[] colours = new short[vertexColours.length];
+            byte[] transparencies = new byte[vertexColours.length];
+            for (int i = 0; i < vertexColours.length; i++)
+            {
+                double[] colour = vertexColours[i];
+                int colorHInt = (int) (63 - (colour[0] * 63));
+                int colorLInt = (int) (colour[1] * 127);
+                int colorSInt = (int) (colour[2] * 7);
+                short jagexColor = JagexColor.packHSL(colorHInt, colorSInt, colorLInt);
+                transparencies[i] = (byte) colour[3];
+                colours[i] = jagexColor;
+            }
+
+            for (int i = 0; i < modelData.getVerticesCount(); i++)
+            {
+                fc1[i] = colours[i * 3];
+                fc2[i] = colours[i * 3 + 1];
+                fc3[i] = colours[i * 3 + 2];
+                tps[i] = (byte) ((transparencies[i * 3] + transparencies[i * 3 + 1] + transparencies[i * 3 + 1]) / 3);
+            }
         }
 
         byte[] priorities = blenderModel.getPriorities();

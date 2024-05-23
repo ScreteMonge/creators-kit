@@ -104,11 +104,124 @@ public class ModelExporter
 
         // Each face has 3 vertices, each vertex has a h, l, s, and alpha value
         byte[] vertTransparencies = Arrays.copyOf(transparencies, transparencies.length);
-        double[][] vertexColours = new double[model.getFaceCount() * 3][4];
+        int[] vt = new int[vertTransparencies.length];
+        for (int i = 0; i< model.getFaceCount(); i++)
+        {
+            int tp = vertTransparencies[i];
+            if (tp < 0)
+            {
+                tp += 256;
+            }
+            vt[i] = tp;
+        }
+
         int[] fc1 = model.getFaceColors1();
         int[] fc2 = model.getFaceColors2();
         int[] fc3 = model.getFaceColors3();
+        // newVertexColours index = (colour, tp)
+        int[][] shortList = new int[0][2];
+        int[] vertexColourIndex = new int[0];
 
+        for (int i = 0; i < model.getFaceCount(); i++)
+        {
+            int tp = vt[i];
+
+            int fc1i = fc1[i];
+            int fc2i = fc2[i];
+            int fc3i = fc3[i];
+            boolean shadeFlat = fc3i == -1;
+            if (shadeFlat)
+            {
+                fc1i = fc2i = fc3i;
+            }
+
+            boolean alreadyContains1 = false;
+            for (int e = 0; e < shortList.length; e++)
+            {
+                if (shortList[e][0] == fc1i && shortList[e][1] == tp)
+                {
+                    alreadyContains1 = true;
+                    vertexColourIndex = ArrayUtils.add(vertexColourIndex, e);
+                    break;
+                }
+            }
+
+            if (!alreadyContains1)
+            {
+                int[] colourTransparency = new int[]{fc1i, tp};
+                shortList = ArrayUtils.add(shortList, colourTransparency);
+                vertexColourIndex = ArrayUtils.add(vertexColourIndex, shortList.length - 1);
+            }
+
+
+            boolean alreadyContains2 = false;
+            for (int e = 0; e < shortList.length; e++)
+            {
+                if (shortList[e][0] == fc2i && shortList[e][1] == tp)
+                {
+                    alreadyContains2 = true;
+                    vertexColourIndex = ArrayUtils.add(vertexColourIndex, e);
+                    break;
+                }
+            }
+
+            if (!alreadyContains2)
+            {
+                int[] colourTransparency = new int[]{fc2i, tp};
+                shortList = ArrayUtils.add(shortList, colourTransparency);
+                vertexColourIndex = ArrayUtils.add(vertexColourIndex, shortList.length - 1);
+            }
+
+            boolean alreadyContains3 = false;
+            for (int e = 0; e < shortList.length; e++)
+            {
+                if (shortList[e][0] == fc3i && shortList[e][1] == tp)
+                {
+                    alreadyContains3 = true;
+                    vertexColourIndex = ArrayUtils.add(vertexColourIndex, e);
+                    break;
+                }
+            }
+
+            if (!alreadyContains3)
+            {
+                int[] colourTransparency = new int[]{fc3i, tp};
+                shortList = ArrayUtils.add(shortList, colourTransparency);
+                vertexColourIndex = ArrayUtils.add(vertexColourIndex, shortList.length - 1);
+            }
+        }
+
+        System.out.println("Shortlist length: " + shortList.length);
+        System.out.println("index length: " + vertexColourIndex.length);
+        System.out.println("Verts: " + model.getVerticesCount());
+        System.out.println("Faces: " + model.getFaceCount());
+
+        double[][] vertexColours = new double[shortList.length][4];
+        for (int i = 0; i < shortList.length; i++)
+        {
+            double tp = shortList[i][1];
+            tp = -1 * (tp - 255) / 255;
+
+            int intCol = shortList[i][0];
+            if (intCol > 32767)
+            {
+                intCol -= 65536;
+            }
+
+            short col = (short) intCol;
+            double h0 = (double) (63 - JagexColor.unpackHue(col)) / 63;
+            double l0 = (double) JagexColor.unpackLuminance(col) / 127;
+            double s0 = (double) JagexColor.unpackSaturation(col) / 7;
+            vertexColours[i][0] = h0;
+            vertexColours[i][1] = l0;
+            vertexColours[i][2] = s0;
+            vertexColours[i][3] = tp;
+        }
+
+        /*
+
+
+        double[][] vertexColours = new double[model.getFaceCount() * 3][4];
         for (int i = 0; i < model.getFaceCount(); i++)
         {
             double tp = vertTransparencies[i];
@@ -186,6 +299,8 @@ public class ModelExporter
             }
         }
 
+
+         */
         byte[] renderPriorities = model.getFaceRenderPriorities();
         if (model.getFaceRenderPriorities() == null)
         {
@@ -198,6 +313,7 @@ public class ModelExporter
                 verts,
                 faces,
                 vertexColours,
+                vertexColourIndex,
                 new double[0][],
                 new int[0],
                 renderPriorities,
@@ -353,6 +469,7 @@ public class ModelExporter
                 verts,
                 faces,
                 new double[0][],
+                new int[0],
                 faceColours,
                 faceColourIndex,
                 renderPriorities,
@@ -451,6 +568,7 @@ public class ModelExporter
                 verts,
                 faces,
                 new double[0][],
+                new int[0],
                 faceColours,
                 faceColourIndex,
                 renderPriorities,
@@ -721,6 +839,7 @@ public class ModelExporter
                 verts,
                 faces,
                 new double[0][],
+                new int[0],
                 faceColours,
                 faceColourIndex,
                 renderPriorities,

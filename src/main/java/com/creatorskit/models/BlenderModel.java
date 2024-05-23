@@ -13,6 +13,7 @@ public class BlenderModel
     int[][] vertices;
     int[][] faces;
     double[][] vertexColours;
+    int[] vertexColourIndex;
     double[][] faceColours;
     int[] faceColourIndex;
     byte[] priorities;
