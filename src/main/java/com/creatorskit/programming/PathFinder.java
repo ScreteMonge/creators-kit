@@ -42,6 +42,8 @@ public class PathFinder
 
     public Coordinate[] getPath(LocalPoint startLocation, LocalPoint destLocation, MovementType movementType)
     {
+        WorldView worldView = client.getTopLevelWorldView();
+        Scene scene = worldView.getScene();
         final ArrayList<Integer> rowQueue = new ArrayList<>();
         final ArrayList<Integer> columnQueue = new ArrayList<>();
         final boolean[][] visited = new boolean[Constants.SCENE_SIZE][Constants.SCENE_SIZE];
@@ -62,13 +64,13 @@ public class PathFinder
         rowQueue.add(startY);
         columnQueue.add(startX);
         visited[startX][startY] = true;
-        if (client.getCollisionMaps() == null)
+        if (worldView.getCollisionMaps() == null)
         {
             return null;
         }
 
-        CollisionData data = client.getCollisionMaps()[client.getPlane()];
-        short[][] overlays = client.getScene().getOverlayIds()[client.getPlane()];
+        CollisionData data = worldView.getCollisionMaps()[worldView.getPlane()];
+        short[][] overlays = scene.getOverlayIds()[worldView.getPlane()];
 
         while (!rowQueue.isEmpty() && !columnQueue.isEmpty())
         {
@@ -95,20 +97,22 @@ public class PathFinder
 
     public Coordinate[] getPath(WorldPoint startLocation, WorldPoint destLocation, MovementType movementType)
     {
+        WorldView worldView = client.getTopLevelWorldView();
+        Scene scene = worldView.getScene();
         final ArrayList<Integer> rowQueue = new ArrayList<>();
         final ArrayList<Integer> columnQueue = new ArrayList<>();
         final boolean[][] visited = new boolean[Constants.SCENE_SIZE][Constants.SCENE_SIZE];
         final Coordinate[][] path = new Coordinate[Constants.SCENE_SIZE][Constants.SCENE_SIZE];
 
         boolean reachedEnd = false;
-        Collection<WorldPoint> startPoints = WorldPoint.toLocalInstance(client, startLocation);
+        Collection<WorldPoint> startPoints = WorldPoint.toLocalInstance(scene, startLocation);
         WorldPoint startPoint = startPoints.iterator().next();
 
-        Collection<WorldPoint> destPoints = WorldPoint.toLocalInstance(client, destLocation);
+        Collection<WorldPoint> destPoints = WorldPoint.toLocalInstance(scene, destLocation);
         WorldPoint destPoint = destPoints.iterator().next();
 
-        LocalPoint startLoc = LocalPoint.fromWorld(client, startPoint);
-        LocalPoint destLoc = LocalPoint.fromWorld(client, destPoint);
+        LocalPoint startLoc = LocalPoint.fromWorld(worldView, startPoint);
+        LocalPoint destLoc = LocalPoint.fromWorld(worldView, destPoint);
 
         if (startLoc == null || destLoc == null)
         {
@@ -122,13 +126,13 @@ public class PathFinder
         rowQueue.add(startY);
         columnQueue.add(startX);
         visited[startX][startY] = true;
-        if (client.getCollisionMaps() == null)
+        if (worldView.getCollisionMaps() == null)
         {
             return null;
         }
 
-        CollisionData data = client.getCollisionMaps()[client.getPlane()];
-        short[][] overlays = client.getScene().getOverlayIds()[client.getPlane()];
+        CollisionData data = worldView.getCollisionMaps()[worldView.getPlane()];
+        short[][] overlays = scene.getOverlayIds()[worldView.getPlane()];
 
         while (!rowQueue.isEmpty() && !columnQueue.isEmpty())
         {
@@ -253,6 +257,7 @@ public class PathFinder
 
     public void transplantNonInstancedSteps(Character character, int newX, int newY, boolean fromInstance)
     {
+        WorldView worldView = client.getTopLevelWorldView();
         Program program = character.getProgram();
         ProgramComp comp = program.getComp();
 
@@ -269,7 +274,7 @@ public class PathFinder
             for (int i = 0; i < steps.length; i++)
             {
                 WorldPoint wp = steps[i];
-                WorldPoint point = new WorldPoint(wp.getX() + changeX, wp.getY() + changeY, client.getPlane());
+                WorldPoint point = new WorldPoint(wp.getX() + changeX, wp.getY() + changeY, worldView.getPlane());
                 newSteps[i] = point;
             }
 
@@ -284,7 +289,7 @@ public class PathFinder
             return;
 
         WorldPoint[] newSteps = new WorldPoint[steps.length];
-        newSteps[0] = new WorldPoint(newX, newY, client.getPlane());
+        newSteps[0] = new WorldPoint(newX, newY, worldView.getPlane());
 
         int[] changeXArray = new int[steps.length];
         int[] changeYArray = new int[steps.length];
@@ -301,7 +306,7 @@ public class PathFinder
 
             for (int i = 1; i < steps.length; i++)
             {
-                WorldPoint point = new WorldPoint(newX + changeXArray[i], newY + changeYArray[i], client.getPlane());
+                WorldPoint point = new WorldPoint(newX + changeXArray[i], newY + changeYArray[i], worldView.getPlane());
                 newSteps[i] = point;
             }
         }
@@ -313,6 +318,7 @@ public class PathFinder
 
     public void transplantInstancedSteps(Character character, int newX, int newY, boolean fromInstance)
     {
+        Scene scene = client.getTopLevelWorldView().getScene();
         Program program = character.getProgram();
         ProgramComp comp = program.getComp();
 
@@ -329,7 +335,7 @@ public class PathFinder
             for (int i = 0; i < steps.length; i++)
             {
                 LocalPoint lp = steps[i];
-                LocalPoint point = LocalPoint.fromScene(lp.getSceneX() + changeX, lp.getSceneY() + changeY);
+                LocalPoint point = LocalPoint.fromScene(lp.getSceneX() + changeX, lp.getSceneY() + changeY, scene);
                 newSteps[i] = point;
             }
 
@@ -344,7 +350,7 @@ public class PathFinder
             return;
 
         LocalPoint[] newSteps = new LocalPoint[steps.length];
-        newSteps[0] = LocalPoint.fromScene(newX, newY);
+        newSteps[0] = LocalPoint.fromScene(newX, newY, scene);
 
         int[] changeXArray = new int[steps.length];
         int[] changeYArray = new int[steps.length];
@@ -361,7 +367,7 @@ public class PathFinder
 
             for (int i = 1; i < steps.length; i++)
             {
-                LocalPoint point = LocalPoint.fromScene(newX + changeXArray[i], newY + changeYArray[i]);
+                LocalPoint point = LocalPoint.fromScene(newX + changeXArray[i], newY + changeYArray[i], scene);
                 newSteps[i] = point;
             }
         }
