@@ -38,7 +38,7 @@ public class KitRecolourer
     {
         switch (bodyPart)
         {
-            case NA:
+            default:
                 modelData.recolor(BODY_COLOURS_1_SOURCE[4], BODY_COLOURS_1_DEST[4][kitRecolours[4]]);
                 break;
             case HAIR:
@@ -74,7 +74,7 @@ public class KitRecolourer
 
         switch (bodyPart)
         {
-            case NA:
+            default:
                 colourFrom = ArrayUtils.add(colourFrom, BODY_COLOURS_1_SOURCE[4]);
                 break;
             case HAIR:
@@ -104,7 +104,7 @@ public class KitRecolourer
 
         switch (bodyPart)
         {
-            case NA:
+            default:
                 colourTo = ArrayUtils.add(colourTo, BODY_COLOURS_1_DEST[4][kitRecolours[4]]);
                 break;
             case HAIR:

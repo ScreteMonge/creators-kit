@@ -307,10 +307,6 @@ public class ModelImporter
 
         if (blenderModel.isUseVertexColours())
         {
-            int[] fc1 = model.getFaceColors1();
-            int[] fc2 = model.getFaceColors2();
-            int[] fc3 = model.getFaceColors3();
-
             double[][] vertexColours = blenderModel.getVertexColours();
             short[] colours = new short[vertexColours.length];
             byte[] transparencies = new byte[vertexColours.length];
@@ -325,12 +321,19 @@ public class ModelImporter
                 colours[i] = jagexColor;
             }
 
-            for (int i = 0; i < modelData.getVerticesCount(); i++)
+            int[] fc1 = model.getFaceColors1();
+            int[] fc2 = model.getFaceColors2();
+            int[] fc3 = model.getFaceColors3();
+            byte[] ftp = model.getFaceTransparencies();
+            int[] vertexColourIndex = blenderModel.getVertexColourIndex();
+
+            for (int i = 0; i < model.getFaceCount(); i++)
             {
-                fc1[i] = colours[i * 3];
-                fc2[i] = colours[i * 3 + 1];
-                fc3[i] = colours[i * 3 + 2];
-                tps[i] = (byte) ((transparencies[i * 3] + transparencies[i * 3 + 1] + transparencies[i * 3 + 1]) / 3);
+                fc1[i] = colours[vertexColourIndex[i * 3]];
+                fc2[i] = colours[vertexColourIndex[i * 3 + 1]];
+                fc3[i] = colours[vertexColourIndex[i * 3 + 2]];
+                int tp = (transparencies[vertexColourIndex[i * 3]] + transparencies[vertexColourIndex[i * 3 + 1]] + transparencies[vertexColourIndex[i * 3 + 2]]) / 3;
+                ftp[i] = (byte) tp;
             }
         }
 
