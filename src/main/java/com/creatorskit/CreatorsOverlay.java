@@ -51,10 +51,13 @@ public class CreatorsOverlay extends Overlay
             return null;
         }
 
+        WorldView worldView = client.getTopLevelWorldView();
+        Scene scene = worldView.getScene();
+
         boolean keyHeld = false;
         if (config.enableCtrlHotkeys() && client.isKeyPressed(KeyCode.KC_CONTROL))
         {
-            renderSelectedObject(graphics);
+            renderSelectedObject(graphics, worldView);
             keyHeld = true;
         }
 
@@ -63,33 +66,33 @@ public class CreatorsOverlay extends Overlay
             return null;
         }
 
-        renderObjectsOverlay(graphics, keyHeld);
+        renderObjectsOverlay(graphics, keyHeld, worldView);
 
         if (config.pathOverlay())
         {
-            if (client.isInInstancedRegion())
+            if (scene.isInstance())
             {
-                renderInstancedProgramOverlay(graphics);
+                renderInstancedProgramOverlay(graphics, worldView);
             }
             else
             {
-                renderNonInstancedProgramOverlay(graphics);
+                renderNonInstancedProgramOverlay(graphics, worldView);
             }
         }
 
         if (config.npcOverlay())
-            renderNPCOverlay(graphics);
+            renderNPCOverlay(graphics, worldView);
 
         if (config.playerOverlay())
-            renderPlayerOverlay(graphics);
+            renderPlayerOverlay(graphics, worldView);
 
         if (config.projectileOverlay())
-            renderProjectiles(graphics);
+            renderProjectiles(graphics, worldView);
 
         return null;
     }
 
-    public void renderNonInstancedProgramOverlay(Graphics2D graphics)
+    public void renderNonInstancedProgramOverlay(Graphics2D graphics, WorldView worldView)
     {
         for (int e = 0; e < plugin.getCharacters().size(); e++)
         {
@@ -112,10 +115,10 @@ public class CreatorsOverlay extends Overlay
                 if (!comp.isPathFound())
                     continue;
 
-                LocalPoint lpStart = LocalPoint.fromScene(coordinates[i].getColumn(), coordinates[i].getRow());
-                LocalPoint lpEnd = LocalPoint.fromScene(coordinates[i + 1].getColumn(), coordinates[i + 1].getRow());
-                Point startPoint = Perspective.localToCanvas(client, lpStart, client.getPlane());
-                Point endPoint = Perspective.localToCanvas(client, lpEnd, client.getPlane());
+                LocalPoint lpStart = LocalPoint.fromScene(coordinates[i].getColumn(), coordinates[i].getRow(), worldView.getScene());
+                LocalPoint lpEnd = LocalPoint.fromScene(coordinates[i + 1].getColumn(), coordinates[i + 1].getRow(), worldView.getScene());
+                Point startPoint = Perspective.localToCanvas(client, lpStart, worldView.getPlane());
+                Point endPoint = Perspective.localToCanvas(client, lpEnd, worldView.getPlane());
                 if (startPoint == null || endPoint == null)
                     continue;
 
@@ -141,7 +144,7 @@ public class CreatorsOverlay extends Overlay
 
             for (int i = 0; i < points.length; i++)
             {
-                LocalPoint localPoint = LocalPoint.fromWorld(client, points[i]);
+                LocalPoint localPoint = LocalPoint.fromWorld(worldView, points[i]);
                 if (localPoint == null)
                     continue;
 
@@ -154,7 +157,7 @@ public class CreatorsOverlay extends Overlay
         }
     }
 
-    public void renderInstancedProgramOverlay(Graphics2D graphics)
+    public void renderInstancedProgramOverlay(Graphics2D graphics, WorldView worldView)
     {
         for (int e = 0; e < plugin.getCharacters().size(); e++)
         {
@@ -181,10 +184,10 @@ public class CreatorsOverlay extends Overlay
                 if (!comp.isPathFound())
                     continue;
 
-                LocalPoint lpStart = LocalPoint.fromScene(coordinates[i].getColumn(), coordinates[i].getRow());
-                LocalPoint lpEnd = LocalPoint.fromScene(coordinates[i + 1].getColumn(), coordinates[i + 1].getRow());
-                Point startPoint = Perspective.localToCanvas(client, lpStart, client.getPlane());
-                Point endPoint = Perspective.localToCanvas(client, lpEnd, client.getPlane());
+                LocalPoint lpStart = LocalPoint.fromScene(coordinates[i].getColumn(), coordinates[i].getRow(), worldView.getScene());
+                LocalPoint lpEnd = LocalPoint.fromScene(coordinates[i + 1].getColumn(), coordinates[i + 1].getRow(), worldView.getScene());
+                Point startPoint = Perspective.localToCanvas(client, lpStart, worldView.getPlane());
+                Point endPoint = Perspective.localToCanvas(client, lpEnd, worldView.getPlane());
                 if (startPoint == null || endPoint == null)
                     continue;
 
@@ -223,9 +226,9 @@ public class CreatorsOverlay extends Overlay
         }
     }
 
-    public void renderPlayerOverlay(Graphics2D graphics)
+    public void renderPlayerOverlay(Graphics2D graphics, WorldView worldView)
     {
-        for (Player player : client.getPlayers())
+        for (Player player : worldView.players())
         {
             LocalPoint localPoint = player.getLocalLocation();
             if (localPoint == null)
@@ -242,9 +245,9 @@ public class CreatorsOverlay extends Overlay
         }
     }
 
-    public void renderNPCOverlay(Graphics2D graphics)
+    public void renderNPCOverlay(Graphics2D graphics, WorldView worldView)
     {
-        for (NPC npc : client.getNpcs())
+        for (NPC npc : worldView.npcs())
         {
             LocalPoint localPoint = npc.getLocalLocation();
             if (localPoint == null)
@@ -261,11 +264,11 @@ public class CreatorsOverlay extends Overlay
         }
     }
 
-    public void renderObjectsOverlay(Graphics2D graphics, boolean keyHeld)
+    public void renderObjectsOverlay(Graphics2D graphics, boolean keyHeld, WorldView worldView)
     {
-        Scene scene = client.getScene();
+        Scene scene = worldView.getScene();
         Tile[][][] tiles = scene.getTiles();
-        int z = client.getPlane();
+        int z = worldView.getPlane();
 
         for (int x = 0; x < Constants.SCENE_SIZE; x++)
         {
@@ -286,28 +289,28 @@ public class CreatorsOverlay extends Overlay
 
                 if (config.gameObjectOverlay() || config.myObjectOverlay())
                 {
-                    renderGameObjects(graphics, tile, keyHeld);
+                    renderGameObjects(graphics, tile, keyHeld, worldView);
                 }
 
                 if (config.groundObjectOverlay())
                 {
-                    renderGroundObjects(graphics, tile);
+                    renderGroundObjects(graphics, tile, worldView);
                 }
 
                 if (config.wallObjectOverlay())
                 {
-                    renderWallObjects(graphics, tile);
+                    renderWallObjects(graphics, tile, worldView);
                 }
 
                 if (config.decorativeObjectOverlay())
                 {
-                    renderDecorativeObjects(graphics, tile);
+                    renderDecorativeObjects(graphics, tile, worldView);
                 }
             }
         }
     }
 
-    public void renderSelectedObject(Graphics2D graphics)
+    public void renderSelectedObject(Graphics2D graphics, WorldView worldView)
     {
         Character character = plugin.getSelectedCharacter();
         if (character == null)
@@ -327,9 +330,9 @@ public class CreatorsOverlay extends Overlay
             return;
         }
 
-        Scene scene = client.getScene();
+        Scene scene = worldView.getScene();
         Tile[][][] tiles = scene.getTiles();
-        int z = client.getPlane();
+        int z = worldView.getPlane();
         Tile tile = tiles[z][lp.getSceneX()][lp.getSceneY()];
 
         if (tile == null)
@@ -372,7 +375,7 @@ public class CreatorsOverlay extends Overlay
         }
     }
 
-    public void renderGameObjects(Graphics2D graphics, Tile tile, boolean keyHeld)
+    public void renderGameObjects(Graphics2D graphics, Tile tile, boolean keyHeld, WorldView worldView)
     {
         GameObject[] gameObjects = tile.getGameObjects();
         if (gameObjects != null)
@@ -420,7 +423,7 @@ public class CreatorsOverlay extends Overlay
                         continue;
                     }
 
-                    LocalPoint camera = new LocalPoint(client.getCameraX(), client.getCameraY());
+                    LocalPoint camera = new LocalPoint(client.getCameraX(), client.getCameraY(), worldView);
                     if (gameObject.getLocalLocation().distanceTo(camera) <= MAX_DISTANCE)
                     {
                         if (!config.gameObjectOverlay())
@@ -456,12 +459,12 @@ public class CreatorsOverlay extends Overlay
         }
     }
 
-    public void renderGroundObjects(Graphics2D graphics, Tile tile)
+    public void renderGroundObjects(Graphics2D graphics, Tile tile, WorldView worldView)
     {
         GroundObject groundObject = tile.getGroundObject();
         if (groundObject != null)
         {
-            LocalPoint camera = new LocalPoint(client.getCameraX(), client.getCameraY());
+            LocalPoint camera = new LocalPoint(client.getCameraX(), client.getCameraY(), worldView);
             if (groundObject.getLocalLocation().distanceTo(camera) <= MAX_DISTANCE)
             {
                 OverlayUtil.renderTileOverlay(graphics, groundObject, "ID: " + groundObject.getId(), GROUND_OBJECT_COLOUR);
@@ -469,12 +472,12 @@ public class CreatorsOverlay extends Overlay
         }
     }
 
-    public void renderWallObjects(Graphics2D graphics, Tile tile)
+    public void renderWallObjects(Graphics2D graphics, Tile tile, WorldView worldView)
     {
         TileObject tileObject = tile.getWallObject();
         if (tileObject != null)
         {
-            LocalPoint camera = new LocalPoint(client.getCameraX(), client.getCameraY());
+            LocalPoint camera = new LocalPoint(client.getCameraX(), client.getCameraY(), worldView);
             if (tileObject.getLocalLocation().distanceTo(camera) <= MAX_DISTANCE)
             {
                 OverlayUtil.renderTileOverlay(graphics, tileObject, "ID: " + tileObject.getId(), WALL_OBJECT_COLOUR);
@@ -482,12 +485,12 @@ public class CreatorsOverlay extends Overlay
         }
     }
 
-    public void renderDecorativeObjects(Graphics2D graphics, Tile tile)
+    public void renderDecorativeObjects(Graphics2D graphics, Tile tile, WorldView worldView)
     {
         TileObject tileObject = tile.getDecorativeObject();
         if (tileObject != null)
         {
-            LocalPoint camera = new LocalPoint(client.getCameraX(), client.getCameraY());
+            LocalPoint camera = new LocalPoint(client.getCameraX(), client.getCameraY(), worldView);
             if (tileObject.getLocalLocation().distanceTo(camera) <= MAX_DISTANCE)
             {
                 OverlayUtil.renderTileOverlay(graphics, tileObject, "ID: " + tileObject.getId(), DECORATIVE_OBJECT_COLOUR);
@@ -495,15 +498,15 @@ public class CreatorsOverlay extends Overlay
         }
     }
 
-    private void renderProjectiles(Graphics2D graphics)
+    private void renderProjectiles(Graphics2D graphics, WorldView worldView)
     {
-        for (Projectile projectile : client.getProjectiles())
+        for (Projectile projectile : worldView.getProjectiles())
         {
             int projectileId = projectile.getId();
             String text = "ID: " + projectileId;
             int x = (int) projectile.getX();
             int y = (int) projectile.getY();
-            LocalPoint projectilePoint = new LocalPoint(x, y);
+            LocalPoint projectilePoint = new LocalPoint(x, y, worldView);
             Point textLocation = Perspective.getCanvasTextLocation(client, graphics, projectilePoint, text, 0);
             if (textLocation != null)
             {

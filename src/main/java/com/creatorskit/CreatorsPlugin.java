@@ -281,13 +281,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		WorldPoint worldPoint = client.getLocalPlayer().getWorldLocation();
 		LocalPoint localPoint = client.getLocalPlayer().getLocalLocation();
+		WorldView worldView = client.getTopLevelWorldView();
 
-		int region = client.isInInstancedRegion() ? WorldPoint.fromLocalInstance(client, localPoint).getRegionID() : worldPoint.getRegionID();
+		int region = worldView.getScene().isInstance() ? WorldPoint.fromLocalInstance(client, localPoint).getRegionID() : worldPoint.getRegionID();
 
 		if (savedRegion != region)
 			savedRegion = region;
 
-		int plane = client.getPlane();
+		int plane = worldView.getPlane();
 		if (savedPlane != plane)
 		{
 			savedPlane = plane;
@@ -309,7 +310,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		if (client.getGameState() != GameState.LOGGED_IN)
 			return;
 
-		updatePreviewObject(client.getSelectedSceneTile());
+		updatePreviewObject(client.getTopLevelWorldView().getSelectedSceneTile());
 		modelGetter.handleAnimationExport(client.getGameCycle());
 
 		switch (autoRotateYaw)
@@ -331,6 +332,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 
 		Player player = client.getLocalPlayer();
+		WorldView worldView = client.getTopLevelWorldView();
 
 		for (int i = 0; i < characters.size(); i++)
 		{
@@ -338,7 +340,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			Program program = character.getProgram();
 			ProgramComp comp = program.getComp();
 			RuneLiteObject runeLiteObject = character.getRuneLiteObject();
-			boolean instance = client.isInInstancedRegion();
+			boolean instance = worldView.getScene().isInstance();
 
 			if (runeLiteObject == null)
 				continue;
@@ -399,7 +401,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			}
 			else
 			{
-				destination = LocalPoint.fromWorld(client, comp.getPathWP()[currentStep]);
+				destination = LocalPoint.fromWorld(worldView, comp.getPathWP()[currentStep]);
 			}
 
 			if (destination == null)
@@ -445,7 +447,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					}
 					else
 					{
-						nextPath = LocalPoint.fromWorld(client, comp.getPathWP()[currentStep]);
+						nextPath = LocalPoint.fromWorld(worldView, comp.getPathWP()[currentStep]);
 					}
 
 					if (nextPath == null)
@@ -484,8 +486,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				runeLiteObject.setOrientation(newOrientation);
 			}
 
-			LocalPoint finalPoint = new LocalPoint(endX, endY);
-			runeLiteObject.setLocation(finalPoint, client.getPlane());
+			LocalPoint finalPoint = new LocalPoint(endX, endY, worldView);
+			runeLiteObject.setLocation(finalPoint, worldView.getPlane());
 		}
 
 		TransmogPanel transmogPanel = creatorsPanel.getTransmogPanel();
@@ -496,7 +498,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				return;
 
 			LocalPoint localPoint = player.getLocalLocation();
-			transmog.setLocation(localPoint, client.getPlane());
+			transmog.setLocation(localPoint, worldView.getPlane());
 			transmog.setOrientation(player.getCurrentOrientation());
 			if (!transmog.isActive())
 				transmog.setActive(true);
@@ -658,14 +660,15 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	{
 		if (event.getGameState() == GameState.LOGGED_IN)
 		{
-			boolean instance = client.isInInstancedRegion();
+			WorldView worldView = client.getTopLevelWorldView();
+			boolean instance = worldView.getScene().isInstance();
 
 			for (Character character : characters)
 			{
 				boolean active = character.isActive();
 				setLocation(character, false, false, false, true);
 				resetProgram(character, character.getProgram().getComp().isProgramActive());
-				if ((character.isInInstance() && instance && client.getPlane() == character.getInstancedPlane()) || (!character.isInInstance() && !instance))
+				if ((character.isInInstance() && instance && worldView.getPlane() == character.getInstancedPlane()) || (!character.isInInstance() && !instance))
 					updateProgramPath(character.getProgram(), true, character.isInInstance());
 
 				if (!active)
@@ -685,7 +688,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	{
 		if (event.getKey().equals("orbSpeed"))
 		{
-			client.setOculusOrbNormalSpeed(config.orbSpeed());
+			client.setFreeCameraSpeed(config.orbSpeed());
 			oculusOrbSpeed = config.orbSpeed();
 		}
 
@@ -757,6 +760,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		String target = event.getTarget();
 		String option = event.getOption();
+
+		WorldView worldView = client.getTopLevelWorldView();
+		Tile tile = worldView.getSelectedSceneTile();
 
 		NPC npc = event.getMenuEntry().getNpc();
 		if (npc != null && option.equals("Examine"))
@@ -848,7 +854,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		if (client.getGameState() != GameState.LOGGED_IN)
 			return;
 
-		boolean instance = client.isInInstancedRegion();
+		boolean instance = client.getTopLevelWorldView().getScene().isInstance();
 
 		if (!newLocation && !isInScene(character))
 			return;
@@ -866,6 +872,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	{
 		clientThread.invoke(() ->
 		{
+			WorldView worldView = client.getTopLevelWorldView();
 			LocalPoint localPoint;
 			WorldPoint[] steps = character.getProgram().getComp().getStepsWP();
 
@@ -875,7 +882,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			}
 			else if (setToHoveredTile)
 			{
-				Tile tile = client.getSelectedSceneTile();
+				Tile tile = worldView.getSelectedSceneTile();
 				if (tile == null)
 					return;
 
@@ -883,7 +890,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			}
 			else if (setToPathStart && steps.length > 0)
 			{
-				localPoint = LocalPoint.fromWorld(client, steps[0]);
+				localPoint = LocalPoint.fromWorld(worldView, steps[0]);
 			}
 			else
 			{
@@ -914,7 +921,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			RuneLiteObject runeLiteObject = character.getRuneLiteObject();
 			runeLiteObject.setActive(false);
-			runeLiteObject.setLocation(localPoint, client.getPlane());
+			runeLiteObject.setLocation(localPoint, worldView.getPlane());
 			runeLiteObject.setActive(true);
 			runeLiteObject.setOrientation((int) character.getOrientationSpinner().getValue());
 			character.setActive(true);
@@ -926,6 +933,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	{
 		clientThread.invoke(() ->
 		{
+			WorldView worldView = client.getTopLevelWorldView();
 			LocalPoint localPoint;
 			LocalPoint[] steps = character.getProgram().getComp().getStepsLP();
 
@@ -935,7 +943,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			}
 			else if (setToHoveredTile)
 			{
-				Tile tile = client.getSelectedSceneTile();
+				Tile tile = worldView.getSelectedSceneTile();
 				if (tile == null)
 					return;
 
@@ -958,11 +966,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			character.setLocationSet(true);
 			character.setInInstance(true);
 			character.setInstancedRegions(client.getMapRegions());
-			character.setInstancedPlane(client.getPlane());
+			character.setInstancedPlane(worldView.getPlane());
 			updateProgramPath(character.getProgram(), false, true);
 			RuneLiteObject runeLiteObject = character.getRuneLiteObject();
 			runeLiteObject.setActive(false);
-			runeLiteObject.setLocation(localPoint, client.getPlane());
+			runeLiteObject.setLocation(localPoint, worldView.getPlane());
 			runeLiteObject.setActive(true);
 			runeLiteObject.setOrientation((int) character.getOrientationSpinner().getValue());
 			character.setActive(true);
@@ -972,13 +980,15 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 	public boolean isInScene(Character character)
 	{
+		WorldView worldView = client.getTopLevelWorldView();
+		boolean instance = worldView.getScene().isInstance();
 		int[] mapRegions = client.getMapRegions();
-		if (client.isInInstancedRegion() && character.isInInstance())
+		if (instance && character.isInInstance())
 		{
 			if (character.getInstancedPoint() == null)
 				return false;
 
-			if (character.getInstancedPlane() != client.getPlane())
+			if (character.getInstancedPlane() != worldView.getPlane())
 				return false;
 
 			//This function is finicky with larger instances, in that only an exact region:region map will load
@@ -988,13 +998,13 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return Arrays.deepEquals(mapRegionsObjects, instancedRegionObjects);
 		}
 
-		if (!client.isInInstancedRegion() && !character.isInInstance())
+		if (!instance && !character.isInInstance())
 		{
 			WorldPoint worldPoint = character.getNonInstancedPoint();
 			if (worldPoint == null)
 				return false;
 
-			return worldPoint.isInScene(client);
+			return worldPoint.isInScene(worldView);
 		}
 
 		return false;
@@ -1873,6 +1883,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 	public void updateInstancedProgramPath(Program program, boolean gameStateChanged)
 	{
+		Scene scene = client.getTopLevelWorldView().getScene();
 		ProgramComp comp = program.getComp();
 		LocalPoint[] stepsLP = comp.getStepsLP();
 		LocalPoint[] pathLP = new LocalPoint[0];
@@ -1917,7 +1928,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				if (direction == Direction.UNSET || direction != newDirection)
 				{
 					direction = newDirection;
-					LocalPoint localPoint = LocalPoint.fromScene(x, y);
+					LocalPoint localPoint = LocalPoint.fromScene(x, y, scene);
 					pathLP = ArrayUtils.add(pathLP, localPoint);
 				}
 			}
@@ -1930,6 +1941,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 	public void updateNonInstancedProgramPath(Program program, boolean gameStateChanged)
 	{
+		Scene scene = client.getTopLevelWorldView().getScene();
 		ProgramComp comp = program.getComp();
 		WorldPoint[] stepsWP = comp.getStepsWP();
 		WorldPoint[] pathWP = new WorldPoint[0];
@@ -1973,7 +1985,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				if (direction == Direction.UNSET || direction != newDirection)
 				{
 					direction = newDirection;
-					LocalPoint localPoint = LocalPoint.fromScene(x, y);
+					LocalPoint localPoint = LocalPoint.fromScene(x, y, scene);
 					pathWP = ArrayUtils.add(pathWP, WorldPoint.fromLocalInstance(client, localPoint));
 
 				}
@@ -2188,7 +2200,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		previewObject.setOrientation(orientation);
 		previewObject.setAnimation(animation);
 		previewObject.setDrawFrontTilesFirst(true);
-		previewObject.setLocation(lp, client.getPlane());
+		previewObject.setLocation(lp, client.getTopLevelWorldView().getPlane());
 		previewObject.setRadius(rlObject.getRadius());
 		previewObject.setActive(true);
 	}
@@ -2212,15 +2224,15 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			if (client.getOculusOrbState() == 1)
+			if (client.getCameraMode() == 1)
 			{
-				client.setOculusOrbState(0);
-				client.setOculusOrbNormalSpeed(12);
+				client.setCameraMode(0);
+				client.setFreeCameraSpeed(12);
 				return;
 			}
 
-			client.setOculusOrbState(1);
-			client.setOculusOrbNormalSpeed(oculusOrbSpeed);
+			client.setCameraMode(1);
+			client.setFreeCameraSpeed(oculusOrbSpeed);
 		}
 	};
 
@@ -2235,7 +2247,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				try
 				{
 					int value = Integer.parseInt(result);
-					client.setOculusOrbNormalSpeed(value);
+					client.setFreeCameraSpeed(value);
 					oculusOrbSpeed = value;
 				}
 				catch (Exception f)
@@ -2251,7 +2263,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			client.setOculusOrbNormalSpeed(config.speedHotkey1());
+			client.setFreeCameraSpeed(config.speedHotkey1());
 			sendChatMessage("Oculus Orb set to speed: " + config.speedHotkey1());
 		}
 	};
@@ -2261,7 +2273,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			client.setOculusOrbNormalSpeed(config.speedHotkey2());
+			client.setFreeCameraSpeed(config.speedHotkey2());
 			sendChatMessage("Oculus Orb set to speed: " + config.speedHotkey2());
 		}
 	};
@@ -2271,7 +2283,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			client.setOculusOrbNormalSpeed(config.speedHotkey3());
+			client.setFreeCameraSpeed(config.speedHotkey3());
 			sendChatMessage("Oculus Orb set to speed: " + config.speedHotkey3());
 		}
 	};
@@ -2384,7 +2396,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	{
 		if (selectedCharacter != null)
 		{
-			Tile tile = client.getSelectedSceneTile();
+			WorldView worldView = client.getTopLevelWorldView();
+			boolean instance = worldView.getScene().isInstance();
+
+			Tile tile = worldView.getSelectedSceneTile();
 			if (tile == null)
 				return;
 
@@ -2395,7 +2410,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			Program program = selectedCharacter.getProgram();
 			boolean isInScene = isInScene(selectedCharacter);
 
-			if (isInScene && client.isInInstancedRegion())
+			if (isInScene && instance)
 			{
 				LocalPoint[] steps = program.getComp().getStepsLP();
 
@@ -2420,7 +2435,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				return;
 			}
 
-			if (!isInScene && client.isInInstancedRegion())
+			if (!isInScene && instance)
 			{
 				program.getComp().setStepsLP(new LocalPoint[]{localPoint});
 				program.getComp().setStepsWP(new WorldPoint[0]);
@@ -2429,7 +2444,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				return;
 			}
 
-			if (isInScene && !client.isInInstancedRegion())
+			if (isInScene && !instance)
 			{
 				WorldPoint[] steps = program.getComp().getStepsWP();
 
@@ -2456,7 +2471,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				return;
 			}
 
-			if (!isInScene && !client.isInInstancedRegion())
+			if (!isInScene && !instance)
 			{
 				WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
 				program.getComp().setStepsWP(new WorldPoint[]{worldPoint});
@@ -2483,14 +2498,15 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			if (!isInScene(selectedCharacter))
 				return;
 
-			Tile tile = client.getSelectedSceneTile();
+			WorldView worldView = client.getTopLevelWorldView();
+			Tile tile = worldView.getSelectedSceneTile();
 			if (tile == null)
 				return;
 
 			Program program = selectedCharacter.getProgram();
 			ProgramComp comp = program.getComp();
 
-			if (client.isInInstancedRegion())
+			if (worldView.getScene().isInstance())
 			{
 				LocalPoint[] steps = comp.getStepsLP();
 				steps = ArrayUtils.removeElement(steps, tile.getLocalLocation());
