@@ -1004,7 +1004,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			if (worldPoint == null)
 				return false;
 
-			return worldPoint.isInScene(worldView);
+			return worldPoint.isInScene(client);
 		}
 
 		return false;

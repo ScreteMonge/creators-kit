@@ -329,9 +329,27 @@ public class ModelImporter
 
             for (int i = 0; i < model.getFaceCount(); i++)
             {
-                fc1[i] = colours[vertexColourIndex[i * 3]];
-                fc2[i] = colours[vertexColourIndex[i * 3 + 1]];
-                fc3[i] = colours[vertexColourIndex[i * 3 + 2]];
+                int col1 = colours[vertexColourIndex[i * 3]];
+                if (col1 < 0)
+                {
+                    col1 += 65536;
+                }
+
+                int col2 = colours[vertexColourIndex[i * 3 + 1]];
+                if (col2 < 0)
+                {
+                    col2 += 65536;
+                }
+
+                int col3 = colours[vertexColourIndex[i * 3 + 2]];
+                if (col3 < 0)
+                {
+                    col3 += 65536;
+                }
+
+                fc1[i] = col1;
+                fc2[i] = col2;
+                fc3[i] = col3;
                 int tp = (transparencies[vertexColourIndex[i * 3]] + transparencies[vertexColourIndex[i * 3 + 1]] + transparencies[vertexColourIndex[i * 3 + 2]]) / 3;
                 ftp[i] = (byte) tp;
             }
