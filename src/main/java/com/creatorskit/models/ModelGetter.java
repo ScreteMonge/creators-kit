@@ -974,7 +974,7 @@ public class ModelGetter
                 {
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DEFAULT);
+                        ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DEFAULT, false);
                         CustomLighting lighting = new CustomLighting(64, 768, -50, -50, 10);
                         CustomModelComp comp = new CustomModelComp(0, type, objectId, modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, name);
                         CustomModel customModel = new CustomModel(model, comp);
@@ -1026,7 +1026,7 @@ public class ModelGetter
                 {
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DYNAMIC);
+                        ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DYNAMIC, false);
                         LightingStyle ls = LightingStyle.DYNAMIC;
                         CustomLighting lighting = new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getY(), ls.getZ());
                         CustomModelComp comp = new CustomModelComp(0, type, objectId, modelStats, null, null, null, ls, lighting, false, name);
@@ -1083,7 +1083,7 @@ public class ModelGetter
                 {
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, lightingStyle);
+                        ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, lightingStyle, false);
                         clientThread.invokeLater(() ->
                         {
                             plugin.cacheToAnvil(modelStats, new int[0], false);
@@ -1142,7 +1142,7 @@ public class ModelGetter
 
                         Thread thread = new Thread(() ->
                         {
-                            ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DEFAULT);
+                            ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DEFAULT, false);
 
                             clientThread.invokeLater(() ->
                             {
@@ -1226,7 +1226,7 @@ public class ModelGetter
                         {
                             Thread thread = new Thread(() ->
                             {
-                                ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DYNAMIC);
+                                ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DYNAMIC, false);
                                 clientThread.invokeLater(() ->
                                 {
                                     initiateAnimationExport(animId, name, bm, modelStats, new int[0], false, false);
@@ -1243,7 +1243,7 @@ public class ModelGetter
                     {
                         Thread thread = new Thread(() ->
                         {
-                            ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DYNAMIC);
+                            ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DYNAMIC, false);
 
                             clientThread.invokeLater(() ->
                             {

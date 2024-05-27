@@ -1,26 +1,27 @@
 package com.creatorskit.models;
 
+import com.creatorskit.models.datatypes.*;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.ActorSpotAnim;
-import net.runelite.api.IterableHashTable;
-import net.runelite.api.ModelData;
 import okhttp3.*;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.inject.Inject;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Scanner;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Slf4j
 public class ModelFinder
 {
+    @Inject
+    private Gson gson;
     @Inject
     OkHttpClient httpClient;
     @Getter
@@ -43,15 +44,6 @@ public class ModelFinder
             BodyPart.SPOTANIM};
     private static final int WEAPON_IDX = 3;
     private static final int SHIELD_IDX = 5;
-    private static final Pattern recolFrom = Pattern.compile("recol\\ds=.+");
-    private static final Pattern recolTo = Pattern.compile("recol\\dd=.+");
-    private static final Pattern retexFrom = Pattern.compile("retex\\ds=.+");
-    private static final Pattern retexTo = Pattern.compile("retex\\dd=.+");
-    private final Request objRequest = new Request.Builder().url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.obj").build();
-    private final Request spotAnimRequest = new Request.Builder().url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.spotanim?ref_type=heads").build();
-    private final Request npcRequest = new Request.Builder().url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.npc").build();
-    private final Request locRequest = new Request.Builder().url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.loc").build();
-    private final Request seqRequest = new Request.Builder().url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.seq?ref_type=heads").build();
 
     public ModelStats[] findModelsForPlayer(boolean groundItem, boolean maleItem, int[] items, int animId, int[] spotAnims)
     {
@@ -94,17 +86,20 @@ public class ModelFinder
         {
             CountDownLatch countDownLatch1 = new CountDownLatch(1);
 
+            Request seqRequest = new Request.Builder()
+                    .url("https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/sequences.json")
+                    .build();
             Call call = httpClient.newCall(seqRequest);
             call.enqueue(new Callback() {
                 @Override
                 public void onFailure(Call call, IOException e)
                 {
-                    log.debug("Failed to access URL: https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.seq?ref_type=heads");
+                    log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/sequences.json");
                     countDownLatch1.countDown();
                 }
 
                 @Override
-                public void onResponse(Call call, Response response) throws IOException
+                public void onResponse(Call call, Response response)
                 {
                     if (!response.isSuccessful() || response.body() == null)
                         return;
@@ -129,17 +124,20 @@ public class ModelFinder
 
         ArrayList<ModelStats> itemArray = new ArrayList<>();
 
-        Call itemCall = httpClient.newCall(objRequest);
+        Request itemRequest = new Request.Builder()
+                .url("https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/item_defs.json")
+                .build();
+        Call itemCall = httpClient.newCall(itemRequest);
         itemCall.enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e)
             {
-                log.debug("Failed to access URL: https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.obj");
+                log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/item_defs.json");
                 countDownLatch2.countDown();
             }
 
             @Override
-            public void onResponse(Call call, Response response) throws IOException
+            public void onResponse(Call call, Response response)
             {
                 if (!response.isSuccessful() || response.body() == null)
                     return;
@@ -155,19 +153,19 @@ public class ModelFinder
         //for KitIds
 
         Request kitRequest = new Request.Builder()
-                .url("https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.idk")
+                .url("https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/kit.json")
                 .build();
         Call kitCall = httpClient.newCall(kitRequest);
         kitCall.enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e)
             {
-                log.debug("Failed to access URL: https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.idk");
+                log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/kit.json");
                 countDownLatch2.countDown();
             }
 
             @Override
-            public void onResponse(Call call, Response response) throws IOException
+            public void onResponse(Call call, Response response)
             {
                 if (!response.isSuccessful() || response.body() == null)
                     return;
@@ -186,18 +184,21 @@ public class ModelFinder
         }
         else
         {
-            Call call = httpClient.newCall(spotAnimRequest);
+            Request spotanimRequest = new Request.Builder()
+                    .url("https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/spotanims.json")
+                    .build();
+            Call call = httpClient.newCall(spotanimRequest);
             call.enqueue(new Callback()
             {
                 @Override
                 public void onFailure(Call call, IOException e)
                 {
-                    log.debug("Failed to access URL: https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.spotanim?ref_type=heads");
+                    log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/spotanims.json");
                     countDownLatch2.countDown();
                 }
 
                 @Override
-                public void onResponse(Call call, Response response) throws IOException
+                public void onResponse(Call call, Response response)
                 {
                     if (!response.isSuccessful() || response.body() == null)
                         return;
@@ -241,58 +242,49 @@ public class ModelFinder
 
     public void removePlayerItems(Response response, AnimSequence animSequence, int animId)
     {
-        InputStream inputStream = response.body().byteStream();
-        Scanner scanner = new Scanner(inputStream);
-        Pattern seqPattern = Pattern.compile("\\[.+_" + animId + "]");
+        InputStreamReader reader = new InputStreamReader(response.body().byteStream());
+        Type listType = new TypeToken<List<SeqData>>(){}.getType();
+        List<SeqData> posts = gson.fromJson(reader, listType);
 
-        while (scanner.hasNextLine())
+        for (SeqData seqData : posts)
         {
-            String string = scanner.nextLine();
-            Matcher match = seqPattern.matcher(string);
-            if (match.matches())
+            if (seqData.getId() == animId)
             {
-                while (!string.isEmpty())
+                int offHandItem = seqData.getLeftHandItem() - 512;
+                switch (offHandItem)
                 {
-                    string = scanner.nextLine();
-                    if (string.startsWith("mainhand"))
-                    {
-                        String[] split = string.split("=");
-                        if (split[1].equals("hide"))
-                        {
-                            animSequence.setMainHandData(AnimSequenceData.HIDE);
-                        }
-                        else
-                        {
-                            animSequence.setMainHandData(AnimSequenceData.SWAP);
-                            String[] modelSplit = split[1].split("_");
-                            animSequence.setMainHandItemId(Integer.parseInt(modelSplit[modelSplit.length - 1]));
-                        }
-                    }
-                    else if (string.startsWith("offhand"))
-                    {
-                        String[] split = string.split("=");
-                        if (split[1].equals("hide"))
-                        {
-                            animSequence.setOffHandData(AnimSequenceData.HIDE);
-                        }
-                        else
-                        {
-                            animSequence.setOffHandData(AnimSequenceData.SWAP);
-                            String[] modelSplit = split[1].split("_");
-                            animSequence.setOffHandItemId(Integer.parseInt(modelSplit[modelSplit.length - 1]));
-                        }
-                    }
+                    case -1:
+                        break;
+                    case 0:
+                        animSequence.setOffHandData(AnimSequenceData.HIDE);
+                        break;
+                    default:
+                        animSequence.setOffHandItemId(offHandItem);
+                        animSequence.setOffHandData(AnimSequenceData.SWAP);
                 }
-                return;
+
+                int mainHandItem = seqData.getRightHandItem() - 512;
+                switch (mainHandItem)
+                {
+                    case -1:
+                        break;
+                    case 0:
+                        animSequence.setMainHandData(AnimSequenceData.HIDE);
+                        break;
+                    default:
+                        animSequence.setMainHandItemId(mainHandItem);
+                        animSequence.setMainHandData(AnimSequenceData.SWAP);
+                }
+                break;
             }
         }
     }
 
-    public static void getPlayerItems(Response response, ArrayList<ModelStats> modelStatsArray, boolean groundItem, boolean maleItem, int[] itemId, AnimSequence animSequence)
+    public void getPlayerItems(Response response, ArrayList<ModelStats> modelStats, boolean groundItem, boolean maleItem, int[] itemId, AnimSequence animSequence)
     {
-        InputStream inputStream = response.body().byteStream();
-        Scanner scanner = new Scanner(inputStream);
-        Pattern[] patterns = new Pattern[itemId.length];
+        InputStreamReader reader = new InputStreamReader(response.body().byteStream());
+        Type listType = new TypeToken<List<ItemData>>(){}.getType();
+        List<ItemData> posts = gson.fromJson(reader, listType);
 
         AnimSequenceData mainHand = animSequence.getMainHandData();
         AnimSequenceData offHand = animSequence.getOffHandData();
@@ -345,395 +337,295 @@ public class ModelFinder
                 break;
         }
 
-        for (int i = 0; i < updatedItemIds.length; i++)
+        int itemsToComplete = updatedItemIds.length;
+        for (int i : updatedItemIds)
         {
-            int item = updatedItemIds[i];
-            if (item == -1)
+            if (i == -1)
             {
-                continue;
+                itemsToComplete--;
             }
-
-            Pattern itemPattern = Pattern.compile("\\[.+_" + item + "]");
-            patterns[i] = itemPattern;
         }
 
-        while (scanner.hasNextLine())
+        for (ItemData itemData : posts)
         {
-            String string = scanner.nextLine();
-            for (int i = 0; i < patterns.length; i++)
+            if (itemsToComplete == 0)
             {
-                if (updatedItemIds[i] == -1)
+                break;
+            }
+
+            for (int i = 0; i < updatedItemIds.length; i++)
+            {
+                int item = updatedItemIds[i];
+                if (item == -1)
                 {
                     continue;
                 }
 
-                Pattern pattern = patterns[i];
-                Matcher matcher = pattern.matcher(string);
-                if (matcher.matches())
+                if (itemData.getId() == item)
                 {
-                    int[] modelIds = new int[3];
-                    ArrayList<Integer> recolourFrom = new ArrayList<>();
-                    ArrayList<Integer> recolourTo = new ArrayList<>();
-                    short[] retextureFrom = new short[0];
-                    short[] retextureTo = new short[0];
-
-                    while (!string.isEmpty())
+                    itemsToComplete--;
+                    int[] modelIds = new int[0];
+                    if (groundItem)
                     {
-                        string = scanner.nextLine();
-                        if (groundItem && string.startsWith("model="))
-                        {
-                            String[] split = string.split("_");
-                            modelIds[0] = Integer.parseInt(split[split.length - 1]);
-                        }
-                        else if (maleItem && string.startsWith("manwear="))
-                        {
-                            String replaced = string.replace(",", "_");
-                            String[] split = replaced.split("_");
-                            modelIds[0] = Integer.parseInt(split[split.length - 2]);
-                        }
-                        else if (maleItem && string.startsWith("manwear2="))
-                        {
-                            String[] split = string.split("_");
-                            modelIds[1] = Integer.parseInt(split[split.length - 1]);
-                        }
-                        else if (maleItem && string.startsWith("manwear3="))
-                        {
-                            String[] split = string.split("_");
-                            modelIds[2] = Integer.parseInt(split[split.length - 1]);
-                        }
-                        else if (!maleItem && string.startsWith("womanwear="))
-                        {
-                            String replaced = string.replace(",", "_");
-                            String[] split = replaced.split("_");
-                            modelIds[0] = Integer.parseInt(split[split.length - 2]);
-                        }
-                        else if (!maleItem && string.startsWith("womanwear2="))
-                        {
-                            String[] split = string.split("_");
-                            modelIds[1] = Integer.parseInt(split[split.length - 1]);
-                        }
-                        else if (!maleItem && string.startsWith("womanwear3="))
-                        {
-                            String[] split = string.split("_");
-                            modelIds[2] = Integer.parseInt(split[split.length - 1]);
-                        }
-                        else if (string.startsWith("recol"))
-                        {
-                            matcher = recolFrom.matcher(string);
+                        modelIds = ArrayUtils.add(modelIds, itemData.getInventoryModel());
+                    }
+                    else if (maleItem)
+                    {
+                        modelIds = ArrayUtils.addAll(modelIds, itemData.getMaleModel0(), itemData.getMaleModel1(), itemData.getMaleModel2());
+                    }
+                    else
+                    {
+                        modelIds = ArrayUtils.addAll(modelIds, itemData.getFemaleModel0(), itemData.getFemaleModel1(), itemData.getFemaleModel2());
+                    }
 
-                            if (matcher.matches())
+                    short[] rf = new short[0];
+                    short[] rt = new short[0];
+
+                    if (itemData.getColorReplace() != null)
+                    {
+                        int[] recolorToReplace = itemData.getColorReplace();
+                        int[] recolorToFind = itemData.getColorFind();
+                        rf = new short[recolorToReplace.length];
+                        rt = new short[recolorToReplace.length];
+
+                        for (int e = 0; e < rf.length; e++)
+                        {
+                            int rfi = recolorToFind[e];
+                            if (rfi > 32767)
                             {
-                                String[] split = string.split("=");
-                                recolourFrom.add(Integer.parseInt(split[1]));
-                                continue;
+                                rfi -= 65536;
                             }
+                            rf[e] = (short) rfi;
 
-                            matcher = recolTo.matcher(string);
-
-                            if (matcher.matches())
+                            int rti = recolorToReplace[e];
+                            if (rti > 32767)
                             {
-                                String[] split = string.split("=");
-                                recolourTo.add(Integer.parseInt(split[1]));
+                                rti -= 65536;
                             }
-                        }
-                        else if (string.startsWith("retex"))
-                        {
-                            matcher = retexFrom.matcher(string);
-
-                            if (matcher.matches())
-                            {
-                                String[] split = string.split("_");
-                                retextureFrom = ArrayUtils.add(retextureFrom, Short.parseShort(split[1]));
-                                continue;
-                            }
-
-                            matcher = retexTo.matcher(string);
-
-                            if (matcher.matches())
-                            {
-                                String[] split = string.split("_");
-                                retextureTo = ArrayUtils.add(retextureTo, Short.parseShort(split[1]));
-                            }
+                            rt[e] = (short) rti;
                         }
                     }
 
-                    int size = recolourFrom.size();
-                    short[] recolourFromArray = new short[size];
-                    short[] recolourToArray = new short[size];
-                    for (int e = 0; e < size; e++)
-                    {
-                        int from = recolourFrom.get(e);
-                        if (from > 32767)
-                            from -= 65536;
-                        recolourFromArray[e] = (short) from;
+                    short[] rtFrom = new short[0];
+                    short[] rtTo = new short[0];
 
-                        int to = recolourTo.get(e);
-                        if (to > 32767)
-                            to -= 65536;
-                        recolourToArray[e] = (short) to;
+                    if (itemData.getTextureReplace() != null)
+                    {
+                        int[] textureToReplace = itemData.getTextureReplace();
+                        int[] retextureToFind = itemData.getTextureFind();
+                        rtFrom = new short[textureToReplace.length];
+                        rtTo = new short[textureToReplace.length];
+
+                        for (int e = 0; e < rtFrom.length; e++)
+                        {
+                            rtFrom[e] = (short) retextureToFind[e];
+                            rtTo[e] = (short) textureToReplace[e];
+                        }
                     }
+
+                    LightingStyle ls = LightingStyle.ACTOR;
+                    CustomLighting customLighting = new CustomLighting(
+                            ls.getAmbient(),
+                            ls.getContrast(),
+                            ls.getX(),
+                            ls.getY(),
+                            ls.getZ());
 
                     for (int id : modelIds)
                     {
-                        if (id > 0)
+                        if (id != -1)
                         {
-                            modelStatsArray.add(new ModelStats(
+                            modelStats.add(new ModelStats(
                                     id,
                                     bodyParts[i],
-                                    recolourFromArray,
-                                    recolourToArray,
-                                    retextureFrom,
-                                    retextureTo,
-                                    128,
-                                    128,
-                                    128,
-                                    new CustomLighting(64, 850, -30, -50, -30)));
+                                    rf,
+                                    rt,
+                                    rtFrom,
+                                    rtTo,
+                                    itemData.getResizeX(),
+                                    itemData.getResizeZ(),
+                                    itemData.getResizeY(),
+                                    customLighting
+                            ));
                         }
                     }
 
-                    if (i == patterns.length - 1)
-                    {
-                        break;
-                    }
+                    break;
                 }
             }
         }
     }
 
-    public static void getPlayerKit(Response response, ArrayList<ModelStats> modelStatsArray, int[] kitId)
+    public void getPlayerKit(Response response, ArrayList<ModelStats> modelStats, int[] kitId)
     {
-        InputStream inputStream = response.body().byteStream();
-        Scanner scanner = new Scanner(inputStream);
-        Pattern[] patterns = new Pattern[kitId.length];
+        InputStreamReader reader = new InputStreamReader(response.body().byteStream());
+        Type listType = new TypeToken<List<KitData>>(){}.getType();
+        List<KitData> posts = gson.fromJson(reader, listType);
 
-        for (int i = 0; i < kitId.length; i++)
+        int itemsToComplete = kitId.length;
+        for (int i : kitId)
         {
-            //Create a pattern to match the format [idk_XXX] per kitId
-            int item = kitId[i];
-            if (item != -1)
+            if (i == -1)
             {
-                Pattern kitPattern = Pattern.compile("\\[.+_" + item + "]");
-                patterns[i] = kitPattern;
+                itemsToComplete--;
             }
         }
 
-        while (scanner.hasNextLine())
+        for (KitData kitData : posts)
         {
-            String string = scanner.nextLine();
-            for (int i = 0; i < patterns.length; i++)
+            if (itemsToComplete == 0)
             {
-                if (kitId[i] == -1)
+                break;
+            }
+
+            for (int i = 0; i < kitId.length; i++)
+            {
+                int item = kitId[i];
+                if (item == -1)
                 {
                     continue;
                 }
 
-                Pattern pattern = patterns[i];
-                Matcher matcher = pattern.matcher(string);
-                if (matcher.matches())
+                if (kitData.getId() == item)
                 {
-                    int[] modelIds = new int[2];
-                    ArrayList<Integer> recolourFrom = new ArrayList<>();
-                    ArrayList<Integer> recolourTo = new ArrayList<>();
+                    itemsToComplete--;
+                    int[] modelIds = kitData.getModels();
 
-                    while (!string.isEmpty())
+                    short[] rf = new short[0];
+                    short[] rt = new short[0];
+
+                    if (kitData.getRecolorToReplace() != null)
                     {
-                        string = scanner.nextLine();
-                        if (string.startsWith("model1="))
-                        {
-                            String[] split = string.split("_");
-                            modelIds[0] = Integer.parseInt(split[split.length - 1]);
-                        }
-                        else if (string.startsWith("model2="))
-                        {
-                            String[] split = string.split("_");
-                            modelIds[1] = Integer.parseInt(split[split.length - 1]);
-                        }
-                        else if (string.startsWith("recol"))
-                        {
-                            //recolour if a recol1s and recol1d are present with the kitId
-                            matcher = recolFrom.matcher(string);
+                        int[] recolorToReplace = kitData.getRecolorToReplace();
+                        int[] recolorToFind = kitData.getRecolorToFind();
+                        rf = new short[recolorToReplace.length];
+                        rt = new short[recolorToReplace.length];
 
-                            if (matcher.matches())
+                        for (int e = 0; e < rf.length; e++)
+                        {
+                            int rfi = recolorToFind[e];
+                            if (rfi > 32767)
                             {
-                                String[] split = string.split("=");
-                                recolourFrom.add(Integer.parseInt(split[1]));
-                                continue;
+                                rfi -= 65536;
                             }
+                            rf[e] = (short) rfi;
 
-                            matcher = recolTo.matcher(string);
-
-                            if (matcher.matches())
+                            int rti = recolorToReplace[e];
+                            if (rti > 32767)
                             {
-                                String[] split = string.split("=");
-                                recolourTo.add(Integer.parseInt(split[1]));
+                                rti -= 65536;
                             }
+                            rt[e] = (short) rti;
                         }
                     }
 
-                    int size = recolourFrom.size();
-                    short[] recolourFromArray = new short[size];
-                    short[] recolourToArray = new short[size];
-                    for (int e = 0; e < size; e++)
-                    {
-                        int from = recolourFrom.get(e);
-                        if (from > 32767)
-                            from -= 65536;
-                        recolourFromArray[e] = (short) from;
-
-                        int to = recolourTo.get(e);
-                        if (to > 32767)
-                            to -= 65536;
-                        recolourToArray[e] = (short) to;
-                    }
+                    LightingStyle ls = LightingStyle.ACTOR;
+                    CustomLighting customLighting = new CustomLighting(
+                            ls.getAmbient(),
+                            ls.getContrast(),
+                            ls.getX(),
+                            ls.getY(),
+                            ls.getZ());
 
                     for (int id : modelIds)
                     {
-                        if (id > 0)
+                        if (id != -1)
                         {
-                            modelStatsArray.add(new ModelStats(
+                            modelStats.add(new ModelStats(
                                     id,
                                     bodyParts[i],
-                                    recolourFromArray,
-                                    recolourToArray,
+                                    rf,
+                                    rt,
                                     new short[0],
                                     new short[0],
                                     128,
                                     128,
                                     128,
-                                    new CustomLighting(64, 850, -30, -50, -30)));
+                                    customLighting
+                            ));
                         }
                     }
 
-                    if (i == patterns.length - 1)
-                    {
-                        break;
-                    }
+                    break;
                 }
             }
         }
     }
 
-    public static void getPlayerSpotAnims(Response response, int[] spotAnims, ArrayList<ModelStats> spotAnimList)
+    public void getPlayerSpotAnims(Response response, int[] spotAnims, ArrayList<ModelStats> modelStats)
     {
-        InputStream inputStream = response.body().byteStream();
-        Scanner scanner = new Scanner(inputStream);
-        Pattern[] patterns = new Pattern[spotAnims.length];
+        InputStreamReader reader = new InputStreamReader(response.body().byteStream());
+        Type listType = new TypeToken<List<SpotanimData>>(){}.getType();
+        List<SpotanimData> posts = gson.fromJson(reader, listType);
 
-        for (int i = 0; i < spotAnims.length; i++)
-        {
-            //Create a pattern to match the format [idk_XXX] per kitId
-            int spotAnimId = spotAnims[i];
-            Pattern kitPattern = Pattern.compile("\\[.+_" + spotAnimId + "]");
-            patterns[i] = kitPattern;
-        }
+        int itemsToComplete = spotAnims.length;
 
-        while (scanner.hasNextLine())
+        for (SpotanimData spotanimData : posts)
         {
-            String string = scanner.nextLine();
-            for (int i = 0; i < patterns.length; i++)
+            if (itemsToComplete == 0)
             {
-                Pattern pattern = patterns[i];
-                Matcher matcher = pattern.matcher(string);
-                if (matcher.matches())
+                break;
+            }
+
+            for (int i : spotAnims)
+            {
+                if (spotanimData.getId() == i)
                 {
-                    int modelId = 0;
-                    CustomLighting lighting = new CustomLighting(64, 850, -50, -50, 75);
-                    int[] resize = new int[]{128, 128, 128};
-                    ArrayList<Integer> recolourFrom = new ArrayList<>();
-                    ArrayList<Integer> recolourTo = new ArrayList<>();
+                    itemsToComplete--;
+                    int modelId = spotanimData.getModelId();
 
-                    while (!string.isEmpty())
+                    short[] rf = new short[0];
+                    short[] rt = new short[0];
+                    if (spotanimData.getRecolorToReplace() != null)
                     {
-                        string = scanner.nextLine();
-                        if (string.startsWith("model"))
-                        {
-                            String[] split = string.split("_");
-                            modelId = Integer.parseInt(split[split.length - 1]);
-                        }
-                        else if (string.startsWith("amb"))
-                        {
-                            String[] split = string.split("=");
-                            int ambient = Integer.parseInt(split[split.length - 1]);
-                            if (ambient >= 128)
-                                ambient -= 256;
+                        int[] recolorToReplace = spotanimData.getRecolorToReplace();
+                        int[] recolorToFind = spotanimData.getRecolorToFind();
+                        rf = new short[recolorToReplace.length];
+                        rt = new short[recolorToReplace.length];
 
-                            lighting.setAmbient(64 + ambient);
-                        }
-                        else if (string.startsWith("con"))
+                        for (int e = 0; e < rf.length; e++)
                         {
-                            String[] split = string.split("=");
-                            int contrast = Integer.parseInt(split[split.length - 1]);
-                            if (contrast >= 128)
-                                contrast -= 128;
-
-                            lighting.setContrast(768 + contrast);
-                        }
-                        else if (string.startsWith("resizeh"))
-                        {
-                            String[] split = string.split("=");
-                            int resizeH = Integer.parseInt(split[split.length - 1]);
-                            resize[0] = resizeH;
-                            resize[1] = resizeH;
-                        }
-                        else if (string.startsWith("resizev"))
-                        {
-                            String[] split = string.split("=");
-                            resize[2] = Integer.parseInt(split[split.length - 1]);
-                        }
-                        else
-                        {
-                            matcher = recolFrom.matcher(string);
-
-                            if (matcher.matches())
+                            int rfi = recolorToFind[e];
+                            if (rfi > 32767)
                             {
-                                String[] split = string.split("=");
-                                int e = Integer.parseInt(split[1]);
-                                recolourFrom.add(e);
+                                rfi -= 65536;
                             }
+                            rf[e] = (short) rfi;
 
-                            matcher = recolTo.matcher(string);
-
-                            if (matcher.matches())
+                            int rti = recolorToReplace[e];
+                            if (rti > 32767)
                             {
-                                String[] split = string.split("=");
-                                int e = Integer.parseInt(split[1]);
-                                recolourTo.add(e);
+                                rti -= 65536;
                             }
+                            rt[e] = (short) rti;
                         }
                     }
 
-                    int size = recolourFrom.size();
-                    short[] recolourFromArray = new short[size];
-                    short[] recolourToArray = new short[size];
-                    for (int e = 0; e < size; e++)
-                    {
-                        int from = recolourFrom.get(e);
-                        if (from > 32767)
-                            from -= 65536;
-                        recolourFromArray[e] = (short) from;
+                    int ambient = spotanimData.getAmbient();
+                    int contrast = spotanimData.getContrast();
 
-                        int to = recolourTo.get(e);
-                        if (to > 32767)
-                            to -= 65536;
-                        recolourToArray[e] = (short) to;
-                    }
+                    LightingStyle ls = LightingStyle.SPOTANIM;
+                    CustomLighting customLighting = new CustomLighting(
+                            ls.getAmbient() + ambient,
+                            ls.getContrast() + contrast,
+                            ls.getX(),
+                            ls.getY(),
+                            ls.getZ());
 
-                    spotAnimList.add(new ModelStats(
+                    modelStats.add(new ModelStats(
                             modelId,
                             BodyPart.SPOTANIM,
-                            recolourFromArray,
-                            recolourToArray,
+                            rf,
+                            rt,
                             new short[0],
                             new short[0],
-                            resize[0],
-                            resize[1],
-                            resize[2],
-                            lighting));
+                            spotanimData.getResizeX(),
+                            spotanimData.getResizeX(),
+                            spotanimData.getResizeY(),
+                            customLighting
+                    ));
 
-                    if (i == patterns.length - 1)
-                    {
-                        break;
-                    }
+                    break;
                 }
             }
         }
@@ -741,116 +633,93 @@ public class ModelFinder
 
     public ModelStats[] findSpotAnim(int spotAnimId)
     {
-        ArrayList<Integer> modelIds = new ArrayList<>();
-        final int[] resize = new int[]{128, 128, 128};
-        ArrayList<Short> recolourFrom = new ArrayList<>();
-        ArrayList<Short> recolourTo = new ArrayList<>();
-        CustomLighting lighting = new CustomLighting(64, 850, -50, -50, 75);
-
+        ArrayList<ModelStats> modelStats = new ArrayList<>();
         CountDownLatch countDownLatch = new CountDownLatch(1);
 
-        Call call = httpClient.newCall(spotAnimRequest);
+        Request spotanimRequest = new Request.Builder()
+                .url("https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/spotanims.json")
+                .build();
+        Call call = httpClient.newCall(spotanimRequest);
         call.enqueue(new Callback()
         {
             @Override
             public void onFailure(Call call, IOException e)
             {
-                log.debug("Failed to access URL: https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.spotanim?ref_type=heads");
+                log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/spotanims.json");
                 countDownLatch.countDown();
             }
 
             @Override
-            public void onResponse(Call call, Response response) throws IOException
+            public void onResponse(Call call, Response response)
             {
                 if (!response.isSuccessful() || response.body() == null)
                     return;
 
-                InputStream inputStream = response.body().byteStream();
-                Scanner scanner = new Scanner(inputStream);
-                Pattern npcPattern = Pattern.compile("\\[.+_" + spotAnimId + "]");
+                InputStreamReader reader = new InputStreamReader(response.body().byteStream());
+                Type listType = new TypeToken<List<SpotanimData>>(){}.getType();
+                List<SpotanimData> posts = gson.fromJson(reader, listType);
 
-                while (scanner.hasNextLine())
+                for (SpotanimData spotanimData : posts)
                 {
-                    String string = scanner.nextLine();
-                    Matcher match = npcPattern.matcher(string);
-                    if (match.matches())
+                    if (spotanimData.getId() == spotAnimId)
                     {
+                        int modelId = spotanimData.getModelId();
+
                         lastFound = "SpotAnim " + spotAnimId;
-                        lastAnim = -1;
-                        while (!string.isEmpty())
+                        lastAnim = spotanimData.getAnimationId();
+
+                        short[] rf = new short[0];
+                        short[] rt = new short[0];
+                        if (spotanimData.getRecolorToReplace() != null)
                         {
-                            string = scanner.nextLine();
-                            if (string.startsWith("model"))
-                            {
-                                String[] split = string.split("_");
-                                modelIds.add(Integer.parseInt(split[split.length - 1]));
-                            }
-                            else if (string.startsWith("anim"))
-                            {
-                                String[] split = string.split("_");
-                                lastAnim = Integer.parseInt(split[split.length - 1]);
-                            }
-                            else if (string.startsWith("amb"))
-                            {
-                                String[] split = string.split("=");
-                                int ambient = Integer.parseInt(split[split.length - 1]);
-                                if (ambient >= 128)
-                                    ambient -= 256;
+                            int[] recolorToReplace = spotanimData.getRecolorToReplace();
+                            int[] recolorToFind = spotanimData.getRecolorToFind();
+                            rf = new short[recolorToReplace.length];
+                            rt = new short[recolorToReplace.length];
 
-                                lighting.setAmbient(64 + ambient);
-                            }
-                            else if (string.startsWith("con"))
+                            for (int e = 0; e < rf.length; e++)
                             {
-                                String[] split = string.split("=");
-                                int contrast = Integer.parseInt(split[split.length - 1]);
-                                if (contrast >= 128)
-                                    contrast -= 128;
-
-                                lighting.setContrast(768 + contrast);
-                            }
-                            else if (string.startsWith("resizeh"))
-                            {
-                                String[] split = string.split("=");
-                                int resizeH = Integer.parseInt(split[split.length - 1]);
-                                resize[0] = resizeH;
-                                resize[1] = resizeH;
-                            }
-                            else if (string.startsWith("resizev"))
-                            {
-                                String[] split = string.split("=");
-                                resize[2] = Integer.parseInt(split[split.length - 1]);
-                            }
-                            else
-                            {
-                                match = recolFrom.matcher(string);
-
-                                if (match.matches())
+                                int rfi = recolorToFind[e];
+                                if (rfi > 32767)
                                 {
-                                    String[] split = string.split("=");
-                                    int i = Integer.parseInt(split[1]);
-                                    if (i > 32767)
-                                    {
-                                        i -= 65536;
-                                    }
-                                    recolourFrom.add((short) i);
+                                    rfi -= 65536;
                                 }
+                                rf[e] = (short) rfi;
 
-                                match = recolTo.matcher(string);
-
-                                if (match.matches())
+                                int rti = recolorToReplace[e];
+                                if (rti > 32767)
                                 {
-                                    String[] split = string.split("=");
-                                    int i = Integer.parseInt(split[1]);
-                                    if (i > 32767)
-                                    {
-                                        i -= 65536;
-                                    }
-                                    recolourTo.add((short) i);
+                                    rti -= 65536;
                                 }
+                                rt[e] = (short) rti;
                             }
                         }
+
+                        int ambient = spotanimData.getAmbient();
+                        int contrast = spotanimData.getContrast();
+
+                        LightingStyle ls = LightingStyle.SPOTANIM;
+                        CustomLighting customLighting = new CustomLighting(
+                                ls.getAmbient() + ambient,
+                                ls.getContrast() + contrast,
+                                ls.getX(),
+                                ls.getY(),
+                                ls.getZ());
+
+                        modelStats.add(new ModelStats(
+                                modelId,
+                                BodyPart.SPOTANIM,
+                                rf,
+                                rt,
+                                new short[0],
+                                new short[0],
+                                spotanimData.getResizeX(),
+                                spotanimData.getResizeX(),
+                                spotanimData.getResizeY(),
+                                customLighting));
                     }
                 }
+
                 countDownLatch.countDown();
                 response.body().close();
             }
@@ -862,124 +731,108 @@ public class ModelFinder
         }
         catch (Exception e)
         {
-            log.debug("CountDownLatch failed to await at findModelsForNPCs");
+            log.debug("CountDownLatch failed to await at findSpotAnim");
         }
 
-        short[] rf = new short[recolourFrom.size()];
-        short[] rt = new short[recolourTo.size()];
-        for (int i = 0; i < recolourFrom.size(); i++)
+        if (modelStats.isEmpty())
         {
-            rf[i] = recolourFrom.get(i);
-            rt[i] = recolourTo.get(i);
+            return null;
         }
 
-        return new ModelStats[]{new ModelStats(
-                modelIds.get(0),
-                BodyPart.SPOTANIM,
-                rf,
-                rt,
-                new short[0],
-                new short[0],
-                resize[0],
-                resize[1],
-                resize[2],
-                lighting)};
+        return new ModelStats[]{modelStats.get(0)};
     }
 
     public ModelStats[] findModelsForNPC(int npcId)
     {
-        ArrayList<Integer> modelIds = new ArrayList<>();
-        final int[] resize = new int[]{128, 128, 128};
-        ArrayList<Short> recolourFrom = new ArrayList<>();
-        ArrayList<Short> recolourTo = new ArrayList<>();
-        short[] retextureFrom = new short[0];
-        short[] retextureTo = new short[0];
-
         CountDownLatch countDownLatch = new CountDownLatch(1);
+        ArrayList<ModelStats> modelStats = new ArrayList<>();
 
-        Call call = httpClient.newCall(npcRequest);
+        Request request = new Request.Builder().url("https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/npc_defs.json").build();
+        Call call = httpClient.newCall(request);
         call.enqueue(new Callback()
         {
             @Override
             public void onFailure(Call call, IOException e)
             {
-                log.debug("Failed to access URL: https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.npc");
+                log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/npc_defs.json");
                 countDownLatch.countDown();
             }
 
             @Override
-            public void onResponse(Call call, Response response) throws IOException
+            public void onResponse(Call call, Response response)
             {
                 if (!response.isSuccessful() || response.body() == null)
                     return;
 
-                InputStream inputStream = response.body().byteStream();
-                Scanner scanner = new Scanner(inputStream);
-                Pattern npcPattern = Pattern.compile("\\[.+_" + npcId + "]");
+                InputStreamReader reader = new InputStreamReader(response.body().byteStream());
 
-                while (scanner.hasNextLine())
+                Type listType = new TypeToken<List<NPCData>>(){}.getType();
+                List<NPCData> posts = gson.fromJson(reader, listType);
+                for (NPCData npcData : posts)
                 {
-                    String string = scanner.nextLine();
-                    Matcher match = npcPattern.matcher(string);
-                    if (match.matches())
+                    if (npcData.getId() == npcId)
                     {
-                        lastFound = string;
-                        while (!string.isEmpty())
+                        lastFound = npcData.getName();
+                        lastAnim = npcData.getStandingAnimation();
+
+                        int[] modelIds = npcData.getModels();
+
+                        short[] rf = new short[0];
+                        short[] rt = new short[0];
+
+                        if (npcData.getRecolorToReplace() != null)
                         {
-                            string = scanner.nextLine();
+                            int[] recolorToReplace = npcData.getRecolorToReplace();
+                            int[] recolorToFind = npcData.getRecolorToFind();
+                            rf = new short[recolorToReplace.length];
+                            rt = new short[recolorToReplace.length];
 
-                            if (string.startsWith("name="))
+                            for (int i = 0; i < rf.length; i++)
                             {
-                                lastFound = string.replaceAll("name=", "");
-                            }
-                            else if (string.startsWith("model"))
-                            {
-                                String[] split = string.split("_");
-                                modelIds.add(Integer.parseInt(split[split.length - 1]));
-                            }
-                            else if (string.startsWith("recol"))
-                            {
-                                match = recolFrom.matcher(string);
-
-                                if (match.matches())
+                                int rfi = recolorToFind[i];
+                                if (rfi > 32767)
                                 {
-                                    String[] split = string.split("=");
-                                    int i = Integer.parseInt(split[1]);
-                                    if (i > 32767)
-                                    {
-                                        i -= 65536;
-                                    }
-                                    recolourFrom.add((short) i);
+                                    rfi -= 65536;
                                 }
+                                rf[i] = (short) rfi;
 
-                                match = recolTo.matcher(string);
-
-                                if (match.matches())
+                                int rti = recolorToReplace[i];
+                                if (rti > 32767)
                                 {
-                                    String[] split = string.split("=");
-                                    int i = Integer.parseInt(split[1]);
-                                    if (i > 32767)
-                                    {
-                                        i -= 65536;
-                                    }
-                                    recolourTo.add((short) i);
+                                    rti -= 65536;
                                 }
-                            }
-                            else if (string.startsWith("resizeh"))
-                            {
-                                String[] split = string.split("=");
-                                int resizeH = Integer.parseInt(split[1]);
-                                resize[0] = resizeH;
-                                resize[2] = resizeH;
-                            }
-                            else if (string.startsWith("resizev"))
-                            {
-                                String[] split = string.split("=");
-                                resize[1] = Integer.parseInt(split[1]);
+                                rt[i] = (short) rti;
                             }
                         }
+
+                        LightingStyle ls = LightingStyle.ACTOR;
+                        CustomLighting customLighting = new CustomLighting(
+                                ls.getAmbient(),
+                                ls.getContrast(),
+                                ls.getX(),
+                                ls.getY(),
+                                ls.getZ());
+
+                        for (int i : modelIds)
+                        {
+                            modelStats.add(new ModelStats(
+                                    i,
+                                    BodyPart.NA,
+                                    rf,
+                                    rt,
+                                    new short[0],
+                                    new short[0],
+                                    npcData.getWidthScale(),
+                                    npcData.getWidthScale(),
+                                    npcData.getHeightScale(),
+                                    customLighting
+                            ));
+                        }
+
+                        break;
                     }
                 }
+
                 countDownLatch.countDown();
                 response.body().close();
             }
@@ -991,202 +844,147 @@ public class ModelFinder
         }
         catch (Exception e)
         {
-            log.debug("CountDownLatch failed to await at findModelsForNPCs");
+            log.debug("CountDownLatch failed to await at findModelsForNPC");
         }
 
-        short[] rf = new short[recolourFrom.size()];
-        short[] rt = new short[recolourTo.size()];
-        for (int i = 0; i < recolourFrom.size(); i++)
+        ModelStats[] stats = new ModelStats[modelStats.size()];
+        for (int i = 0; i < modelStats.size(); i++)
         {
-            rf[i] = recolourFrom.get(i);
-            rt[i] = recolourTo.get(i);
+            stats[i] = modelStats.get(i);
         }
 
-        //Currently the only npc in dump.npc that has a retexture
-        //Less costly (unless more retextured npcs are added) to manually enter that npc in rather than search for retex on every npc
-        if (npcId == 2702)
-        {
-            retextureFrom = ArrayUtils.add(retextureFrom, (short) 2);
-            retextureTo = ArrayUtils.add(retextureTo, (short) 0);
-        }
-
-        ModelStats[] modelStats = new ModelStats[modelIds.size()];
-        for (int i = 0; i < modelIds.size(); i++)
-            modelStats[i] = new ModelStats(
-                    modelIds.get(i),
-                    BodyPart.NA,
-                    rf,
-                    rt,
-                    retextureFrom,
-                    retextureTo,
-                    resize[0],
-                    resize[1],
-                    resize[2],
-                    new CustomLighting(64, 850, -30, -50, -30));
-
-        return modelStats;
+        return stats;
     }
 
-    public ModelStats[] findModelsForObject(int objectId, int modelType, LightingStyle ls)
+    public ModelStats[] findModelsForObject(int objectId, int modelType, LightingStyle ls, boolean firstModelType)
     {
-        ArrayList<Integer> modelIds = new ArrayList<>();
-        final int[] resize = new int[]{128, 128, 128};
-        ArrayList<Short> recolourFrom = new ArrayList<>();
-        ArrayList<Short> recolourTo = new ArrayList<>();
-        ArrayList<Short> retextureFrom = new ArrayList<>();
-        ArrayList<Short> retextureTo = new ArrayList<>();
-        CustomLighting lighting = new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getY(), ls.getZ());
-
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        final char cacheValueToFind = ModelType.findCacheValue(modelType);
+        ArrayList<ModelStats> modelStats = new ArrayList<>();
 
-        Call call = httpClient.newCall(locRequest);
+        Request request = new Request.Builder().url("https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/object_defs.json").build();
+        Call call = httpClient.newCall(request);
         call.enqueue(new Callback()
         {
             @Override
             public void onFailure(Call call, IOException e)
             {
-                log.debug("Failed to access URL: https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.loc");
+                log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/object_defs.json");
                 countDownLatch.countDown();
             }
 
             @Override
-            public void onResponse(Call call, Response response) throws IOException
+            public void onResponse(Call call, Response response)
             {
                 if (!response.isSuccessful() || response.body() == null)
                     return;
 
-                InputStream inputStream = response.body().byteStream();
-                Scanner scanner = new Scanner(inputStream);
-                Pattern npcPattern = Pattern.compile("\\[.+_" + objectId + "]");
+                //create a reader to read the URL
+                InputStreamReader reader = new InputStreamReader(response.body().byteStream());
 
-                boolean cacheValueFound = false;
-
-                //In the case where Cache Searcher is used and the objectId has multiple ModelType variants, get the first variant only
-                boolean getFirstModelType = cacheValueToFind == '/';
-
-                while (scanner.hasNextLine())
+                Type listType = new TypeToken<List<ObjectData>>(){}.getType();
+                List<ObjectData> posts = gson.fromJson(reader, listType);
+                for (ObjectData objectData : posts)
                 {
-                    String string = scanner.nextLine();
-                    Matcher matcher = npcPattern.matcher(string);
-                    if (matcher.matches())
+                    if (objectData.getId() == objectId)
                     {
-                        lastFound = string;
-                        while (!string.isEmpty())
+                        lastFound = objectData.getName();
+                        int[] modelIds = objectData.getObjectModels();
+
+                        int[] objectTypes = objectData.getObjectTypes();
+                        if (objectTypes != null && objectTypes.length > 0)
                         {
-                            string = scanner.nextLine();
-                            if (string.startsWith("name"))
+                            if (firstModelType)
                             {
-                                lastFound = string.replaceAll("name=", "");
+                                int modelId = modelIds[0];
+                                modelIds = new int[]{modelId};
                             }
-                            else if (!cacheValueFound && string.startsWith("model"))
+                            else
                             {
-                                String[] split = string.split("_");
-                                if (split[split.length - 1].contains(","))
+                                for (int i = 0; i < objectTypes.length; i++)
                                 {
-                                    String split2 = split[split.length - 1];
-                                    String[] splitCacheValue = split2.split(",");
-                                    char cacheValue = splitCacheValue[1].charAt(0);
-                                    if (cacheValueToFind == cacheValue)
+                                    if (objectTypes[i] == modelType)
                                     {
-                                        modelIds.add(Integer.parseInt(splitCacheValue[0]));
-                                        cacheValueFound = true;
-                                    }
-
-                                    if (getFirstModelType)
-                                    {
-                                        modelIds.add(Integer.parseInt(splitCacheValue[0]));
-                                        cacheValueFound = true;
+                                        int modelId = modelIds[i];
+                                        modelIds = new int[]{modelId};
+                                        break;
                                     }
                                 }
-                                else
-                                {
-                                    modelIds.add(Integer.parseInt(split[split.length - 1]));
-                                }
-                            }
-                            else if (string.startsWith("amb"))
-                            {
-                                String[] split = string.split("=");
-                                int ambient = Integer.parseInt(split[split.length - 1]);
-                                if (ambient >= 128)
-                                    ambient -= 256;
-
-                                lighting.setAmbient(LightingStyle.DEFAULT.getAmbient() + ambient);
-                            }
-                            else if (string.startsWith("con"))
-                            {
-                                String[] split = string.split("=");
-                                int contrast = Integer.parseInt(split[split.length - 1]);
-                                if (contrast >= 128)
-                                    contrast -= 128;
-
-                                lighting.setContrast(LightingStyle.DEFAULT.getContrast() + contrast);
-                            }
-                            else if (string.startsWith("recol"))
-                            {
-                                matcher = recolFrom.matcher(string);
-
-                                if (matcher.matches())
-                                {
-                                    String[] split = string.split("=");
-                                    int i = Integer.parseInt(split[1]);
-                                    if (i > 32767)
-                                    {
-                                        i -= 65536;
-                                    }
-                                    recolourFrom.add((short) i);
-                                }
-
-                                matcher = recolTo.matcher(string);
-
-                                if (matcher.matches())
-                                {
-                                    String[] split = string.split("=");
-                                    int i = Integer.parseInt(split[1]);
-                                    if (i > 32767)
-                                    {
-                                        i -= 65536;
-                                    }
-                                    recolourTo.add((short) i);
-                                }
-                            }
-                            else if (string.startsWith("retex"))
-                            {
-                                matcher = retexFrom.matcher(string);
-
-                                if (matcher.matches())
-                                {
-                                    String[] split = string.split("_");
-                                    retextureFrom.add(Short.parseShort(split[1]));
-                                    continue;
-                                }
-
-                                matcher = retexTo.matcher(string);
-
-                                if (matcher.matches())
-                                {
-                                    String[] split = string.split("_");
-                                    retextureTo.add(Short.parseShort(split[1]));
-                                }
-                            }
-                            else if (string.startsWith("resizex"))
-                            {
-                                String[] split = string.split("=");
-                                resize[0] = Integer.parseInt(split[1]);
-                            }
-                            else if (string.startsWith("resizey"))
-                            {
-                                String[] split = string.split("=");
-                                resize[2] = Integer.parseInt(split[1]);
-                            }
-                            else if (string.startsWith("resizez"))
-                            {
-                                String[] split = string.split("=");
-                                resize[1] = Integer.parseInt(split[1]);
                             }
                         }
+
+                        short[] rf = new short[0];
+                        short[] rt = new short[0];
+                        if (objectData.getRecolorToReplace() != null)
+                        {
+                            int[] recolorToReplace = objectData.getRecolorToReplace();
+                            int[] recolorToFind = objectData.getRecolorToFind();
+                            rf = new short[recolorToReplace.length];
+                            rt = new short[recolorToReplace.length];
+
+                            for (int i = 0; i < rf.length; i++)
+                            {
+                                int rfi = recolorToFind[i];
+                                if (rfi > 32767)
+                                {
+                                    rfi -= 65536;
+                                }
+                                rf[i] = (short) rfi;
+
+                                int rti = recolorToReplace[i];
+                                if (rti > 32767)
+                                {
+                                    rti -= 65536;
+                                }
+                                rt[i] = (short) rti;
+                            }
+                        }
+
+                        short[] rtFrom = new short[0];
+                        short[] rtTo = new short[0];
+
+                        if (objectData.getTextureToReplace() != null)
+                        {
+                            int[] textureToReplace = objectData.getTextureToReplace();
+                            int[] retextureToFind = objectData.getRetextureToFind();
+                            rtFrom = new short[textureToReplace.length];
+                            rtTo = new short[textureToReplace.length];
+
+                            for (int i = 0; i < rtFrom.length; i++)
+                            {
+                                rtFrom[i] = (short) retextureToFind[i];
+                                rtTo[i] = (short) textureToReplace[i];
+                            }
+                        }
+
+                        int ambient = objectData.getAmbient();
+                        int contrast = objectData.getContrast();
+                        CustomLighting customLighting = new CustomLighting(
+                                ls.getAmbient() + ambient,
+                                ls.getContrast() + contrast,
+                                ls.getX(),
+                                ls.getY(),
+                                ls.getZ());
+
+                        for (int i : modelIds)
+                        {
+                            modelStats.add(new ModelStats(
+                                    i,
+                                    BodyPart.NA,
+                                    rf,
+                                    rt,
+                                    rtFrom,
+                                    rtTo,
+                                    objectData.getModelSizeX(),
+                                    objectData.getModelSizeY(),
+                                    objectData.getModelSizeZ(),
+                                    customLighting
+                            ));
+                        }
+
+                        break;
                     }
                 }
+
                 countDownLatch.countDown();
                 response.body().close();
             }
@@ -1201,159 +999,150 @@ public class ModelFinder
             log.debug("CountDownLatch failed to await at findModelsForObject");
         }
 
-        short[] rf = new short[recolourFrom.size()];
-        short[] rt = new short[recolourTo.size()];
-        for (int i = 0; i < recolourFrom.size(); i++)
+        ModelStats[] stats = new ModelStats[modelStats.size()];
+        for (int i = 0; i < modelStats.size(); i++)
         {
-            rf[i] = recolourFrom.get(i);
-            rt[i] = recolourTo.get(i);
+            stats[i] = modelStats.get(i);
         }
 
-        short[] rtFrom = new short[retextureFrom.size()];
-        short[] rtTo = new short[retextureTo.size()];
-        for (int i = 0; i < retextureFrom.size(); i++)
-        {
-            rtFrom[i] = retextureFrom.get(i);
-            rtTo[i] = retextureTo.get(i);
-        }
-
-        ModelStats[] modelStats = new ModelStats[modelIds.size()];
-        for (int i = 0; i < modelIds.size(); i++)
-            modelStats[i] = new ModelStats(
-                    modelIds.get(i),
-                    BodyPart.NA,
-                    rf,
-                    rt,
-                    rtFrom,
-                    rtTo,
-                    resize[0],
-                    resize[1],
-                    resize[2],
-                    lighting);
-
-        return modelStats;
+        return stats;
     }
 
     public ModelStats[] findModelsForGroundItem(int itemId, CustomModelType modelType)
     {
-        ArrayList<Integer> modelIds = new ArrayList<>();
-        ArrayList<Short> recolourFrom = new ArrayList<>();
-        ArrayList<Short> recolourTo = new ArrayList<>();
-        ArrayList<Short> retextureFrom = new ArrayList<>();
-        ArrayList<Short> retextureTo = new ArrayList<>();
+        ArrayList<ModelStats> modelStats = new ArrayList<>();
 
         CountDownLatch countDownLatch = new CountDownLatch(1);
-        Call call = httpClient.newCall(objRequest);
-        call.enqueue(new Callback()
-        {
+        Request itemRequest = new Request.Builder()
+                .url("https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/item_defs.json")
+                .build();
+        Call itemCall = httpClient.newCall(itemRequest);
+        itemCall.enqueue(new Callback() {
             @Override
             public void onFailure(Call call, IOException e)
             {
-                log.debug("Failed to access URL: https://gitlab.com/waliedyassen/cache-dumps/-/raw/master/dump.obj");
+                log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/item_defs.json");
                 countDownLatch.countDown();
             }
 
             @Override
-            public void onResponse(Call call, Response response) throws IOException
+            public void onResponse(Call call, Response response)
             {
                 if (!response.isSuccessful() || response.body() == null)
                     return;
 
-                InputStream inputStream = response.body().byteStream();
-                Scanner scanner = new Scanner(inputStream);
-                Pattern npcPattern = Pattern.compile("\\[.+_" + itemId + "]");
+                InputStreamReader reader = new InputStreamReader(response.body().byteStream());
+                Type listType = new TypeToken<List<ItemData>>(){}.getType();
+                List<ItemData> posts = gson.fromJson(reader, listType);
 
-                while (scanner.hasNextLine())
+                for (ItemData itemData : posts)
                 {
-                    String string = scanner.nextLine();
-                    Matcher matcher = npcPattern.matcher(string);
-                    if (matcher.matches())
+                    if (itemData.getId() == itemId)
                     {
-                        lastFound = string;
-                        while (!string.isEmpty())
+                        lastFound = itemData.getName();
+                        int[] modelIds = new int[0];
+
+                        switch (modelType)
                         {
-                            string = scanner.nextLine();
-                            String searchName;
-                            switch (modelType)
+                            default:
+                            case CACHE_GROUND_ITEM:
+                                modelIds = ArrayUtils.add(modelIds, itemData.getInventoryModel());
+                                break;
+                            case CACHE_MAN_WEAR:
+                                modelIds = ArrayUtils.addAll(modelIds, itemData.getMaleModel0(), itemData.getMaleModel1(), itemData.getMaleModel2());
+                                break;
+                            case CACHE_WOMAN_WEAR:
+                                modelIds = ArrayUtils.addAll(modelIds, itemData.getFemaleModel0(), itemData.getFemaleModel1(), itemData.getFemaleModel2());
+                        }
+
+                        short[] rf = new short[0];
+                        short[] rt = new short[0];
+
+                        if (itemData.getColorReplace() != null)
+                        {
+                            int[] recolorToReplace = itemData.getColorReplace();
+                            int[] recolorToFind = itemData.getColorFind();
+                            rf = new short[recolorToReplace.length];
+                            rt = new short[recolorToReplace.length];
+
+                            for (int e = 0; e < rf.length; e++)
                             {
-                                default:
-                                case CACHE_GROUND_ITEM:
-                                    searchName = "model";
-                                    break;
-                                case CACHE_MAN_WEAR:
-                                    searchName = "manwear";
-                                    break;
-                                case CACHE_WOMAN_WEAR:
-                                    searchName = "womanwear";
-                            }
-
-                            if (string.startsWith("name="))
-                            {
-                                lastFound = string.replaceAll("name=", "");
-                            }
-                            else if (string.startsWith(searchName))
-                            {
-                                String[] split = string.split("_");
-                                if (split[split.length - 1].contains(","))
+                                int rfi = recolorToFind[e];
+                                if (rfi > 32767)
                                 {
-                                    String split2 = split[split.length - 1].split(",")[0];
-                                    modelIds.add(Integer.parseInt(split2));
+                                    rfi -= 65536;
                                 }
-                                else
+                                rf[e] = (short) rfi;
+
+                                int rti = recolorToReplace[e];
+                                if (rti > 32767)
                                 {
-                                    modelIds.add(Integer.parseInt(split[split.length - 1]));
+                                    rti -= 65536;
                                 }
-                            }
-                            else if (string.startsWith("recol"))
-                            {
-                                matcher = recolFrom.matcher(string);
-
-                                if (matcher.matches())
-                                {
-                                    String[] split = string.split("=");
-                                    int i = Integer.parseInt(split[1]);
-                                    if (i > 32767)
-                                    {
-                                        i -= 65536;
-                                    }
-                                    recolourFrom.add((short) i);
-                                }
-
-                                matcher = recolTo.matcher(string);
-
-                                if (matcher.matches())
-                                {
-                                    String[] split = string.split("=");
-                                    int i = Integer.parseInt(split[1]);
-                                    if (i > 32767)
-                                    {
-                                        i -= 65536;
-                                    }
-                                    recolourTo.add((short) i);
-                                }
-                            }
-                            else if (string.startsWith("retex"))
-                            {
-                                matcher = retexFrom.matcher(string);
-
-                                if (matcher.matches())
-                                {
-                                    String[] split = string.split("_");
-                                    retextureFrom.add(Short.parseShort(split[1]));
-                                    continue;
-                                }
-
-                                matcher = retexTo.matcher(string);
-
-                                if (matcher.matches())
-                                {
-                                    String[] split = string.split("_");
-                                    retextureTo.add(Short.parseShort(split[1]));
-                                }
+                                rt[e] = (short) rti;
                             }
                         }
+
+                        short[] rtFrom = new short[0];
+                        short[] rtTo = new short[0];
+
+                        if (itemData.getTextureReplace() != null)
+                        {
+                            int[] textureToReplace = itemData.getTextureReplace();
+                            int[] retextureToFind = itemData.getTextureFind();
+                            rtFrom = new short[textureToReplace.length];
+                            rtTo = new short[textureToReplace.length];
+
+                            for (int e = 0; e < rtFrom.length; e++)
+                            {
+                                rtFrom[e] = (short) retextureToFind[e];
+                                rtTo[e] = (short) textureToReplace[e];
+                            }
+                        }
+
+                        LightingStyle ls;
+
+                        switch (modelType)
+                        {
+                            default:
+                            case CACHE_GROUND_ITEM:
+                                ls = LightingStyle.DEFAULT;
+                                break;
+                            case CACHE_MAN_WEAR:
+                            case CACHE_WOMAN_WEAR:
+                                ls = LightingStyle.ACTOR;
+                        }
+
+                        CustomLighting customLighting = new CustomLighting(
+                                ls.getAmbient(),
+                                ls.getContrast(),
+                                ls.getX(),
+                                ls.getY(),
+                                ls.getZ());
+
+                        for (int id : modelIds)
+                        {
+                            if (id != -1)
+                            {
+                                modelStats.add(new ModelStats(
+                                        id,
+                                        BodyPart.NA,
+                                        rf,
+                                        rt,
+                                        rtFrom,
+                                        rtTo,
+                                        itemData.getResizeX(),
+                                        itemData.getResizeZ(),
+                                        itemData.getResizeY(),
+                                        customLighting
+                                ));
+                            }
+                        }
+
+                        break;
                     }
                 }
+
                 countDownLatch.countDown();
                 response.body().close();
             }
@@ -1368,39 +1157,11 @@ public class ModelFinder
             log.debug("CountDownLatch failed to await at findModelsForGroundItem");
         }
 
-        if (modelIds.isEmpty())
+        if (modelStats.isEmpty())
+        {
             return null;
-
-        short[] rf = new short[recolourFrom.size()];
-        short[] rt = new short[recolourTo.size()];
-        for (int i = 0; i < recolourFrom.size(); i++)
-        {
-            rf[i] = recolourFrom.get(i);
-            rt[i] = recolourTo.get(i);
         }
 
-        short[] rtFrom = new short[retextureFrom.size()];
-        short[] rtTo = new short[retextureTo.size()];
-        for (int i = 0; i < retextureFrom.size(); i++)
-        {
-            rtFrom[i] = retextureFrom.get(i);
-            rtTo[i] = retextureTo.get(i);
-        }
-
-        ModelStats[] modelStats = new ModelStats[modelIds.size()];
-        for (int i = 0; i < modelIds.size(); i++)
-            modelStats[i] = new ModelStats(
-                    modelIds.get(i),
-                    BodyPart.NA,
-                    rf,
-                    rt,
-                    rtFrom,
-                    rtTo,
-                    128,
-                    128,
-                    128,
-                    new CustomLighting(ModelData.DEFAULT_AMBIENT, ModelData.DEFAULT_CONTRAST, ModelData.DEFAULT_X, ModelData.DEFAULT_Y, ModelData.DEFAULT_Z));
-
-        return modelStats;
+        return new ModelStats[]{modelStats.get(0)};
     }
 }

@@ -1426,7 +1426,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					break;
 				default:
 				case CACHE_OBJECT:
-					modelStats = modelFinder.findModelsForObject(id, -1, LightingStyle.DEFAULT);
+					modelStats = modelFinder.findModelsForObject(id, -1, LightingStyle.DEFAULT, true);
 					name = modelFinder.getLastFound();
 					break;
 				case CACHE_GROUND_ITEM:
@@ -1477,7 +1477,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					break;
 				default:
 				case CACHE_OBJECT:
-					modelStats = modelFinder.findModelsForObject(id, modelType, LightingStyle.DEFAULT);
+					modelStats = modelFinder.findModelsForObject(id, modelType, LightingStyle.DEFAULT, false);
 					name = modelFinder.getLastFound();
 					lighting = modelStats[0].getLighting();
 					comp = new CustomModelComp(0, CustomModelType.CACHE_OBJECT, id, modelStats, null, null, null, LightingStyle.CUSTOM, lighting, false, name);
