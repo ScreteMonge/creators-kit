@@ -302,8 +302,8 @@ public class ModelImporter
                 lightingStyle.getAmbient(),
                 lightingStyle.getContrast(),
                 lightingStyle.getX(),
-                lightingStyle.getY(),
-                lightingStyle.getZ());
+                lightingStyle.getZ() * -1,
+                lightingStyle.getY());
 
         if (blenderModel.isUseVertexColours())
         {
@@ -330,18 +330,19 @@ public class ModelImporter
             for (int i = 0; i < model.getFaceCount(); i++)
             {
                 int col1 = colours[vertexColourIndex[i * 3]];
+                int col2 = colours[vertexColourIndex[i * 3 + 1]];
+                int col3 = colours[vertexColourIndex[i * 3 + 2]];
+
                 if (col1 < 0)
                 {
                     col1 += 65536;
                 }
 
-                int col2 = colours[vertexColourIndex[i * 3 + 1]];
                 if (col2 < 0)
                 {
                     col2 += 65536;
                 }
 
-                int col3 = colours[vertexColourIndex[i * 3 + 2]];
                 if (col3 < 0)
                 {
                     col3 += 65536;

@@ -751,6 +751,13 @@ public class ModelGetter
                     }
                     final int[] fSpotAnims = Arrays.copyOf(spotAnims, spotAnims.length);
 
+                    int animId = player.getAnimation();
+                    if (animId == -1)
+                    {
+                        animId = player.getPoseAnimation();
+                    }
+                    final int anim = animId;
+
                     String name = player.getName();
                     if (player == client.getLocalPlayer())
                         name = "Local Player";
@@ -761,7 +768,7 @@ public class ModelGetter
                     {
                         Thread thread = new Thread(() ->
                         {
-                            ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items, player.getAnimation(), fSpotAnims);
+                            ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items, anim, fSpotAnims);
                             clientThread.invokeLater(() ->
                             {
                                 plugin.cacheToAnvil(modelStats, comp.getColors(), true);
@@ -775,7 +782,7 @@ public class ModelGetter
                     //For "Store" option on players
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items, player.getAnimation(), fSpotAnims);
+                        ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items, anim, fSpotAnims);
                         clientThread.invokeLater(() ->
                         {
                             Model model = plugin.constructModelFromCache(modelStats, comp.getColors(), true, true);
@@ -801,9 +808,9 @@ public class ModelGetter
                                         true,
                                         false,
                                         player.getCurrentOrientation(),
-                                        player.getPoseAnimation(),
+                                        anim,
                                         60,
-                                        creatorsPanel.createEmptyProgram(player.getPoseAnimation(), player.getWalkAnimation()),
+                                        creatorsPanel.createEmptyProgram(anim, player.getWalkAnimation()),
                                         false,
                                         null,
                                         null,
@@ -1199,9 +1206,15 @@ public class ModelGetter
             transparencies = model.getFaceTransparencies();
         }
 
+        String option = "Export Model";
+        if (exportAnimation)
+        {
+            option = "Export Animation";
+        }
+
         String target = ColorUtil.prependColorTag(name, Color.CYAN);
         client.createMenuEntry(index)
-                .setOption(ColorUtil.prependColorTag("Export", Color.ORANGE))
+                .setOption(ColorUtil.prependColorTag(option, Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
                 .onClick(e ->

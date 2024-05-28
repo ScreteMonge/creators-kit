@@ -250,7 +250,7 @@ public class ModelFinder
         {
             if (seqData.getId() == animId)
             {
-                int offHandItem = seqData.getLeftHandItem() - 512;
+                int offHandItem = seqData.getLeftHandItem();
                 switch (offHandItem)
                 {
                     case -1:
@@ -259,11 +259,11 @@ public class ModelFinder
                         animSequence.setOffHandData(AnimSequenceData.HIDE);
                         break;
                     default:
-                        animSequence.setOffHandItemId(offHandItem);
+                        animSequence.setOffHandItemId(offHandItem - 512);
                         animSequence.setOffHandData(AnimSequenceData.SWAP);
                 }
 
-                int mainHandItem = seqData.getRightHandItem() - 512;
+                int mainHandItem = seqData.getRightHandItem();
                 switch (mainHandItem)
                 {
                     case -1:
@@ -272,7 +272,7 @@ public class ModelFinder
                         animSequence.setMainHandData(AnimSequenceData.HIDE);
                         break;
                     default:
-                        animSequence.setMainHandItemId(mainHandItem);
+                        animSequence.setMainHandItemId(mainHandItem - 512);
                         animSequence.setMainHandData(AnimSequenceData.SWAP);
                 }
                 break;

@@ -724,7 +724,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			}
 		}
 
-		Tile tile = client.getSelectedSceneTile();
+		WorldView worldView = client.getTopLevelWorldView();
+		Tile tile = worldView.getSelectedSceneTile();
 		if (tile == null)
 		{
 			return;
@@ -760,9 +761,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		String target = event.getTarget();
 		String option = event.getOption();
-
-		WorldView worldView = client.getTopLevelWorldView();
-		Tile tile = worldView.getSelectedSceneTile();
 
 		NPC npc = event.getMenuEntry().getNpc();
 		if (npc != null && option.equals("Examine"))
@@ -800,7 +798,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			if (config.exportRightClick())
 			{
-				modelGetter.addSpotAnimExporter(1, target, npc.getSpotAnims());
 				modelGetter.addNPCExporter(1, target, npc, false);
 				modelGetter.addNPCExporter(1, target, npc, true);
 			}

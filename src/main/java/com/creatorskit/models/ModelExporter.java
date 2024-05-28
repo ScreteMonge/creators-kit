@@ -726,7 +726,7 @@ public class ModelExporter
             faceColourIndex[i] = fcShortList.length - 1;
         }
 
-        int shortListSize = faceColourIndex.length;
+        int shortListSize = fcShortList.length;
         double[][] faceColours = new double[shortListSize][4];
         for (int i = 0; i < shortListSize; i++)
         {
