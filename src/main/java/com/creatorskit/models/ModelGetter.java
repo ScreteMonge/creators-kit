@@ -93,36 +93,37 @@ public class ModelGetter
         {
             if (tile.getLocalLocation().equals(localPlayer.getLocalLocation()))
             {
+                String target = ColorUtil.prependColorTag("Local Player", Color.GREEN);
                 if (config.rightClick())
                 {
                     if (client.isKeyPressed(KeyCode.KC_CONTROL))
                     {
-                        addPlayerGetter(1, "Local Player", ColorUtil.prependColorTag("Store-Add", Color.ORANGE), localPlayer, ModelMenuOption.STORE_AND_ADD);
+                        addPlayerGetter(1, target, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), localPlayer, ModelMenuOption.STORE_AND_ADD);
                     }
                     else
                     {
-                        addPlayerGetter(1, "Local Player", ColorUtil.prependColorTag("Store", Color.ORANGE), localPlayer, ModelMenuOption.STORE);
+                        addPlayerGetter(1, target, ColorUtil.prependColorTag("Store", Color.ORANGE), localPlayer, ModelMenuOption.STORE);
                     }
-                    addPlayerGetter(1, "Local Player", ColorUtil.prependColorTag("Anvil", Color.ORANGE), localPlayer, ModelMenuOption.ANVIL);
+                    addPlayerGetter(1, target, ColorUtil.prependColorTag("Anvil", Color.ORANGE), localPlayer, ModelMenuOption.ANVIL);
                 }
 
                 if (config.rightSpotAnim())
                 {
                     if (client.isKeyPressed(KeyCode.KC_CONTROL))
                     {
-                        addSpotAnimGetter(1, "Local Player", ColorUtil.prependColorTag("SpotAnim-Store-Add", Color.ORANGE), localPlayer.getSpotAnims(), ModelMenuOption.STORE_AND_ADD);
+                        addSpotAnimGetter(1, target, ColorUtil.prependColorTag("SpotAnim-Store-Add", Color.ORANGE), localPlayer.getSpotAnims(), ModelMenuOption.STORE_AND_ADD);
                     }
                     else
                     {
-                        addSpotAnimGetter(1, "Local Player", ColorUtil.prependColorTag("SpotAnim-Store", Color.ORANGE), localPlayer.getSpotAnims(), ModelMenuOption.STORE);
+                        addSpotAnimGetter(1, target, ColorUtil.prependColorTag("SpotAnim-Store", Color.ORANGE), localPlayer.getSpotAnims(), ModelMenuOption.STORE);
                     }
-                    addSpotAnimGetter(1, "Local Player", ColorUtil.prependColorTag("SpotAnim-Anvil", Color.ORANGE), localPlayer.getSpotAnims(), ModelMenuOption.ANVIL);
+                    addSpotAnimGetter(1, target, ColorUtil.prependColorTag("SpotAnim-Anvil", Color.ORANGE), localPlayer.getSpotAnims(), ModelMenuOption.ANVIL);
                 }
 
                 if (config.exportRightClick())
                 {
-                    addPlayerExporter(1, "Local Player", localPlayer, false);
-                    addPlayerExporter(1, "Local Player", localPlayer, true);
+                    addPlayerExporter(1, target, localPlayer, false);
+                    addPlayerExporter(1, target, localPlayer, true);
                 }
             }
         }

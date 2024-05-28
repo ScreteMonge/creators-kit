@@ -47,7 +47,7 @@ public class ModelExporter
             String string = plugin.getGson().toJson(blenderModel);
             writer.write(string);
             writer.close();
-			plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
+			plugin.sendChatMessage("Exported " + name + " to your /.runelite/creatorskit/blender-models directory.");
         }
         catch (IOException e)
         {
