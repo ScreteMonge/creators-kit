@@ -1,6 +1,7 @@
 package com.creatorskit.models;
 
 import com.creatorskit.CreatorsPlugin;
+import java.nio.file.Paths;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.client.RuneLite;
@@ -32,7 +33,7 @@ public class ModelExporter
         {
             BLENDER_DIR.mkdirs();
 
-            String path = BLENDER_DIR.getPath() + "\\\\" + name;
+            String path = Paths.get(BLENDER_DIR.getPath(), name).toString();
             String ext = ".json";
             int iteration = 0;
             File file = new File(path + ext);
@@ -46,7 +47,7 @@ public class ModelExporter
             String string = plugin.getGson().toJson(blenderModel);
             writer.write(string);
             writer.close();
-            plugin.sendChatMessage("Exported " + name + " to your /.runelite/creatorskit/blender-models directory.");
+			plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
         }
         catch (IOException e)
         {
