@@ -191,10 +191,13 @@ public class ModelExporter
             }
         }
 
+        /*
         System.out.println("Shortlist length: " + shortList.length);
         System.out.println("index length: " + vertexColourIndex.length);
         System.out.println("Verts: " + model.getVerticesCount());
         System.out.println("Faces: " + model.getFaceCount());
+
+         */
 
         double[][] vertexColours = new double[shortList.length][4];
         for (int i = 0; i < shortList.length; i++)
@@ -309,8 +312,10 @@ public class ModelExporter
 
         ModelData md = client.mergeModels(mds);
 
+        /*
         System.out.println("ModelData FC: " + md.getFaceCount());
         System.out.println(f1.length + "," + f2.length + "," + f3.length);
+         */
 
         int[][] verts = new int[md.getVerticesCount()][3];
         for (int i = 0; i < verts.length; i++)
@@ -408,8 +413,10 @@ public class ModelExporter
             byte[] transparencies,
             byte[] renderPriorities)
     {
+        /*
         System.out.println("ModelData FC: " + md.getFaceCount());
         System.out.println(f1.length + "," + f2.length + "," + f3.length);
+         */
 
         int[][] verts = new int[md.getVerticesCount()][3];
         for (int i = 0; i < verts.length; i++)
