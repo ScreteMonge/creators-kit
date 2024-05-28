@@ -64,7 +64,7 @@ public class CreatorsPanel extends PluginPanel
     private final GridBagConstraints cNPC = new GridBagConstraints();
     private final GridBagConstraints cManager = new GridBagConstraints();
     private final Random random = new Random();
-    public static final File SETUP_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit-setups");
+    public static final File SETUP_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/setups");
     public static final File CREATORS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
     private final Pattern pattern = Pattern.compile("\\(\\d+\\)\\Z");
     private int npcPanels = 0;
