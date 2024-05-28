@@ -300,7 +300,6 @@ public class ModelOrganizer extends JPanel
                 String name = model.getComp().getName();
                 BlenderModel blenderModel = modelExporter.bmFromCustomModel(model);
                 modelExporter.saveToFile(name, blenderModel);
-                plugin.sendChatMessage("Exported " + name + " to " + BLENDER_DIR.getAbsolutePath() + ".");
             });
         });
 
