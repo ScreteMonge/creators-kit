@@ -1414,7 +1414,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 							modelStats.getModelId(),
 							9,
 							0, 0, 0,
-							0, 0, 0,
+							0, 0, modelStats.getTranslateZ(),
 							modelStats.getResizeX(), modelStats.getResizeY(), modelStats.getResizeZ(),
 							0,
 							"", "",
@@ -1430,7 +1430,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 						modelStats.getModelId(),
 						8,
 						0, 0, 0,
-						0, 0, 0,
+						0, 0, modelStats.getTranslateZ(),
 						modelStats.getResizeX(), modelStats.getResizeY(), modelStats.getResizeZ(),
 						0,
 						"", "",
@@ -1618,6 +1618,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			}
 
 			modelData.scale(modelStats.getResizeX(), modelStats.getResizeZ(), modelStats.getResizeY());
+
+			modelData.translate(0, -1 * modelStats.getTranslateZ(), 0);
 
 			mds[i] = modelData;
 		}

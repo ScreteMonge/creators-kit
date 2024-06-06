@@ -305,6 +305,7 @@ public class ModelExporter
             }
 
             modelData.scale(modelStats.getResizeX(), modelStats.getResizeZ(), modelStats.getResizeY());
+            modelData.translate(0, -1 * modelStats.getTranslateZ(), 0);
 
             mds[i] = modelData;
         }
@@ -314,6 +315,8 @@ public class ModelExporter
         /*
         System.out.println("ModelData FC: " + md.getFaceCount());
         System.out.println(f1.length + "," + f2.length + "," + f3.length);
+        System.out.println("ModelData VC: " + md.getVerticesCount());
+        System.out.println(vX.length + "," + vY.length + "," + vZ.length);
          */
 
         int[][] verts = new int[md.getVerticesCount()][3];
@@ -661,6 +664,7 @@ public class ModelExporter
             }
 
             modelData.scale(modelStats.getResizeX(), modelStats.getResizeZ(), modelStats.getResizeY());
+            modelData.translate(0, -1 * modelStats.getTranslateZ(), 0);
 
             mds[i] = modelData;
         }

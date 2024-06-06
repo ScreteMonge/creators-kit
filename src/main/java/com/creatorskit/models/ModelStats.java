@@ -18,5 +18,6 @@ public class ModelStats
     private int resizeX;
     private int resizeY;
     private int resizeZ;
+    private int translateZ;
     private CustomLighting lighting;
 }

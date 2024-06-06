@@ -365,6 +365,8 @@ public class ModelFinder
                 {
                     itemsToComplete--;
                     int[] modelIds = new int[0];
+                    int offset = 0;
+
                     if (groundItem)
                     {
                         modelIds = ArrayUtils.add(modelIds, itemData.getInventoryModel());
@@ -372,10 +374,12 @@ public class ModelFinder
                     else if (maleItem)
                     {
                         modelIds = ArrayUtils.addAll(modelIds, itemData.getMaleModel0(), itemData.getMaleModel1(), itemData.getMaleModel2());
+                        offset = itemData.getMaleOffset();
                     }
                     else
                     {
                         modelIds = ArrayUtils.addAll(modelIds, itemData.getFemaleModel0(), itemData.getFemaleModel1(), itemData.getFemaleModel2());
+                        offset = itemData.getFemaleOffset();
                     }
 
                     short[] rf = new short[0];
@@ -445,6 +449,7 @@ public class ModelFinder
                                     itemData.getResizeX(),
                                     itemData.getResizeZ(),
                                     itemData.getResizeY(),
+                                    offset * -1,
                                     customLighting
                             ));
                         }
@@ -541,6 +546,7 @@ public class ModelFinder
                                     128,
                                     128,
                                     128,
+                                    0,
                                     customLighting
                             ));
                         }
@@ -622,6 +628,7 @@ public class ModelFinder
                             spotanimData.getResizeX(),
                             spotanimData.getResizeX(),
                             spotanimData.getResizeY(),
+                            0,
                             customLighting
                     ));
 
@@ -716,6 +723,7 @@ public class ModelFinder
                                 spotanimData.getResizeX(),
                                 spotanimData.getResizeX(),
                                 spotanimData.getResizeY(),
+                                0,
                                 customLighting));
                     }
                 }
@@ -825,6 +833,7 @@ public class ModelFinder
                                     npcData.getWidthScale(),
                                     npcData.getWidthScale(),
                                     npcData.getHeightScale(),
+                                    0,
                                     customLighting
                             ));
                         }
@@ -977,6 +986,7 @@ public class ModelFinder
                                     objectData.getModelSizeX(),
                                     objectData.getModelSizeY(),
                                     objectData.getModelSizeZ(),
+                                    0,
                                     customLighting
                             ));
                         }
@@ -1134,6 +1144,7 @@ public class ModelFinder
                                         itemData.getResizeX(),
                                         itemData.getResizeZ(),
                                         itemData.getResizeY(),
+                                        0,
                                         customLighting
                                 ));
                             }

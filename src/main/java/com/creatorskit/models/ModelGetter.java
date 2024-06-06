@@ -1456,6 +1456,7 @@ public class ModelGetter
                                         128,
                                         128,
                                         128,
+                                        0,
                                         new CustomLighting(64, 768, -50, -50, 10))};
 
                                 clientThread.invokeLater(() ->
@@ -1607,6 +1608,7 @@ public class ModelGetter
                                     128,
                                     128,
                                     128,
+                                    0,
                                     new CustomLighting(64, 768, -50, -50, 10))};
 
                             clientThread.invokeLater(() ->
