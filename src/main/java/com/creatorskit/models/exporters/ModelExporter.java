@@ -37,9 +37,14 @@ public class ModelExporter
         boolean success;
         switch (config.exportFileFormat())
         {
-//            case OBJ:
-//                OBJExporter.saveOBJ(name, blenderModel);
-//                break;
+            case OBJ:
+                if (blenderModel.getAnimVertices().length > 0)
+                {
+                    success = saveBlender(name, blenderModel);
+                } else {
+                    success = OBJExporter.saveOBJ(name, blenderModel);
+                }
+                break;
             case GLTF:
                 GLTFExporter gltfExporter = new GLTFExporter(name, blenderModel);
                 success = gltfExporter.saveGLTF(plugin.getGson(), name);
