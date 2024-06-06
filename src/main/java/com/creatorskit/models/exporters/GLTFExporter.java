@@ -161,16 +161,16 @@ public class GLTFExporter {
             cols = blenderModel.getFaceColours()[blenderModel.getFaceColourIndex()[fi]];
         }
 
-        Color rgb = HSLColor.toRGB(new float[] {
+        Color rgbColor = HSLColor.toRGB(new float[] {
                 (float) cols[0] * 360f,
                 (float) cols[2] * 100f,
                 (float) cols[1] * 100f
         });
 
         return new float[] {
-                rgb.getRed() / 255f,
-                rgb.getBlue() / 255f,
-                rgb.getGreen() / 255f,
+                (float) Math.pow(rgbColor.getRed() / 255f, 2.2f),
+                (float) Math.pow(rgbColor.getBlue() / 255f, 2.2f),
+                (float) Math.pow(rgbColor.getGreen() / 255f, 2.2f),
                 (float) cols[3]
         };
     }
@@ -437,7 +437,7 @@ public class GLTFExporter {
     }
 
     @Data
-    static class Vertex
+    private static class Vertex
     {
         float[] xyz;
         float[] colour;
