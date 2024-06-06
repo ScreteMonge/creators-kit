@@ -124,6 +124,30 @@ public class ProgrammerPanel extends JPanel
             }
         });
 
+        c.gridx = 3;
+        c.gridy = 0;
+        c.weightx = 0;
+        c.gridwidth = 1;
+        JButton desyncButton = new JButton("Start Desync");
+        desyncButton.setToolTipText("Starts a Desync process that, every 100 ms, restarts a random Object's animation");
+        desyncButton.setPreferredSize(new Dimension(150, 30));
+        headerPanel.add(desyncButton, c);
+        desyncButton.addActionListener(e ->
+        {
+            boolean desync = plugin.isDesync();
+            if (desync)
+            {
+                plugin.setDesync(false);
+                desyncButton.setText("Start Desync");
+                plugin.sendChatMessage("Stopping Desync.");
+                return;
+            }
+
+            plugin.setDesync(true);
+            desyncButton.setText("Stop Desync");
+            plugin.sendChatMessage("Starting Desync. Remember to stop the Desync while recording!");
+        });
+
         c.fill = GridBagConstraints.BOTH;
         c.gridx = 1;
         c.gridy = 1;

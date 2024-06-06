@@ -668,8 +668,8 @@ public interface CreatorsConfig extends Config
 
 	@ConfigItem(
 			keyName = "exportTPose",
-			name = "Export T-Pose",
-			description = "Puts the Model into T-pose (disables animations) for exporting",
+			name = "Export Neutral Pose",
+			description = "Puts the Model into its neutral pose (disables animations) for exporting",
 			section = modelExporter,
 			position = 1
 	)

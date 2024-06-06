@@ -96,11 +96,11 @@ public class ColourSwapPanel extends JPanel
         pasteButton.addActionListener(e -> pasteColoursTextures(currentComplexPanel));
         comboPane.add(pasteButton);
 
-        JButton clearAllButton = new JButton("Clear All");
-        clearAllButton.setToolTipText("Clears all swapped colours & textures");
-        clearAllButton.setPreferredSize(TOP_BAR_DIMENSION);
-        clearAllButton.addActionListener(e -> clearColoursTextures(currentComplexPanel));
-        comboPane.add(clearAllButton);
+        JButton clearEverythingButton = new JButton("Clear Everything");
+        clearEverythingButton.setToolTipText("Clears every swapped colour & texture for every model in the Anvil");
+        clearEverythingButton.setPreferredSize(new Dimension(130, 25));
+        clearEverythingButton.addActionListener(e -> clearColoursEverything());
+        comboPane.add(clearEverythingButton);
 
         JButton setAllModelColours = new JButton("Set Everything");
         setAllModelColours.setToolTipText("Sets colours for every model in the Anvil to the colour currently selected in the Colour Picker");
@@ -501,6 +501,22 @@ public class ColourSwapPanel extends JPanel
 
             onSwapperPressed((ComplexPanel) comboBox.getSelectedItem());
         });
+    }
+
+    private void clearColoursEverything()
+    {
+        for (ComplexPanel complexPanel : complexPanels)
+        {
+            if ((int) complexPanel.getModelIdSpinner().getValue() == -1)
+            {
+                continue;
+            }
+
+            complexPanel.setColoursFrom(new short[0]);
+            complexPanel.setColoursTo(new short[0]);
+        }
+
+        onSwapperPressed((ComplexPanel) comboBox.getSelectedItem());
     }
 
     private void setColour(ColourPanel colourPanel, Color rgbColour)

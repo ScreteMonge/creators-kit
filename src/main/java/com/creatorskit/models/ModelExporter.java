@@ -119,7 +119,6 @@ public class ModelExporter
         int[] fc1 = model.getFaceColors1();
         int[] fc2 = model.getFaceColors2();
         int[] fc3 = model.getFaceColors3();
-        // newVertexColours index = (colour, tp)
         int[][] shortList = new int[0][2];
         int[] vertexColourIndex = new int[0];
 
@@ -133,7 +132,7 @@ public class ModelExporter
             boolean shadeFlat = fc3i == -1;
             if (shadeFlat)
             {
-                fc1i = fc2i = fc3i;
+                fc3i = fc2i = fc1i;
             }
 
             boolean alreadyContains1 = false;

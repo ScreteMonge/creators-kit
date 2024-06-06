@@ -418,6 +418,13 @@ public class ModelGetter
                     Thread thread = new Thread(() ->
                     {
                         ModelStats[] modelStats = modelFinder.findModelsForNPC(npc.getId());
+                        if (modelStats == null || modelStats.length == 0)
+                        {
+                            plugin.sendChatMessage("Could not find this NPC in the cache.");
+                            plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                            return;
+                        }
+
                         clientThread.invokeLater(() ->
                         {
                             Model model = plugin.constructModelFromCache(modelStats, new int[0], false, true);
@@ -473,6 +480,13 @@ public class ModelGetter
                     Thread thread = new Thread(() ->
                     {
                         ModelStats[] modelStats = modelFinder.findModelsForNPC(npc.getId());
+                        if (modelStats == null || modelStats.length == 0)
+                        {
+                            plugin.sendChatMessage("Could not find this NPC in the cache.");
+                            plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                            return;
+                        }
+
                         clientThread.invokeLater(() ->
                         {
                             plugin.cacheToAnvil(modelStats, new int[0], false);
@@ -531,6 +545,13 @@ public class ModelGetter
                             Thread thread = new Thread(() ->
                             {
                                 ModelStats[] modelStats = modelFinder.findModelsForNPC(npcId);
+                                if (modelStats == null || modelStats.length == 0)
+                                {
+                                    plugin.sendChatMessage("Could not find this NPC in the cache.");
+                                    plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                                    return;
+                                }
+
                                 clientThread.invokeLater(() ->
                                 {
                                     initiateAnimationExport(finalAnimId, name, bm, modelStats, new int[0], false, true);
@@ -585,6 +606,12 @@ public class ModelGetter
                         Thread thread = new Thread(() ->
                         {
                             ModelStats[] modelStats = modelFinder.findModelsForNPC(npcId);
+                            if (modelStats == null || modelStats.length == 0)
+                            {
+                                plugin.sendChatMessage("Could not find this NPC in the cache.");
+                                plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                                return;
+                            }
 
                             clientThread.invokeLater(() ->
                             {
@@ -638,6 +665,13 @@ public class ModelGetter
                             Thread thread = new Thread(() ->
                             {
                                 ModelStats[] modelStats = modelFinder.findSpotAnim(spotAnim.getId());
+                                if (modelStats == null || modelStats.length == 0)
+                                {
+                                    plugin.sendChatMessage("Could not find this Spotanim in the cache.");
+                                    plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                                    return;
+                                }
+
                                 clientThread.invokeLater(() ->
                                 {
                                     CustomLighting lighting = modelStats[0].getLighting();
@@ -656,6 +690,13 @@ public class ModelGetter
                         Thread thread = new Thread(() ->
                         {
                             ModelStats[] modelStats = modelFinder.findSpotAnim(spotAnim.getId());
+                            if (modelStats == null || modelStats.length == 0)
+                            {
+                                plugin.sendChatMessage("Could not find this Spotanim in the cache.");
+                                plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                                return;
+                            }
+
                             clientThread.invokeLater(() ->
                             {
                                 String name = "SpotAnim " + spotAnim.getId();
@@ -720,6 +761,12 @@ public class ModelGetter
                         for (ActorSpotAnim spotAnim : spotAnims)
                         {
                             ModelStats[] modelStats = modelFinder.findSpotAnim(spotAnim.getId());
+                            if (modelStats == null || modelStats.length == 0)
+                            {
+                                plugin.sendChatMessage("Could not find this Spotanim in the cache.");
+                                plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                                return;
+                            }
 
                             clientThread.invokeLater(() ->
                             {
@@ -770,6 +817,7 @@ public class ModelGetter
                         Thread thread = new Thread(() ->
                         {
                             ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items, anim, fSpotAnims);
+
                             clientThread.invokeLater(() ->
                             {
                                 plugin.cacheToAnvil(modelStats, comp.getColors(), true);
@@ -983,6 +1031,13 @@ public class ModelGetter
                     Thread thread = new Thread(() ->
                     {
                         ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DEFAULT, false);
+                        if (modelStats == null || modelStats.length == 0)
+                        {
+                            plugin.sendChatMessage("Could not find this Object in the cache.");
+                            plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                            return;
+                        }
+
                         CustomLighting lighting = new CustomLighting(64, 768, -50, -50, 10);
                         CustomModelComp comp = new CustomModelComp(0, type, objectId, modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, name);
                         CustomModel customModel = new CustomModel(model, comp);
@@ -1035,6 +1090,13 @@ public class ModelGetter
                     Thread thread = new Thread(() ->
                     {
                         ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DYNAMIC, false);
+                        if (modelStats == null || modelStats.length == 0)
+                        {
+                            plugin.sendChatMessage("Could not find this Object in the cache.");
+                            plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                            return;
+                        }
+
                         LightingStyle ls = LightingStyle.DYNAMIC;
                         CustomLighting lighting = new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getY(), ls.getZ());
                         CustomModelComp comp = new CustomModelComp(0, type, objectId, modelStats, null, null, null, ls, lighting, false, name);
@@ -1092,6 +1154,13 @@ public class ModelGetter
                     Thread thread = new Thread(() ->
                     {
                         ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, lightingStyle, false);
+                        if (modelStats == null || modelStats.length == 0)
+                        {
+                            plugin.sendChatMessage("Could not find this Object in the cache.");
+                            plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                            return;
+                        }
+
                         clientThread.invokeLater(() ->
                         {
                             plugin.cacheToAnvil(modelStats, new int[0], false);
@@ -1151,6 +1220,12 @@ public class ModelGetter
                         Thread thread = new Thread(() ->
                         {
                             ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DEFAULT, false);
+                            if (modelStats == null || modelStats.length == 0)
+                            {
+                                plugin.sendChatMessage("Could not find this Object in the cache.");
+                                plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                                return;
+                            }
 
                             clientThread.invokeLater(() ->
                             {
@@ -1241,6 +1316,13 @@ public class ModelGetter
                             Thread thread = new Thread(() ->
                             {
                                 ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DYNAMIC, false);
+                                if (modelStats == null || modelStats.length == 0)
+                                {
+                                    plugin.sendChatMessage("Could not find this Object in the cache.");
+                                    plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                                    return;
+                                }
+
                                 clientThread.invokeLater(() ->
                                 {
                                     initiateAnimationExport(animId, name, bm, modelStats, new int[0], false, false);
@@ -1258,6 +1340,12 @@ public class ModelGetter
                         Thread thread = new Thread(() ->
                         {
                             ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DYNAMIC, false);
+                            if (modelStats == null || modelStats.length == 0)
+                            {
+                                plugin.sendChatMessage("Could not find this Object in the cache.");
+                                plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                                return;
+                            }
 
                             clientThread.invokeLater(() ->
                             {
@@ -1320,8 +1408,6 @@ public class ModelGetter
                         return;
                     }
 
-                    CustomModelComp comp = character.getStoredModel().getComp();
-
                     final Model model = character.getRuneLiteObject().getModel();
                     if (config.vertexColours())
                     {
@@ -1333,6 +1419,7 @@ public class ModelGetter
                             {
                                 clientThread.invokeLater(() ->
                                 {
+                                    CustomModelComp comp = character.getStoredModel().getComp();
                                     switch (comp.getType())
                                     {
                                         case FORGED:
@@ -1418,6 +1505,7 @@ public class ModelGetter
                         {
                             clientThread.invokeLater(() ->
                             {
+                                CustomModelComp comp = character.getStoredModel().getComp();
                                 BlenderModel bm;
                                 ModelData modelData = null;
                                 switch (comp.getType())
@@ -1562,6 +1650,13 @@ public class ModelGetter
                     Thread thread = new Thread(() ->
                     {
                         ModelStats[] modelStats = modelFinder.findModelsForGroundItem(itemId, CustomModelType.CACHE_GROUND_ITEM);
+                        if (modelStats == null || modelStats.length == 0)
+                        {
+                            plugin.sendChatMessage("Could not find this Item in the cache.");
+                            plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                            return;
+                        }
+
                         CustomLighting lighting = new CustomLighting(64, 768, -50, -50, 10);
                         CustomModelComp comp = new CustomModelComp(0, CustomModelType.CACHE_GROUND_ITEM, itemId, modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, name);
                         CustomModel customModel = new CustomModel(model, comp);
@@ -1614,6 +1709,13 @@ public class ModelGetter
                     Thread thread = new Thread(() ->
                     {
                         ModelStats[] modelStats = modelFinder.findModelsForGroundItem(itemId, CustomModelType.CACHE_GROUND_ITEM);
+                        if (modelStats == null || modelStats.length == 0)
+                        {
+                            plugin.sendChatMessage("Could not find this Item in the cache.");
+                            plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                            return;
+                        }
+
                         clientThread.invokeLater(() ->
                         {
                             plugin.cacheToAnvil(modelStats, new int[0], false);
@@ -1673,6 +1775,12 @@ public class ModelGetter
                         Thread thread = new Thread(() ->
                         {
                             ModelStats[] modelStats = modelFinder.findModelsForGroundItem(itemId, CustomModelType.CACHE_GROUND_ITEM);
+                            if (modelStats == null || modelStats.length == 0)
+                            {
+                                plugin.sendChatMessage("Could not find this Item in the cache.");
+                                plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                                return;
+                            }
 
                             clientThread.invokeLater(() ->
                             {
