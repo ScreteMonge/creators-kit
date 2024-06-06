@@ -28,6 +28,7 @@ public class OBJExporter
     final static String VERT_COLOUR = "v %f %f %f %f %f %f";
     final static String FACE = "f %d %d %d";
     final static String NEW_MTL = "newmtl c%d";
+    final static String KD = "Kd %f %f %f";
 
     public static boolean saveOBJ(String name, BlenderModel blenderModel)
     {
@@ -146,15 +147,13 @@ public class OBJExporter
     public static boolean saveFaceColours(String name, BlenderModel blenderModel)
     {
         StringBuilder obj = new StringBuilder();
-        StringBuilder verts = new StringBuilder();
-        StringBuilder faces = new StringBuilder();
         StringBuilder mtl = new StringBuilder();
 
         for (int ci = 0; ci < blenderModel.getFaceColours().length; ci++)
         {
             float[] colour = getRGB(blenderModel.getFaceColours()[ci]);
             mtl.append(String.format(NEW_MTL, ci)).append("\n");
-            mtl.append(String.format("Kd %f %f %f", colour[0], colour[1], colour[2])).append("\n");
+            mtl.append(String.format(KD, colour[0], colour[1], colour[2])).append("\n");
             if (colour[3] != 1.0f)
             {
                 mtl.append(String.format("d %f", colour[3])).append("\n");
