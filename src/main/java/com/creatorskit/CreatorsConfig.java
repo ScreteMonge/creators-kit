@@ -647,7 +647,7 @@ public interface CreatorsConfig extends Config
 					"<br>Blender json files are intended to be used with the associated Runescape Import addon" +
 					"<br>See ScreteMonge for more details",
 			section = modelExporter,
-			position = 55
+			position = 0
 	)
 	default ExportFileFormat exportFileFormat()
 	{
@@ -659,7 +659,7 @@ public interface CreatorsConfig extends Config
 			name = "Vertex Colours",
 			description = "Makes Blender Model .json files export with Vertex Colours instead of Face Colours",
 			section = modelExporter,
-			position = 0
+			position = 1
 	)
 	default boolean vertexColours()
 	{
@@ -671,7 +671,7 @@ public interface CreatorsConfig extends Config
 			name = "Export Neutral Pose",
 			description = "Puts the Model into its neutral pose (disables animations) for exporting",
 			section = modelExporter,
-			position = 1
+			position = 2
 	)
 	default boolean exportTPose()
 	{
