@@ -2,10 +2,7 @@ package com.creatorskit.models.exporters;
 
 import com.creatorskit.models.BlenderModel;
 import com.creatorskit.swing.colours.HSLColor;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hasher;
-import com.google.common.hash.Hashing;
-import lombok.Data;
+import com.creatorskit.models.exporters.GLTFExporter.Vertex;
 import lombok.extern.slf4j.Slf4j;
 
 import java.awt.*;
@@ -14,7 +11,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -243,42 +239,6 @@ public class OBJExporter
                 rgb.getGreen() / 255f,
                 (float) colour[3]
         };
-    }
-
-    @Data
-    static class Vertex
-    {
-        float[] xyz;
-        float[] colour;
-        int index;
-
-        @Override
-        public boolean equals(Object obj)
-        {
-            if (!(obj instanceof Vertex))
-            {
-                return false;
-            }
-
-            Vertex v = (Vertex) obj;
-            return Arrays.equals(xyz, v.getXyz()) && Arrays.equals(colour, v.getColour());
-        }
-
-        @Override
-        public int hashCode() {
-            HashFunction hashFunction = Hashing.murmur3_32();
-            Hasher hasher = hashFunction.newHasher();
-
-            for (float value : xyz) {
-                hasher.putFloat(value);
-            }
-
-            for (float value : colour) {
-                hasher.putFloat(value);
-            }
-
-            return hasher.hash().asInt();
-        }
     }
 
 }

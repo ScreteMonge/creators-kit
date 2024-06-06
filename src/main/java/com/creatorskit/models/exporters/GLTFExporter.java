@@ -437,7 +437,7 @@ public class GLTFExporter {
     }
 
     @Data
-    private static class Vertex
+    static class Vertex
     {
         float[] xyz;
         float[] colour;
@@ -473,7 +473,8 @@ public class GLTFExporter {
     }
 
     @Data
-    static class FaceMap
+    static
+    class FaceMap
     {
         int[] indices;
         public void addIndex(int pos, int vertIndex)
