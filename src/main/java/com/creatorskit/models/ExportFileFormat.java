@@ -4,5 +4,5 @@ public enum ExportFileFormat
 {
     BLENDER,
     OBJ,
-    PLY
+    GLTF
 }
