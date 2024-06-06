@@ -40,6 +40,7 @@ public class ModelExporter
             case OBJ:
                 if (blenderModel.getAnimVertices().length > 0)
                 {
+                    plugin.sendChatMessage("You cannot export animations to OBJ format. Falling back to Blender format.");
                     success = saveBlender(name, blenderModel);
                 } else {
                     success = OBJExporter.saveOBJ(name, blenderModel);
