@@ -1,6 +1,6 @@
 package com.creatorskit;
 
-import com.creatorskit.models.ExportFileFormat;
+import com.creatorskit.models.exporters.ExportFileFormat;
 import net.runelite.client.config.*;
 
 import java.awt.event.KeyEvent;
@@ -639,7 +639,7 @@ public interface CreatorsConfig extends Config
 			position = 5
 	)
 	String modelExporter = "modelExporter";
-/*
+
 	@ConfigItem(
 			keyName = "exportFileFormat",
 			name = "Export File Format",
@@ -653,8 +653,6 @@ public interface CreatorsConfig extends Config
 	{
 		return ExportFileFormat.BLENDER;
 	}
-
- */
 
 	@ConfigItem(
 			keyName = "vertexColours",

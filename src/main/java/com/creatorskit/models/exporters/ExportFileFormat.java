@@ -1,8 +1,8 @@
-package com.creatorskit.models;
+package com.creatorskit.models.exporters;
 
 public enum ExportFileFormat
 {
     BLENDER,
     OBJ,
-    PLY
+    GLTF
 }

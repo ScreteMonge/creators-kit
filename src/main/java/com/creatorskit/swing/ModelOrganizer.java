@@ -5,6 +5,7 @@ import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.ModelImporter;
 import com.creatorskit.models.*;
+import com.creatorskit.models.exporters.ModelExporter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.RuneLiteObject;
