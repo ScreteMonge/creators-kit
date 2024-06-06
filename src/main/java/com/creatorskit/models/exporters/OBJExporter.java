@@ -45,7 +45,6 @@ public class OBJExporter
         obj.append("o ").append(name).append("\n");
 
         HashMap<Integer, GLTFExporter.FaceMap> faceMaps = new HashMap<>();
-        HashMap<Integer, float[]> vertexColours = new HashMap<>();
 
         List<Vertex> uVerts = new ArrayList<>();
         HashMap<Integer, Integer> hashToIndex = new HashMap<>();
@@ -74,7 +73,6 @@ public class OBJExporter
                 if (!hashVertexMap.containsKey(v.hashCode()))
                 {
                     hashToIndex.put(v.hashCode(), uVerts.size());
-                    vertexColours.put(uVerts.size(), v.getColour());
                     hashVertexMap.put(v.hashCode(), v);
                     uVerts.add(v);
                 }
