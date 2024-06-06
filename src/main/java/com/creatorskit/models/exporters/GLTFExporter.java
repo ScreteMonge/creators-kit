@@ -101,10 +101,10 @@ public class GLTFExporter {
     }
 
     private void addMesh() {
-        mesh m = new mesh();
+        Mesh m = new Mesh();
         gltf.meshes.add(m);
         primitive prim = new primitive();
-        prim.setAttributes(new attribute());
+        prim.setAttributes(new Attribute());
         m.primitives.add(prim);
     }
 
@@ -209,7 +209,7 @@ public class GLTFExporter {
         }
 
         int vertAccessorIdx = addBuffer(vertices, vertexCount, ARRAY_BUFFER, FLOAT, AccessorType.VEC3);
-        accessor vertexAccessor = gltf.accessors.get(vertAccessorIdx);
+        Accessor vertexAccessor = gltf.accessors.get(vertAccessorIdx);
 
         for (int i = 0; i < 3; i++) {
             vertexAccessor.min.add(vertexMin[i]);
@@ -242,7 +242,7 @@ public class GLTFExporter {
         int faceAccessorIdx = addBuffer(
                 faces, faceMaps.size() * 3, ELEMENT_ARRAY_BUFFER, UNSIGNED_SHORT, AccessorType.SCALAR
         );
-        accessor faceAccessor = gltf.accessors.get(faceAccessorIdx);
+        Accessor faceAccessor = gltf.accessors.get(faceAccessorIdx);
         faceAccessor.min.add(faceMin);
         faceAccessor.max.add(faceMax);
         gltf.meshes.get(0).primitives.get(0).setIndices(faceAccessorIdx);
@@ -291,7 +291,7 @@ public class GLTFExporter {
 
             gltf.meshes.get(0).weights.add(frame == 0 ? 1 : 0);
 
-            target t = new target();
+            Target t = new Target();
             t.setPOSITION(morphAccessor);
             gltf.meshes.get(0).primitives.get(0).targets.add(t);
         }
@@ -301,15 +301,15 @@ public class GLTFExporter {
         int keyframesAccessor = addKeyframes();
 
         // Add the animation
-        animation anim = new animation();
+        Animation anim = new Animation();
 
-        sampler sampler = new sampler();
+        Sampler sampler = new Sampler();
         sampler.input = keyframesAccessor;
         sampler.output = weightsAccessor;
 
-        channel channel = new channel();
+        Channel channel = new Channel();
         channel.sampler = 0;
-        channel.target = new channelTarget();
+        channel.target = new ChannelTarget();
 
         anim.samplers.add(sampler);
         anim.channels.add(channel);
@@ -339,7 +339,7 @@ public class GLTFExporter {
         }
 
         int idx = addBuffer(morph, vertexCount, ARRAY_BUFFER, FLOAT, AccessorType.VEC3);
-        accessor a = gltf.accessors.get(idx);
+        Accessor a = gltf.accessors.get(idx);
         for (int i = 0; i < 3; i++)
         {
             a.min.add(morphMin[i]);
@@ -388,7 +388,7 @@ public class GLTFExporter {
         }
 
         int idx = addBuffer(keyframes, frameCount, ARRAY_BUFFER, FLOAT, AccessorType.SCALAR);
-        accessor a = gltf.accessors.get(idx);
+        Accessor a = gltf.accessors.get(idx);
         a.min.add(min);
         a.max.add(max);
 
@@ -403,9 +403,9 @@ public class GLTFExporter {
             AccessorType type
     )
     {
-        buffer b = new buffer();
-        bufferView bv = new bufferView();
-        accessor a = new accessor();
+        Buffer b = new Buffer();
+        BufferView bv = new BufferView();
+        Accessor a = new Accessor();
 
         gltf.buffers.add(b);
         gltf.bufferViews.add(bv);

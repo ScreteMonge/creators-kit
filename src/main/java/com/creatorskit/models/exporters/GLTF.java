@@ -4,21 +4,20 @@ import lombok.Data;
 import java.util.ArrayList;
 import java.util.List;
 
-@Data
 public class GLTF
 {
     public int scene = 0;
-    public scene[] scenes = new scene[]{new scene()};
-    public node[] nodes = new node[]{new node()};
-    public baseSampler[] samplers = new baseSampler[]{new baseSampler()};
-    public List<mesh> meshes = new ArrayList<>();
-    public List<buffer> buffers = new ArrayList<>();
-    public List<bufferView> bufferViews = new ArrayList<>();
-    public List<accessor> accessors = new ArrayList<>();
-    public asset asset = new asset();
+    public Scene[] scenes = new Scene[]{new Scene()};
+    public Node[] nodes = new Node[]{new Node()};
+    public BaseSampler[] samplers = new BaseSampler[]{new BaseSampler()};
+    public List<Mesh> meshes = new ArrayList<>();
+    public List<Buffer> buffers = new ArrayList<>();
+    public List<BufferView> bufferViews = new ArrayList<>();
+    public List<Accessor> accessors = new ArrayList<>();
+    public Asset asset = new Asset();
 
-    public material[] materials = new material[]{new material()};
-    public List<animation> animations = new ArrayList<>();
+    public Material[] materials = new Material[]{new Material()};
+    public List<Animation> animations = new ArrayList<>();
 
     enum AccessorType {
         SCALAR,
@@ -26,16 +25,16 @@ public class GLTF
         VEC4
     }
 
-    public static class scene {
+    public static class Scene {
         int[] nodes = new int[]{0};
     }
 
-    public static class node {
+    public static class Node {
         int mesh = 0;
     }
 
     @Data
-    public static class mesh {
+    public static class Mesh {
         List<primitive> primitives = new ArrayList<>();
         List<Integer> weights = new ArrayList<>();
         int[] materials = new int[]{0};
@@ -45,30 +44,30 @@ public class GLTF
     @Data
     public static class primitive {
         int indices;
-        attribute attributes;
-        List<target> targets = new ArrayList<>();
+        Attribute attributes;
+        List<Target> targets = new ArrayList<>();
         int material = 0;
     }
 
     @Data
-    public static class target {
+    public static class Target {
         int POSITION;
     }
 
     @Data
-    public static class attribute {
+    public static class Attribute {
         int POSITION;
         int COLOR_0;
     }
 
-    public static class material
+    public static class Material
     {
         String name = "vertexColors";
         float[] baseColorFactor = new float[]{1.0f, 1.0f, 1.0f};
-        pbrMetallicRoughness pbrMetallicRoughness = new pbrMetallicRoughness();
+        MetallicRoughness pbrMetallicRoughness = new MetallicRoughness();
     }
 
-    public static class pbrMetallicRoughness
+    public static class MetallicRoughness
     {
         float[] baseColorFactor = new float[]{1.0f, 1.0f, 1.0f, 1.0f};
         float metallicFactor = 0.0f;
@@ -76,12 +75,12 @@ public class GLTF
     }
 
     @Data
-    public static class animation {
-        List<channel> channels = new ArrayList<>();
-        List<sampler> samplers = new ArrayList<>();
+    public static class Animation {
+        List<Channel> channels = new ArrayList<>();
+        List<Sampler> samplers = new ArrayList<>();
     }
 
-    public static class baseSampler {
+    public static class BaseSampler {
         int magFilter = 9729;
         int minFilter = 9987;
         int wrapS = 33648;
@@ -89,31 +88,31 @@ public class GLTF
     }
 
     @Data
-    public static class sampler {
+    public static class Sampler {
         int input;
         String interpolation = "STEP";
         int output;
     }
 
     @Data
-    public static class channel {
+    public static class Channel {
         int sampler;
-        channelTarget target;
+        ChannelTarget target;
     }
 
-    public static class channelTarget {
+    public static class ChannelTarget {
         int node = 0;
         String path = "weights";
     }
 
     @Data
-    public static class buffer {
+    public static class Buffer {
         String uri;
         int byteLength;
     }
 
     @Data
-    public static class bufferView {
+    public static class BufferView {
         int buffer;
         int byteOffset;
         int byteLength;
@@ -121,7 +120,7 @@ public class GLTF
     }
 
     @Data
-    public static class accessor {
+    public static class Accessor {
         int bufferView;
         int byteOffset;
         int componentType;
@@ -132,7 +131,7 @@ public class GLTF
         List<Number> min = new ArrayList<>();
     }
 
-    public static class asset {
+    public static class Asset {
         String version = "2.0";
         String generator = "CreatorsKit";
     }
