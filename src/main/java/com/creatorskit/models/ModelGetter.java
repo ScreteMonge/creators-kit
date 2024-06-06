@@ -622,6 +622,7 @@ public class ModelGetter
 
                                 BlenderModel bm = modelExporter.bmFaceColours(
                                         modelStats,
+                                        false,
                                         new int[0],
                                         false,
                                         vX,
@@ -992,6 +993,7 @@ public class ModelGetter
                             {
                                 BlenderModel bm = modelExporter.bmFaceColours(
                                         modelStats,
+                                        false,
                                         comp.getColors(),
                                         true,
                                         vX,
@@ -1230,6 +1232,7 @@ public class ModelGetter
                             {
                                 BlenderModel blenderModel = modelExporter.bmFaceColours(
                                         modelStats,
+                                        true,
                                         new int[0],
                                         false,
                                         vX,
@@ -1350,6 +1353,7 @@ public class ModelGetter
                             {
                                 BlenderModel bm = modelExporter.bmFaceColours(
                                         modelStats,
+                                        true,
                                         new int[0],
                                         false,
                                         vX,
@@ -1531,6 +1535,7 @@ public class ModelGetter
                                     case CACHE_WOMAN_WEAR:
                                         bm = modelExporter.bmFaceColours(
                                                 comp.getModelStats(),
+                                                comp.getType() == CustomModelType.CACHE_OBJECT,
                                                 new int[0],
                                                 false,
                                                 vX,
@@ -1545,6 +1550,7 @@ public class ModelGetter
                                     case CACHE_PLAYER:
                                         bm = modelExporter.bmFaceColours(
                                                 comp.getModelStats(),
+                                                false,
                                                 comp.getKitRecolours(),
                                                 true,
                                                 vX,
@@ -1614,6 +1620,7 @@ public class ModelGetter
                             {
                                 BlenderModel bm = modelExporter.bmFaceColours(
                                         modelStats,
+                                        false,
                                         new int[0],
                                         false,
                                         vX,
@@ -1787,6 +1794,7 @@ public class ModelGetter
                             {
                                 BlenderModel blenderModel = modelExporter.bmFaceColours(
                                         modelStats,
+                                        false,
                                         new int[0],
                                         false,
                                         vX,

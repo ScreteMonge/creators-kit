@@ -279,6 +279,7 @@ public class ModelExporter
 
     public BlenderModel bmFaceColours(
             ModelStats[] modelStatsArray,
+            boolean object,
             int[] kitRecolours,
             boolean player,
             int[] vX,
@@ -339,13 +340,26 @@ public class ModelExporter
                 modelStats.setResizeZ(128);
             }
 
-            modelData.scale(modelStats.getResizeX(), modelStats.getResizeZ(), modelStats.getResizeY());
+            if (!object)
+            {
+                modelData.scale(modelStats.getResizeX(), modelStats.getResizeZ(), modelStats.getResizeY());
+            }
             modelData.translate(0, -1 * modelStats.getTranslateZ(), 0);
 
             mds[i] = modelData;
         }
 
         ModelData md = client.mergeModels(mds);
+        if (object)
+        {
+            ModelStats ms0 = modelStatsArray[0];
+            if (ms0 == null)
+            {
+                return null;
+            }
+
+            md.scale(ms0.getResizeX(), ms0.getResizeZ(), ms0.getResizeY());
+        }
 
         /*
         System.out.println("ModelData FC: " + md.getFaceCount());
@@ -615,6 +629,7 @@ public class ModelExporter
 
                 blenderModel = bmFaceColours(
                         comp.getModelStats(),
+                        comp.getType() == CustomModelType.CACHE_OBJECT,
                         new int[0],
                         false,
                         md.getVerticesX(),
@@ -652,6 +667,7 @@ public class ModelExporter
 
                 blenderModel = bmFaceColours(
                         comp.getModelStats(),
+                        false,
                         comp.getKitRecolours(),
                         true,
                         md.getVerticesX(),
