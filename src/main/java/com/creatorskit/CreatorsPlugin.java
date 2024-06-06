@@ -1,6 +1,7 @@
 package com.creatorskit;
 
 import com.creatorskit.models.*;
+import com.creatorskit.models.exporters.ModelExporter;
 import com.creatorskit.programming.*;
 import com.creatorskit.saves.TransmogLoadOption;
 import com.creatorskit.saves.TransmogSave;

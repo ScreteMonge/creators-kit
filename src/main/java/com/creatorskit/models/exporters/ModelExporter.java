@@ -1,7 +1,10 @@
-package com.creatorskit.models;
+package com.creatorskit.models.exporters;
 
+import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
 import java.nio.file.Paths;
+
+import com.creatorskit.models.*;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.client.RuneLite;
@@ -18,16 +21,40 @@ public class ModelExporter
 {
     private final Client client;
     private final CreatorsPlugin plugin;
+    private final CreatorsConfig config;
     public final File BLENDER_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/blender-models");
 
     @Inject
-    public ModelExporter(Client client, CreatorsPlugin plugin)
+    public ModelExporter(Client client, CreatorsPlugin plugin, CreatorsConfig config)
     {
         this.client = client;
         this.plugin = plugin;
+        this.config = config;
     }
 
     public void saveToFile(String name, BlenderModel blenderModel)
+    {
+        boolean success;
+        switch (config.exportFileFormat())
+        {
+//            case OBJ:
+//                OBJExporter.saveOBJ(name, blenderModel);
+//                break;
+            case GLTF:
+                GLTFExporter gltfExporter = new GLTFExporter(name, blenderModel);
+                success = gltfExporter.saveGLTF(plugin.getGson(), name);
+                break;
+            default:
+            case BLENDER:
+                success = saveBlender(name, blenderModel);
+                break;
+        }
+
+        if (success)
+            plugin.sendChatMessage("Exported " + name + " to your /.runelite/creatorskit/blender-models directory.");
+    }
+
+    private boolean saveBlender(String name, BlenderModel blenderModel)
     {
         try
         {
@@ -47,12 +74,14 @@ public class ModelExporter
             String string = plugin.getGson().toJson(blenderModel);
             writer.write(string);
             writer.close();
-			plugin.sendChatMessage("Exported " + name + " to your /.runelite/creatorskit/blender-models directory.");
         }
         catch (IOException e)
         {
             log.debug("Error when exporting model to file");
+            return false;
         }
+
+        return true;
     }
 
     public BlenderModel bmVertexColours(Renderable renderable)

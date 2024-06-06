@@ -1,6 +1,6 @@
 package com.creatorskit;
 
-import com.creatorskit.models.ExportFileFormat;
+import com.creatorskit.models.exporters.ExportFileFormat;
 import net.runelite.client.config.*;
 
 import java.awt.event.KeyEvent;
