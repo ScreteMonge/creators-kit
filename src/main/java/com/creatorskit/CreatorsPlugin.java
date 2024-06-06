@@ -38,7 +38,6 @@ import net.runelite.client.util.ColorUtil;
 import net.runelite.client.util.HotkeyListener;
 import net.runelite.client.util.ImageUtil;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.tuple.Pair;
 
 import java.awt.*;
 import java.awt.event.MouseEvent;
@@ -54,7 +53,7 @@ import java.util.*;
 @PluginDescriptor(
 		name = "Creator's Kit",
 		description = "A suite of tools for creators",
-		tags = {"tool", "creator", "content", "kit", "camera", "immersion"}
+		tags = {"tool", "creator", "content", "kit", "camera", "immersion", "export"}
 )
 public class CreatorsPlugin extends Plugin implements MouseListener {
 	@Inject
@@ -128,6 +127,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private boolean autoSetupPathFound = true;
 	private boolean autoTransmogFound = true;
 	private boolean controlDown = false;
+	private boolean desync = false;
 
 	@Override
 	protected void startUp() throws Exception
@@ -312,6 +312,39 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		updatePreviewObject(client.getTopLevelWorldView().getSelectedSceneTile());
 		modelGetter.handleAnimationExport(client.getGameCycle());
+
+		if (desync)
+		{
+			int size = characters.size();
+			int meter = 100 / size;
+			if (meter < 2)
+			{
+				meter = 2;
+			}
+
+			if (client.getGameCycle() % meter == 0)
+			{
+				Random random = new Random();
+				int roll = random.nextInt(size);
+				try
+				{
+					Character character = characters.get(roll);
+					RuneLiteObject runeLiteObject = character.getRuneLiteObject();
+					if (runeLiteObject != null)
+					{
+						Animation animation = runeLiteObject.getAnimation();
+						if (animation != null)
+						{
+							setAnimation(character, animation.getId());
+						}
+					}
+				}
+				catch (Exception e)
+				{
+
+				}
+			}
+		}
 
 		switch (autoRotateYaw)
 		{
@@ -897,7 +930,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				}
 				else
 				{
-					localPoint = LocalPoint.fromWorld(client, character.getNonInstancedPoint());
+					localPoint = LocalPoint.fromWorld(worldView, character.getNonInstancedPoint());
 				}
 			}
 
@@ -1439,13 +1472,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					name = modelFinder.getLastFound();
 			}
 
-			if (modelStats == null)
+			if (modelStats == null || modelStats.length == 0)
 			{
-				String idType = type.toString();
-				if (type == CustomModelType.CACHE_MAN_WEAR || type == CustomModelType.CACHE_WOMAN_WEAR || type == CustomModelType.CACHE_GROUND_ITEM)
-					idType = "Item";
-
-				sendChatMessage("Could not find any associated Models for the given " + idType + " Id.");
+				sendChatMessage("Could not find what you were searching for in the cache.");
+				sendChatMessage("This is because the id you're looking for does not exist or Creator's Kit's cache dumps have not yet been updated to the latest game update.");
 				return;
 			}
 
@@ -1468,44 +1498,55 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			{
 				case CACHE_NPC:
 					modelStats = modelFinder.findModelsForNPC(id);
+					break;
+				default:
+				case CACHE_OBJECT:
+					modelStats = modelFinder.findModelsForObject(id, modelType, LightingStyle.DEFAULT, false);
+					break;
+				case CACHE_GROUND_ITEM:
+					modelStats = modelFinder.findModelsForGroundItem(id, CustomModelType.CACHE_GROUND_ITEM);
+					break;
+				case CACHE_MAN_WEAR:
+					modelStats = modelFinder.findModelsForGroundItem(id, CustomModelType.CACHE_MAN_WEAR);
+					break;
+				case CACHE_WOMAN_WEAR:
+					modelStats = modelFinder.findModelsForGroundItem(id, CustomModelType.CACHE_WOMAN_WEAR);
+			}
+
+			if (modelStats == null || modelStats.length == 0)
+			{
+				sendChatMessage("Could not find what you were searching for in the cache.");
+				sendChatMessage("This is because the id you're looking for does not exist or Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+				return;
+			}
+
+			switch (type)
+			{
+				case CACHE_NPC:
 					name = modelFinder.getLastFound();
 					lighting = new CustomLighting(64, 850, -30, -30, 50);
 					comp = new CustomModelComp(0, CustomModelType.CACHE_NPC, id, modelStats, null, null, null, LightingStyle.ACTOR, lighting, false, name);
 					break;
 				default:
 				case CACHE_OBJECT:
-					modelStats = modelFinder.findModelsForObject(id, modelType, LightingStyle.DEFAULT, false);
 					name = modelFinder.getLastFound();
 					lighting = modelStats[0].getLighting();
 					comp = new CustomModelComp(0, CustomModelType.CACHE_OBJECT, id, modelStats, null, null, null, LightingStyle.CUSTOM, lighting, false, name);
 					break;
 				case CACHE_GROUND_ITEM:
-					modelStats = modelFinder.findModelsForGroundItem(id, CustomModelType.CACHE_GROUND_ITEM);
 					name = modelFinder.getLastFound();
 					lighting = new CustomLighting(64, 768, -50, -50, 10);
 					comp = new CustomModelComp(0, CustomModelType.CACHE_GROUND_ITEM, id, modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, name);
 					break;
 				case CACHE_MAN_WEAR:
-					modelStats = modelFinder.findModelsForGroundItem(id, CustomModelType.CACHE_MAN_WEAR);
 					name = modelFinder.getLastFound();
 					lighting = new CustomLighting(64, 768, -50, -50, 10);
 					comp = new CustomModelComp(0, CustomModelType.CACHE_MAN_WEAR, id, modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, name);
 					break;
 				case CACHE_WOMAN_WEAR:
-					modelStats = modelFinder.findModelsForGroundItem(id, CustomModelType.CACHE_WOMAN_WEAR);
 					name = modelFinder.getLastFound();
 					lighting = new CustomLighting(64, 768, -50, -50, 10);
 					comp = new CustomModelComp(0, CustomModelType.CACHE_WOMAN_WEAR, id, modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, name);
-			}
-
-			if (modelStats == null)
-			{
-				String idType = type.toString();
-				if (type == CustomModelType.CACHE_MAN_WEAR || type == CustomModelType.CACHE_WOMAN_WEAR || type == CustomModelType.CACHE_GROUND_ITEM)
-					idType = "Item";
-
-				sendChatMessage("Could not find any associated Models for the given " + idType + " Id.");
-				return;
 			}
 
 			clientThread.invokeLater(() ->
