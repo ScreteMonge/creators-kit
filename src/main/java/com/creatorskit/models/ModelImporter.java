@@ -284,7 +284,14 @@ public class ModelImporter
                 int colorLInt = (int) (colour[1] * 127);
                 int colorSInt = (int) (colour[2] * 7);
                 short jagexColor = JagexColor.packHSL(colorHInt, colorSInt, colorLInt);
-                transparencies[i] = (byte) colour[3];
+                double tp = colour[3];
+                tp *= -256;
+                if (tp < -128)
+                {
+                    tp += 256;
+                }
+
+                transparencies[i] = (byte) tp;
                 colours[i] = jagexColor;
             }
 
@@ -317,7 +324,14 @@ public class ModelImporter
                 int colorLInt = (int) (colour[1] * 127);
                 int colorSInt = (int) (colour[2] * 7);
                 short jagexColor = JagexColor.packHSL(colorHInt, colorSInt, colorLInt);
-                transparencies[i] = (byte) colour[3];
+                double tp = colour[3];
+                tp *= -256;
+                if (tp < -128)
+                {
+                    tp += 256;
+                }
+
+                transparencies[i] = (byte) tp;
                 colours[i] = jagexColor;
             }
 
