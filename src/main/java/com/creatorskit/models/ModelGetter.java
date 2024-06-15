@@ -9,6 +9,8 @@ import com.creatorskit.swing.ObjectPanel;
 import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.plugins.PluginManager;
+import net.runelite.client.plugins.animsmoothing.AnimationSmoothingPlugin;
 import net.runelite.client.util.ColorUtil;
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -574,9 +576,21 @@ public class ModelGetter
                         Model model = npc.getModel();
                         int vCount = model.getVerticesCount();
                         int fCount = model.getFaceCount();
-                        int[] vX = Arrays.copyOf(model.getVerticesX(), vCount);
-                        int[] vY = Arrays.copyOf(model.getVerticesY(), vCount);
-                        int[] vZ = Arrays.copyOf(model.getVerticesZ(), vCount);
+                        float[] fvX = Arrays.copyOf(model.getVerticesX(), vCount);
+                        float[] fvY = Arrays.copyOf(model.getVerticesY(), vCount);
+                        float[] fvZ = Arrays.copyOf(model.getVerticesZ(), vCount);
+
+                        int[] vX = new int[vCount];
+                        int[] vY = new int[vCount];
+                        int[] vZ = new int[vCount];
+
+                        for (int i = 0; i < vCount; i++)
+                        {
+                            vX[i] = (int) fvX[i];
+                            vY[i] = (int) fvY[i];
+                            vZ[i] = (int) fvZ[i];
+                        }
+
                         int[] f1 = Arrays.copyOf(model.getFaceIndices1(), fCount);
                         int[] f2 = Arrays.copyOf(model.getFaceIndices2(), fCount);
                         int[] f3 = Arrays.copyOf(model.getFaceIndices3(), fCount);
@@ -922,9 +936,21 @@ public class ModelGetter
                     Model model = player.getModel();
                     int vCount = model.getVerticesCount();
                     int fCount = model.getFaceCount();
-                    int[] vX = Arrays.copyOf(model.getVerticesX(), vCount);
-                    int[] vY = Arrays.copyOf(model.getVerticesY(), vCount);
-                    int[] vZ = Arrays.copyOf(model.getVerticesZ(), vCount);
+                    float[] fvX = Arrays.copyOf(model.getVerticesX(), vCount);
+                    float[] fvY = Arrays.copyOf(model.getVerticesY(), vCount);
+                    float[] fvZ = Arrays.copyOf(model.getVerticesZ(), vCount);
+
+                    int[] vX = new int[vCount];
+                    int[] vY = new int[vCount];
+                    int[] vZ = new int[vCount];
+
+                    for (int i = 0; i < vCount; i++)
+                    {
+                        vX[i] = (int) fvX[i];
+                        vY[i] = (int) fvY[i];
+                        vZ[i] = (int) fvZ[i];
+                    }
+
                     int[] f1 = Arrays.copyOf(model.getFaceIndices1(), fCount);
                     int[] f2 = Arrays.copyOf(model.getFaceIndices2(), fCount);
                     int[] f3 = Arrays.copyOf(model.getFaceIndices3(), fCount);
@@ -1190,9 +1216,21 @@ public class ModelGetter
                     {
                         int vCount = model.getVerticesCount();
                         int fCount = model.getFaceCount();
-                        int[] vX = Arrays.copyOf(model.getVerticesX(), vCount);
-                        int[] vY = Arrays.copyOf(model.getVerticesY(), vCount);
-                        int[] vZ = Arrays.copyOf(model.getVerticesZ(), vCount);
+                        float[] fvX = Arrays.copyOf(model.getVerticesX(), vCount);
+                        float[] fvY = Arrays.copyOf(model.getVerticesY(), vCount);
+                        float[] fvZ = Arrays.copyOf(model.getVerticesZ(), vCount);
+
+                        int[] vX = new int[vCount];
+                        int[] vY = new int[vCount];
+                        int[] vZ = new int[vCount];
+
+                        for (int i = 0; i < vCount; i++)
+                        {
+                            vX[i] = (int) fvX[i];
+                            vY[i] = (int) fvY[i];
+                            vZ[i] = (int) fvZ[i];
+                        }
+
                         int[] f1 = Arrays.copyOf(model.getFaceIndices1(), fCount);
                         int[] f2 = Arrays.copyOf(model.getFaceIndices2(), fCount);
                         int[] f3 = Arrays.copyOf(model.getFaceIndices3(), fCount);
@@ -1256,9 +1294,10 @@ public class ModelGetter
     {
         int vCount = model.getVerticesCount();
         int fCount = model.getFaceCount();
-        int[] vX = Arrays.copyOf(model.getVerticesX(), vCount);
-        int[] vY = Arrays.copyOf(model.getVerticesY(), vCount);
-        int[] vZ = Arrays.copyOf(model.getVerticesZ(), vCount);
+        float[] fvX = Arrays.copyOf(model.getVerticesX(), vCount);
+        float[] fvY = Arrays.copyOf(model.getVerticesY(), vCount);
+        float[] fvZ = Arrays.copyOf(model.getVerticesZ(), vCount);
+
         int[] f1 = Arrays.copyOf(model.getFaceIndices1(), fCount);
         int[] f2 = Arrays.copyOf(model.getFaceIndices2(), fCount);
         int[] f3 = Arrays.copyOf(model.getFaceIndices3(), fCount);
@@ -1347,6 +1386,17 @@ public class ModelGetter
                                 plugin.sendChatMessage("Could not find this Object in the cache.");
                                 plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
                                 return;
+                            }
+
+                            int[] vX = new int[vCount];
+                            int[] vY = new int[vCount];
+                            int[] vZ = new int[vCount];
+
+                            for (int i = 0; i < vCount; i++)
+                            {
+                                vX[i] = (int) fvX[i];
+                                vY[i] = (int) fvY[i];
+                                vZ[i] = (int) fvZ[i];
                             }
 
                             clientThread.invokeLater(() ->
@@ -1477,9 +1527,21 @@ public class ModelGetter
                     {
                         int vCount = model.getVerticesCount();
                         int fCount = model.getFaceCount();
-                        int[] vX = Arrays.copyOf(model.getVerticesX(), vCount);
-                        int[] vY = Arrays.copyOf(model.getVerticesY(), vCount);
-                        int[] vZ = Arrays.copyOf(model.getVerticesZ(), vCount);
+                        float[] fvX = Arrays.copyOf(model.getVerticesX(), vCount);
+                        float[] fvY = Arrays.copyOf(model.getVerticesY(), vCount);
+                        float[] fvZ = Arrays.copyOf(model.getVerticesZ(), vCount);
+
+                        int[] vX = new int[vCount];
+                        int[] vY = new int[vCount];
+                        int[] vZ = new int[vCount];
+
+                        for (int i = 0; i < vCount; i++)
+                        {
+                            vX[i] = (int) fvX[i];
+                            vY[i] = (int) fvY[i];
+                            vZ[i] = (int) fvZ[i];
+                        }
+
                         int[] f1 = Arrays.copyOf(model.getFaceIndices1(), fCount);
                         int[] f2 = Arrays.copyOf(model.getFaceIndices2(), fCount);
                         int[] f3 = Arrays.copyOf(model.getFaceIndices3(), fCount);
@@ -1752,9 +1814,22 @@ public class ModelGetter
                     {
                         int vCount = model.getVerticesCount();
                         int fCount = model.getFaceCount();
-                        int[] vX = Arrays.copyOf(model.getVerticesX(), vCount);
-                        int[] vY = Arrays.copyOf(model.getVerticesY(), vCount);
-                        int[] vZ = Arrays.copyOf(model.getVerticesZ(), vCount);
+
+                        float[] fvX = Arrays.copyOf(model.getVerticesX(), vCount);
+                        float[] fvY = Arrays.copyOf(model.getVerticesY(), vCount);
+                        float[] fvZ = Arrays.copyOf(model.getVerticesZ(), vCount);
+
+                        int[] vX = new int[vCount];
+                        int[] vY = new int[vCount];
+                        int[] vZ = new int[vCount];
+
+                        for (int i = 0; i < vCount; i++)
+                        {
+                            vX[i] = (int) fvX[i];
+                            vY[i] = (int) fvY[i];
+                            vZ[i] = (int) fvZ[i];
+                        }
+
                         int[] f1 = Arrays.copyOf(model.getFaceIndices1(), fCount);
                         int[] f2 = Arrays.copyOf(model.getFaceIndices2(), fCount);
                         int[] f3 = Arrays.copyOf(model.getFaceIndices3(), fCount);
@@ -1882,6 +1957,7 @@ public class ModelGetter
         }
 
         Model model = exportObject.getModel();
+        int vCount = model.getVerticesCount();
         int frame = exportObject.getAnimationFrame();
 
         if (initiateExport)
@@ -1892,9 +1968,21 @@ public class ModelGetter
 
             animVerts = new int[1][model.getVerticesCount()][3];
             int[][] verts = animVerts[0];
-            int[] vX = model.getVerticesX();
-            int[] vY = model.getVerticesY();
-            int[] vZ = model.getVerticesZ();
+
+            float[] fvX = model.getVerticesX();
+            float[] fvY = model.getVerticesY();
+            float[] fvZ = model.getVerticesZ();
+
+            int[] vX = new int[vCount];
+            int[] vY = new int[vCount];
+            int[] vZ = new int[vCount];
+
+            for (int i = 0; i < vCount; i++)
+            {
+                vX[i] = (int) fvX[i];
+                vY[i] = (int) fvY[i];
+                vZ[i] = (int) fvZ[i];
+            }
 
             for (int i = 0; i < verts.length; i++)
             {
@@ -1913,9 +2001,20 @@ public class ModelGetter
         }
 
         int[][] verts = new int[model.getVerticesCount()][3];
-        int[] vX = model.getVerticesX();
-        int[] vY = model.getVerticesY();
-        int[] vZ = model.getVerticesZ();
+        float[] fvX = model.getVerticesX();
+        float[] fvY = model.getVerticesY();
+        float[] fvZ = model.getVerticesZ();
+
+        int[] vX = new int[vCount];
+        int[] vY = new int[vCount];
+        int[] vZ = new int[vCount];
+
+        for (int i = 0; i < vCount; i++)
+        {
+            vX[i] = (int) fvX[i];
+            vY[i] = (int) fvY[i];
+            vZ[i] = (int) fvZ[i];
+        }
 
         for (int i = 0; i < verts.length; i++)
         {

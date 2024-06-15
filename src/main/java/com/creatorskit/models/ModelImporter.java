@@ -249,9 +249,9 @@ public class ModelImporter
         //System.out.println(faceCount + ", " + modelData.getFaceCount());
         //System.out.println(vertexCount + ", " + modelData.getVerticesCount());
 
-        int[] vX = modelData.getVerticesX();
-        int[] vY = modelData.getVerticesY();
-        int[] vZ = modelData.getVerticesZ();
+        float[] vX = modelData.getVerticesX();
+        float[] vY = modelData.getVerticesY();
+        float[] vZ = modelData.getVerticesZ();
         int[] f1 = modelData.getFaceIndices1();
         int[] f2 = modelData.getFaceIndices2();
         int[] f3 = modelData.getFaceIndices3();
@@ -436,9 +436,9 @@ public class ModelImporter
         if (polyPriority != null)
         {
             polyPriority.cloneColors().cloneVertices();
-            int[] vX = polyPriority.getVerticesX();
-            int[] vY = polyPriority.getVerticesY();
-            int[] vZ = polyPriority.getVerticesZ();
+            float[] vX = polyPriority.getVerticesX();
+            float[] vY = polyPriority.getVerticesY();
+            float[] vZ = polyPriority.getVerticesZ();
 
             vX[0] = vX[1] = 64;
             vY[0] = vY[1] = 0;
@@ -463,9 +463,9 @@ public class ModelImporter
         if (poly_transparent != null)
         {
             poly_transparent.cloneColors().cloneVertices().cloneTransparencies();
-            int[] vX = poly_transparent.getVerticesX();
-            int[] vY = poly_transparent.getVerticesY();
-            int[] vZ = poly_transparent.getVerticesZ();
+            float[] vX = poly_transparent.getVerticesX();
+            float[] vY = poly_transparent.getVerticesY();
+            float[] vZ = poly_transparent.getVerticesZ();
 
             vX[0] = 64;
             vY[0] = 0;

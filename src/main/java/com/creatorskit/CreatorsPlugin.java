@@ -2111,9 +2111,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				}
 
 				transparent.cloneVertices();
-				int[] tx = transparent.getVerticesX();
-				int[] ty = transparent.getVerticesY();
-				int[] tz = transparent.getVerticesZ();
+				float[] tx = transparent.getVerticesX();
+				float[] ty = transparent.getVerticesY();
+				float[] tz = transparent.getVerticesZ();
 				for (int i = 0; i < tx.length; i++)
 				{
 					tx[i] = 0;

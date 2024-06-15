@@ -103,16 +103,16 @@ public class ModelExporter
         }
 
         int[][] verts = new int[model.getVerticesCount()][3];
-        int[] vX = model.getVerticesX();
-        int[] vY = model.getVerticesY();
-        int[] vZ = model.getVerticesZ();
+        float[] vX = model.getVerticesX();
+        float[] vY = model.getVerticesY();
+        float[] vZ = model.getVerticesZ();
 
         for (int i = 0; i < verts.length; i++)
         {
             int[] v = verts[i];
-            v[0] = vX[i];
-            v[1] = vY[i];
-            v[2] = vZ[i];
+            v[0] = (int) vX[i];
+            v[1] = (int) vY[i];
+            v[2] = (int) vZ[i];
         }
 
         int[][] faces = new int[model.getFaceCount()][3];
@@ -587,11 +587,27 @@ public class ModelExporter
                     transparencies = model.getFaceTransparencies();
                 }
 
+                float[] fvx = md.getVerticesX();
+                float[] fvy = md.getVerticesY();
+                float[] fvz = md.getVerticesZ();
+
+                int vCount = md.getVerticesCount();
+                int[] vX = new int[vCount];
+                int[] vY = new int[vCount];
+                int[] vZ = new int[vCount];
+
+                for (int i = 0; i < md.getVerticesCount(); i++)
+                {
+                    vX[i] = (int) fvx[i];
+                    vY[i] = (int) fvy[i];
+                    vZ[i] = (int) fvz[i];
+                }
+
                 blenderModel = bmFaceColoursForForgedModel(
                         md,
-                        md.getVerticesX(),
-                        md.getVerticesY(),
-                        md.getVerticesZ(),
+                        vX,
+                        vY,
+                        vZ,
                         md.getFaceIndices1(),
                         md.getFaceIndices2(),
                         md.getFaceIndices3(),
@@ -627,14 +643,30 @@ public class ModelExporter
                     transparencies = model.getFaceTransparencies();
                 }
 
+                float[] fvx1 = md.getVerticesX();
+                float[] fvy1 = md.getVerticesY();
+                float[] fvz1 = md.getVerticesZ();
+
+                int vCount1 = md.getVerticesCount();
+                int[] vX1 = new int[vCount1];
+                int[] vY1 = new int[vCount1];
+                int[] vZ1 = new int[vCount1];
+
+                for (int i = 0; i < md.getVerticesCount(); i++)
+                {
+                    vX1[i] = (int) fvx1[i];
+                    vY1[i] = (int) fvy1[i];
+                    vZ1[i] = (int) fvz1[i];
+                }
+
                 blenderModel = bmFaceColours(
                         comp.getModelStats(),
                         comp.getType() == CustomModelType.CACHE_OBJECT,
                         new int[0],
                         false,
-                        md.getVerticesX(),
-                        md.getVerticesY(),
-                        md.getVerticesZ(),
+                        vX1,
+                        vY1,
+                        vZ1,
                         md.getFaceIndices1(),
                         md.getFaceIndices2(),
                         md.getFaceIndices3(),
@@ -665,14 +697,30 @@ public class ModelExporter
                     transparencies = model.getFaceTransparencies();
                 }
 
+                float[] fvx2 = md.getVerticesX();
+                float[] fvy2 = md.getVerticesY();
+                float[] fvz2 = md.getVerticesZ();
+
+                int vCount2 = md.getVerticesCount();
+                int[] vX2 = new int[vCount2];
+                int[] vY2 = new int[vCount2];
+                int[] vZ2 = new int[vCount2];
+
+                for (int i = 0; i < md.getVerticesCount(); i++)
+                {
+                    vX2[i] = (int) fvx2[i];
+                    vY2[i] = (int) fvy2[i];
+                    vZ2[i] = (int) fvz2[i];
+                }
+
                 blenderModel = bmFaceColours(
                         comp.getModelStats(),
                         false,
                         comp.getKitRecolours(),
                         true,
-                        md.getVerticesX(),
-                        md.getVerticesY(),
-                        md.getVerticesZ(),
+                        vX2,
+                        vY2,
+                        vZ2,
                         md.getFaceIndices1(),
                         md.getFaceIndices2(),
                         md.getFaceIndices3(),
@@ -723,16 +771,16 @@ public class ModelExporter
         ModelData md = client.mergeModels(mds);
 
         int[][] verts = new int[md.getVerticesCount()][3];
-        int[] vX = md.getVerticesX();
-        int[] vY = md.getVerticesY();
-        int[] vZ = md.getVerticesZ();
+        float[] vX = md.getVerticesX();
+        float[] vY = md.getVerticesY();
+        float[] vZ = md.getVerticesZ();
 
         for (int i = 0; i < verts.length; i++)
         {
             int[] v = verts[i];
-            v[0] = vX[i];
-            v[1] = vY[i];
-            v[2] = vZ[i];
+            v[0] = (int) vX[i];
+            v[1] = (int) vY[i];
+            v[2] = (int) vZ[i];
         }
 
         int[][] faces = new int[md.getFaceCount()][3];
