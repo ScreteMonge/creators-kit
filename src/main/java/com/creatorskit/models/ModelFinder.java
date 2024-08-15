@@ -5,6 +5,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.PlayerComposition;
 import okhttp3.*;
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -57,18 +58,18 @@ public class ModelFinder
         {
             int item = items[i];
 
-            if (item >= 256 && item <= 512)
+            if (item >= PlayerComposition.KIT_OFFSET && item <= PlayerComposition.ITEM_OFFSET)
             {
-                kitShortList[i] = item - 256;
+                kitShortList[i] = item - PlayerComposition.KIT_OFFSET;
             }
             else
             {
                 kitShortList[i] = -1;
             }
 
-            if (item > 512)
+            if (item > PlayerComposition.ITEM_OFFSET)
             {
-                itemShortList[i] = item - 512;
+                itemShortList[i] = item - PlayerComposition.ITEM_OFFSET;
             }
             else
             {
