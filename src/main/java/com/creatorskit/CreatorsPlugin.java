@@ -750,7 +750,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		{
 			if (selectedCharacter != null)
 			{
-				client.createMenuEntry(-1)
+				client.getMenu().createMenuEntry(-1)
 						.setOption(ColorUtil.prependColorTag("Relocate", Color.ORANGE))
 						.setTarget(ColorUtil.colorTag(Color.GREEN) + selectedCharacter.getName())
 						.setType(MenuAction.RUNELITE)
@@ -765,7 +765,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 		}
 
-		MenuEntry[] menuEntries = client.getMenuEntries();
+		MenuEntry[] menuEntries = client.getMenu().getMenuEntries();
 		boolean hoveringTile = false;
 		for (MenuEntry menuEntry : menuEntries)
 		{

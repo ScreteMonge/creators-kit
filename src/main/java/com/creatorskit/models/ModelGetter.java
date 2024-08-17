@@ -9,8 +9,6 @@ import com.creatorskit.swing.ObjectPanel;
 import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.client.callback.ClientThread;
-import net.runelite.client.plugins.PluginManager;
-import net.runelite.client.plugins.animsmoothing.AnimationSmoothingPlugin;
 import net.runelite.client.util.ColorUtil;
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -70,7 +68,7 @@ public class ModelGetter
                 {
                     if (config.rightSelect())
                     {
-                        client.createMenuEntry(1)
+                        client.getMenu().createMenuEntry(1)
                                 .setOption(ColorUtil.prependColorTag("Select", Color.ORANGE))
                                 .setTarget(ColorUtil.colorTag(Color.GREEN) + character.getName())
                                 .setType(MenuAction.RUNELITE)
@@ -410,7 +408,7 @@ public class ModelGetter
 
     public void storeNPC(int index, String target, String option, NPC npc, ModelMenuOption menuOption)
     {
-        client.createMenuEntry(index)
+        client.getMenu().createMenuEntry(index)
                 .setOption(option)
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
@@ -472,7 +470,7 @@ public class ModelGetter
 
     public void sendToAnvilNPC(int index, String target, NPC npc)
     {
-        client.createMenuEntry(index)
+        client.getMenu().createMenuEntry(index)
                 .setOption(ColorUtil.prependColorTag("Anvil", Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
@@ -507,7 +505,7 @@ public class ModelGetter
             option = "Export Animation";
         }
 
-        client.createMenuEntry(index)
+        client.getMenu().createMenuEntry(index)
                 .setOption(ColorUtil.prependColorTag(option, Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
@@ -665,7 +663,7 @@ public class ModelGetter
 
     public void addSpotAnimGetter(int index, String target, String option, IterableHashTable<ActorSpotAnim> spotAnims, ModelMenuOption menuOption)
     {
-        client.createMenuEntry(index)
+        client.getMenu().createMenuEntry(index)
                 .setOption(option)
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
@@ -764,7 +762,7 @@ public class ModelGetter
 
     public void addSpotAnimExporter(int index, String target, IterableHashTable<ActorSpotAnim> spotAnims)
     {
-        client.createMenuEntry(index)
+        client.getMenu().createMenuEntry(index)
                 .setOption(ColorUtil.prependColorTag("Export SpotAnims", Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
@@ -796,7 +794,7 @@ public class ModelGetter
 
     public void addPlayerGetter(int index, String target, String option, Player player, ModelMenuOption menuOption)
     {
-        client.createMenuEntry(index)
+        client.getMenu().createMenuEntry(index)
                 .setOption(option)
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
@@ -898,7 +896,7 @@ public class ModelGetter
             option = "Export Animation";
         }
 
-        client.createMenuEntry(index)
+        client.getMenu().createMenuEntry(index)
                 .setOption(ColorUtil.prependColorTag(option, Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
@@ -1049,7 +1047,7 @@ public class ModelGetter
     public void addGameObjectGetter(int index, String option, String name, Model model, int objectId, int modelType, CustomModelType type, int animationId, int orientation, ModelMenuOption menuOption)
     {
         String target = ColorUtil.prependColorTag(name, Color.CYAN);
-        client.createMenuEntry(index)
+        client.getMenu().createMenuEntry(index)
                 .setOption(option)
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
@@ -1108,7 +1106,7 @@ public class ModelGetter
     public void addDynamicObjectGetter(int index, String option, String name, int objectId, int modelType, CustomModelType type, int animationId, int orientation, ModelMenuOption menuOption)
     {
         String target = ColorUtil.prependColorTag(name, Color.CYAN);
-        client.createMenuEntry(index)
+        client.getMenu().createMenuEntry(index)
                 .setOption(option)
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
@@ -1172,7 +1170,7 @@ public class ModelGetter
     public void addObjectGetterToAnvil(int index, String name, int objectId, int modelType, LightingStyle lightingStyle)
     {
         String target = ColorUtil.prependColorTag(name, Color.CYAN);
-        client.createMenuEntry(index)
+        client.getMenu().createMenuEntry(index)
                 .setOption(ColorUtil.prependColorTag("Anvil", Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
@@ -1201,7 +1199,7 @@ public class ModelGetter
     public void addObjectExporter(int index, String name, int objectId, int modelType, Model model)
     {
         String target = ColorUtil.prependColorTag(name, Color.CYAN);
-        client.createMenuEntry(index)
+        client.getMenu().createMenuEntry(index)
                 .setOption(ColorUtil.prependColorTag("Export", Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
@@ -1330,7 +1328,7 @@ public class ModelGetter
         }
 
         String target = ColorUtil.prependColorTag(name, Color.CYAN);
-        client.createMenuEntry(index)
+        client.getMenu().createMenuEntry(index)
                 .setOption(ColorUtil.prependColorTag(option, Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
@@ -1441,7 +1439,7 @@ public class ModelGetter
             option = "Export Animation";
         }
 
-        client.createMenuEntry(index)
+        client.getMenu().createMenuEntry(index)
                 .setOption(ColorUtil.prependColorTag(option, Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
@@ -1711,7 +1709,7 @@ public class ModelGetter
     public void addGroundItemGetter(int index, String option, String name, Model model, int itemId, int orientation, ModelMenuOption menuOption)
     {
         String target = ColorUtil.prependColorTag(name, Color.CYAN);
-        client.createMenuEntry(index)
+        client.getMenu().createMenuEntry(index)
                 .setOption(option)
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
@@ -1770,7 +1768,7 @@ public class ModelGetter
     public void addGroundItemGetterToAnvil(int index, String name, int itemId)
     {
         String target = ColorUtil.prependColorTag(name, Color.CYAN);
-        client.createMenuEntry(index)
+        client.getMenu().createMenuEntry(index)
                 .setOption(ColorUtil.prependColorTag("Anvil", Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
@@ -1799,7 +1797,7 @@ public class ModelGetter
     public void addGroundItemExporter(int index, String name, int itemId, Model model)
     {
         String target = ColorUtil.prependColorTag(name, Color.CYAN);
-        client.createMenuEntry(index)
+        client.getMenu().createMenuEntry(index)
                 .setOption(ColorUtil.prependColorTag("Export", Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
@@ -1904,7 +1902,7 @@ public class ModelGetter
         exportObject = client.createRuneLiteObject();
         exportObject.setAnimation(client.loadAnimation(animId));
         exportObject.setModel(model);
-        exportObject.setLocation(client.getLocalPlayer().getLocalLocation(), client.getPlane());
+        exportObject.setLocation(client.getLocalPlayer().getLocalLocation(), client.getTopLevelWorldView().getPlane());
         exportObject.setActive(true);
         continueAnimExport = true;
         initiateExport = true;
