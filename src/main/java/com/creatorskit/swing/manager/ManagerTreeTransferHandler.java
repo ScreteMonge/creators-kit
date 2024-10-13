@@ -1,6 +1,9 @@
-package com.creatorskit.swing.jtree;
+package com.creatorskit.swing.manager;
 
-import com.creatorskit.swing.ObjectPanel;
+import com.creatorskit.Character;
+import com.creatorskit.CreatorsPlugin;
+import com.creatorskit.swing.*;
+import com.creatorskit.swing.timesheet.TimeTree;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.swing.*;
@@ -14,14 +17,20 @@ import java.awt.datatransfer.UnsupportedFlavorException;
 import java.util.*;
 
 @Slf4j
-class CreatorTreeTransferHandler extends TransferHandler
+class ManagerTreeTransferHandler extends TransferHandler
 {
+    private final CreatorsPlugin plugin;
+    private final ToolBoxFrame toolBox;
+    private final TimeTree timeTree;
     private DataFlavor nodesFlavor;
     private DataFlavor[] flavors = new DataFlavor[1];
     private DefaultMutableTreeNode[] nodesToRemove;
 
-    public CreatorTreeTransferHandler()
+    public ManagerTreeTransferHandler(CreatorsPlugin plugin, ToolBoxFrame toolBox, TimeTree timeTree)
     {
+        this.plugin = plugin;
+        this.toolBox = toolBox;
+        this.timeTree = timeTree;
         try
         {
             String mimeType = DataFlavor.javaJVMLocalObjectMimeType +
@@ -71,8 +80,17 @@ class CreatorTreeTransferHandler extends TransferHandler
         int childIndex = dl.getChildIndex();
         TreePath dest = dl.getPath();
         DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) dest.getLastPathComponent();
-        if (childIndex == -1 && parentNode.getUserObject() instanceof ObjectPanel)
+        if (childIndex == -1 && parentNode.getUserObject() instanceof Character)
             return false;
+
+        if (parentNode.getUserObject() instanceof Folder)
+        {
+            Folder folder = (Folder) parentNode.getUserObject();
+            if (folder.getFolderType() == FolderType.MASTER)
+            {
+                return false;
+            }
+        }
 
         return true;
     }
@@ -93,7 +111,7 @@ class CreatorTreeTransferHandler extends TransferHandler
             DefaultMutableTreeNode copy = copy(node, doneItems, tree);
             copies.add(copy);
             toRemove.add(node);
-            for(int i = 1; i < paths.length; i++)
+            for (int i = 1; i < paths.length; i++)
             {
                 DefaultMutableTreeNode next = (DefaultMutableTreeNode)paths[i].getLastPathComponent();
                 if (doneItems.contains(next))
@@ -117,8 +135,9 @@ class CreatorTreeTransferHandler extends TransferHandler
                 doneItems.add(next);
             }
             DefaultMutableTreeNode[] nodes = copies.toArray(new DefaultMutableTreeNode[copies.size()]);
+
             nodesToRemove = toRemove.toArray(new DefaultMutableTreeNode[toRemove.size()]);
-            return new CreatorTreeTransferHandler.NodesTransferable(nodes);
+            return new ManagerTreeTransferHandler.NodesTransferable(nodes);
         }
         return null;
     }
@@ -126,6 +145,16 @@ class CreatorTreeTransferHandler extends TransferHandler
     private DefaultMutableTreeNode copy(DefaultMutableTreeNode node, HashSet<TreeNode> doneItems, JTree tree)
     {
         DefaultMutableTreeNode copy = new DefaultMutableTreeNode(node.getUserObject());
+        if (node.getUserObject() instanceof Folder)
+        {
+            ((Folder) node.getUserObject()).setLinkedManagerNode(copy);
+        }
+
+        if (node.getUserObject() instanceof Character)
+        {
+            ((Character) node.getUserObject()).setLinkedManagerNode(copy);
+        }
+
         doneItems.add(node);
         for (int i = 0; i < node.getChildCount(); i++)
         {
@@ -146,6 +175,9 @@ class CreatorTreeTransferHandler extends TransferHandler
             for (DefaultMutableTreeNode node : nodesToRemove)
                 model.removeNodeFromParent(node);
         }
+
+        plugin.getCreatorsPanel().resetSidePanel();
+        toolBox.getManagerPanel().getManagerTree().resetObjectHolder();
     }
 
     public int getSourceActions(JComponent c)
@@ -180,6 +212,38 @@ class CreatorTreeTransferHandler extends TransferHandler
         TreePath dest = dl.getPath();
         DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) (dest.getLastPathComponent());
 
+        ManagerPanel managerPanel = toolBox.getManagerPanel();
+        boolean sendToSidePanel = managerPanel.getManagerTree().treeContainsSidePanel(parentNode);
+        ParentPanel newParent = sendToSidePanel ? ParentPanel.SIDE_PANEL : ParentPanel.MANAGER;
+        ArrayList<Character> sidePanelCharacters = plugin.getCreatorsPanel().getSidePanelCharacters();
+        ArrayList<Character> managerCharacters = managerPanel.getManagerCharacters();
+
+        ArrayList<Character> arrayTo;
+        if (sendToSidePanel)
+        {
+            arrayTo = sidePanelCharacters;
+        }
+        else
+        {
+            arrayTo = managerCharacters;
+        }
+
+        // Prevent Protected folders from being transferred
+        for (DefaultMutableTreeNode node : nodes)
+        {
+            if (node.getUserObject() instanceof Folder)
+            {
+                Folder folder = (Folder) node.getUserObject();
+                FolderType type = folder.getFolderType();
+                if (type == FolderType.MANAGER
+                        || type == FolderType.MASTER
+                        || type == FolderType.SIDE_PANEL)
+                {
+                    return false;
+                }
+            }
+        }
+
         JTree tree = (JTree) support.getComponent();
         DefaultTreeModel model = (DefaultTreeModel) tree.getModel();
         // Configure for drop mode.
@@ -189,12 +253,52 @@ class CreatorTreeTransferHandler extends TransferHandler
             index = parentNode.getChildCount();
         }
 
+        ArrayList<Character> characters = new ArrayList<>();
+        Folder parentFolder = (Folder) parentNode.getUserObject();
+
         // Add data to model.
-        for(int i = 0; i < nodes.length; i++)
+        for (int i = 0; i < nodes.length; i++)
         {
-            model.insertNodeInto(nodes[i], parentNode, index++);
+            DefaultMutableTreeNode node = nodes[i];
+            model.insertNodeInto(node, parentNode, index++);
+
+            if (node.getUserObject() instanceof Folder)
+            {
+                Folder folder = (Folder) node.getUserObject();
+                folder.setParentManagerNode(parentNode);
+                folder.setParentTimeSheetNode(parentFolder.getLinkedTimeSheetNode());
+                getCharacterNodeChildren(node, characters);
+            }
+
+            if (node.getUserObject() instanceof Character)
+            {
+                characters.add((Character) node.getUserObject());
+            }
         }
 
+        for (Character character : characters)
+        {
+            ParentPanel oldParent = character.getParentPanel();
+            character.setParentPanel(newParent);
+            character.setParentManagerNode(parentNode);
+            character.setParentTimeSheetNode(parentFolder.getLinkedTimeSheetNode());
+
+            ArrayList<Character> arrayFrom;
+            if (oldParent == ParentPanel.SIDE_PANEL)
+            {
+                arrayFrom = sidePanelCharacters;
+            }
+            else
+            {
+                arrayFrom = managerCharacters;
+            }
+
+            arrayFrom.remove(character);
+            arrayTo.add(character);
+        }
+
+        timeTree.moveNodes(nodes, parentNode);
+        tree.setSelectionPath(dest);
         tree.expandPath(dest);
         return true;
     }
@@ -228,6 +332,23 @@ class CreatorTreeTransferHandler extends TransferHandler
         public boolean isDataFlavorSupported (DataFlavor flavor)
         {
             return nodesFlavor.equals(flavor);
+        }
+    }
+
+    public void getCharacterNodeChildren(DefaultMutableTreeNode parent, ArrayList<Character> characters)
+    {
+        Enumeration<TreeNode> children = parent.children();
+        while (children.hasMoreElements())
+        {
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode) children.nextElement();
+            if (node.getUserObject() instanceof Character)
+            {
+                characters.add((Character) node.getUserObject());
+                continue;
+            }
+
+            if (!node.isLeaf())
+                getCharacterNodeChildren(node, characters);
         }
     }
 }

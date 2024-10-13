@@ -6,7 +6,6 @@ import com.creatorskit.programming.MovementType;
 import com.creatorskit.programming.Program;
 import com.creatorskit.programming.ProgramComp;
 import lombok.Getter;
-import lombok.Setter;
 import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
@@ -19,6 +18,7 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.Random;
 
 @Getter
@@ -30,6 +30,7 @@ public class ProgrammerPanel extends JPanel
     private final GridBagConstraints c = new GridBagConstraints();
     private final JPanel managerProgramHolder = new JPanel();
     private final JPanel sideProgramHolder = new JPanel();
+    private final JPanel scrollPanel = new JPanel();
     private JPanel[] sidePrograms = new JPanel[0];
     private final Random random = new Random();
 
@@ -79,6 +80,10 @@ public class ProgrammerPanel extends JPanel
             }
         });
 
+        BorderLayout borderLayout = new BorderLayout();
+        borderLayout.setHgap(4);
+        scrollPanel.setLayout(borderLayout);
+
         JTabbedPane tabbedPane = new JTabbedPane();
         JScrollPane managerScrollPane = new JScrollPane();
         JScrollPane sideScrollPane = new JScrollPane();
@@ -93,33 +98,23 @@ public class ProgrammerPanel extends JPanel
         headerPanel.add(syncShownButton, c);
         syncShownButton.addActionListener(e ->
         {
+            ArrayList<Character> characters = plugin.getCharacters();
             Component component = tabbedPane.getSelectedComponent();
             if (component == sideScrollPane)
             {
-                for (ObjectPanel objectPanel : plugin.getCreatorsPanel().getSideObjectPanels())
+                for (int i = 0; i < characters.size(); i++)
                 {
-                    for (Character character : plugin.getCharacters())
-                    {
-                        if (character.getObjectPanel() == objectPanel)
-                        {
-                            plugin.setAnimation(character, (int) character.getAnimationSpinner().getValue());
-                        }
-                    }
+                    Character character = characters.get(i);
+                    plugin.setAnimation(character, (int) character.getAnimationSpinner().getValue());
                 }
             }
 
             if (component == managerScrollPane)
             {
-                ObjectPanel[] objectPanels = plugin.getCreatorsPanel().getToolBox().getManagerPanel().getShownObjectPanels();
-                for (ObjectPanel objectPanel : objectPanels)
+                Character[] shownCharacters = plugin.getCreatorsPanel().getToolBox().getManagerPanel().getShownCharacters();
+                for (Character character : shownCharacters)
                 {
-                    for (Character character : plugin.getCharacters())
-                    {
-                        if (character.getObjectPanel() == objectPanel)
-                        {
-                            plugin.setAnimation(character, (int) character.getAnimationSpinner().getValue());
-                        }
-                    }
+                    plugin.setAnimation(character, (int) character.getAnimationSpinner().getValue());
                 }
             }
         });
@@ -151,13 +146,14 @@ public class ProgrammerPanel extends JPanel
         c.fill = GridBagConstraints.BOTH;
         c.gridx = 1;
         c.gridy = 1;
-        c.weightx = 0.8;
+        c.weightx = 1;
         c.weighty = 1;
         c.gridwidth = 2;
         tabbedPane.addTab("Side Panel Objects", sideScrollPane);
         tabbedPane.addTab("Manager Objects", managerScrollPane);
         tabbedPane.setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 1));
-        add(tabbedPane, c);
+        scrollPanel.add(tabbedPane, BorderLayout.CENTER);
+        add(scrollPanel, c);
 
         managerProgramHolder.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         managerProgramHolder.setBorder(new EmptyBorder(4, 4, 4, 4));

@@ -1,6 +1,7 @@
 package com.creatorskit.saves;
 
 import com.creatorskit.programming.ProgramComp;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -28,4 +29,5 @@ public class CharacterSave
     private int rotation;
     private int animationId;
     private ProgramComp programComp;
+    private KeyFrame[][] keyFrames;
 }

@@ -5,7 +5,8 @@ import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.exporters.ModelExporter;
 import com.creatorskit.swing.CreatorsPanel;
-import com.creatorskit.swing.ObjectPanel;
+import com.creatorskit.swing.ParentPanel;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.client.callback.ClientThread;
@@ -441,8 +442,8 @@ public class ModelGetter
 
                             if (menuOption == ModelMenuOption.STORE_AND_ADD)
                             {
-                                ObjectPanel objectPanel = creatorsPanel.createPanel(
-                                        creatorsPanel.getSidePanel(),
+                                Character character = creatorsPanel.createCharacter(
+                                        ParentPanel.SIDE_PANEL,
                                         npc.getName(),
                                         7699,
                                         customModel,
@@ -451,6 +452,7 @@ public class ModelGetter
                                         npc.getOrientation(),
                                         npc.getPoseAnimation(),
                                         60,
+                                        new KeyFrame[0][],
                                         creatorsPanel.createEmptyProgram(npc.getPoseAnimation(), npc.getWalkAnimation()),
                                         false,
                                         null,
@@ -460,7 +462,7 @@ public class ModelGetter
                                         false,
                                         false);
 
-                                SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(creatorsPanel.getSideObjectPanels(), creatorsPanel.getSidePanel(), objectPanel));
+                                SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character));
                             }
                         });
                     });
@@ -732,8 +734,8 @@ public class ModelGetter
                                 {
                                     CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
 
-                                    ObjectPanel objectPanel = creatorsPanel.createPanel(
-                                            creatorsPanel.getSidePanel(),
+                                    Character character = creatorsPanel.createCharacter(
+                                            ParentPanel.SIDE_PANEL,
                                             name,
                                             7699,
                                             customModel,
@@ -742,6 +744,7 @@ public class ModelGetter
                                             0,
                                             anim,
                                             60,
+                                            new KeyFrame[0][],
                                             creatorsPanel.createEmptyProgram(anim, anim),
                                             false,
                                             null,
@@ -751,7 +754,7 @@ public class ModelGetter
                                             false,
                                             false);
 
-                                    SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(creatorsPanel.getSideObjectPanels(), creatorsPanel.getSidePanel(), objectPanel));
+                                    SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character));
                                 }
                             });
                         });
@@ -861,8 +864,8 @@ public class ModelGetter
 
                             if (menuOption == ModelMenuOption.STORE_AND_ADD)
                             {
-                                ObjectPanel objectPanel = creatorsPanel.createPanel(
-                                        creatorsPanel.getSidePanel(),
+                                Character character = creatorsPanel.createCharacter(
+                                        ParentPanel.SIDE_PANEL,
                                         finalName,
                                         7699,
                                         customModel,
@@ -871,7 +874,8 @@ public class ModelGetter
                                         player.getCurrentOrientation(),
                                         anim,
                                         60,
-                                        creatorsPanel.createEmptyProgram(anim, player.getWalkAnimation()),
+                                        new KeyFrame[0][],
+                                        creatorsPanel.createEmptyProgram(player.getPoseAnimation(), player.getWalkAnimation()),
                                         false,
                                         null,
                                         null,
@@ -880,7 +884,7 @@ public class ModelGetter
                                         false,
                                         false);
 
-                                SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(creatorsPanel.getSideObjectPanels(), creatorsPanel.getSidePanel(), objectPanel));
+                                SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character));
                             }
                         });
                     });
@@ -1077,8 +1081,8 @@ public class ModelGetter
 
                         if (menuOption == ModelMenuOption.STORE_AND_ADD)
                         {
-                            ObjectPanel objectPanel = creatorsPanel.createPanel(
-                                    creatorsPanel.getSidePanel(),
+                            Character character = creatorsPanel.createCharacter(
+                                    ParentPanel.SIDE_PANEL,
                                     name,
                                     7699,
                                     customModel,
@@ -1087,6 +1091,7 @@ public class ModelGetter
                                     orientation,
                                     animationId,
                                     60,
+                                    new KeyFrame[0][],
                                     creatorsPanel.createEmptyProgram(animationId, animationId),
                                     false,
                                     null,
@@ -1096,7 +1101,7 @@ public class ModelGetter
                                     false,
                                     false);
 
-                            SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(creatorsPanel.getSideObjectPanels(), creatorsPanel.getSidePanel(), objectPanel));
+                            SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character));
                         }
                     });
                     thread.start();

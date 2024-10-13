@@ -1,7 +1,11 @@
 package com.creatorskit.swing;
 
 import com.creatorskit.CreatorsPlugin;
-import com.creatorskit.swing.jtree.FolderTree;
+import com.creatorskit.swing.manager.ManagerPanel;
+import com.creatorskit.swing.manager.ManagerTree;
+import com.creatorskit.swing.timesheet.TimeSheet;
+import com.creatorskit.swing.timesheet.TimeSheetPanel;
+import com.creatorskit.swing.timesheet.TimeTree;
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
@@ -12,6 +16,7 @@ import net.runelite.client.util.ImageUtil;
 
 import javax.inject.Inject;
 import javax.swing.*;
+import javax.swing.tree.DefaultMutableTreeNode;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
@@ -23,29 +28,55 @@ public class ToolBoxFrame extends JFrame
     private ClientThread clientThread;
     private final Client client;
     private final CreatorsPlugin plugin;
+    private final CreatorsPanel creatorsPanel;
     private final ConfigManager configManager;
     private final ManagerPanel managerPanel;
     private final ModelOrganizer modelOrganizer;
     private final ModelAnvil modelAnvil;
     private final ProgrammerPanel programPanel;
     private final TransmogPanel transmogPanel;
+    private final TimeSheetPanel timeSheetPanel;
     private final BufferedImage ICON = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
 
     @Inject
-    public ToolBoxFrame(Client client, ClientThread clientThread, CreatorsPlugin plugin, ConfigManager configManager, ManagerPanel managerPanel, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, ProgrammerPanel programPanel, TransmogPanel transmogPanel)
+    public ToolBoxFrame(Client client, ClientThread clientThread, CreatorsPlugin plugin, ConfigManager configManager, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, ProgrammerPanel programPanel, TransmogPanel transmogPanel)
     {
         this.client = client;
         this.clientThread = clientThread;
         this.plugin = plugin;
+        this.creatorsPanel = plugin.getCreatorsPanel();
         this.configManager = configManager;
-        this.managerPanel = managerPanel;
         this.modelOrganizer = modelOrganizer;
         this.modelAnvil = modelAnvil;
         this.programPanel = programPanel;
         this.transmogPanel = transmogPanel;
 
+        Folder rootFolder = new Folder("Master Folder", FolderType.MASTER, null, null, null, null);
+        DefaultMutableTreeNode managerRootNode = new DefaultMutableTreeNode(rootFolder);
+        DefaultMutableTreeNode timeRootNode = new DefaultMutableTreeNode(rootFolder);
+        rootFolder.setLinkedManagerNode(managerRootNode);
+        rootFolder.setLinkedTimeSheetNode(timeRootNode);
+
+        Folder sidePanelFolder = new Folder("Side Panel", FolderType.SIDE_PANEL, null, null, managerRootNode, timeRootNode);
+        Folder managerPanelFolder = new Folder("Manager", FolderType.MANAGER, null, null, managerRootNode, timeRootNode);
+        DefaultMutableTreeNode timeSideNode = new DefaultMutableTreeNode(sidePanelFolder);
+        DefaultMutableTreeNode timeManagerNode = new DefaultMutableTreeNode(managerPanelFolder);
+        DefaultMutableTreeNode managerSideNode = new DefaultMutableTreeNode(sidePanelFolder);
+        DefaultMutableTreeNode managerManagerNode = new DefaultMutableTreeNode(managerPanelFolder);
+        sidePanelFolder.setLinkedManagerNode(managerSideNode);
+        sidePanelFolder.setLinkedTimeSheetNode(timeSideNode);
+        managerPanelFolder.setLinkedManagerNode(managerManagerNode);
+        managerPanelFolder.setLinkedTimeSheetNode(timeManagerNode);
+
+        TimeSheet timeSheet = new TimeSheet();
+        TimeTree timeTree = new TimeTree(timeSheet, timeRootNode, timeSideNode, timeManagerNode);
+        this.timeSheetPanel = new TimeSheetPanel(client, plugin, clientThread, timeSheet, timeTree);
+
+        JPanel objectHolder = new JPanel();
+        ManagerTree managerTree = new ManagerTree(this, plugin, objectHolder, managerRootNode, managerSideNode, managerManagerNode, timeTree);
+        this.managerPanel = new ManagerPanel(client, plugin, objectHolder, managerTree);
+
         setBackground(ColorScheme.DARK_GRAY_COLOR);
-        setLayout(new BorderLayout());
         setTitle("Creator's Kit Toolbox");
         setIconImage(ICON);
 
@@ -82,6 +113,7 @@ public class ToolBoxFrame extends JFrame
         tabbedPane.addTab("Model Anvil", modelAnvil);
         tabbedPane.addTab("Programmer", programPanel);
         tabbedPane.addTab("Transmogger", transmogPanel);
+        tabbedPane.addTab("Timesheet", timeSheetPanel);
         tabbedPane.setToolTipTextAt(0, "Manage and organize all your Objects");
         tabbedPane.setToolTipTextAt(1, "Organize Custom Models you've loaded from the cache or Forged");
         tabbedPane.setToolTipTextAt(2, "Create Custom Models by modifying and merging different models together");
@@ -95,31 +127,13 @@ public class ToolBoxFrame extends JFrame
                 JTabbedPane jTabbedPane = (JTabbedPane) e.getSource();
                 if (jTabbedPane.getSelectedComponent() == managerPanel)
                 {
-                    FolderTree folderTree = managerPanel.getFolderTree();
-                    GridBagConstraints c = managerPanel.getC();
-                    c.fill = GridBagConstraints.BOTH;
-                    c.gridx = 0;
-                    c.gridy = 2;
-                    c.weightx = 0;
-                    c.weighty = 1;
-                    c.gridwidth = 1;
-                    c.gridheight = 2;
-                    managerPanel.add(folderTree, c);
+                    managerPanel.getScrollPanel().add(managerTree, BorderLayout.LINE_START);
                     setHeaderButtonsVisible(true);
                 }
 
                 if (jTabbedPane.getSelectedComponent() == programPanel)
                 {
-                    FolderTree folderTree = managerPanel.getFolderTree();
-                    GridBagConstraints c = programPanel.getC();
-                    c.fill = GridBagConstraints.BOTH;
-                    c.gridx = 0;
-                    c.gridy = 1;
-                    c.weightx = 0;
-                    c.weighty = 1;
-                    c.gridwidth = 1;
-                    c.gridheight = 1;
-                    programPanel.add(folderTree, c);
+                    programPanel.getScrollPanel().add(managerPanel.getManagerTree(), BorderLayout.LINE_START);
                     setHeaderButtonsVisible(false);
                 }
             }
@@ -134,7 +148,7 @@ public class ToolBoxFrame extends JFrame
 
     private void setHeaderButtonsVisible(boolean setVisible)
     {
-        JButton[] headerButtons = managerPanel.getFolderTree().getHeaderButtons();
+        JButton[] headerButtons = managerPanel.getManagerTree().getHeaderButtons();
         for (JButton button : headerButtons)
             button.setVisible(setVisible);
     }
