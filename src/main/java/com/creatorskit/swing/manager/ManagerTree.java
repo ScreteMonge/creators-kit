@@ -231,9 +231,20 @@ public class ManagerTree extends JScrollPane
         return linkedManagerNode;
     }
 
-    // Gets the currently selected Folder and adds the character to it
+    /**
+     * Adds a character node to the currently selected ManagerTree node. Creates a linked ManagerTree and TimeTree node and remembers the parent node of each
+     * @param character the character to add to the selected node
+     * @param parentPanel the ParentPanel to which the character will be added (SidePanel or ManagerPanel)
+     * @param shouldBeVisible visibility
+     * @return the linked ManagerTree node
+     */
     public DefaultMutableTreeNode addCharacterNode(Character character, ParentPanel parentPanel, boolean shouldBeVisible)
     {
+        if (parentPanel == ParentPanel.SIDE_PANEL)
+        {
+            return addCharacterNode(sidePanelNode, character, parentPanel, shouldBeVisible);
+        }
+
         return addCharacterNode(getParentNode(parentPanel), character, parentPanel, shouldBeVisible);
     }
 
@@ -243,6 +254,14 @@ public class ManagerTree extends JScrollPane
         return addCharacterNode(parent, character, parentPanel, false);
     }
 
+    /**
+     * Adds a character node to the indicated ManagerTree node. Creates a linked ManagerTree and TimeTree node and remembers the parent node of each
+     * @param managerParent the parent node in the ManagerTree to which to attach the new node
+     * @param character the character to add to the selected node
+     * @param parentPanel the ParentPanel to which the character will be added (SidePanel or ManagerPanel)
+     * @param shouldBeVisible visibility
+     * @return the linked ManagerTree node
+     */
     public DefaultMutableTreeNode addCharacterNode(DefaultMutableTreeNode managerParent, Character character, ParentPanel parentPanel, boolean shouldBeVisible)
     {
         if (managerParent == rootNode)

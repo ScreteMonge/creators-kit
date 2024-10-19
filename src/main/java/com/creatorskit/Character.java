@@ -29,7 +29,6 @@ public class Character
     private DefaultMutableTreeNode linkedTimeSheetNode;
     private DefaultMutableTreeNode parentManagerNode;
     private DefaultMutableTreeNode parentTimeSheetNode;
-    private DefaultMutableTreeNode[] timeTreeNodes;
     private Program program;
     private WorldPoint nonInstancedPoint;
     private LocalPoint instancedPoint;

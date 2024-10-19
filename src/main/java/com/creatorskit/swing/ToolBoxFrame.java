@@ -68,9 +68,11 @@ public class ToolBoxFrame extends JFrame
         managerPanelFolder.setLinkedManagerNode(managerManagerNode);
         managerPanelFolder.setLinkedTimeSheetNode(timeManagerNode);
 
+        JScrollBar scrollBar = new JScrollBar(Adjustable.HORIZONTAL);
         TimeSheet timeSheet = new TimeSheet();
         TimeTree timeTree = new TimeTree(timeSheet, timeRootNode, timeSideNode, timeManagerNode);
-        this.timeSheetPanel = new TimeSheetPanel(client, plugin, clientThread, timeSheet, timeTree);
+        this.timeSheetPanel = new TimeSheetPanel(client, plugin, clientThread, timeSheet, timeTree, scrollBar);
+
 
         JPanel objectHolder = new JPanel();
         ManagerTree managerTree = new ManagerTree(this, plugin, objectHolder, managerRootNode, managerSideNode, managerManagerNode, timeTree);

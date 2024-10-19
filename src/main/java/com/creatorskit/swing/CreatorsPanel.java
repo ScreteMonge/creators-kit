@@ -472,7 +472,6 @@ public class CreatorsPanel extends PluginPanel
                 null,
                 null,
                 null,
-                TimeTree.createEmptyNodeTree(),
                 program,
                 worldPoint,
                 localPoint,

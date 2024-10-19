@@ -73,7 +73,7 @@ public class ModelGetter
                                 .setOption(ColorUtil.prependColorTag("Select", Color.ORANGE))
                                 .setTarget(ColorUtil.colorTag(Color.GREEN) + character.getName())
                                 .setType(MenuAction.RUNELITE)
-                                .onClick(e -> creatorsPanel.setSelectedCharacter(character, character.getObjectPanel()));
+                                .onClick(e -> creatorsPanel.setSelectedCharacter(character));
                     }
 
                     if (config.exportRightClick())
@@ -1145,8 +1145,8 @@ public class ModelGetter
 
                             if (menuOption == ModelMenuOption.STORE_AND_ADD)
                             {
-                                ObjectPanel objectPanel = creatorsPanel.createPanel(
-                                        creatorsPanel.getSidePanel(),
+                                Character character = creatorsPanel.createCharacter(
+                                        ParentPanel.SIDE_PANEL,
                                         name,
                                         7699,
                                         customModel,
@@ -1155,6 +1155,7 @@ public class ModelGetter
                                         orientation,
                                         animationId,
                                         60,
+                                        new KeyFrame[0][],
                                         creatorsPanel.createEmptyProgram(animationId, animationId),
                                         false,
                                         null,
@@ -1164,7 +1165,7 @@ public class ModelGetter
                                         false,
                                         false);
 
-                                SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(creatorsPanel.getSideObjectPanels(), creatorsPanel.getSidePanel(), objectPanel));
+                                SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character));
                             }
                         });
                     });
@@ -1744,8 +1745,8 @@ public class ModelGetter
 
                         if (menuOption == ModelMenuOption.STORE_AND_ADD)
                         {
-                            ObjectPanel objectPanel = creatorsPanel.createPanel(
-                                    creatorsPanel.getSidePanel(),
+                            Character character = creatorsPanel.createCharacter(
+                                    ParentPanel.SIDE_PANEL,
                                     name,
                                     7699,
                                     customModel,
@@ -1754,6 +1755,7 @@ public class ModelGetter
                                     orientation,
                                     -1,
                                     60,
+                                    new KeyFrame[0][],
                                     creatorsPanel.createEmptyProgram(-1, -1),
                                     false,
                                     null,
@@ -1763,7 +1765,7 @@ public class ModelGetter
                                     false,
                                     false);
 
-                            SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(creatorsPanel.getSideObjectPanels(), creatorsPanel.getSidePanel(), objectPanel));
+                            SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character));
                         }
                     });
                     thread.start();

@@ -147,21 +147,7 @@ public class TimeTree extends JScrollPane
     {
         DefaultMutableTreeNode node = character.getLinkedTimeSheetNode();
         parent.add(node);
-        addKeyFrameNodes(node, character);
         updateTreeSelectionIndex();
-    }
-
-    private void addKeyFrameNodes(DefaultMutableTreeNode newNode, Character character)
-    {
-        DefaultMutableTreeNode[] nodes = character.getTimeTreeNodes();
-        newNode.add(nodes[0]);
-        newNode.add(nodes[1]);
-        newNode.add(nodes[2]);
-        newNode.add(nodes[3]);
-        newNode.add(nodes[4]);
-        newNode.add(nodes[5]);
-        newNode.add(nodes[6]);
-        newNode.add(nodes[7]);
     }
 
     public void addKeyFrame(Character character, KeyFrame keyFrame)
