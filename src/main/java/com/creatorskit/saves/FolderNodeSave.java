@@ -1,5 +1,6 @@
 package com.creatorskit.saves;
 
+import com.creatorskit.swing.FolderType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -9,8 +10,8 @@ import lombok.Setter;
 @Setter
 public class FolderNodeSave
 {
-    boolean masterFolder;
-    String name;
-    CharacterSave[] characterSaves;
-    FolderNodeSave[] folderSaves;
+    private FolderType folderType;
+    private String name;
+    private CharacterSave[] characterSaves;
+    private FolderNodeSave[] folderSaves;
 }

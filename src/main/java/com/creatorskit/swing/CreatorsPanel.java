@@ -1323,14 +1323,7 @@ public class CreatorsPanel extends PluginPanel
         //Get Folder structure and all characters contained within
         FolderNodeSave folderNodeSave = getFolders(comps);
 
-        //Get all characters in side panel
-        CharacterSave[] characterSaves = new CharacterSave[sidePanelCharacters.size()];
-        for (int i = 0; i < sidePanelCharacters.size(); i++)
-        {
-            characterSaves[i] = createCharacterSave(sidePanelCharacters.get(i), comps);
-        }
-
-        SetupSave saveFile = new SetupSave(comps, folderNodeSave, characterSaves);
+        SetupSave saveFile = new SetupSave(comps, folderNodeSave, new CharacterSave[0]);
 
         try
         {
@@ -1347,7 +1340,7 @@ public class CreatorsPanel extends PluginPanel
 
     public FolderNodeSave getFolders(CustomModelComp[] comps)
     {
-        FolderNodeSave folderNodeSave = new FolderNodeSave(true, "Master Panel", new CharacterSave[0], new FolderNodeSave[0]);
+        FolderNodeSave folderNodeSave = new FolderNodeSave(FolderType.MASTER, "Master Panel", new CharacterSave[0], new FolderNodeSave[0]);
         getFolderChildren(folderNodeSave, toolBox.getManagerPanel().getManagerTree().getRootNode(), comps);
         return folderNodeSave;
     }
@@ -1368,8 +1361,9 @@ public class CreatorsPanel extends PluginPanel
 
             if (node.getUserObject() instanceof Folder)
             {
-                String name = ((Folder) node.getUserObject()).getName();
-                FolderNodeSave folderNodeSave = new FolderNodeSave(false, name, new CharacterSave[0], new FolderNodeSave[0]);
+                Folder folder = (Folder) node.getUserObject();
+                String name = (folder.getName());
+                FolderNodeSave folderNodeSave = new FolderNodeSave(folder.getFolderType(), name, new CharacterSave[0], new FolderNodeSave[0]);
                 parentNodeSave.setFolderSaves(ArrayUtils.add(parentNodeSave.getFolderSaves(), folderNodeSave));
 
                 if (!node.isLeaf())
@@ -1511,7 +1505,6 @@ public class CreatorsPanel extends PluginPanel
     {
         CustomModelComp[] comps = saveFile.getComps();
         FolderNodeSave folderNodeSave = saveFile.getMasterFolderNode();
-        CharacterSave[] characterSaves = saveFile.getSaves();
         CustomModel[] customModels = new CustomModel[comps.length];
 
         for (int i = 0; i < comps.length; i++)
@@ -1565,50 +1558,55 @@ public class CreatorsPanel extends PluginPanel
                 openFolderNodeSave(managerTree, rootNode, folderNodeSave, customModels);
         });
 
-        Thread thread = new Thread(() ->
+        //Handle pre-v1.5.4 characters saved to the SidePanel
+        CharacterSave[] characterSaves = saveFile.getSaves();
+        if (characterSaves.length > 0)
         {
-            for (CharacterSave save : characterSaves)
+            Thread thread = new Thread(() ->
             {
-                Color color = new Color(save.getProgramComp().getRgb());
-                Program program = new Program(save.getProgramComp(), new JPanel(), new JLabel(), new JSpinner(), color);
-                Character character;
-
-                CustomModel customModel = null;
-                if (customModels.length > 0)
+                for (CharacterSave save : characterSaves)
                 {
-                    customModel = customModels[save.getCompId()];
+                    Color color = new Color(save.getProgramComp().getRgb());
+                    Program program = new Program(save.getProgramComp(), new JPanel(), new JLabel(), new JSpinner(), color);
+                    Character character;
+
+                    CustomModel customModel = null;
+                    if (customModels.length > 0)
+                    {
+                        customModel = customModels[save.getCompId()];
+                    }
+
+                    KeyFrame[][] keyFrames = save.getKeyFrames();
+                    if (keyFrames == null)
+                    {
+                        keyFrames = new KeyFrame[0][];
+                    }
+
+                    character = createCharacter(
+                            ParentPanel.SIDE_PANEL,
+                            save.getName(),
+                            save.getModelId(),
+                            customModel,
+                            save.isCustomMode(),
+                            save.isMinimized(),
+                            save.getRotation(),
+                            save.getAnimationId(),
+                            save.getRadius(),
+                            keyFrames,
+                            program,
+                            save.isActive(),
+                            save.getNonInstancedPoint(),
+                            save.getInstancedPoint(),
+                            save.getInstancedRegions(),
+                            save.getInstancedPlane(),
+                            save.isInInstance(),
+                            false);
+
+                    SwingUtilities.invokeLater(() -> addPanel(ParentPanel.SIDE_PANEL, character));
                 }
-
-                KeyFrame[][] keyFrames = save.getKeyFrames();
-                if (keyFrames == null)
-                {
-                    keyFrames = new KeyFrame[0][];
-                }
-
-                character = createCharacter(
-                        ParentPanel.SIDE_PANEL,
-                        save.getName(),
-                        save.getModelId(),
-                        customModel,
-                        save.isCustomMode(),
-                        save.isMinimized(),
-                        save.getRotation(),
-                        save.getAnimationId(),
-                        save.getRadius(),
-                        keyFrames,
-                        program,
-                        save.isActive(),
-                        save.getNonInstancedPoint(),
-                        save.getInstancedPoint(),
-                        save.getInstancedRegions(),
-                        save.getInstancedPlane(),
-                        save.isInInstance(),
-                        false);
-
-                SwingUtilities.invokeLater(() -> addPanel(ParentPanel.SIDE_PANEL, character));
-            }
-        });
-        thread.start();
+            });
+            thread.start();
+        }
 
         if (v1_2Save)
         {
@@ -1621,13 +1619,38 @@ public class CreatorsPanel extends PluginPanel
     {
         String name = folderNodeSave.getName();
         DefaultMutableTreeNode node;
-        if (folderNodeSave.isMasterFolder())
+        FolderType folderType = folderNodeSave.getFolderType();
+
+        //Handle pre-v1.5.4 saves
+        if (folderType == null)
         {
-            node = managerTree.getRootNode();
+            node = managerTree.addFolderNode(parentNode, name);
         }
         else
         {
-            node = managerTree.addFolderNode(parentNode, name);
+            switch (folderType)
+            {
+                default:
+                case STANDARD:
+                    node = managerTree.addFolderNode(parentNode, name);
+                    break;
+                case MASTER:
+                case MANAGER:
+                    node = managerTree.getManagerNode();
+                    break;
+                case SIDE_PANEL:
+                    node = managerTree.getSidePanelNode();
+            }
+        }
+
+        ParentPanel parentPanel;
+        if (folderType == FolderType.SIDE_PANEL)
+        {
+            parentPanel = ParentPanel.SIDE_PANEL;
+        }
+        else
+        {
+            parentPanel = ParentPanel.MANAGER;
         }
 
         for (CharacterSave save : folderNodeSave.getCharacterSaves())
@@ -1648,7 +1671,7 @@ public class CreatorsPanel extends PluginPanel
             }
 
             character = createCharacter(
-                    ParentPanel.MANAGER,
+                    parentPanel,
                     save.getName(),
                     save.getModelId(),
                     customModel,
@@ -1667,7 +1690,7 @@ public class CreatorsPanel extends PluginPanel
                     save.isInInstance(),
                     false);
 
-            addPanel(ParentPanel.MANAGER, character, node);
+            addPanel(parentPanel, character, node);
         }
 
         FolderNodeSave[] folderNodeSaves = folderNodeSave.getFolderSaves();
