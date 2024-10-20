@@ -2,9 +2,10 @@ package com.creatorskit.swing.timesheet.keyframe;
 
 public enum KeyFrameType
 {
-    LOCATION,
+    MOVEMENT,
     ANIMATION,
     SPAWN,
+    MODEL,
     ORIENTATION,
     TEXT,
     OVERHEAD,
@@ -16,22 +17,24 @@ public enum KeyFrameType
         switch (type)
         {
             default:
-            case LOCATION:
+            case MOVEMENT:
                 return 0;
             case ANIMATION:
                 return 1;
             case SPAWN:
                 return 2;
-            case ORIENTATION:
+            case MODEL:
                 return 3;
-            case TEXT:
+            case ORIENTATION:
                 return 4;
-            case OVERHEAD:
+            case TEXT:
                 return 5;
-            case HITSPLAT:
+            case OVERHEAD:
                 return 6;
-            case HEALTHBAR:
+            case HITSPLAT:
                 return 7;
+            case HEALTHBAR:
+                return 8;
         }
     }
 }

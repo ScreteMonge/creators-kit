@@ -3,6 +3,7 @@ package com.creatorskit.swing;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.swing.manager.ManagerPanel;
 import com.creatorskit.swing.manager.ManagerTree;
+import com.creatorskit.swing.timesheet.AttributeSheet;
 import com.creatorskit.swing.timesheet.TimeSheet;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.TimeTree;
@@ -70,8 +71,9 @@ public class ToolBoxFrame extends JFrame
 
         JScrollBar scrollBar = new JScrollBar(Adjustable.HORIZONTAL);
         TimeSheet timeSheet = new TimeSheet();
+        AttributeSheet attributeSheet = new AttributeSheet();
         TimeTree timeTree = new TimeTree(timeSheet, timeRootNode, timeSideNode, timeManagerNode);
-        this.timeSheetPanel = new TimeSheetPanel(client, plugin, clientThread, timeSheet, timeTree, scrollBar);
+        this.timeSheetPanel = new TimeSheetPanel(client, plugin, clientThread, timeSheet, attributeSheet, timeTree, scrollBar);
 
 
         JPanel objectHolder = new JPanel();
@@ -115,7 +117,7 @@ public class ToolBoxFrame extends JFrame
         tabbedPane.addTab("Model Anvil", modelAnvil);
         tabbedPane.addTab("Programmer", programPanel);
         tabbedPane.addTab("Transmogger", transmogPanel);
-        tabbedPane.addTab("Timesheet", timeSheetPanel);
+        //tabbedPane.addTab("Timesheet", timeSheetPanel);
         tabbedPane.setToolTipTextAt(0, "Manage and organize all your Objects");
         tabbedPane.setToolTipTextAt(1, "Organize Custom Models you've loaded from the cache or Forged");
         tabbedPane.setToolTipTextAt(2, "Create Custom Models by modifying and merging different models together");

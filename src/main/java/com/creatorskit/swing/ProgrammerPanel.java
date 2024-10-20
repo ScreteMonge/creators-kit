@@ -10,7 +10,6 @@ import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
-import org.apache.commons.lang3.ArrayUtils;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -18,7 +17,6 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
-import java.util.ArrayList;
 import java.util.Random;
 
 @Getter
@@ -29,9 +27,8 @@ public class ProgrammerPanel extends JPanel
     private final CreatorsPlugin plugin;
     private final GridBagConstraints c = new GridBagConstraints();
     private final JPanel managerProgramHolder = new JPanel();
-    private final JPanel sideProgramHolder = new JPanel();
     private final JPanel scrollPanel = new JPanel();
-    private JPanel[] sidePrograms = new JPanel[0];
+    private final JPanel[] sidePrograms = new JPanel[0];
     private final Random random = new Random();
 
 
@@ -84,10 +81,6 @@ public class ProgrammerPanel extends JPanel
         borderLayout.setHgap(4);
         scrollPanel.setLayout(borderLayout);
 
-        JTabbedPane tabbedPane = new JTabbedPane();
-        JScrollPane managerScrollPane = new JScrollPane();
-        JScrollPane sideScrollPane = new JScrollPane();
-
         c.gridx = 2;
         c.gridy = 0;
         c.weightx = 0;
@@ -98,24 +91,10 @@ public class ProgrammerPanel extends JPanel
         headerPanel.add(syncShownButton, c);
         syncShownButton.addActionListener(e ->
         {
-            ArrayList<Character> characters = plugin.getCharacters();
-            Component component = tabbedPane.getSelectedComponent();
-            if (component == sideScrollPane)
+            Character[] shownCharacters = plugin.getCreatorsPanel().getToolBox().getManagerPanel().getShownCharacters();
+            for (Character character : shownCharacters)
             {
-                for (int i = 0; i < characters.size(); i++)
-                {
-                    Character character = characters.get(i);
-                    plugin.setAnimation(character, (int) character.getAnimationSpinner().getValue());
-                }
-            }
-
-            if (component == managerScrollPane)
-            {
-                Character[] shownCharacters = plugin.getCreatorsPanel().getToolBox().getManagerPanel().getShownCharacters();
-                for (Character character : shownCharacters)
-                {
-                    plugin.setAnimation(character, (int) character.getAnimationSpinner().getValue());
-                }
+                plugin.setAnimation(character, (int) character.getAnimationSpinner().getValue());
             }
         });
 
@@ -143,27 +122,21 @@ public class ProgrammerPanel extends JPanel
             plugin.sendChatMessage("Starting Desync. Remember to stop the Desync while recording!");
         });
 
+        JScrollPane managerScrollPane = new JScrollPane();
+
         c.fill = GridBagConstraints.BOTH;
         c.gridx = 1;
         c.gridy = 1;
         c.weightx = 1;
         c.weighty = 1;
         c.gridwidth = 2;
-        tabbedPane.addTab("Side Panel Objects", sideScrollPane);
-        tabbedPane.addTab("Manager Objects", managerScrollPane);
-        tabbedPane.setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 1));
-        scrollPanel.add(tabbedPane, BorderLayout.CENTER);
+        scrollPanel.add(managerScrollPane, BorderLayout.CENTER);
         add(scrollPanel, c);
 
         managerProgramHolder.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         managerProgramHolder.setBorder(new EmptyBorder(4, 4, 4, 4));
         managerProgramHolder.setLayout(new GridBagLayout());
         managerScrollPane.setViewportView(managerProgramHolder);
-
-        sideProgramHolder.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        sideProgramHolder.setBorder(new EmptyBorder(4, 4, 4, 4));
-        sideProgramHolder.setLayout(new GridBagLayout());
-        sideScrollPane.setViewportView(sideProgramHolder);
 
         repaint();
         revalidate();
@@ -310,63 +283,5 @@ public class ProgrammerPanel extends JPanel
         float g = random.nextFloat();
         float b = random.nextFloat();
         return new Color(r, g, b);
-    }
-
-    public void addSideProgram(JPanel programPanel)
-    {
-        sidePrograms = ArrayUtils.add(sidePrograms, programPanel);
-        resetProgramSidePanel();
-    }
-
-    public void removeSideProgram(JPanel programPanel)
-    {
-        sidePrograms = ArrayUtils.removeElement(sidePrograms, programPanel);
-        resetProgramSidePanel();
-    }
-
-    public void clearSidePrograms()
-    {
-        sidePrograms = new JPanel[0];
-        sideProgramHolder.removeAll();
-    }
-
-    public void resetProgramSidePanel()
-    {
-        c.fill = GridBagConstraints.NONE;
-        c.insets = new Insets(2, 2, 2, 2);
-        c.gridx = 0;
-        c.gridy = 0;
-        c.weightx = 0;
-        c.weighty = 0;
-        c.gridheight = 1;
-        c.gridwidth = 1;
-        c.anchor = GridBagConstraints.FIRST_LINE_START;
-
-        sideProgramHolder.removeAll();
-        int rows = sidePrograms.length / 5;
-
-        for (int i = 0; i < sidePrograms.length; i++)
-        {
-            JPanel panel = sidePrograms[i];
-
-            c.weightx = c.gridx == 4 ? 1 : 0;
-            if (c.gridx == sidePrograms.length - 1)
-                c.weightx = 1;
-
-            c.weighty = c.gridy == rows ? 1 : 0;
-            if (i == sidePrograms.length - 1)
-                c.weighty = 1;
-
-            sideProgramHolder.add(panel, c);
-            c.gridx++;
-            if (c.gridx > 4)
-            {
-                c.gridx = 0;
-                c.gridy++;
-            }
-        }
-
-        sideProgramHolder.revalidate();
-        sideProgramHolder.repaint();
     }
 }

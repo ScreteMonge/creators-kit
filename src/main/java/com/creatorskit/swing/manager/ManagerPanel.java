@@ -9,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
-import net.runelite.client.util.ImageUtil;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -18,7 +17,6 @@ import javax.swing.border.LineBorder;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 import java.awt.*;
-import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 
 @Slf4j
@@ -32,7 +30,6 @@ public class ManagerPanel extends JPanel
     private final JPanel scrollPanel = new JPanel();
     private final ArrayList<Character> managerCharacters = new ArrayList<>();
     private final ManagerTree managerTree;
-    private final BufferedImage SWITCH_ALL = ImageUtil.loadImageResource(getClass(), "/Switch All.png");
     private final JLabel objectLabel = new JLabel("Current Folder: Master Folder");
 
     @Inject
@@ -121,17 +118,6 @@ public class ManagerPanel extends JPanel
             creatorsPanel.addPanel(parentPanel, character);
         });
         rightButtons.add(addObjectButton);
-
-        JButton switchPanelsButton = new JButton(new ImageIcon(SWITCH_ALL));
-        switchPanelsButton.setToolTipText("Send all shown Objects to the Side Panel");
-        switchPanelsButton.setFocusable(false);
-        switchPanelsButton.setPreferredSize(new Dimension(40, 30));
-        switchPanelsButton.addActionListener(e ->
-        {
-            CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
-            creatorsPanel.onSwitchAllButtonPressed(ParentPanel.MANAGER, getShownCharacters());
-        });
-        rightButtons.add(switchPanelsButton);
 
         JPanel viewport = new JPanel();
         viewport.setLayout(new GridBagLayout());

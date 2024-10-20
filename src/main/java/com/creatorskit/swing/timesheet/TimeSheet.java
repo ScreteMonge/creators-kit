@@ -7,7 +7,6 @@ import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import org.apache.commons.lang3.ArrayUtils;
 
-import javax.inject.Inject;
 import javax.swing.*;
 import javax.swing.border.LineBorder;
 import java.awt.*;
@@ -21,6 +20,8 @@ public class TimeSheet extends JPanel
     private double hScroll = 0;
     private int vScroll = 0;
     private int selectedIndex = 0;
+
+    private double currentTime = 0;
 
     private final int ROW_HEIGHT = 24;
     private final int ROW_HEIGHT_OFFSET = 1;
@@ -67,6 +68,7 @@ public class TimeSheet extends JPanel
         g2.setStroke(new BasicStroke(1));
         drawHighlight(g2);
         drawBackgroundLines(g2);
+        drawTimeIndicator(g2);
         drawTextHeader(g2);
         revalidate();
         repaint();
@@ -129,6 +131,17 @@ public class TimeSheet extends JPanel
             g.drawLine((int) (i * spacing + startOffset * spacing), 0, (int) (i * spacing + startOffset * spacing), this.getHeight());
             skip5Line = true;
         }
+    }
+
+    private void drawTimeIndicator(Graphics g)
+    {
+        g.setColor(Color.CYAN.darker());
+        double x = (currentTime + hScroll) * this.getWidth() / zoom;
+        g.fillRect((int) x - 11, 0, 23, 7);
+        g.setColor(Color.CYAN.darker().darker());
+        g.drawLine((int) x, 8, (int) x, 21);
+        g.setColor(Color.CYAN.darker());
+        g.drawLine((int) x, 22, (int) x, this.getHeight());
     }
 
     private void drawTextHeader(Graphics g)

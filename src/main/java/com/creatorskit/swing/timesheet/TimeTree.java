@@ -20,7 +20,6 @@ import java.awt.image.BufferedImage;
 @Getter
 public class TimeTree extends JScrollPane
 {
-    private TimeSheetPanel timeSheetPanel;
     private final TimeSheet timeSheet;
     private final JTree tree;
     private final DefaultTreeModel treeModel;
@@ -170,20 +169,5 @@ public class TimeTree extends JScrollPane
             }
             timeSheet.setSelectedIndex(rows[0]);
         }
-    }
-
-    public static DefaultMutableTreeNode[] createEmptyNodeTree()
-    {
-        return new DefaultMutableTreeNode[]
-                {
-                        new DefaultMutableTreeNode("Location"),
-                        new DefaultMutableTreeNode("Animation"),
-                        new DefaultMutableTreeNode("Spawn"),
-                        new DefaultMutableTreeNode("Orientation"),
-                        new DefaultMutableTreeNode("Text"),
-                        new DefaultMutableTreeNode("Overhead"),
-                        new DefaultMutableTreeNode("Hitsplat"),
-                        new DefaultMutableTreeNode("Healthbar")
-                };
     }
 }

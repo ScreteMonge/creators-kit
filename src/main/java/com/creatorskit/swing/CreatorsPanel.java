@@ -45,6 +45,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.net.URI;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -67,7 +68,6 @@ public class CreatorsPanel extends PluginPanel
 
     private final JButton addObjectButton = new JButton();
     private final JPanel sidePanel = new JPanel();
-    private final GridBagConstraints cManager = new GridBagConstraints();
     private final Random random = new Random();
     public static final File SETUP_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/setups");
     public static final File CREATORS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
@@ -82,8 +82,7 @@ public class CreatorsPanel extends PluginPanel
     private final BufferedImage MINIMIZE = ImageUtil.loadImageResource(getClass(), "/Minimize.png");
     private final BufferedImage DUPLICATE = ImageUtil.loadImageResource(getClass(), "/Duplicate.png");
     private final BufferedImage CLOSE = ImageUtil.loadImageResource(getClass(), "/Close.png");
-    private final BufferedImage SWITCH = ImageUtil.loadImageResource(getClass(), "/Switch.png");
-    private final BufferedImage SWITCH_ALL = ImageUtil.loadImageResource(getClass(), "/Switch All.png");
+    private final BufferedImage HELP = ImageUtil.loadImageResource(getClass(), "/Help.png");
     private final BufferedImage CLEAR = ImageUtil.loadImageResource(getClass(), "/Clear.png");
     private final BufferedImage LOAD = ImageUtil.loadImageResource(getClass(), "/Load.png");
     private final BufferedImage SAVE = ImageUtil.loadImageResource(getClass(), "/Save.png");
@@ -171,11 +170,22 @@ public class CreatorsPanel extends PluginPanel
 
         c.gridx = 2;
         c.gridy = 1;
-        JButton switchAllButton = new JButton(new ImageIcon(SWITCH_ALL));
-        switchAllButton.setToolTipText("Send all Objects from this Side Panel to the currently open folder in the Manager");
-        switchAllButton.setFocusable(false);
-        add(switchAllButton, c);
-        switchAllButton.addActionListener(e -> onSwitchAllButtonPressed(ParentPanel.SIDE_PANEL, sidePanelCharacters.toArray(new Character[sidePanelCharacters.size()])));
+        JButton helpButton = new JButton(new ImageIcon(HELP));
+        helpButton.setToolTipText("Open at YouTube tutorial for help with using this plugin");
+        helpButton.setFocusable(false);
+        add(helpButton, c);
+        helpButton.addActionListener(e ->
+        {
+            try
+            {
+                Desktop desk = Desktop.getDesktop();
+                desk.browse(new URI("https://www.youtube.com/watch?v=E_9c-LwDRRY"));
+            }
+            catch (Exception exception)
+            {
+                plugin.sendChatMessage("Failed to open link...");
+            }
+        });
 
         c.gridx = 1;
         c.gridy = 2;
@@ -209,13 +219,6 @@ public class CreatorsPanel extends PluginPanel
         c.weighty = 1;
         JLabel emptyLabel = new JLabel("");
         add(emptyLabel, c);
-
-        cManager.insets = new Insets(1, 2, 1, 2);
-        cManager.gridx = 0;
-        cManager.gridy = 0;
-        cManager.anchor = GridBagConstraints.FIRST_LINE_START;
-        cManager.weightx = 0;
-        cManager.weighty = 0;
     }
 
     public Character createCharacter(ParentPanel parentPanel)
@@ -271,10 +274,6 @@ public class CreatorsPanel extends PluginPanel
         topButtonsPanel.setPreferredSize(topButtonsPanelSize);
         topButtonsPanel.setMinimumSize(topButtonsPanelSize);
         topButtonsPanel.setLayout(new GridLayout(1, 3, 0, 0));
-
-        JButton switchButton = new JButton(new ImageIcon(SWITCH));
-        switchButton.setToolTipText("Switch this Object between the Manager and Side Panel");
-        switchButton.setFocusable(false);
 
         JButton duplicateButton = new JButton(new ImageIcon(DUPLICATE));
         duplicateButton.setToolTipText("Duplicate object");
@@ -399,7 +398,6 @@ public class CreatorsPanel extends PluginPanel
             c.gridy = 0;
             c.weightx = 0;
             objectPanel.add(topButtonsPanel, c);
-            topButtonsPanel.add(switchButton);
             topButtonsPanel.add(duplicateButton);
             topButtonsPanel.add(minimizeButton);
             topButtonsPanel.add(deleteButton);
@@ -530,7 +528,6 @@ public class CreatorsPanel extends PluginPanel
             }
         });
 
-        switchButton.addActionListener(e -> onSwitchButtonPressed(character));
 
         deleteButton.addActionListener(e -> onDeleteButtonPressed(character));
 
@@ -699,7 +696,6 @@ public class CreatorsPanel extends PluginPanel
                 character,
                 objectPanel,
                 textField,
-                switchButton,
                 topButtonsPanel,
                 duplicateButton,
                 minimizeButton,
@@ -732,7 +728,6 @@ public class CreatorsPanel extends PluginPanel
             Character character,
             ObjectPanel objectPanel,
             JTextField textField,
-            JButton switchButton,
             JPanel topButtonsPanel,
             JButton duplicateButton,
             JButton minimizeButton,
@@ -753,7 +748,6 @@ public class CreatorsPanel extends PluginPanel
     {
         addSelectListeners(objectPanel, character, objectPanel, true);
         addSelectListeners(textField, character, objectPanel, true);
-        addSelectListeners(switchButton, character, objectPanel, true);
         addSelectListeners(topButtonsPanel, character, objectPanel, true);
         addSelectListeners(duplicateButton, character, objectPanel, false);
         addSelectListeners(minimizeButton, character, objectPanel, true);
@@ -912,15 +906,6 @@ public class CreatorsPanel extends PluginPanel
         Program newProgram = new Program(newComp, new JPanel(), new JLabel(), new JSpinner(), newColor);
 
         ParentPanel parentPanel = character.getParentPanel();
-        ArrayList<Character> characterArray;
-        if (parentPanel == ParentPanel.SIDE_PANEL)
-        {
-            characterArray = sidePanelCharacters;
-        }
-        else
-        {
-            characterArray = toolBox.getManagerPanel().getManagerCharacters();
-        }
 
         String finalNewName = newName;
         Thread thread = new Thread(() ->
@@ -991,7 +976,6 @@ public class CreatorsPanel extends PluginPanel
             if (parentPanel == ParentPanel.SIDE_PANEL)
             {
                 sidePanel.remove(objectPanel);
-                programmerPanel.removeSideProgram(objectPanel.getProgramPanel());
                 sidePanelCharacters.remove(character);
                 managerTree.removeCharacterNode(character);
             }
@@ -1021,7 +1005,7 @@ public class CreatorsPanel extends PluginPanel
         if (parentPanel == ParentPanel.SIDE_PANEL)
         {
             sidePanel.remove(objectPanel);
-            programmerPanel.removeSideProgram(objectPanel.getProgramPanel());
+            managerTree.resetObjectHolder();
             sidePanelCharacters.remove(character);
             managerTree.removeCharacterNode(character);
         }
@@ -1062,7 +1046,6 @@ public class CreatorsPanel extends PluginPanel
         Character[] charactersToRemove = sidePanelCharacters.toArray(new Character[sidePanelCharacters.size()]);
 
         sidePanelCharacters.clear();
-        programmerPanel.clearSidePrograms();
         Thread thread = new Thread(() -> deleteCharacters(charactersToRemove));
         thread.start();
         sidePanel.removeAll();
@@ -1111,21 +1094,6 @@ public class CreatorsPanel extends PluginPanel
 
         sidePanel.repaint();
         sidePanel.revalidate();
-    }
-
-    public void onSwitchAllButtonPressed(ParentPanel parentPanelFrom, Character[] characters)
-    {
-        ManagerPanel managerPanel = toolBox.getManagerPanel();
-        ManagerTree managerTree = managerPanel.getManagerTree();
-        managerTree.switchFolders(characters, parentPanelFrom);
-    }
-
-    public void onSwitchButtonPressed(Character character)
-    {
-        ManagerTree managerTree = toolBox.getManagerPanel().getManagerTree();
-        managerTree.switchFolders(character);
-        managerTree.resetObjectHolder();
-        resetSidePanel();
     }
 
     public void setSelectedCharacter(Character selected)
@@ -1662,7 +1630,6 @@ public class CreatorsPanel extends PluginPanel
             node = managerTree.addFolderNode(parentNode, name);
         }
 
-        JPanel objectHolder = toolBox.getManagerPanel().getObjectHolder();
         for (CharacterSave save : folderNodeSave.getCharacterSaves())
         {
             Color color = new Color(save.getProgramComp().getRgb());
