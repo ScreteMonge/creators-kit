@@ -572,7 +572,7 @@ public class ManagerTree extends JScrollPane
             }
         }
 
-        resetObjectHolder(objectPanels, true);
+        resetObjectHolder(objectPanels, false);
     }
 
     public void resetObjectHolder(ArrayList<Character> charactersToAdd, boolean sidePanel)
