@@ -143,7 +143,7 @@ public class CreatorsPanel extends PluginPanel
         addObjectButton.addActionListener(e ->
         {
             Character character = createCharacter(ParentPanel.SIDE_PANEL);
-            SwingUtilities.invokeLater(() -> addPanel(ParentPanel.SIDE_PANEL, character));
+            SwingUtilities.invokeLater(() -> addPanel(ParentPanel.SIDE_PANEL, character, true));
         });
         add(addObjectButton, c);
 
@@ -454,6 +454,9 @@ public class CreatorsPanel extends PluginPanel
 
             c.gridy++;
             objectPanel.add(animationSpinner, c);
+
+            objectPanel.repaint();
+            objectPanel.revalidate();
         });
 
         JLabel programmerNameLabel = program.getNameLabel();
@@ -809,12 +812,12 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
-    public void addPanel(ParentPanel parentPanel, Character character)
+    public void addPanel(ParentPanel parentPanel, Character character, boolean revalidate)
     {
-        addPanel(parentPanel, character, null);
+        addPanel(parentPanel, character, null, revalidate);
     }
 
-    public void addPanel(ParentPanel parentPanel, Character character, DefaultMutableTreeNode parentNode)
+    public void addPanel(ParentPanel parentPanel, Character character, DefaultMutableTreeNode parentNode, boolean revalidate)
     {
         ObjectPanel childPanel = character.getObjectPanel();
         ManagerPanel managerPanel = toolBox.getManagerPanel();
@@ -835,8 +838,11 @@ public class CreatorsPanel extends PluginPanel
                 timeTree.addCharacterNode(timeTree.getManagerNode(), character);
             }
 
-            sidePanel.repaint();
-            sidePanel.revalidate();
+            if (revalidate)
+            {
+                sidePanel.repaint();
+                sidePanel.revalidate();
+            }
         }
 
         if (parentPanel == ParentPanel.MANAGER)
@@ -854,7 +860,10 @@ public class CreatorsPanel extends PluginPanel
                 timeTree.addCharacterNode(timeTree.getManagerNode(), character);
             }
 
-            managerTree.resetObjectHolder();
+            if (revalidate)
+            {
+                managerTree.resetObjectHolder();
+            }
         }
 
         npcPanels++;
@@ -929,7 +938,7 @@ public class CreatorsPanel extends PluginPanel
                     character.isInInstance(),
                     setLocation);
 
-            SwingUtilities.invokeLater(() -> addPanel(parentPanel, c));
+            SwingUtilities.invokeLater(() -> addPanel(parentPanel, c, true));
         });
         thread.start();
     }
@@ -1555,7 +1564,12 @@ public class CreatorsPanel extends PluginPanel
         SwingUtilities.invokeLater(() ->
         {
             if (folderNodeSave != null)
+            {
                 openFolderNodeSave(managerTree, rootNode, folderNodeSave, customModels);
+                sidePanel.repaint();
+                sidePanel.revalidate();
+                managerTree.resetObjectHolder();
+            }
         });
 
         //Handle pre-v1.5.4 characters saved to the SidePanel
@@ -1602,7 +1616,7 @@ public class CreatorsPanel extends PluginPanel
                             save.isInInstance(),
                             false);
 
-                    SwingUtilities.invokeLater(() -> addPanel(ParentPanel.SIDE_PANEL, character));
+                    SwingUtilities.invokeLater(() -> addPanel(ParentPanel.SIDE_PANEL, character, true));
                 }
             });
             thread.start();
@@ -1690,7 +1704,7 @@ public class CreatorsPanel extends PluginPanel
                     save.isInInstance(),
                     false);
 
-            addPanel(parentPanel, character, node);
+            addPanel(parentPanel, character, node, false);
         }
 
         FolderNodeSave[] folderNodeSaves = folderNodeSave.getFolderSaves();

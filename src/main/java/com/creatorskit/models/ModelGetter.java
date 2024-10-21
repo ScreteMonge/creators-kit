@@ -462,7 +462,7 @@ public class ModelGetter
                                         false,
                                         false);
 
-                                SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character));
+                                SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true));
                             }
                         });
                     });
@@ -754,7 +754,7 @@ public class ModelGetter
                                             false,
                                             false);
 
-                                    SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character));
+                                    SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true));
                                 }
                             });
                         });
@@ -884,7 +884,7 @@ public class ModelGetter
                                         false,
                                         false);
 
-                                SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character));
+                                SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true));
                             }
                         });
                     });
@@ -1101,7 +1101,7 @@ public class ModelGetter
                                     false,
                                     false);
 
-                            SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character));
+                            SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true));
                         }
                     });
                     thread.start();
@@ -1165,7 +1165,7 @@ public class ModelGetter
                                         false,
                                         false);
 
-                                SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character));
+                                SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true));
                             }
                         });
                     });
@@ -1765,7 +1765,7 @@ public class ModelGetter
                                     false,
                                     false);
 
-                            SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character));
+                            SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true));
                         }
                     });
                     thread.start();

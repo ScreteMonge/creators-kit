@@ -239,11 +239,6 @@ public class ManagerTree extends JScrollPane
      */
     public DefaultMutableTreeNode addCharacterNode(Character character, ParentPanel parentPanel, boolean shouldBeVisible)
     {
-        if (parentPanel == ParentPanel.SIDE_PANEL)
-        {
-            return addCharacterNode(sidePanelNode, character, parentPanel, shouldBeVisible);
-        }
-
         return addCharacterNode(getParentNode(parentPanel), character, parentPanel, shouldBeVisible);
     }
 
