@@ -5,6 +5,7 @@ import com.creatorskit.programming.Program;
 import com.creatorskit.swing.ObjectPanel;
 import com.creatorskit.swing.ParentPanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -56,5 +57,15 @@ public class Character
     public String toString()
     {
         return name;
+    }
+
+    public KeyFrame[] getKeyFrames(KeyFrameType type)
+    {
+        return frames[KeyFrameType.getIndex(type)];
+    }
+
+    public void setKeyFrames(KeyFrame[] keyFrames, KeyFrameType type)
+    {
+        frames[KeyFrameType.getIndex(type)] = keyFrames;
     }
 }

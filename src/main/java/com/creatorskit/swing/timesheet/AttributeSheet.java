@@ -1,5 +1,6 @@
 package com.creatorskit.swing.timesheet;
 
+import com.creatorskit.swing.ToolBoxFrame;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -7,8 +8,11 @@ import lombok.Setter;
 @Setter
 public class AttributeSheet extends TimeSheet
 {
-    public AttributeSheet()
-    {
+    private ToolBoxFrame toolBox;
 
+    public AttributeSheet(ToolBoxFrame toolBox)
+    {
+        super(toolBox);
+        setDrawMainFrames(false);
     }
 }

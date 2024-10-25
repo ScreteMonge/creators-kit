@@ -15,6 +15,7 @@ import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.TimeTree;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Animation;
@@ -233,7 +234,7 @@ public class CreatorsPanel extends PluginPanel
                 0,
                 -1,
                 60,
-                new KeyFrame[0][],
+                new KeyFrame[KeyFrameType.getTotalFrameTypes()][0],
                 createEmptyProgram(-1, -1),
                 false, null, null, new int[0], -1, false, false);
     }
@@ -1593,7 +1594,12 @@ public class CreatorsPanel extends PluginPanel
                     KeyFrame[][] keyFrames = save.getKeyFrames();
                     if (keyFrames == null)
                     {
-                        keyFrames = new KeyFrame[0][];
+                        keyFrames = new KeyFrame[KeyFrameType.getTotalFrameTypes()][0];
+                    }
+
+                    if (keyFrames.length < KeyFrameType.getTotalFrameTypes())
+                    {
+                        keyFrames = new KeyFrame[KeyFrameType.getTotalFrameTypes()][0];
                     }
 
                     character = createCharacter(
@@ -1681,7 +1687,12 @@ public class CreatorsPanel extends PluginPanel
             KeyFrame[][] keyFrames = save.getKeyFrames();
             if (keyFrames == null)
             {
-                keyFrames = new KeyFrame[0][];
+                keyFrames = new KeyFrame[KeyFrameType.getTotalFrameTypes()][0];
+            }
+
+            if (keyFrames.length < KeyFrameType.getTotalFrameTypes())
+            {
+                keyFrames = new KeyFrame[KeyFrameType.getTotalFrameTypes()][0];
             }
 
             character = createCharacter(

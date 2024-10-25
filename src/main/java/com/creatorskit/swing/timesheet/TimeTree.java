@@ -6,14 +6,13 @@ import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import lombok.Getter;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.util.ImageUtil;
+import org.apache.commons.lang3.ArrayUtils;
 
 import javax.inject.Inject;
 import javax.swing.*;
 import javax.swing.event.TreeExpansionEvent;
 import javax.swing.event.TreeExpansionListener;
-import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.DefaultTreeCellRenderer;
-import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 
@@ -149,11 +148,6 @@ public class TimeTree extends JScrollPane
         updateTreeSelectionIndex();
     }
 
-    public void addKeyFrame(Character character, KeyFrame keyFrame)
-    {
-
-    }
-
     private void onPanelScrolled(int scroll)
     {
         timeSheet.onVerticalScrollEvent(scroll);
@@ -169,5 +163,24 @@ public class TimeTree extends JScrollPane
             }
             timeSheet.setSelectedIndex(rows[0]);
         }
+    }
+
+    public Character[] getSelectedCharacters()
+    {
+        TreePath[] treePaths = tree.getSelectionPaths();
+        Character[] characters = new Character[0];
+        if (treePaths == null)
+            return characters;
+
+        for (TreePath treePath : treePaths)
+        {
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode) treePath.getLastPathComponent();
+            if (node.getUserObject() instanceof Character)
+            {
+                characters = ArrayUtils.add(characters, (Character) node.getUserObject());
+            }
+        }
+
+        return characters;
     }
 }

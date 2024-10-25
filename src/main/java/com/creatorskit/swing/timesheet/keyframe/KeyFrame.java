@@ -10,5 +10,5 @@ import lombok.Setter;
 public class KeyFrame
 {
     private KeyFrameType keyFrameType;
-    private int tick;
+    private double tick;
 }
