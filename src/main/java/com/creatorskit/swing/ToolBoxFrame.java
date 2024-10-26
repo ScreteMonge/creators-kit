@@ -3,8 +3,6 @@ package com.creatorskit.swing;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.swing.manager.ManagerPanel;
 import com.creatorskit.swing.manager.ManagerTree;
-import com.creatorskit.swing.timesheet.AttributeSheet;
-import com.creatorskit.swing.timesheet.TimeSheet;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.TimeTree;
 import lombok.Getter;
@@ -70,11 +68,8 @@ public class ToolBoxFrame extends JFrame
         managerPanelFolder.setLinkedTimeSheetNode(timeManagerNode);
 
         JScrollBar scrollBar = new JScrollBar(Adjustable.HORIZONTAL);
-        TimeSheet timeSheet = new TimeSheet(this);
-        AttributeSheet attributeSheet = new AttributeSheet(this);
-        TimeTree timeTree = new TimeTree(timeSheet, timeRootNode, timeSideNode, timeManagerNode);
-        this.timeSheetPanel = new TimeSheetPanel(client, plugin, clientThread, this, timeSheet, attributeSheet, timeTree, scrollBar);
-
+        TimeTree timeTree = new TimeTree(this, timeRootNode, timeSideNode, timeManagerNode);
+        this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, clientThread, timeTree, scrollBar);
 
         JPanel objectHolder = new JPanel();
         ManagerTree managerTree = new ManagerTree(this, plugin, objectHolder, managerRootNode, managerSideNode, managerManagerNode, timeTree);

@@ -5,6 +5,9 @@ import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
+import com.creatorskit.swing.timesheet.sheets.AttributeSheet;
+import com.creatorskit.swing.timesheet.sheets.SummarySheet;
+import com.creatorskit.swing.timesheet.sheets.TimeSheet;
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
@@ -19,6 +22,7 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
@@ -30,7 +34,8 @@ public class TimeSheetPanel extends JPanel
     private final CreatorsPlugin plugin;
     private final GridBagConstraints c = new GridBagConstraints();
     private final ToolBoxFrame toolBox;
-    private final TimeSheet timeSheet;
+    @Getter
+    private final SummarySheet summarySheet;
     private final AttributeSheet attributeSheet;
     @Getter
     private final TimeTree timeTree;
@@ -44,6 +49,7 @@ public class TimeSheetPanel extends JPanel
     private final BufferedImage HELP = ImageUtil.loadImageResource(getClass(), "/Help.png");
 
     private final int ROW_HEIGHT = 24;
+    private final int INDEX_BUFFER = 20;
     private final int ABSOLUTE_MAX_SEQUENCE_LENGTH = 100000;
     private final int ZOOM_MAX = 500;
     private final int ZOOM_MIN = 5;
@@ -68,15 +74,16 @@ public class TimeSheetPanel extends JPanel
     private double currentTime = 0;
     private boolean pauseScrollBarListener = false;
     private Character selectedCharacter;
+    private KeyFrame[] selectedKeyFrames;
 
     @Inject
-    public TimeSheetPanel(@Nullable Client client, CreatorsPlugin plugin, ClientThread clientThread, ToolBoxFrame toolBox, TimeSheet timeSheet, AttributeSheet attributeSheet, TimeTree timeTree, JScrollBar scrollBar)
+    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, ClientThread clientThread, TimeTree timeTree, JScrollBar scrollBar)
     {
+        this.toolBox = toolBox;
         this.plugin = plugin;
         this.clientThread = clientThread;
-        this.toolBox = toolBox;
-        this.timeSheet = timeSheet;
-        this.attributeSheet = attributeSheet;
+        this.summarySheet = new SummarySheet(toolBox);
+        this.attributeSheet = new AttributeSheet(toolBox);
         this.timeTree = timeTree;
         this.scrollBar = scrollBar;
 
@@ -96,7 +103,13 @@ public class TimeSheetPanel extends JPanel
     {
         timeTree.getTree().addTreeSelectionListener(e ->
         {
-            DefaultMutableTreeNode node = (DefaultMutableTreeNode) e.getNewLeadSelectionPath().getLastPathComponent();
+            TreePath treePath = e.getPath();
+            if (treePath == null)
+            {
+                return;
+            }
+
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode) treePath.getLastPathComponent();
             Object o = node.getUserObject();
             if (o == null)
             {
@@ -113,8 +126,9 @@ public class TimeSheetPanel extends JPanel
     private void setSelectedCharacter(Character character)
     {
         selectedCharacter = character;
-        timeSheet.setSelectedCharacter(character);
+        summarySheet.setSelectedCharacter(character);
         attributeSheet.setSelectedCharacter(character);
+        objectLabel.setText(character.getName());
     }
 
     private void setupAttributePanel()
@@ -189,65 +203,89 @@ public class TimeSheetPanel extends JPanel
         c.fill = GridBagConstraints.BOTH;
         c.insets = new Insets(2, 2, 2, 2);
 
+        c.gridheight = 1;
+        c.gridwidth = 2;
+        c.gridx = 0;
+        c.gridy = 0;
+        c.weightx = 0;
+        c.weighty = 0;
+        JLabel buffer = new JLabel("Folders");
+        buffer.setFont(FontManager.getDefaultBoldFont());
+        buffer.setHorizontalTextPosition(SwingConstants.LEFT);
+        buffer.setPreferredSize(new Dimension(0, INDEX_BUFFER));
+        add(buffer, c);
+
         c.gridwidth = 2;
         c.weightx = 1;
         c.weighty = 5;
         c.gridx = 0;
-        c.gridy = 0;
+        c.gridy = 1;
         add(timeTree, c);
 
         c.gridwidth = 1;
+        c.gridheight = 2;
         c.weightx = 5;
         c.weighty = 5;
         c.gridx = 2;
         c.gridy = 0;
-        add(timeSheet, c);
+        add(summarySheet, c);
 
+        c.gridheight = 1;
         c.weightx = 0;
         c.weighty = 0;
         c.gridx = 2;
-        c.gridy = 1;
+        c.gridy = 2;
         add(scrollBar, c);
 
         c.weightx = 0;
         c.weighty = 0;
         c.gridx = 2;
-        c.gridy = 2;
+        c.gridy = 3;
         add(controlPanel, c);
 
         c.gridheight = 3;
-        c.weightx = 1;
+        c.weightx = 2;
         c.weighty = 0;
         c.gridx = 0;
-        c.gridy = 1;
+        c.gridy = 2;
         add(attributePanel, c);
 
         c.gridheight = 1;
         c.weightx = 0;
         c.weighty = 0;
         c.gridx = 1;
-        c.gridy = 3;
+        c.gridy = 4;
         add(labelPanel, c);
 
         c.weightx = 0;
         c.weighty = 0;
         c.gridx = 2;
-        c.gridy = 3;
+        c.gridy = 4;
         add(attributeSheet, c);
     }
 
     public void setCurrentTime(double tick)
     {
+        if (tick < -10)
+        {
+            tick = -10;
+        }
+
+        if (tick > ABSOLUTE_MAX_SEQUENCE_LENGTH)
+        {
+            tick = ABSOLUTE_MAX_SEQUENCE_LENGTH;
+        }
+
         currentTime = tick;
         attributeSheet.setCurrentTime(currentTime);
-        timeSheet.setCurrentTime(currentTime);
+        summarySheet.setCurrentTime(currentTime);
         timeSpinner.setValue(tick);
     }
 
     public void setPreviewTime(double tick)
     {
         attributeSheet.setPreviewTime(tick);
-        timeSheet.setPreviewTime(tick);
+        summarySheet.setPreviewTime(tick);
     }
 
     private void setupScrollBar()
@@ -424,9 +462,9 @@ public class TimeSheetPanel extends JPanel
 
     private void updateSheets()
     {
-        timeSheet.setHScroll(hScroll);
-        timeSheet.setVScroll(vScroll);
-        timeSheet.setZoom(zoom);
+        summarySheet.setHScroll(hScroll);
+        summarySheet.setVScroll(vScroll);
+        summarySheet.setZoom(zoom);
         attributeSheet.setHScroll(hScroll);
         attributeSheet.setVScroll(vScroll);
         attributeSheet.setZoom(zoom);

@@ -1,7 +1,8 @@
-package com.creatorskit.swing.timesheet;
+package com.creatorskit.swing.timesheet.sheets;
 
 import com.creatorskit.Character;
 import com.creatorskit.swing.ToolBoxFrame;
+import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import lombok.Getter;
 import lombok.Setter;
@@ -22,7 +23,7 @@ public class TimeSheet extends JPanel
 {
     private ToolBoxFrame toolBox;
 
-    private final BufferedImage KEYFRAME = ImageUtil.loadImageResource(getClass(), "/Keyframe.png");
+    private final BufferedImage keyframeImage = ImageUtil.loadImageResource(getClass(), "/Keyframe.png");
 
     private double zoom = 50;
     private double hScroll = 0;
@@ -32,15 +33,16 @@ public class TimeSheet extends JPanel
     private double currentTime = 0;
     private double previewTime = 0;
     private boolean timeIndicatorPressed = false;
+    private boolean drawingRectangleSelect = false;
+    private Point rectangleSelectStart = new Point(0, 0);
 
-    private final int ROW_HEIGHT = 24;
-    private final int ROW_HEIGHT_OFFSET = 1;
-    private final int TEXT_HEIGHT_OFFSET = 5;
+    public final int ROW_HEIGHT = 24;
+    public final int ROW_HEIGHT_OFFSET = 1;
+    public final int TEXT_HEIGHT_OFFSET = 5;
+    private int indexBuffers = 1;
 
-    private final int SHOW_5_ZOOM = 200;
-    private final int SHOW_1_ZOOM = 50;
-
-    private boolean drawMainFrames = true;
+    public final int SHOW_5_ZOOM = 200;
+    public final int SHOW_1_ZOOM = 50;
 
     private KeyFrame[] visibleKeyFrames = new KeyFrame[0];
     private Character selectedCharacter;
@@ -84,6 +86,7 @@ public class TimeSheet extends JPanel
         g2.setStroke(new BasicStroke(1));
         drawHighlight(g2);
         drawBackgroundLines(g2);
+        drawRectangleSelect(g2);
         drawTextHeader(g2);
         drawTimeIndicator(g2);
         drawPreviewTimeIndicator(g2);
@@ -92,35 +95,83 @@ public class TimeSheet extends JPanel
         repaint();
     }
 
-    private void drawKeyFrames(Graphics g)
+    private void drawRectangleSelect(Graphics2D g)
     {
-        if (selectedCharacter == null)
+        if (!drawingRectangleSelect)
         {
             return;
         }
 
-        int yImageOffset = (KEYFRAME.getHeight() - ROW_HEIGHT) / 2;
-        int xImageOffset = KEYFRAME.getWidth() / 2;
-        KeyFrame[][] frames = selectedCharacter.getFrames();
-        for (int i = 0; i < frames.length; i++)
+        Point absoluteMouse = MouseInfo.getPointerInfo().getLocation();
+
+        int x1 = (int) rectangleSelectStart.getX();
+        int x2 = (int) (absoluteMouse.getX() - getLocationOnScreen().getX());
+        int y1 = (int) rectangleSelectStart.getY();
+        int y2 = (int) (absoluteMouse.getY() - getLocationOnScreen().getY());
+
+        int startX;
+        int startY;
+        int endX;
+        int endY;
+
+        if (x1 < x2)
         {
-            KeyFrame[] keyFrames = frames[i];
-            for (int e = 0; e < keyFrames.length; e++)
-            {
-                double zoomFactor = this.getWidth() / zoom;
-                g.drawImage(
-                        KEYFRAME,
-                        (int) ((keyFrames[e].getTick() + hScroll) * zoomFactor - xImageOffset),
-                        ROW_HEIGHT_OFFSET + ROW_HEIGHT + ROW_HEIGHT * i - yImageOffset,
-                        null);
-            }
+            startX = x1;
+            endX = x2;
         }
+        else
+        {
+            startX = x2;
+            endX = x1;
+        }
+
+        if (y1 < y2)
+        {
+            startY = y1;
+            endY = y2;
+        }
+        else
+        {
+            startY = y2;
+            endY = y1;
+        }
+
+        int buffer = 1;
+
+        if (startX < buffer)
+        {
+            startX = buffer;
+        }
+
+        if (endX > getWidth() - 2)
+        {
+            endX = getWidth() - 2;
+        }
+
+        if (startY < buffer)
+        {
+            startY = buffer;
+        }
+
+        if (endY > getHeight() - 2)
+        {
+            endY = getHeight() - 2;
+        }
+
+        g.setColor(new Color(93, 93, 93));
+        Composite composite = g.getComposite();
+        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2F));
+        g.fillRect(startX, startY, endX - startX, endY - startY);
+
+        g.setColor(new Color(255, 255, 255));
+        g.drawRect(startX, startY, endX - startX, endY - startY);
+        g.setComposite(composite);
     }
 
     private void drawHighlight(Graphics g)
     {
         g.setColor(Color.DARK_GRAY);
-        g.fillRect(0, selectedIndex * ROW_HEIGHT + ROW_HEIGHT_OFFSET - vScroll, this.getWidth(), ROW_HEIGHT);
+        g.fillRect(0, (selectedIndex + indexBuffers) * ROW_HEIGHT + ROW_HEIGHT_OFFSET - vScroll, this.getWidth(), ROW_HEIGHT);
     }
 
     private void drawBackgroundLines(Graphics g)
@@ -284,14 +335,58 @@ public class TimeSheet extends JPanel
         }
     }
 
+    public void drawKeyFrames(Graphics g)
+    {
+        /*
+        if (selectedCharacter == null)
+        {
+            return;
+        }
+
+        int yImageOffset = (keyframeImage.getHeight() - ROW_HEIGHT) / 2;
+        int xImageOffset = keyframeImage.getWidth() / 2;
+        KeyFrame[][] frames = selectedCharacter.getFrames();
+        for (int i = 0; i < frames.length; i++)
+        {
+            KeyFrame[] keyFrames = frames[i];
+            for (int e = 0; e < keyFrames.length; e++)
+            {
+                double zoomFactor = this.getWidth() / zoom;
+                g.drawImage(
+                        keyframeImage,
+                        (int) ((keyFrames[e].getTick() + hScroll) * zoomFactor - xImageOffset),
+                        ROW_HEIGHT_OFFSET + ROW_HEIGHT + ROW_HEIGHT * i - yImageOffset,
+                        null);
+            }
+        }
+
+         */
+    }
+
     private void setKeyBindings()
     {
         ActionMap actionMap = getActionMap();
         InputMap inputMap = getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
 
-        String vkS = "VK_S";
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_S, 0), vkS);
-        actionMap.put(vkS, new KeyAction(vkS));
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, 0), "VK_LEFT");
+        actionMap.put("VK_LEFT", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                getTimeSheetPanel().setCurrentTime(currentTime - 0.1);
+            }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, 0), "VK_RIGHT");
+        actionMap.put("VK_RIGHT", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                getTimeSheetPanel().setCurrentTime(currentTime + 0.1);
+            }
+        });
     }
 
     private void setMouseListeners(TimeSheet timeSheet)
@@ -309,13 +404,20 @@ public class TimeSheet extends JPanel
                     return;
                 }
 
-                if (getMousePosition().getY() < ROW_HEIGHT)
+                Point mousePosition = getMousePosition();
+
+                if (mousePosition.getY() < ROW_HEIGHT)
                 {
                     timeIndicatorPressed = true;
 
-                    TimeSheetPanel timeSheetPanel = toolBox.getTimeSheetPanel();
+                    TimeSheetPanel timeSheetPanel = getTimeSheetPanel();
                     double previewTime = getTimeIndicatorPosition();
                     timeSheetPanel.setPreviewTime(previewTime);
+                }
+                else
+                {
+                    drawingRectangleSelect = true;
+                    rectangleSelectStart = mousePosition;
                 }
             }
 
@@ -330,12 +432,14 @@ public class TimeSheet extends JPanel
                     return;
                 }
 
+                drawingRectangleSelect = false;
+
                 if (!timeIndicatorPressed)
                 {
                     return;
                 }
 
-                TimeSheetPanel timeSheetPanel = toolBox.getTimeSheetPanel();
+                TimeSheetPanel timeSheetPanel = getTimeSheetPanel();
                 double time = getTimeIndicatorPosition();
                 timeSheetPanel.setCurrentTime(time);
                 timeIndicatorPressed = false;
@@ -350,7 +454,7 @@ public class TimeSheet extends JPanel
                 super.mouseDragged(e);
                 requestFocusInWindow();
 
-                TimeSheetPanel timeSheetPanel = toolBox.getTimeSheetPanel();
+                TimeSheetPanel timeSheetPanel = getTimeSheetPanel();
                 double previewTime = getTimeIndicatorPosition();
                 timeSheetPanel.setPreviewTime(previewTime);
             }
@@ -366,11 +470,11 @@ public class TimeSheet extends JPanel
 
                 if (e.isAltDown())
                 {
-                    toolBox.getTimeSheetPanel().onZoomEvent(amount, timeSheet);
+                    getTimeSheetPanel().onZoomEvent(amount, timeSheet);
                     return;
                 }
 
-                toolBox.getTimeSheetPanel().onHorizontalScrollEvent(amount);
+                getTimeSheetPanel().onHorizontalScrollEvent(amount);
             }
         });
     }
@@ -394,5 +498,10 @@ public class TimeSheet extends JPanel
         }
 
         return time;
+    }
+
+    private TimeSheetPanel getTimeSheetPanel()
+    {
+        return toolBox.getTimeSheetPanel();
     }
 }
