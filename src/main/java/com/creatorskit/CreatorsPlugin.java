@@ -94,14 +94,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private PathFinder pathFinder;
 
 	@Inject
-	private ModelFinder modelFinder;
+	private DataFinder dataFinder;
 
 	@Inject
 	private ModelExporter modelExporter;
 
 	@Inject
 	private Gson gson;
-	
+
 	private CreatorsPanel creatorsPanel;
 	private NavigationButton navigationButton;
 	private boolean overlaysActive = false;
@@ -1452,31 +1452,30 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			switch (type)
 			{
 				case CACHE_NPC:
-					modelStats = modelFinder.findModelsForNPC(id);
-					name = modelFinder.getLastFound();
+					modelStats = dataFinder.findModelsForNPC(id);
+					name = dataFinder.getLastFound();
 					break;
 				default:
 				case CACHE_OBJECT:
-					modelStats = modelFinder.findModelsForObject(id, -1, LightingStyle.DEFAULT, true);
-					name = modelFinder.getLastFound();
+					modelStats = dataFinder.findModelsForObject(id, -1, LightingStyle.DEFAULT, true);
+					name = dataFinder.getLastFound();
 					break;
 				case CACHE_GROUND_ITEM:
-					modelStats = modelFinder.findModelsForGroundItem(id, CustomModelType.CACHE_GROUND_ITEM);
-					name = modelFinder.getLastFound();
+					modelStats = dataFinder.findModelsForGroundItem(id, CustomModelType.CACHE_GROUND_ITEM);
+					name = dataFinder.getLastFound();
 					break;
 				case CACHE_MAN_WEAR:
-					modelStats = modelFinder.findModelsForGroundItem(id, CustomModelType.CACHE_MAN_WEAR);
-					name = modelFinder.getLastFound();
+					modelStats = dataFinder.findModelsForGroundItem(id, CustomModelType.CACHE_MAN_WEAR);
+					name = dataFinder.getLastFound();
 					break;
 				case CACHE_WOMAN_WEAR:
-					modelStats = modelFinder.findModelsForGroundItem(id, CustomModelType.CACHE_WOMAN_WEAR);
-					name = modelFinder.getLastFound();
+					modelStats = dataFinder.findModelsForGroundItem(id, CustomModelType.CACHE_WOMAN_WEAR);
+					name = dataFinder.getLastFound();
 			}
 
 			if (modelStats == null || modelStats.length == 0)
 			{
-				sendChatMessage("Could not find what you were searching for in the cache.");
-				sendChatMessage("This is because the id you're looking for does not exist or Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+				sendChatMessage("Could not find the " + type + " you were looking for in the cache.");
 				return;
 			}
 
@@ -1498,54 +1497,53 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			switch (type)
 			{
 				case CACHE_NPC:
-					modelStats = modelFinder.findModelsForNPC(id);
+					modelStats = dataFinder.findModelsForNPC(id);
 					break;
 				default:
 				case CACHE_OBJECT:
-					modelStats = modelFinder.findModelsForObject(id, modelType, LightingStyle.DEFAULT, false);
+					modelStats = dataFinder.findModelsForObject(id, modelType, LightingStyle.DEFAULT, false);
 					break;
 				case CACHE_GROUND_ITEM:
-					modelStats = modelFinder.findModelsForGroundItem(id, CustomModelType.CACHE_GROUND_ITEM);
+					modelStats = dataFinder.findModelsForGroundItem(id, CustomModelType.CACHE_GROUND_ITEM);
 					break;
 				case CACHE_MAN_WEAR:
-					modelStats = modelFinder.findModelsForGroundItem(id, CustomModelType.CACHE_MAN_WEAR);
+					modelStats = dataFinder.findModelsForGroundItem(id, CustomModelType.CACHE_MAN_WEAR);
 					break;
 				case CACHE_WOMAN_WEAR:
-					modelStats = modelFinder.findModelsForGroundItem(id, CustomModelType.CACHE_WOMAN_WEAR);
+					modelStats = dataFinder.findModelsForGroundItem(id, CustomModelType.CACHE_WOMAN_WEAR);
 			}
 
 			if (modelStats == null || modelStats.length == 0)
 			{
-				sendChatMessage("Could not find what you were searching for in the cache.");
-				sendChatMessage("This is because the id you're looking for does not exist or Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+				sendChatMessage("Could not find the " + type + " you were looking for in the cache.");
 				return;
 			}
 
 			switch (type)
 			{
 				case CACHE_NPC:
-					name = modelFinder.getLastFound();
+					name = dataFinder.getLastFound();
 					lighting = new CustomLighting(64, 850, -30, -30, 50);
 					comp = new CustomModelComp(0, CustomModelType.CACHE_NPC, id, modelStats, null, null, null, LightingStyle.ACTOR, lighting, false, name);
 					break;
 				default:
 				case CACHE_OBJECT:
-					name = modelFinder.getLastFound();
+					name = dataFinder.getLastFound();
 					lighting = modelStats[0].getLighting();
 					comp = new CustomModelComp(0, CustomModelType.CACHE_OBJECT, id, modelStats, null, null, null, LightingStyle.CUSTOM, lighting, false, name);
 					break;
 				case CACHE_GROUND_ITEM:
-					name = modelFinder.getLastFound();
+					name = dataFinder.getLastFound();
 					lighting = new CustomLighting(64, 768, -50, -50, 10);
 					comp = new CustomModelComp(0, CustomModelType.CACHE_GROUND_ITEM, id, modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, name);
 					break;
 				case CACHE_MAN_WEAR:
-					name = modelFinder.getLastFound();
+					name = dataFinder.getLastFound();
 					lighting = new CustomLighting(64, 768, -50, -50, 10);
 					comp = new CustomModelComp(0, CustomModelType.CACHE_MAN_WEAR, id, modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, name);
 					break;
 				case CACHE_WOMAN_WEAR:
-					name = modelFinder.getLastFound();
+					name = dataFinder.getLastFound();
 					lighting = new CustomLighting(64, 768, -50, -50, 10);
 					comp = new CustomModelComp(0, CustomModelType.CACHE_WOMAN_WEAR, id, modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, name);
 			}

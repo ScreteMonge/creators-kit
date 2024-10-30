@@ -2,6 +2,7 @@ package com.creatorskit.swing.timesheet.keyframe;
 
 public enum KeyFrameType
 {
+    NULL,
     MOVEMENT,
     ANIMATION,
     SPAWN,
@@ -21,11 +22,11 @@ public enum KeyFrameType
                 return 0;
             case ANIMATION:
                 return 1;
-            case SPAWN:
-                return 2;
-            case MODEL:
-                return 3;
             case ORIENTATION:
+                return 2;
+            case SPAWN:
+                return 3;
+            case MODEL:
                 return 4;
             case TEXT:
                 return 5;
@@ -36,5 +37,10 @@ public enum KeyFrameType
             case HEALTHBAR:
                 return 8;
         }
+    }
+
+    public static int getTotalFrameTypes()
+    {
+        return 9;
     }
 }

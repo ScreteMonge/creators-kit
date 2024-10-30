@@ -29,4 +29,10 @@ public class ItemData
     private final int[] colorFind;
     private final int[] textureReplace;
     private final int[] textureFind;
+
+    @Override
+    public String toString()
+    {
+        return name + " (" + id + ")";
+    }
 }

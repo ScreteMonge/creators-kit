@@ -2,25 +2,24 @@ package com.creatorskit.swing.timesheet;
 
 import com.creatorskit.Character;
 import com.creatorskit.swing.Folder;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import com.creatorskit.swing.ToolBoxFrame;
 import lombok.Getter;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.util.ImageUtil;
+import org.apache.commons.lang3.ArrayUtils;
 
 import javax.inject.Inject;
 import javax.swing.*;
 import javax.swing.event.TreeExpansionEvent;
 import javax.swing.event.TreeExpansionListener;
-import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.DefaultTreeCellRenderer;
-import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 
 @Getter
 public class TimeTree extends JScrollPane
 {
-    private final TimeSheet timeSheet;
+    private final ToolBoxFrame toolBox;
     private final JTree tree;
     private final DefaultTreeModel treeModel;
     private final JPanel viewPort = new JPanel();
@@ -35,9 +34,9 @@ public class TimeTree extends JScrollPane
     private final int BLOCK_HEIGHT = 24;
 
     @Inject
-    public TimeTree(TimeSheet timeSheet, DefaultMutableTreeNode rootNode, DefaultMutableTreeNode sidePanelNode, DefaultMutableTreeNode managerNode)
+    public TimeTree(ToolBoxFrame toolBox, DefaultMutableTreeNode rootNode, DefaultMutableTreeNode sidePanelNode, DefaultMutableTreeNode managerNode)
     {
-        this.timeSheet = timeSheet;
+        this.toolBox = toolBox;
         this.rootNode = rootNode;
         this.sidePanelNode = sidePanelNode;
         this.managerNode = managerNode;
@@ -47,10 +46,13 @@ public class TimeTree extends JScrollPane
 
         treeModel = new TimeTreeModel(rootNode);
         tree = new JTree(treeModel);
-        tree.putClientProperty("JTree.lineStyle", "Angled");
+
+        rootNode.add(sidePanelNode);
+        rootNode.add(managerNode);
+        tree.expandRow(0);
         tree.setRowHeight(BLOCK_HEIGHT);
         tree.setShowsRootHandles(true);
-        tree.setRootVisible(true);
+        tree.setRootVisible(false);
         tree.addTreeSelectionListener(e -> updateTreeSelectionIndex());
         tree.addTreeExpansionListener(new TreeExpansionListener() {
             @Override
@@ -59,14 +61,16 @@ public class TimeTree extends JScrollPane
                 Object object = event.getPath().getLastPathComponent();
                 if (object instanceof Character)
                 {
+                    /*
                     Character character = (Character) object;
                     for (KeyFrame[] keyFrames : character.getFrames())
                     {
                         for (KeyFrame keyFrame : keyFrames)
                         {
-                            timeSheet.addVisibleKeyFrame(keyFrame);
+                            toolBox.getTimeSheetPanel().getTimeSheet().addVisibleKeyFrame(keyFrame);
                         }
                     }
+                     */
                 }
                 updateTreeSelectionIndex();
             }
@@ -77,6 +81,7 @@ public class TimeTree extends JScrollPane
                 Object object = event.getPath().getLastPathComponent();
                 if (object instanceof Character)
                 {
+                    /*
                     Character character = (Character) object;
                     for (KeyFrame[] keyFrames : character.getFrames())
                     {
@@ -85,6 +90,8 @@ public class TimeTree extends JScrollPane
                             timeSheet.removeVisibleKeyFrame(keyFrame);
                         }
                     }
+
+                     */
                 }
                 updateTreeSelectionIndex();
             }
@@ -95,9 +102,6 @@ public class TimeTree extends JScrollPane
         renderer.setClosedIcon(new ImageIcon(FOLDER_CLOSED));
         renderer.setLeafIcon(new ImageIcon(OBJECT));
         tree.setCellRenderer(renderer);
-
-        rootNode.add(sidePanelNode);
-        rootNode.add(managerNode);
 
         viewPort.add(tree, BorderLayout.CENTER);
         setViewportView(viewPort);
@@ -149,14 +153,9 @@ public class TimeTree extends JScrollPane
         updateTreeSelectionIndex();
     }
 
-    public void addKeyFrame(Character character, KeyFrame keyFrame)
-    {
-
-    }
-
     private void onPanelScrolled(int scroll)
     {
-        timeSheet.onVerticalScrollEvent(scroll);
+        toolBox.getTimeSheetPanel().getSummarySheet().onVerticalScrollEvent(scroll);
     }
 
     private void updateTreeSelectionIndex()
@@ -167,7 +166,26 @@ public class TimeTree extends JScrollPane
             {
                 return;
             }
-            timeSheet.setSelectedIndex(rows[0]);
+            toolBox.getTimeSheetPanel().getSummarySheet().setSelectedIndex(rows[0]);
         }
+    }
+
+    public Character[] getSelectedCharacters()
+    {
+        TreePath[] treePaths = tree.getSelectionPaths();
+        Character[] characters = new Character[0];
+        if (treePaths == null)
+            return characters;
+
+        for (TreePath treePath : treePaths)
+        {
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode) treePath.getLastPathComponent();
+            if (node.getUserObject() instanceof Character)
+            {
+                characters = ArrayUtils.add(characters, (Character) node.getUserObject());
+            }
+        }
+
+        return characters;
     }
 }

@@ -15,6 +15,7 @@ import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.TimeTree;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Animation;
@@ -60,6 +61,7 @@ public class CreatorsPanel extends PluginPanel
     private final ToolBoxFrame toolBox;
     private final ModelAnvil modelAnvil;
     private final ModelOrganizer modelOrganizer;
+    private final DataFinder dataFinder;
     private final ProgrammerPanel programmerPanel;
     private final TransmogPanel transmogPanel;
     private final ModelImporter modelImporter;
@@ -94,7 +96,7 @@ public class CreatorsPanel extends PluginPanel
     private final LineBorder selectedBorder = new LineBorder(Color.WHITE, 1);
 
     @Inject
-    public CreatorsPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin, ToolBoxFrame toolBox, ModelImporter modelImporter)
+    public CreatorsPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin, ToolBoxFrame toolBox, DataFinder dataFinder, ModelImporter modelImporter)
     {
         this.clientThread = clientThread;
         this.plugin = plugin;
@@ -103,6 +105,7 @@ public class CreatorsPanel extends PluginPanel
         this.programmerPanel = toolBox.getProgramPanel();
         this.modelAnvil = toolBox.getModelAnvil();
         this.transmogPanel = toolBox.getTransmogPanel();
+        this.dataFinder = dataFinder;
         this.modelImporter = modelImporter;
         this.timeSheetPanel = toolBox.getTimeSheetPanel();
         this.timeTree = timeSheetPanel.getTimeTree();
@@ -233,7 +236,7 @@ public class CreatorsPanel extends PluginPanel
                 0,
                 -1,
                 60,
-                new KeyFrame[0][],
+                new KeyFrame[KeyFrameType.getTotalFrameTypes()][0],
                 createEmptyProgram(-1, -1),
                 false, null, null, new int[0], -1, false, false);
     }
@@ -830,7 +833,7 @@ public class CreatorsPanel extends PluginPanel
             if (parentNode == null)
             {
                 managerTree.addCharacterNode(character, ParentPanel.SIDE_PANEL, true);
-                timeTree.addCharacterNode(timeTree.getManagerNode(), character);
+                timeTree.addCharacterNode(timeTree.getSidePanelNode(), character);
             }
             else
             {
@@ -1593,7 +1596,12 @@ public class CreatorsPanel extends PluginPanel
                     KeyFrame[][] keyFrames = save.getKeyFrames();
                     if (keyFrames == null)
                     {
-                        keyFrames = new KeyFrame[0][];
+                        keyFrames = new KeyFrame[KeyFrameType.getTotalFrameTypes()][0];
+                    }
+
+                    if (keyFrames.length < KeyFrameType.getTotalFrameTypes())
+                    {
+                        keyFrames = new KeyFrame[KeyFrameType.getTotalFrameTypes()][0];
                     }
 
                     character = createCharacter(
@@ -1681,7 +1689,12 @@ public class CreatorsPanel extends PluginPanel
             KeyFrame[][] keyFrames = save.getKeyFrames();
             if (keyFrames == null)
             {
-                keyFrames = new KeyFrame[0][];
+                keyFrames = new KeyFrame[KeyFrameType.getTotalFrameTypes()][0];
+            }
+
+            if (keyFrames.length < KeyFrameType.getTotalFrameTypes())
+            {
+                keyFrames = new KeyFrame[KeyFrameType.getTotalFrameTypes()][0];
             }
 
             character = createCharacter(

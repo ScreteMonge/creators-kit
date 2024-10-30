@@ -9,9 +9,9 @@ public class AnimationKeyFrame extends KeyFrame
 {
     private int animationId;
 
-    public AnimationKeyFrame(KeyFrameType keyFrameType, int duration, int animationId)
+    public AnimationKeyFrame(double tick, int animationId)
     {
-        super(keyFrameType, duration);
+        super(KeyFrameType.ANIMATION, tick);
         this.animationId = animationId;
     }
 }

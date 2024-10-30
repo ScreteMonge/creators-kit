@@ -27,7 +27,7 @@ public class ModelGetter
     private final ClientThread clientThread;
     private final CreatorsConfig config;
     private final CreatorsPlugin plugin;
-    private final ModelFinder modelFinder;
+    private final DataFinder dataFinder;
     private final ModelExporter modelExporter;
     private boolean initiateExport = false;
     private boolean continueAnimExport = false;
@@ -39,14 +39,14 @@ public class ModelGetter
     private int[][][] animVerts;
 
     @Inject
-    public ModelGetter(Client client, CreatorsPanel creatorsPanel, ClientThread clientThread, CreatorsConfig config, CreatorsPlugin plugin, ModelFinder modelFinder, ModelExporter modelExporter)
+    public ModelGetter(Client client, CreatorsPanel creatorsPanel, ClientThread clientThread, CreatorsConfig config, CreatorsPlugin plugin, DataFinder dataFinder, ModelExporter modelExporter)
     {
         this.client = client;
         this.creatorsPanel = creatorsPanel;
         this.clientThread = clientThread;
         this.config = config;
         this.plugin = plugin;
-        this.modelFinder = modelFinder;
+        this.dataFinder = dataFinder;
         this.modelExporter = modelExporter;
     }
 
@@ -417,7 +417,7 @@ public class ModelGetter
                 {
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = modelFinder.findModelsForNPC(npc.getId());
+                        ModelStats[] modelStats = dataFinder.findModelsForNPC(npc.getId());
                         if (modelStats == null || modelStats.length == 0)
                         {
                             plugin.sendChatMessage("Could not find this NPC in the cache.");
@@ -480,7 +480,7 @@ public class ModelGetter
                 {
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = modelFinder.findModelsForNPC(npc.getId());
+                        ModelStats[] modelStats = dataFinder.findModelsForNPC(npc.getId());
                         if (modelStats == null || modelStats.length == 0)
                         {
                             plugin.sendChatMessage("Could not find this NPC in the cache.");
@@ -545,7 +545,7 @@ public class ModelGetter
                         {
                             Thread thread = new Thread(() ->
                             {
-                                ModelStats[] modelStats = modelFinder.findModelsForNPC(npcId);
+                                ModelStats[] modelStats = dataFinder.findModelsForNPC(npcId);
                                 if (modelStats == null || modelStats.length == 0)
                                 {
                                     plugin.sendChatMessage("Could not find this NPC in the cache.");
@@ -618,7 +618,7 @@ public class ModelGetter
 
                         Thread thread = new Thread(() ->
                         {
-                            ModelStats[] modelStats = modelFinder.findModelsForNPC(npcId);
+                            ModelStats[] modelStats = dataFinder.findModelsForNPC(npcId);
                             if (modelStats == null || modelStats.length == 0)
                             {
                                 plugin.sendChatMessage("Could not find this NPC in the cache.");
@@ -678,7 +678,7 @@ public class ModelGetter
                         {
                             Thread thread = new Thread(() ->
                             {
-                                ModelStats[] modelStats = modelFinder.findSpotAnim(spotAnim.getId());
+                                ModelStats[] modelStats = dataFinder.findSpotAnim(spotAnim.getId());
                                 if (modelStats == null || modelStats.length == 0)
                                 {
                                     plugin.sendChatMessage("Could not find this Spotanim in the cache.");
@@ -690,7 +690,7 @@ public class ModelGetter
                                 {
                                     CustomLighting lighting = modelStats[0].getLighting();
                                     plugin.cacheToAnvil(modelStats, new int[0], false);
-                                    plugin.sendChatMessage("Model sent to Anvil: " + spotAnim.getId() + "; Anim: " + modelFinder.getLastAnim() + "; Ambient/Contrast: " + lighting.getAmbient() + "/" + lighting.getContrast());
+                                    plugin.sendChatMessage("Model sent to Anvil: " + spotAnim.getId() + "; Anim: " + dataFinder.getLastAnim() + "; Ambient/Contrast: " + lighting.getAmbient() + "/" + lighting.getContrast());
                                 });
                             });
                             thread.start();
@@ -703,7 +703,7 @@ public class ModelGetter
                     {
                         Thread thread = new Thread(() ->
                         {
-                            ModelStats[] modelStats = modelFinder.findSpotAnim(spotAnim.getId());
+                            ModelStats[] modelStats = dataFinder.findSpotAnim(spotAnim.getId());
                             if (modelStats == null || modelStats.length == 0)
                             {
                                 plugin.sendChatMessage("Could not find this Spotanim in the cache.");
@@ -724,7 +724,7 @@ public class ModelGetter
                                     modelData.recolor(recolFrom[i], recolTo[i]);
                                 modelData.scale(modelStats[0].getResizeX(), modelStats[0].getResizeZ(), modelStats[0].getResizeY());
 
-                                int anim = modelFinder.getLastAnim();
+                                int anim = dataFinder.getLastAnim();
                                 Model model = modelData.light(lighting.getAmbient(), lighting.getContrast(), lighting.getX(), lighting.getZ() * -1, lighting.getY());
                                 CustomModel customModel = new CustomModel(model, comp);
                                 plugin.addCustomModel(customModel, false);
@@ -775,7 +775,7 @@ public class ModelGetter
                     {
                         for (ActorSpotAnim spotAnim : spotAnims)
                         {
-                            ModelStats[] modelStats = modelFinder.findSpotAnim(spotAnim.getId());
+                            ModelStats[] modelStats = dataFinder.findSpotAnim(spotAnim.getId());
                             if (modelStats == null || modelStats.length == 0)
                             {
                                 plugin.sendChatMessage("Could not find this Spotanim in the cache.");
@@ -831,7 +831,7 @@ public class ModelGetter
                     {
                         Thread thread = new Thread(() ->
                         {
-                            ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items, anim, fSpotAnims);
+                            ModelStats[] modelStats = dataFinder.findModelsForPlayer(false, comp.getGender() == 0, items, anim, fSpotAnims);
 
                             clientThread.invokeLater(() ->
                             {
@@ -846,7 +846,7 @@ public class ModelGetter
                     //For "Store" option on players
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items, anim, fSpotAnims);
+                        ModelStats[] modelStats = dataFinder.findModelsForPlayer(false, comp.getGender() == 0, items, anim, fSpotAnims);
                         clientThread.invokeLater(() ->
                         {
                             Model model = plugin.constructModelFromCache(modelStats, comp.getColors(), true, true);
@@ -998,7 +998,7 @@ public class ModelGetter
                         {
                             Thread thread = new Thread(() ->
                             {
-                                ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items, finalAnimId, fSpotAnims);
+                                ModelStats[] modelStats = dataFinder.findModelsForPlayer(false, comp.getGender() == 0, items, finalAnimId, fSpotAnims);
                                 clientThread.invokeLater(() ->
                                 {
                                     initiateAnimationExport(finalAnimId, finalName, bm, modelStats, comp.getColors(), true, true);
@@ -1015,7 +1015,7 @@ public class ModelGetter
                     {
                         Thread thread = new Thread(() ->
                         {
-                            ModelStats[] modelStats = modelFinder.findModelsForPlayer(false, comp.getGender() == 0, items, finalAnimId, fSpotAnims);
+                            ModelStats[] modelStats = dataFinder.findModelsForPlayer(false, comp.getGender() == 0, items, finalAnimId, fSpotAnims);
 
                             clientThread.invokeLater(() ->
                             {
@@ -1059,7 +1059,7 @@ public class ModelGetter
                 {
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DEFAULT, false);
+                        ModelStats[] modelStats = dataFinder.findModelsForObject(objectId, modelType, LightingStyle.DEFAULT, false);
                         if (modelStats == null || modelStats.length == 0)
                         {
                             plugin.sendChatMessage("Could not find this Object in the cache.");
@@ -1119,7 +1119,7 @@ public class ModelGetter
                 {
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DYNAMIC, false);
+                        ModelStats[] modelStats = dataFinder.findModelsForObject(objectId, modelType, LightingStyle.DYNAMIC, false);
                         if (modelStats == null || modelStats.length == 0)
                         {
                             plugin.sendChatMessage("Could not find this Object in the cache.");
@@ -1184,7 +1184,7 @@ public class ModelGetter
                 {
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, lightingStyle, false);
+                        ModelStats[] modelStats = dataFinder.findModelsForObject(objectId, modelType, lightingStyle, false);
                         if (modelStats == null || modelStats.length == 0)
                         {
                             plugin.sendChatMessage("Could not find this Object in the cache.");
@@ -1262,7 +1262,7 @@ public class ModelGetter
 
                         Thread thread = new Thread(() ->
                         {
-                            ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DEFAULT, false);
+                            ModelStats[] modelStats = dataFinder.findModelsForObject(objectId, modelType, LightingStyle.DEFAULT, false);
                             if (modelStats == null || modelStats.length == 0)
                             {
                                 plugin.sendChatMessage("Could not find this Object in the cache.");
@@ -1360,7 +1360,7 @@ public class ModelGetter
                         {
                             Thread thread = new Thread(() ->
                             {
-                                ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DYNAMIC, false);
+                                ModelStats[] modelStats = dataFinder.findModelsForObject(objectId, modelType, LightingStyle.DYNAMIC, false);
                                 if (modelStats == null || modelStats.length == 0)
                                 {
                                     plugin.sendChatMessage("Could not find this Object in the cache.");
@@ -1384,7 +1384,7 @@ public class ModelGetter
                     {
                         Thread thread = new Thread(() ->
                         {
-                            ModelStats[] modelStats = modelFinder.findModelsForObject(objectId, modelType, LightingStyle.DYNAMIC, false);
+                            ModelStats[] modelStats = dataFinder.findModelsForObject(objectId, modelType, LightingStyle.DYNAMIC, false);
                             if (modelStats == null || modelStats.length == 0)
                             {
                                 plugin.sendChatMessage("Could not find this Object in the cache.");
@@ -1723,7 +1723,7 @@ public class ModelGetter
                 {
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = modelFinder.findModelsForGroundItem(itemId, CustomModelType.CACHE_GROUND_ITEM);
+                        ModelStats[] modelStats = dataFinder.findModelsForGroundItem(itemId, CustomModelType.CACHE_GROUND_ITEM);
                         if (modelStats == null || modelStats.length == 0)
                         {
                             plugin.sendChatMessage("Could not find this Item in the cache.");
@@ -1783,7 +1783,7 @@ public class ModelGetter
                 {
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = modelFinder.findModelsForGroundItem(itemId, CustomModelType.CACHE_GROUND_ITEM);
+                        ModelStats[] modelStats = dataFinder.findModelsForGroundItem(itemId, CustomModelType.CACHE_GROUND_ITEM);
                         if (modelStats == null || modelStats.length == 0)
                         {
                             plugin.sendChatMessage("Could not find this Item in the cache.");
@@ -1862,7 +1862,7 @@ public class ModelGetter
 
                         Thread thread = new Thread(() ->
                         {
-                            ModelStats[] modelStats = modelFinder.findModelsForGroundItem(itemId, CustomModelType.CACHE_GROUND_ITEM);
+                            ModelStats[] modelStats = dataFinder.findModelsForGroundItem(itemId, CustomModelType.CACHE_GROUND_ITEM);
                             if (modelStats == null || modelStats.length == 0)
                             {
                                 plugin.sendChatMessage("Could not find this Item in the cache.");
