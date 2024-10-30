@@ -61,6 +61,7 @@ public class CreatorsPanel extends PluginPanel
     private final ToolBoxFrame toolBox;
     private final ModelAnvil modelAnvil;
     private final ModelOrganizer modelOrganizer;
+    private final DataFinder dataFinder;
     private final ProgrammerPanel programmerPanel;
     private final TransmogPanel transmogPanel;
     private final ModelImporter modelImporter;
@@ -95,7 +96,7 @@ public class CreatorsPanel extends PluginPanel
     private final LineBorder selectedBorder = new LineBorder(Color.WHITE, 1);
 
     @Inject
-    public CreatorsPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin, ToolBoxFrame toolBox, ModelImporter modelImporter)
+    public CreatorsPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin, ToolBoxFrame toolBox, DataFinder dataFinder, ModelImporter modelImporter)
     {
         this.clientThread = clientThread;
         this.plugin = plugin;
@@ -104,6 +105,7 @@ public class CreatorsPanel extends PluginPanel
         this.programmerPanel = toolBox.getProgramPanel();
         this.modelAnvil = toolBox.getModelAnvil();
         this.transmogPanel = toolBox.getTransmogPanel();
+        this.dataFinder = dataFinder;
         this.modelImporter = modelImporter;
         this.timeSheetPanel = toolBox.getTimeSheetPanel();
         this.timeTree = timeSheetPanel.getTimeTree();
@@ -831,7 +833,7 @@ public class CreatorsPanel extends PluginPanel
             if (parentNode == null)
             {
                 managerTree.addCharacterNode(character, ParentPanel.SIDE_PANEL, true);
-                timeTree.addCharacterNode(timeTree.getManagerNode(), character);
+                timeTree.addCharacterNode(timeTree.getSidePanelNode(), character);
             }
             else
             {

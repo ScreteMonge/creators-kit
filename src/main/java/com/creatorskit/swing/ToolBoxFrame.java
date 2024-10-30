@@ -1,6 +1,7 @@
 package com.creatorskit.swing;
 
 import com.creatorskit.CreatorsPlugin;
+import com.creatorskit.models.DataFinder;
 import com.creatorskit.swing.manager.ManagerPanel;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
@@ -27,24 +28,25 @@ public class ToolBoxFrame extends JFrame
     private ClientThread clientThread;
     private final Client client;
     private final CreatorsPlugin plugin;
-    private final CreatorsPanel creatorsPanel;
     private final ConfigManager configManager;
+    private final DataFinder dataFinder;
     private final ManagerPanel managerPanel;
     private final ModelOrganizer modelOrganizer;
     private final ModelAnvil modelAnvil;
+    private final CacheSearcherTab cacheSearcher;
     private final ProgrammerPanel programPanel;
     private final TransmogPanel transmogPanel;
     private final TimeSheetPanel timeSheetPanel;
     private final BufferedImage ICON = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
 
     @Inject
-    public ToolBoxFrame(Client client, ClientThread clientThread, CreatorsPlugin plugin, ConfigManager configManager, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, ProgrammerPanel programPanel, TransmogPanel transmogPanel)
+    public ToolBoxFrame(Client client, ClientThread clientThread, CreatorsPlugin plugin, ConfigManager configManager, DataFinder dataFinder, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, ProgrammerPanel programPanel, TransmogPanel transmogPanel)
     {
         this.client = client;
         this.clientThread = clientThread;
         this.plugin = plugin;
-        this.creatorsPanel = plugin.getCreatorsPanel();
         this.configManager = configManager;
+        this.dataFinder = dataFinder;
         this.modelOrganizer = modelOrganizer;
         this.modelAnvil = modelAnvil;
         this.programPanel = programPanel;
@@ -69,11 +71,13 @@ public class ToolBoxFrame extends JFrame
 
         JScrollBar scrollBar = new JScrollBar(Adjustable.HORIZONTAL);
         TimeTree timeTree = new TimeTree(this, timeRootNode, timeSideNode, timeManagerNode);
-        this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, clientThread, timeTree, scrollBar);
+        this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, clientThread, dataFinder, timeTree, scrollBar);
 
         JPanel objectHolder = new JPanel();
         ManagerTree managerTree = new ManagerTree(this, plugin, objectHolder, managerRootNode, managerSideNode, managerManagerNode, timeTree);
         this.managerPanel = new ManagerPanel(client, plugin, objectHolder, managerTree);
+
+        this.cacheSearcher = new CacheSearcherTab(plugin, clientThread, dataFinder);
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setTitle("Creator's Kit Toolbox");
@@ -107,10 +111,11 @@ public class ToolBoxFrame extends JFrame
 
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setFont(FontManager.getRunescapeBoldFont());
-        tabbedPane.addTab("Timesheet", timeSheetPanel);
+        //tabbedPane.addTab("Timesheet", timeSheetPanel);
         tabbedPane.addTab("Manager", managerPanel);
         tabbedPane.addTab("Model Organizer", modelOrganizer);
         tabbedPane.addTab("Model Anvil", modelAnvil);
+        tabbedPane.addTab("Cache Searcher", cacheSearcher);
         tabbedPane.addTab("Programmer", programPanel);
         tabbedPane.addTab("Transmogger", transmogPanel);
         tabbedPane.setToolTipTextAt(0, "Manage and organize all your Objects");

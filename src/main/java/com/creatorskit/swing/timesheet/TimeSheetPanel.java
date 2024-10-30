@@ -2,6 +2,7 @@ package com.creatorskit.swing.timesheet;
 
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
+import com.creatorskit.models.DataFinder;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
@@ -34,6 +35,7 @@ public class TimeSheetPanel extends JPanel
     private final CreatorsPlugin plugin;
     private final GridBagConstraints c = new GridBagConstraints();
     private final ToolBoxFrame toolBox;
+    private final DataFinder dataFinder;
     @Getter
     private final SummarySheet summarySheet;
     private final AttributeSheet attributeSheet;
@@ -44,15 +46,14 @@ public class TimeSheetPanel extends JPanel
     private final JPanel labelPanel = new JPanel();
     private final JPanel controlPanel = new JPanel();
     private final JSpinner timeSpinner = new JSpinner();
-    private final JLabel objectLabel = new JLabel("Pick an Object");
     private final BufferedImage CLOSE = ImageUtil.loadImageResource(getClass(), "/Close.png");
     private final BufferedImage HELP = ImageUtil.loadImageResource(getClass(), "/Help.png");
 
-    private final int ROW_HEIGHT = 24;
-    private final int INDEX_BUFFER = 20;
-    private final int ABSOLUTE_MAX_SEQUENCE_LENGTH = 100000;
-    private final int ZOOM_MAX = 500;
-    private final int ZOOM_MIN = 5;
+    private static final int ROW_HEIGHT = 24;
+    private static final int INDEX_BUFFER = 20;
+    private static final int ABSOLUTE_MAX_SEQUENCE_LENGTH = 100000;
+    private static final int ZOOM_MAX = 500;
+    private static final int ZOOM_MIN = 5;
 
     private final String MOVE_CARD = "Movement";
     private final String ANIM_CARD = "Animation";
@@ -77,11 +78,12 @@ public class TimeSheetPanel extends JPanel
     private KeyFrame[] selectedKeyFrames;
 
     @Inject
-    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, ClientThread clientThread, TimeTree timeTree, JScrollBar scrollBar)
+    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, TimeTree timeTree, JScrollBar scrollBar)
     {
         this.toolBox = toolBox;
         this.plugin = plugin;
         this.clientThread = clientThread;
+        this.dataFinder = dataFinder;
         this.summarySheet = new SummarySheet(toolBox);
         this.attributeSheet = new AttributeSheet(toolBox);
         this.timeTree = timeTree;
@@ -89,7 +91,6 @@ public class TimeSheetPanel extends JPanel
 
         setLayout(new GridBagLayout());
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
-
 
         setupControlPanel();
         setupAttributePanel();
@@ -128,12 +129,12 @@ public class TimeSheetPanel extends JPanel
         selectedCharacter = character;
         summarySheet.setSelectedCharacter(character);
         attributeSheet.setSelectedCharacter(character);
-        objectLabel.setText(character.getName());
+        attributePanel.setSelectedCharacter(character);
     }
 
     private void setupAttributePanel()
     {
-        attributePanel = new AttributePanel(this, objectLabel);
+        attributePanel = new AttributePanel(this, dataFinder);
     }
 
     /**
@@ -216,7 +217,7 @@ public class TimeSheetPanel extends JPanel
         add(buffer, c);
 
         c.gridwidth = 2;
-        c.weightx = 1;
+        c.weightx = 0;
         c.weighty = 5;
         c.gridx = 0;
         c.gridy = 1;
@@ -224,7 +225,7 @@ public class TimeSheetPanel extends JPanel
 
         c.gridwidth = 1;
         c.gridheight = 2;
-        c.weightx = 5;
+        c.weightx = 8;
         c.weighty = 5;
         c.gridx = 2;
         c.gridy = 0;
@@ -244,7 +245,7 @@ public class TimeSheetPanel extends JPanel
         add(controlPanel, c);
 
         c.gridheight = 3;
-        c.weightx = 2;
+        c.weightx = 0;
         c.weighty = 0;
         c.gridx = 0;
         c.gridy = 2;
@@ -257,7 +258,7 @@ public class TimeSheetPanel extends JPanel
         c.gridy = 4;
         add(labelPanel, c);
 
-        c.weightx = 0;
+        c.weightx = 8;
         c.weighty = 0;
         c.gridx = 2;
         c.gridy = 4;
@@ -327,6 +328,7 @@ public class TimeSheetPanel extends JPanel
         c.gridy = 0;
         controlPanel.add(timeSpinner, c);
 
+        timeSpinner.setBackground(ColorScheme.DARK_GRAY_COLOR);
         timeSpinner.setModel(new SpinnerNumberModel(0, -10, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.1));
         JSpinner.NumberEditor editor = (JSpinner.NumberEditor) timeSpinner.getEditor();
         DecimalFormat format = editor.getFormat();
