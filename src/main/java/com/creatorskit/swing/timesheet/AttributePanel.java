@@ -3,9 +3,14 @@ package com.creatorskit.swing.timesheet;
 import com.creatorskit.Character;
 import com.creatorskit.models.DataFinder;
 import com.creatorskit.models.datatypes.NPCData;
+import com.creatorskit.programming.Direction;
 import com.creatorskit.swing.AutoCompletion;
 import com.creatorskit.swing.timesheet.attributes.AnimAttributes;
+import com.creatorskit.swing.timesheet.attributes.OriAttributes;
+import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
+import com.creatorskit.swing.timesheet.keyframe.OrientationKeyFrame;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.client.ui.ColorScheme;
@@ -15,11 +20,11 @@ import net.runelite.client.util.ImageUtil;
 import javax.inject.Inject;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 @Getter
@@ -30,10 +35,14 @@ public class AttributePanel extends JPanel
     private DataFinder dataFinder;
 
     private final BufferedImage HELP = ImageUtil.loadImageResource(getClass(), "/Help.png");
+    private final Icon keyframeImage = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/Keyframe.png"));
+    private final Icon keyframeEmptyImage = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/Keyframe_Empty.png"));
+
     private final GridBagConstraints c = new GridBagConstraints();
     private final JPanel cardPanel = new JPanel();
     private final JLabel objectLabel = new JLabel("Pick an Object");
     private final JLabel cardLabel = new JLabel("");
+    private final JLabel keyFramed = new JLabel();
 
     private final String MOVE_CARD = "Movement";
     private final String ANIM_CARD = "Animation";
@@ -46,8 +55,10 @@ public class AttributePanel extends JPanel
     private final String HEALTH_CARD = "Healthbar";
 
     private KeyFrameType hoveredKeyFrameType;
+    private KeyFrameType selectedKeyFramePage = KeyFrameType.MOVEMENT;
 
     private final AnimAttributes animAttributes = new AnimAttributes();
+    private final OriAttributes oriAttributes = new OriAttributes();
 
     @Inject
     public AttributePanel(TimeSheetPanel timeSheetPanel, DataFinder dataFinder)
@@ -59,7 +70,7 @@ public class AttributePanel extends JPanel
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
         setKeyBindings();
 
-        objectLabel.setFont(FontManager.getDefaultBoldFont());
+        objectLabel.setFont(FontManager.getRunescapeBoldFont());
         objectLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
         cardPanel.setLayout(new CardLayout());
@@ -70,7 +81,7 @@ public class AttributePanel extends JPanel
 
         c.gridwidth = 1;
         c.gridheight = 1;
-        c.weightx = 0;
+        c.weightx = 1;
         c.weighty = 0;
         c.gridx = 0;
         c.gridy = 0;
@@ -78,11 +89,27 @@ public class AttributePanel extends JPanel
 
         c.gridx = 1;
         c.gridy = 0;
+        c.weightx = 0;
         cardLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         cardLabel.setFont(FontManager.getRunescapeBoldFont());
+        cardLabel.setText(MOVE_CARD);
         add(cardLabel, c);
 
-        c.gridwidth = 2;
+        c.gridx = 2;
+        c.gridy = 0;
+        keyFramed.setIcon(keyframeEmptyImage);
+        keyFramed.setPreferredSize(new Dimension(18, 18));
+        keyFramed.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseReleased(MouseEvent e)
+            {
+                super.mouseReleased(e);
+                timeSheetPanel.onKeyFrameIconPressedEvent();
+            }
+        });
+        add(keyFramed, c);
+
+        c.gridwidth = 3;
         c.weightx = 1;
         c.weighty = 1;
         c.gridx = 0;
@@ -110,7 +137,52 @@ public class AttributePanel extends JPanel
 
         setupMoveCard(moveCard);
         setupAnimCard(animCard);
+        setupOriCard(oriCard);
 
+    }
+
+    /**
+     * Create a keyframe out of the current AttributePanel settings, based on which card is currently being shown
+     * @return a keyframe of type depending on which card is currently showing, with settings based on what is displayed on that card
+     */
+    public KeyFrame createKeyFrame()
+    {
+        switch (selectedKeyFramePage)
+        {
+            default:
+            case MOVEMENT:
+                break;
+            case ANIMATION:
+                return new AnimationKeyFrame(
+                        timeSheetPanel.getCurrentTime(),
+                        (int) animAttributes.getManual().getValue(),
+                        animAttributes.getManualOverride().isSelected(),
+                        (int) animAttributes.getIdle().getValue(),
+                        (int) animAttributes.getWalk().getValue(),
+                        (int) animAttributes.getRun().getValue(),
+                        (int) animAttributes.getWalk180().getValue(),
+                        (int) animAttributes.getWalkRight().getValue(),
+                        (int) animAttributes.getWalkLeft().getValue(),
+                        (int) animAttributes.getIdleRight().getValue(),
+                        (int) animAttributes.getIdleLeft().getValue()
+                );
+            case SPAWN:
+            case MODEL:
+                break;
+            case ORIENTATION:
+                return new OrientationKeyFrame(
+                        timeSheetPanel.getCurrentTime(),
+                        (int) oriAttributes.getManual().getValue(),
+                        oriAttributes.getManualOverride().isSelected()
+                );
+            case TEXT:
+            case OVERHEAD:
+            case HITSPLAT:
+            case HEALTHBAR:
+                break;
+        }
+
+        return null;
     }
 
     private void setupMoveCard(JPanel card)
@@ -174,7 +246,7 @@ public class AttributePanel extends JPanel
 
         c.gridx = 1;
         c.gridy = 1;
-        JSpinner manual = animAttributes.getOverride();
+        JSpinner manual = animAttributes.getManual();
         manual.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
         manual.setPreferredSize(spinnerSize);
         card.add(manual, c);
@@ -182,7 +254,7 @@ public class AttributePanel extends JPanel
         c.gridwidth = 3;
         c.gridx = 2;
         c.gridy = 1;
-        JCheckBox manualCheckbox = animAttributes.getCheckBox();
+        JCheckBox manualCheckbox = animAttributes.getManualOverride();
         manualCheckbox.setText("Enable manual override");
         manualCheckbox.setHorizontalAlignment(SwingConstants.LEFT);
         card.add(manualCheckbox, c);
@@ -370,11 +442,144 @@ public class AttributePanel extends JPanel
         card.add(empty1, c);
     }
 
+    private void setupOriCard(JPanel card)
+    {
+        Dimension spinnerSize = new Dimension(90, 25);
+        card.setLayout(new GridBagLayout());
+        card.setBorder(new EmptyBorder(4, 4, 4, 4));
+        card.setFocusable(true);
+
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(2, 2, 2, 2);
+
+        c.gridwidth = 4;
+        c.gridheight = 1;
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 0;
+        JPanel manualTitlePanel = new JPanel();
+        manualTitlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        card.add(manualTitlePanel, c);
+
+        JLabel manualTitle = new JLabel("Manual Orientation");
+        manualTitle.setHorizontalAlignment(SwingConstants.LEFT);
+        manualTitle.setFont(FontManager.getRunescapeBoldFont());
+        manualTitlePanel.add(manualTitle);
+
+        JLabel manualTitleHelp = new JLabel(new ImageIcon(HELP));
+        manualTitleHelp.setHorizontalAlignment(SwingConstants.LEFT);
+        manualTitleHelp.setBorder(new EmptyBorder(0, 4, 0, 4));
+        manualTitleHelp.setToolTipText("<html>Enabling manual orientation override lets you exactly control what orientation your Object will face" +
+                "<br>Otherwise, the Object's orientation is instead based off of the direction of its movement</html>");
+        manualTitlePanel.add(manualTitleHelp);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 1;
+        JLabel manualLabel = new JLabel("Manual: ");
+        manualLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(manualLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 1;
+        JSpinner manual = oriAttributes.getManual();
+        manual.setModel(new SpinnerNumberModel(0, 0, 2048, 1));
+        manual.setPreferredSize(spinnerSize);
+        card.add(manual, c);
+
+        c.gridx = 0;
+        c.gridy = 2;
+        c.gridwidth = 1;
+        JLabel presetLabel = new JLabel("Presets: ");
+        presetLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        card.add(presetLabel, c);
+
+        c.gridwidth = 3;
+        c.gridx = 1;
+        c.gridy = 2;
+        JComboBox<Direction> searcher = new JComboBox<>();
+        AutoCompletion.enable(searcher);
+        Direction[] directions = Direction.getAllDirections();
+        for (Direction d : directions)
+        {
+            searcher.addItem(d);
+        }
+        searcher.setPreferredSize(new Dimension(100, 25));
+        card.add(searcher, c);
+
+        c.gridwidth = 1;
+        c.gridx = 4;
+        c.gridy = 2;
+        JButton searchApply = new JButton("Apply");
+        searchApply.addActionListener(e ->
+        {
+            Direction direction = (Direction) searcher.getSelectedItem();
+            if (direction == null)
+            {
+                return;
+            }
+
+            manual.setValue(direction.getJUnit());
+        });
+        card.add(searchApply, c);
+
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.weightx = 1;
+        c.weighty = 1;
+        c.gridx = 8;
+        c.gridy = 15;
+        JLabel empty1 = new JLabel("");
+        card.add(empty1, c);
+    }
+
     public void switchCards(String cardName)
     {
         CardLayout cl = (CardLayout)(cardPanel.getLayout());
         cl.show(cardPanel, cardName);
         cardLabel.setText(cardName);
+
+        switch (cardName)
+        {
+            default:
+            case MOVE_CARD:
+                selectedKeyFramePage = KeyFrameType.MOVEMENT;
+                break;
+            case ANIM_CARD:
+                selectedKeyFramePage = KeyFrameType.ANIMATION;
+                break;
+            case SPAWN_CARD:
+                selectedKeyFramePage = KeyFrameType.SPAWN;
+                break;
+            case MODEL_CARD:
+                selectedKeyFramePage = KeyFrameType.MODEL;
+                break;
+            case ORI_CARD:
+                selectedKeyFramePage = KeyFrameType.ORIENTATION;
+                break;
+            case TEXT_CARD:
+                selectedKeyFramePage = KeyFrameType.TEXT;
+                break;
+            case OVER_CARD:
+                selectedKeyFramePage = KeyFrameType.OVERHEAD;
+                break;
+            case HITS_CARD:
+                selectedKeyFramePage = KeyFrameType.HITSPLAT;
+                break;
+            case HEALTH_CARD:
+                selectedKeyFramePage = KeyFrameType.HEALTHBAR;
+        }
+
+        Character character = timeSheetPanel.getSelectedCharacter();
+        if (character == null)
+        {
+            return;
+        }
+
+        KeyFrame keyFrame = character.findKeyFrame(selectedKeyFramePage, timeSheetPanel.getCurrentTime());
+        setKeyFramedIcon(keyFrame != null);
     }
 
     public void setSelectedCharacter(Character character)
@@ -444,6 +649,17 @@ public class AttributePanel extends JPanel
                 }
             }
         });
+    }
+
+    public void setKeyFramedIcon(boolean isKeyFramed)
+    {
+        if (isKeyFramed)
+        {
+            keyFramed.setIcon(keyframeImage);
+            return;
+        }
+
+        keyFramed.setIcon(keyframeEmptyImage);
     }
 }
 

@@ -111,7 +111,7 @@ public class ToolBoxFrame extends JFrame
 
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setFont(FontManager.getRunescapeBoldFont());
-        //tabbedPane.addTab("Timesheet", timeSheetPanel);
+        tabbedPane.addTab("Timesheet", timeSheetPanel);
         tabbedPane.addTab("Manager", managerPanel);
         tabbedPane.addTab("Model Organizer", modelOrganizer);
         tabbedPane.addTab("Model Anvil", modelAnvil);

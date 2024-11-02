@@ -50,6 +50,8 @@ public class TimeTree extends JScrollPane
         rootNode.add(sidePanelNode);
         rootNode.add(managerNode);
         tree.expandRow(0);
+        tree.expandRow(1);
+        tree.expandRow(2);
         tree.setRowHeight(BLOCK_HEIGHT);
         tree.setShowsRootHandles(true);
         tree.setRootVisible(false);

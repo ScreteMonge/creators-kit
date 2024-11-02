@@ -18,6 +18,7 @@ public class AttributeSheet extends TimeSheet
     {
         super(toolBox);
         setIndexBuffers(0);
+        setSelectedIndex(1);
     }
 
     @Override

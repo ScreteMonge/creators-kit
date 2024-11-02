@@ -7,16 +7,19 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum Direction
 {
-    UNSET,
-    NORTH,
-    SOUTH,
-    EAST,
-    WEST,
-    NORTHEAST,
-    NORTHWEST,
-    SOUTHEAST,
-    SOUTHWEST
+    UNSET("Unset", 0),
+    NORTH("North", 1024),
+    SOUTH("South", 0),
+    EAST("East", 1536),
+    WEST("West", 512),
+    NORTHEAST("Northeast", 1280),
+    NORTHWEST("Northwest", 768),
+    SOUTHEAST("Southeast", 1792),
+    SOUTHWEST("Southwest", 256)
     ;
+
+    private String name;
+    private int jUnit;
 
     public static Direction getDirection(int changeX, int changeY)
     {
@@ -53,5 +56,16 @@ public enum Direction
         }
 
         return UNSET;
+    }
+
+    public static Direction[] getAllDirections()
+    {
+        return new Direction[]{NORTH, EAST, SOUTH, WEST, NORTHEAST, NORTHWEST, SOUTHEAST, SOUTHWEST};
+    }
+
+    @Override
+    public String toString()
+    {
+        return name;
     }
 }
