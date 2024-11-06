@@ -1,8 +1,8 @@
 package com.creatorskit.swing.timesheet.attributes;
 
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameState;
-import com.creatorskit.swing.timesheet.keyframe.OrientationKeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.settings.OrientationToggle;
+import com.creatorskit.swing.timesheet.keyframe.SpawnKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.settings.SpawnToggle;
 import lombok.Getter;
 import net.runelite.client.ui.ColorScheme;
 
@@ -10,24 +10,23 @@ import javax.swing.*;
 import java.awt.*;
 
 @Getter
-public class OriAttributes
+public class SpawnAttributes
 {
     private final Color green = new Color(42, 77, 26);
     private final Color yellow = new Color(91, 80, 29);
     private final Color red = new Color(101, 66, 29);
 
-    private final JSpinner manual = new JSpinner();
-    private final JComboBox<OrientationToggle> manualOverride = new JComboBox<>();
+    private final JComboBox<SpawnToggle> spawn = new JComboBox<>();
 
-    public OriAttributes()
+    public SpawnAttributes()
     {
         addChangeListeners();
+        spawn.setOpaque(true);
     }
 
-    public void setAttributes(OrientationKeyFrame kf)
+    public void setAttributes(SpawnKeyFrame kf)
     {
-        manual.setValue(kf.getManualOrientation());
-        manualOverride.setSelectedItem(kf.isManualOverride() ? OrientationToggle.MANUAL_ORIENTATION : OrientationToggle.SMART_ORIENTATION);
+        spawn.setSelectedItem(kf.isSpawnActive() ? SpawnToggle.SPAWN_ACTIVE : SpawnToggle.SPAWN_INACTIVE);
     }
 
     public void setBackgroundColours(KeyFrameState keyFrameState)
@@ -47,29 +46,22 @@ public class OriAttributes
                 color = green;
         }
 
-        manual.setBackground(color);
-        manualOverride.setBackground(color);
+        spawn.setBackground(color);
     }
 
     public JComponent[] getAllComponents()
     {
         return new JComponent[]
                 {
-                        manual,
-                        manualOverride
+                        spawn
                 };
     }
 
     public void addChangeListeners()
     {
-        manual.addChangeListener(e ->
+        spawn.addItemListener(e ->
         {
-            manual.setBackground(red);
-        });
-
-        manualOverride.addItemListener(e ->
-        {
-            manualOverride.setBackground(red);
+            spawn.setBackground(red.brighter());
         });
     }
 }

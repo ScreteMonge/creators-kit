@@ -7,10 +7,11 @@ import com.creatorskit.programming.Direction;
 import com.creatorskit.swing.AutoCompletion;
 import com.creatorskit.swing.timesheet.attributes.AnimAttributes;
 import com.creatorskit.swing.timesheet.attributes.OriAttributes;
-import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
-import com.creatorskit.swing.timesheet.keyframe.OrientationKeyFrame;
+import com.creatorskit.swing.timesheet.attributes.SpawnAttributes;
+import com.creatorskit.swing.timesheet.keyframe.*;
+import com.creatorskit.swing.timesheet.keyframe.settings.AnimationToggle;
+import com.creatorskit.swing.timesheet.keyframe.settings.OrientationToggle;
+import com.creatorskit.swing.timesheet.keyframe.settings.SpawnToggle;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.client.ui.ColorScheme;
@@ -20,7 +21,6 @@ import net.runelite.client.util.ImageUtil;
 import javax.inject.Inject;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
@@ -55,10 +55,12 @@ public class AttributePanel extends JPanel
     private final String HEALTH_CARD = "Healthbar";
 
     private KeyFrameType hoveredKeyFrameType;
+    private Component hoveredComponent;
     private KeyFrameType selectedKeyFramePage = KeyFrameType.MOVEMENT;
 
     private final AnimAttributes animAttributes = new AnimAttributes();
     private final OriAttributes oriAttributes = new OriAttributes();
+    private final SpawnAttributes spawnAttributes = new SpawnAttributes();
 
     @Inject
     public AttributePanel(TimeSheetPanel timeSheetPanel, DataFinder dataFinder)
@@ -68,13 +70,14 @@ public class AttributePanel extends JPanel
 
         setLayout(new GridBagLayout());
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        setKeyBindings();
 
         objectLabel.setFont(FontManager.getRunescapeBoldFont());
         objectLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
         cardPanel.setLayout(new CardLayout());
         cardPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        cardPanel.setFocusable(true);
+        addMouseFocusListener(cardPanel);
 
         c.fill = GridBagConstraints.BOTH;
         c.insets = new Insets(2, 2, 2, 2);
@@ -138,7 +141,9 @@ public class AttributePanel extends JPanel
         setupMoveCard(moveCard);
         setupAnimCard(animCard);
         setupOriCard(oriCard);
+        setupSpawnCard(spawnCard);
 
+        setupKeyListeners();
     }
 
     /**
@@ -156,7 +161,7 @@ public class AttributePanel extends JPanel
                 return new AnimationKeyFrame(
                         timeSheetPanel.getCurrentTime(),
                         (int) animAttributes.getManual().getValue(),
-                        animAttributes.getManualOverride().isSelected(),
+                        animAttributes.getManualOverride().getSelectedItem() == AnimationToggle.MANUAL_ANIMATION,
                         (int) animAttributes.getIdle().getValue(),
                         (int) animAttributes.getWalk().getValue(),
                         (int) animAttributes.getRun().getValue(),
@@ -167,13 +172,17 @@ public class AttributePanel extends JPanel
                         (int) animAttributes.getIdleLeft().getValue()
                 );
             case SPAWN:
+                return new SpawnKeyFrame(
+                        timeSheetPanel.getCurrentTime(),
+                        spawnAttributes.getSpawn().getSelectedItem() == SpawnToggle.SPAWN_ACTIVE
+                );
             case MODEL:
                 break;
             case ORIENTATION:
                 return new OrientationKeyFrame(
                         timeSheetPanel.getCurrentTime(),
                         (int) oriAttributes.getManual().getValue(),
-                        oriAttributes.getManualOverride().isSelected()
+                        oriAttributes.getManualOverride().getSelectedItem() == OrientationToggle.MANUAL_ORIENTATION
                 );
             case TEXT:
             case OVERHEAD:
@@ -188,6 +197,8 @@ public class AttributePanel extends JPanel
     private void setupMoveCard(JPanel card)
     {
         card.setLayout(new GridBagLayout());
+        card.setFocusable(true);
+        addMouseFocusListener(card);
 
         c.fill = GridBagConstraints.HORIZONTAL;
         c.insets = new Insets(2, 2, 2, 2);
@@ -210,6 +221,7 @@ public class AttributePanel extends JPanel
         card.setLayout(new GridBagLayout());
         card.setBorder(new EmptyBorder(4, 4, 4, 4));
         card.setFocusable(true);
+        addMouseFocusListener(card);
 
         c.fill = GridBagConstraints.HORIZONTAL;
         c.insets = new Insets(2, 2, 2, 2);
@@ -254,10 +266,10 @@ public class AttributePanel extends JPanel
         c.gridwidth = 3;
         c.gridx = 2;
         c.gridy = 1;
-        JCheckBox manualCheckbox = animAttributes.getManualOverride();
-        manualCheckbox.setText("Enable manual override");
-        manualCheckbox.setHorizontalAlignment(SwingConstants.LEFT);
-        card.add(manualCheckbox, c);
+        JComboBox<AnimationToggle> manualComboBox = animAttributes.getManualOverride();
+        manualComboBox.addItem(AnimationToggle.SMART_ANIMATION);
+        manualComboBox.addItem(AnimationToggle.MANUAL_ANIMATION);
+        card.add(manualComboBox, c);
 
         c.gridwidth = 4;
         c.gridx = 0;
@@ -388,6 +400,7 @@ public class AttributePanel extends JPanel
                 -1,
                 "Player",
                 new int[0],
+                1,
                 808,
                 819,
                 824,
@@ -448,6 +461,7 @@ public class AttributePanel extends JPanel
         card.setLayout(new GridBagLayout());
         card.setBorder(new EmptyBorder(4, 4, 4, 4));
         card.setFocusable(true);
+        addMouseFocusListener(card);
 
         c.fill = GridBagConstraints.HORIZONTAL;
         c.insets = new Insets(2, 2, 2, 2);
@@ -487,6 +501,14 @@ public class AttributePanel extends JPanel
         manual.setModel(new SpinnerNumberModel(0, 0, 2048, 1));
         manual.setPreferredSize(spinnerSize);
         card.add(manual, c);
+
+        c.gridwidth = 2;
+        c.gridx = 2;
+        c.gridy = 1;
+        JComboBox<OrientationToggle> manualCheckbox = oriAttributes.getManualOverride();
+        manualCheckbox.addItem(OrientationToggle.SMART_ORIENTATION);
+        manualCheckbox.addItem(OrientationToggle.MANUAL_ORIENTATION);
+        card.add(manualCheckbox, c);
 
         c.gridx = 0;
         c.gridy = 2;
@@ -535,6 +557,54 @@ public class AttributePanel extends JPanel
         card.add(empty1, c);
     }
 
+    private void setupSpawnCard(JPanel card)
+    {
+        card.setLayout(new GridBagLayout());
+        card.setBorder(new EmptyBorder(4, 4, 4, 4));
+        card.setFocusable(true);
+        addMouseFocusListener(card);
+
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(2, 2, 2, 2);
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 0;
+        JPanel manualTitlePanel = new JPanel();
+        manualTitlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        card.add(manualTitlePanel, c);
+
+        JLabel manualTitle = new JLabel("Set Spawn");
+        manualTitle.setHorizontalAlignment(SwingConstants.LEFT);
+        manualTitle.setFont(FontManager.getRunescapeBoldFont());
+        manualTitlePanel.add(manualTitle);
+
+        JLabel manualTitleHelp = new JLabel(new ImageIcon(HELP));
+        manualTitleHelp.setHorizontalAlignment(SwingConstants.LEFT);
+        manualTitleHelp.setBorder(new EmptyBorder(0, 4, 0, 4));
+        manualTitleHelp.setToolTipText("Set whether the object appears or not");
+        manualTitlePanel.add(manualTitleHelp);
+
+        c.gridx = 0;
+        c.gridy = 1;
+        JComboBox<SpawnToggle> manualCheckbox = spawnAttributes.getSpawn();
+        manualCheckbox.addItem(SpawnToggle.SPAWN_ACTIVE);
+        manualCheckbox.addItem(SpawnToggle.SPAWN_INACTIVE);
+        card.add(manualCheckbox, c);
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.weightx = 1;
+        c.weighty = 1;
+        c.gridx = 8;
+        c.gridy = 15;
+        JLabel empty1 = new JLabel("");
+        card.add(empty1, c);
+    }
+
     public void switchCards(String cardName)
     {
         CardLayout cl = (CardLayout)(cardPanel.getLayout());
@@ -550,14 +620,14 @@ public class AttributePanel extends JPanel
             case ANIM_CARD:
                 selectedKeyFramePage = KeyFrameType.ANIMATION;
                 break;
+            case ORI_CARD:
+                selectedKeyFramePage = KeyFrameType.ORIENTATION;
+                break;
             case SPAWN_CARD:
                 selectedKeyFramePage = KeyFrameType.SPAWN;
                 break;
             case MODEL_CARD:
                 selectedKeyFramePage = KeyFrameType.MODEL;
-                break;
-            case ORI_CARD:
-                selectedKeyFramePage = KeyFrameType.ORIENTATION;
                 break;
             case TEXT_CARD:
                 selectedKeyFramePage = KeyFrameType.TEXT;
@@ -573,18 +643,76 @@ public class AttributePanel extends JPanel
         }
 
         Character character = timeSheetPanel.getSelectedCharacter();
+        double currentTick = timeSheetPanel.getCurrentTime();
         if (character == null)
         {
+            setKeyFramedIcon(false);
+            resetAttributes(null, currentTick);
             return;
         }
 
-        KeyFrame keyFrame = character.findKeyFrame(selectedKeyFramePage, timeSheetPanel.getCurrentTime());
+        KeyFrame keyFrame = character.findKeyFrame(selectedKeyFramePage, currentTick);
         setKeyFramedIcon(keyFrame != null);
+        resetAttributes(character, currentTick);
     }
 
     public void setSelectedCharacter(Character character)
     {
         objectLabel.setText(character.getName());
+        double tick = timeSheetPanel.getCurrentTime();
+
+        KeyFrame keyFrame = character.findKeyFrame(selectedKeyFramePage, tick);
+        setKeyFramedIcon(keyFrame != null);
+
+        resetAttributes(character, tick);
+    }
+
+    private void setupKeyListeners()
+    {
+        for (JComponent c : animAttributes.getAllComponents())
+        {
+            if (c instanceof JComboBox)
+            {
+                addHoverListeners(c, KeyFrameType.ANIMATION);
+                continue;
+            }
+
+            addHoverListenersWithChildren(c, KeyFrameType.ANIMATION);
+        }
+
+        for (JComponent c : oriAttributes.getAllComponents())
+        {
+            if (c instanceof JComboBox)
+            {
+                addHoverListeners(c, KeyFrameType.ORIENTATION);
+                continue;
+            }
+
+            addHoverListenersWithChildren(c, KeyFrameType.ORIENTATION);
+        }
+
+        for (JComponent c : spawnAttributes.getAllComponents())
+        {
+            if (c instanceof JComboBox)
+            {
+                addHoverListeners(c, KeyFrameType.SPAWN);
+                continue;
+            }
+
+            addHoverListenersWithChildren(c, KeyFrameType.SPAWN);
+        }
+    }
+
+    private void addMouseFocusListener(JComponent component)
+    {
+        component.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e)
+            {
+                super.mousePressed(e);
+                component.requestFocusInWindow();
+            }
+        });
     }
 
     private void addHoverListeners(Component component, KeyFrameType type)
@@ -595,6 +723,7 @@ public class AttributePanel extends JPanel
             public void mouseEntered(MouseEvent e)
             {
                 super.mouseEntered(e);
+                hoveredComponent = component;
                 hoveredKeyFrameType = type;
             }
 
@@ -602,6 +731,7 @@ public class AttributePanel extends JPanel
             public void mouseExited(MouseEvent e)
             {
                 super.mouseExited(e);
+                hoveredComponent = null;
                 hoveredKeyFrameType = KeyFrameType.NULL;
             }
         });
@@ -626,29 +756,96 @@ public class AttributePanel extends JPanel
         }
     }
 
-    private void setKeyBindings()
+    public void resetAttributes(Character character, double tick)
     {
-        ActionMap actionMap = getActionMap();
-        InputMap inputMap = getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_I, 0), "VK_I");
-        actionMap.put("VK_I", new AbstractAction()
+        if (character != null)
         {
-            @Override
-            public void actionPerformed(ActionEvent e)
+            setKeyFramedIcon(character.findKeyFrame(selectedKeyFramePage, tick) != null);
+            KeyFrame keyFrame = character.findPreviousKeyFrame(selectedKeyFramePage, tick, true);
+
+            if (keyFrame == null)
             {
-                switch (hoveredKeyFrameType)
+                keyFrame = character.findNextKeyFrame(selectedKeyFramePage, tick);
+
+                if (keyFrame == null)
                 {
-                    default:
-                    case NULL:
-                        return;
-                    case MOVEMENT:
-                        return;
-                    case ANIMATION:
-                        //timeSheetPanel.addKeyFrame(new AnimationKeyFrame(timeSheetPanel.getCurrentTime(), (int) animSpinner.getValue()));
+                    switch (selectedKeyFramePage)
+                    {
+                        default:
+                        case MOVEMENT:
+                            break;
+                        case ANIMATION:
+                            animAttributes.setBackgroundColours(KeyFrameState.EMPTY);
+                            break;
+                        case ORIENTATION:
+                            oriAttributes.setBackgroundColours(KeyFrameState.EMPTY);
+                            break;
+                        case SPAWN:
+                            spawnAttributes.setBackgroundColours(KeyFrameState.EMPTY);
+                            break;
+                        case MODEL:
+                        case TEXT:
+                        case OVERHEAD:
+                        case HITSPLAT:
+                        case HEALTHBAR:
+                            break;
+                    }
+
+                    return;
                 }
             }
-        });
+
+            KeyFrameState keyFrameState = tick == keyFrame.getTick() ? KeyFrameState.ON_KEYFRAME : KeyFrameState.OFF_KEYFRAME;
+
+            switch (selectedKeyFramePage)
+            {
+                default:
+                case MOVEMENT:
+                    break;
+                case ANIMATION:
+                    animAttributes.setAttributes((AnimationKeyFrame) keyFrame);
+                    animAttributes.setBackgroundColours(keyFrameState);
+                    break;
+                case ORIENTATION:
+                    oriAttributes.setAttributes((OrientationKeyFrame) keyFrame);
+                    oriAttributes.setBackgroundColours(keyFrameState);
+                    break;
+                case SPAWN:
+                    spawnAttributes.setAttributes((SpawnKeyFrame) keyFrame);
+                    spawnAttributes.setBackgroundColours(keyFrameState);
+                    break;
+                case MODEL:
+                case TEXT:
+                case OVERHEAD:
+                case HITSPLAT:
+                case HEALTHBAR:
+                    break;
+            }
+
+            return;
+        }
+
+        switch (selectedKeyFramePage)
+        {
+            default:
+            case MOVEMENT:
+                break;
+            case ANIMATION:
+                animAttributes.setBackgroundColours(KeyFrameState.EMPTY);
+                break;
+            case ORIENTATION:
+                oriAttributes.setBackgroundColours(KeyFrameState.EMPTY);
+                break;
+            case SPAWN:
+                spawnAttributes.setBackgroundColours(KeyFrameState.EMPTY);
+                break;
+            case MODEL:
+            case TEXT:
+            case OVERHEAD:
+            case HITSPLAT:
+            case HEALTHBAR:
+                break;
+        }
     }
 
     public void setKeyFramedIcon(boolean isKeyFramed)

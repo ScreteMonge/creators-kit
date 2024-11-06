@@ -14,9 +14,7 @@ public class Folder
     private String name;
     private FolderType folderType;
     private DefaultMutableTreeNode linkedManagerNode;
-    private DefaultMutableTreeNode linkedTimeSheetNode;
     private DefaultMutableTreeNode parentManagerNode;
-    private DefaultMutableTreeNode parentTimeSheetNode;
 
     @Override
     public String toString()

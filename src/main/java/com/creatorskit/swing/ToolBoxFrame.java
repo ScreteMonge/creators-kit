@@ -5,7 +5,6 @@ import com.creatorskit.models.DataFinder;
 import com.creatorskit.swing.manager.ManagerPanel;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
-import com.creatorskit.swing.timesheet.TimeTree;
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
@@ -40,7 +39,7 @@ public class ToolBoxFrame extends JFrame
     private final BufferedImage ICON = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
 
     @Inject
-    public ToolBoxFrame(Client client, ClientThread clientThread, CreatorsPlugin plugin, ConfigManager configManager, DataFinder dataFinder, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, ProgrammerPanel programPanel, TransmogPanel transmogPanel)
+    public ToolBoxFrame(Client client, ClientThread clientThread, CreatorsPlugin plugin, ConfigManager configManager, DataFinder dataFinder, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, TransmogPanel transmogPanel)
     {
         this.client = client;
         this.clientThread = clientThread;
@@ -49,35 +48,27 @@ public class ToolBoxFrame extends JFrame
         this.dataFinder = dataFinder;
         this.modelOrganizer = modelOrganizer;
         this.modelAnvil = modelAnvil;
-        this.programPanel = programPanel;
         this.transmogPanel = transmogPanel;
 
-        Folder rootFolder = new Folder("Master Folder", FolderType.MASTER, null, null, null, null);
+        Folder rootFolder = new Folder("Master Folder", FolderType.MASTER, null, null);
         DefaultMutableTreeNode managerRootNode = new DefaultMutableTreeNode(rootFolder);
-        DefaultMutableTreeNode timeRootNode = new DefaultMutableTreeNode(rootFolder);
         rootFolder.setLinkedManagerNode(managerRootNode);
-        rootFolder.setLinkedTimeSheetNode(timeRootNode);
 
-        Folder sidePanelFolder = new Folder("Side Panel", FolderType.SIDE_PANEL, null, null, managerRootNode, timeRootNode);
-        Folder managerPanelFolder = new Folder("Manager", FolderType.MANAGER, null, null, managerRootNode, timeRootNode);
-        DefaultMutableTreeNode timeSideNode = new DefaultMutableTreeNode(sidePanelFolder);
-        DefaultMutableTreeNode timeManagerNode = new DefaultMutableTreeNode(managerPanelFolder);
+        Folder sidePanelFolder = new Folder("Side Panel", FolderType.SIDE_PANEL, null, managerRootNode);
+        Folder managerPanelFolder = new Folder("Manager", FolderType.MANAGER, null, managerRootNode);
         DefaultMutableTreeNode managerSideNode = new DefaultMutableTreeNode(sidePanelFolder);
         DefaultMutableTreeNode managerManagerNode = new DefaultMutableTreeNode(managerPanelFolder);
         sidePanelFolder.setLinkedManagerNode(managerSideNode);
-        sidePanelFolder.setLinkedTimeSheetNode(timeSideNode);
         managerPanelFolder.setLinkedManagerNode(managerManagerNode);
-        managerPanelFolder.setLinkedTimeSheetNode(timeManagerNode);
-
-        JScrollBar scrollBar = new JScrollBar(Adjustable.HORIZONTAL);
-        TimeTree timeTree = new TimeTree(this, timeRootNode, timeSideNode, timeManagerNode);
-        this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, clientThread, dataFinder, timeTree, scrollBar);
 
         JPanel objectHolder = new JPanel();
-        ManagerTree managerTree = new ManagerTree(this, plugin, objectHolder, managerRootNode, managerSideNode, managerManagerNode, timeTree);
-        this.managerPanel = new ManagerPanel(client, plugin, objectHolder, managerTree);
+        ManagerTree managerTree = new ManagerTree(this, plugin, objectHolder, managerRootNode, managerSideNode, managerManagerNode);
 
+        JScrollBar scrollBar = new JScrollBar(Adjustable.HORIZONTAL);
+        this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, clientThread, dataFinder, managerTree, scrollBar);
+        this.managerPanel = new ManagerPanel(client, plugin, objectHolder, managerTree);
         this.cacheSearcher = new CacheSearcherTab(plugin, clientThread, dataFinder);
+        this.programPanel = new ProgrammerPanel(client, clientThread, plugin, managerTree);
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setTitle("Creator's Kit Toolbox");
@@ -111,7 +102,8 @@ public class ToolBoxFrame extends JFrame
 
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setFont(FontManager.getRunescapeBoldFont());
-        tabbedPane.addTab("Timesheet", timeSheetPanel);
+        //tabbedPane.addTab("Timesheet", timeSheetPanel);
+        managerPanel.getTreeScrollPane().setViewportView(managerTree);
         tabbedPane.addTab("Manager", managerPanel);
         tabbedPane.addTab("Model Organizer", modelOrganizer);
         tabbedPane.addTab("Model Anvil", modelAnvil);
@@ -131,14 +123,17 @@ public class ToolBoxFrame extends JFrame
                 JTabbedPane jTabbedPane = (JTabbedPane) e.getSource();
                 if (jTabbedPane.getSelectedComponent() == managerPanel)
                 {
-                    managerPanel.getScrollPanel().add(managerTree, BorderLayout.LINE_START);
-                    setHeaderButtonsVisible(true);
+                    managerPanel.getTreeScrollPane().setViewportView(managerTree);
                 }
 
                 if (jTabbedPane.getSelectedComponent() == programPanel)
                 {
-                    programPanel.getScrollPanel().add(managerPanel.getManagerTree(), BorderLayout.LINE_START);
-                    setHeaderButtonsVisible(false);
+                    programPanel.getTreeScrollPane().setViewportView(managerTree);
+                }
+
+                if (jTabbedPane.getSelectedComponent() == timeSheetPanel)
+                {
+                    timeSheetPanel.getTreeScrollPane().setViewportView(managerTree);
                 }
             }
             repaint();
@@ -148,12 +143,5 @@ public class ToolBoxFrame extends JFrame
         add(tabbedPane);
         pack();
         revalidate();
-    }
-
-    private void setHeaderButtonsVisible(boolean setVisible)
-    {
-        JButton[] headerButtons = managerPanel.getManagerTree().getHeaderButtons();
-        for (JButton button : headerButtons)
-            button.setVisible(setVisible);
     }
 }

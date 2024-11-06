@@ -28,9 +28,7 @@ public class Character
     private boolean minimized;
     private KeyFrame[][] frames;
     private DefaultMutableTreeNode linkedManagerNode;
-    private DefaultMutableTreeNode linkedTimeSheetNode;
     private DefaultMutableTreeNode parentManagerNode;
-    private DefaultMutableTreeNode parentTimeSheetNode;
     private Program program;
     private WorldPoint nonInstancedPoint;
     private LocalPoint instancedPoint;
@@ -84,6 +82,64 @@ public class Character
         return null;
     }
 
+    /**
+     * Finds the next keyframe for this character of any given KeyFrameType, excluding any keyframes on the current tick
+     * @param tick the tick at which to start searching
+     * @return the next keyframe
+     */
+    public KeyFrame findNextKeyFrame(double tick)
+    {
+        KeyFrame nextFrame = null;
+
+        for (KeyFrame[] keyFrames : frames)
+        {
+            if (keyFrames.length == 0)
+            {
+                continue;
+            }
+
+            for (int i = keyFrames.length - 1; i >= 0; i--)
+            {
+                KeyFrame keyFrame = keyFrames[i];
+
+                if (nextFrame == null)
+                {
+                    nextFrame = keyFrame;
+                    continue;
+                }
+
+                if (nextFrame.getTick() <= tick)
+                {
+                    nextFrame = keyFrame;
+                    continue;
+                }
+
+                double test = keyFrame.getTick();
+                if (test <= tick)
+                {
+                    continue;
+                }
+
+                if (test < nextFrame.getTick())
+                {
+                    nextFrame = keyFrame;
+                }
+            }
+        }
+
+        if (nextFrame == null)
+        {
+            return null;
+        }
+
+        if (nextFrame.getTick() < tick)
+        {
+            return null;
+        }
+
+        return nextFrame;
+    }
+
     public KeyFrame findNextKeyFrame(KeyFrameType type, double tick)
     {
         KeyFrame[] keyFrames = getKeyFrames(type);
@@ -102,6 +158,58 @@ public class Character
         }
 
         return null;
+    }
+
+    /**
+     * Finds the previous keyframe for this character of any given KeyFrameType, excluding any keyframes on the current tick
+     * @param tick the tick at which to start searching
+     * @return the previous keyframe
+     */
+    public KeyFrame findPreviousKeyFrame(double tick)
+    {
+        KeyFrame nextFrame = null;
+
+        for (KeyFrame[] keyFrames : frames)
+        {
+            if (keyFrames.length == 0)
+            {
+                continue;
+            }
+
+            for (int i = 0; i < keyFrames.length; i++)
+            {
+                KeyFrame keyFrame = keyFrames[i];
+
+                if (nextFrame == null)
+                {
+                    nextFrame = keyFrame;
+                    continue;
+                }
+
+                double test = keyFrame.getTick();
+                if (test >= tick)
+                {
+                    continue;
+                }
+
+                if (test > nextFrame.getTick())
+                {
+                    nextFrame = keyFrame;
+                }
+            }
+        }
+
+        if (nextFrame == null)
+        {
+            return null;
+        }
+
+        if (nextFrame.getTick() > tick)
+        {
+            return null;
+        }
+
+        return nextFrame;
     }
 
     /**

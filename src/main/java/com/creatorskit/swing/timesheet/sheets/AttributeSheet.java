@@ -1,6 +1,7 @@
 package com.creatorskit.swing.timesheet.sheets;
 
 import com.creatorskit.swing.ToolBoxFrame;
+import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import lombok.Getter;
 import lombok.Setter;
@@ -12,11 +13,9 @@ import java.awt.image.BufferedImage;
 @Setter
 public class AttributeSheet extends TimeSheet
 {
-    private ToolBoxFrame toolBox;
-
-    public AttributeSheet(ToolBoxFrame toolBox)
+    public AttributeSheet(ToolBoxFrame toolBox, ManagerTree tree)
     {
-        super(toolBox);
+        super(toolBox, tree);
         setIndexBuffers(0);
         setSelectedIndex(1);
     }

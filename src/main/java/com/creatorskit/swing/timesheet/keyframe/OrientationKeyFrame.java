@@ -1,6 +1,5 @@
 package com.creatorskit.swing.timesheet.keyframe;
 
-
 import lombok.Getter;
 import lombok.Setter;
 

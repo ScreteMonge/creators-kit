@@ -952,7 +952,7 @@ public class CacheSearcherTab extends JPanel
                     false,
                     0,
                     data.getStandingAnimation(),
-                    60,
+                    data.getSize() * 60,
                     new KeyFrame[0][],
                     creatorsPanel.createEmptyProgram(data.getStandingAnimation(), data.getWalkingAnimation()),
                     false,

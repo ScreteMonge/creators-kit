@@ -3,7 +3,6 @@ package com.creatorskit.swing.manager;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.swing.*;
-import com.creatorskit.swing.timesheet.TimeTree;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.swing.*;
@@ -21,16 +20,14 @@ class ManagerTreeTransferHandler extends TransferHandler
 {
     private final CreatorsPlugin plugin;
     private final ToolBoxFrame toolBox;
-    private final TimeTree timeTree;
     private DataFlavor nodesFlavor;
     private DataFlavor[] flavors = new DataFlavor[1];
     private DefaultMutableTreeNode[] nodesToRemove;
 
-    public ManagerTreeTransferHandler(CreatorsPlugin plugin, ToolBoxFrame toolBox, TimeTree timeTree)
+    public ManagerTreeTransferHandler(CreatorsPlugin plugin, ToolBoxFrame toolBox)
     {
         this.plugin = plugin;
         this.toolBox = toolBox;
-        this.timeTree = timeTree;
         try
         {
             String mimeType = DataFlavor.javaJVMLocalObjectMimeType +
@@ -254,7 +251,6 @@ class ManagerTreeTransferHandler extends TransferHandler
         }
 
         ArrayList<Character> characters = new ArrayList<>();
-        Folder parentFolder = (Folder) parentNode.getUserObject();
 
         // Add data to model.
         for (int i = 0; i < nodes.length; i++)
@@ -266,7 +262,6 @@ class ManagerTreeTransferHandler extends TransferHandler
             {
                 Folder folder = (Folder) node.getUserObject();
                 folder.setParentManagerNode(parentNode);
-                folder.setParentTimeSheetNode(parentFolder.getLinkedTimeSheetNode());
                 getCharacterNodeChildren(node, characters);
             }
 
@@ -281,7 +276,6 @@ class ManagerTreeTransferHandler extends TransferHandler
             ParentPanel oldParent = character.getParentPanel();
             character.setParentPanel(newParent);
             character.setParentManagerNode(parentNode);
-            character.setParentTimeSheetNode(parentFolder.getLinkedTimeSheetNode());
 
             ArrayList<Character> arrayFrom;
             if (oldParent == ParentPanel.SIDE_PANEL)
@@ -297,7 +291,6 @@ class ManagerTreeTransferHandler extends TransferHandler
             arrayTo.add(character);
         }
 
-        timeTree.moveNodes(nodes, parentNode);
         tree.setSelectionPath(dest);
         tree.expandPath(dest);
         return true;

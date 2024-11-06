@@ -12,6 +12,7 @@ public class NPCData
     private final int id;
     private String name;
     private final int[] models;
+    private final int size;
     private final int standingAnimation;
     private final int walkingAnimation;
     private final int runAnimation;

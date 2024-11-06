@@ -4,6 +4,8 @@ import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.DataFinder;
 import com.creatorskit.swing.ToolBoxFrame;
+import com.creatorskit.swing.manager.ManagerTree;
+import com.creatorskit.swing.manager.TreeScrollPane;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import com.creatorskit.swing.timesheet.sheets.AttributeSheet;
@@ -14,7 +16,6 @@ import lombok.Setter;
 import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
-import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
 
 import javax.annotation.Nullable;
@@ -40,7 +41,8 @@ public class TimeSheetPanel extends JPanel
     private final DataFinder dataFinder;
     private final SummarySheet summarySheet;
     private final AttributeSheet attributeSheet;
-    private final TimeTree timeTree;
+    private TreeScrollPane treeScrollPane;
+    private final ManagerTree managerTree;
     private final JScrollBar scrollBar;
     private AttributePanel attributePanel;
     private final JPanel labelPanel = new JPanel();
@@ -80,26 +82,28 @@ public class TimeSheetPanel extends JPanel
     private KeyFrame[] selectedKeyFrames;
 
     @Inject
-    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, TimeTree timeTree, JScrollBar scrollBar)
+    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, JScrollBar scrollBar)
     {
         this.toolBox = toolBox;
         this.plugin = plugin;
         this.clientThread = clientThread;
         this.dataFinder = dataFinder;
-        this.summarySheet = new SummarySheet(toolBox);
-        this.attributeSheet = new AttributeSheet(toolBox);
-        this.timeTree = timeTree;
+        this.managerTree = managerTree;
         this.scrollBar = scrollBar;
+        this.summarySheet = new SummarySheet(toolBox, managerTree);
+        this.attributeSheet = new AttributeSheet(toolBox, managerTree);
 
         setLayout(new GridBagLayout());
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
+        setupTreeScrollPane();
         setupControlPanel();
         setupAttributePanel();
         setupAttributeSheet();
         setupScrollBar();
         setupTimeTreeListener();
         setupManager();
+        setKeyBindings();
     }
 
     public void onSummarySkipForward()
@@ -119,8 +123,7 @@ public class TimeSheetPanel extends JPanel
             return;
         }
 
-        KeyFrameType type = attributePanel.getSelectedKeyFramePage();
-        KeyFrame keyFrame = selectedCharacter.findNextKeyFrame(type, currentTime);
+        KeyFrame keyFrame = selectedCharacter.findNextKeyFrame(currentTime);
         if (keyFrame == null)
         {
             return;
@@ -136,8 +139,7 @@ public class TimeSheetPanel extends JPanel
             return;
         }
 
-        KeyFrameType type = attributePanel.getSelectedKeyFramePage();
-        KeyFrame keyFrame = selectedCharacter.findPreviousKeyFrame(type, currentTime, false);
+        KeyFrame keyFrame = selectedCharacter.findPreviousKeyFrame(currentTime);
         if (keyFrame == null)
         {
             return;
@@ -240,6 +242,7 @@ public class TimeSheetPanel extends JPanel
 
         character.addKeyFrame(keyFrame);
         attributePanel.setKeyFramedIcon(true);
+        attributePanel.resetAttributes(character, currentTime);
     }
 
     /**
@@ -268,6 +271,7 @@ public class TimeSheetPanel extends JPanel
     {
         character.removeKeyFrame(keyFrame);
         attributePanel.setKeyFramedIcon(false);
+        attributePanel.resetAttributes(character, currentTime);
     }
 
     private void setSelectedCharacter(Character character)
@@ -293,14 +297,14 @@ public class TimeSheetPanel extends JPanel
         currentTime = tick;
         attributeSheet.setCurrentTime(currentTime);
         summarySheet.setCurrentTime(currentTime);
+
+        onCurrentTimeChanged(tick);
+    }
+
+    public void onCurrentTimeChanged(double tick)
+    {
         timeSpinner.setValue(tick);
-
-        if (selectedCharacter == null)
-        {
-            return;
-        }
-
-        attributePanel.setKeyFramedIcon(selectedCharacter.findKeyFrame(attributePanel.getSelectedKeyFramePage(), currentTime) != null);
+        attributePanel.resetAttributes(selectedCharacter, tick);
     }
 
     public void setPreviewTime(double tick)
@@ -309,10 +313,17 @@ public class TimeSheetPanel extends JPanel
         summarySheet.setPreviewTime(tick);
     }
 
+    private void setupTreeScrollPane()
+    {
+        treeScrollPane = new TreeScrollPane(managerTree);
+        treeScrollPane.setPreferredSize(new Dimension(614, 0));
+    }
+
     private void setupControlPanel()
     {
         controlPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         controlPanel.setLayout(new GridBagLayout());
+        controlPanel.setFocusable(true);
 
         c.fill = GridBagConstraints.BOTH;
         c.insets = new Insets(2, 2, 2, 2);
@@ -379,6 +390,7 @@ public class TimeSheetPanel extends JPanel
         labelPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         labelPanel.setBorder(new EmptyBorder(1, 0, 1, 0));
         labelPanel.setLayout(new GridLayout(0, 1, 0, 0));
+        labelPanel.setFocusable(true);
         JLabel[] labels = new JLabel[KeyFrameType.getTotalFrameTypes() + 1];
         for (int i = 0; i < KeyFrameType.getTotalFrameTypes() + 1; i++)
         {
@@ -458,7 +470,7 @@ public class TimeSheetPanel extends JPanel
 
     private void setupTimeTreeListener()
     {
-        timeTree.getTree().addTreeSelectionListener(e ->
+        managerTree.addTreeSelectionListener(e ->
         {
             TreePath treePath = e.getPath();
             if (treePath == null)
@@ -480,32 +492,63 @@ public class TimeSheetPanel extends JPanel
         });
     }
 
+    private void setKeyBindings()
+    {
+        ActionMap actionMap = getActionMap();
+        InputMap inputMap = getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_I, 0), "VK_I");
+        actionMap.put("VK_I", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                if (selectedCharacter == null)
+                {
+                    return;
+                }
+
+                Component component = attributePanel.getHoveredComponent();
+                if (component == null)
+                {
+                    return;
+                }
+
+                if (component instanceof JSpinner || component instanceof JTextField)
+                {
+                    if (component.isFocusOwner())
+                    {
+                        return;
+                    }
+                }
+
+                KeyFrameType keyFrameType = attributePanel.getHoveredKeyFrameType();
+                if (keyFrameType == null || keyFrameType == KeyFrameType.NULL)
+                {
+                    return;
+                }
+
+                KeyFrame keyFrame = attributePanel.createKeyFrame();
+                addKeyFrame(selectedCharacter, keyFrame);
+            }
+        });
+    }
+
+
     private void setupManager()
     {
         c.fill = GridBagConstraints.BOTH;
         c.insets = new Insets(2, 2, 2, 2);
 
+        c.gridwidth = 2;
         c.gridheight = 1;
-        c.gridwidth = 2;
-        c.gridx = 0;
-        c.gridy = 0;
-        c.weightx = 0;
-        c.weighty = 0;
-        JLabel buffer = new JLabel("Folders");
-        buffer.setFont(FontManager.getDefaultBoldFont());
-        buffer.setHorizontalTextPosition(SwingConstants.LEFT);
-        buffer.setPreferredSize(new Dimension(0, INDEX_BUFFER));
-        add(buffer, c);
-
-        c.gridwidth = 2;
         c.weightx = 0;
         c.weighty = 5;
         c.gridx = 0;
-        c.gridy = 1;
-        add(timeTree, c);
+        c.gridy = 0;
+        add(treeScrollPane, c);
 
+        c.gridheight = 1;
         c.gridwidth = 1;
-        c.gridheight = 2;
         c.weightx = 8;
         c.weighty = 5;
         c.gridx = 2;
@@ -516,33 +559,33 @@ public class TimeSheetPanel extends JPanel
         c.weightx = 0;
         c.weighty = 0;
         c.gridx = 2;
-        c.gridy = 2;
+        c.gridy = 1;
         add(scrollBar, c);
 
         c.weightx = 0;
         c.weighty = 0;
         c.gridx = 2;
-        c.gridy = 3;
+        c.gridy = 2;
         add(controlPanel, c);
 
         c.gridheight = 3;
         c.weightx = 0;
         c.weighty = 0;
         c.gridx = 0;
-        c.gridy = 2;
+        c.gridy = 1;
         add(attributePanel, c);
 
         c.gridheight = 1;
         c.weightx = 0;
         c.weighty = 0;
         c.gridx = 1;
-        c.gridy = 4;
+        c.gridy = 3;
         add(labelPanel, c);
 
         c.weightx = 8;
         c.weighty = 0;
         c.gridx = 2;
-        c.gridy = 4;
+        c.gridy = 3;
         add(attributeSheet, c);
     }
 

@@ -5,6 +5,8 @@ import com.creatorskit.Character;
 import com.creatorskit.programming.MovementType;
 import com.creatorskit.programming.Program;
 import com.creatorskit.programming.ProgramComp;
+import com.creatorskit.swing.manager.ManagerTree;
+import com.creatorskit.swing.manager.TreeScrollPane;
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
@@ -25,18 +27,20 @@ public class ProgrammerPanel extends JPanel
     @Inject
     private ClientThread clientThread;
     private final CreatorsPlugin plugin;
+    private final ManagerTree tree;
     private final GridBagConstraints c = new GridBagConstraints();
     private final JPanel managerProgramHolder = new JPanel();
-    private final JPanel scrollPanel = new JPanel();
+    private final TreeScrollPane treeScrollPane;
     private final JPanel[] sidePrograms = new JPanel[0];
     private final Random random = new Random();
 
 
     @Inject
-    public ProgrammerPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin)
+    public ProgrammerPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin, ManagerTree tree)
     {
         this.clientThread = clientThread;
         this.plugin = plugin;
+        this.tree = tree;
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new GridBagLayout());
@@ -77,9 +81,7 @@ public class ProgrammerPanel extends JPanel
             }
         });
 
-        BorderLayout borderLayout = new BorderLayout();
-        borderLayout.setHgap(4);
-        scrollPanel.setLayout(borderLayout);
+
 
         c.gridx = 2;
         c.gridy = 0;
@@ -130,6 +132,16 @@ public class ProgrammerPanel extends JPanel
         c.weightx = 1;
         c.weighty = 1;
         c.gridwidth = 2;
+
+        JPanel scrollPanel = new JPanel();
+        BorderLayout borderLayout = new BorderLayout();
+        borderLayout.setHgap(4);
+        scrollPanel.setLayout(borderLayout);
+
+        treeScrollPane = new TreeScrollPane(tree);
+        treeScrollPane.setPreferredSize(new Dimension(350, 0));
+
+        scrollPanel.add(treeScrollPane, BorderLayout.LINE_START);
         scrollPanel.add(managerScrollPane, BorderLayout.CENTER);
         add(scrollPanel, c);
 

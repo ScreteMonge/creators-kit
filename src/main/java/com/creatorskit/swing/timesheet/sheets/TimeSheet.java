@@ -2,6 +2,7 @@ package com.creatorskit.swing.timesheet.sheets;
 
 import com.creatorskit.Character;
 import com.creatorskit.swing.ToolBoxFrame;
+import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import lombok.Getter;
@@ -22,6 +23,7 @@ import java.awt.image.BufferedImage;
 public class TimeSheet extends JPanel
 {
     private ToolBoxFrame toolBox;
+    private ManagerTree tree;
 
     private final BufferedImage keyframeImage = ImageUtil.loadImageResource(getClass(), "/Keyframe.png");
 
@@ -47,9 +49,10 @@ public class TimeSheet extends JPanel
     private KeyFrame[] visibleKeyFrames = new KeyFrame[0];
     private Character selectedCharacter;
 
-    public TimeSheet(ToolBoxFrame toolBox)
+    public TimeSheet(ToolBoxFrame toolBox, ManagerTree tree)
     {
         this.toolBox = toolBox;
+        this.tree = tree;
 
         setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1));
         setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -62,16 +65,6 @@ public class TimeSheet extends JPanel
 
         revalidate();
         repaint();
-    }
-
-    public void addVisibleKeyFrame(KeyFrame keyFrame)
-    {
-        visibleKeyFrames = ArrayUtils.add(visibleKeyFrames, keyFrame);
-    }
-
-    public void removeVisibleKeyFrame(KeyFrame keyFrame)
-    {
-        visibleKeyFrames = ArrayUtils.removeElement(visibleKeyFrames, keyFrame);
     }
 
     public void onVerticalScrollEvent(int scroll)
@@ -87,10 +80,10 @@ public class TimeSheet extends JPanel
         drawHighlight(g2);
         drawBackgroundLines(g2);
         drawRectangleSelect(g2);
+        drawKeyFrames(g2);
         drawTextHeader(g2);
         drawTimeIndicator(g2);
         drawPreviewTimeIndicator(g2);
-        drawKeyFrames(g2);
         revalidate();
         repaint();
     }
@@ -337,30 +330,7 @@ public class TimeSheet extends JPanel
 
     public void drawKeyFrames(Graphics g)
     {
-        /*
-        if (selectedCharacter == null)
-        {
-            return;
-        }
 
-        int yImageOffset = (keyframeImage.getHeight() - ROW_HEIGHT) / 2;
-        int xImageOffset = keyframeImage.getWidth() / 2;
-        KeyFrame[][] frames = selectedCharacter.getFrames();
-        for (int i = 0; i < frames.length; i++)
-        {
-            KeyFrame[] keyFrames = frames[i];
-            for (int e = 0; e < keyFrames.length; e++)
-            {
-                double zoomFactor = this.getWidth() / zoom;
-                g.drawImage(
-                        keyframeImage,
-                        (int) ((keyFrames[e].getTick() + hScroll) * zoomFactor - xImageOffset),
-                        ROW_HEIGHT_OFFSET + ROW_HEIGHT + ROW_HEIGHT * i - yImageOffset,
-                        null);
-            }
-        }
-
-         */
     }
 
     private void setKeyBindings()

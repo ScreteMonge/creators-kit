@@ -13,7 +13,6 @@ import com.creatorskit.programming.ProgramComp;
 import com.creatorskit.swing.manager.ManagerPanel;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
-import com.creatorskit.swing.timesheet.TimeTree;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import lombok.Getter;
@@ -66,7 +65,6 @@ public class CreatorsPanel extends PluginPanel
     private final TransmogPanel transmogPanel;
     private final ModelImporter modelImporter;
     private final TimeSheetPanel timeSheetPanel;
-    private final TimeTree timeTree;
 
     private final JButton addObjectButton = new JButton();
     private final JPanel sidePanel = new JPanel();
@@ -108,7 +106,6 @@ public class CreatorsPanel extends PluginPanel
         this.dataFinder = dataFinder;
         this.modelImporter = modelImporter;
         this.timeSheetPanel = toolBox.getTimeSheetPanel();
-        this.timeTree = timeSheetPanel.getTimeTree();
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new GridBagLayout());
@@ -474,8 +471,6 @@ public class CreatorsPanel extends PluginPanel
                 keyFrames,
                 null,
                 null,
-                null,
-                null,
                 program,
                 worldPoint,
                 localPoint,
@@ -500,8 +495,6 @@ public class CreatorsPanel extends PluginPanel
                 0);
 
         objectPanel.setCharacter(character);
-        DefaultMutableTreeNode node = new DefaultMutableTreeNode(character);
-        character.setLinkedTimeSheetNode(node);
         ManagerPanel managerPanel = toolBox.getManagerPanel();
 
         SwingUtilities.invokeLater(() -> programmerPanel.createProgramPanel(character, programPanel, programmerNameLabel, programmerIdleSpinner));
@@ -833,12 +826,10 @@ public class CreatorsPanel extends PluginPanel
             if (parentNode == null)
             {
                 managerTree.addCharacterNode(character, ParentPanel.SIDE_PANEL, true);
-                timeTree.addCharacterNode(timeTree.getSidePanelNode(), character);
             }
             else
             {
                 managerTree.addCharacterNode(parentNode, character, ParentPanel.SIDE_PANEL, true);
-                timeTree.addCharacterNode(timeTree.getManagerNode(), character);
             }
 
             if (revalidate)
@@ -855,12 +846,10 @@ public class CreatorsPanel extends PluginPanel
             if (parentNode == null)
             {
                 managerTree.addCharacterNode(character, ParentPanel.MANAGER, true);
-                timeTree.addCharacterNode(timeTree.getManagerNode(), character);
             }
             else
             {
                 managerTree.addCharacterNode(parentNode, character, ParentPanel.MANAGER, true);
-                timeTree.addCharacterNode(timeTree.getManagerNode(), character);
             }
 
             if (revalidate)
