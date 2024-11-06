@@ -27,7 +27,7 @@ public class ManagerPanel extends JPanel
     private final Client client;
     private final GridBagConstraints c = new GridBagConstraints();
     private final JPanel objectHolder;
-    private final JPanel scrollPanel = new JPanel();
+    private final TreeScrollPane treeScrollPane;
     private final ArrayList<Character> managerCharacters = new ArrayList<>();
     private final ManagerTree managerTree;
     private final JLabel objectLabel = new JLabel("Current Folder: Master Folder");
@@ -46,6 +46,7 @@ public class ManagerPanel extends JPanel
         c.fill = GridBagConstraints.BOTH;
         c.insets = new Insets(4, 4, 4, 4);
 
+        c.gridwidth = 2;
         c.gridx = 0;
         c.gridy = 0;
         c.weightx = 1;
@@ -70,20 +71,21 @@ public class ManagerPanel extends JPanel
         headerPanel.add(loadButton);
         loadButton.addActionListener(e -> plugin.getCreatorsPanel().openLoadSetupDialog());
 
+        c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 2;
-        c.weightx = 1;
+        c.weightx = 0;
         c.weighty = 1;
-        BorderLayout borderLayout = new BorderLayout();
-        borderLayout.setHgap(4);
-        scrollPanel.setLayout(borderLayout);
-        add(scrollPanel, c);
+        treeScrollPane = new TreeScrollPane(managerTree);
+        treeScrollPane.setPreferredSize(new Dimension(350, 0));
+        add(treeScrollPane, c);
 
-        scrollPanel.add(managerTree, BorderLayout.LINE_START);
-
+        c.gridx = 1;
+        c.gridy = 2;
+        c.weightx = 1;
         JScrollPane objectScrollPane = new JScrollPane();
         objectScrollPane.setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 1));
-        scrollPanel.add(objectScrollPane, BorderLayout.CENTER);
+        add(objectScrollPane, c);
 
         JPanel objectHeader = new JPanel();
         objectHeader.setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -103,7 +105,7 @@ public class ManagerPanel extends JPanel
         addObjectButton.addActionListener(e ->
         {
             CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
-            TreePath path = managerTree.getTree().getSelectionPath();
+            TreePath path = managerTree.getSelectionPath();
 
             if (path == null)
             {
