@@ -10,10 +10,10 @@ import lombok.Setter;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 @Getter
 @Setter
@@ -35,12 +35,20 @@ public class SummarySheet extends TimeSheet
         int xImageOffset = image.getWidth() / 2;
 
         ArrayList<DefaultMutableTreeNode> nodes = new ArrayList<>();
+        nodes.add(tree.getRootNode());
         tree.getAllNodes(tree.getRootNode(), nodes);
         int index = -1;
 
         for (DefaultMutableTreeNode node : nodes)
         {
             index++;
+
+            TreePath path = tree.getPathForRow(index);
+            if (path == null)
+            {
+                continue;
+            }
+
             if (node.getUserObject() instanceof Folder)
             {
                 continue;
@@ -88,7 +96,7 @@ public class SummarySheet extends TimeSheet
                 g.drawImage(
                         image,
                         (int) ((d + getHScroll()) * zoomFactor - xImageOffset),
-                        ROW_HEIGHT_OFFSET + ROW_HEIGHT + (index * ROW_HEIGHT) - yImageOffset - getVScroll(),
+                        ROW_HEIGHT_OFFSET + (index * ROW_HEIGHT) - yImageOffset - getVScroll(),
                         null);
             }
         }

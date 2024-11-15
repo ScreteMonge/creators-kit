@@ -3,6 +3,7 @@ package com.creatorskit.swing.timesheet.attributes;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameState;
 import com.creatorskit.swing.timesheet.keyframe.OrientationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.settings.OrientationToggle;
+import com.creatorskit.swing.timesheet.keyframe.settings.SpawnToggle;
 import lombok.Getter;
 import net.runelite.client.ui.ColorScheme;
 
@@ -71,5 +72,12 @@ public class OriAttributes
         {
             manualOverride.setBackground(red);
         });
+    }
+
+    public void resetAttributes()
+    {
+        manual.setValue(0);
+        manualOverride.setSelectedItem(OrientationToggle.SMART_ORIENTATION);
+        setBackgroundColours(KeyFrameState.EMPTY);
     }
 }

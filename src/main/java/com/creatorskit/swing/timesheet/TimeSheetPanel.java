@@ -29,10 +29,11 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 
 @Getter
 @Setter
-public class TimeSheetPanel extends JPanel
+public class TimeSheetPanel extends JPanel implements MouseWheelListener
 {
     private ClientThread clientThread;
     private final CreatorsPlugin plugin;
@@ -56,6 +57,8 @@ public class TimeSheetPanel extends JPanel
     private static final int ROW_HEIGHT = 24;
     private static final int INDEX_BUFFER = 20;
     private static final int ABSOLUTE_MAX_SEQUENCE_LENGTH = 100000;
+    private static final int DEFAULT_MIN_H_SCROLL = -10;
+    private static final int DEFAULT_MAX_H_SCROLL = 200;
     private static final int ZOOM_MAX = 500;
     private static final int ZOOM_MIN = 5;
 
@@ -74,12 +77,13 @@ public class TimeSheetPanel extends JPanel
     private double hScroll = 0;
     private int vScroll = 0;
     private double maxHScroll = 200;
+    private double minHScroll = -10;
 
     private double currentTime = 0;
     private boolean pauseScrollBarListener = false;
     private Character selectedCharacter;
 
-    private KeyFrame[] selectedKeyFrames;
+    private KeyFrame[] selectedKeyFrames = new KeyFrame[0];
 
     @Inject
     public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, JScrollBar scrollBar)
@@ -166,22 +170,17 @@ public class TimeSheetPanel extends JPanel
             hScroll = -ABSOLUTE_MAX_SEQUENCE_LENGTH;
         }
 
-        if (hScroll > 10)
+        if (hScroll > ABSOLUTE_MAX_SEQUENCE_LENGTH)
         {
-            hScroll = 10;
+            hScroll = ABSOLUTE_MAX_SEQUENCE_LENGTH;
         }
 
-        double maxVisibleValue = round(zoom - hScroll);
-        if (maxVisibleValue > maxHScroll)
-        {
-            maxHScroll = maxVisibleValue;
-        }
-
+        boundSliderMinMax();
         updateScrollBar();
         updateSheets();
     }
 
-    public void onHorizontalScrollEvent(int amount)
+    public void onHorizontalScrollEvent(double amount)
     {
         hScroll = round(hScroll - amount * zoom / 50);
         if (hScroll < -ABSOLUTE_MAX_SEQUENCE_LENGTH)
@@ -189,9 +188,41 @@ public class TimeSheetPanel extends JPanel
             hScroll = -ABSOLUTE_MAX_SEQUENCE_LENGTH;
         }
 
-        if (hScroll > 10)
+        if (hScroll > ABSOLUTE_MAX_SEQUENCE_LENGTH)
         {
-            hScroll = 10;
+            hScroll = ABSOLUTE_MAX_SEQUENCE_LENGTH;
+        }
+
+        boundSliderMinMax();
+        updateScrollBar();
+        updateSheets();
+    }
+
+    private void boundSliderMinMax()
+    {
+        if (-hScroll < minHScroll)
+        {
+            minHScroll = -hScroll;
+        }
+
+        if (-hScroll > minHScroll)
+        {
+            KeyFrame firstKeyFrame = getFirstKeyFrame();
+            if (firstKeyFrame == null)
+            {
+                minHScroll = -hScroll;
+            }
+
+            if (firstKeyFrame != null)
+            {
+                double firstTick = firstKeyFrame.getTick();
+                minHScroll = Math.min(-hScroll, firstTick);
+            }
+
+            if (minHScroll > DEFAULT_MIN_H_SCROLL)
+            {
+                minHScroll = DEFAULT_MIN_H_SCROLL;
+            }
         }
 
         double maxVisibleValue = round(zoom - hScroll);
@@ -200,8 +231,97 @@ public class TimeSheetPanel extends JPanel
             maxHScroll = maxVisibleValue;
         }
 
-        updateScrollBar();
-        updateSheets();
+        if (maxVisibleValue < maxHScroll)
+        {
+            KeyFrame lastKeyFrame = getLastKeyFrame();
+            if (lastKeyFrame == null)
+            {
+                maxHScroll = maxVisibleValue;
+            }
+
+            if (lastKeyFrame != null)
+            {
+                double lastTick = lastKeyFrame.getTick();
+                maxHScroll = Math.max(maxVisibleValue, lastTick);
+            }
+
+            if (maxHScroll < DEFAULT_MAX_H_SCROLL)
+            {
+                maxHScroll = DEFAULT_MAX_H_SCROLL;
+            }
+        }
+    }
+
+    private KeyFrame getLastKeyFrame()
+    {
+        ArrayList<Character> characters = plugin.getCharacters();
+        if (characters.size() == 0)
+        {
+            return null;
+        }
+
+        KeyFrame lastKeyFrame = null;
+        for (int i = 0; i < characters.size(); i++)
+        {
+            Character character = characters.get(i);
+            KeyFrame comparison = character.findLastKeyFrame();
+            if (lastKeyFrame == null)
+            {
+                if (comparison != null)
+                {
+                    lastKeyFrame = comparison;
+                    continue;
+                }
+            }
+
+            if (comparison == null)
+            {
+                continue;
+            }
+
+            if (comparison.getTick() > lastKeyFrame.getTick())
+            {
+                lastKeyFrame = comparison;
+            }
+        }
+
+        return lastKeyFrame;
+    }
+
+    private KeyFrame getFirstKeyFrame()
+    {
+        ArrayList<Character> characters = plugin.getCharacters();
+        if (characters.size() == 0)
+        {
+            return null;
+        }
+
+        KeyFrame firstKeyFrame = null;
+        for (int i = 0; i < characters.size(); i++)
+        {
+            Character character = characters.get(i);
+            KeyFrame comparison = character.findFirstKeyFrame();
+            if (firstKeyFrame == null)
+            {
+                if (comparison != null)
+                {
+                    firstKeyFrame = comparison;
+                    continue;
+                }
+            }
+
+            if (comparison == null)
+            {
+                continue;
+            }
+
+            if (comparison.getTick() < firstKeyFrame.getTick())
+            {
+                firstKeyFrame = comparison;
+            }
+        }
+
+        return firstKeyFrame;
     }
 
     public void onKeyFrameIconPressedEvent()
@@ -284,9 +404,9 @@ public class TimeSheetPanel extends JPanel
 
     public void setCurrentTime(double tick)
     {
-        if (tick < -10)
+        if (tick < -ABSOLUTE_MAX_SEQUENCE_LENGTH)
         {
-            tick = -10;
+            tick = -ABSOLUTE_MAX_SEQUENCE_LENGTH;
         }
 
         if (tick > ABSOLUTE_MAX_SEQUENCE_LENGTH)
@@ -337,7 +457,7 @@ public class TimeSheetPanel extends JPanel
         controlPanel.add(timeSpinner, c);
 
         timeSpinner.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        timeSpinner.setModel(new SpinnerNumberModel(0, -10, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.1));
+        timeSpinner.setModel(new SpinnerNumberModel(0, -ABSOLUTE_MAX_SEQUENCE_LENGTH, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.1));
         JSpinner.NumberEditor editor = (JSpinner.NumberEditor) timeSpinner.getEditor();
         DecimalFormat format = editor.getFormat();
         format.setMinimumFractionDigits(2);
@@ -449,8 +569,8 @@ public class TimeSheetPanel extends JPanel
     {
         scrollBar.setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1));
         scrollBar.setPreferredSize(new Dimension(0, 15));
-        scrollBar.setMinimum(-10);
-        scrollBar.setMaximum((int) maxHScroll);
+        scrollBar.setMinimum(DEFAULT_MIN_H_SCROLL);
+        scrollBar.setMaximum(DEFAULT_MAX_H_SCROLL);
         scrollBar.setBlockIncrement((int) (zoom / 5));
         scrollBar.setUnitIncrement((int) (zoom / 50));
         scrollBar.setVisibleAmount((int) (zoom));
@@ -464,6 +584,7 @@ public class TimeSheetPanel extends JPanel
             }
 
             hScroll = -e.getValue();
+            updateScrollBar();
             updateSheets();
         });
     }
@@ -488,7 +609,10 @@ public class TimeSheetPanel extends JPanel
             if (o instanceof Character)
             {
                 setSelectedCharacter((Character) o);
+                return;
             }
+
+            setSelectedCharacter(null);
         });
     }
 
@@ -602,6 +726,7 @@ public class TimeSheetPanel extends JPanel
     private void updateScrollBar()
     {
         pauseScrollBarListener = true;
+        scrollBar.setMinimum((int) minHScroll);
         scrollBar.setMaximum((int) maxHScroll);
         scrollBar.setBlockIncrement((int) (zoom / 5));
         scrollBar.setUnitIncrement((int) (zoom / 50));
@@ -610,9 +735,23 @@ public class TimeSheetPanel extends JPanel
         pauseScrollBarListener = false;
     }
 
+    /**
+     * Rounds the given value to the nearest 1/10th
+     * @param value the value to round
+     * @return the value, rounded to 1 decimal place
+     */
     public static double round (double value)
     {
         int scale = (int) Math.pow(10, 1);
         return (double) Math.round(value * scale) / scale;
+    }
+
+    @Override
+    public void mouseWheelMoved(MouseWheelEvent e)
+    {
+        if (e.isControlDown())
+        {
+
+        }
     }
 }

@@ -267,6 +267,7 @@ public class AttributePanel extends JPanel
         c.gridx = 2;
         c.gridy = 1;
         JComboBox<AnimationToggle> manualComboBox = animAttributes.getManualOverride();
+        manualComboBox.setFocusable(false);
         manualComboBox.addItem(AnimationToggle.SMART_ANIMATION);
         manualComboBox.addItem(AnimationToggle.MANUAL_ANIMATION);
         card.add(manualComboBox, c);
@@ -506,6 +507,7 @@ public class AttributePanel extends JPanel
         c.gridx = 2;
         c.gridy = 1;
         JComboBox<OrientationToggle> manualCheckbox = oriAttributes.getManualOverride();
+        manualCheckbox.setFocusable(false);
         manualCheckbox.addItem(OrientationToggle.SMART_ORIENTATION);
         manualCheckbox.addItem(OrientationToggle.MANUAL_ORIENTATION);
         card.add(manualCheckbox, c);
@@ -591,6 +593,7 @@ public class AttributePanel extends JPanel
         c.gridx = 0;
         c.gridy = 1;
         JComboBox<SpawnToggle> manualCheckbox = spawnAttributes.getSpawn();
+        manualCheckbox.setFocusable(false);
         manualCheckbox.addItem(SpawnToggle.SPAWN_ACTIVE);
         manualCheckbox.addItem(SpawnToggle.SPAWN_INACTIVE);
         card.add(manualCheckbox, c);
@@ -658,12 +661,19 @@ public class AttributePanel extends JPanel
 
     public void setSelectedCharacter(Character character)
     {
-        objectLabel.setText(character.getName());
         double tick = timeSheetPanel.getCurrentTime();
 
+        if (character == null)
+        {
+            objectLabel.setText("");
+            setKeyFramedIcon(false);
+            setAttributesEmpty();
+            return;
+        }
+
+        objectLabel.setText(character.getName());
         KeyFrame keyFrame = character.findKeyFrame(selectedKeyFramePage, tick);
         setKeyFramedIcon(keyFrame != null);
-
         resetAttributes(character, tick);
     }
 
@@ -758,72 +768,48 @@ public class AttributePanel extends JPanel
 
     public void resetAttributes(Character character, double tick)
     {
-        if (character != null)
+        if (character == null)
         {
-            setKeyFramedIcon(character.findKeyFrame(selectedKeyFramePage, tick) != null);
-            KeyFrame keyFrame = character.findPreviousKeyFrame(selectedKeyFramePage, tick, true);
+            setAttributesEmpty();
+            return;
+        }
+
+        setKeyFramedIcon(character.findKeyFrame(selectedKeyFramePage, tick) != null);
+        KeyFrame keyFrame = character.findPreviousKeyFrame(selectedKeyFramePage, tick, true);
+
+        if (keyFrame == null)
+        {
+            keyFrame = character.findNextKeyFrame(selectedKeyFramePage, tick);
 
             if (keyFrame == null)
             {
-                keyFrame = character.findNextKeyFrame(selectedKeyFramePage, tick);
-
-                if (keyFrame == null)
+                switch (selectedKeyFramePage)
                 {
-                    switch (selectedKeyFramePage)
-                    {
-                        default:
-                        case MOVEMENT:
-                            break;
-                        case ANIMATION:
-                            animAttributes.setBackgroundColours(KeyFrameState.EMPTY);
-                            break;
-                        case ORIENTATION:
-                            oriAttributes.setBackgroundColours(KeyFrameState.EMPTY);
-                            break;
-                        case SPAWN:
-                            spawnAttributes.setBackgroundColours(KeyFrameState.EMPTY);
-                            break;
-                        case MODEL:
-                        case TEXT:
-                        case OVERHEAD:
-                        case HITSPLAT:
-                        case HEALTHBAR:
-                            break;
-                    }
-
-                    return;
+                    default:
+                    case MOVEMENT:
+                        break;
+                    case ANIMATION:
+                        animAttributes.setBackgroundColours(KeyFrameState.EMPTY);
+                        break;
+                    case ORIENTATION:
+                        oriAttributes.setBackgroundColours(KeyFrameState.EMPTY);
+                        break;
+                    case SPAWN:
+                        spawnAttributes.setBackgroundColours(KeyFrameState.EMPTY);
+                        break;
+                    case MODEL:
+                    case TEXT:
+                    case OVERHEAD:
+                    case HITSPLAT:
+                    case HEALTHBAR:
+                        break;
                 }
+
+                return;
             }
-
-            KeyFrameState keyFrameState = tick == keyFrame.getTick() ? KeyFrameState.ON_KEYFRAME : KeyFrameState.OFF_KEYFRAME;
-
-            switch (selectedKeyFramePage)
-            {
-                default:
-                case MOVEMENT:
-                    break;
-                case ANIMATION:
-                    animAttributes.setAttributes((AnimationKeyFrame) keyFrame);
-                    animAttributes.setBackgroundColours(keyFrameState);
-                    break;
-                case ORIENTATION:
-                    oriAttributes.setAttributes((OrientationKeyFrame) keyFrame);
-                    oriAttributes.setBackgroundColours(keyFrameState);
-                    break;
-                case SPAWN:
-                    spawnAttributes.setAttributes((SpawnKeyFrame) keyFrame);
-                    spawnAttributes.setBackgroundColours(keyFrameState);
-                    break;
-                case MODEL:
-                case TEXT:
-                case OVERHEAD:
-                case HITSPLAT:
-                case HEALTHBAR:
-                    break;
-            }
-
-            return;
         }
+
+        KeyFrameState keyFrameState = tick == keyFrame.getTick() ? KeyFrameState.ON_KEYFRAME : KeyFrameState.OFF_KEYFRAME;
 
         switch (selectedKeyFramePage)
         {
@@ -831,13 +817,41 @@ public class AttributePanel extends JPanel
             case MOVEMENT:
                 break;
             case ANIMATION:
-                animAttributes.setBackgroundColours(KeyFrameState.EMPTY);
+                animAttributes.setAttributes((AnimationKeyFrame) keyFrame);
+                animAttributes.setBackgroundColours(keyFrameState);
                 break;
             case ORIENTATION:
-                oriAttributes.setBackgroundColours(KeyFrameState.EMPTY);
+                oriAttributes.setAttributes((OrientationKeyFrame) keyFrame);
+                oriAttributes.setBackgroundColours(keyFrameState);
                 break;
             case SPAWN:
-                spawnAttributes.setBackgroundColours(KeyFrameState.EMPTY);
+                spawnAttributes.setAttributes((SpawnKeyFrame) keyFrame);
+                spawnAttributes.setBackgroundColours(keyFrameState);
+                break;
+            case MODEL:
+            case TEXT:
+            case OVERHEAD:
+            case HITSPLAT:
+            case HEALTHBAR:
+                break;
+        }
+    }
+
+    private void setAttributesEmpty()
+    {
+        switch (selectedKeyFramePage)
+        {
+            default:
+            case MOVEMENT:
+                break;
+            case ANIMATION:
+                animAttributes.resetAttributes();
+                break;
+            case ORIENTATION:
+                oriAttributes.resetAttributes();
+                break;
+            case SPAWN:
+                spawnAttributes.resetAttributes();
                 break;
             case MODEL:
             case TEXT:

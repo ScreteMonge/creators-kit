@@ -146,4 +146,19 @@ public class AnimAttributes
             idleLeft.setBackground(red);
         });
     }
+
+    public void resetAttributes()
+    {
+        manual.setValue(-1);
+        manualOverride.setSelectedItem(AnimationToggle.SMART_ANIMATION);
+        idle.setValue(-1);
+        walk.setValue(-1);
+        run.setValue(-1);
+        walk180.setValue(-1);
+        walkRight.setValue(-1);
+        walkLeft.setValue(-1);
+        idleRight.setValue(-1);
+        idleLeft.setValue(-1);
+        setBackgroundColours(KeyFrameState.EMPTY);
+    }
 }
