@@ -113,8 +113,9 @@ public class ToolBoxFrame extends JFrame
         tabbedPane.setToolTipTextAt(0, "Manage and organize all your Objects");
         tabbedPane.setToolTipTextAt(1, "Organize Custom Models you've loaded from the cache or Forged");
         tabbedPane.setToolTipTextAt(2, "Create Custom Models by modifying and merging different models together");
-        tabbedPane.setToolTipTextAt(3, "Change your Object Programs' animations, speeds, and more");
-        tabbedPane.setToolTipTextAt(4, "Set animations for Transmogging your player character");
+        tabbedPane.setToolTipTextAt(3, "Search the cache for NPCs, Items, and Objects for their models");
+        tabbedPane.setToolTipTextAt(4, "Change your Object Programs' animations, speeds, and more");
+        tabbedPane.setToolTipTextAt(5, "Set animations for Transmogging your player character");
 
         //Move the FolderTree between the Manager and Programmer tabs when the given tab is selected
         tabbedPane.addChangeListener(e -> {

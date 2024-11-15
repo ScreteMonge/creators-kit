@@ -804,7 +804,8 @@ public class ModelGetter
                 .onClick(e ->
                 {
                     PlayerComposition comp = player.getPlayerComposition();
-                    int[] items = comp.getEquipmentIds();
+                    final int[] items = comp.getEquipmentIds();
+                    final int[] colours = comp.getColors().clone();
 
                     IterableHashTable<ActorSpotAnim> actorSpotAnims = player.getSpotAnims();
                     int[] spotAnims = new int[0];
@@ -835,7 +836,7 @@ public class ModelGetter
 
                             clientThread.invokeLater(() ->
                             {
-                                plugin.cacheToAnvil(modelStats, comp.getColors(), true);
+                                plugin.cacheToAnvil(modelStats, colours, true);
                                 plugin.sendChatMessage("Model sent to Anvil: " + finalName);
                             });
                         });
@@ -849,9 +850,9 @@ public class ModelGetter
                         ModelStats[] modelStats = dataFinder.findModelsForPlayer(false, comp.getGender() == 0, items, anim, fSpotAnims);
                         clientThread.invokeLater(() ->
                         {
-                            Model model = plugin.constructModelFromCache(modelStats, comp.getColors(), true, true);
+                            Model model = plugin.constructModelFromCache(modelStats, colours, true, true);
                             CustomLighting lighting = new CustomLighting(64, 850, -30, -30, 50);
-                            CustomModelComp composition = new CustomModelComp(0, CustomModelType.CACHE_PLAYER, -1, modelStats, comp.getColors(), null, null, LightingStyle.ACTOR, lighting, false, finalName);
+                            CustomModelComp composition = new CustomModelComp(0, CustomModelType.CACHE_PLAYER, -1, modelStats, colours, null, null, LightingStyle.ACTOR, lighting, false, finalName);
                             CustomModel customModel = new CustomModel(model, composition);
                             plugin.addCustomModel(customModel, false);
                             plugin.sendChatMessage("Model stored: " + finalName);
@@ -885,6 +886,17 @@ public class ModelGetter
                                         false);
 
                                 SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true));
+
+                                for (int i = 0; i < plugin.getStoredModels().size(); i++)
+                                {
+                                    CustomModel cm = plugin.getStoredModels().get(i);
+                                    CustomModelComp comps = cm.getComp();
+                                    System.out.println(comps.getName());
+                                    for (int f : comps.getKitRecolours())
+                                    {
+                                        System.out.println(f);
+                                    }
+                                }
                             }
                         });
                     });

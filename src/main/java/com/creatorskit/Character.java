@@ -9,9 +9,12 @@ import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
+import net.runelite.api.Client;
+import net.runelite.api.Perspective;
 import net.runelite.api.RuneLiteObject;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.geometry.SimplePolygon;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.swing.*;
@@ -68,6 +71,12 @@ public class Character
         frames[KeyFrameType.getIndex(type)] = keyFrames;
     }
 
+    /**
+     * find a keyframe of the given type at the given tick
+     * @param type the type of keyframe to look for
+     * @param tick the tick at which the requested keyframe should exist
+     * @return the keyframe, if one is found; otherwise, returns null
+     */
     public KeyFrame findKeyFrame(KeyFrameType type, double tick)
     {
         KeyFrame[] frames = getKeyFrames(type);
@@ -80,6 +89,52 @@ public class Character
         }
 
         return null;
+    }
+
+    public KeyFrame findFirstKeyFrame()
+    {
+        KeyFrame firstFrame = null;
+
+        for (KeyFrame[] keyFrames : frames)
+        {
+            for (KeyFrame keyFrame : keyFrames)
+            {
+                if (firstFrame == null)
+                {
+                    firstFrame = keyFrame;
+                }
+
+                if (keyFrame.getTick() < firstFrame.getTick())
+                {
+                    firstFrame = keyFrame;
+                }
+            }
+        }
+
+        return firstFrame;
+    }
+
+    public KeyFrame findLastKeyFrame()
+    {
+        KeyFrame lastFrame = null;
+
+        for (KeyFrame[] keyFrames : frames)
+        {
+            for (KeyFrame keyFrame : keyFrames)
+            {
+                if (lastFrame == null)
+                {
+                    lastFrame = keyFrame;
+                }
+
+                if (keyFrame.getTick() > lastFrame.getTick())
+                {
+                    lastFrame = keyFrame;
+                }
+            }
+        }
+
+        return lastFrame;
     }
 
     /**
@@ -180,16 +235,15 @@ public class Character
             {
                 KeyFrame keyFrame = keyFrames[i];
 
-                if (nextFrame == null)
-                {
-                    nextFrame = keyFrame;
-                    continue;
-                }
-
                 double test = keyFrame.getTick();
                 if (test >= tick)
                 {
                     continue;
+                }
+
+                if (nextFrame == null)
+                {
+                    nextFrame = keyFrame;
                 }
 
                 if (test > nextFrame.getTick())

@@ -64,4 +64,10 @@ public class SpawnAttributes
             spawn.setBackground(red.brighter());
         });
     }
+
+    public void resetAttributes()
+    {
+        spawn.setSelectedItem(SpawnToggle.SPAWN_ACTIVE);
+        setBackgroundColours(KeyFrameState.EMPTY);
+    }
 }
