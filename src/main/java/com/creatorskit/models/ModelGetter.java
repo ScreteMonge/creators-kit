@@ -886,17 +886,6 @@ public class ModelGetter
                                         false);
 
                                 SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true));
-
-                                for (int i = 0; i < plugin.getStoredModels().size(); i++)
-                                {
-                                    CustomModel cm = plugin.getStoredModels().get(i);
-                                    CustomModelComp comps = cm.getComp();
-                                    System.out.println(comps.getName());
-                                    for (int f : comps.getKitRecolours())
-                                    {
-                                        System.out.println(f);
-                                    }
-                                }
                             }
                         });
                     });
