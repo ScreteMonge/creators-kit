@@ -7,6 +7,7 @@ import com.creatorskit.models.datatypes.ItemData;
 import com.creatorskit.models.datatypes.NPCData;
 import com.creatorskit.models.datatypes.ObjectData;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import net.runelite.api.Item;
 import net.runelite.api.Model;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
@@ -751,13 +752,13 @@ public class CacheSearcherTab extends JPanel
 
             if (modeString.equals("Name"))
             {
-                ObjectData objectData = (ObjectData) nameBox.getSelectedItem();
-                if (objectData == null)
+                ItemData itemData = (ItemData) nameBox.getSelectedItem();
+                if (itemData == null)
                 {
                     return;
                 }
 
-                addToAnvil(customModelType, objectData.getId());
+                addToAnvil(customModelType, itemData.getId());
             }
             else
             {
@@ -849,7 +850,7 @@ public class CacheSearcherTab extends JPanel
                     false,
                     false);
 
-            SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true));
+            SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true, false));
         });
     }
 
@@ -906,7 +907,7 @@ public class CacheSearcherTab extends JPanel
                     false,
                     false);
 
-            SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true));
+            SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true, false));
         });
     }
 
@@ -963,7 +964,7 @@ public class CacheSearcherTab extends JPanel
                     false,
                     false);
 
-            SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true));
+            SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true, false));
         });
     }
 }

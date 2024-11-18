@@ -645,6 +645,24 @@ public class AttributePanel extends JPanel
                 selectedKeyFramePage = KeyFrameType.HEALTHBAR;
         }
 
+        JLabel[] labels = timeSheetPanel.getLabels();
+        JLabel selectedLabel;
+
+        selectedLabel = labels[KeyFrameType.getIndex(selectedKeyFramePage) + 1];
+        for (int f = 0; f < labels.length; f++)
+        {
+            JLabel label = labels[f];
+            if (label == selectedLabel)
+            {
+                timeSheetPanel.getAttributeSheet().setSelectedIndex(f);
+                label.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
+            }
+            else
+            {
+                label.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+            }
+        }
+
         Character character = timeSheetPanel.getSelectedCharacter();
         double currentTick = timeSheetPanel.getCurrentTime();
         if (character == null)

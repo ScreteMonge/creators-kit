@@ -9,6 +9,7 @@ import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
@@ -26,6 +27,7 @@ public class ToolBoxFrame extends JFrame
 {
     private ClientThread clientThread;
     private final Client client;
+    private final EventBus eventBus;
     private final CreatorsPlugin plugin;
     private final ConfigManager configManager;
     private final DataFinder dataFinder;
@@ -39,11 +41,12 @@ public class ToolBoxFrame extends JFrame
     private final BufferedImage ICON = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
 
     @Inject
-    public ToolBoxFrame(Client client, ClientThread clientThread, CreatorsPlugin plugin, ConfigManager configManager, DataFinder dataFinder, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, TransmogPanel transmogPanel)
+    public ToolBoxFrame(Client client, EventBus eventBus, ClientThread clientThread, CreatorsPlugin plugin, ConfigManager configManager, DataFinder dataFinder, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, TransmogPanel transmogPanel)
     {
         this.client = client;
         this.clientThread = clientThread;
         this.plugin = plugin;
+        this.eventBus = eventBus;
         this.configManager = configManager;
         this.dataFinder = dataFinder;
         this.modelOrganizer = modelOrganizer;
@@ -65,7 +68,7 @@ public class ToolBoxFrame extends JFrame
         ManagerTree managerTree = new ManagerTree(this, plugin, objectHolder, managerRootNode, managerSideNode, managerManagerNode);
 
         JScrollBar scrollBar = new JScrollBar(Adjustable.HORIZONTAL);
-        this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, clientThread, dataFinder, managerTree, scrollBar);
+        this.timeSheetPanel = new TimeSheetPanel(client, eventBus, this, plugin, clientThread, dataFinder, managerTree, scrollBar);
         this.managerPanel = new ManagerPanel(client, plugin, objectHolder, managerTree);
         this.cacheSearcher = new CacheSearcherTab(plugin, clientThread, dataFinder);
         this.programPanel = new ProgrammerPanel(client, clientThread, plugin, managerTree);

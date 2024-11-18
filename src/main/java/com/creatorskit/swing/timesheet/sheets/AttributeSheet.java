@@ -2,6 +2,7 @@ package com.creatorskit.swing.timesheet.sheets;
 
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
+import com.creatorskit.swing.timesheet.AttributePanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import lombok.Getter;
@@ -19,9 +20,15 @@ import static com.creatorskit.swing.timesheet.TimeSheetPanel.round;
 @Setter
 public class AttributeSheet extends TimeSheet
 {
-    public AttributeSheet(ToolBoxFrame toolBox, ManagerTree tree)
+    private ManagerTree tree;
+    private AttributePanel attributePanel;
+
+    public AttributeSheet(ToolBoxFrame toolBox, ManagerTree tree, AttributePanel attributePanel)
     {
-        super(toolBox, tree);
+        super(toolBox, tree, attributePanel);
+        this.tree = tree;
+        this.attributePanel = attributePanel;
+
         setIndexBuffers(0);
         setSelectedIndex(1);
     }
@@ -91,7 +98,8 @@ public class AttributeSheet extends TimeSheet
         Composite composite = g.getComposite();
         g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2F));
 
-        double mouseX = Math.max(0, Math.min(this.getMousePosition().getX(), getWidth()));
+        double x = MouseInfo.getPointerInfo().getLocation().getX() - getLocationOnScreen().getX();
+        double mouseX = Math.max(0, Math.min(x, getWidth()));
         double change = round((mouseX - getMousePointOnPressed().getX()) * getZoom() / getWidth());
 
 

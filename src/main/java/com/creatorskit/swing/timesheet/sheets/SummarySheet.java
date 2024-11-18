@@ -4,6 +4,7 @@ import com.creatorskit.Character;
 import com.creatorskit.swing.Folder;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
+import com.creatorskit.swing.timesheet.AttributePanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import lombok.Getter;
 import lombok.Setter;
@@ -20,11 +21,13 @@ import java.util.ArrayList;
 public class SummarySheet extends TimeSheet
 {
     private ManagerTree tree;
+    private AttributePanel attributePanel;
 
-    public SummarySheet(ToolBoxFrame toolBox, ManagerTree tree)
+    public SummarySheet(ToolBoxFrame toolBox, ManagerTree tree, AttributePanel attributePanel)
     {
-        super(toolBox, tree);
+        super(toolBox, tree, attributePanel);
         this.tree = tree;
+        this.attributePanel = attributePanel;
     }
 
     @Override

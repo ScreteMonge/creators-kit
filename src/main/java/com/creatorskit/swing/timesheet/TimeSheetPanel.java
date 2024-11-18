@@ -14,7 +14,11 @@ import com.creatorskit.swing.timesheet.sheets.TimeSheet;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.Client;
+import net.runelite.api.GameState;
+import net.runelite.api.events.GameTick;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.eventbus.EventBus;
+import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.util.ImageUtil;
 
@@ -33,15 +37,17 @@ import java.util.ArrayList;
 
 @Getter
 @Setter
-public class TimeSheetPanel extends JPanel implements MouseWheelListener
+public class TimeSheetPanel extends JPanel
 {
+    private Client client;
     private ClientThread clientThread;
     private final CreatorsPlugin plugin;
+    private EventBus eventBus;
     private final GridBagConstraints c = new GridBagConstraints();
     private final ToolBoxFrame toolBox;
     private final DataFinder dataFinder;
-    private final SummarySheet summarySheet;
-    private final AttributeSheet attributeSheet;
+    private SummarySheet summarySheet;
+    private AttributeSheet attributeSheet;
     private TreeScrollPane treeScrollPane;
     private final ManagerTree managerTree;
     private final JScrollBar scrollBar;
@@ -49,8 +55,9 @@ public class TimeSheetPanel extends JPanel implements MouseWheelListener
     private final JPanel labelPanel = new JPanel();
     private final JPanel controlPanel = new JPanel();
     private final JSpinner timeSpinner = new JSpinner();
-    private final BufferedImage PLAY = ImageUtil.loadImageResource(getClass(), "/Play.png");
-    private final BufferedImage STOP = ImageUtil.loadImageResource(getClass(), "/Stop.png");
+    private final ImageIcon PLAY = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/Play.png"));
+    private final ImageIcon STOP = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/Stop.png"));
+    private final ImageIcon PAUSE = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/Pause.png"));
     private final BufferedImage SKIP_LEFT = ImageUtil.loadImageResource(getClass(), "/Skip_Left.png");
     private final BufferedImage SKIP_RIGHT = ImageUtil.loadImageResource(getClass(), "/Skip_Right.png");
 
@@ -72,6 +79,7 @@ public class TimeSheetPanel extends JPanel implements MouseWheelListener
     private final String HITS_CARD = "Hitsplat";
     private final String HEALTH_CARD = "Healthbar";
     private final String LABEL_OFFSET = "  ";
+    private JLabel[] labels = new JLabel[0];
 
     private double zoom = 50;
     private double hScroll = 0;
@@ -80,22 +88,23 @@ public class TimeSheetPanel extends JPanel implements MouseWheelListener
     private double minHScroll = -10;
 
     private double currentTime = 0;
+    private boolean play = false;
     private boolean pauseScrollBarListener = false;
     private Character selectedCharacter;
 
     private KeyFrame[] selectedKeyFrames = new KeyFrame[0];
 
     @Inject
-    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, JScrollBar scrollBar)
+    public TimeSheetPanel(@Nullable Client client, EventBus eventBus, ToolBoxFrame toolBox, CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, JScrollBar scrollBar)
     {
+        this.client = client;
+        this.eventBus = eventBus;
         this.toolBox = toolBox;
         this.plugin = plugin;
         this.clientThread = clientThread;
         this.dataFinder = dataFinder;
         this.managerTree = managerTree;
         this.scrollBar = scrollBar;
-        this.summarySheet = new SummarySheet(toolBox, managerTree);
-        this.attributeSheet = new AttributeSheet(toolBox, managerTree);
 
         setLayout(new GridBagLayout());
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
@@ -108,6 +117,26 @@ public class TimeSheetPanel extends JPanel implements MouseWheelListener
         setupTimeTreeListener();
         setupManager();
         setKeyBindings();
+        setMouseListeners();
+    }
+
+    public void startUp()
+    {
+        eventBus.register(this);
+    }
+
+    public void shutDown()
+    {
+        eventBus.unregister(this);
+    }
+
+    @Subscribe
+    public void onGameTick(GameTick event)
+    {
+        if (play)
+        {
+            setCurrentTime(currentTime + 1);
+        }
     }
 
     public void onSummarySkipForward()
@@ -390,7 +419,21 @@ public class TimeSheetPanel extends JPanel implements MouseWheelListener
     public void removeKeyFrame(Character character, KeyFrame keyFrame)
     {
         character.removeKeyFrame(keyFrame);
-        attributePanel.setKeyFramedIcon(false);
+        attributePanel.resetAttributes(character, currentTime);
+    }
+
+    /**
+     * Removes the specified keyframes from the chosen character
+     * @param character the character to remove the keyframes from
+     * @param keyFrames the keyframes to remove
+     */
+    public void removeKeyFrame(Character character, KeyFrame[] keyFrames)
+    {
+        for (KeyFrame keyFrame : keyFrames)
+        {
+            character.removeKeyFrame(keyFrame);
+        }
+
         attributePanel.resetAttributes(character, currentTime);
     }
 
@@ -468,12 +511,21 @@ public class TimeSheetPanel extends JPanel implements MouseWheelListener
             toolBox.getTimeSheetPanel().setCurrentTime(tick);
         });
 
-        JButton playButton = new JButton(new ImageIcon(PLAY));
+        JButton playButton = new JButton(PLAY);
+        playButton.setPreferredSize(new Dimension(35, 35));
+        playButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        playButton.addActionListener(e ->
+        {
+            play = !play;
+            playButton.setIcon(play ? PAUSE : PLAY);
+        });
 
         JPanel backPanel = new JPanel();
         backPanel.setLayout(new BoxLayout(backPanel, BoxLayout.PAGE_AXIS));
         JButton backSummarySheet = new JButton(new ImageIcon(SKIP_LEFT));
         JButton backAttributeSheet = new JButton(new ImageIcon(SKIP_LEFT));
+        backSummarySheet.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        backAttributeSheet.setBackground(ColorScheme.DARK_GRAY_COLOR);
         backSummarySheet.addActionListener(e -> onSummarySkipPrevious());
         backAttributeSheet.addActionListener(e -> onAttributeSkipPrevious());
         backPanel.add(backSummarySheet);
@@ -483,6 +535,8 @@ public class TimeSheetPanel extends JPanel implements MouseWheelListener
         forwardPanel.setLayout(new BoxLayout(forwardPanel, BoxLayout.PAGE_AXIS));
         JButton forwardSummarySheet = new JButton(new ImageIcon(SKIP_RIGHT));
         JButton forwardAttributeSheet = new JButton(new ImageIcon(SKIP_RIGHT));
+        forwardSummarySheet.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        forwardAttributeSheet.setBackground(ColorScheme.DARK_GRAY_COLOR);
         forwardSummarySheet.addActionListener(e -> onSummarySkipForward());
         forwardAttributeSheet.addActionListener(e -> onAttributeSkipForward());
         forwardPanel.add(forwardSummarySheet);
@@ -503,6 +557,8 @@ public class TimeSheetPanel extends JPanel implements MouseWheelListener
     private void setupAttributePanel()
     {
         attributePanel = new AttributePanel(this, dataFinder);
+        summarySheet = new SummarySheet(toolBox, managerTree, attributePanel);
+        attributeSheet = new AttributeSheet(toolBox, managerTree, attributePanel);
     }
 
     private void setupAttributeSheet()
@@ -511,7 +567,7 @@ public class TimeSheetPanel extends JPanel implements MouseWheelListener
         labelPanel.setBorder(new EmptyBorder(1, 0, 1, 0));
         labelPanel.setLayout(new GridLayout(0, 1, 0, 0));
         labelPanel.setFocusable(true);
-        JLabel[] labels = new JLabel[KeyFrameType.getTotalFrameTypes() + 1];
+        labels = new JLabel[KeyFrameType.getTotalFrameTypes() + 1];
         for (int i = 0; i < KeyFrameType.getTotalFrameTypes() + 1; i++)
         {
             JLabel label = new JLabel();
@@ -533,19 +589,8 @@ public class TimeSheetPanel extends JPanel implements MouseWheelListener
                     @Override
                     public void mousePressed(MouseEvent e)
                     {
-                        labels[attributeSheet.getSelectedIndex()].setBackground(ColorScheme.DARKER_GRAY_COLOR);
-                        label.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
-
-                        attributePanel.switchCards(label.getText().replaceAll(LABEL_OFFSET, ""));
-
                         super.mousePressed(e);
-                        for (int f = 0; f < labels.length; f++)
-                        {
-                            if (labels[f] == label)
-                            {
-                                attributeSheet.setSelectedIndex(f);
-                            }
-                        }
+                        attributePanel.switchCards(label.getText().replaceAll(LABEL_OFFSET, ""));
                     }
                 });
             }
@@ -620,6 +665,7 @@ public class TimeSheetPanel extends JPanel implements MouseWheelListener
     {
         ActionMap actionMap = getActionMap();
         InputMap inputMap = getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_I, 0), "VK_I");
         actionMap.put("VK_I", new AbstractAction()
         {
@@ -628,6 +674,13 @@ public class TimeSheetPanel extends JPanel implements MouseWheelListener
             {
                 if (selectedCharacter == null)
                 {
+                    return;
+                }
+
+                if (attributeSheet.getBounds().contains(MouseInfo.getPointerInfo().getLocation()))
+                {
+                    KeyFrame keyFrame = attributePanel.createKeyFrame();
+                    addKeyFrame(selectedCharacter, keyFrame);
                     return;
                 }
 
@@ -657,6 +710,93 @@ public class TimeSheetPanel extends JPanel implements MouseWheelListener
         });
     }
 
+    private void setMouseListeners()
+    {
+        addMouseWheelListener(new MouseAdapter()
+        {
+            @Override
+            public void mouseWheelMoved(MouseWheelEvent e)
+            {
+                super.mouseWheelMoved(e);
+                if (e.isControlDown())
+                {
+                    if (e.isAltDown() || e.isShiftDown())
+                    {
+                        return;
+                    }
+
+                    int currentRow = managerTree.getMinSelectionRow();
+                    if (currentRow == -1)
+                    {
+                        managerTree.setSelectionRow(0);
+                        return;
+                    }
+
+                    TreePath path = null;
+                    int direction = e.getWheelRotation();
+                    if (direction > 0)
+                    {
+                        while (path == null)
+                        {
+                            currentRow++;
+                            if (currentRow >= managerTree.getRowCount())
+                            {
+                                currentRow = 0;
+                            }
+
+                            path = managerTree.getPathForRow(currentRow);
+                        }
+                    }
+
+                    if (direction < 0)
+                    {
+                        while (path == null)
+                        {
+                            currentRow--;
+                            if (currentRow < 0)
+                            {
+                                currentRow = managerTree.getRowCount() - 1;
+                            }
+
+                            path = managerTree.getPathForRow(currentRow);
+                        }
+                    }
+
+                    if (path != null)
+                    {
+                        managerTree.setSelectionPath(path);
+                    }
+                }
+
+                if (e.isShiftDown())
+                {
+                    if (e.isControlDown() || e.isAltDown())
+                    {
+                        return;
+                    }
+
+                    scrollAttributePanel(e.getWheelRotation());
+                }
+            }
+        });
+    }
+
+    public void scrollAttributePanel(int direction)
+    {
+        int index = KeyFrameType.getIndex(attributePanel.getSelectedKeyFramePage()) + direction;
+        int totalFrameTypes = KeyFrameType.getTotalFrameTypes();
+        if (index >= totalFrameTypes)
+        {
+            index = 0;
+        }
+
+        if (index == -1)
+        {
+            index = totalFrameTypes - 1;
+        }
+
+        attributePanel.switchCards(KeyFrameType.getKeyFrameType(index).toString());
+    }
 
     private void setupManager()
     {
@@ -744,14 +884,5 @@ public class TimeSheetPanel extends JPanel implements MouseWheelListener
     {
         int scale = (int) Math.pow(10, 1);
         return (double) Math.round(value * scale) / scale;
-    }
-
-    @Override
-    public void mouseWheelMoved(MouseWheelEvent e)
-    {
-        if (e.isControlDown())
-        {
-
-        }
     }
 }

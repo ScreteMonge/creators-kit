@@ -3,6 +3,7 @@ package com.creatorskit.swing.timesheet.sheets;
 import com.creatorskit.Character;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
+import com.creatorskit.swing.timesheet.AttributePanel;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import lombok.Getter;
@@ -14,6 +15,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import javax.swing.*;
 import javax.swing.border.LineBorder;
+import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
@@ -26,7 +28,8 @@ import static com.creatorskit.swing.timesheet.TimeSheetPanel.round;
 public class TimeSheet extends JPanel
 {
     private ToolBoxFrame toolBox;
-    private ManagerTree tree;
+    private ManagerTree managerTree;
+    private AttributePanel attributePanel;
 
     private final BufferedImage keyframeImage = ImageUtil.loadImageResource(getClass(), "/Keyframe.png");
     private final BufferedImage keyframeSelected = ImageUtil.loadImageResource(getClass(), "/Keyframe_Selected.png");
@@ -55,10 +58,11 @@ public class TimeSheet extends JPanel
     private boolean keyFrameClicked = false;
     private KeyFrame clickedKeyFrame;
 
-    public TimeSheet(ToolBoxFrame toolBox, ManagerTree tree)
+    public TimeSheet(ToolBoxFrame toolBox, ManagerTree managerTree, AttributePanel attributePanel)
     {
         this.toolBox = toolBox;
-        this.tree = tree;
+        this.managerTree = managerTree;
+        this.attributePanel = attributePanel;
 
         setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1));
         setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -374,6 +378,21 @@ public class TimeSheet extends JPanel
                 getTimeSheetPanel().setCurrentTime(currentTime + 0.1);
             }
         });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "VK_DELETE");
+        actionMap.put("VK_DELETE", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                if (selectedCharacter == null)
+                {
+                    return;
+                }
+
+                getTimeSheetPanel().removeKeyFrame(selectedCharacter, getTimeSheetPanel().getSelectedKeyFrames());
+            }
+        });
     }
 
     private void setMouseListeners(TimeSheet timeSheet)
@@ -505,6 +524,8 @@ public class TimeSheet extends JPanel
                 TimeSheetPanel timeSheetPanel = getTimeSheetPanel();
                 double previewTime = getTimeIndicatorPosition();
                 timeSheetPanel.setPreviewTime(previewTime);
+
+
             }
         });
 
@@ -518,7 +539,74 @@ public class TimeSheet extends JPanel
 
                 if (e.isAltDown())
                 {
+                    if (e.isControlDown() || e.isShiftDown())
+                    {
+                        return;
+                    }
+
                     getTimeSheetPanel().onZoomEvent(amount, timeSheet);
+                    return;
+                }
+
+                if (e.isControlDown())
+                {
+                    if (e.isAltDown() || e.isShiftDown())
+                    {
+                        return;
+                    }
+
+                    int currentRow = managerTree.getMinSelectionRow();
+                    if (currentRow == -1)
+                    {
+                        managerTree.setSelectionRow(0);
+                        return;
+                    }
+
+                    TreePath path = null;
+                    int direction = e.getWheelRotation();
+                    if (direction > 0)
+                    {
+                        while (path == null)
+                        {
+                            currentRow++;
+                            if (currentRow >= managerTree.getRowCount())
+                            {
+                                currentRow = 0;
+                            }
+
+                            path = managerTree.getPathForRow(currentRow);
+                        }
+                    }
+
+                    if (direction < 0)
+                    {
+                        while (path == null)
+                        {
+                            currentRow--;
+                            if (currentRow < 0)
+                            {
+                                currentRow = managerTree.getRowCount() - 1;
+                            }
+
+                            path = managerTree.getPathForRow(currentRow);
+                        }
+                    }
+
+                    if (path != null)
+                    {
+                        managerTree.setSelectionPath(path);
+                    }
+                    return;
+                }
+
+                if (e.isShiftDown())
+                {
+                    if (e.isControlDown() || e.isAltDown())
+                    {
+                        return;
+                    }
+
+                    getTimeSheetPanel().scrollAttributePanel(e.getWheelRotation());
                     return;
                 }
 
