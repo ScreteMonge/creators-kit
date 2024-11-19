@@ -110,14 +110,14 @@ public class ManagerPanel extends JPanel
             if (path == null)
             {
                 Character character = creatorsPanel.createCharacter(ParentPanel.MANAGER);
-                creatorsPanel.addPanel(ParentPanel.MANAGER, character, true);
+                creatorsPanel.addPanel(ParentPanel.MANAGER, character, true, false);
                 return;
             }
 
             DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
             ParentPanel parentPanel = managerTree.treeContainsSidePanel(node) ? ParentPanel.SIDE_PANEL : ParentPanel.MANAGER;
             Character character = creatorsPanel.createCharacter(parentPanel);
-            creatorsPanel.addPanel(parentPanel, character, true);
+            creatorsPanel.addPanel(parentPanel, character, true, false);
         });
         rightButtons.add(addObjectButton);
 

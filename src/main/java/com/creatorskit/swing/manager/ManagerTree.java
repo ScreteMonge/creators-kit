@@ -9,6 +9,8 @@ import net.runelite.client.util.ImageUtil;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -88,39 +90,52 @@ public class ManagerTree extends JTree
         renderer.setLeafIcon(new ImageIcon(OBJECT));
         renderer.setBackground(ColorScheme.DARK_GRAY_COLOR);
         setCellRenderer(renderer);
+
+        setMouseListeners();
     }
 
-    public DefaultMutableTreeNode getParentNode(ParentPanel parentPanel)
+    public DefaultMutableTreeNode getParentFolderNode(ParentPanel parentPanel, boolean switching)
     {
         DefaultMutableTreeNode defaultNode = parentPanel == ParentPanel.MANAGER ? managerNode : sidePanelNode;
-        DefaultMutableTreeNode parentNode;
+        DefaultMutableTreeNode parentFolderNode;
         TreePath parentPath = getSelectionPath();
 
         if (parentPath == null)
         {
-            parentNode = defaultNode;
+            return defaultNode;
         }
-        else
+
+        parentFolderNode = (DefaultMutableTreeNode) (parentPath.getLastPathComponent());
+        if (parentFolderNode.getUserObject() instanceof Character)
         {
-            parentNode = (DefaultMutableTreeNode) (parentPath.getLastPathComponent());
-            if (parentNode.getUserObject() instanceof Character)
+            Character character = (Character) parentFolderNode.getUserObject();
+            parentFolderNode = character.getParentManagerNode();
+        }
+
+        if (parentFolderNode == null)
+        {
+            parentFolderNode = defaultNode;
+        }
+
+        if (switching)
+        {
+            if (parentPanel == ParentPanel.SIDE_PANEL && !treeContainsSidePanel(parentFolderNode))
             {
-                Character character = (Character) parentNode.getUserObject();
-                parentNode = character.getParentManagerNode();
+                parentFolderNode = sidePanelNode;
             }
 
-            if (parentNode == null)
+            if (parentPanel == ParentPanel.MANAGER && treeContainsSidePanel(parentFolderNode))
             {
-                parentNode = defaultNode;
+                parentFolderNode = managerNode;
             }
         }
 
-        return parentNode;
+        return parentFolderNode;
     }
 
     public DefaultMutableTreeNode addFolderNode(String name, ParentPanel parentPanel)
     {
-        return addFolderNode(getParentNode(parentPanel), name, true);
+        return addFolderNode(getParentFolderNode(parentPanel, false), name, true);
     }
 
     public DefaultMutableTreeNode addFolderNode(DefaultMutableTreeNode parent, String name)
@@ -148,15 +163,15 @@ public class ManagerTree extends JTree
     }
 
     /**
-     * Adds a character node to the currently selected ManagerTree node. Creates a linked ManagerTree and TimeTree node and remembers the parent node of each
+     * Adds a character node to the currently selected ManagerTree node. Creates a linked ManagerTree node and remembers the selected Parent node
      * @param character the character to add to the selected node
      * @param parentPanel the ParentPanel to which the character will be added (SidePanel or ManagerPanel)
      * @param shouldBeVisible visibility
      * @return the linked ManagerTree node
      */
-    public DefaultMutableTreeNode addCharacterNode(Character character, ParentPanel parentPanel, boolean shouldBeVisible)
+    public DefaultMutableTreeNode addCharacterNode(Character character, ParentPanel parentPanel, boolean shouldBeVisible, boolean switching)
     {
-        return addCharacterNode(getParentNode(parentPanel), character, parentPanel, shouldBeVisible);
+        return addCharacterNode(getParentFolderNode(parentPanel, switching), character, parentPanel, shouldBeVisible);
     }
 
     // Adds the character to a previously indicated parent
@@ -166,7 +181,7 @@ public class ManagerTree extends JTree
     }
 
     /**
-     * Adds a character node to the indicated ManagerTree node. Creates a linked ManagerTree and TimeTree node and remembers the parent node of each
+     * Adds a character node to the indicated ManagerTree node. Creates a linked ManagerTree node and remembers the indicated Parent node
      * @param managerParent the parent node in the ManagerTree to which to attach the new node
      * @param character the character to add to the selected node
      * @param parentPanel the ParentPanel to which the character will be added (SidePanel or ManagerPanel)
@@ -191,6 +206,7 @@ public class ManagerTree extends JTree
         }
 
         DefaultMutableTreeNode linkedManagerNode = new DefaultMutableTreeNode(character);
+        character.setParentPanel(parentPanel);
         character.setLinkedManagerNode(linkedManagerNode);
         character.setParentManagerNode(managerParent);
 
@@ -600,6 +616,77 @@ public class ManagerTree extends JTree
             }
             toolBox.getTimeSheetPanel().getSummarySheet().setSelectedIndex(rows[0]);
         }
+    }
+
+    private void setMouseListeners()
+    {
+        addMouseWheelListener(new MouseAdapter()
+        {
+            @Override
+            public void mouseWheelMoved(MouseWheelEvent e)
+            {
+                super.mouseWheelMoved(e);
+                if (e.isControlDown())
+                {
+                    if (e.isAltDown() || e.isShiftDown())
+                    {
+                        return;
+                    }
+
+                    int currentRow = getMinSelectionRow();
+                    if (currentRow == -1)
+                    {
+                        setSelectionRow(0);
+                        return;
+                    }
+
+                    TreePath path = null;
+                    int direction = e.getWheelRotation();
+                    if (direction > 0)
+                    {
+                        while (path == null)
+                        {
+                            currentRow++;
+                            if (currentRow >= getRowCount())
+                            {
+                                currentRow = 0;
+                            }
+
+                            path = getPathForRow(currentRow);
+                        }
+                    }
+
+                    if (direction < 0)
+                    {
+                        while (path == null)
+                        {
+                            currentRow--;
+                            if (currentRow < 0)
+                            {
+                                currentRow = getRowCount() - 1;
+                            }
+
+                            path = getPathForRow(currentRow);
+                        }
+                    }
+
+                    if (path != null)
+                    {
+                        setSelectionPath(path);
+                    }
+                }
+
+                if (e.isShiftDown())
+                {
+                    if (e.isControlDown() || e.isAltDown())
+                    {
+                        return;
+                    }
+
+                    toolBox.getTimeSheetPanel().scrollAttributePanel(e.getWheelRotation());
+                }
+            }
+        });
     }
 }
 

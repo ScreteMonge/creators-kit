@@ -80,6 +80,7 @@ public class CreatorsPanel extends PluginPanel
     private final int DEFAULT_TURN_SPEED = 40;
     private final BufferedImage MAXIMIZE = ImageUtil.loadImageResource(getClass(), "/Maximize.png");
     private final BufferedImage MINIMIZE = ImageUtil.loadImageResource(getClass(), "/Minimize.png");
+    private final BufferedImage SWITCH = ImageUtil.loadImageResource(getClass(), "/Switch.png");
     private final BufferedImage DUPLICATE = ImageUtil.loadImageResource(getClass(), "/Duplicate.png");
     private final BufferedImage CLOSE = ImageUtil.loadImageResource(getClass(), "/Close.png");
     private final BufferedImage HELP = ImageUtil.loadImageResource(getClass(), "/Help.png");
@@ -143,7 +144,7 @@ public class CreatorsPanel extends PluginPanel
         addObjectButton.addActionListener(e ->
         {
             Character character = createCharacter(ParentPanel.SIDE_PANEL);
-            SwingUtilities.invokeLater(() -> addPanel(ParentPanel.SIDE_PANEL, character, true));
+            SwingUtilities.invokeLater(() -> addPanel(ParentPanel.SIDE_PANEL, character, true, false));
         });
         add(addObjectButton, c);
 
@@ -275,6 +276,10 @@ public class CreatorsPanel extends PluginPanel
         topButtonsPanel.setMinimumSize(topButtonsPanelSize);
         topButtonsPanel.setLayout(new GridLayout(1, 3, 0, 0));
 
+        JButton switchButton = new JButton(new ImageIcon(SWITCH));
+        switchButton.setToolTipText("Switch this Object between the Manager and Side Panel");
+        switchButton.setFocusable(false);
+
         JButton duplicateButton = new JButton(new ImageIcon(DUPLICATE));
         duplicateButton.setToolTipText("Duplicate object");
         duplicateButton.setFocusable(false);
@@ -398,6 +403,7 @@ public class CreatorsPanel extends PluginPanel
             c.gridy = 0;
             c.weightx = 0;
             objectPanel.add(topButtonsPanel, c);
+            topButtonsPanel.add(switchButton);
             topButtonsPanel.add(duplicateButton);
             topButtonsPanel.add(minimizeButton);
             topButtonsPanel.add(deleteButton);
@@ -527,6 +533,7 @@ public class CreatorsPanel extends PluginPanel
             }
         });
 
+        switchButton.addActionListener(e -> onSwitchButtonPressed(character));
 
         deleteButton.addActionListener(e -> onDeleteButtonPressed(character));
 
@@ -808,12 +815,12 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
-    public void addPanel(ParentPanel parentPanel, Character character, boolean revalidate)
+    public void addPanel(ParentPanel parentPanel, Character character, boolean revalidate, boolean switching)
     {
-        addPanel(parentPanel, character, null, revalidate);
+        addPanel(parentPanel, character, null, revalidate, switching);
     }
 
-    public void addPanel(ParentPanel parentPanel, Character character, DefaultMutableTreeNode parentNode, boolean revalidate)
+    public void addPanel(ParentPanel parentPanel, Character character, DefaultMutableTreeNode parentNode, boolean revalidate, boolean switching)
     {
         ObjectPanel childPanel = character.getObjectPanel();
         ManagerPanel managerPanel = toolBox.getManagerPanel();
@@ -825,7 +832,7 @@ public class CreatorsPanel extends PluginPanel
             sidePanel.add(childPanel);
             if (parentNode == null)
             {
-                managerTree.addCharacterNode(character, ParentPanel.SIDE_PANEL, true);
+                managerTree.addCharacterNode(character, ParentPanel.SIDE_PANEL, true, switching);
             }
             else
             {
@@ -845,7 +852,7 @@ public class CreatorsPanel extends PluginPanel
 
             if (parentNode == null)
             {
-                managerTree.addCharacterNode(character, ParentPanel.MANAGER, true);
+                managerTree.addCharacterNode(character, ParentPanel.MANAGER, true, switching);
             }
             else
             {
@@ -858,7 +865,25 @@ public class CreatorsPanel extends PluginPanel
             }
         }
 
-        npcPanels++;
+        if (!switching)
+        {
+            npcPanels++;
+        }
+    }
+
+    public void onSwitchButtonPressed(Character character)
+    {
+        ParentPanel parentPanel = character.getParentPanel();
+        removePanel(character);
+
+        if (parentPanel == ParentPanel.SIDE_PANEL)
+        {
+            addPanel(ParentPanel.MANAGER, character, true, true);
+        }
+        else
+        {
+            addPanel(ParentPanel.SIDE_PANEL, character, true, true);
+        }
     }
 
     public void onDuplicatePressed(Character character, boolean setLocation)
@@ -930,7 +955,7 @@ public class CreatorsPanel extends PluginPanel
                     character.isInInstance(),
                     setLocation);
 
-            SwingUtilities.invokeLater(() -> addPanel(parentPanel, c, true));
+            SwingUtilities.invokeLater(() -> addPanel(parentPanel, c, true, false));
         });
         thread.start();
     }
@@ -1613,7 +1638,7 @@ public class CreatorsPanel extends PluginPanel
                             save.isInInstance(),
                             false);
 
-                    SwingUtilities.invokeLater(() -> addPanel(ParentPanel.SIDE_PANEL, character, true));
+                    SwingUtilities.invokeLater(() -> addPanel(ParentPanel.SIDE_PANEL, character, true, false));
                 }
             });
             thread.start();
@@ -1706,7 +1731,7 @@ public class CreatorsPanel extends PluginPanel
                     save.isInInstance(),
                     false);
 
-            addPanel(parentPanel, character, node, false);
+            addPanel(parentPanel, character, node, false, false);
         }
 
         FolderNodeSave[] folderNodeSaves = folderNodeSave.getFolderSaves();

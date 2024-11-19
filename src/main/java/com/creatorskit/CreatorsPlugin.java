@@ -25,6 +25,7 @@ import net.runelite.client.chat.ChatMessageBuilder;
 import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.input.KeyManager;
@@ -62,6 +63,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 	@Inject
 	private ClientThread clientThread;
+
+	@Inject
+	private EventBus eventBus;
 
 	@Inject
 	private CreatorsConfig config;
@@ -141,6 +145,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				.priority(10)
 				.panel(creatorsPanel)
 				.build();
+
+		creatorsPanel.getTimeSheetPanel().startUp();
 
 		clientToolbar.addNavigation(navigationButton);
 		overlayManager.add(overlay);
@@ -229,6 +235,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	{
 		creatorsPanel.clearSidePanels(false);
 		creatorsPanel.clearManagerPanels();
+
+		creatorsPanel.getTimeSheetPanel().shutDown();
+
 		clientToolbar.removeNavigation(navigationButton);
 		overlayManager.remove(overlay);
 		keyManager.unregisterKeyListener(overlayKeyListener);
