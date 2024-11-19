@@ -50,6 +50,11 @@ public class AttributeSheet extends TimeSheet
         for (int i = 0; i < frames.length; i++)
         {
             KeyFrame[] keyFrames = frames[i];
+            if (keyFrames == null)
+            {
+                continue;
+            }
+
             for (int e = 0; e < keyFrames.length; e++)
             {
                 KeyFrame frame = keyFrames[e];
@@ -135,6 +140,11 @@ public class AttributeSheet extends TimeSheet
         for (int i = 0; i < frames.length; i++)
         {
             KeyFrame[] keyFrames = frames[i];
+            if (keyFrames == null)
+            {
+                continue;
+            }
+
             for (int e = 0; e < keyFrames.length; e++)
             {
                 KeyFrame keyFrame = keyFrames[e];
@@ -174,6 +184,11 @@ public class AttributeSheet extends TimeSheet
         for (int i = 0; i < frames.length; i++)
         {
             KeyFrame[] keyFrames = frames[i];
+            if (keyFrames == null)
+            {
+                continue;
+            }
+
             for (int e = 0; e < keyFrames.length; e++)
             {
                 KeyFrame keyFrame = keyFrames[e];
@@ -320,6 +335,11 @@ public class AttributeSheet extends TimeSheet
         for (int i = 0; i < frames.length; i++)
         {
             KeyFrame[] keyFrames = frames[i];
+            if (keyFrames == null)
+            {
+                continue;
+            }
+
             for (int e = 0; e < keyFrames.length; e++)
             {
                 KeyFrame keyFrame = keyFrames[e];
