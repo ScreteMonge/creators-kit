@@ -7,6 +7,7 @@ import com.creatorskit.models.exporters.ModelExporter;
 import com.creatorskit.swing.CreatorsPanel;
 import com.creatorskit.swing.ParentPanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.client.callback.ClientThread;
@@ -452,7 +453,7 @@ public class ModelGetter
                                         npc.getOrientation(),
                                         npc.getPoseAnimation(),
                                         60,
-                                        new KeyFrame[0][],
+                                        new KeyFrame[KeyFrameType.getTotalFrameTypes()][],
                                         creatorsPanel.createEmptyProgram(npc.getPoseAnimation(), npc.getWalkAnimation()),
                                         false,
                                         null,
@@ -744,7 +745,7 @@ public class ModelGetter
                                             0,
                                             anim,
                                             60,
-                                            new KeyFrame[0][],
+                                            new KeyFrame[KeyFrameType.getTotalFrameTypes()][],
                                             creatorsPanel.createEmptyProgram(anim, anim),
                                             false,
                                             null,
@@ -875,7 +876,7 @@ public class ModelGetter
                                         player.getCurrentOrientation(),
                                         anim,
                                         60,
-                                        new KeyFrame[0][],
+                                        new KeyFrame[KeyFrameType.getTotalFrameTypes()][],
                                         creatorsPanel.createEmptyProgram(player.getPoseAnimation(), player.getWalkAnimation()),
                                         false,
                                         null,
@@ -1092,7 +1093,7 @@ public class ModelGetter
                                     orientation,
                                     animationId,
                                     60,
-                                    new KeyFrame[0][],
+                                    new KeyFrame[KeyFrameType.getTotalFrameTypes()][],
                                     creatorsPanel.createEmptyProgram(animationId, animationId),
                                     false,
                                     null,
@@ -1156,7 +1157,7 @@ public class ModelGetter
                                         orientation,
                                         animationId,
                                         60,
-                                        new KeyFrame[0][],
+                                        new KeyFrame[KeyFrameType.getTotalFrameTypes()][],
                                         creatorsPanel.createEmptyProgram(animationId, animationId),
                                         false,
                                         null,
@@ -1756,7 +1757,7 @@ public class ModelGetter
                                     orientation,
                                     -1,
                                     60,
-                                    new KeyFrame[0][],
+                                    new KeyFrame[KeyFrameType.getTotalFrameTypes()][],
                                     creatorsPanel.createEmptyProgram(-1, -1),
                                     false,
                                     null,

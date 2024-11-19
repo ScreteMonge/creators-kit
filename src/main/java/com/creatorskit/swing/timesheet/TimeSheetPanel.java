@@ -141,7 +141,7 @@ public class TimeSheetPanel extends JPanel
 
     public void onSummarySkipForward()
     {
-
+        
     }
 
     public void onSummarySkipPrevious()
