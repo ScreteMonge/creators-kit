@@ -7,6 +7,7 @@ import com.creatorskit.models.datatypes.ItemData;
 import com.creatorskit.models.datatypes.NPCData;
 import com.creatorskit.models.datatypes.ObjectData;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import net.runelite.api.Item;
 import net.runelite.api.Model;
 import net.runelite.client.callback.ClientThread;
@@ -840,7 +841,7 @@ public class CacheSearcherTab extends JPanel
                     0,
                     -1,
                     60,
-                    new KeyFrame[0][],
+                    new KeyFrame[KeyFrameType.getTotalFrameTypes()][],
                     creatorsPanel.createEmptyProgram(-1, -1),
                     false,
                     null,
@@ -897,7 +898,7 @@ public class CacheSearcherTab extends JPanel
                     0,
                     data.getAnimationId(),
                     60,
-                    new KeyFrame[0][],
+                    new KeyFrame[KeyFrameType.getTotalFrameTypes()][],
                     creatorsPanel.createEmptyProgram(data.getAnimationId(), data.getAnimationId()),
                     false,
                     null,
@@ -954,7 +955,7 @@ public class CacheSearcherTab extends JPanel
                     0,
                     data.getStandingAnimation(),
                     data.getSize() * 60,
-                    new KeyFrame[0][],
+                    new KeyFrame[KeyFrameType.getTotalFrameTypes()][],
                     creatorsPanel.createEmptyProgram(data.getStandingAnimation(), data.getWalkingAnimation()),
                     false,
                     null,
