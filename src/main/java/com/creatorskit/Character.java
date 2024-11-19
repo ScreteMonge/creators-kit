@@ -80,6 +80,11 @@ public class Character
     public KeyFrame findKeyFrame(KeyFrameType type, double tick)
     {
         KeyFrame[] frames = getKeyFrames(type);
+        if (frames == null)
+        {
+            return null;
+        }
+
         for (KeyFrame keyFrame : frames)
         {
             if (keyFrame.getTick() == tick)
@@ -97,6 +102,11 @@ public class Character
 
         for (KeyFrame[] keyFrames : frames)
         {
+            if (keyFrames == null)
+            {
+                continue;
+            }
+
             for (KeyFrame keyFrame : keyFrames)
             {
                 if (firstFrame == null)
@@ -120,6 +130,11 @@ public class Character
 
         for (KeyFrame[] keyFrames : frames)
         {
+            if (keyFrames == null)
+            {
+                continue;
+            }
+
             for (KeyFrame keyFrame : keyFrames)
             {
                 if (lastFrame == null)
@@ -148,6 +163,11 @@ public class Character
 
         for (KeyFrame[] keyFrames : frames)
         {
+            if (keyFrames == null)
+            {
+                continue;
+            }
+
             if (keyFrames.length == 0)
             {
                 continue;
@@ -198,6 +218,11 @@ public class Character
     public KeyFrame findNextKeyFrame(KeyFrameType type, double tick)
     {
         KeyFrame[] keyFrames = getKeyFrames(type);
+        if (keyFrames == null)
+        {
+            return null;
+        }
+
         if (keyFrames.length == 0)
         {
             return null;
@@ -226,6 +251,11 @@ public class Character
 
         for (KeyFrame[] keyFrames : frames)
         {
+            if (keyFrames == null)
+            {
+                continue;
+            }
+
             if (keyFrames.length == 0)
             {
                 continue;
@@ -276,6 +306,11 @@ public class Character
     public KeyFrame findPreviousKeyFrame(KeyFrameType type, double tick, boolean includeCurrentKeyFrame)
     {
         KeyFrame[] keyFrames = getKeyFrames(type);
+        if (keyFrames == null)
+        {
+            return null;
+        }
+
         if (keyFrames.length == 0)
         {
             return null;
@@ -317,6 +352,13 @@ public class Character
     {
         KeyFrameType type = keyFrame.getKeyFrameType();
         KeyFrame[] keyFrames = getKeyFrames(type);
+        if (keyFrames == null)
+        {
+            keyFrames = new KeyFrame[]{keyFrame};
+            setKeyFrames(keyFrames, type);
+            return;
+        }
+
         int[] framePosition = getFramePosition(keyFrames, keyFrame.getTick());
 
         // Check first if the new keyframe is replacing a previous one
@@ -340,6 +382,10 @@ public class Character
     {
         KeyFrameType type = keyFrame.getKeyFrameType();
         KeyFrame[] keyFrames = getKeyFrames(type);
+        if (keyFrames == null)
+        {
+            return;
+        }
 
         keyFrames = ArrayUtils.removeElement(keyFrames, keyFrame);
         setKeyFrames(keyFrames, type);
@@ -353,6 +399,11 @@ public class Character
     public void removeKeyFrame(KeyFrameType type, double tick)
     {
         KeyFrame[] keyFrames = getKeyFrames(type);
+        if (keyFrames == null)
+        {
+            return;
+        }
+
         for (int i = 0; i < keyFrames.length; i++)
         {
             KeyFrame keyFrame = keyFrames[i];
@@ -372,6 +423,11 @@ public class Character
      */
     private int[] getFramePosition(KeyFrame[] keyFrames, double newTick)
     {
+        if (keyFrames == null)
+        {
+            return new int[]{0, 0};
+        }
+
         int frameIndex = 0;
         for (int i = 0; i < keyFrames.length; i++)
         {

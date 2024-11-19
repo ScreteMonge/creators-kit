@@ -63,6 +63,11 @@ public class SummarySheet extends TimeSheet
             for (int i = 0; i < frames.length; i++)
             {
                 KeyFrame[] keyFrames = frames[i];
+                if (keyFrames == null)
+                {
+                    continue;
+                }
+
                 for (int e = 0; e < keyFrames.length; e++)
                 {
                     KeyFrame k = keyFrames[e];
