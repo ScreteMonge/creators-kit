@@ -31,6 +31,13 @@ public class SummarySheet extends TimeSheet
     }
 
     @Override
+    public void drawHighlight(Graphics g)
+    {
+        g.setColor(Color.DARK_GRAY);
+        g.fillRect(0, getSelectedIndex() * ROW_HEIGHT - ROW_HEIGHT_OFFSET - getVScroll(), this.getWidth(), ROW_HEIGHT);
+    }
+
+    @Override
     public void drawKeyFrames(Graphics g)
     {
         BufferedImage image = getKeyframeImage();
@@ -40,7 +47,7 @@ public class SummarySheet extends TimeSheet
         ArrayList<DefaultMutableTreeNode> nodes = new ArrayList<>();
         nodes.add(tree.getRootNode());
         tree.getAllNodes(tree.getRootNode(), nodes);
-        int index = -1;
+        int index = -2;
 
         for (DefaultMutableTreeNode node : nodes)
         {
@@ -104,7 +111,7 @@ public class SummarySheet extends TimeSheet
                 g.drawImage(
                         image,
                         (int) ((d + getHScroll()) * zoomFactor - xImageOffset),
-                        ROW_HEIGHT_OFFSET + (index * ROW_HEIGHT) - yImageOffset - getVScroll(),
+                        (index * ROW_HEIGHT) - ROW_HEIGHT_OFFSET - yImageOffset - getVScroll(),
                         null);
             }
         }

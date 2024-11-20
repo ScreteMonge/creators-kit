@@ -50,6 +50,7 @@ public class TimeSheetPanel extends JPanel
     private AttributeSheet attributeSheet;
     private TreeScrollPane treeScrollPane;
     private final ManagerTree managerTree;
+    private final JComboBox<KeyFrameType> summaryComboBox = new JComboBox<>();
     private final JScrollBar scrollBar;
     private AttributePanel attributePanel;
     private final JPanel labelPanel = new JPanel();
@@ -91,6 +92,7 @@ public class TimeSheetPanel extends JPanel
     private boolean play = false;
     private boolean pauseScrollBarListener = false;
     private Character selectedCharacter;
+    private KeyFrameType summaryKeyFrameType = KeyFrameType.SUMMARY;
 
     private KeyFrame[] selectedKeyFrames = new KeyFrame[0];
 
@@ -109,6 +111,7 @@ public class TimeSheetPanel extends JPanel
         setLayout(new GridBagLayout());
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
+        setupSummaryComboBox();
         setupTreeScrollPane();
         setupControlPanel();
         setupAttributePanel();
@@ -118,16 +121,6 @@ public class TimeSheetPanel extends JPanel
         setupManager();
         setKeyBindings();
         setMouseListeners();
-    }
-
-    public void startUp()
-    {
-        eventBus.register(this);
-    }
-
-    public void shutDown()
-    {
-        eventBus.unregister(this);
     }
 
     @Subscribe
@@ -284,7 +277,7 @@ public class TimeSheetPanel extends JPanel
     private KeyFrame getLastKeyFrame()
     {
         ArrayList<Character> characters = plugin.getCharacters();
-        if (characters.size() == 0)
+        if (characters.isEmpty())
         {
             return null;
         }
@@ -320,7 +313,7 @@ public class TimeSheetPanel extends JPanel
     private KeyFrame getFirstKeyFrame()
     {
         ArrayList<Character> characters = plugin.getCharacters();
-        if (characters.size() == 0)
+        if (characters.isEmpty())
         {
             return null;
         }
@@ -474,6 +467,24 @@ public class TimeSheetPanel extends JPanel
     {
         attributeSheet.setPreviewTime(tick);
         summarySheet.setPreviewTime(tick);
+    }
+
+    private void setupSummaryComboBox()
+    {
+        summaryComboBox.setBackground(ColorScheme.DARK_GRAY_COLOR);
+
+        summaryComboBox.addItem(KeyFrameType.SUMMARY);
+        summaryComboBox.addItem(KeyFrameType.MOVEMENT);
+        summaryComboBox.addItem(KeyFrameType.ANIMATION);
+        summaryComboBox.addItem(KeyFrameType.SPAWN);
+        summaryComboBox.addItem(KeyFrameType.MODEL);
+        summaryComboBox.addItem(KeyFrameType.ORIENTATION);
+        summaryComboBox.addItem(KeyFrameType.TEXT);
+        summaryComboBox.addItem(KeyFrameType.OVERHEAD);
+        summaryComboBox.addItem(KeyFrameType.HITSPLAT);
+        summaryComboBox.addItem(KeyFrameType.HEALTHBAR);
+
+        summaryComboBox.addItemListener(e -> summaryKeyFrameType = (KeyFrameType) summaryComboBox.getSelectedItem());
     }
 
     private void setupTreeScrollPane()
@@ -798,13 +809,23 @@ public class TimeSheetPanel extends JPanel
         attributePanel.switchCards(KeyFrameType.getKeyFrameType(index).toString());
     }
 
+    public void startUp()
+    {
+        eventBus.register(this);
+    }
+
+    public void shutDown()
+    {
+        eventBus.unregister(this);
+    }
+
     private void setupManager()
     {
         c.fill = GridBagConstraints.BOTH;
         c.insets = new Insets(2, 2, 2, 2);
 
         c.gridwidth = 2;
-        c.gridheight = 1;
+        c.gridheight = 2;
         c.weightx = 0;
         c.weighty = 5;
         c.gridx = 0;
@@ -813,43 +834,51 @@ public class TimeSheetPanel extends JPanel
 
         c.gridheight = 1;
         c.gridwidth = 1;
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 2;
+        c.gridy = 0;
+        add(summaryComboBox, c);
+
+        c.gridheight = 1;
+        c.gridwidth = 1;
         c.weightx = 8;
         c.weighty = 5;
         c.gridx = 2;
-        c.gridy = 0;
+        c.gridy = 1;
         add(summarySheet, c);
 
         c.gridheight = 1;
         c.weightx = 0;
         c.weighty = 0;
         c.gridx = 2;
-        c.gridy = 1;
+        c.gridy = 2;
         add(scrollBar, c);
 
         c.weightx = 0;
         c.weighty = 0;
         c.gridx = 2;
-        c.gridy = 2;
+        c.gridy = 3;
         add(controlPanel, c);
 
         c.gridheight = 3;
         c.weightx = 0;
         c.weighty = 0;
         c.gridx = 0;
-        c.gridy = 1;
+        c.gridy = 2;
         add(attributePanel, c);
 
         c.gridheight = 1;
         c.weightx = 0;
         c.weighty = 0;
         c.gridx = 1;
-        c.gridy = 3;
+        c.gridy = 4;
         add(labelPanel, c);
 
         c.weightx = 8;
         c.weighty = 0;
         c.gridx = 2;
-        c.gridy = 3;
+        c.gridy = 4;
         add(attributeSheet, c);
     }
 

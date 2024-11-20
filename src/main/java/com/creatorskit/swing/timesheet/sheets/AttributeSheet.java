@@ -34,6 +34,13 @@ public class AttributeSheet extends TimeSheet
     }
 
     @Override
+    public void drawHighlight(Graphics g)
+    {
+        g.setColor(Color.DARK_GRAY);
+        g.fillRect(0, (getSelectedIndex() + getIndexBuffers()) * ROW_HEIGHT + ROW_HEIGHT_OFFSET - getVScroll(), this.getWidth(), ROW_HEIGHT);
+    }
+
+    @Override
     public void drawKeyFrames(Graphics g)
     {
         if (getSelectedCharacter() == null)
