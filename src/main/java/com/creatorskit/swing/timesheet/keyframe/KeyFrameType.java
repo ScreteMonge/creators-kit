@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 public enum KeyFrameType
 {
     NULL("Null"),
+    SUMMARY("Summary"),
     MOVEMENT("Movement"),
     ANIMATION("Animation"),
     SPAWN("Spawn"),

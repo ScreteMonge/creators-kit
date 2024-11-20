@@ -177,10 +177,9 @@ public class TimeSheet extends JPanel
         g.setComposite(composite);
     }
 
-    private void drawHighlight(Graphics g)
+    public void drawHighlight(Graphics g)
     {
-        g.setColor(Color.DARK_GRAY);
-        g.fillRect(0, (selectedIndex + indexBuffers) * ROW_HEIGHT + ROW_HEIGHT_OFFSET - vScroll, this.getWidth(), ROW_HEIGHT);
+
     }
 
     private void drawBackgroundLines(Graphics g)
