@@ -418,7 +418,18 @@ public class ModelGetter
                 {
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = dataFinder.findModelsForNPC(npc.getId());
+                        NPCComposition composition = npc.getTransformedComposition();
+
+                        ModelStats[] modelStats;
+                        if (composition == null)
+                        {
+                            modelStats = dataFinder.findModelsForNPC(npc.getId());
+                        }
+                        else
+                        {
+                            modelStats = dataFinder.findModelsForNPC(npc.getId(), composition);
+                        }
+
                         if (modelStats == null || modelStats.length == 0)
                         {
                             plugin.sendChatMessage("Could not find this NPC in the cache.");
@@ -481,7 +492,18 @@ public class ModelGetter
                 {
                     Thread thread = new Thread(() ->
                     {
-                        ModelStats[] modelStats = dataFinder.findModelsForNPC(npc.getId());
+                        NPCComposition composition = npc.getTransformedComposition();
+
+                        ModelStats[] modelStats;
+                        if (composition == null)
+                        {
+                            modelStats = dataFinder.findModelsForNPC(npc.getId());
+                        }
+                        else
+                        {
+                            modelStats = dataFinder.findModelsForNPC(npc.getId(), composition);
+                        }
+
                         if (modelStats == null || modelStats.length == 0)
                         {
                             plugin.sendChatMessage("Could not find this NPC in the cache.");
@@ -546,7 +568,18 @@ public class ModelGetter
                         {
                             Thread thread = new Thread(() ->
                             {
-                                ModelStats[] modelStats = dataFinder.findModelsForNPC(npcId);
+                                NPCComposition composition = npc.getTransformedComposition();
+
+                                ModelStats[] modelStats;
+                                if (composition == null)
+                                {
+                                    modelStats = dataFinder.findModelsForNPC(npc.getId());
+                                }
+                                else
+                                {
+                                    modelStats = dataFinder.findModelsForNPC(npc.getId(), composition);
+                                }
+
                                 if (modelStats == null || modelStats.length == 0)
                                 {
                                     plugin.sendChatMessage("Could not find this NPC in the cache.");

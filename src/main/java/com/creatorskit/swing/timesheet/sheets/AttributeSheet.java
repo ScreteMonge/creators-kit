@@ -131,7 +131,31 @@ public class AttributeSheet extends TimeSheet
     }
 
     @Override
-    public KeyFrame getKeyFrameClicked(Point point)
+    public void updateKeyFrameClicked(boolean shiftDown)
+    {
+        KeyFrame[] clickedKeyFrames = getClickedKeyFrames();
+        if (clickedKeyFrames.length == 0)
+        {
+            return;
+        }
+
+        KeyFrame[] selectedKeyFrames = getSelectedKeyFrames();
+        KeyFrame clickedKeyFrame = clickedKeyFrames[0];
+        if (Arrays.stream(selectedKeyFrames).noneMatch(n -> n == clickedKeyFrame))
+        {
+            if (shiftDown)
+            {
+                setSelectedKeyFrames(ArrayUtils.add(selectedKeyFrames, clickedKeyFrame));
+            }
+            else
+            {
+                setSelectedKeyFrames(new KeyFrame[]{clickedKeyFrame});
+            }
+        }
+    }
+
+    @Override
+    public KeyFrame[] getKeyFrameClicked(Point point)
     {
         if (getSelectedCharacter() == null)
         {
@@ -164,7 +188,7 @@ public class AttributeSheet extends TimeSheet
                 {
                     if (point.getY() >= y1 && point.getY() <= y2)
                     {
-                        return keyFrame;
+                        return new KeyFrame[]{keyFrame};
                     }
                 }
             }
@@ -174,7 +198,7 @@ public class AttributeSheet extends TimeSheet
     }
 
     @Override
-    public void onKeyFrameClicked(Point point, boolean shiftKey)
+    public void updateKeyFrameClicked(Point point, boolean shiftKey)
     {
         if (getSelectedCharacter() == null)
         {

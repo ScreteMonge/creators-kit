@@ -95,6 +95,7 @@ public class TimeSheetPanel extends JPanel
     private KeyFrameType summaryKeyFrameType = KeyFrameType.SUMMARY;
 
     private KeyFrame[] selectedKeyFrames = new KeyFrame[0];
+    private KeyFrame[] copiedKeyFrames = new KeyFrame[0];
 
     @Inject
     public TimeSheetPanel(@Nullable Client client, EventBus eventBus, ToolBoxFrame toolBox, CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, JScrollBar scrollBar)
@@ -717,6 +718,50 @@ public class TimeSheetPanel extends JPanel
 
                 KeyFrame keyFrame = attributePanel.createKeyFrame();
                 addKeyFrame(selectedCharacter, keyFrame);
+            }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_C, InputEvent.CTRL_DOWN_MASK), "VK_C");
+        actionMap.put("VK_C", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                copiedKeyFrames = selectedKeyFrames;
+            }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_V, InputEvent.CTRL_DOWN_MASK), "VK_V");
+        actionMap.put("VK_V", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                if (selectedCharacter == null)
+                {
+                    return;
+                }
+
+                double firstTick = ABSOLUTE_MAX_SEQUENCE_LENGTH;
+                for (KeyFrame keyFrame : copiedKeyFrames)
+                {
+                    if (keyFrame.getTick() < firstTick)
+                    {
+                        firstTick = keyFrame.getTick();
+                    }
+                }
+
+                for (KeyFrame keyFrame : copiedKeyFrames)
+                {
+                    double newTime = keyFrame.getTick() - firstTick + currentTime;
+                    KeyFrame copy = keyFrame.createCopy(keyFrame, newTime);
+                    if (copy == null)
+                    {
+                        continue;
+                    }
+
+                    addKeyFrame(selectedCharacter, copy);
+                }
             }
         });
     }
