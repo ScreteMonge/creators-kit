@@ -11,7 +11,6 @@ import lombok.Setter;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
-import org.apache.commons.lang3.ArrayUtils;
 
 import javax.swing.*;
 import javax.swing.border.LineBorder;
@@ -19,7 +18,6 @@ import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
-import java.util.Arrays;
 
 import static com.creatorskit.swing.timesheet.TimeSheetPanel.round;
 
@@ -56,7 +54,7 @@ public class TimeSheet extends JPanel
     private KeyFrame[] visibleKeyFrames = new KeyFrame[0];
     private Character selectedCharacter;
     private boolean keyFrameClicked = false;
-    private KeyFrame clickedKeyFrame;
+    private KeyFrame[] clickedKeyFrames = new KeyFrame[0];
 
     public TimeSheet(ToolBoxFrame toolBox, ManagerTree managerTree, AttributePanel attributePanel)
     {
@@ -394,6 +392,11 @@ public class TimeSheet extends JPanel
         });
     }
 
+    public void updateKeyFrameClicked(boolean shiftDown)
+    {
+
+    }
+
     private void setMouseListeners(TimeSheet timeSheet)
     {
         addMouseListener(new MouseAdapter()
@@ -425,26 +428,12 @@ public class TimeSheet extends JPanel
                     mousePointOnPressed = mousePosition;
                 }
 
-                clickedKeyFrame = getKeyFrameClicked(mousePosition);
-                keyFrameClicked = clickedKeyFrame != null;
+                clickedKeyFrames = getKeyFrameClicked(mousePosition);
+                keyFrameClicked = clickedKeyFrames != null;
                 if (keyFrameClicked)
                 {
                     allowRectangleSelect = false;
-
-                    KeyFrame[] selectedKeyFrames = getSelectedKeyFrames();
-                    {
-                        if (Arrays.stream(selectedKeyFrames).noneMatch(n -> n == clickedKeyFrame))
-                        {
-                            if (e.isShiftDown())
-                            {
-                                setSelectedKeyFrames(ArrayUtils.add(selectedKeyFrames, clickedKeyFrame));
-                            }
-                            else
-                            {
-                                setSelectedKeyFrames(new KeyFrame[]{clickedKeyFrame});
-                            }
-                        }
-                    }
+                    updateKeyFrameClicked(e.isShiftDown());
                 }
             }
 
@@ -466,7 +455,7 @@ public class TimeSheet extends JPanel
                 {
                     if (mousePosition.distance(mousePointOnPressed) < 10)
                     {
-                        onKeyFrameClicked(mousePosition, e.isShiftDown());
+                        updateKeyFrameClicked(mousePosition, e.isShiftDown());
                     }
                     else
                     {
@@ -614,12 +603,12 @@ public class TimeSheet extends JPanel
         });
     }
 
-    public KeyFrame getKeyFrameClicked(Point point)
+    public KeyFrame[] getKeyFrameClicked(Point point)
     {
-        return null;
+        return new KeyFrame[0];
     }
 
-    public void onKeyFrameClicked(Point point, boolean shiftKey)
+    public void updateKeyFrameClicked(Point point, boolean shiftKey)
     {
 
     }

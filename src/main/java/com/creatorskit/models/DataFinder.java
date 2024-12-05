@@ -5,6 +5,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.NPCComposition;
 import net.runelite.api.PlayerComposition;
 import okhttp3.*;
 import org.apache.commons.lang3.ArrayUtils;
@@ -779,6 +780,56 @@ public class DataFinder
                             npcData.getWidthScale(),
                             npcData.getWidthScale(),
                             npcData.getHeightScale(),
+                            0,
+                            customLighting
+                    ));
+                }
+
+                break;
+            }
+        }
+
+        ModelStats[] stats = new ModelStats[modelStats.size()];
+        for (int i = 0; i < modelStats.size(); i++)
+        {
+            stats[i] = modelStats.get(i);
+        }
+
+        return stats;
+    }
+
+    public ModelStats[] findModelsForNPC(int npcId, NPCComposition composition)
+    {
+        ArrayList<ModelStats> modelStats = new ArrayList<>();
+        for (NPCData npcData : npcData)
+        {
+            if (npcData.getId() == npcId)
+            {
+                lastFound = npcData.getName();
+                lastAnim = npcData.getStandingAnimation();
+
+                int[] modelIds = composition.getModels();
+
+                LightingStyle ls = LightingStyle.ACTOR;
+                CustomLighting customLighting = new CustomLighting(
+                        ls.getAmbient(),
+                        ls.getContrast(),
+                        ls.getX(),
+                        ls.getY(),
+                        ls.getZ());
+
+                for (int i : modelIds)
+                {
+                    modelStats.add(new ModelStats(
+                            i,
+                            BodyPart.NA,
+                            composition.getColorToReplace(),
+                            composition.getColorToReplaceWith(),
+                            new short[0],
+                            new short[0],
+                            composition.getWidthScale(),
+                            composition.getWidthScale(),
+                            composition.getHeightScale(),
                             0,
                             customLighting
                     ));

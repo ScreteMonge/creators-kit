@@ -6,6 +6,7 @@ import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.AttributePanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.lang3.ArrayUtils;
@@ -65,55 +66,239 @@ public class SummarySheet extends TimeSheet
             }
 
             Character character = (Character) node.getUserObject();
-            KeyFrame[][] frames = character.getFrames();
-            double[] ticks = new double[0];
-            for (int i = 0; i < frames.length; i++)
+            KeyFrameType keyFrameType = getToolBox().getTimeSheetPanel().getSummaryKeyFrameType();
+            switch (keyFrameType)
             {
-                KeyFrame[] keyFrames = frames[i];
-                if (keyFrames == null)
+                default:
+                case NULL:
+                case SUMMARY:
+                    double[] ticks = getSummaryKeyFrames(character);
+                    drawFrameIcons(g, ticks, image, index, xImageOffset, yImageOffset);
+                    break;
+                case MOVEMENT:
+                case ANIMATION:
+                case SPAWN:
+                case MODEL:
+                case ORIENTATION:
+                case TEXT:
+                case OVERHEAD:
+                case HITSPLAT:
+                case HEALTHBAR:
+                    KeyFrame[] keyFrames = character.getKeyFrames(keyFrameType);
+                    drawFrameIcons(g, keyFrames, image, index, xImageOffset, yImageOffset);
+            }
+        }
+    }
+
+    private double[] getSummaryKeyFrames(Character character)
+    {
+        double[] ticks = new double[0];
+        KeyFrame[][] frames = character.getFrames();
+        for (int i = 0; i < frames.length; i++)
+        {
+            KeyFrame[] keyFrames = frames[i];
+            if (keyFrames == null)
+            {
+                continue;
+            }
+
+            for (int e = 0; e < keyFrames.length; e++)
+            {
+                KeyFrame k = keyFrames[e];
+                if (ticks.length == 0)
+                {
+                    ticks = ArrayUtils.add(ticks, k.getTick());
+                }
+
+                double tick = k.getTick();
+                boolean contains = false;
+                for (double d : ticks)
+                {
+                    if (tick == d)
+                    {
+                        contains = true;
+                        break;
+                    }
+                }
+
+                if (contains)
                 {
                     continue;
                 }
 
-                for (int e = 0; e < keyFrames.length; e++)
+                ticks = ArrayUtils.add(ticks, tick);
+            }
+        }
+
+        return ticks;
+    }
+
+    private void drawFrameIcons(Graphics g, double[] ticks, BufferedImage image, int index, int xImageOffset, int yImageOffset)
+    {
+        for (int e = 0; e < ticks.length; e++)
+        {
+            double d = ticks[e];
+
+            double zoomFactor = this.getWidth() / getZoom();
+            g.drawImage(
+                    image,
+                    (int) ((d + getHScroll()) * zoomFactor - xImageOffset),
+                    (index * ROW_HEIGHT) - ROW_HEIGHT_OFFSET - yImageOffset - getVScroll(),
+                    null);
+        }
+    }
+
+    private void drawFrameIcons(Graphics g, KeyFrame[] keyFrames, BufferedImage image, int index, int xImageOffset, int yImageOffset)
+    {
+        for (int e = 0; e < keyFrames.length; e++)
+        {
+            double d = keyFrames[e].getTick();
+
+            double zoomFactor = this.getWidth() / getZoom();
+            g.drawImage(
+                    image,
+                    (int) ((d + getHScroll()) * zoomFactor - xImageOffset),
+                    (index * ROW_HEIGHT) - ROW_HEIGHT_OFFSET - yImageOffset - getVScroll(),
+                    null);
+        }
+    }
+
+    @Override
+    public void updateKeyFrameClicked(boolean shiftDown)
+    {
+        KeyFrame[] clickedKeyFrames = getClickedKeyFrames();
+        if (clickedKeyFrames.length == 0)
+        {
+            return;
+        }
+
+        KeyFrame[] selectedKeyFrames = getSelectedKeyFrames();
+        if (shiftDown)
+        {
+            setSelectedKeyFrames(ArrayUtils.addAll(selectedKeyFrames, clickedKeyFrames));
+        }
+        else
+        {
+            setSelectedKeyFrames(clickedKeyFrames);
+        }
+    }
+
+    @Override
+    public KeyFrame[] getKeyFrameClicked(Point point)
+    {
+        BufferedImage image = getKeyframeImage();
+        int yImageOffset = (image.getHeight() - ROW_HEIGHT) / 2;
+        int xImageOffset = image.getWidth() / 2;
+        double zoomFactor = this.getWidth() / getZoom();
+
+        KeyFrameType keyFrameType = getToolBox().getTimeSheetPanel().getSummaryKeyFrameType();
+
+        ArrayList<DefaultMutableTreeNode> nodes = new ArrayList<>();
+        nodes.add(tree.getRootNode());
+        tree.getAllNodes(tree.getRootNode(), nodes);
+
+        KeyFrame[] keyFramesClicked = new KeyFrame[0];
+
+        int index = (int) (ROW_HEIGHT_OFFSET + getVScroll() + point.getY() / ROW_HEIGHT);
+        DefaultMutableTreeNode node = nodes.get(index);
+        if (node.getUserObject() instanceof Character)
+        {
+            Character character = (Character) node.getUserObject();
+            KeyFrame[] keyFrames = character.getKeyFrames(keyFrameType);
+            for (KeyFrame keyFrame : keyFrames)
+            {
+                int x1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
+                int x2 = x1 + image.getWidth();
+                int y1 = ROW_HEIGHT_OFFSET + ROW_HEIGHT + ROW_HEIGHT * index - yImageOffset;
+                int y2 = y1 + image.getHeight();
+
+                if (point.getX() >= x1 && point.getX() <= x2)
                 {
-                    KeyFrame k = keyFrames[e];
-                    if (ticks.length == 0)
+                    if (point.getY() >= y1 && point.getY() <= y2)
                     {
-                        ticks = ArrayUtils.add(ticks, k.getTick());
+                        keyFramesClicked = ArrayUtils.add(keyFramesClicked, keyFrame);
                     }
+                }
+            }
+        }
 
-                    double tick = k.getTick();
-                    boolean contains = false;
-                    for (double d : ticks)
+        return keyFramesClicked;
+    }
+
+    @Override
+    public void updateKeyFrameClicked(Point point, boolean shiftKey)
+    {
+        if (getSelectedCharacter() == null)
+        {
+            return;
+        }
+
+        BufferedImage image = getKeyframeImage();
+        int yImageOffset = (image.getHeight() - ROW_HEIGHT) / 2;
+        int xImageOffset = image.getWidth() / 2;
+        double zoomFactor = this.getWidth() / getZoom();
+
+        boolean foundFrame = false;
+        KeyFrame[][] frames = getSelectedCharacter().getFrames();
+        for (int i = 0; i < frames.length; i++)
+        {
+            KeyFrame[] keyFrames = frames[i];
+            if (keyFrames == null)
+            {
+                continue;
+            }
+
+            for (int e = 0; e < keyFrames.length; e++)
+            {
+                KeyFrame keyFrame = keyFrames[e];
+                int x1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
+                int x2 = x1 + image.getWidth();
+                int y1 = ROW_HEIGHT_OFFSET + ROW_HEIGHT + ROW_HEIGHT * i - yImageOffset;
+                int y2 = y1 + image.getHeight();
+
+                if (point.getX() >= x1 && point.getX() <= x2)
+                {
+                    if (point.getY() >= y1 && point.getY() <= y2)
                     {
-                        if (tick == d)
+                        if (shiftKey)
                         {
-                            contains = true;
-                            break;
+                            KeyFrame[] selectedKeyFrames = getSelectedKeyFrames();
+                            boolean alreadyContains = false;
+
+                            for (KeyFrame kf : selectedKeyFrames)
+                            {
+                                if (kf == keyFrame)
+                                {
+                                    alreadyContains = true;
+                                    break;
+                                }
+                            }
+
+                            if (!alreadyContains)
+                            {
+                                setSelectedKeyFrames(ArrayUtils.add(getSelectedKeyFrames(), keyFrame));
+                            }
                         }
-                    }
+                        else
+                        {
+                            setSelectedKeyFrames(new KeyFrame[]{keyFrame});
+                        }
 
-                    if (contains)
-                    {
-                        continue;
+                        foundFrame = true;
+                        break;
                     }
-
-                    ticks = ArrayUtils.add(ticks, tick);
                 }
             }
 
-            for (int e = 0; e < ticks.length; e++)
+            if (foundFrame)
             {
-                double d = ticks[e];
-
-                double zoomFactor = this.getWidth() / getZoom();
-                g.drawImage(
-                        image,
-                        (int) ((d + getHScroll()) * zoomFactor - xImageOffset),
-                        (index * ROW_HEIGHT) - ROW_HEIGHT_OFFSET - yImageOffset - getVScroll(),
-                        null);
+                break;
             }
+        }
+
+        if (!foundFrame && !shiftKey)
+        {
+            setSelectedKeyFrames(new KeyFrame[0]);
         }
     }
 }
