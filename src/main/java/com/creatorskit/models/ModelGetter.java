@@ -419,15 +419,20 @@ public class ModelGetter
                     Thread thread = new Thread(() ->
                     {
                         NPCComposition composition = npc.getTransformedComposition();
+                        NpcOverrides overrides = npc.getModelOverrides();
 
                         ModelStats[] modelStats;
-                        if (composition == null)
+                        if (overrides != null)
                         {
-                            modelStats = dataFinder.findModelsForNPC(npc.getId());
+                            modelStats = dataFinder.findModelsForNPC(npc.getId(), overrides);
+                        }
+                        else if (composition != null)
+                        {
+                            modelStats = dataFinder.findModelsForNPC(npc.getId(), composition);
                         }
                         else
                         {
-                            modelStats = dataFinder.findModelsForNPC(npc.getId(), composition);
+                            modelStats = dataFinder.findModelsForNPC(npc.getId());
                         }
 
                         if (modelStats == null || modelStats.length == 0)
