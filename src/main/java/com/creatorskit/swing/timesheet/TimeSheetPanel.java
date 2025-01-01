@@ -14,7 +14,6 @@ import com.creatorskit.swing.timesheet.sheets.TimeSheet;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.Client;
-import net.runelite.api.GameState;
 import net.runelite.api.events.GameTick;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.EventBus;

@@ -16,6 +16,7 @@ import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 @Getter
 @Setter
@@ -164,7 +165,7 @@ public class SummarySheet extends TimeSheet
     }
 
     @Override
-    public void updateKeyFrameClicked(boolean shiftDown)
+    public void updateKeyFrameOnPressed(boolean shiftDown)
     {
         KeyFrame[] clickedKeyFrames = getClickedKeyFrames();
         if (clickedKeyFrames.length == 0)
@@ -199,17 +200,30 @@ public class SummarySheet extends TimeSheet
 
         KeyFrame[] keyFramesClicked = new KeyFrame[0];
 
-        int index = (int) (ROW_HEIGHT_OFFSET + getVScroll() + point.getY() / ROW_HEIGHT);
-        DefaultMutableTreeNode node = nodes.get(index);
-        if (node.getUserObject() instanceof Character)
+        int index = -2;
+
+        for (DefaultMutableTreeNode node : nodes)
         {
+            index++;
+
+            TreePath path = tree.getPathForRow(index);
+            if (path == null)
+            {
+                continue;
+            }
+
+            if (node.getUserObject() instanceof Folder)
+            {
+                continue;
+            }
+
             Character character = (Character) node.getUserObject();
             KeyFrame[] keyFrames = character.getKeyFrames(keyFrameType);
             for (KeyFrame keyFrame : keyFrames)
             {
                 int x1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
                 int x2 = x1 + image.getWidth();
-                int y1 = ROW_HEIGHT_OFFSET + ROW_HEIGHT + ROW_HEIGHT * index - yImageOffset;
+                int y1 = (index * ROW_HEIGHT) - ROW_HEIGHT_OFFSET - yImageOffset - getVScroll();
                 int y2 = y1 + image.getHeight();
 
                 if (point.getX() >= x1 && point.getX() <= x2)
@@ -226,79 +240,15 @@ public class SummarySheet extends TimeSheet
     }
 
     @Override
-    public void updateKeyFrameClicked(Point point, boolean shiftKey)
+    public void updateKeyFrameOnRelease(Point point, boolean shiftKey)
     {
-        if (getSelectedCharacter() == null)
+        KeyFrame[] clickedKeyFrames = getClickedKeyFrames();
+        if (clickedKeyFrames.length == 0)
         {
+            setSelectedKeyFrames(new KeyFrame[0]);
             return;
         }
 
-        BufferedImage image = getKeyframeImage();
-        int yImageOffset = (image.getHeight() - ROW_HEIGHT) / 2;
-        int xImageOffset = image.getWidth() / 2;
-        double zoomFactor = this.getWidth() / getZoom();
-
-        boolean foundFrame = false;
-        KeyFrame[][] frames = getSelectedCharacter().getFrames();
-        for (int i = 0; i < frames.length; i++)
-        {
-            KeyFrame[] keyFrames = frames[i];
-            if (keyFrames == null)
-            {
-                continue;
-            }
-
-            for (int e = 0; e < keyFrames.length; e++)
-            {
-                KeyFrame keyFrame = keyFrames[e];
-                int x1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
-                int x2 = x1 + image.getWidth();
-                int y1 = ROW_HEIGHT_OFFSET + ROW_HEIGHT + ROW_HEIGHT * i - yImageOffset;
-                int y2 = y1 + image.getHeight();
-
-                if (point.getX() >= x1 && point.getX() <= x2)
-                {
-                    if (point.getY() >= y1 && point.getY() <= y2)
-                    {
-                        if (shiftKey)
-                        {
-                            KeyFrame[] selectedKeyFrames = getSelectedKeyFrames();
-                            boolean alreadyContains = false;
-
-                            for (KeyFrame kf : selectedKeyFrames)
-                            {
-                                if (kf == keyFrame)
-                                {
-                                    alreadyContains = true;
-                                    break;
-                                }
-                            }
-
-                            if (!alreadyContains)
-                            {
-                                setSelectedKeyFrames(ArrayUtils.add(getSelectedKeyFrames(), keyFrame));
-                            }
-                        }
-                        else
-                        {
-                            setSelectedKeyFrames(new KeyFrame[]{keyFrame});
-                        }
-
-                        foundFrame = true;
-                        break;
-                    }
-                }
-            }
-
-            if (foundFrame)
-            {
-                break;
-            }
-        }
-
-        if (!foundFrame && !shiftKey)
-        {
-            setSelectedKeyFrames(new KeyFrame[0]);
-        }
+        setSelectedKeyFrames(clickedKeyFrames);
     }
 }
