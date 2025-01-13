@@ -131,7 +131,7 @@ public class AttributeSheet extends TimeSheet
     }
 
     @Override
-    public void updateKeyFrameOnPressed(boolean shiftDown)
+    public void updateSelectedKeyFrameOnPressed(boolean shiftDown)
     {
         KeyFrame[] clickedKeyFrames = getClickedKeyFrames();
         if (clickedKeyFrames.length == 0)
@@ -198,7 +198,7 @@ public class AttributeSheet extends TimeSheet
     }
 
     @Override
-    public void updateKeyFrameOnRelease(Point point, boolean shiftKey)
+    public void updateSelectedKeyFrameOnRelease(Point point, boolean shiftKey)
     {
         if (getSelectedCharacter() == null)
         {

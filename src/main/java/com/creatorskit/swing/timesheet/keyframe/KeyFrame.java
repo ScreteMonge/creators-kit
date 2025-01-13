@@ -37,6 +37,15 @@ public class KeyFrame
                     kf.getIdleLAnim());
         }
 
+        if (keyFrame instanceof OrientationKeyFrame)
+        {
+            OrientationKeyFrame kf = (OrientationKeyFrame) keyFrame;
+            return new OrientationKeyFrame(
+                    tick,
+                    kf.getManualOrientation(),
+                    kf.isManualOverride());
+        }
+
         if (keyFrame instanceof SpawnKeyFrame)
         {
             SpawnKeyFrame kf = (SpawnKeyFrame) keyFrame;
@@ -45,13 +54,56 @@ public class KeyFrame
                     kf.isSpawnActive());
         }
 
-        if (keyFrame instanceof OrientationKeyFrame)
+        if (keyFrame instanceof ModelKeyFrame)
         {
-            OrientationKeyFrame kf = (OrientationKeyFrame) keyFrame;
-            return new OrientationKeyFrame(
+            ModelKeyFrame kf = (ModelKeyFrame) keyFrame;
+            return new ModelKeyFrame(
                     tick,
-                    kf.getManualOrientation(),
-                    kf.isManualOverride());
+                    kf.isUseCustomModel(),
+                    kf.getModelId(),
+                    kf.getCustomModel());
+        }
+
+        if (keyFrame instanceof TextKeyFrame)
+        {
+            TextKeyFrame kf = (TextKeyFrame) keyFrame;
+            return new TextKeyFrame(
+                    tick,
+                    kf.isEnabled(),
+                    kf.getText(),
+                    kf.getHeight());
+        }
+
+        if (keyFrame instanceof OverheadKeyFrame)
+        {
+            OverheadKeyFrame kf = (OverheadKeyFrame) keyFrame;
+            return new OverheadKeyFrame(
+                    tick,
+                    kf.isEnabled(),
+                    kf.getHeadIcon(),
+                    kf.getHeight());
+        }
+
+        if (keyFrame instanceof HealthKeyFrame)
+        {
+            HealthKeyFrame kf = (HealthKeyFrame) keyFrame;
+            return new HealthKeyFrame(
+                    tick,
+                    kf.isEnabled(),
+                    kf.getHitsplatType(),
+                    kf.getHitsplatHeight(),
+                    kf.getMaxHealth(),
+                    kf.getCurrentHealth(),
+                    kf.getHealthbarHeight());
+        }
+
+        if (keyFrame instanceof SpotAnimKeyFrame)
+        {
+            SpotAnimKeyFrame kf = (SpotAnimKeyFrame) keyFrame;
+            return new SpotAnimKeyFrame(
+                    tick,
+                    kf.getSpotAnimId1(),
+                    kf.getSpotAnimId2());
         }
 
         return null;

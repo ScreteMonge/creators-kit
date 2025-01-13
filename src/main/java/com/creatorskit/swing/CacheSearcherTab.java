@@ -8,7 +8,6 @@ import com.creatorskit.models.datatypes.NPCData;
 import com.creatorskit.models.datatypes.ObjectData;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
-import net.runelite.api.Item;
 import net.runelite.api.Model;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
@@ -837,8 +836,8 @@ public class CacheSearcherTab extends JPanel
                     7699,
                     customModel,
                     true,
-                    false,
                     0,
+                    -1,
                     -1,
                     60,
                     new KeyFrame[KeyFrameType.getTotalFrameTypes()][],
@@ -894,9 +893,9 @@ public class CacheSearcherTab extends JPanel
                     7699,
                     customModel,
                     true,
-                    false,
                     0,
                     data.getAnimationId(),
+                    -1,
                     60,
                     new KeyFrame[KeyFrameType.getTotalFrameTypes()][],
                     creatorsPanel.createEmptyProgram(data.getAnimationId(), data.getAnimationId()),
@@ -951,9 +950,9 @@ public class CacheSearcherTab extends JPanel
                     7699,
                     customModel,
                     true,
-                    false,
                     0,
                     data.getStandingAnimation(),
+                    -1,
                     data.getSize() * 60,
                     new KeyFrame[KeyFrameType.getTotalFrameTypes()][],
                     creatorsPanel.createEmptyProgram(data.getStandingAnimation(), data.getWalkingAnimation()),

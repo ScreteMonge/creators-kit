@@ -1,22 +1,18 @@
 package com.creatorskit.swing.timesheet.attributes;
 
+import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameState;
 import com.creatorskit.swing.timesheet.keyframe.SpawnKeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.settings.SpawnToggle;
+import com.creatorskit.swing.timesheet.keyframe.settings.Toggle;
 import lombok.Getter;
-import net.runelite.client.ui.ColorScheme;
 
 import javax.swing.*;
 import java.awt.*;
 
 @Getter
-public class SpawnAttributes
+public class SpawnAttributes extends Attributes
 {
-    private final Color green = new Color(42, 77, 26);
-    private final Color yellow = new Color(91, 80, 29);
-    private final Color red = new Color(101, 66, 29);
-
-    private final JComboBox<SpawnToggle> spawn = new JComboBox<>();
+    private final JComboBox<Toggle> spawn = new JComboBox<>();
 
     public SpawnAttributes()
     {
@@ -24,31 +20,20 @@ public class SpawnAttributes
         spawn.setOpaque(true);
     }
 
-    public void setAttributes(SpawnKeyFrame kf)
+    @Override
+    public void setAttributes(KeyFrame keyFrame)
     {
-        spawn.setSelectedItem(kf.isSpawnActive() ? SpawnToggle.SPAWN_ACTIVE : SpawnToggle.SPAWN_INACTIVE);
+        SpawnKeyFrame kf = (SpawnKeyFrame) keyFrame;
+        spawn.setSelectedItem(kf.isSpawnActive() ? Toggle.ENABLE : Toggle.DISABLE);
     }
 
-    public void setBackgroundColours(KeyFrameState keyFrameState)
+    @Override
+    public void setBackgroundColours(Color color)
     {
-        Color color;
-
-        switch (keyFrameState)
-        {
-            default:
-            case EMPTY:
-                color = ColorScheme.DARKER_GRAY_COLOR;
-                break;
-            case ON_KEYFRAME:
-                color = yellow;
-                break;
-            case OFF_KEYFRAME:
-                color = green;
-        }
-
-        spawn.setBackground(color);
+       spawn.setBackground(color);
     }
 
+    @Override
     public JComponent[] getAllComponents()
     {
         return new JComponent[]
@@ -57,17 +42,19 @@ public class SpawnAttributes
                 };
     }
 
+    @Override
     public void addChangeListeners()
     {
         spawn.addItemListener(e ->
         {
-            spawn.setBackground(red.brighter());
+            spawn.setBackground(getRed().brighter());
         });
     }
 
+    @Override
     public void resetAttributes()
     {
-        spawn.setSelectedItem(SpawnToggle.SPAWN_ACTIVE);
+        spawn.setSelectedItem(Toggle.ENABLE);
         setBackgroundColours(KeyFrameState.EMPTY);
     }
 }

@@ -76,8 +76,8 @@ public class TimeSheetPanel extends JPanel
     private final String MODEL_CARD = "Model";
     private final String TEXT_CARD = "Text";
     private final String OVER_CARD = "Overhead";
-    private final String HITS_CARD = "Hitsplat";
-    private final String HEALTH_CARD = "Healthbar";
+    private final String HEALTH_CARD = "Health";
+    private final String SPOTANIM_CARD = "SpotAnim";
     private final String LABEL_OFFSET = "  ";
     private JLabel[] labels = new JLabel[0];
 
@@ -481,8 +481,8 @@ public class TimeSheetPanel extends JPanel
         summaryComboBox.addItem(KeyFrameType.ORIENTATION);
         summaryComboBox.addItem(KeyFrameType.TEXT);
         summaryComboBox.addItem(KeyFrameType.OVERHEAD);
-        summaryComboBox.addItem(KeyFrameType.HITSPLAT);
-        summaryComboBox.addItem(KeyFrameType.HEALTHBAR);
+        summaryComboBox.addItem(KeyFrameType.HEALTH);
+        summaryComboBox.addItem(KeyFrameType.SPOTANIM);
 
         summaryComboBox.addItemListener(e -> summaryKeyFrameType = (KeyFrameType) summaryComboBox.getSelectedItem());
     }
@@ -617,8 +617,8 @@ public class TimeSheetPanel extends JPanel
         labels[5].setText(MODEL_CARD + LABEL_OFFSET);
         labels[6].setText(TEXT_CARD + LABEL_OFFSET);
         labels[7].setText(OVER_CARD + LABEL_OFFSET);
-        labels[8].setText(HITS_CARD + LABEL_OFFSET);
-        labels[9].setText(HEALTH_CARD + LABEL_OFFSET);
+        labels[8].setText(HEALTH_CARD + LABEL_OFFSET);
+        labels[9].setText(SPOTANIM_CARD + LABEL_OFFSET);
     }
 
     private void setupScrollBar()

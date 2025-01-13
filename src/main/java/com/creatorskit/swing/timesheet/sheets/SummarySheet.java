@@ -83,8 +83,8 @@ public class SummarySheet extends TimeSheet
                 case ORIENTATION:
                 case TEXT:
                 case OVERHEAD:
-                case HITSPLAT:
-                case HEALTHBAR:
+                case HEALTH:
+                case SPOTANIM:
                     KeyFrame[] keyFrames = character.getKeyFrames(keyFrameType);
                     drawFrameIcons(g, keyFrames, image, index, xImageOffset, yImageOffset);
             }
@@ -165,7 +165,7 @@ public class SummarySheet extends TimeSheet
     }
 
     @Override
-    public void updateKeyFrameOnPressed(boolean shiftDown)
+    public void updateSelectedKeyFrameOnPressed(boolean shiftDown)
     {
         KeyFrame[] clickedKeyFrames = getClickedKeyFrames();
         if (clickedKeyFrames.length == 0)
@@ -174,13 +174,17 @@ public class SummarySheet extends TimeSheet
         }
 
         KeyFrame[] selectedKeyFrames = getSelectedKeyFrames();
-        if (shiftDown)
+        KeyFrame clickedKeyFrame = clickedKeyFrames[0];
+        if (Arrays.stream(selectedKeyFrames).noneMatch(n -> n == clickedKeyFrame))
         {
-            setSelectedKeyFrames(ArrayUtils.addAll(selectedKeyFrames, clickedKeyFrames));
-        }
-        else
-        {
-            setSelectedKeyFrames(clickedKeyFrames);
+            if (shiftDown)
+            {
+                setSelectedKeyFrames(ArrayUtils.add(selectedKeyFrames, clickedKeyFrame));
+            }
+            else
+            {
+                setSelectedKeyFrames(new KeyFrame[]{clickedKeyFrame});
+            }
         }
     }
 
@@ -240,15 +244,79 @@ public class SummarySheet extends TimeSheet
     }
 
     @Override
-    public void updateKeyFrameOnRelease(Point point, boolean shiftKey)
+    public void updateSelectedKeyFrameOnRelease(Point point, boolean shiftKey)
     {
-        KeyFrame[] clickedKeyFrames = getClickedKeyFrames();
-        if (clickedKeyFrames.length == 0)
+        BufferedImage image = getKeyframeImage();
+        int yImageOffset = (image.getHeight() - ROW_HEIGHT) / 2;
+        int xImageOffset = image.getWidth() / 2;
+        double zoomFactor = this.getWidth() / getZoom();
+
+        KeyFrameType keyFrameType = getToolBox().getTimeSheetPanel().getSummaryKeyFrameType();
+
+        ArrayList<DefaultMutableTreeNode> nodes = new ArrayList<>();
+        nodes.add(tree.getRootNode());
+        tree.getAllNodes(tree.getRootNode(), nodes);
+
+        KeyFrame[] keyFramesClicked = new KeyFrame[0];
+
+        int index = -2;
+
+        for (DefaultMutableTreeNode node : nodes)
         {
-            setSelectedKeyFrames(new KeyFrame[0]);
-            return;
+            index++;
+
+            TreePath path = tree.getPathForRow(index);
+            if (path == null)
+            {
+                continue;
+            }
+
+            if (node.getUserObject() instanceof Folder)
+            {
+                continue;
+            }
+
+            Character character = (Character) node.getUserObject();
+            KeyFrame[] keyFrames = character.getKeyFrames(keyFrameType);
+            for (KeyFrame keyFrame : keyFrames)
+            {
+                int x1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
+                int x2 = x1 + image.getWidth();
+                int y1 = (index * ROW_HEIGHT) - ROW_HEIGHT_OFFSET - yImageOffset - getVScroll();
+                int y2 = y1 + image.getHeight();
+
+                if (point.getX() >= x1 && point.getX() <= x2)
+                {
+                    if (point.getY() >= y1 && point.getY() <= y2)
+                    {
+                        if (shiftKey)
+                        {
+                            KeyFrame[] selectedKeyFrames = getSelectedKeyFrames();
+                            boolean alreadyContains = false;
+
+                            for (KeyFrame kf : selectedKeyFrames)
+                            {
+                                if (kf == keyFrame)
+                                {
+                                    alreadyContains = true;
+                                    break;
+                                }
+                            }
+
+                            if (!alreadyContains)
+                            {
+                                keyFramesClicked = ArrayUtils.add(keyFramesClicked, keyFrame);
+                            }
+                        }
+                        else
+                        {
+                            keyFramesClicked = ArrayUtils.add(keyFramesClicked, keyFrame);
+                        }
+                    }
+                }
+            }
         }
 
-        setSelectedKeyFrames(clickedKeyFrames);
+        setSelectedKeyFrames(keyFramesClicked);
     }
 }

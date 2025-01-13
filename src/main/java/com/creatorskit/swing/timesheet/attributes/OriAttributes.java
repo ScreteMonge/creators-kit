@@ -1,22 +1,17 @@
 package com.creatorskit.swing.timesheet.attributes;
 
+import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameState;
 import com.creatorskit.swing.timesheet.keyframe.OrientationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.settings.OrientationToggle;
-import com.creatorskit.swing.timesheet.keyframe.settings.SpawnToggle;
 import lombok.Getter;
-import net.runelite.client.ui.ColorScheme;
 
 import javax.swing.*;
 import java.awt.*;
 
 @Getter
-public class OriAttributes
+public class OriAttributes extends Attributes
 {
-    private final Color green = new Color(42, 77, 26);
-    private final Color yellow = new Color(91, 80, 29);
-    private final Color red = new Color(101, 66, 29);
-
     private final JSpinner manual = new JSpinner();
     private final JComboBox<OrientationToggle> manualOverride = new JComboBox<>();
 
@@ -25,33 +20,21 @@ public class OriAttributes
         addChangeListeners();
     }
 
-    public void setAttributes(OrientationKeyFrame kf)
+    @Override
+    public void setAttributes(KeyFrame keyFrame)
     {
+        OrientationKeyFrame kf = (OrientationKeyFrame) keyFrame;
         manual.setValue(kf.getManualOrientation());
         manualOverride.setSelectedItem(kf.isManualOverride() ? OrientationToggle.MANUAL_ORIENTATION : OrientationToggle.SMART_ORIENTATION);
     }
 
-    public void setBackgroundColours(KeyFrameState keyFrameState)
+    public void setBackgroundColours(Color color)
     {
-        Color color;
-
-        switch (keyFrameState)
-        {
-            default:
-            case EMPTY:
-                color = ColorScheme.DARKER_GRAY_COLOR;
-                break;
-            case ON_KEYFRAME:
-                color = yellow;
-                break;
-            case OFF_KEYFRAME:
-                color = green;
-        }
-
         manual.setBackground(color);
         manualOverride.setBackground(color);
     }
 
+    @Override
     public JComponent[] getAllComponents()
     {
         return new JComponent[]
@@ -61,19 +44,21 @@ public class OriAttributes
                 };
     }
 
+    @Override
     public void addChangeListeners()
     {
         manual.addChangeListener(e ->
         {
-            manual.setBackground(red);
+            manual.setBackground(getRed());
         });
 
         manualOverride.addItemListener(e ->
         {
-            manualOverride.setBackground(red);
+            manualOverride.setBackground(getRed());
         });
     }
 
+    @Override
     public void resetAttributes()
     {
         manual.setValue(0);

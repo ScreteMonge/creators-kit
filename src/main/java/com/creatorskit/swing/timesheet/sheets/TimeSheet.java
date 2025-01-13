@@ -392,7 +392,7 @@ public class TimeSheet extends JPanel
         });
     }
 
-    public void updateKeyFrameOnPressed(boolean shiftDown)
+    public void updateSelectedKeyFrameOnPressed(boolean shiftDown)
     {
 
     }
@@ -433,7 +433,7 @@ public class TimeSheet extends JPanel
                 if (keyFrameClicked)
                 {
                     allowRectangleSelect = false;
-                    updateKeyFrameOnPressed(e.isShiftDown());
+                    updateSelectedKeyFrameOnPressed(e.isShiftDown());
                 }
             }
 
@@ -453,9 +453,9 @@ public class TimeSheet extends JPanel
 
                 if (keyFrameClicked)
                 {
-                    if (mousePosition.distance(mousePointOnPressed) < 10)
+                    if (mousePosition.distance(mousePointOnPressed) < 1)
                     {
-                        updateKeyFrameOnRelease(mousePosition, e.isShiftDown());
+                        updateSelectedKeyFrameOnRelease(mousePosition, e.isShiftDown());
                     }
                     else
                     {
@@ -608,7 +608,7 @@ public class TimeSheet extends JPanel
         return new KeyFrame[0];
     }
 
-    public void updateKeyFrameOnRelease(Point point, boolean shiftKey)
+    public void updateSelectedKeyFrameOnRelease(Point point, boolean shiftKey)
     {
 
     }

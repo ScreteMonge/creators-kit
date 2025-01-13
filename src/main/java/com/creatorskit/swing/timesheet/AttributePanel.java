@@ -1,19 +1,17 @@
 package com.creatorskit.swing.timesheet;
 
 import com.creatorskit.Character;
+import com.creatorskit.models.CustomModel;
 import com.creatorskit.models.DataFinder;
 import com.creatorskit.models.datatypes.NPCData;
 import com.creatorskit.programming.Direction;
 import com.creatorskit.swing.AutoCompletion;
-import com.creatorskit.swing.timesheet.attributes.AnimAttributes;
-import com.creatorskit.swing.timesheet.attributes.OriAttributes;
-import com.creatorskit.swing.timesheet.attributes.SpawnAttributes;
+import com.creatorskit.swing.timesheet.attributes.*;
 import com.creatorskit.swing.timesheet.keyframe.*;
-import com.creatorskit.swing.timesheet.keyframe.settings.AnimationToggle;
-import com.creatorskit.swing.timesheet.keyframe.settings.OrientationToggle;
-import com.creatorskit.swing.timesheet.keyframe.settings.SpawnToggle;
+import com.creatorskit.swing.timesheet.keyframe.settings.*;
 import lombok.Getter;
 import lombok.Setter;
+import net.runelite.api.HeadIcon;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
@@ -51,8 +49,8 @@ public class AttributePanel extends JPanel
     private final String MODEL_CARD = "Model";
     private final String TEXT_CARD = "Text";
     private final String OVER_CARD = "Overhead";
-    private final String HITS_CARD = "Hitsplat";
-    private final String HEALTH_CARD = "Healthbar";
+    private final String HEALTH_CARD = "Health";
+    private final String SPOTANIM_CARD = "SpotAnim";
 
     private KeyFrameType hoveredKeyFrameType;
     private Component hoveredComponent;
@@ -61,6 +59,11 @@ public class AttributePanel extends JPanel
     private final AnimAttributes animAttributes = new AnimAttributes();
     private final OriAttributes oriAttributes = new OriAttributes();
     private final SpawnAttributes spawnAttributes = new SpawnAttributes();
+    private final ModelAttributes modelAttributes = new ModelAttributes();
+    private final TextAttributes textAttributes = new TextAttributes();
+    private final OverheadAttributes overheadAttributes = new OverheadAttributes();
+    private final HealthAttributes healthAttributes = new HealthAttributes();
+    private final SpotAnimAttributes spotAnimAttributes = new SpotAnimAttributes();
 
     @Inject
     public AttributePanel(TimeSheetPanel timeSheetPanel, DataFinder dataFinder)
@@ -126,8 +129,8 @@ public class AttributePanel extends JPanel
         JPanel modelCard = new JPanel();
         JPanel textCard = new JPanel();
         JPanel overCard = new JPanel();
-        JPanel hitsCard = new JPanel();
         JPanel healthCard = new JPanel();
+        JPanel spotanimCard = new JPanel();
         cardPanel.add(moveCard, MOVE_CARD);
         cardPanel.add(animCard, ANIM_CARD);
         cardPanel.add(oriCard, ORI_CARD);
@@ -135,13 +138,18 @@ public class AttributePanel extends JPanel
         cardPanel.add(modelCard, MODEL_CARD);
         cardPanel.add(textCard, TEXT_CARD);
         cardPanel.add(overCard, OVER_CARD);
-        cardPanel.add(hitsCard, HITS_CARD);
         cardPanel.add(healthCard, HEALTH_CARD);
+        cardPanel.add(spotanimCard, SPOTANIM_CARD);
 
         setupMoveCard(moveCard);
         setupAnimCard(animCard);
         setupOriCard(oriCard);
         setupSpawnCard(spawnCard);
+        setupModelCard(modelCard);
+        setupTextCard(textCard);
+        setupOverheadCard(overCard);
+        setupHealthCard(healthCard);
+        setupSpotAnimCard(spotanimCard);
 
         setupKeyListeners();
     }
@@ -171,24 +179,54 @@ public class AttributePanel extends JPanel
                         (int) animAttributes.getIdleRight().getValue(),
                         (int) animAttributes.getIdleLeft().getValue()
                 );
-            case SPAWN:
-                return new SpawnKeyFrame(
-                        timeSheetPanel.getCurrentTime(),
-                        spawnAttributes.getSpawn().getSelectedItem() == SpawnToggle.SPAWN_ACTIVE
-                );
-            case MODEL:
-                break;
             case ORIENTATION:
                 return new OrientationKeyFrame(
                         timeSheetPanel.getCurrentTime(),
                         (int) oriAttributes.getManual().getValue(),
                         oriAttributes.getManualOverride().getSelectedItem() == OrientationToggle.MANUAL_ORIENTATION
                 );
+            case SPAWN:
+                return new SpawnKeyFrame(
+                        timeSheetPanel.getCurrentTime(),
+                        spawnAttributes.getSpawn().getSelectedItem() == Toggle.ENABLE
+                );
+            case MODEL:
+                return new ModelKeyFrame(
+                        timeSheetPanel.getCurrentTime(),
+                        modelAttributes.getModelOverride().getSelectedItem() == ModelToggle.CUSTOM_MODEL,
+                        (int) modelAttributes.getModelId().getValue(),
+                        (CustomModel) modelAttributes.getCustomModel().getSelectedItem()
+                );
             case TEXT:
+                return new TextKeyFrame(
+                        timeSheetPanel.getCurrentTime(),
+                        textAttributes.getEnableBox().getSelectedItem() == Toggle.ENABLE,
+                        textAttributes.getText().getText(),
+                        (int) textAttributes.getHeight().getValue()
+                );
             case OVERHEAD:
-            case HITSPLAT:
-            case HEALTHBAR:
-                break;
+                return new OverheadKeyFrame(
+                        timeSheetPanel.getCurrentTime(),
+                        overheadAttributes.getEnableBox().getSelectedItem() == Toggle.ENABLE,
+                        (HeadIcon) overheadAttributes.getHeadIcon().getSelectedItem(),
+                        (int) overheadAttributes.getHeight().getValue()
+                );
+            case HEALTH:
+                return new HealthKeyFrame(
+                        timeSheetPanel.getCurrentTime(),
+                        healthAttributes.getEnableBox().getSelectedItem() == Toggle.ENABLE,
+                        (HitsplatType) healthAttributes.getHitsplatType().getSelectedItem(),
+                        (int) healthAttributes.getHitsplatHeight().getValue(),
+                        (int) healthAttributes.getMaxHealth().getValue(),
+                        (int) healthAttributes.getCurrentHealth().getValue(),
+                        (int) healthAttributes.getHealthbarHeight().getValue()
+                );
+            case SPOTANIM:
+                return new SpotAnimKeyFrame(
+                        timeSheetPanel.getCurrentTime(),
+                        (int) spotAnimAttributes.getSpotAnimId1().getValue(),
+                        (int) spotAnimAttributes.getSpotAnimId2().getValue()
+                );
         }
 
         return null;
@@ -569,7 +607,7 @@ public class AttributePanel extends JPanel
         c.fill = GridBagConstraints.HORIZONTAL;
         c.insets = new Insets(2, 2, 2, 2);
 
-        c.gridwidth = 1;
+        c.gridwidth = 4;
         c.gridheight = 1;
         c.weightx = 0;
         c.weighty = 0;
@@ -592,11 +630,464 @@ public class AttributePanel extends JPanel
 
         c.gridx = 0;
         c.gridy = 1;
-        JComboBox<SpawnToggle> manualCheckbox = spawnAttributes.getSpawn();
+        JComboBox<Toggle> manualCheckbox = spawnAttributes.getSpawn();
         manualCheckbox.setFocusable(false);
-        manualCheckbox.addItem(SpawnToggle.SPAWN_ACTIVE);
-        manualCheckbox.addItem(SpawnToggle.SPAWN_INACTIVE);
+        manualCheckbox.addItem(Toggle.ENABLE);
+        manualCheckbox.addItem(Toggle.DISABLE);
         card.add(manualCheckbox, c);
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.weightx = 1;
+        c.weighty = 1;
+        c.gridx = 8;
+        c.gridy = 15;
+        JLabel empty1 = new JLabel("");
+        card.add(empty1, c);
+    }
+
+    public void setupModelCard(JPanel card)
+    {
+        Dimension spinnerSize = new Dimension(90, 25);
+        card.setLayout(new GridBagLayout());
+        card.setBorder(new EmptyBorder(4, 4, 4, 4));
+        card.setFocusable(true);
+        addMouseFocusListener(card);
+
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(2, 2, 2, 2);
+
+        c.gridwidth = 4;
+        c.gridheight = 1;
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 0;
+        JPanel manualTitlePanel = new JPanel();
+        manualTitlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        card.add(manualTitlePanel, c);
+
+        JLabel manualTitle = new JLabel("Model");
+        manualTitle.setHorizontalAlignment(SwingConstants.LEFT);
+        manualTitle.setFont(FontManager.getRunescapeBoldFont());
+        manualTitlePanel.add(manualTitle);
+
+        JLabel manualTitleHelp = new JLabel(new ImageIcon(HELP));
+        manualTitleHelp.setHorizontalAlignment(SwingConstants.LEFT);
+        manualTitleHelp.setBorder(new EmptyBorder(0, 4, 0, 4));
+        manualTitleHelp.setToolTipText("<html>Switch between using a 3D model based on the Model Id from the cache," +
+                "<br>or a Custom Model that you've grabbed from the environment or created in the Model Anvil</html>");
+        manualTitlePanel.add(manualTitleHelp);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 1;
+        JLabel idLabel = new JLabel("Model Id: ");
+        idLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(idLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 1;
+        JSpinner id = modelAttributes.getModelId();
+        id.setValue(-1);
+        id.setPreferredSize(spinnerSize);
+        card.add(id, c);
+
+        c.gridwidth = 2;
+        c.gridx = 2;
+        c.gridy = 1;
+        JComboBox<ModelToggle> toggleComboBox = modelAttributes.getModelOverride();
+        toggleComboBox.setFocusable(false);
+        toggleComboBox.addItem(ModelToggle.MODEL_ID);
+        toggleComboBox.addItem(ModelToggle.CUSTOM_MODEL);
+        card.add(toggleComboBox, c);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 2;
+        JLabel customLabel = new JLabel("Custom Model: ");
+        customLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(customLabel, c);
+
+        c.gridwidth = 2;
+        c.gridx = 1;
+        c.gridy = 2;
+        JComboBox<CustomModel> customComboBox = modelAttributes.getCustomModel();
+        customComboBox.setFocusable(false);
+        //customComboBox.addItem(ModelToggle.MODEL_ID);
+        card.add(customComboBox, c);
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.weightx = 1;
+        c.weighty = 1;
+        c.gridx = 8;
+        c.gridy = 15;
+        JLabel empty1 = new JLabel("");
+        card.add(empty1, c);
+    }
+
+    private void setupTextCard(JPanel card)
+    {
+        Dimension spinnerSize = new Dimension(90, 25);
+        card.setLayout(new GridBagLayout());
+        card.setBorder(new EmptyBorder(4, 4, 4, 4));
+        card.setFocusable(true);
+        addMouseFocusListener(card);
+
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(2, 2, 2, 2);
+
+        c.gridwidth = 4;
+        c.gridheight = 1;
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 0;
+        JPanel manualTitlePanel = new JPanel();
+        manualTitlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        card.add(manualTitlePanel, c);
+
+        JLabel manualTitle = new JLabel("Overhead Text");
+        manualTitle.setHorizontalAlignment(SwingConstants.LEFT);
+        manualTitle.setFont(FontManager.getRunescapeBoldFont());
+        manualTitlePanel.add(manualTitle);
+
+        JLabel manualTitleHelp = new JLabel(new ImageIcon(HELP));
+        manualTitleHelp.setHorizontalAlignment(SwingConstants.LEFT);
+        manualTitleHelp.setBorder(new EmptyBorder(0, 4, 0, 4));
+        manualTitleHelp.setToolTipText("Set the text to display over this Object's head");
+        manualTitlePanel.add(manualTitleHelp);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 1;
+        JComboBox<Toggle> toggleComboBox = textAttributes.getEnableBox();
+        toggleComboBox.setFocusable(false);
+        toggleComboBox.addItem(Toggle.DISABLE);
+        toggleComboBox.addItem(Toggle.ENABLE);
+        card.add(toggleComboBox, c);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 2;
+        JLabel textLabel = new JLabel("Overhead Text: ");
+        textLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(textLabel, c);
+
+        c.weightx = 1;
+        c.gridwidth = 2;
+        c.gridx = 1;
+        c.gridy = 2;
+        JTextArea text = textAttributes.getText();
+        text.setText("");
+        text.setLineWrap(true);
+        card.add(text, c);
+
+        c.weightx = 0;
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 3;
+        JLabel heightLabel = new JLabel("Height: ");
+        heightLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(heightLabel, c);
+
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.gridy = 3;
+        JSpinner height = textAttributes.getHeight();
+        height.setValue(60);
+        card.add(height, c);
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.weightx = 1;
+        c.weighty = 1;
+        c.gridx = 8;
+        c.gridy = 15;
+        JLabel empty1 = new JLabel("");
+        card.add(empty1, c);
+    }
+
+    private void setupOverheadCard(JPanel card)
+    {
+        Dimension spinnerSize = new Dimension(90, 25);
+        card.setLayout(new GridBagLayout());
+        card.setBorder(new EmptyBorder(4, 4, 4, 4));
+        card.setFocusable(true);
+        addMouseFocusListener(card);
+
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(2, 2, 2, 2);
+
+        c.gridwidth = 4;
+        c.gridheight = 1;
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 0;
+        JPanel manualTitlePanel = new JPanel();
+        manualTitlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        card.add(manualTitlePanel, c);
+
+        JLabel manualTitle = new JLabel("Overhead Prayer");
+        manualTitle.setHorizontalAlignment(SwingConstants.LEFT);
+        manualTitle.setFont(FontManager.getRunescapeBoldFont());
+        manualTitlePanel.add(manualTitle);
+
+        JLabel manualTitleHelp = new JLabel(new ImageIcon(HELP));
+        manualTitleHelp.setHorizontalAlignment(SwingConstants.LEFT);
+        manualTitleHelp.setBorder(new EmptyBorder(0, 4, 0, 4));
+        manualTitleHelp.setToolTipText("Set the prayer icon to display over this Object's head");
+        manualTitlePanel.add(manualTitleHelp);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 1;
+        JComboBox<Toggle> toggleComboBox = overheadAttributes.getEnableBox();
+        toggleComboBox.setFocusable(false);
+        toggleComboBox.addItem(Toggle.DISABLE);
+        toggleComboBox.addItem(Toggle.ENABLE);
+        card.add(toggleComboBox, c);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 2;
+        JLabel textLabel = new JLabel("Overhead Icon: ");
+        textLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(textLabel, c);
+
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.gridy = 2;
+        JComboBox<HeadIcon> headIconBox = overheadAttributes.getHeadIcon();
+        headIconBox.setFocusable(false);
+        headIconBox.addItem(HeadIcon.MAGIC);
+        headIconBox.addItem(HeadIcon.RANGED);
+        headIconBox.addItem(HeadIcon.MELEE);
+        headIconBox.addItem(HeadIcon.REDEMPTION);
+        headIconBox.addItem(HeadIcon.RETRIBUTION);
+        headIconBox.addItem(HeadIcon.SMITE);
+        headIconBox.addItem(HeadIcon.RANGE_MAGE);
+        headIconBox.addItem(HeadIcon.RANGE_MELEE);
+        headIconBox.addItem(HeadIcon.MAGE_MELEE);
+        headIconBox.addItem(HeadIcon.RANGE_MAGE_MELEE);
+        headIconBox.addItem(HeadIcon.DEFLECT_MAGE);
+        headIconBox.addItem(HeadIcon.DEFLECT_RANGE);
+        headIconBox.addItem(HeadIcon.DEFLECT_MELEE);
+        headIconBox.addItem(HeadIcon.SOUL_SPLIT);
+        headIconBox.addItem(HeadIcon.WRATH);
+        card.add(headIconBox, c);
+
+        c.weightx = 0;
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 3;
+        JLabel heightLabel = new JLabel("Height: ");
+        heightLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(heightLabel, c);
+
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.gridy = 3;
+        JSpinner height = overheadAttributes.getHeight();
+        height.setValue(60);
+        card.add(height, c);
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.weightx = 1;
+        c.weighty = 1;
+        c.gridx = 8;
+        c.gridy = 15;
+        JLabel empty1 = new JLabel("");
+        card.add(empty1, c);
+    }
+
+    private void setupHealthCard(JPanel card)
+    {
+        Dimension spinnerSize = new Dimension(90, 25);
+        card.setLayout(new GridBagLayout());
+        card.setBorder(new EmptyBorder(4, 4, 4, 4));
+        card.setFocusable(true);
+        addMouseFocusListener(card);
+
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(2, 2, 2, 2);
+
+        c.gridwidth = 4;
+        c.gridheight = 1;
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 0;
+        JPanel manualTitlePanel = new JPanel();
+        manualTitlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        card.add(manualTitlePanel, c);
+
+        JLabel manualTitle = new JLabel("Healthbar & Hitsplats");
+        manualTitle.setHorizontalAlignment(SwingConstants.LEFT);
+        manualTitle.setFont(FontManager.getRunescapeBoldFont());
+        manualTitlePanel.add(manualTitle);
+
+        JLabel manualTitleHelp = new JLabel(new ImageIcon(HELP));
+        manualTitleHelp.setHorizontalAlignment(SwingConstants.LEFT);
+        manualTitleHelp.setBorder(new EmptyBorder(0, 4, 0, 4));
+        manualTitleHelp.setToolTipText("Set the healthbar and hitsplats for this Object");
+        manualTitlePanel.add(manualTitleHelp);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 1;
+        JComboBox<Toggle> toggleComboBox = healthAttributes.getEnableBox();
+        toggleComboBox.setFocusable(false);
+        toggleComboBox.addItem(Toggle.DISABLE);
+        toggleComboBox.addItem(Toggle.ENABLE);
+        card.add(toggleComboBox, c);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 2;
+        JLabel textLabel = new JLabel("Hitsplat Icon: ");
+        textLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(textLabel, c);
+
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.gridy = 2;
+        JComboBox<HitsplatType> hitsplatComboBox = healthAttributes.getHitsplatType();
+        hitsplatComboBox.setFocusable(false);
+        hitsplatComboBox.addItem(HitsplatType.DAMAGE);
+        hitsplatComboBox.addItem(HitsplatType.BLOCK);
+        card.add(hitsplatComboBox, c);
+
+        c.weightx = 0;
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 3;
+        JLabel hitsplatHeightLabel = new JLabel("Hitsplat Height: ");
+        hitsplatHeightLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(hitsplatHeightLabel, c);
+
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.gridy = 3;
+        JSpinner hitsplatHeight = healthAttributes.getHitsplatHeight();
+        hitsplatHeight.setValue(30);
+        card.add(hitsplatHeight, c);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 4;
+        JLabel maxHealthLabel = new JLabel("Max Health: ");
+        maxHealthLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(maxHealthLabel, c);
+
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.gridy = 4;
+        JSpinner maxHealth = healthAttributes.getMaxHealth();
+        maxHealth.setValue(99);
+        card.add(maxHealth, c);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 5;
+        JLabel currentHealthLabel = new JLabel("Current Health: ");
+        currentHealthLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(currentHealthLabel, c);
+
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.gridy = 5;
+        JSpinner currentHealth = healthAttributes.getCurrentHealth();
+        currentHealth.setValue(99);
+        card.add(currentHealth, c);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 6;
+        JLabel healthbarHeightLabel = new JLabel("Healthbar Height: ");
+        healthbarHeightLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(healthbarHeightLabel, c);
+
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.gridy = 6;
+        JSpinner healthbarHeight = healthAttributes.getHealthbarHeight();
+        healthbarHeight.setValue(60);
+        card.add(healthbarHeight, c);
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.weightx = 1;
+        c.weighty = 1;
+        c.gridx = 8;
+        c.gridy = 15;
+        JLabel empty1 = new JLabel("");
+        card.add(empty1, c);
+    }
+
+    private void setupSpotAnimCard(JPanel card)
+    {
+        Dimension spinnerSize = new Dimension(90, 25);
+        card.setLayout(new GridBagLayout());
+        card.setBorder(new EmptyBorder(4, 4, 4, 4));
+        card.setFocusable(true);
+        addMouseFocusListener(card);
+
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(2, 2, 2, 2);
+
+        c.gridwidth = 4;
+        c.gridheight = 1;
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 0;
+        JPanel manualTitlePanel = new JPanel();
+        manualTitlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        card.add(manualTitlePanel, c);
+
+        JLabel manualTitle = new JLabel("SpotAnim");
+        manualTitle.setHorizontalAlignment(SwingConstants.LEFT);
+        manualTitle.setFont(FontManager.getRunescapeBoldFont());
+        manualTitlePanel.add(manualTitle);
+
+        JLabel manualTitleHelp = new JLabel(new ImageIcon(HELP));
+        manualTitleHelp.setHorizontalAlignment(SwingConstants.LEFT);
+        manualTitleHelp.setBorder(new EmptyBorder(0, 4, 0, 4));
+        manualTitleHelp.setToolTipText("Set the SpotAnim (like spell effects) to play on the Object");
+        manualTitlePanel.add(manualTitleHelp);
+
+        c.weightx = 0;
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 1;
+        JLabel spotAnim1Label = new JLabel("SpotAnim 1: ");
+        spotAnim1Label.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(spotAnim1Label, c);
+
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.gridy = 1;
+        JSpinner spotAnim1 = spotAnimAttributes.getSpotAnimId1();
+        spotAnim1.setValue(-1);
+        card.add(spotAnim1, c);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 2;
+        JLabel spotAnim2Label = new JLabel("SpotAnim 2: ");
+        spotAnim2Label.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(spotAnim2Label, c);
+
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.gridy = 2;
+        JSpinner spotAnim2 = spotAnimAttributes.getSpotAnimId2();
+        spotAnim2.setValue(-1);
+        card.add(spotAnim2, c);
 
         c.gridwidth = 1;
         c.gridheight = 1;
@@ -638,11 +1129,11 @@ public class AttributePanel extends JPanel
             case OVER_CARD:
                 selectedKeyFramePage = KeyFrameType.OVERHEAD;
                 break;
-            case HITS_CARD:
-                selectedKeyFramePage = KeyFrameType.HITSPLAT;
-                break;
             case HEALTH_CARD:
-                selectedKeyFramePage = KeyFrameType.HEALTHBAR;
+                selectedKeyFramePage = KeyFrameType.HEALTH;
+                break;
+            case SPOTANIM_CARD:
+                selectedKeyFramePage = KeyFrameType.SPOTANIM;
         }
 
         JLabel[] labels = timeSheetPanel.getLabels();
@@ -728,6 +1219,61 @@ public class AttributePanel extends JPanel
             }
 
             addHoverListenersWithChildren(c, KeyFrameType.SPAWN);
+        }
+
+        for (JComponent c : modelAttributes.getAllComponents())
+        {
+            if (c instanceof JComboBox)
+            {
+                addHoverListeners(c, KeyFrameType.MODEL);
+                continue;
+            }
+
+            addHoverListenersWithChildren(c, KeyFrameType.MODEL);
+        }
+
+        for (JComponent c : textAttributes.getAllComponents())
+        {
+            if (c instanceof JComboBox)
+            {
+                addHoverListeners(c, KeyFrameType.TEXT);
+                continue;
+            }
+
+            addHoverListenersWithChildren(c, KeyFrameType.TEXT);
+        }
+
+        for (JComponent c : overheadAttributes.getAllComponents())
+        {
+            if (c instanceof JComboBox)
+            {
+                addHoverListeners(c, KeyFrameType.OVERHEAD);
+                continue;
+            }
+
+            addHoverListenersWithChildren(c, KeyFrameType.OVERHEAD);
+        }
+
+        for (JComponent c : healthAttributes.getAllComponents())
+        {
+            if (c instanceof JComboBox)
+            {
+                addHoverListeners(c, KeyFrameType.HEALTH);
+                continue;
+            }
+
+            addHoverListenersWithChildren(c, KeyFrameType.HEALTH);
+        }
+
+        for (JComponent c : spotAnimAttributes.getAllComponents())
+        {
+            if (c instanceof JComboBox)
+            {
+                addHoverListeners(c, KeyFrameType.SPOTANIM);
+                continue;
+            }
+
+            addHoverListenersWithChildren(c, KeyFrameType.SPOTANIM);
         }
     }
 
@@ -816,10 +1362,19 @@ public class AttributePanel extends JPanel
                         spawnAttributes.setBackgroundColours(KeyFrameState.EMPTY);
                         break;
                     case MODEL:
+                        modelAttributes.setBackgroundColours(KeyFrameState.EMPTY);
+                        break;
                     case TEXT:
+                        textAttributes.setBackgroundColours(KeyFrameState.EMPTY);
+                        break;
                     case OVERHEAD:
-                    case HITSPLAT:
-                    case HEALTHBAR:
+                        overheadAttributes.setBackgroundColours(KeyFrameState.EMPTY);
+                        break;
+                    case HEALTH:
+                        healthAttributes.setBackgroundColours(KeyFrameState.EMPTY);
+                        break;
+                    case SPOTANIM:
+                        spotAnimAttributes.setBackgroundColours(KeyFrameState.EMPTY);
                         break;
                 }
 
@@ -835,23 +1390,36 @@ public class AttributePanel extends JPanel
             case MOVEMENT:
                 break;
             case ANIMATION:
-                animAttributes.setAttributes((AnimationKeyFrame) keyFrame);
+                animAttributes.setAttributes(keyFrame);
                 animAttributes.setBackgroundColours(keyFrameState);
                 break;
             case ORIENTATION:
-                oriAttributes.setAttributes((OrientationKeyFrame) keyFrame);
+                oriAttributes.setAttributes(keyFrame);
                 oriAttributes.setBackgroundColours(keyFrameState);
                 break;
             case SPAWN:
-                spawnAttributes.setAttributes((SpawnKeyFrame) keyFrame);
+                spawnAttributes.setAttributes(keyFrame);
                 spawnAttributes.setBackgroundColours(keyFrameState);
                 break;
             case MODEL:
-            case TEXT:
-            case OVERHEAD:
-            case HITSPLAT:
-            case HEALTHBAR:
+                modelAttributes.setAttributes(keyFrame);
+                modelAttributes.setBackgroundColours(keyFrameState);
                 break;
+            case TEXT:
+                textAttributes.setAttributes(keyFrame);
+                textAttributes.setBackgroundColours(keyFrameState);
+                break;
+            case OVERHEAD:
+                overheadAttributes.setAttributes(keyFrame);
+                overheadAttributes.setBackgroundColours(keyFrameState);
+                break;
+            case HEALTH:
+                healthAttributes.setAttributes(keyFrame);
+                healthAttributes.setBackgroundColours(keyFrameState);
+                break;
+            case SPOTANIM:
+                spotAnimAttributes.setAttributes(keyFrame);
+                spotAnimAttributes.setBackgroundColours(keyFrameState);
         }
     }
 
@@ -872,11 +1440,19 @@ public class AttributePanel extends JPanel
                 spawnAttributes.resetAttributes();
                 break;
             case MODEL:
-            case TEXT:
-            case OVERHEAD:
-            case HITSPLAT:
-            case HEALTHBAR:
+                modelAttributes.resetAttributes();
                 break;
+            case TEXT:
+                textAttributes.resetAttributes();
+                break;
+            case OVERHEAD:
+                overheadAttributes.resetAttributes();
+                break;
+            case HEALTH:
+                healthAttributes.resetAttributes();
+                break;
+            case SPOTANIM:
+                spotAnimAttributes.resetAttributes();
         }
     }
 

@@ -22,12 +22,12 @@ public class CharacterSave
     private boolean inInstance;
     private int compId;
     private boolean customMode;
-    private boolean minimized;
     private int modelId;
     private boolean active;
     private int radius;
     private int rotation;
     private int animationId;
+    private int frame;
     private ProgramComp programComp;
     private KeyFrame[][] keyFrames;
 }

@@ -46,6 +46,7 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -78,8 +79,6 @@ public class CreatorsPanel extends PluginPanel
     private final Dimension spinnerSize = new Dimension(72, 30);
     private final Dimension BUTTON_SIZE = new Dimension(25, 25);
     private final int DEFAULT_TURN_SPEED = 40;
-    private final BufferedImage MAXIMIZE = ImageUtil.loadImageResource(getClass(), "/Maximize.png");
-    private final BufferedImage MINIMIZE = ImageUtil.loadImageResource(getClass(), "/Minimize.png");
     private final BufferedImage SWITCH = ImageUtil.loadImageResource(getClass(), "/Switch.png");
     private final BufferedImage DUPLICATE = ImageUtil.loadImageResource(getClass(), "/Duplicate.png");
     private final BufferedImage CLOSE = ImageUtil.loadImageResource(getClass(), "/Close.png");
@@ -230,8 +229,8 @@ public class CreatorsPanel extends PluginPanel
                 7699,
                 null,
                 false,
-                false,
                 0,
+                -1,
                 -1,
                 60,
                 new KeyFrame[KeyFrameType.getTotalFrameTypes()][0],
@@ -245,9 +244,9 @@ public class CreatorsPanel extends PluginPanel
                               int modelId,
                               CustomModel customModel,
                               boolean customModeActive,
-                              boolean setMinimized,
                               int orientation,
                               int animationId,
+                              int frame,
                               int radius,
                               KeyFrame[][] keyFrames,
                               Program program,
@@ -284,12 +283,6 @@ public class CreatorsPanel extends PluginPanel
         duplicateButton.setToolTipText("Duplicate object");
         duplicateButton.setFocusable(false);
 
-        ImageIcon minimize = new ImageIcon(MINIMIZE);
-        ImageIcon maximize = new ImageIcon(MAXIMIZE);
-        JButton minimizeButton = new JButton(minimize);
-        minimizeButton.setToolTipText("Minimize");
-        minimizeButton.setFocusable(false);
-
         JButton deleteButton = new JButton(new ImageIcon(CLOSE));
         deleteButton.setToolTipText("Delete object");
         deleteButton.setFocusable(false);
@@ -308,18 +301,24 @@ public class CreatorsPanel extends PluginPanel
         spawnButton.setToolTipText("Toggle the NPC on or off");
         spawnButton.setFocusable(false);
 
-        JButton relocateButton = new JButton();
-        relocateButton.setFont(FontManager.getRunescapeFont());
-        relocateButton.setText("Relocate");
-        relocateButton.setToolTipText("Set the object's location to the selected tile");
-        relocateButton.setFocusable(false);
-
         JButton animationButton = new JButton();
         animationButton.setFont(FontManager.getRunescapeFont());
         animationButton.setText("Anim Off");
         animationButton.setToolTipText("Toggle the playing animation");
         animationButton.setPreferredSize(new Dimension(90, 25));
         animationButton.setFocusable(false);
+
+        JPanel framePanel = new JPanel();
+        framePanel.setLayout(new BorderLayout());
+
+        JLabel frameLabel = new JLabel("Frame: ");
+        frameLabel.setToolTipText("The animation frame to freeze on");
+        frameLabel.setFont(FontManager.getRunescapeSmallFont());
+        //framePanel.add(frameLabel, BorderLayout.LINE_START);
+
+        JSpinner animationFrameSpinner = new JSpinner(new SpinnerNumberModel(frame, -1, 999, 1));
+        animationFrameSpinner.setPreferredSize(new Dimension(60, 25));
+        //framePanel.add(animationFrameSpinner, BorderLayout.CENTER);
 
         //Labels
         JLabel modelLabel = new JLabel("Model ID:");
@@ -368,25 +367,6 @@ public class CreatorsPanel extends PluginPanel
         JSpinner animationSpinner = new JSpinner();
         animationSpinner.setValue(animationId);
 
-        if (setMinimized)
-        {
-            relocateButton.setVisible(false);
-            modelButton.setVisible(false);
-            modelLabel.setVisible(false);
-            modelSpinner.setVisible(false);
-            modelComboBox.setVisible(false);
-            spawnButton.setVisible(false);
-            orientationLabel.setVisible(false);
-            orientationSpinner.setVisible(false);
-            animationButton.setVisible(false);
-            animationLabel.setVisible(false);
-            animationSpinner.setVisible(false);
-            radiusLabel.setVisible(false);
-            radiusSpinner.setVisible(false);
-            minimizeButton.setIcon(maximize);
-            minimizeButton.setToolTipText("Maximize");
-        }
-
         SwingUtilities.invokeLater(() ->
         {
             GridBagConstraints c = new GridBagConstraints();
@@ -405,7 +385,6 @@ public class CreatorsPanel extends PluginPanel
             objectPanel.add(topButtonsPanel, c);
             topButtonsPanel.add(switchButton);
             topButtonsPanel.add(duplicateButton);
-            topButtonsPanel.add(minimizeButton);
             topButtonsPanel.add(deleteButton);
 
             c.ipadx = 0;
@@ -420,10 +399,10 @@ public class CreatorsPanel extends PluginPanel
             objectPanel.add(spawnButton, c);
 
             c.gridy++;
-            objectPanel.add(relocateButton, c);
+            objectPanel.add(animationButton, c);
 
             c.gridy++;
-            objectPanel.add(animationButton, c);
+            objectPanel.add(framePanel, c);
 
             c.fill = GridBagConstraints.NONE;
             c.anchor = GridBagConstraints.LINE_END;
@@ -473,7 +452,6 @@ public class CreatorsPanel extends PluginPanel
                 textField.getText(),
                 active,
                 worldPoint != null || localPoint != null,
-                setMinimized,
                 keyFrames,
                 null,
                 null,
@@ -493,6 +471,7 @@ public class CreatorsPanel extends PluginPanel
                 modelButton,
                 modelSpinner,
                 animationSpinner,
+                animationFrameSpinner,
                 orientationSpinner,
                 radiusSpinner,
                 programmerNameLabel,
@@ -539,57 +518,6 @@ public class CreatorsPanel extends PluginPanel
 
         duplicateButton.addActionListener(e -> onDuplicatePressed(character, false));
 
-        minimizeButton.addActionListener(e ->
-        {
-            if (!character.isMinimized())
-            {
-                relocateButton.setVisible(false);
-                modelButton.setVisible(false);
-                modelLabel.setVisible(false);
-                modelSpinner.setVisible(false);
-                modelComboBox.setVisible(false);
-                spawnButton.setVisible(false);
-                orientationLabel.setVisible(false);
-                orientationSpinner.setVisible(false);
-                animationButton.setVisible(false);
-                animationLabel.setVisible(false);
-                animationSpinner.setVisible(false);
-                radiusLabel.setVisible(false);
-                radiusSpinner.setVisible(false);
-                minimizeButton.setIcon(maximize);
-                character.setMinimized(true);
-                minimizeButton.setToolTipText("Maximize");
-                objectPanel.updateUI();
-                return;
-            }
-
-            relocateButton.setVisible(true);
-            modelButton.setVisible(true);
-            modelLabel.setVisible(true);
-            if (character.isCustomMode())
-            {
-                modelComboBox.setVisible(true);
-            }
-            else
-            {
-                modelSpinner.setVisible(true);
-            }
-
-            spawnButton.setVisible(true);
-            orientationLabel.setVisible(true);
-            orientationSpinner.setVisible(true);
-            animationButton.setVisible(true);
-            animationLabel.setVisible(true);
-            animationSpinner.setVisible(true);
-            radiusLabel.setVisible(true);
-            radiusSpinner.setVisible(true);
-            minimizeButton.setIcon(minimize);
-            character.setMinimized(false);
-            minimizeButton.setToolTipText("Minimize");
-            objectPanel.updateUI();
-        });
-
-
         objectPanel.addMouseListener(new MouseAdapter()
         {
             @Override
@@ -614,7 +542,7 @@ public class CreatorsPanel extends PluginPanel
             }
         });
 
-        relocateButton.addActionListener(e -> plugin.setLocation(character, !character.isLocationSet(), false, false, false));
+        //relocateButton.addActionListener(e -> plugin.setLocation(character, !character.isLocationSet(), false, false, false));
 
         spawnButton.addActionListener(e -> plugin.toggleSpawn(spawnButton, character));
 
@@ -704,12 +632,12 @@ public class CreatorsPanel extends PluginPanel
                 textField,
                 topButtonsPanel,
                 duplicateButton,
-                minimizeButton,
                 deleteButton,
                 modelButton,
                 spawnButton,
-                relocateButton,
                 animationButton,
+                animationFrameSpinner,
+                frameLabel,
                 modelLabel,
                 orientationLabel,
                 radiusLabel,
@@ -736,12 +664,12 @@ public class CreatorsPanel extends PluginPanel
             JTextField textField,
             JPanel topButtonsPanel,
             JButton duplicateButton,
-            JButton minimizeButton,
             JButton deleteButton,
             JButton modelButton,
             JButton spawnButton,
-            JButton relocateButton,
             JButton animationButton,
+            JSpinner animationFrameSpinner,
+            JLabel frameLabel,
             JLabel modelLabel,
             JLabel orientationLabel,
             JLabel radiusLabel,
@@ -756,12 +684,12 @@ public class CreatorsPanel extends PluginPanel
         addSelectListeners(textField, character, objectPanel, true);
         addSelectListeners(topButtonsPanel, character, objectPanel, true);
         addSelectListeners(duplicateButton, character, objectPanel, false);
-        addSelectListeners(minimizeButton, character, objectPanel, true);
         addSelectListeners(deleteButton, character, objectPanel, false);
         addSelectListeners(modelButton, character, objectPanel, true);
         addSelectListeners(spawnButton, character, objectPanel, true);
-        addSelectListeners(relocateButton, character, objectPanel, true);
         addSelectListeners(animationButton, character, objectPanel, true);
+        addSelectListeners(animationFrameSpinner, character, objectPanel, true);
+        addSelectListeners(frameLabel, character, objectPanel, true);
         addSelectListeners(modelLabel, character, objectPanel, true);
         addSelectListeners(orientationLabel, character, objectPanel, true);
         addSelectListeners(radiusLabel, character, objectPanel, true);
@@ -941,9 +869,10 @@ public class CreatorsPanel extends PluginPanel
                     finalNewName,
                     (int) character.getModelSpinner().getValue(),
                     (CustomModel) character.getComboBox().getSelectedItem(),
-                    character.isCustomMode(), character.isMinimized(),
+                    character.isCustomMode(),
                     (int) character.getOrientationSpinner().getValue(),
                     (int) character.getAnimationSpinner().getValue(),
+                    (int) character.getAnimationFrameSpinner().getValue(),
                     (int) character.getRadiusSpinner().getValue(),
                     Arrays.copyOf(character.getFrames(), character.getFrames().length),
                     newProgram,
@@ -1349,7 +1278,7 @@ public class CreatorsPanel extends PluginPanel
         //Get Folder structure and all characters contained within
         FolderNodeSave folderNodeSave = getFolders(comps);
 
-        SetupSave saveFile = new SetupSave(comps, folderNodeSave, new CharacterSave[0]);
+        SetupSave saveFile = new SetupSave(getPluginVersion(), comps, folderNodeSave, new CharacterSave[0]);
 
         try
         {
@@ -1423,12 +1352,12 @@ public class CreatorsPanel extends PluginPanel
         }
 
         boolean customMode = character.isCustomMode();
-        boolean minimized = character.isMinimized();
         int modelId = (int) character.getModelSpinner().getValue();
         boolean active = character.getRuneLiteObject().isActive();
         int radius = character.getRuneLiteObject().getRadius();
         int rotation = (int) character.getOrientationSpinner().getValue();
         int animationId = (int) character.getAnimationSpinner().getValue();
+        int frame = (int) character.getAnimationFrameSpinner().getValue();
         KeyFrame[][] keyFrames = character.getFrames();
         ProgramComp programComp = character.getProgram().getComp();
 
@@ -1442,12 +1371,12 @@ public class CreatorsPanel extends PluginPanel
                 inInstance,
                 compId,
                 customMode,
-                minimized,
                 modelId,
                 active,
                 radius,
                 rotation,
                 animationId,
+                frame,
                 programComp,
                 keyFrames);
     }
@@ -1532,6 +1461,11 @@ public class CreatorsPanel extends PluginPanel
         CustomModelComp[] comps = saveFile.getComps();
         FolderNodeSave folderNodeSave = saveFile.getMasterFolderNode();
         CustomModel[] customModels = new CustomModel[comps.length];
+        String fileVersion = saveFile.getVersion();
+        if (fileVersion == null || fileVersion.isEmpty())
+        {
+            fileVersion = "1.5.10";
+        }
 
         for (int i = 0; i < comps.length; i++)
         {
@@ -1576,13 +1510,14 @@ public class CreatorsPanel extends PluginPanel
 
         ManagerTree managerTree = toolBox.getManagerPanel().getManagerTree();
         DefaultMutableTreeNode rootNode = managerTree.getRootNode();
-        boolean v1_2Save = folderNodeSave == null;
+
+        final String version = fileVersion;
 
         SwingUtilities.invokeLater(() ->
         {
             if (folderNodeSave != null)
             {
-                openFolderNodeSave(managerTree, rootNode, folderNodeSave, customModels);
+                openFolderNodeSave(version, managerTree, rootNode, folderNodeSave, customModels);
                 sidePanel.repaint();
                 sidePanel.revalidate();
                 managerTree.resetObjectHolder();
@@ -1607,6 +1542,12 @@ public class CreatorsPanel extends PluginPanel
                         customModel = customModels[save.getCompId()];
                     }
 
+                    int animFrame = save.getFrame();
+                    if (isVersionLessThan(version, "1.5.12"))
+                    {
+                        animFrame = -1;
+                    }
+
                     KeyFrame[][] keyFrames = save.getKeyFrames();
                     if (keyFrames == null)
                     {
@@ -1624,9 +1565,9 @@ public class CreatorsPanel extends PluginPanel
                             save.getModelId(),
                             customModel,
                             save.isCustomMode(),
-                            save.isMinimized(),
                             save.getRotation(),
                             save.getAnimationId(),
+                            animFrame,
                             save.getRadius(),
                             keyFrames,
                             program,
@@ -1643,15 +1584,9 @@ public class CreatorsPanel extends PluginPanel
             });
             thread.start();
         }
-
-        if (v1_2Save)
-        {
-            plugin.sendChatMessage("The Setup you loaded appears to be an older version 1.2 Setup");
-            plugin.sendChatMessage("Please re-save this Setup to update it to a newer 1.3 version");
-        }
     }
 
-    private void openFolderNodeSave(ManagerTree managerTree, DefaultMutableTreeNode parentNode, FolderNodeSave folderNodeSave, CustomModel[] customModels)
+    private void openFolderNodeSave(String fileVersion, ManagerTree managerTree, DefaultMutableTreeNode parentNode, FolderNodeSave folderNodeSave, CustomModel[] customModels)
     {
         String name = folderNodeSave.getName();
         DefaultMutableTreeNode node;
@@ -1700,6 +1635,12 @@ public class CreatorsPanel extends PluginPanel
                 customModel = customModels[save.getCompId()];
             }
 
+            int animFrame = save.getFrame();
+            if (isVersionLessThan(fileVersion, "1.5.11"))
+            {
+                animFrame = -1;
+            }
+
             KeyFrame[][] keyFrames = save.getKeyFrames();
             if (keyFrames == null)
             {
@@ -1717,9 +1658,9 @@ public class CreatorsPanel extends PluginPanel
                     save.getModelId(),
                     customModel,
                     save.isCustomMode(),
-                    save.isMinimized(),
                     save.getRotation(),
                     save.getAnimationId(),
+                    animFrame,
                     save.getRadius(),
                     keyFrames,
                     program,
@@ -1737,7 +1678,7 @@ public class CreatorsPanel extends PluginPanel
         FolderNodeSave[] folderNodeSaves = folderNodeSave.getFolderSaves();
         for (FolderNodeSave fns : folderNodeSaves)
         {
-            openFolderNodeSave(managerTree, node, fns, customModels);
+            openFolderNodeSave(fileVersion, managerTree, node, fns, customModels);
         }
     }
 
@@ -1779,5 +1720,70 @@ public class CreatorsPanel extends PluginPanel
             return string;
         String tail = string.substring(lastIndex).replaceFirst(from, "");
         return string.substring(0, lastIndex) + tail;
+    }
+
+    private String getPluginVersion()
+    {
+        try (InputStream is = CreatorsPlugin.class.getResourceAsStream("/version.txt"))
+        {
+            if (is == null)
+            {
+                return "0.0.0";
+            }
+
+            String text = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8)).readLine();
+            String version = text.split("=")[1];
+            is.close();
+            return version;
+        }
+        catch (IOException e)
+        {
+            return "0.0.0";
+        }
+    }
+
+    private boolean isVersionLessThan(String version1, String version2)
+    {
+        String[] split1 = version1.split("\\.");
+        int first1 = Integer.parseInt(split1[0]);
+        int second1 = Integer.parseInt(split1[1]);
+        int third1 = Integer.parseInt(split1[2]);
+
+        String[] split2 = version2.split("\\.");
+        int first2 = Integer.parseInt(split2[0]);
+        int second2 = Integer.parseInt(split2[1]);
+        int third2 = Integer.parseInt(split2[2]);
+
+        if (first1 < first2)
+        {
+            return true;
+        }
+
+        if (first1 > first2)
+        {
+            return false;
+        }
+
+        if (second1 < second2)
+        {
+            return true;
+        }
+
+        if (second1 > second2)
+        {
+            return false;
+        }
+
+        if (third1 < third2)
+        {
+            return true;
+        }
+
+        if (third1 > third2)
+        {
+            return false;
+        }
+
+        return false;
     }
 }

@@ -10,6 +10,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class SetupSave
 {
+    private String version;
     private CustomModelComp[] comps;
     private FolderNodeSave masterFolderNode;
     private CharacterSave[] saves;

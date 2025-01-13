@@ -14,8 +14,8 @@ public enum KeyFrameType
     ORIENTATION("Orientation"),
     TEXT("Text"),
     OVERHEAD("Overhead"),
-    HITSPLAT("Hitsplat"),
-    HEALTHBAR("Healthbar");
+    HEALTH("Healtht"),
+    SPOTANIM("SpotAnim");
 
     private String name;
 
@@ -43,9 +43,9 @@ public enum KeyFrameType
                 return 5;
             case OVERHEAD:
                 return 6;
-            case HITSPLAT:
+            case HEALTH:
                 return 7;
-            case HEALTHBAR:
+            case SPOTANIM:
                 return 8;
         }
     }
@@ -70,9 +70,9 @@ public enum KeyFrameType
             case 6:
                 return OVERHEAD;
             case 7:
-                return HITSPLAT;
+                return HEALTH;
             case 8:
-                return HEALTHBAR;
+                return SPOTANIM;
         }
     }
 

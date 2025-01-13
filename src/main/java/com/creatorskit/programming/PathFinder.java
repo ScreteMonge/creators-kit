@@ -10,7 +10,6 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import javax.inject.Inject;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 
 public class PathFinder

@@ -9,12 +9,9 @@ import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-import net.runelite.api.Client;
-import net.runelite.api.Perspective;
-import net.runelite.api.RuneLiteObject;
+import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
-import net.runelite.api.geometry.SimplePolygon;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.swing.*;
@@ -28,7 +25,6 @@ public class Character
     private String name;
     private boolean active;
     private boolean locationSet;
-    private boolean minimized;
     private KeyFrame[][] frames;
     private DefaultMutableTreeNode linkedManagerNode;
     private DefaultMutableTreeNode parentManagerNode;
@@ -48,6 +44,7 @@ public class Character
     private JButton modelButton;
     private JSpinner modelSpinner;
     private JSpinner animationSpinner;
+    private JSpinner animationFrameSpinner;
     private JSpinner orientationSpinner;
     private JSpinner radiusSpinner;
     private JLabel programmerLabel;
