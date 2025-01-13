@@ -1155,7 +1155,6 @@ public class ModelAnvil extends JPanel
         }
         catch (Exception e)
         {
-            System.out.println("e");
             return new short[0];
         }
 

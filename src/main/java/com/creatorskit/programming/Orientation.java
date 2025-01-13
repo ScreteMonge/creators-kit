@@ -115,7 +115,6 @@ public class Orientation
             return 1792;
         }
 
-        System.out.println("Error: Rotation Translation Failed: " + orientation);
         return 0;
     }
 
