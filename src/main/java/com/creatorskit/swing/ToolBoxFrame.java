@@ -2,6 +2,7 @@ package com.creatorskit.swing;
 
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.DataFinder;
+import com.creatorskit.programming.Programmer;
 import com.creatorskit.swing.manager.ManagerPanel;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
@@ -38,6 +39,7 @@ public class ToolBoxFrame extends JFrame
     private final ProgrammerPanel programPanel;
     private final TransmogPanel transmogPanel;
     private final TimeSheetPanel timeSheetPanel;
+    private final Programmer programmer;
     private final BufferedImage ICON = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
 
     @Inject
@@ -68,10 +70,11 @@ public class ToolBoxFrame extends JFrame
         ManagerTree managerTree = new ManagerTree(this, plugin, objectHolder, managerRootNode, managerSideNode, managerManagerNode);
 
         JScrollBar scrollBar = new JScrollBar(Adjustable.HORIZONTAL);
-        this.timeSheetPanel = new TimeSheetPanel(client, eventBus, this, plugin, clientThread, dataFinder, managerTree, scrollBar);
+        this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, clientThread, dataFinder, managerTree, scrollBar);
         this.managerPanel = new ManagerPanel(client, plugin, objectHolder, managerTree);
         this.cacheSearcher = new CacheSearcherTab(plugin, clientThread, dataFinder);
         this.programPanel = new ProgrammerPanel(client, clientThread, plugin, managerTree);
+        this.programmer = new Programmer(client, plugin, timeSheetPanel);
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setTitle("Creator's Kit Toolbox");
@@ -105,8 +108,15 @@ public class ToolBoxFrame extends JFrame
 
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setFont(FontManager.getRunescapeBoldFont());
-        //tabbedPane.addTab("Timesheet", timeSheetPanel);
-        managerPanel.getTreeScrollPane().setViewportView(managerTree);
+        if (plugin.isTest2_0())
+        {
+            tabbedPane.addTab("Timesheet", timeSheetPanel);
+            timeSheetPanel.getTreeScrollPane().setViewportView(managerTree);
+        }
+        else
+        {
+            managerPanel.getTreeScrollPane().setViewportView(managerTree);
+        }
         tabbedPane.addTab("Manager", managerPanel);
         tabbedPane.addTab("Model Organizer", modelOrganizer);
         tabbedPane.addTab("Model Anvil", modelAnvil);

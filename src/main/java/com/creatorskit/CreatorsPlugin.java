@@ -135,6 +135,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private boolean controlDown = false;
 	private boolean desync = false;
 
+	private boolean test2_0 = false;
+
 	@Override
 	protected void startUp() throws Exception
 	{
@@ -147,7 +149,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				.panel(creatorsPanel)
 				.build();
 
-		creatorsPanel.getTimeSheetPanel().startUp();
+		eventBus.register(creatorsPanel.getToolBox().getProgrammer());
 
 		clientToolbar.addNavigation(navigationButton);
 		overlayManager.add(overlay);
@@ -237,7 +239,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		creatorsPanel.clearSidePanels(false);
 		creatorsPanel.clearManagerPanels();
 
-		creatorsPanel.getTimeSheetPanel().shutDown();
+		eventBus.unregister(creatorsPanel.getToolBox().getProgrammer());
 
 		clientToolbar.removeNavigation(navigationButton);
 		overlayManager.remove(overlay);

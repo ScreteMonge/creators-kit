@@ -65,7 +65,6 @@ public class CreatorsPanel extends PluginPanel
     private final ProgrammerPanel programmerPanel;
     private final TransmogPanel transmogPanel;
     private final ModelImporter modelImporter;
-    private final TimeSheetPanel timeSheetPanel;
 
     private final JButton addObjectButton = new JButton();
     private final JPanel sidePanel = new JPanel();
@@ -105,7 +104,6 @@ public class CreatorsPanel extends PluginPanel
         this.transmogPanel = toolBox.getTransmogPanel();
         this.dataFinder = dataFinder;
         this.modelImporter = modelImporter;
-        this.timeSheetPanel = toolBox.getTimeSheetPanel();
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new GridBagLayout());

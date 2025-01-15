@@ -14,10 +14,7 @@ import com.creatorskit.swing.timesheet.sheets.TimeSheet;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.Client;
-import net.runelite.api.events.GameTick;
 import net.runelite.client.callback.ClientThread;
-import net.runelite.client.eventbus.EventBus;
-import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.util.ImageUtil;
 
@@ -41,7 +38,6 @@ public class TimeSheetPanel extends JPanel
     private Client client;
     private ClientThread clientThread;
     private final CreatorsPlugin plugin;
-    private EventBus eventBus;
     private final GridBagConstraints c = new GridBagConstraints();
     private final ToolBoxFrame toolBox;
     private final DataFinder dataFinder;
@@ -88,7 +84,7 @@ public class TimeSheetPanel extends JPanel
     private double minHScroll = -10;
 
     private double currentTime = 0;
-    private boolean play = false;
+    private boolean playActive = false;
     private boolean pauseScrollBarListener = false;
     private Character selectedCharacter;
     private KeyFrameType summaryKeyFrameType = KeyFrameType.SUMMARY;
@@ -97,10 +93,9 @@ public class TimeSheetPanel extends JPanel
     private KeyFrame[] copiedKeyFrames = new KeyFrame[0];
 
     @Inject
-    public TimeSheetPanel(@Nullable Client client, EventBus eventBus, ToolBoxFrame toolBox, CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, JScrollBar scrollBar)
+    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, JScrollBar scrollBar)
     {
         this.client = client;
-        this.eventBus = eventBus;
         this.toolBox = toolBox;
         this.plugin = plugin;
         this.clientThread = clientThread;
@@ -121,15 +116,6 @@ public class TimeSheetPanel extends JPanel
         setupManager();
         setKeyBindings();
         setMouseListeners();
-    }
-
-    @Subscribe
-    public void onGameTick(GameTick event)
-    {
-        if (play)
-        {
-            setCurrentTime(currentTime + 1);
-        }
     }
 
     public void onSummarySkipForward()
@@ -527,8 +513,8 @@ public class TimeSheetPanel extends JPanel
         playButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
         playButton.addActionListener(e ->
         {
-            play = !play;
-            playButton.setIcon(play ? PAUSE : PLAY);
+            playActive = !playActive;
+            playButton.setIcon(playActive ? PAUSE : PLAY);
         });
 
         JPanel backPanel = new JPanel();
@@ -851,16 +837,6 @@ public class TimeSheetPanel extends JPanel
         }
 
         attributePanel.switchCards(KeyFrameType.getKeyFrameType(index).toString());
-    }
-
-    public void startUp()
-    {
-        eventBus.register(this);
-    }
-
-    public void shutDown()
-    {
-        eventBus.unregister(this);
     }
 
     private void setupManager()
