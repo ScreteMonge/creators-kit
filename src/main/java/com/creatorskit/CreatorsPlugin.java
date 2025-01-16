@@ -546,8 +546,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			LocalPoint localPoint = player.getLocalLocation();
 			transmog.setLocation(localPoint, worldView.getPlane());
 			transmog.setOrientation(player.getCurrentOrientation());
-			if (!transmog.isActive())
-				transmog.setActive(true);
+			transmog.setActive(true);
 
 			int playerAnimation = player.getAnimation();
 			int playerPose = player.getPoseAnimation();
@@ -1055,7 +1054,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 	public void toggleSpawn(JButton spawnButton, Character character)
 	{
-		if (character.getRuneLiteObject().isActive())
+		if (character.isActive())
 		{
 			despawnCharacter(character);
 			spawnButton.setText("Depawn");

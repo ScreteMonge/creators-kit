@@ -874,7 +874,7 @@ public class CreatorsPanel extends PluginPanel
                     (int) character.getRadiusSpinner().getValue(),
                     Arrays.copyOf(character.getFrames(), character.getFrames().length),
                     newProgram,
-                    character.getRuneLiteObject().isActive(),
+                    character.isActive(),
                     character.getNonInstancedPoint(),
                     character.getInstancedPoint(),
                     character.getInstancedRegions(),
@@ -1351,7 +1351,7 @@ public class CreatorsPanel extends PluginPanel
 
         boolean customMode = character.isCustomMode();
         int modelId = (int) character.getModelSpinner().getValue();
-        boolean active = character.getRuneLiteObject().isActive();
+        boolean active = character.isActive();
         int radius = character.getRuneLiteObject().getRadius();
         int rotation = (int) character.getOrientationSpinner().getValue();
         int animationId = (int) character.getAnimationSpinner().getValue();
