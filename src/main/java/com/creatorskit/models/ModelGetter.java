@@ -3,6 +3,7 @@ package com.creatorskit.models;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
+import com.creatorskit.RLObject;
 import com.creatorskit.models.exporters.ModelExporter;
 import com.creatorskit.swing.CreatorsPanel;
 import com.creatorskit.swing.ParentPanel;
@@ -30,14 +31,7 @@ public class ModelGetter
     private final CreatorsPlugin plugin;
     private final DataFinder dataFinder;
     private final ModelExporter modelExporter;
-    private boolean initiateExport = false;
-    private boolean continueAnimExport = false;
-    private RuneLiteObject exportObject;
-    private String exportName;
-    private BlenderModel blenderModelExport;
-    private int[] animFrames;
-    private int[] clientTicks;
-    private int[][][] animVerts;
+    private RLObject exportObject;
 
     @Inject
     public ModelGetter(Client client, CreatorsPanel creatorsPanel, ClientThread clientThread, CreatorsConfig config, CreatorsPlugin plugin, DataFinder dataFinder, ModelExporter modelExporter)
@@ -62,10 +56,10 @@ public class ModelGetter
         for (int i = 0; i < characters.size(); i++)
         {
             Character character = characters.get(i);
-            RuneLiteObject runeLiteObject = character.getRuneLiteObject();
-            if (character.isActive() && runeLiteObject != null)
+            RLObject rlObject = character.getRlObject();
+            if (character.isActive() && rlObject != null)
             {
-                LocalPoint localPoint = runeLiteObject.getLocation();
+                LocalPoint localPoint = rlObject.getLocation();
                 if (localPoint != null && localPoint.equals(tile.getLocalLocation()))
                 {
                     if (config.rightSelect())
@@ -541,12 +535,6 @@ public class ModelGetter
                 .setType(MenuAction.RUNELITE)
                 .onClick(e ->
                 {
-                    if (exportAnimation && continueAnimExport)
-                    {
-                        plugin.sendChatMessage("Please wait for the current animation export to finish before trying again.");
-                        return;
-                    }
-
                     int animId = npc.getAnimation();
                     int poseAnimId = npc.getPoseAnimation();
                     if (animId == -1)
@@ -946,12 +934,6 @@ public class ModelGetter
                 .setType(MenuAction.RUNELITE)
                 .onClick(e ->
                 {
-                    if (exportAnimation && continueAnimExport)
-                    {
-                        plugin.sendChatMessage("Please wait for the current animation export to finish before trying again.");
-                        return;
-                    }
-
                     int animId = player.getAnimation();
                     int poseAnimId = player.getPoseAnimation();
                     if (animId == -1)
@@ -1380,12 +1362,6 @@ public class ModelGetter
                 .setType(MenuAction.RUNELITE)
                 .onClick(e ->
                 {
-                    if (exportAnimation && continueAnimExport)
-                    {
-                        plugin.sendChatMessage("Please wait for the current animation export to finish before trying again.");
-                        return;
-                    }
-
                     if (exportAnimation && animId == -1)
                     {
                         plugin.sendChatMessage("There is no animation currently playing to export.");
@@ -1491,12 +1467,6 @@ public class ModelGetter
                 .setType(MenuAction.RUNELITE)
                 .onClick(e ->
                 {
-                    if (exportAnimation && continueAnimExport)
-                    {
-                        plugin.sendChatMessage("Please wait for the current animation export to finish before trying again.");
-                        return;
-                    }
-
                     int animId = (int) character.getAnimationSpinner().getValue();
 
                     if (exportAnimation && animId == -1)
@@ -1505,7 +1475,7 @@ public class ModelGetter
                         return;
                     }
 
-                    final Model model = character.getRuneLiteObject().getModel();
+                    final Model model = character.getRlObject().getModel();
                     if (config.vertexColours())
                     {
                         BlenderModel bm = modelExporter.bmVertexColours(model);
@@ -1942,81 +1912,70 @@ public class ModelGetter
 
     private void initiateAnimationExport(int animId, String name, Model model, BlenderModel bm)
     {
-        plugin.sendChatMessage("Exporting " + name + ", please stand by as the animation plays...");
-        blenderModelExport = bm;
-        exportName = name;
+        exportObject = new RLObject(client);
+        client.registerRuneLiteObject(exportObject);
 
-        exportObject = client.createRuneLiteObject();
-        exportObject.setAnimation(client.loadAnimation(animId));
+        exportObject.setAnimation(animId);
         exportObject.setModel(model);
-        exportObject.setLocation(client.getLocalPlayer().getLocalLocation(), client.getTopLevelWorldView().getPlane());
         exportObject.setActive(true);
-        continueAnimExport = true;
-        initiateExport = true;
-    }
+        exportObject.setLocation(client.getLocalPlayer().getLocalLocation(), client.getTopLevelWorldView().getPlane());
 
-    public void handleAnimationExport(int clientTick)
-    {
-        if (!continueAnimExport)
+        AnimationController ac = exportObject.getAnimationController();
+        if (ac == null)
         {
-            initiateExport = false;
             return;
         }
 
-        if (blenderModelExport == null || exportObject == null)
+        Animation animation = ac.getAnimation();
+        if (animation == null)
         {
-            initiateExport = false;
-            continueAnimExport = false;
             return;
         }
 
-        if (!exportObject.isActive())
-        {
-            int[] ticks = new int[clientTicks.length];
-            int baseLine = clientTicks[0];
-            for (int i = 0; i < clientTicks.length; i++)
-            {
-                ticks[i] = clientTicks[i] - baseLine;
-            }
-
-            blenderModelExport.setClientTicks(ticks);
-            blenderModelExport.setAnimVertices(animVerts);
-            continueAnimExport = false;
-            modelExporter.saveToFile(exportName, blenderModelExport);
-            return;
-        }
-
-        if (exportObject.getAnimation() == null)
-        {
-            initiateExport = false;
-            continueAnimExport = false;
-            return;
-        }
-
-        Animation animation = exportObject.getAnimation();
-        if (animation.getId() == -1)
-        {
-            initiateExport = false;
-            continueAnimExport = false;
-            return;
-        }
-
-        Model model = exportObject.getModel();
         int vCount = model.getVerticesCount();
-        int frame = exportObject.getAnimationFrame();
 
-        if (initiateExport)
+        int[] clientTicks;
+        if (animation.isMayaAnim())
         {
-            initiateExport = false;
-            animFrames = new int[]{0};
-            clientTicks = new int[]{clientTick};
+            int frames = animation.getNumFrames();
+            clientTicks = new int[frames];
 
-            animVerts = new int[1][model.getVerticesCount()][3];
-            int[][] verts = animVerts[0];
+            for (int i = 0; i < frames; i++)
+            {
+                clientTicks[i] = i;
+            }
+        }
+        else
+        {
+            int[] frameLengths = animation.getFrameLengths();
+            int frames = frameLengths.length;
+            clientTicks = new int[frames];
 
-            float[] fvX = model.getVerticesX();
-            float[] fvY = model.getVerticesY();
-            float[] fvZ = model.getVerticesZ();
+            for (int i = 0; i < frameLengths.length; i++)
+            {
+                int length = 0;
+                for (int e = 0; e <= i; e++)
+                {
+                    length += frameLengths[e];
+                }
+
+                clientTicks[i] = length;
+            }
+        }
+
+        int maxAnimFrames = exportObject.getMaxAnimFrames();
+        int[][][] animVerts = new int[maxAnimFrames][model.getVerticesCount()][3];
+
+        for (int e = 0; e < maxAnimFrames; e++)
+        {
+            exportObject.setAnimationFrame(e, true);
+            Model m = exportObject.getModel();
+
+            int[][] verts = animVerts[e];
+
+            float[] fvX = m.getVerticesX();
+            float[] fvY = m.getVerticesY();
+            float[] fvZ = m.getVerticesZ();
 
             int[] vX = new int[vCount];
             int[] vY = new int[vCount];
@@ -2036,41 +1995,12 @@ public class ModelGetter
                 v[1] = vY[i];
                 v[2] = vZ[i];
             }
-
-            return;
         }
 
-        if (frame == animFrames[animFrames.length - 1])
-        {
-            return;
-        }
+        exportObject.setActive(false);
 
-        int[][] verts = new int[model.getVerticesCount()][3];
-        float[] fvX = model.getVerticesX();
-        float[] fvY = model.getVerticesY();
-        float[] fvZ = model.getVerticesZ();
-
-        int[] vX = new int[vCount];
-        int[] vY = new int[vCount];
-        int[] vZ = new int[vCount];
-
-        for (int i = 0; i < vCount; i++)
-        {
-            vX[i] = (int) fvX[i];
-            vY[i] = (int) fvY[i];
-            vZ[i] = (int) fvZ[i];
-        }
-
-        for (int i = 0; i < verts.length; i++)
-        {
-            int[] v = verts[i];
-            v[0] = vX[i];
-            v[1] = vY[i];
-            v[2] = vZ[i];
-        }
-
-        animFrames = ArrayUtils.add(animFrames, frame);
-        clientTicks = ArrayUtils.add(clientTicks, clientTick);
-        animVerts = ArrayUtils.add(animVerts, verts);
+        bm.setClientTicks(clientTicks);
+        bm.setAnimVertices(animVerts);
+        modelExporter.saveToFile(name, bm);
     }
 }

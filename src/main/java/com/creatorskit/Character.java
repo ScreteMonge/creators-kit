@@ -49,7 +49,7 @@ public class Character
     private JSpinner radiusSpinner;
     private JLabel programmerLabel;
     private JSpinner programmerIdleSpinner;
-    private RuneLiteObject runeLiteObject;
+    private RLObject rlObject;
     private int targetOrientation;
 
     @Override

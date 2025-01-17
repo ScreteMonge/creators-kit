@@ -1,6 +1,7 @@
 package com.creatorskit.swing;
 
 import com.creatorskit.CreatorsPlugin;
+import com.creatorskit.RLObject;
 import com.creatorskit.saves.TransmogLoadOption;
 import com.creatorskit.saves.TransmogSave;
 import com.creatorskit.models.*;
@@ -107,11 +108,11 @@ public class TransmogPanel extends JPanel
         radiusSpinner.setToolTipText("Set the radius of your transmog. 60 is best for an object the size of 1 tile");
         radiusSpinner.addChangeListener(e -> {
             radius = (int) radiusSpinner.getValue();
-            RuneLiteObject runeLiteObject = plugin.getTransmog();
-            if (runeLiteObject == null)
+            RLObject rlObject = plugin.getTransmog();
+            if (rlObject == null)
                 return;
 
-            clientThread.invokeLater(() -> runeLiteObject.setRadius(radius));
+            clientThread.invokeLater(() -> rlObject.setRadius(radius));
         });
         rowHeaderPanel.add(radiusSpinner, c);
 

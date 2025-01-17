@@ -104,24 +104,37 @@ public class ProgrammerPanel extends JPanel
         c.gridy = 0;
         c.weightx = 0;
         c.gridwidth = 1;
-        JButton desyncButton = new JButton("Start Desync");
-        desyncButton.setToolTipText("Starts a Desync process that, every 100 ms, restarts a random Object's animation");
+        JButton desyncButton = new JButton("Desync All Idles");
+        desyncButton.setToolTipText("Deynchronizes the idle animations of all current Objects");
         desyncButton.setPreferredSize(new Dimension(150, 30));
         headerPanel.add(desyncButton, c);
         desyncButton.addActionListener(e ->
         {
-            boolean desync = plugin.isDesync();
-            if (desync)
+            for (Character character : plugin.getCharacters())
             {
-                plugin.setDesync(false);
-                desyncButton.setText("Start Desync");
-                plugin.sendChatMessage("Stopping Desync.");
-                return;
+                int maxAnimFrames = character.getRlObject().getMaxAnimFrames();
+                int animFrame = random.nextInt(maxAnimFrames);
+                plugin.setAnimationFrame(character, animFrame, false);
             }
+        });
 
-            plugin.setDesync(true);
-            desyncButton.setText("Stop Desync");
-            plugin.sendChatMessage("Starting Desync. Remember to stop the Desync while recording!");
+        c.gridx = 4;
+        c.gridy = 0;
+        c.weightx = 0;
+        c.gridwidth = 1;
+        JButton desyncShownIdles = new JButton("Desync Shown Idles");
+        desyncShownIdles.setToolTipText("Deynchronizes the idle animations of all currently shown Objects");
+        desyncShownIdles.setPreferredSize(new Dimension(150, 30));
+        headerPanel.add(desyncShownIdles, c);
+        desyncShownIdles.addActionListener(e ->
+        {
+            Character[] shownCharacters = plugin.getCreatorsPanel().getToolBox().getManagerPanel().getShownCharacters();
+            for (Character character : shownCharacters)
+            {
+                int maxAnimFrames = character.getRlObject().getMaxAnimFrames();
+                int animFrame = random.nextInt(maxAnimFrames);
+                plugin.setAnimationFrame(character, animFrame, false);
+            }
         });
 
         JScrollPane managerScrollPane = new JScrollPane();

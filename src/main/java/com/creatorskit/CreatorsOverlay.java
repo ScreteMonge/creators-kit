@@ -54,11 +54,10 @@ public class CreatorsOverlay extends Overlay
         WorldView worldView = client.getTopLevelWorldView();
         Scene scene = worldView.getScene();
 
-        boolean keyHeld = false;
-        if (config.enableCtrlHotkeys() && client.isKeyPressed(KeyCode.KC_CONTROL))
+        boolean keyHeld = config.enableCtrlHotkeys() && client.isKeyPressed(KeyCode.KC_CONTROL);
+        if (keyHeld)
         {
-            renderSelectedObject(graphics, worldView);
-            keyHeld = true;
+            renderSelectedRLObject(graphics);
         }
 
         if (!plugin.isOverlaysActive())
@@ -66,7 +65,9 @@ public class CreatorsOverlay extends Overlay
             return null;
         }
 
-        renderObjectsOverlay(graphics, keyHeld, worldView);
+        renderRLObjects(graphics, keyHeld);
+
+        renderObjectsOverlay(graphics, worldView);
 
         if (config.pathOverlay())
         {
@@ -264,7 +265,7 @@ public class CreatorsOverlay extends Overlay
         }
     }
 
-    public void renderObjectsOverlay(Graphics2D graphics, boolean keyHeld, WorldView worldView)
+    public void renderObjectsOverlay(Graphics2D graphics, WorldView worldView)
     {
         Scene scene = worldView.getScene();
         Tile[][][] tiles = scene.getTiles();
@@ -289,7 +290,7 @@ public class CreatorsOverlay extends Overlay
 
                 if (config.gameObjectOverlay() || config.myObjectOverlay())
                 {
-                    renderGameObjects(graphics, tile, keyHeld, worldView);
+                    renderGameObjects(graphics, tile, worldView);
                 }
 
                 if (config.groundObjectOverlay())
@@ -310,7 +311,7 @@ public class CreatorsOverlay extends Overlay
         }
     }
 
-    public void renderSelectedObject(Graphics2D graphics, WorldView worldView)
+    public void renderSelectedRLObject(Graphics2D graphics)
     {
         Character character = plugin.getSelectedCharacter();
         if (character == null)
@@ -318,64 +319,77 @@ public class CreatorsOverlay extends Overlay
             return;
         }
 
-        RuneLiteObject runeLiteObject = character.getRuneLiteObject();
-        if (runeLiteObject == null)
+        RLObject rlObject = character.getRlObject();
+        if (rlObject == null)
         {
             return;
         }
 
-        LocalPoint lp = runeLiteObject.getLocation();
+        LocalPoint lp = rlObject.getLocation();
         if (lp == null || !plugin.isInScene(character))
         {
             return;
         }
 
-        Scene scene = worldView.getScene();
-        Tile[][][] tiles = scene.getTiles();
-        int z = worldView.getPlane();
-        Tile tile = tiles[z][lp.getSceneX()][lp.getSceneY()];
-
-        if (tile == null)
+        Point p = Perspective.getCanvasTextLocation(client, graphics, lp, character.getName(), 0);
+        if (p != null)
         {
-            return;
+            OverlayUtil.renderTextLocation(graphics, p, character.getName(), SELECTED_COLOUR);
         }
+    }
 
-        GameObject[] gameObjects = tile.getGameObjects();
-        if (gameObjects == null)
+    public void renderRLObjects(Graphics2D graphics, boolean keyHeld)
+    {
+        for (int i = 0; i < plugin.getCharacters().size(); i++)
         {
-            return;
-        }
-
-        for (GameObject gameObject : gameObjects)
-        {
-            if (gameObject == null)
+            Character character = plugin.getCharacters().get(i);
+            if (!plugin.isInScene(character) || !character.isActive())
             {
                 continue;
             }
 
-            Renderable renderable = gameObject.getRenderable();
-            if (renderable instanceof RuneLiteObject)
+            RLObject rlObject = character.getRlObject();
+            if (rlObject == null)
             {
-                if (renderable == runeLiteObject)
-                {
-                    if (plugin.isOverlaysActive() && !plugin.isMousePressed())
-                    {
-                        OverlayUtil.renderTileOverlay(graphics, gameObject, character.getName(), SELECTED_COLOUR);
-                        return;
-                    }
-
-                    Point p = Perspective.getCanvasTextLocation(client, graphics, lp, character.getName(), 0);
-                    if (p != null)
-                    {
-                        OverlayUtil.renderTextLocation(graphics, p, character.getName(), SELECTED_COLOUR);
-                    }
-                    return;
-                }
+                continue;
             }
+
+            LocalPoint lp = rlObject.getLocation();
+            if (lp == null)
+            {
+                continue;
+            }
+
+            String name = character.getName();
+            Point point = Perspective.getCanvasTextLocation(client, graphics, lp, name, 0);
+
+            if (plugin.getSelectedCharacter() == character)
+            {
+                if (keyHeld)
+                {
+                    continue;
+                }
+
+                OverlayUtil.renderTextLocation(graphics, point, name, SELECTED_COLOUR);
+                continue;
+            }
+
+            if (!config.myObjectOverlay())
+            {
+                continue;
+            }
+
+            if (plugin.getHoveredCharacter() == character)
+            {
+                OverlayUtil.renderTextLocation(graphics, point, name, HOVERED_COLOUR);
+                continue;
+            }
+
+            OverlayUtil.renderTextLocation(graphics, point, name, MY_OBJECT_COLOUR);
         }
     }
 
-    public void renderGameObjects(Graphics2D graphics, Tile tile, boolean keyHeld, WorldView worldView)
+    public void renderGameObjects(Graphics2D graphics, Tile tile, WorldView worldView)
     {
         GameObject[] gameObjects = tile.getGameObjects();
         if (gameObjects != null)
@@ -391,35 +405,8 @@ public class CreatorsOverlay extends Overlay
 
                     StringBuilder stringBuilder = new StringBuilder();
 
-                    if (gameObject.getRenderable() instanceof RuneLiteObject && config.myObjectOverlay())
+                    if (gameObject.getRenderable() instanceof RuneLiteObject)
                     {
-                        RuneLiteObject runeLiteObject = (RuneLiteObject) gameObject.getRenderable();
-                        for (int i = 0; i < plugin.getCharacters().size(); i++)
-                        {
-                            Character character = plugin.getCharacters().get(i);
-                            if (character.getRuneLiteObject() == runeLiteObject)
-                            {
-                                stringBuilder.append(character.getName());
-                                if (plugin.getSelectedCharacter() == character)
-                                {
-                                    if (keyHeld)
-                                    {
-                                        continue;
-                                    }
-
-                                    OverlayUtil.renderTileOverlay(graphics, gameObject, stringBuilder.toString(), SELECTED_COLOUR);
-                                    continue;
-                                }
-
-                                if (plugin.getHoveredCharacter() == character)
-                                {
-                                    OverlayUtil.renderTileOverlay(graphics, gameObject, stringBuilder.toString(), HOVERED_COLOUR);
-                                    continue;
-                                }
-
-                                OverlayUtil.renderTileOverlay(graphics, gameObject, stringBuilder.toString(), MY_OBJECT_COLOUR);
-                            }
-                        }
                         continue;
                     }
 

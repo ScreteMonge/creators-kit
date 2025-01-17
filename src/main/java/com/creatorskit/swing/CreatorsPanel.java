@@ -12,7 +12,6 @@ import com.creatorskit.programming.Program;
 import com.creatorskit.programming.ProgramComp;
 import com.creatorskit.swing.manager.ManagerPanel;
 import com.creatorskit.swing.manager.ManagerTree;
-import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import lombok.Getter;
@@ -309,14 +308,14 @@ public class CreatorsPanel extends PluginPanel
         JPanel framePanel = new JPanel();
         framePanel.setLayout(new BorderLayout());
 
-        JLabel frameLabel = new JLabel("Frame: ");
+        JLabel frameLabel = new JLabel(" Frame: ");
         frameLabel.setToolTipText("The animation frame to freeze on");
         frameLabel.setFont(FontManager.getRunescapeSmallFont());
-        //framePanel.add(frameLabel, BorderLayout.LINE_START);
+        framePanel.add(frameLabel, BorderLayout.LINE_START);
 
         JSpinner animationFrameSpinner = new JSpinner(new SpinnerNumberModel(frame, -1, 999, 1));
         animationFrameSpinner.setPreferredSize(new Dimension(60, 25));
-        //framePanel.add(animationFrameSpinner, BorderLayout.CENTER);
+        framePanel.add(animationFrameSpinner, BorderLayout.CENTER);
 
         //Labels
         JLabel modelLabel = new JLabel("Model ID:");
@@ -540,24 +539,11 @@ public class CreatorsPanel extends PluginPanel
             }
         });
 
-        //relocateButton.addActionListener(e -> plugin.setLocation(character, !character.isLocationSet(), false, false, false));
-
         spawnButton.addActionListener(e -> plugin.toggleSpawn(spawnButton, character));
 
         animationButton.addActionListener(e ->
         {
-            Animation anim = character.getRuneLiteObject().getAnimation();
-
-            if (anim == null)
-            {
-                animationButton.setText("Anim Off");
-                programmerIdleSpinner.setValue((int) animationSpinner.getValue());
-                plugin.setAnimation(character, (int) animationSpinner.getValue());
-                return;
-            }
-
-            int animId = anim.getId();
-
+            int animId = character.getRlObject().getAnimationId();
             if (animId == -1)
             {
                 animationButton.setText("Anim Off");
@@ -615,7 +601,14 @@ public class CreatorsPanel extends PluginPanel
             animationButton.setText("Anim Off");
             int animationNumber = (int) animationSpinner.getValue();
             plugin.setAnimation(character, animationNumber);
+            plugin.setAnimationFrame(character, (int) animationFrameSpinner.getValue(), true);
             programmerIdleSpinner.setValue(animationNumber);
+        });
+
+        animationFrameSpinner.addChangeListener(e ->
+        {
+            int animFrame = (int) animationFrameSpinner.getValue();
+            plugin.setAnimationFrame(character, animFrame, true);
         });
 
         radiusSpinner.addChangeListener(e ->
@@ -891,7 +884,7 @@ public class CreatorsPanel extends PluginPanel
     {
         removePanel(character);
         ArrayList<Character> characters = plugin.getCharacters();
-        clientThread.invokeLater(() -> character.getRuneLiteObject().setActive(false));
+        clientThread.invokeLater(() -> character.getRlObject().setActive(false));
         characters.remove(character);
         if (plugin.getSelectedCharacter() == character)
         {
@@ -906,7 +899,7 @@ public class CreatorsPanel extends PluginPanel
         ArrayList<Character> characters = plugin.getCharacters();
         for (Character c : charactersToRemove)
         {
-            clientThread.invokeLater(() -> c.getRuneLiteObject().setActive(false));
+            clientThread.invokeLater(() -> c.getRlObject().setActive(false));
             characters.remove(c);
             if (c == plugin.getSelectedCharacter())
             {
@@ -1352,7 +1345,7 @@ public class CreatorsPanel extends PluginPanel
         boolean customMode = character.isCustomMode();
         int modelId = (int) character.getModelSpinner().getValue();
         boolean active = character.isActive();
-        int radius = character.getRuneLiteObject().getRadius();
+        int radius = character.getRlObject().getRadius();
         int rotation = (int) character.getOrientationSpinner().getValue();
         int animationId = (int) character.getAnimationSpinner().getValue();
         int frame = (int) character.getAnimationFrameSpinner().getValue();

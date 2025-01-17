@@ -3,6 +3,7 @@ package com.creatorskit.swing;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
+import com.creatorskit.RLObject;
 import com.creatorskit.models.ModelImporter;
 import com.creatorskit.models.*;
 import com.creatorskit.models.exporters.ModelExporter;
@@ -519,17 +520,17 @@ public class ModelOrganizer extends JPanel
 
     public void setTransmog(CustomModel customModel)
     {
-        RuneLiteObject transmog = plugin.getTransmog();
+        RLObject transmog = plugin.getTransmog();
         if (transmog == null)
         {
-            transmog = client.createRuneLiteObject();
+            transmog = new RLObject(client);
+            client.registerRuneLiteObject(transmog);
             plugin.setTransmog(transmog);
         }
 
         plugin.setTransmogModel(customModel);
         plugin.getCreatorsPanel().getTransmogPanel().getTransmogLabel().setText(customModel.getComp().getName());
         transmog.setModel(customModel.getModel());
-        transmog.setShouldLoop(true);
         transmog.setRadius(plugin.getCreatorsPanel().getTransmogPanel().getRadius());
     }
 }

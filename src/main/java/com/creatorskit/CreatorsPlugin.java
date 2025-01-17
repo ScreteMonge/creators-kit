@@ -46,7 +46,6 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
 
@@ -112,11 +111,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private boolean overlaysActive = false;
 	private final ArrayList<Character> characters = new ArrayList<>();
 	private final ArrayList<CustomModel> storedModels = new ArrayList<>();
-	private Animation[] loadedAnimations = new Animation[0];
 	private Character selectedCharacter;
 	private Character hoveredCharacter;
-	private RuneLiteObject transmog;
-	private RuneLiteObject previewObject;
+	private RLObject transmog;
+	private RLObject previewObject;
 	private Model previewArrow;
 	private CustomModel transmogModel;
 	private int savedRegion = -1;
@@ -133,7 +131,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private boolean autoSetupPathFound = true;
 	private boolean autoTransmogFound = true;
 	private boolean controlDown = false;
-	private boolean desync = false;
 
 	private boolean test2_0 = false;
 
@@ -324,40 +321,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 
 		updatePreviewObject(client.getTopLevelWorldView().getSelectedSceneTile());
-		modelGetter.handleAnimationExport(client.getGameCycle());
-
-		if (desync)
-		{
-			int size = characters.size();
-			int meter = 100 / size;
-			if (meter < 2)
-			{
-				meter = 2;
-			}
-
-			if (client.getGameCycle() % meter == 0)
-			{
-				Random random = new Random();
-				int roll = random.nextInt(size);
-				try
-				{
-					Character character = characters.get(roll);
-					RuneLiteObject runeLiteObject = character.getRuneLiteObject();
-					if (runeLiteObject != null)
-					{
-						Animation animation = runeLiteObject.getAnimation();
-						if (animation != null)
-						{
-							setAnimation(character, animation.getId());
-						}
-					}
-				}
-				catch (Exception e)
-				{
-
-				}
-			}
-		}
 
 		switch (autoRotateYaw)
 		{
@@ -385,10 +348,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			Character character = characters.get(i);
 			Program program = character.getProgram();
 			ProgramComp comp = program.getComp();
-			RuneLiteObject runeLiteObject = character.getRuneLiteObject();
+			RLObject rlObject = character.getRlObject();
 			boolean instance = worldView.getScene().isInstance();
 
-			if (runeLiteObject == null)
+			if (rlObject == null)
 				continue;
 
 			if (!isInScene(character))
@@ -396,12 +359,12 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			if (!comp.isProgramActive())
 			{
-				Animation animation = runeLiteObject.getAnimation();
-				if (animation == null)
+				int animId = rlObject.getAnimationId();
+				if (animId == -1)
 					continue;
 
-				if (animation.getId() != comp.getIdleAnim())
-					runeLiteObject.setAnimation(getAnimation(comp.getIdleAnim()));
+				if (animId != comp.getIdleAnim())
+					rlObject.setAnimation(comp.getIdleAnim());
 
 				continue;
 			}
@@ -418,27 +381,28 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					continue;
 				}
 
-				if (runeLiteObject.getAnimation() == null)
+				int animId = rlObject.getAnimationId();
+				if (animId == -1)
 					continue;
 
-				if (runeLiteObject.getAnimation().getId() != comp.getIdleAnim())
-					runeLiteObject.setAnimation(getAnimation(comp.getIdleAnim()));
+				if (animId != comp.getIdleAnim())
+					rlObject.setAnimation(comp.getIdleAnim());
 
 				continue;
 			}
 
-			Animation currentAnim = runeLiteObject.getAnimation();
-			if (currentAnim != null && currentAnim.getId() != comp.getWalkAnim())
+			int currentAnim = rlObject.getAnimationId();;
+			if (currentAnim != -1 && currentAnim != comp.getWalkAnim())
 			{
 				int walkAnimId = comp.getWalkAnim();
 				if (walkAnimId == -1)
 					walkAnimId = comp.getIdleAnim();
 
-				if (currentAnim.getId() != walkAnimId)
-					runeLiteObject.setAnimation(getAnimation(comp.getWalkAnim()));
+				if (currentAnim != walkAnimId)
+					rlObject.setAnimation(comp.getWalkAnim());
 			}
 
-			LocalPoint start = runeLiteObject.getLocation();
+			LocalPoint start = rlObject.getLocation();
 			LocalPoint destination;
 
 			if (instance)
@@ -508,7 +472,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				}
 			}
 
-			int orientation = runeLiteObject.getOrientation();
+			int orientation = rlObject.getOrientation();
 			int targetOrientation = character.getTargetOrientation();
 			int turnSpeed = comp.getTurnSpeed();
 			if (orientation != targetOrientation)
@@ -529,11 +493,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					newOrientation = Orientation.boundOrientation(orientation - turnSpeed);
 				}
 
-				runeLiteObject.setOrientation(newOrientation);
+				rlObject.setOrientation(newOrientation);
 			}
 
 			LocalPoint finalPoint = new LocalPoint(endX, endY, worldView);
-			runeLiteObject.setLocation(finalPoint, worldView.getPlane());
+			rlObject.setLocation(finalPoint, worldView.getPlane());
 		}
 
 		TransmogPanel transmogPanel = creatorsPanel.getTransmogPanel();
@@ -550,11 +514,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			int playerAnimation = player.getAnimation();
 			int playerPose = player.getPoseAnimation();
-			Animation animation = transmog.getAnimation();
+			int animId = transmog.getAnimationId();
 
 			int transmogAnimation = -1;
-			if (animation != null)
-				transmogAnimation = animation.getId();
+			if (animId != -1)
+				transmogAnimation = animId;
 
 			TransmogAnimationMode animationMode = transmogPanel.getTransmogAnimationMode();
 			if (animationMode == TransmogAnimationMode.PLAYER)
@@ -562,7 +526,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				if (playerAnimation == -1)
 				{
 					if (transmogAnimation != playerPose)
-						transmog.setAnimation(getAnimation(playerPose));
+						transmog.setAnimation(playerPose);
 				}
 			}
 
@@ -601,46 +565,46 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					if (pose != -1 && poseAnimation == PoseAnimation.POSE)
 					{
 						if (transmogAnimation != pose)
-							transmog.setAnimation(getAnimation(pose));
+							transmog.setAnimation(pose);
 					}
 					else if (walk != -1 && poseAnimation == PoseAnimation.WALK)
 					{
 						if (transmogAnimation != walk)
-							transmog.setAnimation(getAnimation(walk));
+							transmog.setAnimation(walk);
 					}
 					else if (run != -1 && poseAnimation == PoseAnimation.RUN)
 					{
 						if (transmogAnimation != run)
-							transmog.setAnimation(getAnimation(run));
+							transmog.setAnimation(run);
 					}
 					else if (backwards != -1 && poseAnimation == PoseAnimation.BACKWARDS)
 					{
 						if (transmogAnimation != backwards)
-							transmog.setAnimation(getAnimation(backwards));
+							transmog.setAnimation(backwards);
 					}
 					else if (right != -1 && poseAnimation == PoseAnimation.SHUFFLE_RIGHT)
 					{
 						if (transmogAnimation != right)
-							transmog.setAnimation(getAnimation(right));
+							transmog.setAnimation(right);
 					}
 					else if (left != -1 && poseAnimation == PoseAnimation.SHUFFLE_LEFT)
 					{
 						if (transmogAnimation != left)
-							transmog.setAnimation(getAnimation(left));
+							transmog.setAnimation(left);
 					}
 					else if (rotate != -1 && poseAnimation == PoseAnimation.ROTATE)
 					{
 						if (transmogAnimation != rotate)
-							transmog.setAnimation(getAnimation(rotate));
+							transmog.setAnimation(rotate);
 					}
 					else if (animationMode == TransmogAnimationMode.MODIFIED)
 					{
-						transmog.setAnimation(getAnimation(playerPose));
+						transmog.setAnimation(playerPose);
 					}
 					else
 					{
 						if (transmogAnimation != walk)
-							transmog.setAnimation(getAnimation(walk));
+							transmog.setAnimation(walk);
 					}
 				}
 			}
@@ -666,16 +630,16 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				return;
 
 			int playerAnimation = player.getAnimation();
-			Animation animation = transmog.getAnimation();
+			int animId = transmog.getAnimationId();
 			int transmogAnimation = -1;
-			if (animation != null)
-				transmogAnimation = animation.getId();
+			if (animId != -1)
+				transmogAnimation = animId;
 
 			int action = transmogPanel.getActionAnimation();
 
 			if (animationMode == TransmogAnimationMode.PLAYER && transmogAnimation != playerAnimation)
 			{
-				transmog.setAnimation(getAnimation(playerAnimation));
+				transmog.setAnimation(playerAnimation);
 				return;
 			}
 
@@ -684,19 +648,19 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			{
 				if (swap[0] == player.getAnimation() && transmogAnimation != swap[1])
 				{
-					transmog.setAnimation(getAnimation(swap[1]));
+					transmog.setAnimation(swap[1]);
 					return;
 				}
 			}
 
 			if (animationMode == TransmogAnimationMode.MODIFIED && transmogAnimation != playerAnimation && action == -1)
-				transmog.setAnimation(getAnimation(playerAnimation));
+				transmog.setAnimation(playerAnimation);
 
 			if (animationMode == TransmogAnimationMode.MODIFIED && transmogAnimation != action && action != -1)
-				transmog.setAnimation(getAnimation(action));
+				transmog.setAnimation(action);
 
 			if (animationMode == TransmogAnimationMode.CUSTOM && transmogAnimation != action)
-				transmog.setAnimation(getAnimation(action));
+				transmog.setAnimation(action);
 		}
 	}
 
@@ -748,7 +712,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				transmog.setActive(enableTransmog);
 				if (!enableTransmog)
 				{
-					transmog.setAnimation(getAnimation(-1));
+					transmog.setAnimation(-1);
 				}
 			});
 		}
@@ -961,11 +925,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				updateProgramPath(character.getProgram(), false, false);
 			}
 
-			RuneLiteObject runeLiteObject = character.getRuneLiteObject();
-			runeLiteObject.setActive(false);
-			runeLiteObject.setLocation(localPoint, worldView.getPlane());
-			runeLiteObject.setActive(true);
-			runeLiteObject.setOrientation((int) character.getOrientationSpinner().getValue());
+			RLObject rlObject = character.getRlObject();
+			rlObject.setActive(false);
+			rlObject.setLocation(localPoint, worldView.getPlane());
+			rlObject.setActive(true);
+			rlObject.setOrientation((int) character.getOrientationSpinner().getValue());
 			character.setActive(true);
 			character.getSpawnButton().setText("Spawn");
 		});
@@ -1010,11 +974,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			character.setInstancedRegions(client.getMapRegions());
 			character.setInstancedPlane(worldView.getPlane());
 			updateProgramPath(character.getProgram(), false, true);
-			RuneLiteObject runeLiteObject = character.getRuneLiteObject();
-			runeLiteObject.setActive(false);
-			runeLiteObject.setLocation(localPoint, worldView.getPlane());
-			runeLiteObject.setActive(true);
-			runeLiteObject.setOrientation((int) character.getOrientationSpinner().getValue());
+			RLObject rlObject = character.getRlObject();
+			rlObject.setActive(false);
+			rlObject.setLocation(localPoint, worldView.getPlane());
+			rlObject.setActive(true);
+			rlObject.setOrientation((int) character.getOrientationSpinner().getValue());
 			character.setActive(true);
 			character.getSpawnButton().setText("Spawn");
 		});
@@ -1072,46 +1036,33 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 	public void spawnCharacter(Character character)
 	{
-		RuneLiteObject runeLiteObject = character.getRuneLiteObject();
+		RLObject rlObject = character.getRlObject();
 		character.setActive(true);
-		clientThread.invokeLater(() -> runeLiteObject.setActive(true));
+		clientThread.invokeLater(() -> rlObject.setActive(true));
 	}
 
 	public void despawnCharacter(Character character)
 	{
-		RuneLiteObject runeLiteObject = character.getRuneLiteObject();
+		RLObject rlObject = character.getRlObject();
 		character.setActive(false);
-		clientThread.invokeLater(() -> runeLiteObject.setActive(false));
+		clientThread.invokeLater(() -> rlObject.setActive(false));
 	}
 
 	public void setModel(Character character, boolean modelMode, int modelId)
 	{
-		RuneLiteObject runeLiteObject = character.getRuneLiteObject();
+		RLObject rlObject = character.getRlObject();
 		clientThread.invokeLater(() -> {
 			if (modelMode)
 			{
 				CustomModel customModel = character.getStoredModel();
 				Model model = customModel == null ? client.loadModel(29757) : customModel.getModel();
-				runeLiteObject.setModel(model);
+				rlObject.setModel(model);
 				return;
 			}
 
 			Model model = client.loadModel(modelId);
-			runeLiteObject.setModel(model);
+			rlObject.setModel(model);
 		});
-	}
-
-	public Animation getAnimation(int id)
-	{
-		for (Animation animation : loadedAnimations)
-		{
-			if (animation != null && animation.getId() == id)
-				return animation;
-		}
-
-		Animation animation = client.loadAnimation(id);
-		loadedAnimations = ArrayUtils.add(loadedAnimations, animation);
-		return animation;
 	}
 
 	public void setAnimation(Character character, int animationId)
@@ -1119,35 +1070,44 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		if (client.getGameState() != GameState.LOGGED_IN)
 			return;
 
-		RuneLiteObject runeLiteObject = character.getRuneLiteObject();
+		RLObject rlObject = character.getRlObject();
 		clientThread.invoke(() ->
 		{
-			Animation animation = getAnimation(animationId);
-			runeLiteObject.setAnimation(animation);
-			loadedAnimations = ArrayUtils.removeAllOccurences(loadedAnimations, null);
+			rlObject.setAnimation(animationId);
 		});
 	}
 
 	public void unsetAnimation(Character character)
 	{
-		RuneLiteObject runeLiteObject = character.getRuneLiteObject();
+		RLObject rlObject = character.getRlObject();
 		clientThread.invoke(() ->
 		{
-			Animation animation = getAnimation(-1);
-			runeLiteObject.setAnimation(animation);
+			rlObject.setAnimation(-1);
+		});
+	}
+
+	public void setAnimationFrame(Character character, int animFrame, boolean allowPause)
+	{
+		if (client.getGameState() != GameState.LOGGED_IN)
+			return;
+
+		RLObject rlObject = character.getRlObject();
+		clientThread.invoke(() ->
+		{
+			rlObject.setAnimationFrame(animFrame, allowPause);
 		});
 	}
 
 	public void setRadius(Character character, int radius)
 	{
-		RuneLiteObject runeLiteObject = character.getRuneLiteObject();
-		clientThread.invoke(() -> runeLiteObject.setRadius(radius));
+		RLObject rlObject = character.getRlObject();
+		clientThread.invoke(() -> rlObject.setRadius(radius));
 	}
 
 	public void addOrientation(Character character, int addition)
 	{
-		RuneLiteObject runeLiteObject = character.getRuneLiteObject();
-		int orientation = runeLiteObject.getOrientation();
+		RLObject rlObject = character.getRlObject();
+		int orientation = rlObject.getOrientation();
 		orientation += addition;
 		if (orientation >= 2048)
 			orientation -= 2048;
@@ -1160,27 +1120,28 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 	public void setOrientation(Character character, int orientation)
 	{
-		RuneLiteObject runeLiteObject = character.getRuneLiteObject();
+		RLObject rlObject = character.getRlObject();
 		character.getOrientationSpinner().setValue(orientation);
-		clientThread.invokeLater(() -> runeLiteObject.setOrientation(orientation));
+		clientThread.invokeLater(() -> rlObject.setOrientation(orientation));
 	}
 
 	public void setupRLObject(Character character, boolean setHoveredTile)
 	{
 		clientThread.invoke(() ->
 		{
-			RuneLiteObject runeLiteObject = client.createRuneLiteObject();
-			character.setRuneLiteObject(runeLiteObject);
+			RLObject rlObject = new RLObject(client);
+			client.registerRuneLiteObject(rlObject);
+			character.setRlObject(rlObject);
 
-			runeLiteObject.setRadius((int) character.getRadiusSpinner().getValue());
-			runeLiteObject.setOrientation((int) character.getOrientationSpinner().getValue());
-			runeLiteObject.setDrawFrontTilesFirst(true);
-			runeLiteObject.setShouldLoop(true);
+			rlObject.setRadius((int) character.getRadiusSpinner().getValue());
+			rlObject.setOrientation((int) character.getOrientationSpinner().getValue());
+			rlObject.setDrawFrontTilesFirst(true);
 
 			boolean active = character.isActive();
 
 			setModel(character, character.isCustomMode(), (int) character.getModelSpinner().getValue());
 			setAnimation(character, (int) character.getAnimationSpinner().getValue());
+			setAnimationFrame(character, (int) character.getAnimationFrameSpinner().getValue(), true);
 
 			if (setHoveredTile)
 			{
@@ -1191,7 +1152,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				setLocation(character, !character.isLocationSet(), false, false, false);
 			}
 
-			runeLiteObject.setActive(active);
+			rlObject.setActive(active);
 			character.setActive(active);
 		});
 	}
@@ -1201,8 +1162,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		clientThread.invokeLater(() -> {
 			for (Character character : charactersToRemove)
 			{
-				RuneLiteObject runeLiteObject = character.getRuneLiteObject();
-				runeLiteObject.setActive(false);
+				RLObject rlObject = character.getRlObject();
+				rlObject.setActive(false);
 				characters.remove(character);
 			}
 		});
@@ -1223,8 +1184,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	public void removeCharacter(Character character)
 	{
 		clientThread.invokeLater(() -> {
-				RuneLiteObject runeLiteObject = character.getRuneLiteObject();
-				runeLiteObject.setActive(false);
+				RLObject rlObject = character.getRlObject();
+				rlObject.setActive(false);
 				characters.remove(character);
 		});
 	}
@@ -2109,7 +2070,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		{
 			clientThread.invokeLater(() ->
 			{
-				previewObject = client.createRuneLiteObject();
+				previewObject = new RLObject(client);
+				client.registerRuneLiteObject(previewObject);
 				previewObject.setActive(false);
 
 				ModelData arrow = client.loadModelData(4852);
@@ -2159,7 +2121,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 		}
 
-		RuneLiteObject rlObject = selectedCharacter.getRuneLiteObject();
+		RLObject rlObject = selectedCharacter.getRlObject();
 		if (rlObject == null)
 		{
 			return;
@@ -2236,19 +2198,19 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 		}
 
-		Animation animation;
+		int animId;
 		if (allowArrow)
 		{
-			animation = client.loadAnimation(-1);
+			animId = -1;
 		}
 		else
 		{
-			animation = rlObject.getAnimation();
+			animId = rlObject.getAnimationId();
 		}
 
 		previewObject.setModel(model);
 		previewObject.setOrientation(orientation);
-		previewObject.setAnimation(animation);
+		previewObject.setAnimation(animId);
 		previewObject.setDrawFrontTilesFirst(true);
 		previewObject.setLocation(lp, client.getTopLevelWorldView().getPlane());
 		previewObject.setRadius(rlObject.getRadius());
