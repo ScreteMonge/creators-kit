@@ -52,8 +52,6 @@ public class Programmer
             }
 
             double nextSubTick = TimeSheetPanel.round((double) change / 30);
-            System.out.println("Nextsubtick: " + nextSubTick);
-            System.out.println("CurrentSubTick: " + subTick);
             if (subTick < nextSubTick)
             {
                 incrementSubTime();
@@ -80,14 +78,12 @@ public class Programmer
     {
         double time = TimeSheetPanel.round(timeSheetPanel.getCurrentTime() + 0.1);
         timeSheetPanel.setCurrentTime(time);
-        System.out.println("Subtime: " + time);
     }
 
     private void incrementTime()
     {
         subTick = 0;
         timeSheetPanel.setCurrentTime(Math.floor(timeSheetPanel.getCurrentTime()) + 1);
-        System.out.println("Time: " + timeSheetPanel.getCurrentTime());
     }
 
 }
