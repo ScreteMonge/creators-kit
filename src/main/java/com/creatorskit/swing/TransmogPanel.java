@@ -107,11 +107,11 @@ public class TransmogPanel extends JPanel
         radiusSpinner.setToolTipText("Set the radius of your transmog. 60 is best for an object the size of 1 tile");
         radiusSpinner.addChangeListener(e -> {
             radius = (int) radiusSpinner.getValue();
-            CKObject CKObject = plugin.getTransmog();
-            if (CKObject == null)
+            CKObject ckObject = plugin.getTransmog();
+            if (ckObject == null)
                 return;
 
-            clientThread.invokeLater(() -> CKObject.setRadius(radius));
+            clientThread.invokeLater(() -> ckObject.setRadius(radius));
         });
         rowHeaderPanel.add(radiusSpinner, c);
 

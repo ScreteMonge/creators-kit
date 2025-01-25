@@ -319,13 +319,13 @@ public class CreatorsOverlay extends Overlay
             return;
         }
 
-        CKObject CKObject = character.getCKObject();
-        if (CKObject == null)
+        CKObject ckObject = character.getCkObject();
+        if (ckObject == null)
         {
             return;
         }
 
-        LocalPoint lp = CKObject.getLocation();
+        LocalPoint lp = ckObject.getLocation();
         if (lp == null || !plugin.isInScene(character))
         {
             return;
@@ -348,13 +348,13 @@ public class CreatorsOverlay extends Overlay
                 continue;
             }
 
-            CKObject CKObject = character.getCKObject();
-            if (CKObject == null)
+            CKObject ckObject = character.getCkObject();
+            if (ckObject == null)
             {
                 continue;
             }
 
-            LocalPoint lp = CKObject.getLocation();
+            LocalPoint lp = ckObject.getLocation();
             if (lp == null)
             {
                 continue;

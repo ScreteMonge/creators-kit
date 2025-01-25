@@ -542,7 +542,7 @@ public class CreatorsPanel extends PluginPanel
 
         animationButton.addActionListener(e ->
         {
-            int animId = character.getCKObject().getAnimationId();
+            int animId = character.getCkObject().getAnimationId();
             if (animId == -1)
             {
                 animationButton.setText("Anim Off");
@@ -883,7 +883,7 @@ public class CreatorsPanel extends PluginPanel
     {
         removePanel(character);
         ArrayList<Character> characters = plugin.getCharacters();
-        clientThread.invokeLater(() -> character.getCKObject().setActive(false));
+        clientThread.invokeLater(() -> character.getCkObject().setActive(false));
         characters.remove(character);
         if (plugin.getSelectedCharacter() == character)
         {
@@ -898,7 +898,7 @@ public class CreatorsPanel extends PluginPanel
         ArrayList<Character> characters = plugin.getCharacters();
         for (Character c : charactersToRemove)
         {
-            clientThread.invokeLater(() -> c.getCKObject().setActive(false));
+            clientThread.invokeLater(() -> c.getCkObject().setActive(false));
             characters.remove(c);
             if (c == plugin.getSelectedCharacter())
             {
@@ -1344,7 +1344,7 @@ public class CreatorsPanel extends PluginPanel
         boolean customMode = character.isCustomMode();
         int modelId = (int) character.getModelSpinner().getValue();
         boolean active = character.isActive();
-        int radius = character.getCKObject().getRadius();
+        int radius = character.getCkObject().getRadius();
         int rotation = (int) character.getOrientationSpinner().getValue();
         int animationId = (int) character.getAnimationSpinner().getValue();
         int frame = (int) character.getAnimationFrameSpinner().getValue();

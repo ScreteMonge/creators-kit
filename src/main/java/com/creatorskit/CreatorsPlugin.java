@@ -348,10 +348,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			Character character = characters.get(i);
 			Program program = character.getProgram();
 			ProgramComp comp = program.getComp();
-			CKObject CKObject = character.getCKObject();
+			CKObject ckObject = character.getCkObject();
 			boolean instance = worldView.getScene().isInstance();
 
-			if (CKObject == null)
+			if (ckObject == null)
 				continue;
 
 			if (!isInScene(character))
@@ -359,12 +359,12 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			if (!comp.isProgramActive())
 			{
-				int animId = CKObject.getAnimationId();
+				int animId = ckObject.getAnimationId();
 				if (animId == -1)
 					continue;
 
 				if (animId != comp.getIdleAnim())
-					CKObject.setAnimation(comp.getIdleAnim());
+					ckObject.setAnimation(comp.getIdleAnim());
 
 				continue;
 			}
@@ -381,17 +381,17 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					continue;
 				}
 
-				int animId = CKObject.getAnimationId();
+				int animId = ckObject.getAnimationId();
 				if (animId == -1)
 					continue;
 
 				if (animId != comp.getIdleAnim())
-					CKObject.setAnimation(comp.getIdleAnim());
+					ckObject.setAnimation(comp.getIdleAnim());
 
 				continue;
 			}
 
-			int currentAnim = CKObject.getAnimationId();;
+			int currentAnim = ckObject.getAnimationId();;
 			if (currentAnim != -1 && currentAnim != comp.getWalkAnim())
 			{
 				int walkAnimId = comp.getWalkAnim();
@@ -399,10 +399,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					walkAnimId = comp.getIdleAnim();
 
 				if (currentAnim != walkAnimId)
-					CKObject.setAnimation(comp.getWalkAnim());
+					ckObject.setAnimation(comp.getWalkAnim());
 			}
 
-			LocalPoint start = CKObject.getLocation();
+			LocalPoint start = ckObject.getLocation();
 			LocalPoint destination;
 
 			if (instance)
@@ -472,7 +472,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				}
 			}
 
-			int orientation = CKObject.getOrientation();
+			int orientation = ckObject.getOrientation();
 			int targetOrientation = character.getTargetOrientation();
 			int turnSpeed = comp.getTurnSpeed();
 			if (orientation != targetOrientation)
@@ -493,11 +493,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					newOrientation = Orientation.boundOrientation(orientation - turnSpeed);
 				}
 
-				CKObject.setOrientation(newOrientation);
+				ckObject.setOrientation(newOrientation);
 			}
 
 			LocalPoint finalPoint = new LocalPoint(endX, endY, worldView);
-			CKObject.setLocation(finalPoint, worldView.getPlane());
+			ckObject.setLocation(finalPoint, worldView.getPlane());
 		}
 
 		TransmogPanel transmogPanel = creatorsPanel.getTransmogPanel();
@@ -925,11 +925,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				updateProgramPath(character.getProgram(), false, false);
 			}
 
-			CKObject CKObject = character.getCKObject();
-			CKObject.setActive(false);
-			CKObject.setLocation(localPoint, worldView.getPlane());
-			CKObject.setActive(true);
-			CKObject.setOrientation((int) character.getOrientationSpinner().getValue());
+			CKObject ckObject = character.getCkObject();
+			ckObject.setActive(false);
+			ckObject.setLocation(localPoint, worldView.getPlane());
+			ckObject.setActive(true);
+			ckObject.setOrientation((int) character.getOrientationSpinner().getValue());
 			character.setActive(true);
 			character.getSpawnButton().setText("Spawn");
 		});
@@ -974,11 +974,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			character.setInstancedRegions(client.getMapRegions());
 			character.setInstancedPlane(worldView.getPlane());
 			updateProgramPath(character.getProgram(), false, true);
-			CKObject CKObject = character.getCKObject();
-			CKObject.setActive(false);
-			CKObject.setLocation(localPoint, worldView.getPlane());
-			CKObject.setActive(true);
-			CKObject.setOrientation((int) character.getOrientationSpinner().getValue());
+			CKObject ckObject = character.getCkObject();
+			ckObject.setActive(false);
+			ckObject.setLocation(localPoint, worldView.getPlane());
+			ckObject.setActive(true);
+			ckObject.setOrientation((int) character.getOrientationSpinner().getValue());
 			character.setActive(true);
 			character.getSpawnButton().setText("Spawn");
 		});
@@ -1036,32 +1036,32 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 	public void spawnCharacter(Character character)
 	{
-		CKObject CKObject = character.getCKObject();
+		CKObject ckObject = character.getCkObject();
 		character.setActive(true);
-		clientThread.invokeLater(() -> CKObject.setActive(true));
+		clientThread.invokeLater(() -> ckObject.setActive(true));
 	}
 
 	public void despawnCharacter(Character character)
 	{
-		CKObject CKObject = character.getCKObject();
+		CKObject ckObject = character.getCkObject();
 		character.setActive(false);
-		clientThread.invokeLater(() -> CKObject.setActive(false));
+		clientThread.invokeLater(() -> ckObject.setActive(false));
 	}
 
 	public void setModel(Character character, boolean modelMode, int modelId)
 	{
-		CKObject CKObject = character.getCKObject();
+		CKObject ckObject = character.getCkObject();
 		clientThread.invokeLater(() -> {
 			if (modelMode)
 			{
 				CustomModel customModel = character.getStoredModel();
 				Model model = customModel == null ? client.loadModel(29757) : customModel.getModel();
-				CKObject.setModel(model);
+				ckObject.setModel(model);
 				return;
 			}
 
 			Model model = client.loadModel(modelId);
-			CKObject.setModel(model);
+			ckObject.setModel(model);
 		});
 	}
 
@@ -1070,19 +1070,19 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		if (client.getGameState() != GameState.LOGGED_IN)
 			return;
 
-		CKObject CKObject = character.getCKObject();
+		CKObject ckObject = character.getCkObject();
 		clientThread.invoke(() ->
 		{
-			CKObject.setAnimation(animationId);
+			ckObject.setAnimation(animationId);
 		});
 	}
 
 	public void unsetAnimation(Character character)
 	{
-		CKObject CKObject = character.getCKObject();
+		CKObject ckObject = character.getCkObject();
 		clientThread.invoke(() ->
 		{
-			CKObject.setAnimation(-1);
+			ckObject.setAnimation(-1);
 		});
 	}
 
@@ -1091,23 +1091,23 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		if (client.getGameState() != GameState.LOGGED_IN)
 			return;
 
-		CKObject CKObject = character.getCKObject();
+		CKObject ckObject = character.getCkObject();
 		clientThread.invoke(() ->
 		{
-			CKObject.setAnimationFrame(animFrame, allowPause);
+			ckObject.setAnimationFrame(animFrame, allowPause);
 		});
 	}
 
 	public void setRadius(Character character, int radius)
 	{
-		CKObject CKObject = character.getCKObject();
-		clientThread.invoke(() -> CKObject.setRadius(radius));
+		CKObject ckObject = character.getCkObject();
+		clientThread.invoke(() -> ckObject.setRadius(radius));
 	}
 
 	public void addOrientation(Character character, int addition)
 	{
-		CKObject CKObject = character.getCKObject();
-		int orientation = CKObject.getOrientation();
+		CKObject ckObject = character.getCkObject();
+		int orientation = ckObject.getOrientation();
 		orientation += addition;
 		if (orientation >= 2048)
 			orientation -= 2048;
@@ -1120,22 +1120,22 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 	public void setOrientation(Character character, int orientation)
 	{
-		CKObject CKObject = character.getCKObject();
+		CKObject ckObject = character.getCkObject();
 		character.getOrientationSpinner().setValue(orientation);
-		clientThread.invokeLater(() -> CKObject.setOrientation(orientation));
+		clientThread.invokeLater(() -> ckObject.setOrientation(orientation));
 	}
 
 	public void setupRLObject(Character character, boolean setHoveredTile)
 	{
 		clientThread.invoke(() ->
 		{
-			CKObject CKObject = new CKObject(client);
-			client.registerRuneLiteObject(CKObject);
-			character.setCKObject(CKObject);
+			CKObject ckObject = new CKObject(client);
+			client.registerRuneLiteObject(ckObject);
+			character.setCkObject(ckObject);
 
-			CKObject.setRadius((int) character.getRadiusSpinner().getValue());
-			CKObject.setOrientation((int) character.getOrientationSpinner().getValue());
-			CKObject.setDrawFrontTilesFirst(true);
+			ckObject.setRadius((int) character.getRadiusSpinner().getValue());
+			ckObject.setOrientation((int) character.getOrientationSpinner().getValue());
+			ckObject.setDrawFrontTilesFirst(true);
 
 			boolean active = character.isActive();
 
@@ -1152,7 +1152,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				setLocation(character, !character.isLocationSet(), false, false, false);
 			}
 
-			CKObject.setActive(active);
+			ckObject.setActive(active);
 			character.setActive(active);
 		});
 	}
@@ -1162,8 +1162,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		clientThread.invokeLater(() -> {
 			for (Character character : charactersToRemove)
 			{
-				CKObject CKObject = character.getCKObject();
-				CKObject.setActive(false);
+				CKObject ckObject = character.getCkObject();
+				ckObject.setActive(false);
 				characters.remove(character);
 			}
 		});
@@ -1184,8 +1184,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	public void removeCharacter(Character character)
 	{
 		clientThread.invokeLater(() -> {
-				CKObject CKObject = character.getCKObject();
-				CKObject.setActive(false);
+				CKObject ckObject = character.getCkObject();
+				ckObject.setActive(false);
 				characters.remove(character);
 		});
 	}
@@ -2121,8 +2121,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 		}
 
-		CKObject CKObject = selectedCharacter.getCKObject();
-		if (CKObject == null)
+		CKObject ckObject = selectedCharacter.getCkObject();
+		if (ckObject == null)
 		{
 			return;
 		}
@@ -2138,7 +2138,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			double y = -1 * (p.getY() - clickY);
 			if (Math.sqrt(x * x + y * y) < 40)
 			{
-				orientation = Rotation.roundRotation(CKObject.getOrientation());
+				orientation = Rotation.roundRotation(ckObject.getOrientation());
 			}
 			else
 			{
@@ -2148,7 +2148,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 		else
 		{
-			orientation = CKObject.getOrientation();
+			orientation = ckObject.getOrientation();
 		}
 
 		Model model;
@@ -2178,7 +2178,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		LocalPoint lp;
 		if (mousePressed)
 		{
-			lp = CKObject.getLocation();
+			lp = ckObject.getLocation();
 			if (lp == null)
 			{
 				lp = tile.getLocalLocation();
@@ -2189,7 +2189,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			lp = tile.getLocalLocation();
 			if (lp == null)
 			{
-				lp = CKObject.getLocation();
+				lp = ckObject.getLocation();
 			}
 		}
 
@@ -2205,7 +2205,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 		else
 		{
-			animId = CKObject.getAnimationId();
+			animId = ckObject.getAnimationId();
 		}
 
 		previewObject.setModel(model);
@@ -2213,7 +2213,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		previewObject.setAnimation(animId);
 		previewObject.setDrawFrontTilesFirst(true);
 		previewObject.setLocation(lp, client.getTopLevelWorldView().getPlane());
-		previewObject.setRadius(CKObject.getRadius());
+		previewObject.setRadius(ckObject.getRadius());
 		previewObject.setActive(true);
 	}
 

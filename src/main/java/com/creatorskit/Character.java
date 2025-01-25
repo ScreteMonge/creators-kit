@@ -48,7 +48,7 @@ public class Character
     private JSpinner radiusSpinner;
     private JLabel programmerLabel;
     private JSpinner programmerIdleSpinner;
-    private CKObject CKObject;
+    private CKObject ckObject;
     private int targetOrientation;
 
     @Override

@@ -56,10 +56,10 @@ public class ModelGetter
         for (int i = 0; i < characters.size(); i++)
         {
             Character character = characters.get(i);
-            CKObject CKObject = character.getCKObject();
-            if (character.isActive() && CKObject != null)
+            CKObject ckObject = character.getCkObject();
+            if (character.isActive() && ckObject != null)
             {
-                LocalPoint localPoint = CKObject.getLocation();
+                LocalPoint localPoint = ckObject.getLocation();
                 if (localPoint != null && localPoint.equals(tile.getLocalLocation()))
                 {
                     if (config.rightSelect())
@@ -1475,7 +1475,7 @@ public class ModelGetter
                         return;
                     }
 
-                    final Model model = character.getCKObject().getModel();
+                    final Model model = character.getCkObject().getModel();
                     if (config.vertexColours())
                     {
                         BlenderModel bm = modelExporter.bmVertexColours(model);
