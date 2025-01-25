@@ -9,7 +9,6 @@ import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import org.apache.commons.lang3.ArrayUtils;
@@ -49,7 +48,7 @@ public class Character
     private JSpinner radiusSpinner;
     private JLabel programmerLabel;
     private JSpinner programmerIdleSpinner;
-    private RLObject rlObject;
+    private CKObject CKObject;
     private int targetOrientation;
 
     @Override

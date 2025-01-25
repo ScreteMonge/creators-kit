@@ -16,7 +16,6 @@ import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.Animation;
 import net.runelite.api.Client;
 import net.runelite.api.Model;
 import net.runelite.api.coords.LocalPoint;
@@ -543,7 +542,7 @@ public class CreatorsPanel extends PluginPanel
 
         animationButton.addActionListener(e ->
         {
-            int animId = character.getRlObject().getAnimationId();
+            int animId = character.getCKObject().getAnimationId();
             if (animId == -1)
             {
                 animationButton.setText("Anim Off");
@@ -884,7 +883,7 @@ public class CreatorsPanel extends PluginPanel
     {
         removePanel(character);
         ArrayList<Character> characters = plugin.getCharacters();
-        clientThread.invokeLater(() -> character.getRlObject().setActive(false));
+        clientThread.invokeLater(() -> character.getCKObject().setActive(false));
         characters.remove(character);
         if (plugin.getSelectedCharacter() == character)
         {
@@ -899,7 +898,7 @@ public class CreatorsPanel extends PluginPanel
         ArrayList<Character> characters = plugin.getCharacters();
         for (Character c : charactersToRemove)
         {
-            clientThread.invokeLater(() -> c.getRlObject().setActive(false));
+            clientThread.invokeLater(() -> c.getCKObject().setActive(false));
             characters.remove(c);
             if (c == plugin.getSelectedCharacter())
             {
@@ -1345,7 +1344,7 @@ public class CreatorsPanel extends PluginPanel
         boolean customMode = character.isCustomMode();
         int modelId = (int) character.getModelSpinner().getValue();
         boolean active = character.isActive();
-        int radius = character.getRlObject().getRadius();
+        int radius = character.getCKObject().getRadius();
         int rotation = (int) character.getOrientationSpinner().getValue();
         int animationId = (int) character.getAnimationSpinner().getValue();
         int frame = (int) character.getAnimationFrameSpinner().getValue();

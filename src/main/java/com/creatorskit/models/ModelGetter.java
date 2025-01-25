@@ -3,7 +3,7 @@ package com.creatorskit.models;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
-import com.creatorskit.RLObject;
+import com.creatorskit.CKObject;
 import com.creatorskit.models.exporters.ModelExporter;
 import com.creatorskit.swing.CreatorsPanel;
 import com.creatorskit.swing.ParentPanel;
@@ -31,7 +31,7 @@ public class ModelGetter
     private final CreatorsPlugin plugin;
     private final DataFinder dataFinder;
     private final ModelExporter modelExporter;
-    private RLObject exportObject;
+    private CKObject exportObject;
 
     @Inject
     public ModelGetter(Client client, CreatorsPanel creatorsPanel, ClientThread clientThread, CreatorsConfig config, CreatorsPlugin plugin, DataFinder dataFinder, ModelExporter modelExporter)
@@ -56,10 +56,10 @@ public class ModelGetter
         for (int i = 0; i < characters.size(); i++)
         {
             Character character = characters.get(i);
-            RLObject rlObject = character.getRlObject();
-            if (character.isActive() && rlObject != null)
+            CKObject CKObject = character.getCKObject();
+            if (character.isActive() && CKObject != null)
             {
-                LocalPoint localPoint = rlObject.getLocation();
+                LocalPoint localPoint = CKObject.getLocation();
                 if (localPoint != null && localPoint.equals(tile.getLocalLocation()))
                 {
                     if (config.rightSelect())
@@ -1475,7 +1475,7 @@ public class ModelGetter
                         return;
                     }
 
-                    final Model model = character.getRlObject().getModel();
+                    final Model model = character.getCKObject().getModel();
                     if (config.vertexColours())
                     {
                         BlenderModel bm = modelExporter.bmVertexColours(model);
@@ -1912,7 +1912,7 @@ public class ModelGetter
 
     private void initiateAnimationExport(int animId, String name, Model model, BlenderModel bm)
     {
-        exportObject = new RLObject(client);
+        exportObject = new CKObject(client);
         client.registerRuneLiteObject(exportObject);
 
         exportObject.setAnimation(animId);

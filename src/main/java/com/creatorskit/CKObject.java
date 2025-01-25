@@ -11,7 +11,7 @@ import javax.annotation.Nullable;
 @Getter
 @Setter
 @RequiredArgsConstructor
-public class RLObject extends RuneLiteObjectController
+public class CKObject extends RuneLiteObjectController
 {
     private final Client client;
     private Model baseModel;

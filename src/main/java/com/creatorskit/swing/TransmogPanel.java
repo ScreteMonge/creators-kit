@@ -1,14 +1,13 @@
 package com.creatorskit.swing;
 
 import com.creatorskit.CreatorsPlugin;
-import com.creatorskit.RLObject;
+import com.creatorskit.CKObject;
 import com.creatorskit.saves.TransmogLoadOption;
 import com.creatorskit.saves.TransmogSave;
 import com.creatorskit.models.*;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
-import net.runelite.api.RuneLiteObject;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
@@ -108,11 +107,11 @@ public class TransmogPanel extends JPanel
         radiusSpinner.setToolTipText("Set the radius of your transmog. 60 is best for an object the size of 1 tile");
         radiusSpinner.addChangeListener(e -> {
             radius = (int) radiusSpinner.getValue();
-            RLObject rlObject = plugin.getTransmog();
-            if (rlObject == null)
+            CKObject CKObject = plugin.getTransmog();
+            if (CKObject == null)
                 return;
 
-            clientThread.invokeLater(() -> rlObject.setRadius(radius));
+            clientThread.invokeLater(() -> CKObject.setRadius(radius));
         });
         rowHeaderPanel.add(radiusSpinner, c);
 

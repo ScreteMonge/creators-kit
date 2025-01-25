@@ -112,7 +112,7 @@ public class ProgrammerPanel extends JPanel
         {
             for (Character character : plugin.getCharacters())
             {
-                int maxAnimFrames = character.getRlObject().getMaxAnimFrames();
+                int maxAnimFrames = character.getCKObject().getMaxAnimFrames();
                 int animFrame = random.nextInt(maxAnimFrames);
                 plugin.setAnimationFrame(character, animFrame, false);
             }
@@ -131,7 +131,7 @@ public class ProgrammerPanel extends JPanel
             Character[] shownCharacters = plugin.getCreatorsPanel().getToolBox().getManagerPanel().getShownCharacters();
             for (Character character : shownCharacters)
             {
-                int maxAnimFrames = character.getRlObject().getMaxAnimFrames();
+                int maxAnimFrames = character.getCKObject().getMaxAnimFrames();
                 int animFrame = random.nextInt(maxAnimFrames);
                 plugin.setAnimationFrame(character, animFrame, false);
             }
