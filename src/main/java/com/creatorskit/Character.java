@@ -25,6 +25,7 @@ public class Character
     private boolean active;
     private boolean locationSet;
     private KeyFrame[][] frames;
+    private KeyFrame[] currentFrames;
     private DefaultMutableTreeNode linkedManagerNode;
     private DefaultMutableTreeNode parentManagerNode;
     private Program program;
@@ -49,12 +50,58 @@ public class Character
     private JLabel programmerLabel;
     private JSpinner programmerIdleSpinner;
     private CKObject ckObject;
+    private CKObject spotAnim1;
+    private CKObject spotAnim2;
     private int targetOrientation;
 
     @Override
     public String toString()
     {
         return name;
+    }
+
+    /**
+     * Updates the Character's current KeyFrame for the given time
+     * @param tick the tick at which to look for KeyFrames
+     */
+    public void updateProgram(double tick)
+    {
+        KeyFrame currentMovement = findPreviousKeyFrame(KeyFrameType.MOVEMENT, tick, true);
+        setCurrentKeyFrame(currentMovement, KeyFrameType.MOVEMENT);
+
+        KeyFrame currentAnimation = findPreviousKeyFrame(KeyFrameType.ANIMATION, tick, true);
+        setCurrentKeyFrame(currentAnimation, KeyFrameType.ANIMATION);
+
+        KeyFrame currentSpawn = findPreviousKeyFrame(KeyFrameType.SPAWN, tick, true);
+        setCurrentKeyFrame(currentSpawn, KeyFrameType.SPAWN);
+
+        KeyFrame currentModel = findPreviousKeyFrame(KeyFrameType.MODEL, tick, true);
+        setCurrentKeyFrame(currentModel, KeyFrameType.MODEL);
+
+        KeyFrame currentOrientation = findPreviousKeyFrame(KeyFrameType.ORIENTATION, tick, true);
+        setCurrentKeyFrame(currentOrientation, KeyFrameType.ORIENTATION);
+
+        KeyFrame currentText = findPreviousKeyFrame(KeyFrameType.TEXT, tick, true);
+        setCurrentKeyFrame(currentText, KeyFrameType.TEXT);
+
+        KeyFrame currentOverhead = findPreviousKeyFrame(KeyFrameType.OVERHEAD, tick, true);
+        setCurrentKeyFrame(currentOverhead, KeyFrameType.OVERHEAD);
+
+        KeyFrame currentHealth = findPreviousKeyFrame(KeyFrameType.HEALTH, tick, true);
+        setCurrentKeyFrame(currentHealth, KeyFrameType.HEALTH);
+
+        KeyFrame currentSpotAnim = findPreviousKeyFrame(KeyFrameType.SPOTANIM, tick, true);
+        setCurrentKeyFrame(currentSpotAnim, KeyFrameType.SPOTANIM);
+    }
+
+    public KeyFrame getCurrentKeyFrame(KeyFrameType type)
+    {
+        return currentFrames[KeyFrameType.getIndex(type)];
+    }
+
+    public void setCurrentKeyFrame(KeyFrame keyFrame, KeyFrameType type)
+    {
+        currentFrames[KeyFrameType.getIndex(type)] = keyFrame;
     }
 
     public KeyFrame[] getKeyFrames(KeyFrameType type)
@@ -211,6 +258,12 @@ public class Character
         return nextFrame;
     }
 
+    /**
+     * Finds the next keyframe for this character of the given KeyFrameType, excluding any keyframes on the current tick
+     * @param type the KeyFrameType to look for
+     * @param tick the tick at which to start looking
+     * @return the next Keyframe of the given KeyFrameType
+     */
     public KeyFrame findNextKeyFrame(KeyFrameType type, double tick)
     {
         KeyFrame[] keyFrames = getKeyFrames(type);
@@ -293,11 +346,11 @@ public class Character
     }
 
     /**
-     * Finds the last KeyFrame of the given type relative to the current time
+     * Finds the last KeyFrame of the given type relative to the given time
      * @param type the type of KeyFrame to search for
-     * @param tick the current time indicator
-     * @param includeCurrentKeyFrame whether to include the keyframe at the current time (if any), or to skip and find the keyframe before
-     * @return the last keyframe relative to the current time indicator
+     * @param tick the given time
+     * @param includeCurrentKeyFrame whether to include the keyframe at the given time (if any), or to skip and find the keyframe before
+     * @return the last keyframe relative to the given time
      */
     public KeyFrame findPreviousKeyFrame(KeyFrameType type, double tick, boolean includeCurrentKeyFrame)
     {
@@ -344,7 +397,7 @@ public class Character
      * Adds the keyframe to a specific character, or replaces a keyframe if the tick matches exactly
      * @param keyFrame the keyframe to add or modify for the character
      */
-    public void addKeyFrame(KeyFrame keyFrame)
+    public void addKeyFrame(KeyFrame keyFrame, double currentTime)
     {
         KeyFrameType type = keyFrame.getKeyFrameType();
         KeyFrame[] keyFrames = getKeyFrames(type);
@@ -352,6 +405,9 @@ public class Character
         {
             keyFrames = new KeyFrame[]{keyFrame};
             setKeyFrames(keyFrames, type);
+
+            KeyFrame currentKeyFrame = findPreviousKeyFrame(type, currentTime, true);
+            setCurrentKeyFrame(currentKeyFrame, type);
             return;
         }
 
@@ -368,6 +424,9 @@ public class Character
         }
 
         setKeyFrames(keyFrames, type);
+
+        KeyFrame currentKeyFrame = findPreviousKeyFrame(type, currentTime, true);
+        setCurrentKeyFrame(currentKeyFrame, type);
     }
 
     /**
@@ -385,6 +444,11 @@ public class Character
 
         keyFrames = ArrayUtils.removeElement(keyFrames, keyFrame);
         setKeyFrames(keyFrames, type);
+
+        if (getCurrentKeyFrame(type) == keyFrame)
+        {
+            setCurrentKeyFrame(null, type);
+        }
     }
 
     /**
@@ -406,6 +470,10 @@ public class Character
             if (keyFrame.getTick() == tick)
             {
                 removeKeyFrame(keyFrame);
+                if (getCurrentKeyFrame(type) == keyFrame)
+                {
+                    setCurrentKeyFrame(null, type);
+                }
                 return;
             }
         }

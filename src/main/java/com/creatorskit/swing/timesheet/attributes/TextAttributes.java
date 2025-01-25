@@ -16,7 +16,6 @@ public class TextAttributes extends Attributes
 {
     private final JComboBox<Toggle> enableBox = new JComboBox<>();
     private final JTextArea text = new JTextArea("");
-    private final JSpinner height = new JSpinner();
 
     public TextAttributes()
     {
@@ -29,7 +28,6 @@ public class TextAttributes extends Attributes
         TextKeyFrame kf = (TextKeyFrame) keyFrame;
         enableBox.setSelectedItem(kf.isEnabled() ? Toggle.ENABLE : Toggle.DISABLE);
         text.setText(kf.getText());
-        height.setValue(kf.getHeight());
     }
 
     @Override
@@ -37,7 +35,6 @@ public class TextAttributes extends Attributes
     {
         enableBox.setBackground(color);
         text.setBackground(color);
-        height.setBackground(color);
     }
 
     @Override
@@ -46,8 +43,7 @@ public class TextAttributes extends Attributes
         return new JComponent[]
                 {
                         enableBox,
-                        text,
-                        height
+                        text
                 };
     }
 
@@ -77,11 +73,6 @@ public class TextAttributes extends Attributes
 
             }
         });
-
-        height.addChangeListener(e ->
-        {
-            height.setBackground(getRed());
-        });
     }
 
     @Override
@@ -89,7 +80,6 @@ public class TextAttributes extends Attributes
     {
         enableBox.setSelectedItem(Toggle.DISABLE);
         text.setText("");
-        height.setValue(60);
         setBackgroundColours(KeyFrameState.EMPTY);
     }
 }

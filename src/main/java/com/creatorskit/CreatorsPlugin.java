@@ -83,6 +83,15 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private CreatorsOverlay overlay;
 
 	@Inject
+	private TextOverlay textOverlay;
+
+	@Inject
+	private OverheadOverlay overheadOverlay;
+
+	@Inject
+	private HealthOverlay healthOverlay;
+
+	@Inject
 	private KeyManager keyManager;
 
 	@Inject
@@ -150,6 +159,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		clientToolbar.addNavigation(navigationButton);
 		overlayManager.add(overlay);
+		overlayManager.add(textOverlay);
+		overlayManager.add(overheadOverlay);
+		overlayManager.add(healthOverlay);
+
 		keyManager.registerKeyListener(overlayKeyListener);
 		keyManager.registerKeyListener(oculusOrbListener);
 		keyManager.registerKeyListener(orbSpeedListener);
@@ -240,6 +253,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		clientToolbar.removeNavigation(navigationButton);
 		overlayManager.remove(overlay);
+		overlayManager.remove(textOverlay);
+		overlayManager.remove(overheadOverlay);
+		overlayManager.remove(healthOverlay);
+
 		keyManager.unregisterKeyListener(overlayKeyListener);
 		keyManager.unregisterKeyListener(oculusOrbListener);
 		keyManager.unregisterKeyListener(orbSpeedListener);
@@ -929,9 +946,30 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			ckObject.setActive(false);
 			ckObject.setLocation(localPoint, worldView.getPlane());
 			ckObject.setActive(true);
-			ckObject.setOrientation((int) character.getOrientationSpinner().getValue());
 			character.setActive(true);
+
+			int orientation = (int) character.getOrientationSpinner().getValue();
+			ckObject.setOrientation(orientation);
 			character.getSpawnButton().setText("Spawn");
+
+			CKObject spotanim1 = character.getSpotAnim1();
+			CKObject spotanim2 = character.getSpotAnim2();
+
+			if (spotanim1 != null)
+			{
+				spotanim1.setActive(false);
+				spotanim1.setLocation(localPoint, worldView.getPlane());
+				spotanim1.setActive(true);
+				spotanim1.setOrientation(orientation);
+			}
+
+			if (spotanim2 != null)
+			{
+				spotanim2.setActive(false);
+				spotanim2.setLocation(localPoint, worldView.getPlane());
+				spotanim2.setActive(true);
+				spotanim2.setOrientation(orientation);
+			}
 		});
 	}
 
@@ -974,13 +1012,35 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			character.setInstancedRegions(client.getMapRegions());
 			character.setInstancedPlane(worldView.getPlane());
 			updateProgramPath(character.getProgram(), false, true);
+
 			CKObject ckObject = character.getCkObject();
 			ckObject.setActive(false);
 			ckObject.setLocation(localPoint, worldView.getPlane());
 			ckObject.setActive(true);
-			ckObject.setOrientation((int) character.getOrientationSpinner().getValue());
 			character.setActive(true);
+
+			int orientation = (int) character.getOrientationSpinner().getValue();
+			ckObject.setOrientation(orientation);
 			character.getSpawnButton().setText("Spawn");
+
+			CKObject spotanim1 = character.getSpotAnim1();
+			CKObject spotanim2 = character.getSpotAnim2();
+
+			if (spotanim1 != null)
+			{
+				spotanim1.setActive(false);
+				spotanim1.setLocation(localPoint, worldView.getPlane());
+				spotanim1.setActive(true);
+				spotanim1.setOrientation(orientation);
+			}
+
+			if (spotanim2 != null)
+			{
+				spotanim2.setActive(false);
+				spotanim2.setLocation(localPoint, worldView.getPlane());
+				spotanim2.setActive(true);
+				spotanim2.setOrientation(orientation);
+			}
 		});
 	}
 
@@ -1154,39 +1214,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			ckObject.setActive(active);
 			character.setActive(active);
-		});
-	}
-
-	public void removeCharacters(Character[] charactersToRemove)
-	{
-		clientThread.invokeLater(() -> {
-			for (Character character : charactersToRemove)
-			{
-				CKObject ckObject = character.getCkObject();
-				ckObject.setActive(false);
-				characters.remove(character);
-			}
-		});
-	}
-
-	public void removeCharacter(ObjectPanel objectPanel)
-	{
-		for (Character character : characters)
-		{
-			if (character.getObjectPanel() == objectPanel)
-			{
-				removeCharacter(character);
-				return;
-			}
-		}
-	}
-
-	public void removeCharacter(Character character)
-	{
-		clientThread.invokeLater(() -> {
-				CKObject ckObject = character.getCkObject();
-				ckObject.setActive(false);
-				characters.remove(character);
 		});
 	}
 
@@ -1522,7 +1549,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			clientThread.invokeLater(() ->
 			{
-				Model model = constructModelFromCache(modelStats, new int[0], false, true);
+				Model model = constructModelFromCache(modelStats, new int[0], false, LightingStyle.CUSTOM, lighting);
 				CustomModel customModel = new CustomModel(model, comp);
 				addCustomModel(customModel, false);
 				sendChatMessage("Model stored: " + name);
@@ -1531,14 +1558,15 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		thread.start();
 	}
 
-	public Model constructModelFromCache(ModelStats[] modelStatsArray, int[] kitRecolours, boolean player, boolean actorLighting)
+	public Model constructModelFromCache(ModelStats[] modelStatsArray, int[] kitRecolours, boolean player, LightingStyle ls, CustomLighting cl)
 	{
 		ModelData md = constructModelDataFromCache(modelStatsArray, kitRecolours, player);
+		if (ls == LightingStyle.CUSTOM)
+		{
+			return client.mergeModels(md).light(cl.getAmbient(), cl.getContrast(), cl.getX(), -cl.getZ(), cl.getY());
+		}
 
-		if (actorLighting)
-			return client.mergeModels(md).light(64, 850, -30, -50, -30);
-
-		return client.mergeModels(md).light();
+		return client.mergeModels(md).light(ls.getAmbient(), ls.getContrast(), ls.getX(), -ls.getZ(), ls.getY());
 	}
 
 	public ModelData constructModelDataFromCache(ModelStats[] modelStatsArray, int[] kitRecolours, boolean player)

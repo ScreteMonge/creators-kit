@@ -223,6 +223,11 @@ public class SummarySheet extends TimeSheet
 
             Character character = (Character) node.getUserObject();
             KeyFrame[] keyFrames = character.getKeyFrames(keyFrameType);
+            if (keyFrames == null)
+            {
+                continue;
+            }
+
             for (KeyFrame keyFrame : keyFrames)
             {
                 int x1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);

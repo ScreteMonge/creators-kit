@@ -74,7 +74,7 @@ public class ToolBoxFrame extends JFrame
         this.managerPanel = new ManagerPanel(client, plugin, objectHolder, managerTree);
         this.cacheSearcher = new CacheSearcherTab(plugin, clientThread, dataFinder);
         this.programPanel = new ProgrammerPanel(client, clientThread, plugin, managerTree);
-        this.programmer = new Programmer(client, plugin, timeSheetPanel);
+        this.programmer = new Programmer(client, clientThread, plugin, timeSheetPanel, dataFinder);
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setTitle("Creator's Kit Toolbox");

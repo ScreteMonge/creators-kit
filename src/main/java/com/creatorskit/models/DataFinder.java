@@ -691,6 +691,86 @@ public class DataFinder
         return new ModelStats[]{modelStats.get(0)};
     }
 
+    public ModelStats[] findSpotAnim(SpotanimData spotanimData)
+    {
+        if (spotanimData == null)
+        {
+            return null;
+        }
+
+        ArrayList<ModelStats> modelStats = new ArrayList<>();
+        int modelId = spotanimData.getModelId();
+
+        lastFound = "SpotAnim " + spotanimData.getId();
+        lastAnim = spotanimData.getAnimationId();
+
+        short[] rf = new short[0];
+        short[] rt = new short[0];
+        if (spotanimData.getRecolorToReplace() != null)
+        {
+            int[] recolorToReplace = spotanimData.getRecolorToReplace();
+            int[] recolorToFind = spotanimData.getRecolorToFind();
+            rf = new short[recolorToReplace.length];
+            rt = new short[recolorToReplace.length];
+
+            for (int e = 0; e < rf.length; e++)
+            {
+                int rfi = recolorToFind[e];
+                if (rfi > 32767)
+                {
+                    rfi -= 65536;
+                }
+                rf[e] = (short) rfi;
+
+                int rti = recolorToReplace[e];
+                if (rti > 32767)
+                {
+                    rti -= 65536;
+                }
+                rt[e] = (short) rti;
+            }
+        }
+
+        int ambient = spotanimData.getAmbient();
+        int contrast = spotanimData.getContrast();
+
+        LightingStyle ls = LightingStyle.SPOTANIM;
+        CustomLighting customLighting = new CustomLighting(
+                ls.getAmbient() + ambient,
+                ls.getContrast() + contrast,
+                ls.getX(),
+                ls.getY(),
+                ls.getZ());
+
+        modelStats.add(new ModelStats(
+                modelId,
+                BodyPart.SPOTANIM,
+                rf,
+                rt,
+                new short[0],
+                new short[0],
+                spotanimData.getResizeX(),
+                spotanimData.getResizeX(),
+                spotanimData.getResizeY(),
+                0,
+                customLighting));
+
+        return new ModelStats[]{modelStats.get(0)};
+    }
+
+    public SpotanimData getSpotAnimData(int spotAnimId)
+    {
+        for (SpotanimData data : spotanimData)
+        {
+            if (data.getId() == spotAnimId)
+            {
+                return data;
+            }
+        }
+
+        return null;
+    }
+
     public void lookupNPCData()
     {
         Request request = new Request.Builder().url("https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/npc_defs.json").build();

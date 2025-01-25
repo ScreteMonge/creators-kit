@@ -1,0 +1,127 @@
+package com.creatorskit.programming;
+
+import com.creatorskit.Character;
+import com.creatorskit.CreatorsPlugin;
+import com.creatorskit.CKObject;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
+import com.creatorskit.swing.timesheet.keyframe.OverheadKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.TextKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.settings.OverheadSprite;
+import net.runelite.api.*;
+import net.runelite.api.Point;
+import net.runelite.api.coords.LocalPoint;
+import net.runelite.client.game.SpriteManager;
+import net.runelite.client.ui.overlay.Overlay;
+import net.runelite.client.ui.overlay.OverlayLayer;
+import net.runelite.client.ui.overlay.OverlayPosition;
+import net.runelite.client.ui.overlay.OverlayUtil;
+
+import javax.inject.Inject;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+
+public class OverheadOverlay extends Overlay
+{
+    private final Client client;
+    private final CreatorsPlugin plugin;
+    private final SpriteManager spriteManager;
+
+    private final int HEIGHT_BUFFER = 16;
+    private final int OVERHEAD_Y_BUFFER = -18;
+    private final int SKULL_Y_BUFFER = -25;
+    private final int TEXT_BUFFER = -12;
+    private final int X_BUFFER = -1;
+
+    @Inject
+    private OverheadOverlay(Client client, CreatorsPlugin plugin, SpriteManager spriteManager)
+    {
+        setPosition(OverlayPosition.DYNAMIC);
+        setLayer(OverlayLayer.ABOVE_SCENE);
+        this.client = client;
+        this.plugin = plugin;
+        this.spriteManager = spriteManager;
+    }
+
+    @Override
+    public Dimension render(Graphics2D graphics)
+    {
+        if (client.getGameState() != GameState.LOGGED_IN)
+        {
+            return null;
+        }
+
+        ArrayList<Character> characters = plugin.getCharacters();
+        for (int i = 0; i < characters.size(); i++)
+        {
+            Character character = characters.get(i);
+            if (!character.isActive())
+            {
+                continue;
+            }
+
+            if (!plugin.isInScene(character))
+            {
+                continue;
+            }
+
+            OverheadKeyFrame overheadKeyFrame = (OverheadKeyFrame) character.getCurrentKeyFrame(KeyFrameType.OVERHEAD);
+            if (overheadKeyFrame == null)
+            {
+                continue;
+            }
+
+            OverheadSprite sprite = overheadKeyFrame.getOverheadSprite();
+            if (sprite == OverheadSprite.NONE && !overheadKeyFrame.isToggleSkull())
+            {
+                continue;
+            }
+
+            CKObject ckObject = character.getCkObject();
+            LocalPoint lp = ckObject.getLocation();
+            if (lp == null)
+            {
+                continue;
+            }
+
+            BufferedImage icon = spriteManager.getSprite(sprite.getSpriteID(), sprite.getFile());
+            if (icon == null)
+            {
+                continue;
+            }
+
+            Model model = ckObject.getModel();
+            model.calculateBoundsCylinder();
+            int height = model.getModelHeight();
+
+            int textBuffer = 0;
+            TextKeyFrame textKeyFrame = (TextKeyFrame) character.getCurrentKeyFrame(KeyFrameType.TEXT);
+            if (textKeyFrame != null)
+            {
+                if (textKeyFrame.isEnabled())
+                {
+                    textBuffer = TEXT_BUFFER;
+                }
+            }
+
+            Point base = Perspective.getCanvasImageLocation(client, lp, icon, height + HEIGHT_BUFFER);
+
+            int skullBuffer = 0;
+            if (overheadKeyFrame.isToggleSkull())
+            {
+                Point p = new Point(base.getX() + X_BUFFER, base.getY() + OVERHEAD_Y_BUFFER + textBuffer);
+                skullBuffer = SKULL_Y_BUFFER;
+                BufferedImage skull = spriteManager.getSprite(OverheadSprite.SKULL.getSpriteID(), OverheadSprite.SKULL.getFile());
+                OverlayUtil.renderImageLocation(graphics, p, skull);
+            }
+
+            if (sprite != OverheadSprite.NONE)
+            {
+                Point p = new Point(base.getX() + X_BUFFER, base.getY() + OVERHEAD_Y_BUFFER + skullBuffer + textBuffer);
+                OverlayUtil.renderImageLocation(graphics, p, icon);
+            }
+        }
+
+        return null;
+    }
+}

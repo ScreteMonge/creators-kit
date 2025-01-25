@@ -362,7 +362,7 @@ public class TimeSheet extends JPanel
             @Override
             public void actionPerformed(ActionEvent e)
             {
-                getTimeSheetPanel().setCurrentTime(currentTime - 0.1);
+                getTimeSheetPanel().setCurrentTime(TimeSheetPanel.round(currentTime - 0.1), false);
             }
         });
 
@@ -372,7 +372,7 @@ public class TimeSheet extends JPanel
             @Override
             public void actionPerformed(ActionEvent e)
             {
-                getTimeSheetPanel().setCurrentTime(currentTime + 0.1);
+                getTimeSheetPanel().setCurrentTime(TimeSheetPanel.round(currentTime + 0.1), false);
             }
         });
 
@@ -494,7 +494,7 @@ public class TimeSheet extends JPanel
                 if (timeIndicatorPressed)
                 {
                     double time = getTimeIndicatorPosition();
-                    timeSheetPanel.setCurrentTime(time);
+                    timeSheetPanel.setCurrentTime(time, false);
                     timeIndicatorPressed = false;
                 }
 

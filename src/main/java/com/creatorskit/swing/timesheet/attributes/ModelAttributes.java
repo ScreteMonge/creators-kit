@@ -74,7 +74,7 @@ public class ModelAttributes extends Attributes
     public void resetAttributes()
     {
         modelId.setValue(-1);
-        modelOverride.setSelectedItem(ModelToggle.MODEL_ID);
+        modelOverride.setSelectedItem(ModelToggle.CUSTOM_MODEL);
         customModel.setSelectedItem(null);
         setBackgroundColours(KeyFrameState.EMPTY);
     }

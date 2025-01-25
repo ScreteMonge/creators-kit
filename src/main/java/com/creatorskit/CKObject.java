@@ -112,6 +112,16 @@ public class CKObject extends RuneLiteObjectController
         animationController.setAnimation(client.loadAnimation(animId));
     }
 
+    public Animation getAnimation()
+    {
+        if (animationController == null)
+        {
+            animationController = new AnimationController(client, -1);
+        }
+
+        return animationController.getAnimation();
+    }
+
     public void setAnimationFrame(int animFrame, boolean allowPause)
     {
         if (animationController == null)

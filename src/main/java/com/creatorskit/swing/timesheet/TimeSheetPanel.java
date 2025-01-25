@@ -3,6 +3,7 @@ package com.creatorskit.swing.timesheet;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.DataFinder;
+import com.creatorskit.programming.Programmer;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.manager.TreeScrollPane;
@@ -50,7 +51,7 @@ public class TimeSheetPanel extends JPanel
     private AttributePanel attributePanel;
     private final JPanel labelPanel = new JPanel();
     private final JPanel controlPanel = new JPanel();
-    private final JSpinner timeSpinner = new JSpinner();
+    private final JLabel timeLabel = new JLabel();
     private final ImageIcon PLAY = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/Play.png"));
     private final ImageIcon STOP = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/Stop.png"));
     private final ImageIcon PAUSE = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/Pause.png"));
@@ -141,7 +142,7 @@ public class TimeSheetPanel extends JPanel
             return;
         }
 
-        setCurrentTime(keyFrame.getTick());
+        setCurrentTime(keyFrame.getTick(), false);
     }
 
     public void onAttributeSkipPrevious()
@@ -157,7 +158,7 @@ public class TimeSheetPanel extends JPanel
             return;
         }
 
-        setCurrentTime(keyFrame.getTick());
+        setCurrentTime(keyFrame.getTick(), false);
     }
 
     public void onZoomEvent(int amount, TimeSheet source)
@@ -368,9 +369,10 @@ public class TimeSheetPanel extends JPanel
             return;
         }
 
-        character.addKeyFrame(keyFrame);
+        character.addKeyFrame(keyFrame, currentTime);
         attributePanel.setKeyFramedIcon(true);
         attributePanel.resetAttributes(character, currentTime);
+        toolBox.getProgrammer().updateProgram(character, currentTime);
     }
 
     /**
@@ -388,6 +390,8 @@ public class TimeSheetPanel extends JPanel
 
         character.removeKeyFrame(type, tick);
         attributePanel.setKeyFramedIcon(false);
+        attributePanel.resetAttributes(character, currentTime);
+        toolBox.getProgrammer().updateProgram(character, currentTime);
     }
 
     /**
@@ -399,6 +403,7 @@ public class TimeSheetPanel extends JPanel
     {
         character.removeKeyFrame(keyFrame);
         attributePanel.resetAttributes(character, currentTime);
+        toolBox.getProgrammer().updateProgram(character, currentTime);
     }
 
     /**
@@ -414,9 +419,10 @@ public class TimeSheetPanel extends JPanel
         }
 
         attributePanel.resetAttributes(character, currentTime);
+        toolBox.getProgrammer().updateProgram(character, currentTime);
     }
 
-    private void setSelectedCharacter(Character character)
+    public void setSelectedCharacter(Character character)
     {
         selectedCharacter = character;
         summarySheet.setSelectedCharacter(character);
@@ -424,7 +430,7 @@ public class TimeSheetPanel extends JPanel
         attributePanel.setSelectedCharacter(character);
     }
 
-    public void setCurrentTime(double tick)
+    public void setCurrentTime(double tick, boolean playing)
     {
         if (tick < -ABSOLUTE_MAX_SEQUENCE_LENGTH)
         {
@@ -440,12 +446,23 @@ public class TimeSheetPanel extends JPanel
         attributeSheet.setCurrentTime(currentTime);
         summarySheet.setCurrentTime(currentTime);
 
+        Programmer programmer = toolBox.getProgrammer();
+
+        if (playing)
+        {
+            programmer.updatePrograms();
+        }
+        else
+        {
+            programmer.updatePrograms(tick);
+        }
+
         onCurrentTimeChanged(tick);
     }
 
     public void onCurrentTimeChanged(double tick)
     {
-        timeSpinner.setValue(tick);
+        timeLabel.setText("" + tick);
         attributePanel.resetAttributes(selectedCharacter, tick);
     }
 
@@ -494,8 +511,7 @@ public class TimeSheetPanel extends JPanel
         c.weighty = 1;
         c.gridx = 0;
         c.gridy = 0;
-        controlPanel.add(timeSpinner, c);
-
+        JSpinner timeSpinner = new JSpinner();
         timeSpinner.setBackground(ColorScheme.DARK_GRAY_COLOR);
         timeSpinner.setModel(new SpinnerNumberModel(0, -ABSOLUTE_MAX_SEQUENCE_LENGTH, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.1));
         JSpinner.NumberEditor editor = (JSpinner.NumberEditor) timeSpinner.getEditor();
@@ -505,8 +521,14 @@ public class TimeSheetPanel extends JPanel
         timeSpinner.addChangeListener(e ->
         {
             double tick = TimeSheetPanel.round((double) timeSpinner.getValue());
-            toolBox.getTimeSheetPanel().setCurrentTime(tick);
+            toolBox.getTimeSheetPanel().setCurrentTime(tick, false);
         });
+        controlPanel.add(timeSpinner, c);
+
+        c.gridx = 1;
+        c.gridy = 0;
+        timeLabel.setText("" + (int) timeSpinner.getValue());
+        controlPanel.add(timeLabel, c);
 
         JButton playButton = new JButton(PLAY);
         playButton.setPreferredSize(new Dimension(35, 35));
@@ -541,7 +563,7 @@ public class TimeSheetPanel extends JPanel
 
         c.weightx = 1;
         c.weighty = 1;
-        c.gridx = 1;
+        c.gridx = 2;
         c.gridy = 0;
         JPanel controls = new JPanel();
         controls.setBackground(ColorScheme.DARKER_GRAY_COLOR);

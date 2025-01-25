@@ -70,8 +70,7 @@ public class KeyFrame
             return new TextKeyFrame(
                     tick,
                     kf.isEnabled(),
-                    kf.getText(),
-                    kf.getHeight());
+                    kf.getText());
         }
 
         if (keyFrame instanceof OverheadKeyFrame)
@@ -79,9 +78,8 @@ public class KeyFrame
             OverheadKeyFrame kf = (OverheadKeyFrame) keyFrame;
             return new OverheadKeyFrame(
                     tick,
-                    kf.isEnabled(),
-                    kf.getHeadIcon(),
-                    kf.getHeight());
+                    kf.isToggleSkull(),
+                    kf.getOverheadSprite());
         }
 
         if (keyFrame instanceof HealthKeyFrame)
@@ -90,11 +88,17 @@ public class KeyFrame
             return new HealthKeyFrame(
                     tick,
                     kf.isEnabled(),
-                    kf.getHitsplatType(),
-                    kf.getHitsplatHeight(),
+                    kf.getHealthbarSprite(),
                     kf.getMaxHealth(),
                     kf.getCurrentHealth(),
-                    kf.getHealthbarHeight());
+                    kf.getHitsplat1Sprite(),
+                    kf.getHitsplat2Sprite(),
+                    kf.getHitsplat3Sprite(),
+                    kf.getHitsplat4Sprite(),
+                    kf.getHitsplat1(),
+                    kf.getHitsplat2(),
+                    kf.getHitsplat3(),
+                    kf.getHitsplat4());
         }
 
         if (keyFrame instanceof SpotAnimKeyFrame)
@@ -103,7 +107,9 @@ public class KeyFrame
             return new SpotAnimKeyFrame(
                     tick,
                     kf.getSpotAnimId1(),
-                    kf.getSpotAnimId2());
+                    kf.getSpotAnimId2(),
+                    kf.isLoop1(),
+                    kf.isLoop2());
         }
 
         return null;

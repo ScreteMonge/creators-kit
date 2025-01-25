@@ -304,31 +304,6 @@ public class ModelAnvil extends JPanel
         lightZSpinner.setPreferredSize(LIGHT_DIMENSION);
         lightPanel.add(lightZSpinner, c);
 
-        JPanel cacheSearcherPanel = new JPanel();
-        cacheSearcherPanel.setLayout(new GridLayout(0, 1, 4, 4));
-        cacheSearcherPanel.setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 1));
-        cacheSearcherPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
-
-        JLabel searcherLabel = new JLabel("Cache Searcher");
-        searcherLabel.setFont(FontManager.getRunescapeBoldFont());
-        searcherLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        searcherLabel.setVerticalAlignment(SwingConstants.CENTER);
-        cacheSearcherPanel.add(searcherLabel);
-
-        JSpinner idSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 99999, 1));
-        idSpinner.setToolTipText("Choose the NPC, Object, or Item Id to find all its associated models");
-        cacheSearcherPanel.add(idSpinner);
-
-        JComboBox<CustomModelType> modelTypeComboBox = new JComboBox<>();
-        modelTypeComboBox.addItem(CustomModelType.CACHE_NPC);
-        modelTypeComboBox.addItem(CustomModelType.CACHE_OBJECT);
-        modelTypeComboBox.addItem(CustomModelType.CACHE_GROUND_ITEM);
-        modelTypeComboBox.addItem(CustomModelType.CACHE_MAN_WEAR);
-        modelTypeComboBox.addItem(CustomModelType.CACHE_WOMAN_WEAR);
-        modelTypeComboBox.setFocusable(false);
-        modelTypeComboBox.setToolTipText("Pick which part of the cache to search");
-        cacheSearcherPanel.add(modelTypeComboBox);
-
         JPanel groupPanel = new GroupPanel(client, plugin, clientThread);
 
         c.insets = new Insets(8, 8, 8, 8);
@@ -339,29 +314,12 @@ public class ModelAnvil extends JPanel
 
         c.gridx = 0;
         c.gridy = 1;
-        sidePanel.add(cacheSearcherPanel, c);
-
-        c.gridx = 0;
-        c.gridy = 2;
         sidePanel.add(groupPanel, c);
 
         c.gridx = 0;
-        c.gridy = 3;
+        c.gridy = 2;
         c.weighty = 1;
         sidePanel.add(new JLabel(""), c);
-
-        JButton addModelsButton = new JButton("Add Models");
-        addModelsButton.setToolTipText("Add the chosen NPC, Object, or Item as a Custom Model");
-        cacheSearcherPanel.add(addModelsButton);
-        addModelsButton.addActionListener(e ->
-        {
-            CustomModelType type = (CustomModelType) modelTypeComboBox.getSelectedItem();
-            if (type == null)
-                return;
-
-            int id = (int) idSpinner.getValue();
-            plugin.cacheToAnvil(type, id);
-        });
 
         forgeButton.addActionListener(e -> onForgeButtonPressed(client, nameField, false));
         forgeSetButton.addActionListener(e -> onForgeButtonPressed(client, nameField, true));

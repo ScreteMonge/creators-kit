@@ -11,7 +11,6 @@ import com.creatorskit.swing.timesheet.keyframe.*;
 import com.creatorskit.swing.timesheet.keyframe.settings.*;
 import lombok.Getter;
 import lombok.Setter;
-import net.runelite.api.HeadIcon;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
@@ -201,31 +200,37 @@ public class AttributePanel extends JPanel
                 return new TextKeyFrame(
                         timeSheetPanel.getCurrentTime(),
                         textAttributes.getEnableBox().getSelectedItem() == Toggle.ENABLE,
-                        textAttributes.getText().getText(),
-                        (int) textAttributes.getHeight().getValue()
+                        textAttributes.getText().getText()
                 );
             case OVERHEAD:
                 return new OverheadKeyFrame(
                         timeSheetPanel.getCurrentTime(),
-                        overheadAttributes.getEnableBox().getSelectedItem() == Toggle.ENABLE,
-                        (HeadIcon) overheadAttributes.getHeadIcon().getSelectedItem(),
-                        (int) overheadAttributes.getHeight().getValue()
+                        overheadAttributes.getToggleSkull().getSelectedItem() == Toggle.ENABLE,
+                        (OverheadSprite) overheadAttributes.getPrayerSprite().getSelectedItem()
                 );
             case HEALTH:
                 return new HealthKeyFrame(
                         timeSheetPanel.getCurrentTime(),
                         healthAttributes.getEnableBox().getSelectedItem() == Toggle.ENABLE,
-                        (HitsplatType) healthAttributes.getHitsplatType().getSelectedItem(),
-                        (int) healthAttributes.getHitsplatHeight().getValue(),
+                        (HealthbarSprite) healthAttributes.getHealthbarSprite().getSelectedItem(),
                         (int) healthAttributes.getMaxHealth().getValue(),
                         (int) healthAttributes.getCurrentHealth().getValue(),
-                        (int) healthAttributes.getHealthbarHeight().getValue()
+                        (HitsplatSprite) healthAttributes.getHitsplat1Sprite().getSelectedItem(),
+                        (HitsplatSprite) healthAttributes.getHitsplat2Sprite().getSelectedItem(),
+                        (HitsplatSprite) healthAttributes.getHitsplat3Sprite().getSelectedItem(),
+                        (HitsplatSprite) healthAttributes.getHitsplat4Sprite().getSelectedItem(),
+                        (int) healthAttributes.getHitsplat1().getValue(),
+                        (int) healthAttributes.getHitsplat2().getValue(),
+                        (int) healthAttributes.getHitsplat3().getValue(),
+                        (int) healthAttributes.getHitsplat4().getValue()
                 );
             case SPOTANIM:
                 return new SpotAnimKeyFrame(
                         timeSheetPanel.getCurrentTime(),
                         (int) spotAnimAttributes.getSpotAnimId1().getValue(),
-                        (int) spotAnimAttributes.getSpotAnimId2().getValue()
+                        (int) spotAnimAttributes.getSpotAnimId2().getValue(),
+                        spotAnimAttributes.getLoop1().getSelectedItem() == Toggle.ENABLE,
+                        spotAnimAttributes.getLoop2().getSelectedItem() == Toggle.ENABLE
                 );
         }
 
@@ -679,28 +684,14 @@ public class AttributePanel extends JPanel
                 "<br>or a Custom Model that you've grabbed from the environment or created in the Model Anvil</html>");
         manualTitlePanel.add(manualTitleHelp);
 
-        c.gridwidth = 1;
+        c.gridwidth = 2;
         c.gridx = 0;
         c.gridy = 1;
-        JLabel idLabel = new JLabel("Model Id: ");
-        idLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(idLabel, c);
-
-        c.gridx = 1;
-        c.gridy = 1;
-        JSpinner id = modelAttributes.getModelId();
-        id.setValue(-1);
-        id.setPreferredSize(spinnerSize);
-        card.add(id, c);
-
-        c.gridwidth = 2;
-        c.gridx = 2;
-        c.gridy = 1;
-        JComboBox<ModelToggle> toggleComboBox = modelAttributes.getModelOverride();
-        toggleComboBox.setFocusable(false);
-        toggleComboBox.addItem(ModelToggle.MODEL_ID);
-        toggleComboBox.addItem(ModelToggle.CUSTOM_MODEL);
-        card.add(toggleComboBox, c);
+        JComboBox<ModelToggle> modelOverride = modelAttributes.getModelOverride();
+        modelOverride.setFocusable(false);
+        modelOverride.addItem(ModelToggle.CUSTOM_MODEL);
+        modelOverride.addItem(ModelToggle.MODEL_ID);
+        card.add(modelOverride, c);
 
         c.gridwidth = 1;
         c.gridx = 0;
@@ -709,13 +700,26 @@ public class AttributePanel extends JPanel
         customLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(customLabel, c);
 
-        c.gridwidth = 2;
+        c.gridwidth = 1;
         c.gridx = 1;
         c.gridy = 2;
         JComboBox<CustomModel> customComboBox = modelAttributes.getCustomModel();
         customComboBox.setFocusable(false);
-        //customComboBox.addItem(ModelToggle.MODEL_ID);
         card.add(customComboBox, c);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 3;
+        JLabel idLabel = new JLabel("Model Id: ");
+        idLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(idLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 3;
+        JSpinner id = modelAttributes.getModelId();
+        id.setValue(-1);
+        id.setPreferredSize(spinnerSize);
+        card.add(id, c);
 
         c.gridwidth = 1;
         c.gridheight = 1;
@@ -784,21 +788,6 @@ public class AttributePanel extends JPanel
         text.setLineWrap(true);
         card.add(text, c);
 
-        c.weightx = 0;
-        c.gridwidth = 1;
-        c.gridx = 0;
-        c.gridy = 3;
-        JLabel heightLabel = new JLabel("Height: ");
-        heightLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(heightLabel, c);
-
-        c.gridwidth = 1;
-        c.gridx = 1;
-        c.gridy = 3;
-        JSpinner height = textAttributes.getHeight();
-        height.setValue(60);
-        card.add(height, c);
-
         c.gridwidth = 1;
         c.gridheight = 1;
         c.weightx = 1;
@@ -844,11 +833,18 @@ public class AttributePanel extends JPanel
         c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 1;
-        JComboBox<Toggle> toggleComboBox = overheadAttributes.getEnableBox();
-        toggleComboBox.setFocusable(false);
-        toggleComboBox.addItem(Toggle.DISABLE);
-        toggleComboBox.addItem(Toggle.ENABLE);
-        card.add(toggleComboBox, c);
+        JLabel skullLabel = new JLabel("Enable Skull: ");
+        skullLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(skullLabel, c);
+
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.gridy = 1;
+        JComboBox<Toggle> toggleSkull = overheadAttributes.getToggleSkull();
+        toggleSkull.setFocusable(false);
+        toggleSkull.addItem(Toggle.DISABLE);
+        toggleSkull.addItem(Toggle.ENABLE);
+        card.add(toggleSkull, c);
 
         c.gridwidth = 1;
         c.gridx = 0;
@@ -860,39 +856,25 @@ public class AttributePanel extends JPanel
         c.gridwidth = 1;
         c.gridx = 1;
         c.gridy = 2;
-        JComboBox<HeadIcon> headIconBox = overheadAttributes.getHeadIcon();
-        headIconBox.setFocusable(false);
-        headIconBox.addItem(HeadIcon.MAGIC);
-        headIconBox.addItem(HeadIcon.RANGED);
-        headIconBox.addItem(HeadIcon.MELEE);
-        headIconBox.addItem(HeadIcon.REDEMPTION);
-        headIconBox.addItem(HeadIcon.RETRIBUTION);
-        headIconBox.addItem(HeadIcon.SMITE);
-        headIconBox.addItem(HeadIcon.RANGE_MAGE);
-        headIconBox.addItem(HeadIcon.RANGE_MELEE);
-        headIconBox.addItem(HeadIcon.MAGE_MELEE);
-        headIconBox.addItem(HeadIcon.RANGE_MAGE_MELEE);
-        headIconBox.addItem(HeadIcon.DEFLECT_MAGE);
-        headIconBox.addItem(HeadIcon.DEFLECT_RANGE);
-        headIconBox.addItem(HeadIcon.DEFLECT_MELEE);
-        headIconBox.addItem(HeadIcon.SOUL_SPLIT);
-        headIconBox.addItem(HeadIcon.WRATH);
-        card.add(headIconBox, c);
-
-        c.weightx = 0;
-        c.gridwidth = 1;
-        c.gridx = 0;
-        c.gridy = 3;
-        JLabel heightLabel = new JLabel("Height: ");
-        heightLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(heightLabel, c);
-
-        c.gridwidth = 1;
-        c.gridx = 1;
-        c.gridy = 3;
-        JSpinner height = overheadAttributes.getHeight();
-        height.setValue(60);
-        card.add(height, c);
+        JComboBox<OverheadSprite> spriteBox = overheadAttributes.getPrayerSprite();
+        spriteBox.setFocusable(false);
+        spriteBox.addItem(OverheadSprite.NONE);
+        spriteBox.addItem(OverheadSprite.PROTECT_MAGIC);
+        spriteBox.addItem(OverheadSprite.PROTECT_RANGED);
+        spriteBox.addItem(OverheadSprite.PROTECT_MELEE);
+        spriteBox.addItem(OverheadSprite.REDEMPTION);
+        spriteBox.addItem(OverheadSprite.RETRIBUTION);
+        spriteBox.addItem(OverheadSprite.SMITE);
+        spriteBox.addItem(OverheadSprite.PROTECT_RANGE_MAGE);
+        spriteBox.addItem(OverheadSprite.PROTECT_RANGE_MELEE);
+        spriteBox.addItem(OverheadSprite.PROTECT_MAGE_MELEE);
+        spriteBox.addItem(OverheadSprite.PROTECT_RANGE_MAGE_MELEE);
+        spriteBox.addItem(OverheadSprite.DEFLECT_MAGE);
+        spriteBox.addItem(OverheadSprite.DEFLECT_RANGE);
+        spriteBox.addItem(OverheadSprite.DEFLECT_MELEE);
+        spriteBox.addItem(OverheadSprite.SOUL_SPLIT);
+        spriteBox.addItem(OverheadSprite.WRATH);
+        card.add(spriteBox, c);
 
         c.gridwidth = 1;
         c.gridheight = 1;
@@ -925,7 +907,7 @@ public class AttributePanel extends JPanel
         manualTitlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
         card.add(manualTitlePanel, c);
 
-        JLabel manualTitle = new JLabel("Healthbar & Hitsplats");
+        JLabel manualTitle = new JLabel("Healthbar");
         manualTitle.setHorizontalAlignment(SwingConstants.LEFT);
         manualTitle.setFont(FontManager.getRunescapeBoldFont());
         manualTitlePanel.add(manualTitle);
@@ -941,82 +923,202 @@ public class AttributePanel extends JPanel
         c.gridy = 1;
         JComboBox<Toggle> toggleComboBox = healthAttributes.getEnableBox();
         toggleComboBox.setFocusable(false);
-        toggleComboBox.addItem(Toggle.DISABLE);
         toggleComboBox.addItem(Toggle.ENABLE);
+        toggleComboBox.addItem(Toggle.DISABLE);
         card.add(toggleComboBox, c);
 
         c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 2;
-        JLabel textLabel = new JLabel("Hitsplat Icon: ");
-        textLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(textLabel, c);
+        JLabel healthbarLabel = new JLabel("Healthbar Sprite: ");
+        healthbarLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(healthbarLabel, c);
 
         c.gridwidth = 1;
         c.gridx = 1;
         c.gridy = 2;
-        JComboBox<HitsplatType> hitsplatComboBox = healthAttributes.getHitsplatType();
-        hitsplatComboBox.setFocusable(false);
-        hitsplatComboBox.addItem(HitsplatType.DAMAGE);
-        hitsplatComboBox.addItem(HitsplatType.BLOCK);
-        card.add(hitsplatComboBox, c);
-
-        c.weightx = 0;
-        c.gridwidth = 1;
-        c.gridx = 0;
-        c.gridy = 3;
-        JLabel hitsplatHeightLabel = new JLabel("Hitsplat Height: ");
-        hitsplatHeightLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(hitsplatHeightLabel, c);
-
-        c.gridwidth = 1;
-        c.gridx = 1;
-        c.gridy = 3;
-        JSpinner hitsplatHeight = healthAttributes.getHitsplatHeight();
-        hitsplatHeight.setValue(30);
-        card.add(hitsplatHeight, c);
+        JComboBox<HealthbarSprite> healthbarSprite = healthAttributes.getHealthbarSprite();
+        healthbarSprite.setFocusable(false);
+        healthbarSprite.addItem(HealthbarSprite.DEFAULT);
+        card.add(healthbarSprite, c);
 
         c.gridwidth = 1;
         c.gridx = 0;
-        c.gridy = 4;
+        c.gridy = 3;
         JLabel maxHealthLabel = new JLabel("Max Health: ");
         maxHealthLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(maxHealthLabel, c);
 
         c.gridwidth = 1;
         c.gridx = 1;
-        c.gridy = 4;
+        c.gridy = 3;
         JSpinner maxHealth = healthAttributes.getMaxHealth();
+        maxHealth.setModel(new SpinnerNumberModel(99, 0, 99999, 1));
         maxHealth.setValue(99);
         card.add(maxHealth, c);
 
         c.gridwidth = 1;
         c.gridx = 0;
-        c.gridy = 5;
+        c.gridy = 4;
         JLabel currentHealthLabel = new JLabel("Current Health: ");
         currentHealthLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(currentHealthLabel, c);
 
         c.gridwidth = 1;
         c.gridx = 1;
-        c.gridy = 5;
+        c.gridy = 4;
         JSpinner currentHealth = healthAttributes.getCurrentHealth();
+        currentHealth.setModel(new SpinnerNumberModel(99, 0, 99999, 1));
         currentHealth.setValue(99);
         card.add(currentHealth, c);
 
         c.gridwidth = 1;
         c.gridx = 0;
+        c.gridy = 5;
+        JLabel hitsplatTitle = new JLabel("Hitsplats");
+        hitsplatTitle.setHorizontalAlignment(SwingConstants.LEFT);
+        hitsplatTitle.setFont(FontManager.getRunescapeBoldFont());
+        card.add(hitsplatTitle, c);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
         c.gridy = 6;
-        JLabel healthbarHeightLabel = new JLabel("Healthbar Height: ");
-        healthbarHeightLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(healthbarHeightLabel, c);
+        JLabel hitsplat1TypeLabel = new JLabel("Hitsplat 1 Icon: ");
+        hitsplat1TypeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(hitsplat1TypeLabel, c);
 
         c.gridwidth = 1;
         c.gridx = 1;
         c.gridy = 6;
-        JSpinner healthbarHeight = healthAttributes.getHealthbarHeight();
-        healthbarHeight.setValue(60);
-        card.add(healthbarHeight, c);
+        JComboBox<HitsplatSprite> hitsplat1Type = healthAttributes.getHitsplat1Sprite();
+        hitsplat1Type.setFocusable(false);
+        hitsplat1Type.addItem(HitsplatSprite.NONE);
+        hitsplat1Type.addItem(HitsplatSprite.BLOCK);
+        hitsplat1Type.addItem(HitsplatSprite.DAMAGE);
+        hitsplat1Type.addItem(HitsplatSprite.POISON);
+        hitsplat1Type.addItem(HitsplatSprite.VENOM);
+        hitsplat1Type.addItem(HitsplatSprite.HEAL);
+        hitsplat1Type.addItem(HitsplatSprite.DISEASE);
+        card.add(hitsplat1Type, c);
+
+        c.gridwidth = 1;
+        c.gridx = 3;
+        c.gridy = 6;
+        JLabel hitsplat1Label = new JLabel(" Damage: ");
+        hitsplat1Label.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(hitsplat1Label, c);
+
+        c.gridwidth = 1;
+        c.gridx = 4;
+        c.gridy = 6;
+        JSpinner hitsplat1 = healthAttributes.getHitsplat1();
+        hitsplat1.setModel(new SpinnerNumberModel(1, 0, 999, 1));
+        card.add(hitsplat1, c);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 7;
+        JLabel hitsplat2TypeLabel = new JLabel("Hitsplat 2 Icon: ");
+        hitsplat2TypeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(hitsplat2TypeLabel, c);
+
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.gridy = 7;
+        JComboBox<HitsplatSprite> hitsplat2Type = healthAttributes.getHitsplat2Sprite();
+        hitsplat2Type.setFocusable(false);
+        hitsplat2Type.addItem(HitsplatSprite.NONE);
+        hitsplat2Type.addItem(HitsplatSprite.BLOCK);
+        hitsplat2Type.addItem(HitsplatSprite.DAMAGE);
+        hitsplat2Type.addItem(HitsplatSprite.POISON);
+        hitsplat2Type.addItem(HitsplatSprite.VENOM);
+        hitsplat2Type.addItem(HitsplatSprite.HEAL);
+        hitsplat2Type.addItem(HitsplatSprite.DISEASE);
+        card.add(hitsplat2Type, c);
+
+        c.gridwidth = 1;
+        c.gridx = 3;
+        c.gridy = 7;
+        JLabel hitsplat2Label = new JLabel(" Damage: ");
+        hitsplat2Label.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(hitsplat2Label, c);
+
+        c.gridwidth = 1;
+        c.gridx = 4;
+        c.gridy = 7;
+        JSpinner hitsplat2 = healthAttributes.getHitsplat2();
+        hitsplat2.setModel(new SpinnerNumberModel(1, 0, 999, 1));
+        card.add(hitsplat2, c);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 8;
+        JLabel hitsplat3TypeLabel = new JLabel("Hitsplat 3 Icon: ");
+        hitsplat3TypeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(hitsplat3TypeLabel, c);
+
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.gridy = 8;
+        JComboBox<HitsplatSprite> hitsplat3Type = healthAttributes.getHitsplat3Sprite();
+        hitsplat3Type.setFocusable(false);
+        hitsplat3Type.addItem(HitsplatSprite.NONE);
+        hitsplat3Type.addItem(HitsplatSprite.BLOCK);
+        hitsplat3Type.addItem(HitsplatSprite.DAMAGE);
+        hitsplat3Type.addItem(HitsplatSprite.POISON);
+        hitsplat3Type.addItem(HitsplatSprite.VENOM);
+        hitsplat3Type.addItem(HitsplatSprite.HEAL);
+        hitsplat3Type.addItem(HitsplatSprite.DISEASE);
+        card.add(hitsplat3Type, c);
+
+        c.gridwidth = 1;
+        c.gridx = 3;
+        c.gridy = 8;
+        JLabel hitsplat3Label = new JLabel(" Damage: ");
+        hitsplat3Label.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(hitsplat3Label, c);
+
+        c.gridwidth = 1;
+        c.gridx = 4;
+        c.gridy = 8;
+        JSpinner hitsplat3 = healthAttributes.getHitsplat3();
+        hitsplat3.setModel(new SpinnerNumberModel(1, 0, 999, 1));
+        card.add(hitsplat3, c);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 9;
+        JLabel hitsplat4TypeLabel = new JLabel("Hitsplat 4 Icon: ");
+        hitsplat4TypeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(hitsplat4TypeLabel, c);
+
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.gridy = 9;
+        JComboBox<HitsplatSprite> hitsplat4Type = healthAttributes.getHitsplat4Sprite();
+        hitsplat4Type.setFocusable(false);
+        hitsplat4Type.addItem(HitsplatSprite.NONE);
+        hitsplat4Type.addItem(HitsplatSprite.BLOCK);
+        hitsplat4Type.addItem(HitsplatSprite.DAMAGE);
+        hitsplat4Type.addItem(HitsplatSprite.POISON);
+        hitsplat4Type.addItem(HitsplatSprite.VENOM);
+        hitsplat4Type.addItem(HitsplatSprite.HEAL);
+        hitsplat4Type.addItem(HitsplatSprite.DISEASE);
+        card.add(hitsplat4Type, c);
+
+        c.gridwidth = 1;
+        c.gridx = 3;
+        c.gridy = 9;
+        JLabel hitsplat4Label = new JLabel(" Damage: ");
+        hitsplat4Label.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(hitsplat4Label, c);
+
+        c.gridwidth = 1;
+        c.gridx = 4;
+        c.gridy = 9;
+        JSpinner hitsplat4 = healthAttributes.getHitsplat4();
+        hitsplat4.setModel(new SpinnerNumberModel(1, 0, 999, 1));
+        card.add(hitsplat4, c);
 
         c.gridwidth = 1;
         c.gridheight = 1;
@@ -1076,6 +1178,21 @@ public class AttributePanel extends JPanel
         card.add(spotAnim1, c);
 
         c.gridwidth = 1;
+        c.gridx = 2;
+        c.gridy = 1;
+        JLabel loop1Label = new JLabel("Loop: ");
+        loop1Label.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(loop1Label, c);
+
+        c.gridx = 3;
+        c.gridy = 1;
+        JComboBox<Toggle> loop1 = spotAnimAttributes.getLoop1();
+        loop1.setFocusable(false);
+        loop1.addItem(Toggle.DISABLE);
+        loop1.addItem(Toggle.ENABLE);
+        card.add(loop1, c);
+
+        c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 2;
         JLabel spotAnim2Label = new JLabel("SpotAnim 2: ");
@@ -1088,6 +1205,21 @@ public class AttributePanel extends JPanel
         JSpinner spotAnim2 = spotAnimAttributes.getSpotAnimId2();
         spotAnim2.setValue(-1);
         card.add(spotAnim2, c);
+
+        c.gridwidth = 1;
+        c.gridx = 2;
+        c.gridy = 2;
+        JLabel loop2Label = new JLabel("Loop: ");
+        loop2Label.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(loop2Label, c);
+
+        c.gridx = 3;
+        c.gridy = 2;
+        JComboBox<Toggle> loop2 = spotAnimAttributes.getLoop2();
+        loop2.setFocusable(false);
+        loop2.addItem(Toggle.DISABLE);
+        loop2.addItem(Toggle.ENABLE);
+        card.add(loop2, c);
 
         c.gridwidth = 1;
         c.gridheight = 1;
@@ -1423,7 +1555,7 @@ public class AttributePanel extends JPanel
         }
     }
 
-    private void setAttributesEmpty()
+    public void setAttributesEmpty()
     {
         switch (selectedKeyFramePage)
         {

@@ -108,56 +108,15 @@ public class ModelOrganizer extends JPanel
 
         c.gridx = 2;
         c.gridy = 0;
-        c.gridheight = 4;
-        c.weightx = 1;
-        JPanel cacheSearcherPanel = new JPanel();
-        cacheSearcherPanel.setLayout(new GridLayout(0, 1, 4, 4));
-        cacheSearcherPanel.setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 1));
-        headerPanel.add(cacheSearcherPanel, c);
-
-        JLabel searcherLabel = new JLabel("Cache Searcher");
-        searcherLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        searcherLabel.setFont(FontManager.getRunescapeBoldFont());
-        cacheSearcherPanel.add(searcherLabel);
-
-        JSpinner idSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 99999, 1));
-        idSpinner.setToolTipText("Choose the NPC, Object, or Item Id to find all its associated models");
-        cacheSearcherPanel.add(idSpinner);
-
-        JComboBox<CustomModelType> modelTypeComboBox = new JComboBox<>();
-        modelTypeComboBox.addItem(CustomModelType.CACHE_NPC);
-        modelTypeComboBox.addItem(CustomModelType.CACHE_OBJECT);
-        modelTypeComboBox.addItem(CustomModelType.CACHE_GROUND_ITEM);
-        modelTypeComboBox.addItem(CustomModelType.CACHE_MAN_WEAR);
-        modelTypeComboBox.addItem(CustomModelType.CACHE_WOMAN_WEAR);
-        modelTypeComboBox.setFocusable(false);
-        modelTypeComboBox.setToolTipText("Pick which part of the cache to search");
-        cacheSearcherPanel.add(modelTypeComboBox);
-
-        JButton addCustomModelButton = new JButton("Add Custom Model");
-        addCustomModelButton.setToolTipText("Add the chosen NPC, Object, or Item as a Custom Model");
-        cacheSearcherPanel.add(addCustomModelButton);
-        addCustomModelButton.addActionListener(e ->
-        {
-            CustomModelType type = (CustomModelType) modelTypeComboBox.getSelectedItem();
-            if (type == null)
-                return;
-
-            int id = (int) idSpinner.getValue();
-            plugin.cacheToCustomModel(type, id, -1);
-        });
-
-        c.gridx = 3;
-        c.gridy = 0;
         c.gridheight = 1;
         c.gridwidth = 2;
         c.weightx = 0.5;
-        JButton loadCustomButton = new JButton("Load Custom Model");
+        JButton loadCustomButton = new JButton("Load Saved Model");
         loadCustomButton.setToolTipText("Loads a previously forged and saved Custom Model");
         headerPanel.add(loadCustomButton, c);
         loadCustomButton.addActionListener(e -> openLoadDialog());
 
-        c.gridx = 3;
+        c.gridx = 2;
         c.gridy = 1;
         c.gridheight = 1;
         c.gridwidth = 1;
@@ -167,7 +126,7 @@ public class ModelOrganizer extends JPanel
         headerPanel.add(loadBlenderButton, c);
         loadBlenderButton.addActionListener(e -> modelImporter.openLoadDialog());
 
-        c.gridx = 4;
+        c.gridx = 3;
         c.gridy = 1;
         c.gridheight = 1;
         c.gridwidth = 1;
@@ -177,7 +136,7 @@ public class ModelOrganizer extends JPanel
         headerPanel.add(quickLoadBlenderButton, c);
         quickLoadBlenderButton.addActionListener(e -> modelImporter.openLatestFile());
 
-        c.gridx = 3;
+        c.gridx = 2;
         c.gridy = 2;
         c.gridheight = 2;
         c.gridwidth = 2;

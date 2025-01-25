@@ -14,7 +14,7 @@ public enum KeyFrameType
     ORIENTATION("Orientation"),
     TEXT("Text"),
     OVERHEAD("Overhead"),
-    HEALTH("Healtht"),
+    HEALTH("Health"),
     SPOTANIM("SpotAnim");
 
     private String name;

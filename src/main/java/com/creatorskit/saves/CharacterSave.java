@@ -30,4 +30,5 @@ public class CharacterSave
     private int frame;
     private ProgramComp programComp;
     private KeyFrame[][] keyFrames;
+    private KeyFrame[] currentFrames;
 }

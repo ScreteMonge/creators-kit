@@ -804,7 +804,6 @@ public class CacheSearcherTab extends JPanel
 
         clientThread.invokeLater(() ->
         {
-            Model model = plugin.constructModelFromCache(modelStats, new int[0], false, false);
             LightingStyle ls;
 
             switch (customModelType)
@@ -825,6 +824,8 @@ public class CacheSearcherTab extends JPanel
                     ls.getY(),
                     ls.getZ());
 
+            Model model = plugin.constructModelFromCache(modelStats, new int[0], false, ls, lighting);
+
             CustomModelComp comp = new CustomModelComp(0, customModelType, data.getId(), modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, data.getName());
             CustomModel customModel = new CustomModel(model, comp);
             plugin.addCustomModel(customModel, false);
@@ -841,6 +842,7 @@ public class CacheSearcherTab extends JPanel
                     -1,
                     60,
                     new KeyFrame[KeyFrameType.getTotalFrameTypes()][],
+                    new KeyFrame[KeyFrameType.getTotalFrameTypes()],
                     creatorsPanel.createEmptyProgram(-1, -1),
                     false,
                     null,
@@ -880,8 +882,8 @@ public class CacheSearcherTab extends JPanel
 
         clientThread.invokeLater(() ->
         {
-            Model model = plugin.constructModelFromCache(modelStats, new int[0], false, false);
             CustomLighting lighting = new CustomLighting(64, 768, -50, -50, 10);
+            Model model = plugin.constructModelFromCache(modelStats, new int[0], false, LightingStyle.DEFAULT, lighting);
             CustomModelComp comp = new CustomModelComp(0, CustomModelType.CACHE_OBJECT, data.getId(), modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, data.getName());
             CustomModel customModel = new CustomModel(model, comp);
             plugin.addCustomModel(customModel, false);
@@ -898,6 +900,7 @@ public class CacheSearcherTab extends JPanel
                     -1,
                     60,
                     new KeyFrame[KeyFrameType.getTotalFrameTypes()][],
+                    new KeyFrame[KeyFrameType.getTotalFrameTypes()],
                     creatorsPanel.createEmptyProgram(data.getAnimationId(), data.getAnimationId()),
                     false,
                     null,
@@ -937,8 +940,8 @@ public class CacheSearcherTab extends JPanel
 
         clientThread.invokeLater(() ->
         {
-            Model model = plugin.constructModelFromCache(modelStats, new int[0], false, true);
             CustomLighting lighting = new CustomLighting(64, 850, -30, -30, 50);
+            Model model = plugin.constructModelFromCache(modelStats, new int[0], false, LightingStyle.ACTOR, lighting);
             CustomModelComp comp = new CustomModelComp(0, CustomModelType.CACHE_NPC, data.getId(), modelStats, null, null, null, LightingStyle.ACTOR, lighting, false, data.getName());
             CustomModel customModel = new CustomModel(model, comp);
             plugin.addCustomModel(customModel, false);
@@ -955,6 +958,7 @@ public class CacheSearcherTab extends JPanel
                     -1,
                     data.getSize() * 60,
                     new KeyFrame[KeyFrameType.getTotalFrameTypes()][],
+                    new KeyFrame[KeyFrameType.getTotalFrameTypes()],
                     creatorsPanel.createEmptyProgram(data.getStandingAnimation(), data.getWalkingAnimation()),
                     false,
                     null,

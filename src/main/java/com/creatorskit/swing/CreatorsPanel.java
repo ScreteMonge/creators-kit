@@ -12,6 +12,7 @@ import com.creatorskit.programming.Program;
 import com.creatorskit.programming.ProgramComp;
 import com.creatorskit.swing.manager.ManagerPanel;
 import com.creatorskit.swing.manager.ManagerTree;
+import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import lombok.Getter;
@@ -187,7 +188,7 @@ public class CreatorsPanel extends PluginPanel
         c.gridy = 2;
         JButton loadCustomModelButton = new JButton(new ImageIcon(CUSTOM_MODEL));
         loadCustomModelButton.setFocusable(false);
-        loadCustomModelButton.setToolTipText("Load a previously saved Custom Model");
+        loadCustomModelButton.setToolTipText("Load a previously Saved Model");
         add(loadCustomModelButton, c);
         loadCustomModelButton.addActionListener(e -> openLoadCustomModelDialog());
 
@@ -230,6 +231,7 @@ public class CreatorsPanel extends PluginPanel
                 -1,
                 60,
                 new KeyFrame[KeyFrameType.getTotalFrameTypes()][0],
+                new KeyFrame[KeyFrameType.getTotalFrameTypes()],
                 createEmptyProgram(-1, -1),
                 false, null, null, new int[0], -1, false, false);
     }
@@ -245,6 +247,7 @@ public class CreatorsPanel extends PluginPanel
                               int frame,
                               int radius,
                               KeyFrame[][] keyFrames,
+                              KeyFrame[] currentFrames,
                               Program program,
                               boolean active,
                               WorldPoint worldPoint,
@@ -449,6 +452,7 @@ public class CreatorsPanel extends PluginPanel
                 active,
                 worldPoint != null || localPoint != null,
                 keyFrames,
+                currentFrames,
                 null,
                 null,
                 program,
@@ -472,6 +476,8 @@ public class CreatorsPanel extends PluginPanel
                 radiusSpinner,
                 programmerNameLabel,
                 programmerIdleSpinner,
+                null,
+                null,
                 null,
                 0);
 
@@ -865,6 +871,7 @@ public class CreatorsPanel extends PluginPanel
                     (int) character.getAnimationFrameSpinner().getValue(),
                     (int) character.getRadiusSpinner().getValue(),
                     Arrays.copyOf(character.getFrames(), character.getFrames().length),
+                    Arrays.copyOf(character.getCurrentFrames(), character.getFrames().length),
                     newProgram,
                     character.isActive(),
                     character.getNonInstancedPoint(),
@@ -881,28 +888,30 @@ public class CreatorsPanel extends PluginPanel
 
     public void onDeleteButtonPressed(Character character)
     {
-        removePanel(character);
-        ArrayList<Character> characters = plugin.getCharacters();
-        clientThread.invokeLater(() -> character.getCkObject().setActive(false));
-        characters.remove(character);
-        if (plugin.getSelectedCharacter() == character)
-        {
-            plugin.setSelectedCharacter(null);
-        }
+        deleteCharacters(new Character[]{character});
     }
 
     public void deleteCharacters(Character[] charactersToRemove)
     {
         removePanels(charactersToRemove);
+        TimeSheetPanel timeSheetPanel = toolBox.getTimeSheetPanel();
 
         ArrayList<Character> characters = plugin.getCharacters();
+        Character selectedCharacter = plugin.getSelectedCharacter();
+        Character tspSelectedCharacter = timeSheetPanel.getSelectedCharacter();
+
         for (Character c : charactersToRemove)
         {
             clientThread.invokeLater(() -> c.getCkObject().setActive(false));
             characters.remove(c);
-            if (c == plugin.getSelectedCharacter())
+            if (c == selectedCharacter)
             {
                 plugin.setSelectedCharacter(null);
+            }
+
+            if (c == tspSelectedCharacter)
+            {
+                timeSheetPanel.setSelectedCharacter(null);
             }
         }
     }
@@ -1019,7 +1028,8 @@ public class CreatorsPanel extends PluginPanel
 
         objectHolder.removeAll();
         managerPanel.getManagerTree().resetObjectHolder();
-        plugin.removeCharacters(charactersToRemove);
+        Thread thread = new Thread(() -> deleteCharacters(charactersToRemove));
+        thread.start();
         programmerPanel.repaint();
         programmerPanel.revalidate();
     }
@@ -1150,35 +1160,49 @@ public class CreatorsPanel extends PluginPanel
     public void addModelOption(CustomModel model, boolean setComboBox)
     {
         modelOrganizer.createModelPanel(model);
-        Character selectedNPC = plugin.getSelectedCharacter();
+        Character selectedCharacter = plugin.getSelectedCharacter();
+
+        toolBox.getTimeSheetPanel()
+                .getAttributePanel()
+                .getModelAttributes()
+                .getCustomModel()
+                .addItem(model);
 
         for (JComboBox<CustomModel> comboBox : comboBoxes)
         {
             comboBox.addItem(model);
-            if (!setComboBox || selectedNPC == null)
+            if (!setComboBox || selectedCharacter == null)
+            {
                 continue;
+            }
 
-            JComboBox<CustomModel> selectedBox = selectedNPC.getComboBox();
+            JComboBox<CustomModel> selectedBox = selectedCharacter.getComboBox();
             if (comboBox == selectedBox)
             {
                 comboBox.setSelectedItem(model);
-                selectedNPC.setCustomMode(true);
-                selectedNPC.getModelButton().setText("Custom");
+                selectedCharacter.setCustomMode(true);
+                selectedCharacter.getModelButton().setText("Custom");
 
-                if (selectedNPC.getModelSpinner().isVisible() || comboBox.isVisible())
+                if (selectedCharacter.getModelSpinner().isVisible() || comboBox.isVisible())
                 {
                     comboBox.setVisible(true);
-                    selectedNPC.getModelSpinner().setVisible(false);
+                    selectedCharacter.getModelSpinner().setVisible(false);
                 }
             }
 
-            selectedNPC.setStoredModel(model);
-            plugin.setModel(selectedNPC, true, -1);
+            selectedCharacter.setStoredModel(model);
+            plugin.setModel(selectedCharacter, true, -1);
         }
     }
 
     public void removeModelOption(CustomModel model)
     {
+        toolBox.getTimeSheetPanel()
+                .getAttributePanel()
+                .getModelAttributes()
+                .getCustomModel()
+                .removeItem(model);
+
         for (JComboBox<CustomModel> comboBox : comboBoxes)
         {
             comboBox.removeItem(model);
@@ -1349,6 +1373,7 @@ public class CreatorsPanel extends PluginPanel
         int animationId = (int) character.getAnimationSpinner().getValue();
         int frame = (int) character.getAnimationFrameSpinner().getValue();
         KeyFrame[][] keyFrames = character.getFrames();
+        KeyFrame[] currentFrames = character.getCurrentFrames();
         ProgramComp programComp = character.getProgram().getComp();
 
         return new CharacterSave(
@@ -1368,7 +1393,8 @@ public class CreatorsPanel extends PluginPanel
                 animationId,
                 frame,
                 programComp,
-                keyFrames);
+                keyFrames,
+                currentFrames);
     }
 
     public void openLoadSetupDialog()
@@ -1472,12 +1498,12 @@ public class CreatorsPanel extends PluginPanel
                     break;
                 case CACHE_NPC:
                     modelStats = comp.getModelStats();
-                    model = plugin.constructModelFromCache(modelStats, new int[0], false, true);
+                    model = plugin.constructModelFromCache(modelStats, new int[0], false, LightingStyle.ACTOR, null);
                     customModel = new CustomModel(model, comp);
                     break;
                 case CACHE_PLAYER:
                     modelStats = comp.getModelStats();
-                    model = plugin.constructModelFromCache(modelStats, comp.getKitRecolours(), true, true);
+                    model = plugin.constructModelFromCache(modelStats, comp.getKitRecolours(), true, LightingStyle.ACTOR, null);
                     customModel = new CustomModel(model, comp);
                     break;
                 default:
@@ -1486,7 +1512,7 @@ public class CreatorsPanel extends PluginPanel
                 case CACHE_MAN_WEAR:
                 case CACHE_WOMAN_WEAR:
                     modelStats = comp.getModelStats();
-                    model = plugin.constructModelFromCache(modelStats, null, false, false);
+                    model = plugin.constructModelFromCache(modelStats, null, false, LightingStyle.DEFAULT, null);
                     customModel = new CustomModel(model, comp);
                     break;
                 case BLENDER:
@@ -1549,6 +1575,17 @@ public class CreatorsPanel extends PluginPanel
                         keyFrames = new KeyFrame[KeyFrameType.getTotalFrameTypes()][0];
                     }
 
+                    KeyFrame[] currentFrames = save.getCurrentFrames();
+                    if (currentFrames == null)
+                    {
+                        currentFrames = new KeyFrame[KeyFrameType.getTotalFrameTypes()];
+                    }
+
+                    if (currentFrames.length < KeyFrameType.getTotalFrameTypes())
+                    {
+                        currentFrames = new KeyFrame[KeyFrameType.getTotalFrameTypes()];
+                    }
+
                     character = createCharacter(
                             ParentPanel.SIDE_PANEL,
                             save.getName(),
@@ -1560,6 +1597,7 @@ public class CreatorsPanel extends PluginPanel
                             animFrame,
                             save.getRadius(),
                             keyFrames,
+                            currentFrames,
                             program,
                             save.isActive(),
                             save.getNonInstancedPoint(),
@@ -1642,6 +1680,17 @@ public class CreatorsPanel extends PluginPanel
                 keyFrames = new KeyFrame[KeyFrameType.getTotalFrameTypes()][0];
             }
 
+            KeyFrame[] currentFrames = save.getCurrentFrames();
+            if (currentFrames == null)
+            {
+                currentFrames = new KeyFrame[KeyFrameType.getTotalFrameTypes()];
+            }
+
+            if (currentFrames.length < KeyFrameType.getTotalFrameTypes())
+            {
+                currentFrames = new KeyFrame[KeyFrameType.getTotalFrameTypes()];
+            }
+
             character = createCharacter(
                     parentPanel,
                     save.getName(),
@@ -1653,6 +1702,7 @@ public class CreatorsPanel extends PluginPanel
                     animFrame,
                     save.getRadius(),
                     keyFrames,
+                    currentFrames,
                     program,
                     save.isActive(),
                     save.getNonInstancedPoint(),
