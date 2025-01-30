@@ -3,6 +3,7 @@ package com.creatorskit.programming;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.CKObject;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import com.creatorskit.swing.timesheet.keyframe.OverheadKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.TextKeyFrame;
@@ -71,8 +72,9 @@ public class OverheadOverlay extends Overlay
                 continue;
             }
 
-            OverheadSprite sprite = overheadKeyFrame.getOverheadSprite();
-            if (sprite == OverheadSprite.NONE && !overheadKeyFrame.isToggleSkull())
+            OverheadSprite prayerSprite = overheadKeyFrame.getPrayerSprite();
+            OverheadSprite skullSprite = overheadKeyFrame.getSkullSprite();
+            if (prayerSprite == OverheadSprite.NONE && skullSprite == OverheadSprite.NONE)
             {
                 continue;
             }
@@ -84,7 +86,7 @@ public class OverheadOverlay extends Overlay
                 continue;
             }
 
-            BufferedImage icon = spriteManager.getSprite(sprite.getSpriteID(), sprite.getFile());
+            BufferedImage icon = spriteManager.getSprite(prayerSprite.getSpriteID(), prayerSprite.getFile());
             if (icon == null)
             {
                 continue;
@@ -107,15 +109,15 @@ public class OverheadOverlay extends Overlay
             Point base = Perspective.getCanvasImageLocation(client, lp, icon, height + HEIGHT_BUFFER);
 
             int skullBuffer = 0;
-            if (overheadKeyFrame.isToggleSkull())
+            if (skullSprite != OverheadSprite.NONE)
             {
                 Point p = new Point(base.getX() + X_BUFFER, base.getY() + OVERHEAD_Y_BUFFER + textBuffer);
                 skullBuffer = SKULL_Y_BUFFER;
-                BufferedImage skull = spriteManager.getSprite(OverheadSprite.SKULL.getSpriteID(), OverheadSprite.SKULL.getFile());
+                BufferedImage skull = spriteManager.getSprite(skullSprite.getSpriteID(), skullSprite.getFile());
                 OverlayUtil.renderImageLocation(graphics, p, skull);
             }
 
-            if (sprite != OverheadSprite.NONE)
+            if (prayerSprite != OverheadSprite.NONE)
             {
                 Point p = new Point(base.getX() + X_BUFFER, base.getY() + OVERHEAD_Y_BUFFER + skullBuffer + textBuffer);
                 OverlayUtil.renderImageLocation(graphics, p, icon);

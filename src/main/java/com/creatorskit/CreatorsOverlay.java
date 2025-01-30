@@ -381,8 +381,18 @@ public class CreatorsOverlay extends Overlay
 
             if (plugin.getHoveredCharacter() == character)
             {
+                if (point == null)
+                {
+                    continue;
+                }
+
                 OverlayUtil.renderTextLocation(graphics, point, name, HOVERED_COLOUR);
                 continue;
+            }
+
+            if (point == null)
+            {
+                return;
             }
 
             OverlayUtil.renderTextLocation(graphics, point, name, MY_OBJECT_COLOUR);

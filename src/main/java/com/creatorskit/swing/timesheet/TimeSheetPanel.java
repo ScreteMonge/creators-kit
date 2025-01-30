@@ -7,8 +7,11 @@ import com.creatorskit.programming.Programmer;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.manager.TreeScrollPane;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
+import com.creatorskit.swing.timesheet.keyframe.*;
+import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameCharacterAction;
+import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameAction;
+import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameCharacterActionType;
+import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameActionType;
 import com.creatorskit.swing.timesheet.sheets.AttributeSheet;
 import com.creatorskit.swing.timesheet.sheets.SummarySheet;
 import com.creatorskit.swing.timesheet.sheets.TimeSheet;
@@ -18,6 +21,7 @@ import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.util.ImageUtil;
+import org.apache.commons.lang3.ArrayUtils;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -51,7 +55,7 @@ public class TimeSheetPanel extends JPanel
     private AttributePanel attributePanel;
     private final JPanel labelPanel = new JPanel();
     private final JPanel controlPanel = new JPanel();
-    private final JLabel timeLabel = new JLabel();
+    private final JButton playButton = new JButton();
     private final ImageIcon PLAY = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/Play.png"));
     private final ImageIcon STOP = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/Stop.png"));
     private final ImageIcon PAUSE = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/Pause.png"));
@@ -74,7 +78,8 @@ public class TimeSheetPanel extends JPanel
     private final String TEXT_CARD = "Text";
     private final String OVER_CARD = "Overhead";
     private final String HEALTH_CARD = "Health";
-    private final String SPOTANIM_CARD = "SpotAnim";
+    private final String SPOTANIM_CARD = "SpotAnim 1";
+    private final String SPOTANIM2_CARD = "SpotAnim 2";
     private final String LABEL_OFFSET = "  ";
     private JLabel[] labels = new JLabel[0];
 
@@ -85,13 +90,17 @@ public class TimeSheetPanel extends JPanel
     private double minHScroll = -10;
 
     private double currentTime = 0;
-    private boolean playActive = false;
     private boolean pauseScrollBarListener = false;
     private Character selectedCharacter;
     private KeyFrameType summaryKeyFrameType = KeyFrameType.SUMMARY;
 
+    private ArrayList<KeyFrameAction> keyFrameStack = new ArrayList<>();
     private KeyFrame[] selectedKeyFrames = new KeyFrame[0];
     private KeyFrame[] copiedKeyFrames = new KeyFrame[0];
+    private KeyFrameAction[][] keyFrameActions = new KeyFrameAction[0][];
+
+    private final int UNDO_LIMIT = 15;
+    private int undoStack = 0;
 
     @Inject
     public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, JScrollBar scrollBar)
@@ -349,11 +358,20 @@ public class TimeSheetPanel extends JPanel
                 return;
             }
 
-            addKeyFrame(selectedCharacter, kf);
+            KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(kf, selectedCharacter, KeyFrameCharacterActionType.ADD)};
+            KeyFrame keyFrameToReplace = addKeyFrame(selectedCharacter, kf);
+
+            if (keyFrameToReplace != null)
+            {
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
+            }
+            addKeyFrameActions(kfa);
             return;
         }
 
        removeKeyFrame(selectedCharacter, keyFrame);
+       KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.REMOVE)};
+       addKeyFrameActions(kfa);
     }
 
 
@@ -361,37 +379,44 @@ public class TimeSheetPanel extends JPanel
      * Adds the keyframe to a specific character, or replaces a keyframe if the tick matches exactly
      * @param character the character to add the keyframe to
      * @param keyFrame the keyframe to add or modify for the character
+     * @return the keyframe that is being replaced; null if there is no keyframe being replaced
      */
-    public void addKeyFrame(Character character, KeyFrame keyFrame)
+    public KeyFrame addKeyFrame(Character character, KeyFrame keyFrame)
     {
         if (character == null)
         {
-            return;
+            return null;
         }
 
-        character.addKeyFrame(keyFrame, currentTime);
+        KeyFrame keyFrameToReplace = character.addKeyFrame(keyFrame, currentTime);
         attributePanel.setKeyFramedIcon(true);
         attributePanel.resetAttributes(character, currentTime);
         toolBox.getProgrammer().updateProgram(character, currentTime);
+
+        return keyFrameToReplace;
     }
 
-    /**
-     * Removes a keyframe from a specific character of the indicated type, at the indicated tick
-     * @param character the character to remove the keyframe from
-     * @param type the KeyFrameType
-     * @param tick the tick to add the keyframe to
-     */
-    public void removeKeyFrame(Character character, KeyFrameType type, double tick)
+    public void loadKeyFrames(Character character)
     {
-        if (character == null)
+        KeyFrame[][] frames = character.getFrames();
+
+        if (frames == null)
         {
             return;
         }
 
-        character.removeKeyFrame(type, tick);
-        attributePanel.setKeyFramedIcon(false);
-        attributePanel.resetAttributes(character, currentTime);
-        toolBox.getProgrammer().updateProgram(character, currentTime);
+        for (KeyFrame[] keyFrames : frames)
+        {
+            if (keyFrames == null)
+            {
+                continue;
+            }
+
+            for (KeyFrame keyFrame : keyFrames)
+            {
+                addKeyFrame(character, keyFrame);
+            }
+        }
     }
 
     /**
@@ -422,6 +447,87 @@ public class TimeSheetPanel extends JPanel
         toolBox.getProgrammer().updateProgram(character, currentTime);
     }
 
+    public void addKeyFrameActions(KeyFrameAction[] actions)
+    {
+        int length = keyFrameActions.length;
+        if (length == UNDO_LIMIT)
+        {
+            keyFrameActions = ArrayUtils.remove(keyFrameActions, length - 1);
+        }
+
+        if (undoStack != length - 1)
+        {
+            for (int i = undoStack + 1; i == length - 1; i++)
+            {
+                keyFrameActions = ArrayUtils.remove(keyFrameActions, undoStack + 1);
+            }
+        }
+
+        keyFrameActions = ArrayUtils.add(keyFrameActions, actions);
+        undoStack = keyFrameActions.length - 1;
+    }
+
+    private void undo()
+    {
+        if (undoStack == -1)
+        {
+            return;
+        }
+
+        KeyFrameAction[] lastActions = keyFrameActions[undoStack];
+        for (int i = 0; i < lastActions.length; i++)
+        {
+            KeyFrameAction keyFrameAction = lastActions[i];
+
+            if (keyFrameAction.getActionType() == KeyFrameActionType.CHARACTER)
+            {
+                KeyFrameCharacterAction kfca = (KeyFrameCharacterAction) keyFrameAction;
+
+                KeyFrameCharacterActionType actionType = kfca.getCharacterActionType();
+                if (actionType == KeyFrameCharacterActionType.ADD)
+                {
+                    removeKeyFrame(kfca.getCharacter(), keyFrameAction.getKeyFrame());
+                }
+
+                if (actionType == KeyFrameCharacterActionType.REMOVE)
+                {
+                    addKeyFrame(kfca.getCharacter(), keyFrameAction.getKeyFrame());
+                }
+            }
+        }
+
+        undoStack--;
+    }
+
+    private void redo()
+    {
+        if (undoStack + 1 >= keyFrameActions.length)
+        {
+            return;
+        }
+
+        undoStack++;
+
+        KeyFrameAction[] lastUndoneActions = keyFrameActions[undoStack];
+        for (KeyFrameAction keyFrameAction : lastUndoneActions)
+        {
+            if (keyFrameAction.getActionType() == KeyFrameActionType.CHARACTER)
+            {
+                KeyFrameCharacterAction keyFrameCharacterAction = (KeyFrameCharacterAction) keyFrameAction;
+                KeyFrameCharacterActionType actionType = keyFrameCharacterAction.getCharacterActionType();
+                if (actionType == KeyFrameCharacterActionType.ADD)
+                {
+                    addKeyFrame(keyFrameCharacterAction.getCharacter(), keyFrameAction.getKeyFrame());
+                }
+
+                if (actionType == KeyFrameCharacterActionType.REMOVE)
+                {
+                    removeKeyFrame(keyFrameCharacterAction.getCharacter(), keyFrameAction.getKeyFrame());
+                }
+            }
+        }
+    }
+
     public void setSelectedCharacter(Character character)
     {
         selectedCharacter = character;
@@ -450,7 +556,7 @@ public class TimeSheetPanel extends JPanel
 
         if (playing)
         {
-            programmer.updatePrograms();
+            programmer.updateProgramsOnTick();
         }
         else
         {
@@ -462,8 +568,12 @@ public class TimeSheetPanel extends JPanel
 
     public void onCurrentTimeChanged(double tick)
     {
-        timeLabel.setText("" + tick);
         attributePanel.resetAttributes(selectedCharacter, tick);
+    }
+
+    public void setPlayButtonIcon(boolean playing)
+    {
+        playButton.setIcon(playing ? PAUSE : PLAY);
     }
 
     public void setPreviewTime(double tick)
@@ -486,6 +596,7 @@ public class TimeSheetPanel extends JPanel
         summaryComboBox.addItem(KeyFrameType.OVERHEAD);
         summaryComboBox.addItem(KeyFrameType.HEALTH);
         summaryComboBox.addItem(KeyFrameType.SPOTANIM);
+        summaryComboBox.addItem(KeyFrameType.SPOTANIM2);
 
         summaryComboBox.addItemListener(e -> summaryKeyFrameType = (KeyFrameType) summaryComboBox.getSelectedItem());
     }
@@ -525,18 +636,12 @@ public class TimeSheetPanel extends JPanel
         });
         controlPanel.add(timeSpinner, c);
 
-        c.gridx = 1;
-        c.gridy = 0;
-        timeLabel.setText("" + (int) timeSpinner.getValue());
-        controlPanel.add(timeLabel, c);
-
-        JButton playButton = new JButton(PLAY);
+        playButton.setIcon(PLAY);
         playButton.setPreferredSize(new Dimension(35, 35));
         playButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
         playButton.addActionListener(e ->
         {
-            playActive = !playActive;
-            playButton.setIcon(playActive ? PAUSE : PLAY);
+            toolBox.getProgrammer().togglePlay();
         });
 
         JPanel backPanel = new JPanel();
@@ -627,6 +732,7 @@ public class TimeSheetPanel extends JPanel
         labels[7].setText(OVER_CARD + LABEL_OFFSET);
         labels[8].setText(HEALTH_CARD + LABEL_OFFSET);
         labels[9].setText(SPOTANIM_CARD + LABEL_OFFSET);
+        labels[10].setText(SPOTANIM2_CARD + LABEL_OFFSET);
     }
 
     private void setupScrollBar()
@@ -699,7 +805,14 @@ public class TimeSheetPanel extends JPanel
                 if (attributeSheet.getBounds().contains(MouseInfo.getPointerInfo().getLocation()))
                 {
                     KeyFrame keyFrame = attributePanel.createKeyFrame();
-                    addKeyFrame(selectedCharacter, keyFrame);
+                    KeyFrame keyFrameToReplace = addKeyFrame(selectedCharacter, keyFrame);
+                    KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(keyFrameToReplace, selectedCharacter, KeyFrameCharacterActionType.ADD)};
+
+                    if (keyFrameToReplace != null)
+                    {
+                        kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
+                    }
+                    addKeyFrameActions(kfa);
                     return;
                 }
 
@@ -724,7 +837,14 @@ public class TimeSheetPanel extends JPanel
                 }
 
                 KeyFrame keyFrame = attributePanel.createKeyFrame();
-                addKeyFrame(selectedCharacter, keyFrame);
+                KeyFrame keyFrameToReplace = addKeyFrame(selectedCharacter, keyFrame);
+                KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.ADD)};
+
+                if (keyFrameToReplace != null)
+                {
+                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
+                }
+                addKeyFrameActions(kfa);
             }
         });
 
@@ -758,17 +878,56 @@ public class TimeSheetPanel extends JPanel
                     }
                 }
 
+                KeyFrameAction[] kfa = new KeyFrameAction[0];
                 for (KeyFrame keyFrame : copiedKeyFrames)
                 {
-                    double newTime = keyFrame.getTick() - firstTick + currentTime;
-                    KeyFrame copy = keyFrame.createCopy(keyFrame, newTime);
+                    double newTime = round(keyFrame.getTick() - firstTick + currentTime);
+                    KeyFrame copy = KeyFrame.createCopy(keyFrame, newTime);
                     if (copy == null)
                     {
                         continue;
                     }
 
-                    addKeyFrame(selectedCharacter, copy);
+                    KeyFrame keyFrameToReplace = addKeyFrame(selectedCharacter, copy);
+                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(copy, selectedCharacter, KeyFrameCharacterActionType.ADD));
+
+                    if (keyFrameToReplace != null)
+                    {
+                        kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
+                    }
                 }
+
+                addKeyFrameActions(kfa);
+            }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_Z, InputEvent.CTRL_DOWN_MASK), "VK_Z");
+        actionMap.put("VK_Z", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                undo();
+            }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_Y, InputEvent.CTRL_DOWN_MASK), "VK_Y");
+        actionMap.put("VK_Y", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                redo();
+            }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, InputEvent.CTRL_DOWN_MASK), "VK_SPACE");
+        actionMap.put("VK_SPACE", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                toolBox.getProgrammer().togglePlay();
             }
         });
     }

@@ -108,7 +108,7 @@ public class ToolBoxFrame extends JFrame
 
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setFont(FontManager.getRunescapeBoldFont());
-        if (plugin.isTest2_0())
+        if (CreatorsPlugin.test2_0)
         {
             tabbedPane.addTab("Timesheet", timeSheetPanel);
             timeSheetPanel.getTreeScrollPane().setViewportView(managerTree);

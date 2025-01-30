@@ -15,7 +15,8 @@ public enum KeyFrameType
     TEXT("Text"),
     OVERHEAD("Overhead"),
     HEALTH("Health"),
-    SPOTANIM("SpotAnim");
+    SPOTANIM("SpotAnim 1"),
+    SPOTANIM2("SpotAnim 2");
 
     private String name;
 
@@ -47,6 +48,8 @@ public enum KeyFrameType
                 return 7;
             case SPOTANIM:
                 return 8;
+            case SPOTANIM2:
+                return 9;
         }
     }
 
@@ -73,11 +76,13 @@ public enum KeyFrameType
                 return HEALTH;
             case 8:
                 return SPOTANIM;
+            case 9:
+                return SPOTANIM2;
         }
     }
 
     public static int getTotalFrameTypes()
     {
-        return 9;
+        return 10;
     }
 }

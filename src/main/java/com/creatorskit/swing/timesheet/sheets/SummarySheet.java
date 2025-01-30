@@ -85,6 +85,7 @@ public class SummarySheet extends TimeSheet
                 case OVERHEAD:
                 case HEALTH:
                 case SPOTANIM:
+                case SPOTANIM2:
                     KeyFrame[] keyFrames = character.getKeyFrames(keyFrameType);
                     drawFrameIcons(g, keyFrames, image, index, xImageOffset, yImageOffset);
             }
@@ -283,6 +284,11 @@ public class SummarySheet extends TimeSheet
 
             Character character = (Character) node.getUserObject();
             KeyFrame[] keyFrames = character.getKeyFrames(keyFrameType);
+            if (keyFrames == null)
+            {
+                return;
+            }
+
             for (KeyFrame keyFrame : keyFrames)
             {
                 int x1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);

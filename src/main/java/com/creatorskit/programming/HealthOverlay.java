@@ -4,6 +4,7 @@ import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.CKObject;
 import com.creatorskit.swing.timesheet.keyframe.HealthKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import com.creatorskit.swing.timesheet.keyframe.TextKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite;
@@ -131,8 +132,11 @@ public class HealthOverlay extends Overlay
 
             OverlayUtil.renderImageLocation(graphics, p, redBar);
 
-            BufferedImage subImage = greenBar.getSubimage(0, 0, barWidth, redBar.getHeight());
-            OverlayUtil.renderImageLocation(graphics, p, subImage);
+            if (barWidth > 0)
+            {
+                BufferedImage subImage = greenBar.getSubimage(0, 0, barWidth, redBar.getHeight());
+                OverlayUtil.renderImageLocation(graphics, p, subImage);
+            }
 
             BufferedImage spriteBase = spriteManager.getSprite(HitsplatSprite.BLOCK.getSpriteID(), 0);
             if (spriteBase == null)

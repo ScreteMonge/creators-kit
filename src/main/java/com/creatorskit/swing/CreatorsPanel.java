@@ -13,8 +13,7 @@ import com.creatorskit.programming.ProgramComp;
 import com.creatorskit.swing.manager.ManagerPanel;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
+import com.creatorskit.swing.timesheet.keyframe.*;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
@@ -231,7 +230,6 @@ public class CreatorsPanel extends PluginPanel
                 -1,
                 60,
                 new KeyFrame[KeyFrameType.getTotalFrameTypes()][0],
-                new KeyFrame[KeyFrameType.getTotalFrameTypes()],
                 createEmptyProgram(-1, -1),
                 false, null, null, new int[0], -1, false, false);
     }
@@ -247,7 +245,6 @@ public class CreatorsPanel extends PluginPanel
                               int frame,
                               int radius,
                               KeyFrame[][] keyFrames,
-                              KeyFrame[] currentFrames,
                               Program program,
                               boolean active,
                               WorldPoint worldPoint,
@@ -452,7 +449,7 @@ public class CreatorsPanel extends PluginPanel
                 active,
                 worldPoint != null || localPoint != null,
                 keyFrames,
-                currentFrames,
+                new KeyFrame[KeyFrameType.getTotalFrameTypes()],
                 null,
                 null,
                 program,
@@ -644,6 +641,8 @@ public class CreatorsPanel extends PluginPanel
                 radiusSpinner,
                 animationSpinner
         );
+
+        toolBox.getTimeSheetPanel().loadKeyFrames(character);
 
         setSelectedCharacter(character);
 
@@ -871,7 +870,6 @@ public class CreatorsPanel extends PluginPanel
                     (int) character.getAnimationFrameSpinner().getValue(),
                     (int) character.getRadiusSpinner().getValue(),
                     Arrays.copyOf(character.getFrames(), character.getFrames().length),
-                    Arrays.copyOf(character.getCurrentFrames(), character.getFrames().length),
                     newProgram,
                     character.isActive(),
                     character.getNonInstancedPoint(),
@@ -1372,8 +1370,6 @@ public class CreatorsPanel extends PluginPanel
         int rotation = (int) character.getOrientationSpinner().getValue();
         int animationId = (int) character.getAnimationSpinner().getValue();
         int frame = (int) character.getAnimationFrameSpinner().getValue();
-        KeyFrame[][] keyFrames = character.getFrames();
-        KeyFrame[] currentFrames = character.getCurrentFrames();
         ProgramComp programComp = character.getProgram().getComp();
 
         return new CharacterSave(
@@ -1393,8 +1389,16 @@ public class CreatorsPanel extends PluginPanel
                 animationId,
                 frame,
                 programComp,
-                keyFrames,
-                currentFrames);
+                character.getMovementKeyFrames(),
+                character.getAnimationKeyFrames(),
+                character.getSpawnKeyFrames(),
+                character.getModelKeyFrame(),
+                character.getOrientationKeyFrames(),
+                character.getTextKeyFrames(),
+                character.getOverheadKeyFrames(),
+                character.getHealthKeyFrames(),
+                character.getSpotAnimKeyFrames(KeyFrameType.SPOTANIM),
+                character.getSpotAnimKeyFrames(KeyFrameType.SPOTANIM2));
     }
 
     public void openLoadSetupDialog()
@@ -1537,6 +1541,7 @@ public class CreatorsPanel extends PluginPanel
                 sidePanel.repaint();
                 sidePanel.revalidate();
                 managerTree.resetObjectHolder();
+                toolBox.getProgrammer().updatePrograms();
             }
         });
 
@@ -1564,26 +1569,55 @@ public class CreatorsPanel extends PluginPanel
                         animFrame = -1;
                     }
 
-                    KeyFrame[][] keyFrames = save.getKeyFrames();
-                    if (keyFrames == null)
+                    KeyFrame[][] frames = new KeyFrame[KeyFrameType.getTotalFrameTypes()][];
+                    if (save.getMovementKeyFrames() != null)
                     {
-                        keyFrames = new KeyFrame[KeyFrameType.getTotalFrameTypes()][0];
+                        frames[KeyFrameType.getIndex(KeyFrameType.MOVEMENT)] = save.getMovementKeyFrames();
                     }
 
-                    if (keyFrames.length < KeyFrameType.getTotalFrameTypes())
+                    if (save.getAnimationKeyFrames() != null)
                     {
-                        keyFrames = new KeyFrame[KeyFrameType.getTotalFrameTypes()][0];
+                        frames[KeyFrameType.getIndex(KeyFrameType.ANIMATION)] = save.getAnimationKeyFrames();
                     }
 
-                    KeyFrame[] currentFrames = save.getCurrentFrames();
-                    if (currentFrames == null)
+                    if (save.getSpawnKeyFrames() != null)
                     {
-                        currentFrames = new KeyFrame[KeyFrameType.getTotalFrameTypes()];
+                        frames[KeyFrameType.getIndex(KeyFrameType.SPAWN)] = save.getSpawnKeyFrames();
                     }
 
-                    if (currentFrames.length < KeyFrameType.getTotalFrameTypes())
+                    if (save.getModelKeyFrames() != null)
                     {
-                        currentFrames = new KeyFrame[KeyFrameType.getTotalFrameTypes()];
+                        frames[KeyFrameType.getIndex(KeyFrameType.MODEL)] = save.getModelKeyFrames();
+                    }
+
+                    if (save.getOrientationKeyFrames() != null)
+                    {
+                        frames[KeyFrameType.getIndex(KeyFrameType.ORIENTATION)] = save.getOrientationKeyFrames();
+                    }
+
+                    if (save.getTextKeyFrames() != null)
+                    {
+                        frames[KeyFrameType.getIndex(KeyFrameType.TEXT)] = save.getTextKeyFrames();
+                    }
+
+                    if (save.getOverheadKeyFrames() != null)
+                    {
+                        frames[KeyFrameType.getIndex(KeyFrameType.OVERHEAD)] = save.getOverheadKeyFrames();
+                    }
+
+                    if (save.getHealthKeyFrames() != null)
+                    {
+                        frames[KeyFrameType.getIndex(KeyFrameType.HEALTH)] = save.getHealthKeyFrames();
+                    }
+
+                    if (save.getSpotAnimKeyFrames() != null)
+                    {
+                        frames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM)] = save.getSpotAnimKeyFrames();
+                    }
+
+                    if (save.getSpotAnim2KeyFrames() != null)
+                    {
+                        frames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM2)] = save.getSpotAnim2KeyFrames();
                     }
 
                     character = createCharacter(
@@ -1596,8 +1630,7 @@ public class CreatorsPanel extends PluginPanel
                             save.getAnimationId(),
                             animFrame,
                             save.getRadius(),
-                            keyFrames,
-                            currentFrames,
+                            frames,
                             program,
                             save.isActive(),
                             save.getNonInstancedPoint(),
@@ -1669,26 +1702,55 @@ public class CreatorsPanel extends PluginPanel
                 animFrame = -1;
             }
 
-            KeyFrame[][] keyFrames = save.getKeyFrames();
-            if (keyFrames == null)
+            KeyFrame[][] frames = new KeyFrame[KeyFrameType.getTotalFrameTypes()][];
+            if (save.getMovementKeyFrames() != null)
             {
-                keyFrames = new KeyFrame[KeyFrameType.getTotalFrameTypes()][0];
+                frames[KeyFrameType.getIndex(KeyFrameType.MOVEMENT)] = save.getMovementKeyFrames();
             }
 
-            if (keyFrames.length < KeyFrameType.getTotalFrameTypes())
+            if (save.getAnimationKeyFrames() != null)
             {
-                keyFrames = new KeyFrame[KeyFrameType.getTotalFrameTypes()][0];
+                frames[KeyFrameType.getIndex(KeyFrameType.ANIMATION)] = save.getAnimationKeyFrames();
             }
 
-            KeyFrame[] currentFrames = save.getCurrentFrames();
-            if (currentFrames == null)
+            if (save.getSpawnKeyFrames() != null)
             {
-                currentFrames = new KeyFrame[KeyFrameType.getTotalFrameTypes()];
+                frames[KeyFrameType.getIndex(KeyFrameType.SPAWN)] = save.getSpawnKeyFrames();
             }
 
-            if (currentFrames.length < KeyFrameType.getTotalFrameTypes())
+            if (save.getModelKeyFrames() != null)
             {
-                currentFrames = new KeyFrame[KeyFrameType.getTotalFrameTypes()];
+                frames[KeyFrameType.getIndex(KeyFrameType.MODEL)] = save.getModelKeyFrames();
+            }
+
+            if (save.getOrientationKeyFrames() != null)
+            {
+                frames[KeyFrameType.getIndex(KeyFrameType.ORIENTATION)] = save.getOrientationKeyFrames();
+            }
+
+            if (save.getTextKeyFrames() != null)
+            {
+                frames[KeyFrameType.getIndex(KeyFrameType.TEXT)] = save.getTextKeyFrames();
+            }
+
+            if (save.getOverheadKeyFrames() != null)
+            {
+                frames[KeyFrameType.getIndex(KeyFrameType.OVERHEAD)] = save.getOverheadKeyFrames();
+            }
+
+            if (save.getHealthKeyFrames() != null)
+            {
+                frames[KeyFrameType.getIndex(KeyFrameType.HEALTH)] = save.getHealthKeyFrames();
+            }
+
+            if (save.getSpotAnimKeyFrames() != null)
+            {
+                frames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM)] = save.getSpotAnimKeyFrames();
+            }
+
+            if (save.getSpotAnim2KeyFrames() != null)
+            {
+                frames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM2)] = save.getSpotAnim2KeyFrames();
             }
 
             character = createCharacter(
@@ -1701,8 +1763,7 @@ public class CreatorsPanel extends PluginPanel
                     save.getAnimationId(),
                     animFrame,
                     save.getRadius(),
-                    keyFrames,
-                    currentFrames,
+                    frames,
                     program,
                     save.isActive(),
                     save.getNonInstancedPoint(),

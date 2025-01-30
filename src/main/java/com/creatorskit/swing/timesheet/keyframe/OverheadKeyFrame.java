@@ -8,13 +8,13 @@ import lombok.Setter;
 @Setter
 public class OverheadKeyFrame extends KeyFrame
 {
-    private boolean toggleSkull;
-    private OverheadSprite overheadSprite;
+    private OverheadSprite skullSprite;
+    private OverheadSprite prayerSprite;
 
-    public OverheadKeyFrame(double tick, boolean toggleSkull, OverheadSprite overheadSprite)
+    public OverheadKeyFrame(double tick, OverheadSprite skullSprite, OverheadSprite prayerSprite)
     {
         super(KeyFrameType.OVERHEAD, tick);
-        this.toggleSkull = toggleSkull;
-        this.overheadSprite = overheadSprite;
+        this.skullSprite = skullSprite;
+        this.prayerSprite = prayerSprite;
     }
 }

@@ -49,7 +49,8 @@ public class AttributePanel extends JPanel
     private final String TEXT_CARD = "Text";
     private final String OVER_CARD = "Overhead";
     private final String HEALTH_CARD = "Health";
-    private final String SPOTANIM_CARD = "SpotAnim";
+    private final String SPOTANIM_CARD = "SpotAnim 1";
+    private final String SPOTANIM2_CARD = "SpotAnim 2";
 
     private KeyFrameType hoveredKeyFrameType;
     private Component hoveredComponent;
@@ -63,6 +64,7 @@ public class AttributePanel extends JPanel
     private final OverheadAttributes overheadAttributes = new OverheadAttributes();
     private final HealthAttributes healthAttributes = new HealthAttributes();
     private final SpotAnimAttributes spotAnimAttributes = new SpotAnimAttributes();
+    private final SpotAnimAttributes spotAnim2Attributes = new SpotAnimAttributes();
 
     @Inject
     public AttributePanel(TimeSheetPanel timeSheetPanel, DataFinder dataFinder)
@@ -130,6 +132,7 @@ public class AttributePanel extends JPanel
         JPanel overCard = new JPanel();
         JPanel healthCard = new JPanel();
         JPanel spotanimCard = new JPanel();
+        JPanel spotanim2Card = new JPanel();
         cardPanel.add(moveCard, MOVE_CARD);
         cardPanel.add(animCard, ANIM_CARD);
         cardPanel.add(oriCard, ORI_CARD);
@@ -139,6 +142,7 @@ public class AttributePanel extends JPanel
         cardPanel.add(overCard, OVER_CARD);
         cardPanel.add(healthCard, HEALTH_CARD);
         cardPanel.add(spotanimCard, SPOTANIM_CARD);
+        cardPanel.add(spotanim2Card, SPOTANIM2_CARD);
 
         setupMoveCard(moveCard);
         setupAnimCard(animCard);
@@ -148,7 +152,8 @@ public class AttributePanel extends JPanel
         setupTextCard(textCard);
         setupOverheadCard(overCard);
         setupHealthCard(healthCard);
-        setupSpotAnimCard(spotanimCard);
+        setupSpotAnimCard(spotanimCard, KeyFrameType.SPOTANIM);
+        setupSpotAnimCard(spotanim2Card, KeyFrameType.SPOTANIM2);
 
         setupKeyListeners();
     }
@@ -205,7 +210,7 @@ public class AttributePanel extends JPanel
             case OVERHEAD:
                 return new OverheadKeyFrame(
                         timeSheetPanel.getCurrentTime(),
-                        overheadAttributes.getToggleSkull().getSelectedItem() == Toggle.ENABLE,
+                        (OverheadSprite) overheadAttributes.getSkullSprite().getSelectedItem(),
                         (OverheadSprite) overheadAttributes.getPrayerSprite().getSelectedItem()
                 );
             case HEALTH:
@@ -227,10 +232,16 @@ public class AttributePanel extends JPanel
             case SPOTANIM:
                 return new SpotAnimKeyFrame(
                         timeSheetPanel.getCurrentTime(),
-                        (int) spotAnimAttributes.getSpotAnimId1().getValue(),
-                        (int) spotAnimAttributes.getSpotAnimId2().getValue(),
-                        spotAnimAttributes.getLoop1().getSelectedItem() == Toggle.ENABLE,
-                        spotAnimAttributes.getLoop2().getSelectedItem() == Toggle.ENABLE
+                        KeyFrameType.SPOTANIM,
+                        (int) spotAnimAttributes.getSpotAnimId().getValue(),
+                        spotAnimAttributes.getLoop().getSelectedItem() == Toggle.ENABLE
+                );
+            case SPOTANIM2:
+                return new SpotAnimKeyFrame(
+                        timeSheetPanel.getCurrentTime(),
+                        KeyFrameType.SPOTANIM2,
+                        (int) spotAnim2Attributes.getSpotAnimId().getValue(),
+                        spotAnim2Attributes.getLoop().getSelectedItem() == Toggle.ENABLE
                 );
         }
 
@@ -840,10 +851,27 @@ public class AttributePanel extends JPanel
         c.gridwidth = 1;
         c.gridx = 1;
         c.gridy = 1;
-        JComboBox<Toggle> toggleSkull = overheadAttributes.getToggleSkull();
+        JComboBox<OverheadSprite> toggleSkull = overheadAttributes.getSkullSprite();
         toggleSkull.setFocusable(false);
-        toggleSkull.addItem(Toggle.DISABLE);
-        toggleSkull.addItem(Toggle.ENABLE);
+        toggleSkull.addItem(OverheadSprite.NONE);
+        toggleSkull.addItem(OverheadSprite.SKULL);
+        toggleSkull.addItem(OverheadSprite.SKULL_HIGH_RISK);
+        toggleSkull.addItem(OverheadSprite.SKULL_BH_1);
+        toggleSkull.addItem(OverheadSprite.SKULL_BH_2);
+        toggleSkull.addItem(OverheadSprite.SKULL_BH_3);
+        toggleSkull.addItem(OverheadSprite.SKULL_BH_4);
+        toggleSkull.addItem(OverheadSprite.SKULL_BH_5);
+        toggleSkull.addItem(OverheadSprite.SKULL_FORINTHRY);
+        toggleSkull.addItem(OverheadSprite.SKULL_FORINTHRY_1);
+        toggleSkull.addItem(OverheadSprite.SKULL_FORINTHRY_2);
+        toggleSkull.addItem(OverheadSprite.SKULL_FORINTHRY_3);
+        toggleSkull.addItem(OverheadSprite.SKULL_FORINTHRY_4);
+        toggleSkull.addItem(OverheadSprite.SKULL_FORINTHRY_5);
+        toggleSkull.addItem(OverheadSprite.SKULL_DEADMAN_1);
+        toggleSkull.addItem(OverheadSprite.SKULL_DEADMAN_2);
+        toggleSkull.addItem(OverheadSprite.SKULL_DEADMAN_3);
+        toggleSkull.addItem(OverheadSprite.SKULL_DEADMAN_4);
+        toggleSkull.addItem(OverheadSprite.SKULL_DEADMAN_5);
         card.add(toggleSkull, c);
 
         c.gridwidth = 1;
@@ -1130,9 +1158,18 @@ public class AttributePanel extends JPanel
         card.add(empty1, c);
     }
 
-    private void setupSpotAnimCard(JPanel card)
+    private void setupSpotAnimCard(JPanel card, KeyFrameType spotAnimType)
     {
-        Dimension spinnerSize = new Dimension(90, 25);
+        SpotAnimAttributes spAttributes;
+        if (spotAnimType == KeyFrameType.SPOTANIM)
+        {
+            spAttributes = spotAnimAttributes;
+        }
+        else
+        {
+            spAttributes = spotAnim2Attributes;
+        }
+
         card.setLayout(new GridBagLayout());
         card.setBorder(new EmptyBorder(4, 4, 4, 4));
         card.setFocusable(true);
@@ -1166,14 +1203,14 @@ public class AttributePanel extends JPanel
         c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 1;
-        JLabel spotAnim1Label = new JLabel("SpotAnim 1: ");
-        spotAnim1Label.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(spotAnim1Label, c);
+        JLabel spotAnimLabel = new JLabel("SpotAnim: ");
+        spotAnimLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(spotAnimLabel, c);
 
         c.gridwidth = 1;
         c.gridx = 1;
         c.gridy = 1;
-        JSpinner spotAnim1 = spotAnimAttributes.getSpotAnimId1();
+        JSpinner spotAnim1 = spAttributes.getSpotAnimId();
         spotAnim1.setValue(-1);
         card.add(spotAnim1, c);
 
@@ -1186,40 +1223,11 @@ public class AttributePanel extends JPanel
 
         c.gridx = 3;
         c.gridy = 1;
-        JComboBox<Toggle> loop1 = spotAnimAttributes.getLoop1();
-        loop1.setFocusable(false);
-        loop1.addItem(Toggle.DISABLE);
-        loop1.addItem(Toggle.ENABLE);
-        card.add(loop1, c);
-
-        c.gridwidth = 1;
-        c.gridx = 0;
-        c.gridy = 2;
-        JLabel spotAnim2Label = new JLabel("SpotAnim 2: ");
-        spotAnim2Label.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(spotAnim2Label, c);
-
-        c.gridwidth = 1;
-        c.gridx = 1;
-        c.gridy = 2;
-        JSpinner spotAnim2 = spotAnimAttributes.getSpotAnimId2();
-        spotAnim2.setValue(-1);
-        card.add(spotAnim2, c);
-
-        c.gridwidth = 1;
-        c.gridx = 2;
-        c.gridy = 2;
-        JLabel loop2Label = new JLabel("Loop: ");
-        loop2Label.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(loop2Label, c);
-
-        c.gridx = 3;
-        c.gridy = 2;
-        JComboBox<Toggle> loop2 = spotAnimAttributes.getLoop2();
-        loop2.setFocusable(false);
-        loop2.addItem(Toggle.DISABLE);
-        loop2.addItem(Toggle.ENABLE);
-        card.add(loop2, c);
+        JComboBox<Toggle> loop = spAttributes.getLoop();
+        loop.setFocusable(false);
+        loop.addItem(Toggle.DISABLE);
+        loop.addItem(Toggle.ENABLE);
+        card.add(loop, c);
 
         c.gridwidth = 1;
         c.gridheight = 1;
@@ -1266,6 +1274,9 @@ public class AttributePanel extends JPanel
                 break;
             case SPOTANIM_CARD:
                 selectedKeyFramePage = KeyFrameType.SPOTANIM;
+                break;
+            case SPOTANIM2_CARD:
+                selectedKeyFramePage = KeyFrameType.SPOTANIM2;
         }
 
         JLabel[] labels = timeSheetPanel.getLabels();
@@ -1407,6 +1418,17 @@ public class AttributePanel extends JPanel
 
             addHoverListenersWithChildren(c, KeyFrameType.SPOTANIM);
         }
+
+        for (JComponent c : spotAnim2Attributes.getAllComponents())
+        {
+            if (c instanceof JComboBox)
+            {
+                addHoverListeners(c, KeyFrameType.SPOTANIM2);
+                continue;
+            }
+
+            addHoverListenersWithChildren(c, KeyFrameType.SPOTANIM2);
+        }
     }
 
     private void addMouseFocusListener(JComponent component)
@@ -1508,6 +1530,9 @@ public class AttributePanel extends JPanel
                     case SPOTANIM:
                         spotAnimAttributes.setBackgroundColours(KeyFrameState.EMPTY);
                         break;
+                    case SPOTANIM2:
+                        spotAnim2Attributes.setBackgroundColours(KeyFrameState.EMPTY);
+                        break;
                 }
 
                 return;
@@ -1552,6 +1577,10 @@ public class AttributePanel extends JPanel
             case SPOTANIM:
                 spotAnimAttributes.setAttributes(keyFrame);
                 spotAnimAttributes.setBackgroundColours(keyFrameState);
+                break;
+            case SPOTANIM2:
+                spotAnim2Attributes.setAttributes(keyFrame);
+                spotAnim2Attributes.setBackgroundColours(keyFrameState);
         }
     }
 
@@ -1585,6 +1614,9 @@ public class AttributePanel extends JPanel
                 break;
             case SPOTANIM:
                 spotAnimAttributes.resetAttributes();
+                break;
+            case SPOTANIM2:
+                spotAnim2Attributes.resetAttributes();
         }
     }
 

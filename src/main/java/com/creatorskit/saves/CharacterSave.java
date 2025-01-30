@@ -1,7 +1,7 @@
 package com.creatorskit.saves;
 
 import com.creatorskit.programming.ProgramComp;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -29,6 +29,14 @@ public class CharacterSave
     private int animationId;
     private int frame;
     private ProgramComp programComp;
-    private KeyFrame[][] keyFrames;
-    private KeyFrame[] currentFrames;
+    private MovementKeyFrame[] movementKeyFrames;
+    private AnimationKeyFrame[] animationKeyFrames;
+    private SpawnKeyFrame[] spawnKeyFrames;
+    private ModelKeyFrame[] modelKeyFrames;
+    private OrientationKeyFrame[] orientationKeyFrames;
+    private TextKeyFrame[] textKeyFrames;
+    private OverheadKeyFrame[] overheadKeyFrames;
+    private HealthKeyFrame[] healthKeyFrames;
+    private SpotAnimKeyFrame[] spotAnimKeyFrames;
+    private SpotAnimKeyFrame[] spotAnim2KeyFrames;
 }

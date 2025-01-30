@@ -1,5 +1,6 @@
 package com.creatorskit.swing.timesheet.attributes;
 
+import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameState;
 import com.creatorskit.swing.timesheet.keyframe.OverheadKeyFrame;
@@ -13,7 +14,7 @@ import java.awt.*;
 @Getter
 public class OverheadAttributes extends Attributes
 {
-    private final JComboBox<Toggle> toggleSkull = new JComboBox<>();
+    private final JComboBox<OverheadSprite> skullSprite = new JComboBox<>();
     private final JComboBox<OverheadSprite> prayerSprite = new JComboBox<>();
 
     public OverheadAttributes()
@@ -25,14 +26,14 @@ public class OverheadAttributes extends Attributes
     public void setAttributes(KeyFrame keyFrame)
     {
         OverheadKeyFrame kf = (OverheadKeyFrame) keyFrame;
-        toggleSkull.setSelectedItem(kf.isToggleSkull() ? Toggle.ENABLE : Toggle.DISABLE);
-        prayerSprite.setSelectedItem(kf.getOverheadSprite());
+        skullSprite.setSelectedItem(kf.getSkullSprite());
+        prayerSprite.setSelectedItem(kf.getPrayerSprite());
     }
 
     @Override
     public void setBackgroundColours(Color color)
     {
-        toggleSkull.setBackground(color);
+        skullSprite.setBackground(color);
         prayerSprite.setBackground(color);
     }
 
@@ -41,7 +42,7 @@ public class OverheadAttributes extends Attributes
     {
         return new JComponent[]
                 {
-                        toggleSkull,
+                        skullSprite,
                         prayerSprite
                 };
     }
@@ -49,9 +50,9 @@ public class OverheadAttributes extends Attributes
     @Override
     public void addChangeListeners()
     {
-        toggleSkull.addItemListener(e ->
+        skullSprite.addItemListener(e ->
         {
-            toggleSkull.setBackground(getRed());
+            skullSprite.setBackground(getRed());
         });
 
         prayerSprite.addItemListener(e ->
@@ -63,7 +64,7 @@ public class OverheadAttributes extends Attributes
     @Override
     public void resetAttributes()
     {
-        toggleSkull.setSelectedItem(Toggle.DISABLE);
+        skullSprite.setSelectedItem(OverheadSprite.NONE);
         prayerSprite.setSelectedItem(OverheadSprite.NONE);
         setBackgroundColours(KeyFrameState.EMPTY);
     }

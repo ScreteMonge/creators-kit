@@ -6,11 +6,15 @@ import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.AttributePanel;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameCharacterAction;
+import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameAction;
+import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameCharacterActionType;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
+import org.apache.commons.lang3.ArrayUtils;
 
 import javax.swing.*;
 import javax.swing.border.LineBorder;
@@ -459,10 +463,13 @@ public class TimeSheet extends JPanel
                     }
                     else
                     {
-                        KeyFrame[] keyFrames = getSelectedKeyFrames().clone();
+                        KeyFrame[] keyFrames = getSelectedKeyFrames();
+                        KeyFrameAction[] kfa = new KeyFrameAction[0];
+
                         for (KeyFrame keyFrame : keyFrames)
                         {
                             timeSheetPanel.removeKeyFrame(selectedCharacter, keyFrame);
+                            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
                         }
 
                         double mouseX = Math.max(0, Math.min(mousePosition.getX(), getWidth()));
@@ -470,11 +477,18 @@ public class TimeSheet extends JPanel
 
                         for (KeyFrame keyFrame : keyFrames)
                         {
-                            keyFrame.setTick(round(keyFrame.getTick() + change));
-                            timeSheetPanel.addKeyFrame(selectedCharacter, keyFrame);
+                            KeyFrame copy = KeyFrame.createCopy(keyFrame, TimeSheetPanel.round(keyFrame.getTick() + change));
+                            KeyFrame keyFrameToReplace = timeSheetPanel.addKeyFrame(selectedCharacter, copy);
+                            if (keyFrameToReplace != null)
+                            {
+                                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
+                            }
+
+                            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(copy, selectedCharacter, KeyFrameCharacterActionType.ADD));
                         }
 
                         setSelectedKeyFrames(keyFrames);
+                        timeSheetPanel.addKeyFrameActions(kfa);
                     }
 
                     keyFrameClicked = false;

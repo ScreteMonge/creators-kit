@@ -1,5 +1,6 @@
 package com.creatorskit.swing.timesheet.attributes;
 
+import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameState;
 import com.creatorskit.swing.timesheet.keyframe.SpotAnimKeyFrame;
@@ -12,10 +13,8 @@ import java.awt.*;
 @Getter
 public class SpotAnimAttributes extends Attributes
 {
-    private final JSpinner spotAnimId1 = new JSpinner();
-    private final JSpinner spotAnimId2 = new JSpinner();
-    private final JComboBox<Toggle> loop1 = new JComboBox<>();
-    private final JComboBox<Toggle> loop2 = new JComboBox<>();
+    private final JSpinner spotAnimId = new JSpinner();
+    private final JComboBox<Toggle> loop = new JComboBox<>();
 
     public SpotAnimAttributes()
     {
@@ -26,19 +25,15 @@ public class SpotAnimAttributes extends Attributes
     public void setAttributes(KeyFrame keyFrame)
     {
         SpotAnimKeyFrame kf = (SpotAnimKeyFrame) keyFrame;
-        spotAnimId1.setValue(kf.getSpotAnimId1());
-        spotAnimId2.setValue(kf.getSpotAnimId2());
-        loop1.setSelectedItem(kf.isLoop1() ? Toggle.ENABLE : Toggle.DISABLE);
-        loop2.setSelectedItem(kf.isLoop2() ? Toggle.ENABLE : Toggle.DISABLE);
+        spotAnimId.setValue(kf.getSpotAnimId());
+        loop.setSelectedItem(kf.isLoop() ? Toggle.ENABLE : Toggle.DISABLE);
     }
 
     @Override
     public void setBackgroundColours(Color color)
     {
-        spotAnimId1.setBackground(color);
-        spotAnimId2.setBackground(color);
-        loop1.setBackground(color);
-        loop2.setBackground(color);
+        spotAnimId.setBackground(color);
+        loop.setBackground(color);
     }
 
     @Override
@@ -46,44 +41,30 @@ public class SpotAnimAttributes extends Attributes
     {
         return new JComponent[]
                 {
-                        spotAnimId1,
-                        spotAnimId2,
-                        loop1,
-                        loop2
+                        spotAnimId,
+                        loop
                 };
     }
 
     @Override
     public void addChangeListeners()
     {
-        spotAnimId1.addChangeListener(e ->
+        spotAnimId.addChangeListener(e ->
         {
-            spotAnimId1.setBackground(getRed());
+            spotAnimId.setBackground(getRed());
         });
 
-        spotAnimId2.addChangeListener(e ->
+        loop.addItemListener(e ->
         {
-            spotAnimId2.setBackground(getRed());
-        });
-
-        loop1.addItemListener(e ->
-        {
-            loop1.setBackground(getRed());
-        });
-
-        loop2.addItemListener(e ->
-        {
-            loop2.setBackground(getRed());
+            loop.setBackground(getRed());
         });
     }
 
     @Override
     public void resetAttributes()
     {
-        spotAnimId1.setValue(-1);
-        spotAnimId2.setValue(-1);
-        loop1.setSelectedItem(Toggle.DISABLE);
-        loop2.setSelectedItem(Toggle.DISABLE);
+        spotAnimId.setValue(-1);
+        loop.setSelectedItem(Toggle.DISABLE);
         setBackgroundColours(KeyFrameState.EMPTY);
     }
 }

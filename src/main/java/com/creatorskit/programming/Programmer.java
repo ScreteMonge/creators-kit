@@ -9,14 +9,12 @@ import com.creatorskit.models.LightingStyle;
 import com.creatorskit.models.ModelStats;
 import com.creatorskit.models.datatypes.SpotanimData;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
-import com.creatorskit.swing.timesheet.keyframe.ModelKeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.SpotAnimKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.*;
+import lombok.Getter;
+import lombok.Setter;
 import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.events.ClientTick;
-import net.runelite.api.events.GameTick;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.Subscribe;
 
@@ -32,6 +30,12 @@ public class Programmer
     private final DataFinder dataFinder;
     private int clientTickAtLastGameTick = -1;
     private double subTick = 0;
+    private boolean delayTick = false;
+    private int clientTickAtLastProgramTick = 0;
+
+    @Getter
+    @Setter
+    private boolean playing = false;
 
     @Inject
     public Programmer(Client client, ClientThread clientThread, CreatorsPlugin plugin, TimeSheetPanel timeSheetPanel, DataFinder dataFinder)
@@ -51,13 +55,34 @@ public class Programmer
             return;
         }
 
+        if (playing)
+        {
+            clientTickAtLastProgramTick++;
+            if (clientTickAtLastProgramTick >= 3)
+            {
+                clientTickAtLastProgramTick = 0;
+                incrementSubTime();
+            }
+        }
+/*
         if (clientTickAtLastGameTick == -1)
         {
             clientTickAtLastGameTick = client.getGameCycle();
         }
 
-        if (timeSheetPanel.isPlayActive())
+        if (delayTick)
         {
+            return;
+        }
+
+
+        if (playing)
+        {
+            if (subTick == 0.9)
+            {
+                return;
+            }
+
             int currentClientTick = client.getGameCycle();
             int change = currentClientTick - clientTickAtLastGameTick;
             if (change * Constants.CLIENT_TICK_LENGTH >= Constants.GAME_TICK_LENGTH)
@@ -65,14 +90,18 @@ public class Programmer
                 return;
             }
 
-            double nextSubTick = TimeSheetPanel.round((double) change / 30);
+            double nextSubTick = TimeSheetPanel.round(((double) change) / 30);
             if (subTick < nextSubTick)
             {
+                subTick = nextSubTick;
                 incrementSubTime();
             }
         }
+
+         */
     }
 
+    /*
     @Subscribe
     public void onGameTick(GameTick event)
     {
@@ -81,12 +110,21 @@ public class Programmer
             return;
         }
 
-        if (timeSheetPanel.isPlayActive())
+        clientTickAtLastGameTick = client.getGameCycle();
+
+        if (playing)
         {
+            if (delayTick)
+            {
+                delayTick = false;
+                return;
+            }
+
             incrementTime();
-            clientTickAtLastGameTick = client.getGameCycle();
         }
     }
+
+     */
 
     private void incrementSubTime()
     {
@@ -97,19 +135,74 @@ public class Programmer
     private void incrementTime()
     {
         subTick = 0;
-        timeSheetPanel.setCurrentTime(Math.floor(timeSheetPanel.getCurrentTime()) + 1, true);
+        int tick = (int) TimeSheetPanel.round(Math.floor(timeSheetPanel.getCurrentTime()) + 1);
+        timeSheetPanel.setCurrentTime(tick, true);
+    }
+
+    public void togglePlay()
+    {
+        togglePlay(!playing);
+    }
+
+    public void togglePlay(boolean play)
+    {
+        if (play)
+        {
+            playing = true;
+            timeSheetPanel.setPlayButtonIcon(true);
+            timeSheetPanel.setCurrentTime(Math.floor(timeSheetPanel.getCurrentTime()), false);
+            delayTick = true;
+
+            ArrayList<Character> characters = plugin.getCharacters();
+            for (int i = 0; i < characters.size(); i++)
+            {
+                Character character = characters.get(i);
+                character.play();
+            }
+            return;
+        }
+
+        playing = false;
+        ArrayList<Character> characters = plugin.getCharacters();
+        for (int i = 0; i < characters.size(); i++)
+        {
+            Character character = characters.get(i);
+            character.pause();
+        }
+
+        timeSheetPanel.setPlayButtonIcon(false);
+    }
+
+    /**
+     * Updates the program with their current KeyFrame at the current time in the TimeSheetPanel
+     * Intended for use adding or removing a KeyFrame from a specific Character
+     */
+    public void updateProgram(Character character)
+    {
+        updateProgram(character, timeSheetPanel.getCurrentTime());
     }
 
     /**
      * Updates the program with their current KeyFrame for the given time
      * Intended for use adding or removing a KeyFrame from a specific Character
+     * @param character the character to update
      * @param tick the tick at which to look for KeyFrames
      */
     public void updateProgram(Character character, double tick)
     {
         character.updateProgram(tick);
         registerModelChanges(character);
-        registerSpotAnimChanges(character, tick);
+        registerSpotAnimChanges(character, KeyFrameType.SPOTANIM, tick);
+        registerSpotAnimChanges(character, KeyFrameType.SPOTANIM2, tick);
+        registerSpawnChanges(character);
+    }
+
+    /**
+     * Loops through all Characters and updates their current KeyFrame for the current time
+     */
+    public void updatePrograms()
+    {
+        updatePrograms(timeSheetPanel.getCurrentTime());
     }
 
     /**
@@ -130,7 +223,7 @@ public class Programmer
      * Loops through all Characters and updates their current KeyFrame for the current time in the TimeSheetPanel
      * Intended for use when Playing the programmer, not when manually setting the time
      */
-    public void updatePrograms()
+    public void updateProgramsOnTick()
     {
         double currentTime = timeSheetPanel.getCurrentTime();
         ArrayList<Character> characters = plugin.getCharacters();
@@ -188,7 +281,7 @@ public class Programmer
                 if (nextSpawn.getTick() <= currentTime)
                 {
                     character.setCurrentKeyFrame(nextSpawn, KeyFrameType.SPAWN);
-                    //register changes
+                    registerSpawnChanges(character);
                 }
             }
 
@@ -295,7 +388,42 @@ public class Programmer
                     character.setCurrentKeyFrame(nextSpotAnim, KeyFrameType.SPOTANIM);
                 }
             }
+
+
+            KeyFrame currentSpotAnim2 = currentFrames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM2)];
+            double lastSpotAnim2Tick = 0;
+            if (currentSpotAnim2 != null)
+            {
+                lastSpotAnim2Tick = currentSpotAnim2.getTick();
+            }
+
+            KeyFrame nextSpotAnim2 = character.findNextKeyFrame(KeyFrameType.SPOTANIM2, lastSpotAnim2Tick);
+            if (nextSpotAnim2 != null)
+            {
+                if (nextSpotAnim2.getTick() <= currentTime)
+                {
+                    character.setCurrentKeyFrame(nextSpotAnim2, KeyFrameType.SPOTANIM2);
+                }
+            }
         }
+    }
+
+    private void registerSpawnChanges(Character character)
+    {
+        CKObject ckObject = character.getCkObject();
+
+        KeyFrame keyFrame = character.getCurrentKeyFrame(KeyFrameType.SPAWN);
+        if (!(keyFrame instanceof SpawnKeyFrame))
+        {
+            return;
+        }
+
+        SpawnKeyFrame spawnKeyFrame = (SpawnKeyFrame) keyFrame;
+
+        clientThread.invokeLater(() ->
+        {
+            ckObject.setActive(spawnKeyFrame.isSpawnActive());
+        });
     }
 
     private void registerModelChanges(Character character)
@@ -303,7 +431,7 @@ public class Programmer
         CKObject ckObject = character.getCkObject();
 
         KeyFrame keyFrame = character.getCurrentKeyFrame(KeyFrameType.MODEL);
-        if (keyFrame == null)
+        if (!(keyFrame instanceof ModelKeyFrame))
         {
             plugin.setModel(character, character.isCustomMode(), (int) character.getModelSpinner().getValue());
             return;
@@ -313,7 +441,13 @@ public class Programmer
 
         if (modelKeyFrame.isUseCustomModel())
         {
-            ckObject.setModel(modelKeyFrame.getCustomModel().getModel());
+            Model model = modelKeyFrame.getCustomModel().getModel();
+            if (model == null)
+            {
+                return;
+            }
+
+            ckObject.setModel(model);
         }
         else
         {
@@ -330,24 +464,38 @@ public class Programmer
         }
     }
 
-    private void registerSpotAnimChanges(Character character, double currentTime)
+    private void registerSpotAnimChanges(Character character, KeyFrameType keyFrameType, double currentTime)
     {
         CKObject ckObject = character.getCkObject();
+        CKObject spotAnim;
+        if (keyFrameType == KeyFrameType.SPOTANIM)
+        {
+            spotAnim = character.getSpotAnim1();
+        }
+        else
+        {
+            spotAnim = character.getSpotAnim2();
+        }
 
-        KeyFrame keyFrame = character.getCurrentKeyFrame(KeyFrameType.SPOTANIM);
+        KeyFrame keyFrame = character.getCurrentKeyFrame(keyFrameType);
+
         if (keyFrame == null)
         {
             clientThread.invokeLater(() ->
             {
-                CKObject spotAnim1 = character.getSpotAnim1();
-                if (spotAnim1 == null)
+                if (spotAnim == null)
                 {
                     return;
                 }
 
-                spotAnim1.setActive(false);
-                character.setSpotAnim1(null);
+                spotAnim.setActive(false);
+                character.setSpotAnim(null, keyFrameType);
             });
+            return;
+        }
+
+        if (!(keyFrame instanceof SpotAnimKeyFrame))
+        {
             return;
         }
 
@@ -356,14 +504,21 @@ public class Programmer
         LocalPoint lp = ckObject.getLocation();
         int plane = ckObject.getLevel();
 
-        CKObject spotAnim1 = character.getSpotAnim1();
-        updateSpotAnim(spotAnim1, spotAnimKeyFrame.getSpotAnimId1(), character, currentTime, spotAnimKeyFrame.getTick(), spotAnimKeyFrame.isLoop1(), lp, plane);
-        CKObject spotAnim2 = character.getSpotAnim2();
-        //updateSpotAnim(spotAnim2, spotAnimKeyFrame.getSpotAnimId2(), character, currentTime, lp, plane);
+        updateSpotAnim(keyFrameType, spotAnimKeyFrame.getSpotAnimId(), character, currentTime, spotAnimKeyFrame.getTick(), spotAnimKeyFrame.isLoop(), lp, plane);
     }
 
-    private void updateSpotAnim(CKObject spotAnim, int spotAnimId, Character character, double currentTime, double startTick, boolean loop, LocalPoint lp, int plane)
+    private void updateSpotAnim(KeyFrameType keyFrameType, int spotAnimId, Character character, double currentTime, double startTick, boolean loop, LocalPoint lp, int plane)
     {
+        CKObject spotAnim;
+        if (keyFrameType == KeyFrameType.SPOTANIM)
+        {
+            spotAnim = character.getSpotAnim1();
+        }
+        else
+        {
+            spotAnim = character.getSpotAnim2();
+        }
+
         if (spotAnim == null)
         {
             if (spotAnimId > -1)
@@ -379,15 +534,15 @@ public class Programmer
                         CustomLighting cl = new CustomLighting(ls.getAmbient() + data.getAmbient(), ls.getContrast() + data.getContrast(), ls.getX(), ls.getY(), ls.getZ());
                         Model model = plugin.constructModelFromCache(stats, new int[0], false, LightingStyle.CUSTOM, cl);
 
-                        CKObject sp1 = new CKObject(client);
-                        character.setSpotAnim1(sp1);
-                        client.registerRuneLiteObject(sp1);
-                        sp1.setModel(model);
-                        sp1.setAnimation(data.getAnimationId());
-                        sp1.setLocation(lp, plane);
-                        sp1.setActive(true);
-                        setAnimationFrame(sp1, currentTime, startTick, loop);
-                        character.setSpotAnim1(sp1);
+                        CKObject ckObject = new CKObject(client);
+                        client.registerRuneLiteObject(ckObject);
+                        ckObject.setModel(model);
+                        ckObject.setAnimation(data.getAnimationId());
+                        ckObject.setLocation(lp, plane);
+                        ckObject.setActive(true);
+                        ckObject.setDrawFrontTilesFirst(true);
+                        setAnimationFrame(ckObject, currentTime, startTick, loop);
+                        character.setSpotAnim(ckObject, keyFrameType);
                     });
                 }
             }
@@ -414,6 +569,7 @@ public class Programmer
             clientThread.invokeLater(() ->
             {
                 ckObject.setActive(false);
+                ckObject.setLoop(loop);
             });
         }
         else
@@ -423,6 +579,7 @@ public class Programmer
                 ckObject.setActive(true);
                 ckObject.setAnimationFrame(animFrame[0], false);
                 ckObject.tick(animFrame[1]);
+                ckObject.setLoop(loop);
             });
         }
     }

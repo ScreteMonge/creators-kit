@@ -12,7 +12,7 @@ public class KeyFrame
     private KeyFrameType keyFrameType;
     private double tick;
 
-    public KeyFrame createCopy(KeyFrame keyFrame, double tick)
+    public static KeyFrame createCopy(KeyFrame keyFrame, double tick)
     {
         if (keyFrame instanceof MovementKeyFrame)
         {
@@ -78,8 +78,8 @@ public class KeyFrame
             OverheadKeyFrame kf = (OverheadKeyFrame) keyFrame;
             return new OverheadKeyFrame(
                     tick,
-                    kf.isToggleSkull(),
-                    kf.getOverheadSprite());
+                    kf.getSkullSprite(),
+                    kf.getPrayerSprite());
         }
 
         if (keyFrame instanceof HealthKeyFrame)
@@ -106,10 +106,9 @@ public class KeyFrame
             SpotAnimKeyFrame kf = (SpotAnimKeyFrame) keyFrame;
             return new SpotAnimKeyFrame(
                     tick,
-                    kf.getSpotAnimId1(),
-                    kf.getSpotAnimId2(),
-                    kf.isLoop1(),
-                    kf.isLoop2());
+                    kf.getSpotAnimType(),
+                    kf.getSpotAnimId(),
+                    kf.isLoop());
         }
 
         return null;

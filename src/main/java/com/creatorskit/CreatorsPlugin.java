@@ -141,7 +141,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private boolean autoTransmogFound = true;
 	private boolean controlDown = false;
 
-	private boolean test2_0 = false;
+	public static boolean test2_0 = false;
 
 	@Override
 	protected void startUp() throws Exception
@@ -1105,12 +1105,25 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	{
 		CKObject ckObject = character.getCkObject();
 		character.setActive(false);
-		clientThread.invokeLater(() -> ckObject.setActive(false));
+		clientThread.invokeLater(() ->
+		{
+			if (ckObject == null)
+			{
+				return;
+			}
+
+			ckObject.setActive(false);
+		});
 	}
 
 	public void setModel(Character character, boolean modelMode, int modelId)
 	{
 		CKObject ckObject = character.getCkObject();
+		if (ckObject == null)
+		{
+			return;
+		}
+
 		clientThread.invokeLater(() -> {
 			if (modelMode)
 			{
@@ -1195,7 +1208,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			ckObject.setRadius((int) character.getRadiusSpinner().getValue());
 			ckObject.setOrientation((int) character.getOrientationSpinner().getValue());
-			ckObject.setDrawFrontTilesFirst(true);
 
 			boolean active = character.isActive();
 
@@ -2239,7 +2251,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		previewObject.setModel(model);
 		previewObject.setOrientation(orientation);
 		previewObject.setAnimation(animId);
-		previewObject.setDrawFrontTilesFirst(true);
 		previewObject.setLocation(lp, client.getTopLevelWorldView().getPlane());
 		previewObject.setRadius(ckObject.getRadius());
 		previewObject.setActive(true);

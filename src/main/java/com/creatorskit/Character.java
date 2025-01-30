@@ -4,17 +4,19 @@ import com.creatorskit.models.CustomModel;
 import com.creatorskit.programming.Program;
 import com.creatorskit.swing.ObjectPanel;
 import com.creatorskit.swing.ParentPanel;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
+import com.creatorskit.swing.timesheet.keyframe.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
+import net.runelite.api.Animation;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
+import java.util.Arrays;
+import java.util.stream.Stream;
 
 @Getter
 @Setter
@@ -60,6 +62,34 @@ public class Character
         return name;
     }
 
+    public void play()
+    {
+        //ckObject.play();
+        if (spotAnim1 != null)
+        {
+            spotAnim1.setPlaying(true);
+        }
+
+        if (spotAnim2 != null)
+        {
+            spotAnim2.setPlaying(true);
+        }
+    }
+
+    public void pause()
+    {
+        //ckObject.pause();
+        if (spotAnim1 != null)
+        {
+            spotAnim1.setPlaying(false);
+        }
+
+        if (spotAnim2 != null)
+        {
+            spotAnim2.setPlaying(false);
+        }
+    }
+
     /**
      * Updates the Character's current KeyFrame for the given time
      * @param tick the tick at which to look for KeyFrames
@@ -92,6 +122,22 @@ public class Character
 
         KeyFrame currentSpotAnim = findPreviousKeyFrame(KeyFrameType.SPOTANIM, tick, true);
         setCurrentKeyFrame(currentSpotAnim, KeyFrameType.SPOTANIM);
+
+        KeyFrame currentSpotAnim2 = findPreviousKeyFrame(KeyFrameType.SPOTANIM2, tick, true);
+        setCurrentKeyFrame(currentSpotAnim2, KeyFrameType.SPOTANIM2);
+    }
+
+    public void setSpotAnim(CKObject spotAnim, KeyFrameType spotAnimType)
+    {
+        if (spotAnimType == KeyFrameType.SPOTANIM)
+        {
+            setSpotAnim1(spotAnim);
+        }
+
+        if (spotAnimType == KeyFrameType.SPOTANIM2)
+        {
+            setSpotAnim2(spotAnim);
+        }
     }
 
     public KeyFrame getCurrentKeyFrame(KeyFrameType type)
@@ -396,8 +442,9 @@ public class Character
     /**
      * Adds the keyframe to a specific character, or replaces a keyframe if the tick matches exactly
      * @param keyFrame the keyframe to add or modify for the character
+     * @return the keyframe that is being replaced; null if there is no keyframe being replaced
      */
-    public void addKeyFrame(KeyFrame keyFrame, double currentTime)
+    public KeyFrame addKeyFrame(KeyFrame keyFrame, double currentTime)
     {
         KeyFrameType type = keyFrame.getKeyFrameType();
         KeyFrame[] keyFrames = getKeyFrames(type);
@@ -408,14 +455,16 @@ public class Character
 
             KeyFrame currentKeyFrame = findPreviousKeyFrame(type, currentTime, true);
             setCurrentKeyFrame(currentKeyFrame, type);
-            return;
+            return null;
         }
 
         int[] framePosition = getFramePosition(keyFrames, keyFrame.getTick());
+        KeyFrame keyFrameToReplace = null;
 
         // Check first if the new keyframe is replacing a previous one
         if (framePosition[1] == 1)
         {
+            keyFrameToReplace = keyFrames[framePosition[0]];
             keyFrames[framePosition[0]] = keyFrame;
         }
         else
@@ -427,6 +476,7 @@ public class Character
 
         KeyFrame currentKeyFrame = findPreviousKeyFrame(type, currentTime, true);
         setCurrentKeyFrame(currentKeyFrame, type);
+        return keyFrameToReplace;
     }
 
     /**
@@ -514,5 +564,149 @@ public class Character
         }
 
         return new int[]{frameIndex, 0};
+    }
+
+    public MovementKeyFrame[] getMovementKeyFrames()
+    {
+        KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.MOVEMENT);
+        if (keyFrames == null)
+        {
+            return null;
+        }
+
+        MovementKeyFrame[] keyFrame = new MovementKeyFrame[keyFrames.length];
+        for (int i = 0; i < keyFrames.length; i++)
+        {
+            keyFrame[i] = (MovementKeyFrame) keyFrames[i];
+        }
+        return keyFrame;
+    }
+
+    public AnimationKeyFrame[] getAnimationKeyFrames()
+    {
+        KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.ANIMATION);
+        if (keyFrames == null)
+        {
+            return null;
+        }
+
+        AnimationKeyFrame[] keyFrame = new AnimationKeyFrame[keyFrames.length];
+        for (int i = 0; i < keyFrames.length; i++)
+        {
+            keyFrame[i] = (AnimationKeyFrame) keyFrames[i];
+        }
+        return keyFrame;
+    }
+
+    public SpawnKeyFrame[] getSpawnKeyFrames()
+    {
+        KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.SPAWN);
+        if (keyFrames == null)
+        {
+            return null;
+        }
+
+        SpawnKeyFrame[] keyFrame = new SpawnKeyFrame[keyFrames.length];
+        for (int i = 0; i < keyFrames.length; i++)
+        {
+            keyFrame[i] = (SpawnKeyFrame) keyFrames[i];
+        }
+        return keyFrame;
+    }
+
+    public ModelKeyFrame[] getModelKeyFrame()
+    {
+        KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.MODEL);
+        if (keyFrames == null)
+        {
+            return null;
+        }
+
+        ModelKeyFrame[] keyFrame = new ModelKeyFrame[keyFrames.length];
+        for (int i = 0; i < keyFrames.length; i++)
+        {
+            keyFrame[i] = (ModelKeyFrame) keyFrames[i];
+        }
+        return keyFrame;
+    }
+
+    public OrientationKeyFrame[] getOrientationKeyFrames()
+    {
+        KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.ORIENTATION);
+        if (keyFrames == null)
+        {
+            return null;
+        }
+
+        OrientationKeyFrame[] keyFrame = new OrientationKeyFrame[keyFrames.length];
+        for (int i = 0; i < keyFrames.length; i++)
+        {
+            keyFrame[i] = (OrientationKeyFrame) keyFrames[i];
+        }
+        return keyFrame;
+    }
+
+    public TextKeyFrame[] getTextKeyFrames()
+    {
+        KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.TEXT);
+        if (keyFrames == null)
+        {
+            return null;
+        }
+
+        TextKeyFrame[] keyFrame = new TextKeyFrame[keyFrames.length];
+        for (int i = 0; i < keyFrames.length; i++)
+        {
+            keyFrame[i] = (TextKeyFrame) keyFrames[i];
+        }
+        return keyFrame;
+    }
+
+    public OverheadKeyFrame[] getOverheadKeyFrames()
+    {
+        KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.OVERHEAD);
+        if (keyFrames == null)
+        {
+            return null;
+        }
+
+        OverheadKeyFrame[] keyFrame = new OverheadKeyFrame[keyFrames.length];
+        for (int i = 0; i < keyFrames.length; i++)
+        {
+            keyFrame[i] = (OverheadKeyFrame) keyFrames[i];
+        }
+        return keyFrame;
+    }
+
+    public HealthKeyFrame[] getHealthKeyFrames()
+    {
+        KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.HEALTH);
+        if (keyFrames == null)
+        {
+            return null;
+        }
+
+        HealthKeyFrame[] keyFrame = new HealthKeyFrame[keyFrames.length];
+        for (int i = 0; i < keyFrames.length; i++)
+        {
+            keyFrame[i] = (HealthKeyFrame) keyFrames[i];
+        }
+        return keyFrame;
+    }
+
+    public SpotAnimKeyFrame[] getSpotAnimKeyFrames(KeyFrameType spotAnimNumber)
+    {
+        KeyFrame[] keyFrames = getKeyFrames(spotAnimNumber);
+        if (keyFrames == null)
+        {
+            return null;
+        }
+
+        SpotAnimKeyFrame[] keyFrame = new SpotAnimKeyFrame[keyFrames.length];
+        for (int i = 0; i < keyFrames.length; i++)
+        {
+            keyFrame[i] = (SpotAnimKeyFrame) keyFrames[i];
+        }
+        return keyFrame;
     }
 }

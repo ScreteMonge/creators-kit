@@ -10,18 +10,36 @@ import javax.annotation.Nullable;
 
 @Getter
 @Setter
-@RequiredArgsConstructor
 public class CKObject extends RuneLiteObjectController
 {
     private final Client client;
     private Model baseModel;
-    private boolean pause;
-
-    @Nullable
+    private boolean freeze;
+    private boolean playing;
+    private boolean loop = true;
     private AnimationController animationController;
-
-    @Nullable
     private AnimationController poseAnimationController;
+
+    public CKObject(Client client)
+    {
+        this.client = client;
+        this.animationController = new AnimationController(client, -1);
+        this.poseAnimationController = new AnimationController(client, -1);
+
+        animationController.setOnFinished(e ->
+        {
+            if (loop)
+            {
+                setActive(true);
+                animationController.loop();
+            }
+            else
+            {
+                setActive(false);
+                animationController.reset();
+            }
+        });
+    }
 
     private int startCycle;
 
@@ -73,9 +91,22 @@ public class CKObject extends RuneLiteObjectController
     @Override
     public void tick(int ticksSinceLastFrame)
     {
-        if (pause)
+        if (freeze)
         {
             return;
+        }
+
+        if (!CreatorsPlugin.test2_0)
+        {
+            if (animationController != null)
+            {
+                animationController.tick(ticksSinceLastFrame);
+            }
+        }
+
+        if (!playing)
+        {
+            //return;
         }
 
         if (animationController != null)
@@ -122,7 +153,7 @@ public class CKObject extends RuneLiteObjectController
         return animationController.getAnimation();
     }
 
-    public void setAnimationFrame(int animFrame, boolean allowPause)
+    public void setAnimationFrame(int animFrame, boolean allowFreeze)
     {
         if (animationController == null)
         {
@@ -140,21 +171,21 @@ public class CKObject extends RuneLiteObjectController
             animFrame = animation.getDuration() - 1;
         }
 
-        if (allowPause)
+        if (allowFreeze)
         {
             if (animFrame == -1)
             {
-                pause = false;
+                freeze = false;
                 animationController.setFrame(0);
                 return;
             }
 
-            pause = true;
+            freeze = true;
             animationController.setFrame(animFrame);
             return;
         }
 
-        pause = false;
+        freeze = false;
         animationController.setFrame(animFrame);
     }
 
