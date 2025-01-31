@@ -102,6 +102,8 @@ public class CKObject extends RuneLiteObjectController
             {
                 animationController.tick(ticksSinceLastFrame);
             }
+
+            return;
         }
 
         if (!playing)
