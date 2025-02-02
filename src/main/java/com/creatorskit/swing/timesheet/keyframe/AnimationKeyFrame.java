@@ -7,8 +7,8 @@ import lombok.Setter;
 @Setter
 public class AnimationKeyFrame extends KeyFrame
 {
-    private int manualAnim;
-    private boolean manualOverride;
+    private int actionAnim;
+    private boolean loop;
     private int idleAnim;
     private int walkAnim;
     private int runAnim;
@@ -18,11 +18,11 @@ public class AnimationKeyFrame extends KeyFrame
     private int idleRAnim;
     private int idleLAnim;
 
-    public AnimationKeyFrame(double tick, int manualAnim, boolean manualOverride, int idleAnim, int walkAnim, int runAnim, int walk180Anim, int walkRAnim, int walkLAnim, int idleRAnim, int idleLAnim)
+    public AnimationKeyFrame(double tick, int actionAnim, boolean loop, int idleAnim, int walkAnim, int runAnim, int walk180Anim, int walkRAnim, int walkLAnim, int idleRAnim, int idleLAnim)
     {
         super(KeyFrameType.ANIMATION, tick);
-        this.manualAnim = manualAnim;
-        this.manualOverride = manualOverride;
+        this.actionAnim = actionAnim;
+        this.loop = loop;
         this.idleAnim = idleAnim;
         this.walkAnim = walkAnim;
         this.runAnim = runAnim;

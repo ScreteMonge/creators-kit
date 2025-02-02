@@ -606,6 +606,13 @@ public class ManagerTree extends JTree
         toolBox.getTimeSheetPanel().getSummarySheet().onVerticalScrollEvent(scroll);
     }
 
+    public void setSelectedCharacter(Character character)
+    {
+        TreePath treePath = new TreePath(character.getLinkedManagerNode().getPath());
+        setSelectionPath(treePath);
+        scrollPathToVisible(treePath);
+    }
+
     private void updateTreeSelectionIndex()
     {
         int[] rows = getSelectionRows();

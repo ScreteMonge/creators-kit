@@ -126,6 +126,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private CKObject previewObject;
 	private Model previewArrow;
 	private CustomModel transmogModel;
+	private final int GOLDEN_CHIN = 29757;
 	private int savedRegion = -1;
 	private int savedPlane = -1;
 	private AutoRotate autoRotateYaw = AutoRotate.OFF;
@@ -141,7 +142,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private boolean autoTransmogFound = true;
 	private boolean controlDown = false;
 
-	public static boolean test2_0 = false;
+	public static boolean test2_0 = true;
 
 	@Override
 	protected void startUp() throws Exception
@@ -408,7 +409,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				continue;
 			}
 
-			int currentAnim = ckObject.getAnimationId();;
+			int currentAnim = ckObject.getAnimationId();
 			if (currentAnim != -1 && currentAnim != comp.getWalkAnim())
 			{
 				int walkAnimId = comp.getWalkAnim();
@@ -1128,7 +1129,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			if (modelMode)
 			{
 				CustomModel customModel = character.getStoredModel();
-				Model model = customModel == null ? client.loadModel(29757) : customModel.getModel();
+				Model model = customModel == null ? client.loadModel(GOLDEN_CHIN) : customModel.getModel();
 				ckObject.setModel(model);
 				return;
 			}
@@ -1144,19 +1145,13 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 
 		CKObject ckObject = character.getCkObject();
-		clientThread.invoke(() ->
-		{
-			ckObject.setAnimation(animationId);
-		});
+		clientThread.invoke(() -> ckObject.setAnimation(animationId));
 	}
 
 	public void unsetAnimation(Character character)
 	{
 		CKObject ckObject = character.getCkObject();
-		clientThread.invoke(() ->
-		{
-			ckObject.setAnimation(-1);
-		});
+		clientThread.invoke(() -> ckObject.setAnimation(-1));
 	}
 
 	public void setAnimationFrame(Character character, int animFrame, boolean allowPause)
@@ -1165,10 +1160,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 
 		CKObject ckObject = character.getCkObject();
-		clientThread.invoke(() ->
-		{
-			ckObject.setAnimationFrame(animFrame, allowPause);
-		});
+		clientThread.invoke(() -> ckObject.setAnimationFrame(animFrame, allowPause));
 	}
 
 	public void setRadius(Character character, int radius)
@@ -1202,9 +1194,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	{
 		clientThread.invoke(() ->
 		{
-			CKObject ckObject = new CKObject(client);
+			CKObject ckObject = character.getCkObject();
 			client.registerRuneLiteObject(ckObject);
-			character.setCkObject(ckObject);
 
 			ckObject.setRadius((int) character.getRadiusSpinner().getValue());
 			ckObject.setOrientation((int) character.getOrientationSpinner().getValue());
@@ -1214,18 +1205,12 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			setModel(character, character.isCustomMode(), (int) character.getModelSpinner().getValue());
 			setAnimation(character, (int) character.getAnimationSpinner().getValue());
 			setAnimationFrame(character, (int) character.getAnimationFrameSpinner().getValue(), true);
-
-			if (setHoveredTile)
-			{
-				setLocation(character, !character.isLocationSet(), false, true, false);
-			}
-			else
-			{
-				setLocation(character, !character.isLocationSet(), false, false, false);
-			}
+			setLocation(character, !character.isLocationSet(), false, setHoveredTile, false);
 
 			ckObject.setActive(active);
 			character.setActive(active);
+
+			creatorsPanel.getToolBox().getProgrammer().updateProgram(character);
 		});
 	}
 
@@ -1704,7 +1689,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		});
 	}
 
-	public void loadCustomModelToAnvil(File file, boolean priority, String name)
+	public void loadCustomModelToAnvil(File file)
 	{
 		ModelAnvil modelAnvil = creatorsPanel.getModelAnvil();
 		try
@@ -1736,55 +1721,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			modelAnvil.getPriorityCheckBox().setSelected(comp.isPriority());
 			modelAnvil.getNameField().setText(comp.getName());
 			reader.close();
-			return;
 		}
 		catch (Exception e)
 		{
-			sendChatMessage("The file chosen is possibly in an older v1.2 file. Attempting conversion...");
-		}
-
-		try
-		{
-			Reader reader = Files.newBufferedReader(file.toPath());
-			DetailedModel[] detailedModels = gson.fromJson(reader, DetailedModel[].class);
-			SwingUtilities.invokeLater(() ->
-			{
-				for (DetailedModel detailedModel : detailedModels)
-				{
-					creatorsPanel.getModelAnvil().createComplexPanel(detailedModel);
-				}
-			});
-			reader.close();
-
-			CustomLighting lighting = new CustomLighting(64, 768, -50, -50, 10);
-			CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, null, LightingStyle.DEFAULT, lighting, priority, name);
-			modelAnvil.getPriorityCheckBox().setSelected(comp.isPriority());
-			modelAnvil.getNameField().setText(comp.getName());
-
-			try
-			{
-				file.delete();
-				String fileName = file.getPath();
-				File newFile = new File(fileName);
-				FileWriter writer = new FileWriter(newFile, false);
-				String string = gson.toJson(comp);
-				writer.write(string);
-				writer.close();
-				sendChatMessage("The chosen v1.2 file has been successfully updated to a v1.3 file for future use.");
-			}
-			catch (IOException e)
-			{
-				e.printStackTrace();
-				sendChatMessage("An error occurred while trying to convert this file to a .json file.");
-			}
-		}
-		catch (Exception e)
-		{
-			sendChatMessage("The file chosen is possibly an older v1.0 file. Please see ScreteMonge for help adapting this.");
+			sendChatMessage("Failed to load this Saved Model file.");
 		}
 	}
 
-	public void loadCustomModel(File file, boolean priority, String name)
+	public void loadCustomModel(File file)
 	{
 		try
 		{
@@ -1802,49 +1746,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				addCustomModel(customModel, false);
 			});
 			reader.close();
-			return;
 		}
 		catch (Exception e)
 		{
-			sendChatMessage("The file chosen is possibly in an older v1.2 file. Attempting conversion...");
-		}
-
-		try
-		{
-			Reader reader = Files.newBufferedReader(file.toPath());
-			DetailedModel[] detailedModels = gson.fromJson(reader, DetailedModel[].class);
-			CustomLighting lighting = new CustomLighting(64, 768, -50, -50, 10);
-			CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, null, LightingStyle.DEFAULT, lighting, priority, name);
-
-			clientThread.invokeLater(() ->
-			{
-				Model model = createComplexModel(detailedModels, priority, LightingStyle.DEFAULT, lighting);
-				CustomModel customModel = new CustomModel(model, comp);
-				addCustomModel(customModel, false);
-			});
-			reader.close();
-
-			try
-			{
-				file.delete();
-				String fileName = file.getPath();
-				File newFile = new File(fileName);
-				FileWriter writer = new FileWriter(newFile, false);
-				String string = gson.toJson(comp);
-				writer.write(string);
-				writer.close();
-
-				sendChatMessage("The chosen v1.2 file has been successfully updated to a v1.3 file for future use.");
-			}
-			catch (IOException e)
-			{
-				e.printStackTrace();
-				sendChatMessage("An error occurred while trying to convert this v1.2 file to a v1.3 file.");
-			}
-		}
-		catch (Exception e)
-		{
-			sendChatMessage("The file chosen is possibly an older v1.0 file. Please see ScreteMonge for help adapting this.");
+			sendChatMessage("Failed to load this Saved Model file.");
 		}
 	}
 
@@ -2251,6 +2156,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		previewObject.setModel(model);
 		previewObject.setOrientation(orientation);
 		previewObject.setAnimation(animId);
+		previewObject.setAnimationFrame(ckObject.getAnimationFrame(), true);
 		previewObject.setLocation(lp, client.getTopLevelWorldView().getPlane());
 		previewObject.setRadius(ckObject.getRadius());
 		previewObject.setActive(true);

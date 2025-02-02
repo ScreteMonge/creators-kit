@@ -112,7 +112,20 @@ public class AttributeSheet extends TimeSheet
 
         double x = MouseInfo.getPointerInfo().getLocation().getX() - getLocationOnScreen().getX();
         double mouseX = Math.max(0, Math.min(x, getWidth()));
-        double change = round((mouseX - getMousePointOnPressed().getX()) * getZoom() / getWidth());
+
+        double xCurrentTime = currentTimeToMouseX();
+
+        double change;
+        if (Math.abs(Math.abs(mouseX) - Math.abs(xCurrentTime)) > DRAG_STICK_RANGE)
+        {
+            change = round((mouseX - getMousePointOnPressed().getX()) * getZoom() / getWidth());
+        }
+        else
+        {
+            KeyFrame keyFrame = getClickedKeyFrames()[0];
+            change = round(getCurrentTime() - keyFrame.getTick());
+            System.out.println(change);
+        }
 
 
         for (int e = 0; e < selectedKeyFrames.length; e++)

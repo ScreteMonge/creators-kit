@@ -15,7 +15,7 @@ import java.awt.image.BufferedImage;
 public class TreeScrollPane extends JScrollPane
 {
     private final ManagerTree tree;
-    private GridBagConstraints c = new GridBagConstraints();
+    private final GridBagConstraints c = new GridBagConstraints();
 
     private final BufferedImage CLOSE = ImageUtil.loadImageResource(getClass(), "/Close.png");
     private final BufferedImage ADD = ImageUtil.loadImageResource(getClass(), "/Add.png");
@@ -39,7 +39,6 @@ public class TreeScrollPane extends JScrollPane
         JPanel folderHeader = new JPanel();
         folderHeader.setLayout(new GridBagLayout());
         folderHeader.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        folderHeader.setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR));
 
         c.fill = GridBagConstraints.BOTH;
         c.insets = new Insets(2, 2, 2, 2);

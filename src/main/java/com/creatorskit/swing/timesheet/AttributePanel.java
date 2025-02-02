@@ -39,7 +39,7 @@ public class AttributePanel extends JPanel
     private final JPanel cardPanel = new JPanel();
     private final JLabel objectLabel = new JLabel("Pick an Object");
     private final JLabel cardLabel = new JLabel("");
-    private final JLabel keyFramed = new JLabel();
+    private final JButton keyFramed = new JButton();
 
     private final String MOVE_CARD = "Movement";
     private final String ANIM_CARD = "Animation";
@@ -106,14 +106,7 @@ public class AttributePanel extends JPanel
         c.gridy = 0;
         keyFramed.setIcon(keyframeEmptyImage);
         keyFramed.setPreferredSize(new Dimension(18, 18));
-        keyFramed.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseReleased(MouseEvent e)
-            {
-                super.mouseReleased(e);
-                timeSheetPanel.onKeyFrameIconPressedEvent();
-            }
-        });
+        keyFramed.addActionListener(e -> timeSheetPanel.onKeyFrameIconPressedEvent());
         add(keyFramed, c);
 
         c.gridwidth = 3;
@@ -172,8 +165,8 @@ public class AttributePanel extends JPanel
             case ANIMATION:
                 return new AnimationKeyFrame(
                         timeSheetPanel.getCurrentTime(),
-                        (int) animAttributes.getManual().getValue(),
-                        animAttributes.getManualOverride().getSelectedItem() == AnimationToggle.MANUAL_ANIMATION,
+                        (int) animAttributes.getAction().getValue(),
+                        animAttributes.getLoop().getSelectedItem() == Toggle.ENABLE,
                         (int) animAttributes.getIdle().getValue(),
                         (int) animAttributes.getWalk().getValue(),
                         (int) animAttributes.getRun().getValue(),
@@ -312,7 +305,7 @@ public class AttributePanel extends JPanel
 
         c.gridx = 1;
         c.gridy = 1;
-        JSpinner manual = animAttributes.getManual();
+        JSpinner manual = animAttributes.getAction();
         manual.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
         manual.setPreferredSize(spinnerSize);
         card.add(manual, c);
@@ -320,10 +313,10 @@ public class AttributePanel extends JPanel
         c.gridwidth = 3;
         c.gridx = 2;
         c.gridy = 1;
-        JComboBox<AnimationToggle> manualComboBox = animAttributes.getManualOverride();
+        JComboBox<Toggle> manualComboBox = animAttributes.getLoop();
         manualComboBox.setFocusable(false);
-        manualComboBox.addItem(AnimationToggle.SMART_ANIMATION);
-        manualComboBox.addItem(AnimationToggle.MANUAL_ANIMATION);
+        manualComboBox.addItem(Toggle.DISABLE);
+        manualComboBox.addItem(Toggle.ENABLE);
         card.add(manualComboBox, c);
 
         c.gridwidth = 4;
@@ -744,7 +737,6 @@ public class AttributePanel extends JPanel
 
     private void setupTextCard(JPanel card)
     {
-        Dimension spinnerSize = new Dimension(90, 25);
         card.setLayout(new GridBagLayout());
         card.setBorder(new EmptyBorder(4, 4, 4, 4));
         card.setFocusable(true);
@@ -811,7 +803,6 @@ public class AttributePanel extends JPanel
 
     private void setupOverheadCard(JPanel card)
     {
-        Dimension spinnerSize = new Dimension(90, 25);
         card.setLayout(new GridBagLayout());
         card.setBorder(new EmptyBorder(4, 4, 4, 4));
         card.setFocusable(true);
@@ -916,7 +907,6 @@ public class AttributePanel extends JPanel
 
     private void setupHealthCard(JPanel card)
     {
-        Dimension spinnerSize = new Dimension(90, 25);
         card.setLayout(new GridBagLayout());
         card.setBorder(new EmptyBorder(4, 4, 4, 4));
         card.setFocusable(true);

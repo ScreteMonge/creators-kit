@@ -1,12 +1,10 @@
 package com.creatorskit.swing.timesheet.attributes;
 
 import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.HealthKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameState;
-import com.creatorskit.swing.timesheet.keyframe.settings.AnimationToggle;
+import com.creatorskit.swing.timesheet.keyframe.settings.Toggle;
 import lombok.Getter;
-import net.runelite.client.ui.ColorScheme;
 
 import javax.swing.*;
 import java.awt.*;
@@ -14,8 +12,8 @@ import java.awt.*;
 @Getter
 public class AnimAttributes extends Attributes
 {
-    private final JSpinner manual = new JSpinner();
-    private final JComboBox<AnimationToggle> manualOverride = new JComboBox<>();
+    private final JSpinner action = new JSpinner();
+    private final JComboBox<Toggle> loop = new JComboBox<>();
 
     private final JSpinner idle = new JSpinner();
     private final JSpinner walk = new JSpinner();
@@ -29,15 +27,15 @@ public class AnimAttributes extends Attributes
     public AnimAttributes()
     {
         addChangeListeners();
-        manualOverride.setOpaque(true);
+        loop.setOpaque(true);
     }
 
     @Override
     public void setAttributes(KeyFrame keyFrame)
     {
         AnimationKeyFrame kf = (AnimationKeyFrame) keyFrame;
-        manual.setValue(kf.getManualAnim());
-        manualOverride.setSelectedItem(kf.isManualOverride() ? AnimationToggle.MANUAL_ANIMATION : AnimationToggle.SMART_ANIMATION);
+        action.setValue(kf.getActionAnim());
+        loop.setSelectedItem(kf.isLoop() ? Toggle.ENABLE : Toggle.DISABLE);
         idle.setValue(kf.getIdleAnim());
         walk.setValue(kf.getWalkAnim());
         run.setValue(kf.getRunAnim());
@@ -51,8 +49,8 @@ public class AnimAttributes extends Attributes
     @Override
     public void setBackgroundColours(Color color)
     {
-        manual.setBackground(color);
-        manualOverride.setBackground(color);
+        action.setBackground(color);
+        loop.setBackground(color);
         idle.setBackground(color);
         walk.setBackground(color);
         run.setBackground(color);
@@ -68,8 +66,8 @@ public class AnimAttributes extends Attributes
     {
         return new JComponent[]
                 {
-                        manual,
-                        manualOverride,
+                        action,
+                        loop,
                         idle,
                         walk,
                         run,
@@ -84,14 +82,14 @@ public class AnimAttributes extends Attributes
     @Override
     public void addChangeListeners()
     {
-        manual.addChangeListener(e ->
+        action.addChangeListener(e ->
         {
-            manual.setBackground(getRed());
+            action.setBackground(getRed());
         });
 
-        manualOverride.addItemListener(e ->
+        loop.addItemListener(e ->
         {
-            manualOverride.setBackground(getRed());
+            loop.setBackground(getRed());
         });
 
         idle.addChangeListener(e ->
@@ -138,8 +136,8 @@ public class AnimAttributes extends Attributes
     @Override
     public void resetAttributes()
     {
-        manual.setValue(-1);
-        manualOverride.setSelectedItem(AnimationToggle.SMART_ANIMATION);
+        action.setValue(-1);
+        loop.setSelectedItem(Toggle.DISABLE);
         idle.setValue(-1);
         walk.setValue(-1);
         run.setValue(-1);

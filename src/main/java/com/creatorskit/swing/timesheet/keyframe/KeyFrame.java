@@ -25,8 +25,8 @@ public class KeyFrame
             AnimationKeyFrame kf = (AnimationKeyFrame) keyFrame;
             return new AnimationKeyFrame(
                     tick,
-                    kf.getManualAnim(),
-                    kf.isManualOverride(),
+                    kf.getActionAnim(),
+                    kf.isLoop(),
                     kf.getIdleAnim(),
                     kf.getWalkAnim(),
                     kf.getRunAnim(),

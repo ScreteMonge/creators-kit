@@ -8,15 +8,12 @@ import com.creatorskit.swing.timesheet.keyframe.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-import net.runelite.api.Animation;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
-import java.util.Arrays;
-import java.util.stream.Stream;
 
 @Getter
 @Setter
@@ -502,34 +499,6 @@ public class Character
     }
 
     /**
-     * Removes a keyframe from the character (if it exists) of the chosen type, at the chosen tick
-     * @param type the KeyFrameType to remove
-     * @param tick the tick at which to find the keyframe
-     */
-    public void removeKeyFrame(KeyFrameType type, double tick)
-    {
-        KeyFrame[] keyFrames = getKeyFrames(type);
-        if (keyFrames == null)
-        {
-            return;
-        }
-
-        for (int i = 0; i < keyFrames.length; i++)
-        {
-            KeyFrame keyFrame = keyFrames[i];
-            if (keyFrame.getTick() == tick)
-            {
-                removeKeyFrame(keyFrame);
-                if (getCurrentKeyFrame(type) == keyFrame)
-                {
-                    setCurrentKeyFrame(null, type);
-                }
-                return;
-            }
-        }
-    }
-
-    /**
      * Gets the new position of the keyframe to add as an int[] of {index, boolean}
      * @param keyFrames the keyframe array to add to
      * @param newTick the tick of the new keyframe to be added
@@ -614,7 +583,7 @@ public class Character
         return keyFrame;
     }
 
-    public ModelKeyFrame[] getModelKeyFrame()
+    public ModelKeyFrame[] getModelKeyFrames()
     {
         KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.MODEL);
         if (keyFrames == null)

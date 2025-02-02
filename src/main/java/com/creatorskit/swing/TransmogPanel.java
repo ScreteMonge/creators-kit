@@ -263,10 +263,7 @@ public class TransmogPanel extends JPanel
         c.gridy = 15;
         JButton resetButton = new JButton("Reset");
         resetButton.setToolTipText("Resets all regular Animation Swaps to -1");
-        resetButton.addActionListener(e ->
-        {
-            resetSidePanel();
-        });
+        resetButton.addActionListener(e -> resetSidePanel());
         rowHeaderPanel.add(resetButton, c);
 
         c.gridwidth = 2;
@@ -285,26 +282,17 @@ public class TransmogPanel extends JPanel
         JButton saveButton = new JButton("Save");
         saveButton.setToolTipText("Saves your Transmog and Animation Swaps for future use");
         columnHeaderPanel.add(saveButton);
-        saveButton.addActionListener(e ->
-        {
-            openSaveDialog(transmogLabel.getText());
-        });
+        saveButton.addActionListener(e -> openSaveDialog(transmogLabel.getText()));
 
         JButton loadButton = new JButton("Load");
         loadButton.setToolTipText("Load a previously saved Transmog and/or set of Animation Swaps");
         columnHeaderPanel.add(loadButton);
-        loadButton.addActionListener(e ->
-        {
-            openLoadDialog();
-        });
+        loadButton.addActionListener(e -> openLoadDialog());
 
         JButton clearButton = new JButton("Clear");
         clearButton.setToolTipText("Clear all Additional Swaps");
         columnHeaderPanel.add(clearButton);
-        clearButton.addActionListener(e ->
-        {
-            clearSwapPanels();
-        });
+        clearButton.addActionListener(e -> clearSwapPanels());
 
         c.insets = new Insets(0, 0, 0, 0);
         c.weightx = 1;

@@ -17,11 +17,13 @@ import net.runelite.client.util.ImageUtil;
 
 import javax.inject.Inject;
 import javax.swing.*;
+import javax.swing.border.MatteBorder;
 import javax.swing.tree.DefaultMutableTreeNode;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
+import java.net.URI;
 
 @Getter
 public class ToolBoxFrame extends JFrame
@@ -31,6 +33,7 @@ public class ToolBoxFrame extends JFrame
     private final EventBus eventBus;
     private final CreatorsPlugin plugin;
     private final ConfigManager configManager;
+    private final JMenuBar jMenuBar;
     private final DataFinder dataFinder;
     private final ManagerPanel managerPanel;
     private final ModelOrganizer modelOrganizer;
@@ -50,6 +53,7 @@ public class ToolBoxFrame extends JFrame
         this.plugin = plugin;
         this.eventBus = eventBus;
         this.configManager = configManager;
+        this.jMenuBar = new JMenuBar();
         this.dataFinder = dataFinder;
         this.modelOrganizer = modelOrganizer;
         this.modelAnvil = modelAnvil;
@@ -69,8 +73,8 @@ public class ToolBoxFrame extends JFrame
         JPanel objectHolder = new JPanel();
         ManagerTree managerTree = new ManagerTree(this, plugin, objectHolder, managerRootNode, managerSideNode, managerManagerNode);
 
-        JScrollBar scrollBar = new JScrollBar(Adjustable.HORIZONTAL);
-        this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, clientThread, dataFinder, managerTree, scrollBar);
+        setupMenuBar();
+        this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, clientThread, dataFinder, managerTree);
         this.managerPanel = new ManagerPanel(client, plugin, objectHolder, managerTree);
         this.cacheSearcher = new CacheSearcherTab(plugin, clientThread, dataFinder);
         this.programPanel = new ProgrammerPanel(client, clientThread, plugin, managerTree);
@@ -79,23 +83,8 @@ public class ToolBoxFrame extends JFrame
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setTitle("Creator's Kit Toolbox");
         setIconImage(ICON);
-
-        try
-        {
-            String string = configManager.getConfiguration("creatorssuite", "toolBoxSize");
-            String[] dimensions = string.split(",");
-            int width = Integer.parseInt(dimensions[0]);
-            int height = Integer.parseInt(dimensions[1]);
-            if (width < 150)
-                width = 150;
-            if (height < 150)
-                height = 150;
-            setPreferredSize(new Dimension(width, height));
-        }
-        catch (Exception e)
-        {
-            setPreferredSize(new Dimension(1500, 800));
-        }
+        setLayout(new BorderLayout());
+        setupWindow();
 
         addComponentListener(new ComponentAdapter()
         {
@@ -103,11 +92,28 @@ public class ToolBoxFrame extends JFrame
             {
                 Dimension dimension = getSize();
                 configManager.setConfiguration("creatorssuite", "toolBoxSize", (int) dimension.getWidth() + "," + (int) dimension.getHeight());
+
+                if (getExtendedState() == Frame.NORMAL)
+                {
+                    configManager.setConfiguration("creatorssuite", "toolBoxMaximized", "false");
+                }
+
+                if (getExtendedState() == Frame.MAXIMIZED_BOTH)
+                {
+                    configManager.setConfiguration("creatorssuite", "toolBoxMaximized", "true");
+                }
+            }
+
+            public void componentMoved(ComponentEvent componentEvent)
+            {
+                Point p = getLocationOnScreen();
+                configManager.setConfiguration("creatorssuite", "toolBoxPoint", (int) p.getX() + "," + (int) p.getY());
             }
         });
 
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setFont(FontManager.getRunescapeBoldFont());
+
         if (CreatorsPlugin.test2_0)
         {
             tabbedPane.addTab("Timesheet", timeSheetPanel);
@@ -154,8 +160,148 @@ public class ToolBoxFrame extends JFrame
             revalidate();
         });
 
-        add(tabbedPane);
+        add(jMenuBar, BorderLayout.PAGE_START);
+        add(tabbedPane, BorderLayout.CENTER);
         pack();
         revalidate();
+    }
+
+    private void setupWindow()
+    {
+        try
+        {
+            String string = configManager.getConfiguration("creatorssuite", "toolBoxSize");
+            String[] dimensions = string.split(",");
+            int width = Integer.parseInt(dimensions[0]);
+            int height = Integer.parseInt(dimensions[1]);
+            if (width < 150)
+                width = 150;
+            if (height < 150)
+                height = 150;
+            setPreferredSize(new Dimension(width, height));
+        }
+        catch (Exception e)
+        {
+            setPreferredSize(new Dimension(1500, 800));
+        }
+
+        try
+        {
+            String string = configManager.getConfiguration("creatorssuite", "toolBoxPoint");
+            String[] point = string.split(",");
+            int x = Integer.parseInt(point[0]);
+            int y = Integer.parseInt(point[1]);
+            setLocation(x, y);
+        }
+        catch (Exception e)
+        {
+            setLocation(0, 0);
+        }
+
+        try
+        {
+            String string = configManager.getConfiguration("creatorssuite", "toolBoxMaximized");
+            boolean maximize = Boolean.parseBoolean(string);
+            if (maximize)
+            {
+                setExtendedState(Frame.MAXIMIZED_BOTH);
+            }
+            else
+            {
+                setExtendedState(Frame.NORMAL);
+            }
+        }
+        catch (Exception e)
+        {
+            setExtendedState(Frame.NORMAL);
+        }
+    }
+
+    private void setupMenuBar()
+    {
+        jMenuBar.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        jMenuBar.setFont(FontManager.getRunescapeBoldFont());
+        jMenuBar.setBorder(new MatteBorder(0, 0, 1, 0, ColorScheme.DARKER_GRAY_COLOR));
+
+        JMenu file = new JMenu("File");
+        jMenuBar.add(file);
+
+        JMenuItem saveAs = new JMenuItem("Save Setup");
+        saveAs.addActionListener(e -> plugin.getCreatorsPanel().openSaveDialog());
+        file.add(saveAs);
+
+        JMenuItem load = new JMenuItem("Load Setup");
+        load.addActionListener(e -> plugin.getCreatorsPanel().openLoadSetupDialog());
+        file.add(load);
+
+        if (CreatorsPlugin.test2_0)
+        {
+            JMenu timeSheet = new JMenu("Timesheet");
+            jMenuBar.add(timeSheet);
+
+            JMenuItem copyKeyFrames = new JMenuItem("Copy KeyFrames");
+            copyKeyFrames.addActionListener(e -> timeSheetPanel.copyKeyFrames());
+            timeSheet.add(copyKeyFrames);
+
+            JMenuItem pasteKeyFrames = new JMenuItem("Paste KeyFrames");
+            pasteKeyFrames.addActionListener(e -> timeSheetPanel.pasteKeyFrames());
+            timeSheet.add(pasteKeyFrames);
+
+            JMenuItem undo = new JMenuItem("Undo KeyFrames");
+            undo.addActionListener(e -> timeSheetPanel.undo());
+            timeSheet.add(undo);
+
+            JMenuItem redo = new JMenuItem("Redo KeyFrames");
+            redo.addActionListener(e -> timeSheetPanel.redo());
+            timeSheet.add(redo);
+        }
+
+        JMenu resources = new JMenu("Resources");
+        jMenuBar.add(resources);
+
+        JMenuItem wikiDB = new JMenuItem("Minimal OSRS Database");
+        wikiDB.addActionListener(e -> openLink("https://chisel.weirdgloop.org/moid/index.html"));
+        resources.add(wikiDB);
+
+        JMenuItem runeMonk = new JMenuItem("RuneMonk");
+        runeMonk.addActionListener(e -> openLink("https://runemonk.com/tools/entityviewer-beta/"));
+        resources.add(runeMonk);
+
+        JMenuItem animations = new JMenuItem("Community Animation List");
+        animations.addActionListener(e -> openLink("https://docs.google.com/spreadsheets/d/16umDNbfiBCF-fI5DNe0dGQo2D5a2l2RgJuNVkQgTm_k/edit?gid=0#gid=0"));
+        resources.add(animations);
+
+
+        JMenu help = new JMenu("Help");
+        jMenuBar.add(help);
+
+        JMenuItem youtube = new JMenuItem("Youtube Tutorial");
+        youtube.addActionListener(e -> openLink("https://www.youtube.com/watch?v=E_9c-LwDRRY"));
+        help.add(youtube);
+
+        JMenuItem discord = new JMenuItem("Discord");
+        discord.addActionListener(e -> openLink("https://discord.gg/DSpPfC2Ebh"));
+        help.add(discord);
+
+        JMenuItem twitter = new JMenuItem("X/Twitter");
+        twitter.addActionListener(e -> openLink("https://x.com/ScreteMonge"));
+        help.add(twitter);
+
+        JMenuItem github = new JMenuItem("Github");
+        github.addActionListener(e -> openLink("https://github.com/ScreteMonge/creators-kit"));
+        help.add(github);
+    }
+
+    public void openLink(String url)
+    {
+        try
+        {
+            Desktop desk = Desktop.getDesktop();
+            desk.browse(new URI(url));
+        }
+        catch (Exception exception)
+        {
+            plugin.sendChatMessage("Failed to open link.");
+        }
     }
 }

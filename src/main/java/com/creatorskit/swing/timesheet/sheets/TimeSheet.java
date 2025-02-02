@@ -46,6 +46,7 @@ public class TimeSheet extends JPanel
     private boolean timeIndicatorPressed = false;
     private boolean allowRectangleSelect = false;
     private Point mousePointOnPressed = new Point(0, 0);
+    public final int DRAG_STICK_RANGE = 15;
 
     public final int ROW_HEIGHT = 24;
     public final int ROW_HEIGHT_OFFSET = 1;
@@ -241,13 +242,13 @@ public class TimeSheet extends JPanel
     {
         double x = (currentTime + hScroll) * this.getWidth() / zoom;
         char[] c = ("" + currentTime).toCharArray();
-        int width = g.getFontMetrics().charsWidth(c, 0, c.length);
+        double width = g.getFontMetrics().charsWidth(c, 0, c.length);
         int textBuffer = 16;
 
         g.setColor(new Color(74, 121, 192));
         g.drawLine((int) x, 0, (int) x, this.getHeight());
 
-        g.fillRoundRect((int) (x - (width + textBuffer) / 2), 0, width + textBuffer, ROW_HEIGHT, 10, 10);
+        g.fillRoundRect((int) (x - (width + textBuffer) / 2), 0, (int) width + textBuffer, ROW_HEIGHT, 10, 10);
 
         g.setColor(Color.WHITE);
         g.drawChars(c, 0, c.length, (int) (x - width / 2), ROW_HEIGHT - TEXT_HEIGHT_OFFSET);
@@ -263,13 +264,13 @@ public class TimeSheet extends JPanel
 
         double x = (previewTime + hScroll) * this.getWidth() / zoom;
         char[] c = ("" + previewTime).toCharArray();
-        int width = g.getFontMetrics().charsWidth(c, 0, c.length);
+        double width = g.getFontMetrics().charsWidth(c, 0, c.length);
         int textBuffer = 16;
 
         g.setColor(new Color(49, 84, 128));
         g.drawLine((int) x, 0, (int) x, this.getHeight());
 
-        g.fillRoundRect((int) (x - (width + textBuffer) / 2), 0, width + textBuffer, ROW_HEIGHT, 10, 10);
+        g.fillRoundRect((int) (x - (width + textBuffer) / 2), 0, (int) width + textBuffer, ROW_HEIGHT, 10, 10);
 
         g.setColor(Color.WHITE);
         g.drawChars(c, 0, c.length, (int) (x - width / 2), ROW_HEIGHT - TEXT_HEIGHT_OFFSET);
@@ -473,11 +474,23 @@ public class TimeSheet extends JPanel
                         }
 
                         double mouseX = Math.max(0, Math.min(mousePosition.getX(), getWidth()));
-                        double change = (mouseX - mousePointOnPressed.getX()) * zoom / getWidth();
+                        double xCurrentTime = currentTimeToMouseX();
+
+                        double change;
+                        if (Math.abs(Math.abs(mouseX) - Math.abs(xCurrentTime)) > DRAG_STICK_RANGE)
+                        {
+                            change = round((mouseX - getMousePointOnPressed().getX()) * getZoom() / getWidth());
+                        }
+                        else
+                        {
+                            KeyFrame keyFrame = getClickedKeyFrames()[0];
+                            change = round(getCurrentTime() - keyFrame.getTick());
+                            System.out.println(change);
+                        }
 
                         for (KeyFrame keyFrame : keyFrames)
                         {
-                            KeyFrame copy = KeyFrame.createCopy(keyFrame, TimeSheetPanel.round(keyFrame.getTick() + change));
+                            KeyFrame copy = KeyFrame.createCopy(keyFrame, round(keyFrame.getTick() + change));
                             KeyFrame keyFrameToReplace = timeSheetPanel.addKeyFrame(selectedCharacter, copy);
                             if (keyFrameToReplace != null)
                             {
@@ -651,6 +664,11 @@ public class TimeSheet extends JPanel
         }
 
         return time;
+    }
+
+    public double currentTimeToMouseX()
+    {
+        return (currentTime + hScroll) * getWidth() / zoom;
     }
 
     public TimeSheetPanel getTimeSheetPanel()

@@ -32,7 +32,7 @@ public class CharacterSave
     private MovementKeyFrame[] movementKeyFrames;
     private AnimationKeyFrame[] animationKeyFrames;
     private SpawnKeyFrame[] spawnKeyFrames;
-    private ModelKeyFrame[] modelKeyFrames;
+    private ModelKeyFrameSave[] modelKeyFrameSaves;
     private OrientationKeyFrame[] orientationKeyFrames;
     private TextKeyFrame[] textKeyFrames;
     private OverheadKeyFrame[] overheadKeyFrames;

@@ -1,9 +1,11 @@
 package com.creatorskit.swing;
 
+import com.creatorskit.CKObject;
 import com.creatorskit.saves.CharacterSave;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.Character;
 import com.creatorskit.saves.FolderNodeSave;
+import com.creatorskit.saves.ModelKeyFrameSave;
 import com.creatorskit.saves.SetupSave;
 import com.creatorskit.models.*;
 import com.creatorskit.programming.Coordinate;
@@ -43,7 +45,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
@@ -55,6 +56,7 @@ import java.util.regex.Pattern;
 public class CreatorsPanel extends PluginPanel
 {
     private ClientThread clientThread;
+    private final Client client;
     private final CreatorsPlugin plugin;
     private final ToolBoxFrame toolBox;
     private final ModelAnvil modelAnvil;
@@ -94,6 +96,7 @@ public class CreatorsPanel extends PluginPanel
     public CreatorsPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin, ToolBoxFrame toolBox, DataFinder dataFinder, ModelImporter modelImporter)
     {
         this.clientThread = clientThread;
+        this.client = client;
         this.plugin = plugin;
         this.toolBox = toolBox;
         this.modelOrganizer = toolBox.getModelOrganizer();
@@ -170,18 +173,7 @@ public class CreatorsPanel extends PluginPanel
         helpButton.setToolTipText("Open at YouTube tutorial for help with using this plugin");
         helpButton.setFocusable(false);
         add(helpButton, c);
-        helpButton.addActionListener(e ->
-        {
-            try
-            {
-                Desktop desk = Desktop.getDesktop();
-                desk.browse(new URI("https://www.youtube.com/watch?v=E_9c-LwDRRY"));
-            }
-            catch (Exception exception)
-            {
-                plugin.sendChatMessage("Failed to open link...");
-            }
-        });
+        helpButton.addActionListener(e -> toolBox.openLink("https://www.youtube.com/watch?v=E_9c-LwDRRY"));
 
         c.gridx = 1;
         c.gridy = 2;
@@ -270,6 +262,10 @@ public class CreatorsPanel extends PluginPanel
         topButtonsPanel.setPreferredSize(topButtonsPanelSize);
         topButtonsPanel.setMinimumSize(topButtonsPanelSize);
         topButtonsPanel.setLayout(new GridLayout(1, 3, 0, 0));
+
+        JButton findButton = new JButton(new ImageIcon(FIND));
+        findButton.setToolTipText("Find this object and select it in the Manager");
+        findButton.setFocusable(false);
 
         JButton switchButton = new JButton(new ImageIcon(SWITCH));
         switchButton.setToolTipText("Switch this Object between the Manager and Side Panel");
@@ -379,6 +375,7 @@ public class CreatorsPanel extends PluginPanel
             c.gridy = 0;
             c.weightx = 0;
             objectPanel.add(topButtonsPanel, c);
+            topButtonsPanel.add(findButton);
             topButtonsPanel.add(switchButton);
             topButtonsPanel.add(duplicateButton);
             topButtonsPanel.add(deleteButton);
@@ -473,7 +470,7 @@ public class CreatorsPanel extends PluginPanel
                 radiusSpinner,
                 programmerNameLabel,
                 programmerIdleSpinner,
-                null,
+                new CKObject(client),
                 null,
                 null,
                 0);
@@ -510,6 +507,8 @@ public class CreatorsPanel extends PluginPanel
                 managerPanel.repaint();
             }
         });
+
+        findButton.addActionListener(e -> onFindButtonPressed(character));
 
         switchButton.addActionListener(e -> onSwitchButtonPressed(character));
 
@@ -625,6 +624,8 @@ public class CreatorsPanel extends PluginPanel
                 textField,
                 topButtonsPanel,
                 duplicateButton,
+                findButton,
+                switchButton,
                 deleteButton,
                 modelButton,
                 spawnButton,
@@ -642,8 +643,6 @@ public class CreatorsPanel extends PluginPanel
                 animationSpinner
         );
 
-        toolBox.getTimeSheetPanel().loadKeyFrames(character);
-
         setSelectedCharacter(character);
 
         plugin.setupRLObject(character, setHoveredLocation);
@@ -659,6 +658,8 @@ public class CreatorsPanel extends PluginPanel
             JTextField textField,
             JPanel topButtonsPanel,
             JButton duplicateButton,
+            JButton findButton,
+            JButton switchButton,
             JButton deleteButton,
             JButton modelButton,
             JButton spawnButton,
@@ -678,6 +679,8 @@ public class CreatorsPanel extends PluginPanel
         addSelectListeners(objectPanel, character, objectPanel, true);
         addSelectListeners(textField, character, objectPanel, true);
         addSelectListeners(topButtonsPanel, character, objectPanel, true);
+        addSelectListeners(findButton, character, objectPanel, true);
+        addSelectListeners(switchButton, character, objectPanel, true);
         addSelectListeners(duplicateButton, character, objectPanel, false);
         addSelectListeners(deleteButton, character, objectPanel, false);
         addSelectListeners(modelButton, character, objectPanel, true);
@@ -792,6 +795,12 @@ public class CreatorsPanel extends PluginPanel
         {
             npcPanels++;
         }
+    }
+
+    private void onFindButtonPressed(Character character)
+    {
+        ManagerTree tree = toolBox.getManagerPanel().getManagerTree();
+        tree.setSelectedCharacter(character);
     }
 
     public void onSwitchButtonPressed(Character character)
@@ -1339,6 +1348,50 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
+    private ModelKeyFrameSave[] saveModelKeyFrames(ModelKeyFrame[] keyFrames, CustomModelComp[] comps)
+    {
+        ModelKeyFrameSave[] saves = new ModelKeyFrameSave[keyFrames.length];
+        for (int i = 0; i < keyFrames.length; i++)
+        {
+            ModelKeyFrame keyFrame = keyFrames[i];
+            CustomModel storedModel = keyFrame.getCustomModel();
+            int compId = 0;
+
+            for (int e = 0; e < comps.length; e++)
+            {
+                CustomModelComp comp = comps[e];
+                if (storedModel.getComp() == comp)
+                {
+                    compId = e;
+                    break;
+                }
+            }
+
+            saves[i] = new ModelKeyFrameSave(keyFrame.getTick(), keyFrame.isUseCustomModel(), keyFrame.getModelId(), compId);
+        }
+
+        return saves;
+    }
+
+    private ModelKeyFrame[] loadModelKeyFrames(ModelKeyFrameSave[] saves, CustomModel[] customModels)
+    {
+        ModelKeyFrame[] keyFrames = new ModelKeyFrame[saves.length];
+
+        for (int i = 0; i < saves.length; i++)
+        {
+            ModelKeyFrameSave save = saves[i];
+            CustomModel customModel = null;
+            if (customModels.length > 0)
+            {
+                customModel = customModels[save.getCustomModel()];
+            }
+
+            keyFrames[i] = new ModelKeyFrame(save.getTick(), save.isUseCustomModel(), save.getModelId(), customModel);
+        }
+
+        return keyFrames;
+    }
+
     private CharacterSave createCharacterSave(Character character, CustomModelComp[] comps)
     {
         String name = character.getName();
@@ -1371,6 +1424,7 @@ public class CreatorsPanel extends PluginPanel
         int animationId = (int) character.getAnimationSpinner().getValue();
         int frame = (int) character.getAnimationFrameSpinner().getValue();
         ProgramComp programComp = character.getProgram().getComp();
+        ModelKeyFrameSave[] modelKeyFrameSaves = saveModelKeyFrames(character.getModelKeyFrames(), comps);
 
         return new CharacterSave(
                 name,
@@ -1392,7 +1446,7 @@ public class CreatorsPanel extends PluginPanel
                 character.getMovementKeyFrames(),
                 character.getAnimationKeyFrames(),
                 character.getSpawnKeyFrames(),
-                character.getModelKeyFrame(),
+                modelKeyFrameSaves,
                 character.getOrientationKeyFrames(),
                 character.getTextKeyFrames(),
                 character.getOverheadKeyFrames(),
@@ -1471,7 +1525,6 @@ public class CreatorsPanel extends PluginPanel
         }
         catch (Exception e)
         {
-            e.printStackTrace();
             plugin.sendChatMessage("An error occurred while attempting to read this file.");
         }
     }
@@ -1484,7 +1537,7 @@ public class CreatorsPanel extends PluginPanel
         String fileVersion = saveFile.getVersion();
         if (fileVersion == null || fileVersion.isEmpty())
         {
-            fileVersion = "1.5.10";
+            fileVersion = "1.5.0";
         }
 
         for (int i = 0; i < comps.length; i++)
@@ -1538,112 +1591,63 @@ public class CreatorsPanel extends PluginPanel
             if (folderNodeSave != null)
             {
                 openFolderNodeSave(version, managerTree, rootNode, folderNodeSave, customModels);
-                sidePanel.repaint();
-                sidePanel.revalidate();
-                managerTree.resetObjectHolder();
-                toolBox.getProgrammer().updatePrograms();
+                toolBox.repaint();
+                toolBox.revalidate();
             }
         });
 
-        //Handle pre-v1.5.4 characters saved to the SidePanel
-        CharacterSave[] characterSaves = saveFile.getSaves();
-        if (characterSaves.length > 0)
+        if (isVersionLessThan(fileVersion, "1.5.4"))
         {
-            Thread thread = new Thread(() ->
+            CharacterSave[] characterSaves = saveFile.getSaves();
+            if (characterSaves.length > 0)
             {
-                for (CharacterSave save : characterSaves)
+                Thread thread = new Thread(() ->
                 {
-                    Color color = new Color(save.getProgramComp().getRgb());
-                    Program program = new Program(save.getProgramComp(), new JPanel(), new JLabel(), new JSpinner(), color);
-                    Character character;
-
-                    CustomModel customModel = null;
-                    if (customModels.length > 0)
+                    for (CharacterSave save : characterSaves)
                     {
-                        customModel = customModels[save.getCompId()];
+                        Color color = new Color(save.getProgramComp().getRgb());
+                        Program program = new Program(save.getProgramComp(), new JPanel(), new JLabel(), new JSpinner(), color);
+                        Character character;
+
+                        CustomModel customModel = null;
+                        if (customModels.length > 0)
+                        {
+                            customModel = customModels[save.getCompId()];
+                        }
+
+                        int animFrame = save.getFrame();
+                        if (isVersionLessThan(version, "1.5.12"))
+                        {
+                            animFrame = -1;
+                        }
+
+                        KeyFrame[][] frames = new KeyFrame[KeyFrameType.getTotalFrameTypes()][];
+
+                        character = createCharacter(
+                                ParentPanel.SIDE_PANEL,
+                                save.getName(),
+                                save.getModelId(),
+                                customModel,
+                                save.isCustomMode(),
+                                save.getRotation(),
+                                save.getAnimationId(),
+                                animFrame,
+                                save.getRadius(),
+                                frames,
+                                program,
+                                save.isActive(),
+                                save.getNonInstancedPoint(),
+                                save.getInstancedPoint(),
+                                save.getInstancedRegions(),
+                                save.getInstancedPlane(),
+                                save.isInInstance(),
+                                false);
+
+                        SwingUtilities.invokeLater(() -> addPanel(ParentPanel.SIDE_PANEL, character, true, false));
                     }
-
-                    int animFrame = save.getFrame();
-                    if (isVersionLessThan(version, "1.5.12"))
-                    {
-                        animFrame = -1;
-                    }
-
-                    KeyFrame[][] frames = new KeyFrame[KeyFrameType.getTotalFrameTypes()][];
-                    if (save.getMovementKeyFrames() != null)
-                    {
-                        frames[KeyFrameType.getIndex(KeyFrameType.MOVEMENT)] = save.getMovementKeyFrames();
-                    }
-
-                    if (save.getAnimationKeyFrames() != null)
-                    {
-                        frames[KeyFrameType.getIndex(KeyFrameType.ANIMATION)] = save.getAnimationKeyFrames();
-                    }
-
-                    if (save.getSpawnKeyFrames() != null)
-                    {
-                        frames[KeyFrameType.getIndex(KeyFrameType.SPAWN)] = save.getSpawnKeyFrames();
-                    }
-
-                    if (save.getModelKeyFrames() != null)
-                    {
-                        frames[KeyFrameType.getIndex(KeyFrameType.MODEL)] = save.getModelKeyFrames();
-                    }
-
-                    if (save.getOrientationKeyFrames() != null)
-                    {
-                        frames[KeyFrameType.getIndex(KeyFrameType.ORIENTATION)] = save.getOrientationKeyFrames();
-                    }
-
-                    if (save.getTextKeyFrames() != null)
-                    {
-                        frames[KeyFrameType.getIndex(KeyFrameType.TEXT)] = save.getTextKeyFrames();
-                    }
-
-                    if (save.getOverheadKeyFrames() != null)
-                    {
-                        frames[KeyFrameType.getIndex(KeyFrameType.OVERHEAD)] = save.getOverheadKeyFrames();
-                    }
-
-                    if (save.getHealthKeyFrames() != null)
-                    {
-                        frames[KeyFrameType.getIndex(KeyFrameType.HEALTH)] = save.getHealthKeyFrames();
-                    }
-
-                    if (save.getSpotAnimKeyFrames() != null)
-                    {
-                        frames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM)] = save.getSpotAnimKeyFrames();
-                    }
-
-                    if (save.getSpotAnim2KeyFrames() != null)
-                    {
-                        frames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM2)] = save.getSpotAnim2KeyFrames();
-                    }
-
-                    character = createCharacter(
-                            ParentPanel.SIDE_PANEL,
-                            save.getName(),
-                            save.getModelId(),
-                            customModel,
-                            save.isCustomMode(),
-                            save.getRotation(),
-                            save.getAnimationId(),
-                            animFrame,
-                            save.getRadius(),
-                            frames,
-                            program,
-                            save.isActive(),
-                            save.getNonInstancedPoint(),
-                            save.getInstancedPoint(),
-                            save.getInstancedRegions(),
-                            save.getInstancedPlane(),
-                            save.isInInstance(),
-                            false);
-
-                    SwingUtilities.invokeLater(() -> addPanel(ParentPanel.SIDE_PANEL, character, true, false));
-                }
-            });
-            thread.start();
+                });
+                thread.start();
+            }
         }
     }
 
@@ -1653,8 +1657,7 @@ public class CreatorsPanel extends PluginPanel
         DefaultMutableTreeNode node;
         FolderType folderType = folderNodeSave.getFolderType();
 
-        //Handle pre-v1.5.4 saves
-        if (folderType == null)
+        if (isVersionLessThan(fileVersion, "1.5.4"))
         {
             node = managerTree.addFolderNode(parentNode, name);
         }
@@ -1697,7 +1700,7 @@ public class CreatorsPanel extends PluginPanel
             }
 
             int animFrame = save.getFrame();
-            if (isVersionLessThan(fileVersion, "1.5.11"))
+            if (isVersionLessThan(fileVersion, "1.5.12"))
             {
                 animFrame = -1;
             }
@@ -1718,9 +1721,11 @@ public class CreatorsPanel extends PluginPanel
                 frames[KeyFrameType.getIndex(KeyFrameType.SPAWN)] = save.getSpawnKeyFrames();
             }
 
-            if (save.getModelKeyFrames() != null)
+            ModelKeyFrameSave[] modelKeyFrameSaves = save.getModelKeyFrameSaves();
+            if (modelKeyFrameSaves != null)
             {
-                frames[KeyFrameType.getIndex(KeyFrameType.MODEL)] = save.getModelKeyFrames();
+                ModelKeyFrame[] modelKeyFrames = loadModelKeyFrames(modelKeyFrameSaves, customModels);
+                frames[KeyFrameType.getIndex(KeyFrameType.MODEL)] = modelKeyFrames;
             }
 
             if (save.getOrientationKeyFrames() != null)
@@ -1803,14 +1808,7 @@ public class CreatorsPanel extends PluginPanel
         if (option == JFileChooser.APPROVE_OPTION)
         {
             File selectedFile = fileChooser.getSelectedFile();
-            String name = selectedFile.getName();
-            if (name.endsWith(".json"))
-                name = replaceLast(name, ".json");
-
-            if (name.endsWith(".txt"))
-                name = replaceLast(name, ".txt");
-
-            plugin.loadCustomModel(selectedFile, priorityCheckbox.isSelected(), name);
+            plugin.loadCustomModel(selectedFile);
         }
     }
 

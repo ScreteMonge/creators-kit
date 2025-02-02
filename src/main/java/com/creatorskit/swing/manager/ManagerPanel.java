@@ -13,7 +13,6 @@ import net.runelite.client.ui.FontManager;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.*;
-import javax.swing.border.LineBorder;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 import java.awt.*;
@@ -44,36 +43,11 @@ public class ManagerPanel extends JPanel
         setLayout(new GridBagLayout());
 
         c.fill = GridBagConstraints.BOTH;
-        c.insets = new Insets(4, 4, 4, 4);
-
-        c.gridwidth = 2;
-        c.gridx = 0;
-        c.gridy = 0;
-        c.weightx = 1;
-        c.weighty = 0;
-        JLabel titleLabel = new JLabel("Manager");
-        titleLabel.setFont(FontManager.getRunescapeBoldFont());
-        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        add(titleLabel, c);
-
-        c.gridx = 0;
-        c.gridy = 1;
-        JPanel headerPanel = new JPanel();
-        add(headerPanel, c);
-
-        JButton saveButton = new JButton("Save Setup");
-        saveButton.setToolTipText("Save this setup for future use");
-        headerPanel.add(saveButton);
-        saveButton.addActionListener(e -> plugin.getCreatorsPanel().openSaveDialog());
-
-        JButton loadButton = new JButton("Load Setup");
-        loadButton.setToolTipText("Load a previously saved setup");
-        headerPanel.add(loadButton);
-        loadButton.addActionListener(e -> plugin.getCreatorsPanel().openLoadSetupDialog());
+        c.insets = new Insets(2, 2, 2, 2);
 
         c.gridwidth = 1;
         c.gridx = 0;
-        c.gridy = 2;
+        c.gridy = 0;
         c.weightx = 0;
         c.weighty = 1;
         treeScrollPane = new TreeScrollPane(managerTree);
@@ -81,10 +55,9 @@ public class ManagerPanel extends JPanel
         add(treeScrollPane, c);
 
         c.gridx = 1;
-        c.gridy = 2;
+        c.gridy = 0;
         c.weightx = 1;
         JScrollPane objectScrollPane = new JScrollPane();
-        objectScrollPane.setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 1));
         add(objectScrollPane, c);
 
         JPanel objectHeader = new JPanel();

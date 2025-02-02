@@ -1,12 +1,9 @@
 package com.creatorskit;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
-
-import javax.annotation.Nullable;
 
 @Getter
 @Setter
@@ -23,22 +20,6 @@ public class CKObject extends RuneLiteObjectController
     public CKObject(Client client)
     {
         this.client = client;
-        this.animationController = new AnimationController(client, -1);
-        this.poseAnimationController = new AnimationController(client, -1);
-
-        animationController.setOnFinished(e ->
-        {
-            if (loop)
-            {
-                setActive(true);
-                animationController.loop();
-            }
-            else
-            {
-                setActive(false);
-                animationController.reset();
-            }
-        });
     }
 
     private int startCycle;
@@ -66,9 +47,24 @@ public class CKObject extends RuneLiteObjectController
         }
     }
 
-    public void setAnimationController(@Nullable AnimationController animationController)
+    private void setupAnimController(int animId)
     {
-        this.animationController = animationController;
+        animationController = new AnimationController(client, animId);
+        poseAnimationController = new AnimationController(client, -1);
+
+        animationController.setOnFinished(e ->
+        {
+            if (loop)
+            {
+                setActive(true);
+                animationController.loop();
+            }
+            else
+            {
+                setActive(false);
+                animationController.reset();
+            }
+        });
     }
 
     public void setActive(boolean active)
@@ -98,10 +94,12 @@ public class CKObject extends RuneLiteObjectController
 
         if (!CreatorsPlugin.test2_0)
         {
-            if (animationController != null)
+            if (animationController == null)
             {
-                animationController.tick(ticksSinceLastFrame);
+                setupAnimController(-1);
             }
+
+            animationController.tick(ticksSinceLastFrame);
 
             return;
         }
@@ -111,10 +109,12 @@ public class CKObject extends RuneLiteObjectController
             //return;
         }
 
-        if (animationController != null)
+        if (animationController == null)
         {
-            animationController.tick(ticksSinceLastFrame);
+            setupAnimController(-1);
         }
+
+        animationController.tick(ticksSinceLastFrame);
     }
 
     @Override
@@ -138,7 +138,7 @@ public class CKObject extends RuneLiteObjectController
     {
         if (animationController == null)
         {
-            animationController = new AnimationController(client, animId);
+            setupAnimController(animId);
             return;
         }
 
@@ -149,7 +149,7 @@ public class CKObject extends RuneLiteObjectController
     {
         if (animationController == null)
         {
-            animationController = new AnimationController(client, -1);
+            setupAnimController(-1);
         }
 
         return animationController.getAnimation();

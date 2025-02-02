@@ -3,10 +3,7 @@ package com.creatorskit.programming;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.CKObject;
-import com.creatorskit.models.CustomLighting;
-import com.creatorskit.models.DataFinder;
-import com.creatorskit.models.LightingStyle;
-import com.creatorskit.models.ModelStats;
+import com.creatorskit.models.*;
 import com.creatorskit.models.datatypes.SpotanimData;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.*;
@@ -32,6 +29,7 @@ public class Programmer
     private double subTick = 0;
     private boolean delayTick = false;
     private int clientTickAtLastProgramTick = 0;
+    private final int GOLDEN_CHIN = 29757;
 
     @Getter
     @Setter
@@ -411,37 +409,45 @@ public class Programmer
     private void registerSpawnChanges(Character character)
     {
         CKObject ckObject = character.getCkObject();
-
-        KeyFrame keyFrame = character.getCurrentKeyFrame(KeyFrameType.SPAWN);
-        if (!(keyFrame instanceof SpawnKeyFrame))
+        if (ckObject == null)
         {
             return;
         }
 
-        SpawnKeyFrame spawnKeyFrame = (SpawnKeyFrame) keyFrame;
-
-        clientThread.invokeLater(() ->
+        SpawnKeyFrame spawnKeyFrame = (SpawnKeyFrame) character.getCurrentKeyFrame(KeyFrameType.SPAWN);
+        if (spawnKeyFrame == null)
         {
-            ckObject.setActive(spawnKeyFrame.isSpawnActive());
-        });
+            return;
+        }
+
+        clientThread.invokeLater(() -> ckObject.setActive(spawnKeyFrame.isSpawnActive()));
     }
 
     private void registerModelChanges(Character character)
     {
         CKObject ckObject = character.getCkObject();
-
-        KeyFrame keyFrame = character.getCurrentKeyFrame(KeyFrameType.MODEL);
-        if (!(keyFrame instanceof ModelKeyFrame))
+        if (ckObject == null)
         {
-            plugin.setModel(character, character.isCustomMode(), (int) character.getModelSpinner().getValue());
             return;
         }
 
-        ModelKeyFrame modelKeyFrame = (ModelKeyFrame) keyFrame;
+        ModelKeyFrame modelKeyFrame = (ModelKeyFrame) character.getCurrentKeyFrame(KeyFrameType.MODEL);
+
+        if (modelKeyFrame == null)
+        {
+            return;
+        }
 
         if (modelKeyFrame.isUseCustomModel())
         {
-            Model model = modelKeyFrame.getCustomModel().getModel();
+            CustomModel customModel = modelKeyFrame.getCustomModel();
+            if (customModel == null)
+            {
+                clientThread.invokeLater(() -> ckObject.setModel(client.loadModel(GOLDEN_CHIN)));
+                return;
+            }
+
+            Model model = customModel.getModel();
             if (model == null)
             {
                 return;
@@ -454,13 +460,12 @@ public class Programmer
             int modelId = modelKeyFrame.getModelId();
             if (modelId == -1)
             {
-                return;
+                modelId = 7699;
             }
 
-            clientThread.invokeLater(() ->
-            {
-                ckObject.setModel(client.loadModel(modelId));
-            });
+            final int id = modelId;
+
+            clientThread.invokeLater(() -> ckObject.setModel(client.loadModel(id)));
         }
     }
 
@@ -477,9 +482,9 @@ public class Programmer
             spotAnim = character.getSpotAnim2();
         }
 
-        KeyFrame keyFrame = character.getCurrentKeyFrame(keyFrameType);
+        SpotAnimKeyFrame spotAnimKeyFrame = (SpotAnimKeyFrame) character.getCurrentKeyFrame(keyFrameType);
 
-        if (keyFrame == null)
+        if (spotAnimKeyFrame == null)
         {
             clientThread.invokeLater(() ->
             {
@@ -493,13 +498,6 @@ public class Programmer
             });
             return;
         }
-
-        if (!(keyFrame instanceof SpotAnimKeyFrame))
-        {
-            return;
-        }
-
-        SpotAnimKeyFrame spotAnimKeyFrame = (SpotAnimKeyFrame) keyFrame;
 
         LocalPoint lp = ckObject.getLocation();
         int plane = ckObject.getLevel();

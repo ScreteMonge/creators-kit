@@ -7,6 +7,7 @@ import com.creatorskit.CKObject;
 import com.creatorskit.models.ModelImporter;
 import com.creatorskit.models.*;
 import com.creatorskit.models.exporters.ModelExporter;
+import com.creatorskit.swing.timesheet.keyframe.ModelKeyFrame;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.client.RuneLite;
@@ -39,7 +40,6 @@ public class ModelOrganizer extends JPanel
     private final ClientThread clientThread;
     private final ModelImporter modelImporter;
     private final ModelExporter modelExporter;
-    private final CreatorsConfig config;
     private final BufferedImage CLEAR = ImageUtil.loadImageResource(getClass(), "/Clear.png");
     private final BufferedImage ANVIL = ImageUtil.loadImageResource(getClass(), "/Anvil.png");
     private final BufferedImage SAVE = ImageUtil.loadImageResource(getClass(), "/Save.png");
@@ -50,17 +50,15 @@ public class ModelOrganizer extends JPanel
     private final JPanel modelPanel = new JPanel();
     private final GridBagConstraints c = new GridBagConstraints();
     public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
-    public final File BLENDER_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/blender-models");
 
     @Inject
-    public ModelOrganizer(Client client, CreatorsPlugin plugin, ClientThread clientThread, ModelImporter modelImporter, ModelExporter modelExporter, CreatorsConfig config)
+    public ModelOrganizer(Client client, CreatorsPlugin plugin, ClientThread clientThread, ModelImporter modelImporter, ModelExporter modelExporter)
     {
         this.client = client;
         this.plugin = plugin;
         this.clientThread = clientThread;
         this.modelImporter = modelImporter;
         this.modelExporter = modelExporter;
-        this.config = config;
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new BorderLayout());
@@ -162,6 +160,20 @@ public class ModelOrganizer extends JPanel
                     if (character.getStoredModel() == customModel)
                     {
                         isBeingUsed = true;
+                        break;
+                    }
+
+                    for (ModelKeyFrame keyFrame : character.getModelKeyFrames())
+                    {
+                        if (keyFrame.isUseCustomModel() && keyFrame.getCustomModel() == customModel)
+                        {
+                            isBeingUsed = true;
+                            break;
+                        }
+                    }
+
+                    if (isBeingUsed)
+                    {
                         break;
                     }
                 }
@@ -326,7 +338,7 @@ public class ModelOrganizer extends JPanel
                     }
                 }
 
-                plugin.loadCustomModel(selectedFile, false, name);
+                plugin.loadCustomModel(selectedFile);
             }
         }
     }

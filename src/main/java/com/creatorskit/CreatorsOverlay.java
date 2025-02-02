@@ -130,7 +130,7 @@ public class CreatorsOverlay extends Overlay
 
             WorldPoint[] points = comp.getStepsWP();
             String name = character.getName();
-            String abbreviation = "";
+            String abbreviation;
             int abbreviationLength = 3;
             int nameLength = name.length();
 
@@ -199,7 +199,7 @@ public class CreatorsOverlay extends Overlay
 
             LocalPoint[] points = comp.getStepsLP();
             String name = character.getName();
-            String abbreviation = "";
+            String abbreviation;
             int abbreviationLength = 3;
             int nameLength = name.length();
 

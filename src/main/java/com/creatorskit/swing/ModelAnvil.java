@@ -1095,7 +1095,7 @@ public class ModelAnvil extends JPanel
                 }
             }
 
-            plugin.loadCustomModelToAnvil(selectedFile, priorityCheckBox.isSelected(), nameField.getText());
+            plugin.loadCustomModelToAnvil(selectedFile);
         }
     }
 

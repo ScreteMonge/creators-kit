@@ -51,7 +51,7 @@ public class TimeSheetPanel extends JPanel
     private TreeScrollPane treeScrollPane;
     private final ManagerTree managerTree;
     private final JComboBox<KeyFrameType> summaryComboBox = new JComboBox<>();
-    private final JScrollBar scrollBar;
+    private JScrollBar scrollBar;
     private AttributePanel attributePanel;
     private final JPanel labelPanel = new JPanel();
     private final JPanel controlPanel = new JPanel();
@@ -62,8 +62,6 @@ public class TimeSheetPanel extends JPanel
     private final BufferedImage SKIP_LEFT = ImageUtil.loadImageResource(getClass(), "/Skip_Left.png");
     private final BufferedImage SKIP_RIGHT = ImageUtil.loadImageResource(getClass(), "/Skip_Right.png");
 
-    private static final int ROW_HEIGHT = 24;
-    private static final int INDEX_BUFFER = 20;
     private static final int ABSOLUTE_MAX_SEQUENCE_LENGTH = 100000;
     private static final int DEFAULT_MIN_H_SCROLL = -10;
     private static final int DEFAULT_MAX_H_SCROLL = 200;
@@ -103,7 +101,7 @@ public class TimeSheetPanel extends JPanel
     private int undoStack = 0;
 
     @Inject
-    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, JScrollBar scrollBar)
+    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree)
     {
         this.client = client;
         this.toolBox = toolBox;
@@ -111,7 +109,6 @@ public class TimeSheetPanel extends JPanel
         this.clientThread = clientThread;
         this.dataFinder = dataFinder;
         this.managerTree = managerTree;
-        this.scrollBar = scrollBar;
 
         setLayout(new GridBagLayout());
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
@@ -396,29 +393,6 @@ public class TimeSheetPanel extends JPanel
         return keyFrameToReplace;
     }
 
-    public void loadKeyFrames(Character character)
-    {
-        KeyFrame[][] frames = character.getFrames();
-
-        if (frames == null)
-        {
-            return;
-        }
-
-        for (KeyFrame[] keyFrames : frames)
-        {
-            if (keyFrames == null)
-            {
-                continue;
-            }
-
-            for (KeyFrame keyFrame : keyFrames)
-            {
-                addKeyFrame(character, keyFrame);
-            }
-        }
-    }
-
     /**
      * Removes a specific keyframe from the chosen character
      * @param character the character to remove the keyframe from
@@ -467,7 +441,7 @@ public class TimeSheetPanel extends JPanel
         undoStack = keyFrameActions.length - 1;
     }
 
-    private void undo()
+    public void undo()
     {
         if (undoStack == -1)
         {
@@ -499,7 +473,7 @@ public class TimeSheetPanel extends JPanel
         undoStack--;
     }
 
-    private void redo()
+    public void redo()
     {
         if (undoStack + 1 >= keyFrameActions.length)
         {
@@ -639,10 +613,7 @@ public class TimeSheetPanel extends JPanel
         playButton.setIcon(PLAY);
         playButton.setPreferredSize(new Dimension(35, 35));
         playButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        playButton.addActionListener(e ->
-        {
-            toolBox.getProgrammer().togglePlay();
-        });
+        playButton.addActionListener(e -> toolBox.getProgrammer().togglePlay());
 
         JPanel backPanel = new JPanel();
         backPanel.setLayout(new BoxLayout(backPanel, BoxLayout.PAGE_AXIS));
@@ -701,6 +672,7 @@ public class TimeSheetPanel extends JPanel
             label.setPreferredSize(new Dimension(100, 24));
             label.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
+            // Skip the empty label
             if (i == 1)
             {
                 label.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
@@ -715,6 +687,24 @@ public class TimeSheetPanel extends JPanel
                     {
                         super.mousePressed(e);
                         attributePanel.switchCards(label.getText().replaceAll(LABEL_OFFSET, ""));
+                        label.requestFocusInWindow();
+                    }
+                });
+
+                label.addKeyListener(new KeyAdapter()
+                {
+                    @Override
+                    public void keyReleased(KeyEvent e)
+                    {
+                        if (e.getKeyCode() == KeyEvent.VK_DOWN)
+                        {
+                            scrollAttributePanel(1);
+                        }
+
+                        if (e.getKeyCode() == KeyEvent.VK_UP)
+                        {
+                            scrollAttributePanel(-1);
+                        }
                     }
                 });
             }
@@ -737,6 +727,7 @@ public class TimeSheetPanel extends JPanel
 
     private void setupScrollBar()
     {
+        scrollBar = new JScrollBar(Adjustable.HORIZONTAL);
         scrollBar.setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1));
         scrollBar.setPreferredSize(new Dimension(0, 15));
         scrollBar.setMinimum(DEFAULT_MIN_H_SCROLL);
@@ -784,6 +775,54 @@ public class TimeSheetPanel extends JPanel
 
             setSelectedCharacter(null);
         });
+    }
+
+    public void copyKeyFrames()
+    {
+        copiedKeyFrames = selectedKeyFrames;
+    }
+
+    public void pasteKeyFrames()
+    {
+        if (selectedCharacter == null)
+        {
+            return;
+        }
+
+        if (copiedKeyFrames == null || copiedKeyFrames.length == 0)
+        {
+            return;
+        }
+
+        double firstTick = ABSOLUTE_MAX_SEQUENCE_LENGTH;
+        for (KeyFrame keyFrame : copiedKeyFrames)
+        {
+            if (keyFrame.getTick() < firstTick)
+            {
+                firstTick = keyFrame.getTick();
+            }
+        }
+
+        KeyFrameAction[] kfa = new KeyFrameAction[0];
+        for (KeyFrame keyFrame : copiedKeyFrames)
+        {
+            double newTime = round(keyFrame.getTick() - firstTick + currentTime);
+            KeyFrame copy = KeyFrame.createCopy(keyFrame, newTime);
+            if (copy == null)
+            {
+                continue;
+            }
+
+            KeyFrame keyFrameToReplace = addKeyFrame(selectedCharacter, copy);
+            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(copy, selectedCharacter, KeyFrameCharacterActionType.ADD));
+
+            if (keyFrameToReplace != null)
+            {
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
+            }
+        }
+
+        addKeyFrameActions(kfa);
     }
 
     private void setKeyBindings()
@@ -854,7 +893,7 @@ public class TimeSheetPanel extends JPanel
             @Override
             public void actionPerformed(ActionEvent e)
             {
-                copiedKeyFrames = selectedKeyFrames;
+                copyKeyFrames();
             }
         });
 
@@ -864,40 +903,7 @@ public class TimeSheetPanel extends JPanel
             @Override
             public void actionPerformed(ActionEvent e)
             {
-                if (selectedCharacter == null)
-                {
-                    return;
-                }
-
-                double firstTick = ABSOLUTE_MAX_SEQUENCE_LENGTH;
-                for (KeyFrame keyFrame : copiedKeyFrames)
-                {
-                    if (keyFrame.getTick() < firstTick)
-                    {
-                        firstTick = keyFrame.getTick();
-                    }
-                }
-
-                KeyFrameAction[] kfa = new KeyFrameAction[0];
-                for (KeyFrame keyFrame : copiedKeyFrames)
-                {
-                    double newTime = round(keyFrame.getTick() - firstTick + currentTime);
-                    KeyFrame copy = KeyFrame.createCopy(keyFrame, newTime);
-                    if (copy == null)
-                    {
-                        continue;
-                    }
-
-                    KeyFrame keyFrameToReplace = addKeyFrame(selectedCharacter, copy);
-                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(copy, selectedCharacter, KeyFrameCharacterActionType.ADD));
-
-                    if (keyFrameToReplace != null)
-                    {
-                        kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
-                    }
-                }
-
-                addKeyFrameActions(kfa);
+                pasteKeyFrames();
             }
         });
 
