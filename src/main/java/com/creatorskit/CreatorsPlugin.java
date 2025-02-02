@@ -142,7 +142,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private boolean autoTransmogFound = true;
 	private boolean controlDown = false;
 
-	public static boolean test2_0 = true;
+	public static boolean test2_0 = false;
 
 	@Override
 	protected void startUp() throws Exception
