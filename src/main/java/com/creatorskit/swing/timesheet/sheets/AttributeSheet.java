@@ -124,7 +124,6 @@ public class AttributeSheet extends TimeSheet
         {
             KeyFrame keyFrame = getClickedKeyFrames()[0];
             change = round(getCurrentTime() - keyFrame.getTick());
-            System.out.println(change);
         }
 
 
