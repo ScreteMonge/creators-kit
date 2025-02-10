@@ -1350,6 +1350,11 @@ public class CreatorsPanel extends PluginPanel
 
     private ModelKeyFrameSave[] saveModelKeyFrames(ModelKeyFrame[] keyFrames, CustomModelComp[] comps)
     {
+        if (keyFrames == null)
+        {
+            return null;
+        }
+
         ModelKeyFrameSave[] saves = new ModelKeyFrameSave[keyFrames.length];
         for (int i = 0; i < keyFrames.length; i++)
         {
