@@ -40,25 +40,17 @@ public class ManagerPanel extends JPanel
         this.managerTree = managerTree;
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
-        setLayout(new GridBagLayout());
+        setLayout(new BorderLayout(2, 2));
 
         c.fill = GridBagConstraints.BOTH;
         c.insets = new Insets(2, 2, 2, 2);
 
-        c.gridwidth = 1;
-        c.gridx = 0;
-        c.gridy = 0;
-        c.weightx = 0;
-        c.weighty = 1;
         treeScrollPane = new TreeScrollPane(managerTree);
         treeScrollPane.setPreferredSize(new Dimension(350, 0));
-        add(treeScrollPane, c);
+        add(treeScrollPane, BorderLayout.LINE_START);
 
-        c.gridx = 1;
-        c.gridy = 0;
-        c.weightx = 1;
         JScrollPane objectScrollPane = new JScrollPane();
-        add(objectScrollPane, c);
+        add(objectScrollPane, BorderLayout.CENTER);
 
         JPanel objectHeader = new JPanel();
         objectHeader.setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -98,18 +90,13 @@ public class ManagerPanel extends JPanel
         viewport.setLayout(new GridBagLayout());
         viewport.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
+        c.fill = GridBagConstraints.VERTICAL;
         c.gridx = 0;
         c.gridy = 0;
         c.weightx = 0;
         c.weighty = 0;
         this.objectHolder.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         viewport.add(this.objectHolder, c);
-
-        c.gridx = 1;
-        c.gridy = 0;
-        c.weightx = 1;
-        c.weighty = 0;
-        viewport.add(new JLabel(""), c);
 
         c.gridx = 0;
         c.gridy = 1;
