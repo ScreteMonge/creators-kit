@@ -8,10 +8,6 @@ import com.creatorskit.saves.FolderNodeSave;
 import com.creatorskit.saves.ModelKeyFrameSave;
 import com.creatorskit.saves.SetupSave;
 import com.creatorskit.models.*;
-import com.creatorskit.programming.Coordinate;
-import com.creatorskit.programming.MovementType;
-import com.creatorskit.programming.Program;
-import com.creatorskit.programming.ProgramComp;
 import com.creatorskit.swing.manager.ManagerPanel;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
@@ -62,7 +58,6 @@ public class CreatorsPanel extends PluginPanel
     private final ModelAnvil modelAnvil;
     private final ModelOrganizer modelOrganizer;
     private final DataFinder dataFinder;
-    private final ProgrammerPanel programmerPanel;
     private final TransmogPanel transmogPanel;
     private final ModelImporter modelImporter;
 
@@ -100,7 +95,6 @@ public class CreatorsPanel extends PluginPanel
         this.plugin = plugin;
         this.toolBox = toolBox;
         this.modelOrganizer = toolBox.getModelOrganizer();
-        this.programmerPanel = toolBox.getProgramPanel();
         this.modelAnvil = toolBox.getModelAnvil();
         this.transmogPanel = toolBox.getTransmogPanel();
         this.dataFinder = dataFinder;
@@ -222,8 +216,8 @@ public class CreatorsPanel extends PluginPanel
                 -1,
                 60,
                 new KeyFrame[KeyFrameType.getTotalFrameTypes()][0],
-                createEmptyProgram(-1, -1),
-                false, null, null, new int[0], -1, false, false);
+                getRandomColor(),
+                false, null, null, -1, false, false);
     }
 
     public Character createCharacter(
@@ -237,17 +231,15 @@ public class CreatorsPanel extends PluginPanel
                               int frame,
                               int radius,
                               KeyFrame[][] keyFrames,
-                              Program program,
+                              Color color,
                               boolean active,
                               WorldPoint worldPoint,
                               LocalPoint localPoint,
-                              int[] localPointRegion,
-                              int localPointPlane,
-                              boolean inInstance,
+                              int plane,
+                              boolean inPOH,
                               boolean setHoveredLocation)
     {
-        JPanel programPanel = program.getProgramPanel();
-        ObjectPanel objectPanel = new ObjectPanel(name, null, programPanel);
+        ObjectPanel objectPanel = new ObjectPanel(name, null);
         objectPanel.setLayout(new GridBagLayout());
 
         JTextField textField = new JTextField(name);
@@ -437,10 +429,6 @@ public class CreatorsPanel extends PluginPanel
             objectPanel.revalidate();
         });
 
-        JLabel programmerNameLabel = program.getNameLabel();
-        programmerNameLabel.setText(name);
-        JSpinner programmerIdleSpinner = program.getIdleAnimSpinner();
-
         Character character = new Character(
                 textField.getText(),
                 active,
@@ -449,12 +437,11 @@ public class CreatorsPanel extends PluginPanel
                 new KeyFrame[KeyFrameType.getTotalFrameTypes()],
                 null,
                 null,
-                program,
+                color,
                 worldPoint,
                 localPoint,
-                localPointRegion,
-                localPointPlane,
-                inInstance,
+                plane,
+                inPOH,
                 (CustomModel) modelComboBox.getSelectedItem(),
                 parentPanel,
                 objectPanel,
@@ -468,8 +455,6 @@ public class CreatorsPanel extends PluginPanel
                 animationFrameSpinner,
                 orientationSpinner,
                 radiusSpinner,
-                programmerNameLabel,
-                programmerIdleSpinner,
                 new CKObject(client),
                 null,
                 null,
@@ -478,15 +463,12 @@ public class CreatorsPanel extends PluginPanel
         objectPanel.setCharacter(character);
         ManagerPanel managerPanel = toolBox.getManagerPanel();
 
-        SwingUtilities.invokeLater(() -> programmerPanel.createProgramPanel(character, programPanel, programmerNameLabel, programmerIdleSpinner));
-
         textField.addActionListener(e ->
         {
             String text = StringHandler.cleanString(textField.getText());
             textField.setText(text);
             character.setName(text);
             objectPanel.setName(text);
-            character.getProgram().getNameLabel().setText(text);
             managerPanel.revalidate();
             managerPanel.repaint();
         });
@@ -502,7 +484,6 @@ public class CreatorsPanel extends PluginPanel
                 textField.setText(text);
                 objectPanel.setName(text);
                 character.setName(text);
-                programmerNameLabel.setText(text);
                 managerPanel.revalidate();
                 managerPanel.repaint();
             }
@@ -548,7 +529,6 @@ public class CreatorsPanel extends PluginPanel
             if (animId == -1)
             {
                 animationButton.setText("Anim Off");
-                programmerIdleSpinner.setValue((int) animationSpinner.getValue());
                 plugin.setAnimation(character, (int) animationSpinner.getValue());
                 return;
             }
@@ -603,7 +583,6 @@ public class CreatorsPanel extends PluginPanel
             int animationNumber = (int) animationSpinner.getValue();
             plugin.setAnimation(character, animationNumber);
             plugin.setAnimationFrame(character, (int) animationFrameSpinner.getValue(), true);
-            programmerIdleSpinner.setValue(animationNumber);
         });
 
         animationFrameSpinner.addChangeListener(e ->
@@ -820,31 +799,6 @@ public class CreatorsPanel extends PluginPanel
 
     public void onDuplicatePressed(Character character, boolean setLocation)
     {
-        ProgramComp comp = character.getProgram().getComp();
-
-        WorldPoint[] newSteps = ArrayUtils.clone(comp.getStepsWP());
-        WorldPoint[] newPath = ArrayUtils.clone(comp.getPathWP());
-        LocalPoint[] newStepsLP = ArrayUtils.clone(comp.getStepsLP());
-        LocalPoint[] newPathLP = ArrayUtils.clone(comp.getPathLP());
-        Coordinate[] newCoordinates = ArrayUtils.clone(comp.getCoordinates());
-        Color newColor = getRandomColor();
-        ProgramComp newComp = new ProgramComp(
-                newSteps,
-                newPath,
-                newStepsLP,
-                newPathLP,
-                newCoordinates,
-                comp.isPathFound(),
-                0,
-                comp.getSpeed(),
-                comp.getTurnSpeed(),
-                comp.getIdleAnim(),
-                comp.getWalkAnim(),
-                comp.getMovementType(),
-                newColor.getRGB(),
-                comp.isLoop(),
-                comp.isProgramActive());
-
         String newName = character.getName();
         Matcher matcher = pattern.matcher(newName);
         if (matcher.find())
@@ -861,8 +815,6 @@ public class CreatorsPanel extends PluginPanel
             newName = newName + " (1)";
         }
 
-        Program newProgram = new Program(newComp, new JPanel(), new JLabel(), new JSpinner(), newColor);
-
         ParentPanel parentPanel = character.getParentPanel();
 
         String finalNewName = newName;
@@ -878,19 +830,46 @@ public class CreatorsPanel extends PluginPanel
                     (int) character.getAnimationSpinner().getValue(),
                     (int) character.getAnimationFrameSpinner().getValue(),
                     (int) character.getRadiusSpinner().getValue(),
-                    Arrays.copyOf(character.getFrames(), character.getFrames().length),
-                    newProgram,
+                    duplicateKeyFrames(character),
+                    getRandomColor(),
                     character.isActive(),
                     character.getNonInstancedPoint(),
                     character.getInstancedPoint(),
-                    character.getInstancedRegions(),
                     character.getInstancedPlane(),
-                    character.isInInstance(),
+                    character.isInPOH(),
                     setLocation);
 
             SwingUtilities.invokeLater(() -> addPanel(parentPanel, c, true, false));
         });
         thread.start();
+    }
+
+    private KeyFrame[][] duplicateKeyFrames(Character character)
+    {
+        KeyFrame[][] duplicatesArrays = new KeyFrame[KeyFrameType.getTotalFrameTypes()][];
+
+        KeyFrame[][] originalArrays = character.getFrames();
+        for (int i = 0; i < originalArrays.length; i++)
+        {
+            KeyFrame[] originalArray = originalArrays[i];
+            if (originalArray == null || originalArray.length == 0)
+            {
+                duplicatesArrays[i] = new KeyFrame[0];
+                continue;
+            }
+
+            KeyFrame[] duplicateArray = new KeyFrame[originalArray.length];
+            for (int e = 0; e < originalArray.length; e++)
+            {
+                KeyFrame original = originalArray[e];
+                KeyFrame duplicate = KeyFrame.createCopy(original, original.getTick());
+                duplicateArray[e] = duplicate;
+            }
+
+            duplicatesArrays[i] = duplicateArray;
+        }
+
+        return duplicatesArrays;
     }
 
     public void onDeleteButtonPressed(Character character)
@@ -1012,8 +991,6 @@ public class CreatorsPanel extends PluginPanel
         sidePanel.removeAll();
         sidePanel.repaint();
         sidePanel.revalidate();
-        programmerPanel.repaint();
-        programmerPanel.revalidate();
     }
 
     public void clearManagerPanels()
@@ -1037,8 +1014,6 @@ public class CreatorsPanel extends PluginPanel
         managerPanel.getManagerTree().resetObjectHolder();
         Thread thread = new Thread(() -> deleteCharacters(charactersToRemove));
         thread.start();
-        programmerPanel.repaint();
-        programmerPanel.revalidate();
     }
 
     public void resetSidePanel()
@@ -1217,19 +1192,14 @@ public class CreatorsPanel extends PluginPanel
         modelOrganizer.removeModelPanel(model);
     }
 
-    private Color getRandomColor()
+    public Color getRandomColor()
     {
-        float r = random.nextFloat();
-        float g = random.nextFloat();
-        float b = random.nextFloat();
+        int max = 100;
+        int min = 30;
+        float r = (float) (random.nextInt(max - min + 1) + min) / 100;
+        float g = (float) (random.nextInt(max - min + 1) + min) / 100;
+        float b = (float) (random.nextInt(max - min + 1) + min) / 100;
         return new Color(r, g, b);
-    }
-
-    public Program createEmptyProgram(int poseAnim, int walkAnim)
-    {
-        Color color = getRandomColor();
-        ProgramComp comp = new ProgramComp(new WorldPoint[0], new WorldPoint[0], new LocalPoint[0], new LocalPoint[0], new Coordinate[0], false, 0, 1, DEFAULT_TURN_SPEED, poseAnim, walkAnim, MovementType.NORMAL, color.getRGB(), false, false);
-        return new Program(comp, new JPanel(), new JLabel(), new JSpinner(), color);
     }
 
     public void openSaveDialog()
@@ -1403,9 +1373,8 @@ public class CreatorsPanel extends PluginPanel
         boolean locationSet = character.isLocationSet();
         WorldPoint savedWorldPoint = character.getNonInstancedPoint();
         LocalPoint savedLocalPoint = character.getInstancedPoint();
-        int[] localPointRegion = character.getInstancedRegions();
         int localPointPlane = character.getInstancedPlane();
-        boolean inInstance = character.isInInstance();
+        boolean inPOH = character.isInPOH();
         int compId = 0;
         CustomModel storedModel = character.getStoredModel();
         if (storedModel != null)
@@ -1428,7 +1397,7 @@ public class CreatorsPanel extends PluginPanel
         int rotation = (int) character.getOrientationSpinner().getValue();
         int animationId = (int) character.getAnimationSpinner().getValue();
         int frame = (int) character.getAnimationFrameSpinner().getValue();
-        ProgramComp programComp = character.getProgram().getComp();
+        int rgb = character.getColor().getRGB();
         ModelKeyFrameSave[] modelKeyFrameSaves = saveModelKeyFrames(character.getModelKeyFrames(), comps);
 
         return new CharacterSave(
@@ -1436,9 +1405,8 @@ public class CreatorsPanel extends PluginPanel
                 locationSet,
                 savedWorldPoint,
                 savedLocalPoint,
-                localPointRegion,
                 localPointPlane,
-                inInstance,
+                inPOH,
                 compId,
                 customMode,
                 modelId,
@@ -1447,7 +1415,7 @@ public class CreatorsPanel extends PluginPanel
                 rotation,
                 animationId,
                 frame,
-                programComp,
+                rgb,
                 character.getMovementKeyFrames(),
                 character.getAnimationKeyFrames(),
                 character.getSpawnKeyFrames(),
@@ -1610,8 +1578,6 @@ public class CreatorsPanel extends PluginPanel
                 {
                     for (CharacterSave save : characterSaves)
                     {
-                        Color color = new Color(save.getProgramComp().getRgb());
-                        Program program = new Program(save.getProgramComp(), new JPanel(), new JLabel(), new JSpinner(), color);
                         Character character;
 
                         CustomModel customModel = null;
@@ -1639,11 +1605,10 @@ public class CreatorsPanel extends PluginPanel
                                 animFrame,
                                 save.getRadius(),
                                 frames,
-                                program,
+                                new Color(save.getRgb()),
                                 save.isActive(),
                                 save.getNonInstancedPoint(),
                                 save.getInstancedPoint(),
-                                save.getInstancedRegions(),
                                 save.getInstancedPlane(),
                                 save.isInInstance(),
                                 false);
@@ -1695,8 +1660,6 @@ public class CreatorsPanel extends PluginPanel
 
         for (CharacterSave save : folderNodeSave.getCharacterSaves())
         {
-            Color color = new Color(save.getProgramComp().getRgb());
-            Program program = new Program(save.getProgramComp(), new JPanel(), new JLabel(), new JSpinner(), color);
             Character character;
             CustomModel customModel = null;
             if (customModels.length > 0)
@@ -1774,11 +1737,10 @@ public class CreatorsPanel extends PluginPanel
                     animFrame,
                     save.getRadius(),
                     frames,
-                    program,
+                    new Color(save.getRgb()),
                     save.isActive(),
                     save.getNonInstancedPoint(),
                     save.getInstancedPoint(),
-                    save.getInstancedRegions(),
                     save.getInstancedPlane(),
                     save.isInInstance(),
                     false);

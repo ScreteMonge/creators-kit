@@ -1,8 +1,9 @@
 package com.creatorskit.programming;
 
 import com.creatorskit.Character;
-import com.creatorskit.CreatorsConfig;
-import com.creatorskit.CreatorsPlugin;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
+import com.creatorskit.swing.timesheet.keyframe.MovementKeyFrame;
 import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
@@ -15,16 +16,9 @@ import java.util.Collection;
 public class PathFinder
 {
     @Inject
-    private CreatorsPlugin plugin;
-
-    @Inject
     private Client client;
 
-    @Inject
-    private CreatorsConfig config;
-
     private final int WATER_OVERLAY = 6;
-    private final int REGION_ID_X = 256;
     private final int[] directionColumn = new int[]{1, -1, 0, 0, -1, 1, -1, 1};
     private final int[] directionRow = new int[]{0, 0, -1, 1, -1, -1, 1, 1};
     private final int[][] directionBlocks = new int[][]
@@ -38,6 +32,25 @@ public class PathFinder
                     {CollisionDataFlag.BLOCK_MOVEMENT_NORTH_WEST, CollisionDataFlag.BLOCK_MOVEMENT_NORTH, CollisionDataFlag.BLOCK_MOVEMENT_WEST},
                     {CollisionDataFlag.BLOCK_MOVEMENT_NORTH_EAST, CollisionDataFlag.BLOCK_MOVEMENT_NORTH, CollisionDataFlag.BLOCK_MOVEMENT_EAST}
             };
+
+    public int[][] findPath(LocalPoint startLocation, LocalPoint destLocation, MovementType movementType)
+    {
+        Coordinate[] coordinates = getPath(startLocation, destLocation, movementType);
+        if (coordinates == null || coordinates.length == 0)
+        {
+            return null;
+        }
+
+        int[][] path = new int[coordinates.length][2];
+
+        for (int i = 0; i < coordinates.length; i++)
+        {
+            Coordinate c = coordinates[i];
+            path[i] = new int[]{c.getColumn(), c.getRow()};
+        }
+
+        return path;
+    }
 
     public Coordinate[] getPath(LocalPoint startLocation, LocalPoint destLocation, MovementType movementType)
     {
@@ -92,6 +105,27 @@ public class PathFinder
         }
 
         return null;
+    }
+
+    public int[][] findPath(WorldView worldView, WorldPoint startLocation, WorldPoint destLocation, MovementType movementType)
+    {
+        Coordinate[] coordinates = getPath(startLocation, destLocation, movementType);
+        if (coordinates == null || coordinates.length == 0)
+        {
+            return null;
+        }
+
+        int[][] path = new int[coordinates.length][2];
+
+        for (int i = 0; i < coordinates.length; i++)
+        {
+            Coordinate c = coordinates[i];
+            LocalPoint lp = LocalPoint.fromScene(c.getColumn(), c.getRow(), worldView);
+            WorldPoint wp = WorldPoint.fromLocalInstance(client, lp, worldView.getPlane());
+            path[i] = new int[]{wp.getX(), wp.getY()};
+        }
+
+        return path;
     }
 
     public Coordinate[] getPath(WorldPoint startLocation, WorldPoint destLocation, MovementType movementType)
@@ -172,6 +206,7 @@ public class PathFinder
         }
 
         ArrayUtils.reverse(path);
+        path = ArrayUtils.remove(path, 0);
 
         return path;
     }
@@ -243,178 +278,33 @@ public class PathFinder
         }
     }
 
-    public void transplantSteps(Character character, int newX, int newY, boolean fromInstance, boolean toInstance)
+    public void transplantSteps(Character character, WorldView worldView, int newX, int newY)
     {
-        if (toInstance)
+        KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
+        if (kf == null)
         {
-            transplantInstancedSteps(character, newX, newY, fromInstance);
             return;
         }
 
-        transplantNonInstancedSteps(character, newX, newY, fromInstance);
+        MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+        int[][] path = keyFrame.getPath();
+        if (path.length == 0)
+        {
+            return;
+        }
+
+        int[] start = path[0];
+        int changeX = newX - start[0];
+        int changeY = newY - start[1];
+
+        keyFrame.setPlane(worldView.getPlane());
+        boolean poh = MovementManager.isInPOH(worldView);
+        keyFrame.setPoh(poh);
+
+        for (int[] coordinates : path)
+        {
+            coordinates[0] = coordinates[0] + changeX;
+            coordinates[1] = coordinates[1] + changeY;
+        }
     }
-
-    public void transplantNonInstancedSteps(Character character, int newX, int newY, boolean fromInstance)
-    {
-        WorldView worldView = client.getTopLevelWorldView();
-        Program program = character.getProgram();
-        ProgramComp comp = program.getComp();
-
-        if (!fromInstance)
-        {
-            WorldPoint[] steps = comp.getStepsWP();
-            if (steps.length == 0)
-                return;
-
-            int changeX = newX - steps[0].getX();
-            int changeY = newY - steps[0].getY();
-
-            WorldPoint[] newSteps = new WorldPoint[steps.length];
-            for (int i = 0; i < steps.length; i++)
-            {
-                WorldPoint wp = steps[i];
-                WorldPoint point = new WorldPoint(wp.getX() + changeX, wp.getY() + changeY, worldView.getPlane());
-                newSteps[i] = point;
-            }
-
-            comp.setStepsWP(newSteps);
-            comp.setCurrentStep(0);
-            return;
-        }
-
-        //Translate from LocalPoints to WorldPoints
-        LocalPoint[] steps = comp.getStepsLP();
-        if (steps.length == 0)
-            return;
-
-        WorldPoint[] newSteps = new WorldPoint[steps.length];
-        newSteps[0] = new WorldPoint(newX, newY, worldView.getPlane());
-
-        int[] changeXArray = new int[steps.length];
-        int[] changeYArray = new int[steps.length];
-        changeXArray[0] = 0;
-        changeYArray[0] = 0;
-
-        if (steps.length > 1)
-        {
-            for (int i = 1; i < steps.length; i++)
-            {
-                changeXArray[i] = changeXArray[i - 1] + steps[i].getSceneX() - steps[i - 1].getSceneX();
-                changeYArray[i] = changeYArray[i - 1] + steps[i].getSceneY() - steps[i - 1].getSceneY();
-            }
-
-            for (int i = 1; i < steps.length; i++)
-            {
-                WorldPoint point = new WorldPoint(newX + changeXArray[i], newY + changeYArray[i], worldView.getPlane());
-                newSteps[i] = point;
-            }
-        }
-
-        comp.setStepsWP(newSteps);
-        comp.setCurrentStep(0);
-
-    }
-
-    public void transplantInstancedSteps(Character character, int newX, int newY, boolean fromInstance)
-    {
-        Scene scene = client.getTopLevelWorldView().getScene();
-        Program program = character.getProgram();
-        ProgramComp comp = program.getComp();
-
-        if (fromInstance)
-        {
-            LocalPoint[] steps = comp.getStepsLP();
-            if (steps.length == 0)
-                return;
-
-            int changeX = newX - steps[0].getSceneX();
-            int changeY = newY - steps[0].getSceneY();
-
-            LocalPoint[] newSteps = new LocalPoint[steps.length];
-            for (int i = 0; i < steps.length; i++)
-            {
-                LocalPoint lp = steps[i];
-                LocalPoint point = LocalPoint.fromScene(lp.getSceneX() + changeX, lp.getSceneY() + changeY, scene);
-                newSteps[i] = point;
-            }
-
-            comp.setStepsLP(newSteps);
-            comp.setCurrentStep(0);
-            return;
-        }
-
-        //Translate from WorldPoints to LocalPoints
-        WorldPoint[] steps = comp.getStepsWP();
-        if (steps.length == 0)
-            return;
-
-        LocalPoint[] newSteps = new LocalPoint[steps.length];
-        newSteps[0] = LocalPoint.fromScene(newX, newY, scene);
-
-        int[] changeXArray = new int[steps.length];
-        int[] changeYArray = new int[steps.length];
-        changeXArray[0] = 0;
-        changeYArray[0] = 0;
-
-        if (steps.length > 1)
-        {
-            for (int i = 1; i < steps.length; i++)
-            {
-                changeXArray[i] = changeXArray[i - 1] + steps[i].getX() - steps[i - 1].getX();
-                changeYArray[i] = changeYArray[i - 1] + steps[i].getY() - steps[i - 1].getY();
-            }
-
-            for (int i = 1; i < steps.length; i++)
-            {
-                LocalPoint point = LocalPoint.fromScene(newX + changeXArray[i], newY + changeYArray[i], scene);
-                newSteps[i] = point;
-            }
-        }
-
-        comp.setStepsLP(newSteps);
-        comp.setCurrentStep(0);
-    }
-
-    /*
-    private int[] calibrateForRegions(Character character)
-    {
-        int[] mapRegions = client.getMapRegions();
-        Object[] mapRegionsObject = {mapRegions};
-
-        int[] savedRegions = character.getLocalPointRegions();
-        Object[] savedRegionsObject = {savedRegions};
-
-        if (Arrays.deepEquals(mapRegionsObject, savedRegionsObject))
-            return new int[]{0, 0};
-
-        int mapRegionCorner = mapRegions[0];
-        int savedRegionCorner = savedRegions[0];
-        int difference = savedRegionCorner - mapRegionCorner;
-
-        int yChange = 0;
-        int xChange = 0;
-
-        while (difference != 0)
-        {
-            if (difference >= REGION_ID_X)
-            {
-                difference -= REGION_ID_X;
-                xChange++;
-            }
-            else if (difference <= -REGION_ID_X)
-            {
-                difference += REGION_ID_X;
-                xChange--;
-            }
-            else
-            {
-                yChange = difference;
-                break;
-            }
-        }
-
-        return new int[]{xChange * Constants.REGION_SIZE, yChange * Constants.REGION_SIZE};
-    }
-
-     */
 }

@@ -40,7 +40,6 @@ public class ToolBoxFrame extends JFrame
     private final ModelOrganizer modelOrganizer;
     private final ModelAnvil modelAnvil;
     private final CacheSearcherTab cacheSearcher;
-    private final ProgrammerPanel programPanel;
     private final TransmogPanel transmogPanel;
     private final TimeSheetPanel timeSheetPanel;
     private final Programmer programmer;
@@ -78,7 +77,6 @@ public class ToolBoxFrame extends JFrame
         this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, clientThread, dataFinder, managerTree);
         this.managerPanel = new ManagerPanel(client, plugin, objectHolder, managerTree);
         this.cacheSearcher = new CacheSearcherTab(plugin, clientThread, dataFinder);
-        this.programPanel = new ProgrammerPanel(client, clientThread, plugin, managerTree);
         this.programmer = new Programmer(client, clientThread, plugin, timeSheetPanel, dataFinder);
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -115,26 +113,17 @@ public class ToolBoxFrame extends JFrame
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setFont(FontManager.getRunescapeBoldFont());
 
-        if (CreatorsPlugin.test2_0)
-        {
-            tabbedPane.addTab("Timesheet", timeSheetPanel);
-            timeSheetPanel.getTreeScrollPane().setViewportView(managerTree);
-        }
-        else
-        {
-            managerPanel.getTreeScrollPane().setViewportView(managerTree);
-        }
+        tabbedPane.addTab("Timeline", timeSheetPanel);
+        timeSheetPanel.getTreeScrollPane().setViewportView(managerTree);
         tabbedPane.addTab("Manager", managerPanel);
         tabbedPane.addTab("Model Organizer", modelOrganizer);
         tabbedPane.addTab("Model Anvil", modelAnvil);
         tabbedPane.addTab("Cache Searcher", cacheSearcher);
-        tabbedPane.addTab("Programmer", programPanel);
         tabbedPane.addTab("Transmogger", transmogPanel);
         tabbedPane.setToolTipTextAt(0, "Manage and organize all your Objects");
         tabbedPane.setToolTipTextAt(1, "Organize Custom Models you've loaded from the cache or Forged");
         tabbedPane.setToolTipTextAt(2, "Create Custom Models by modifying and merging different models together");
         tabbedPane.setToolTipTextAt(3, "Search the cache for NPCs, Items, and Objects for their models");
-        tabbedPane.setToolTipTextAt(4, "Change your Object Programs' animations, speeds, and more");
         tabbedPane.setToolTipTextAt(5, "Set animations for Transmogging your player character");
 
         //Move the FolderTree between the Manager and Programmer tabs when the given tab is selected
@@ -145,11 +134,6 @@ public class ToolBoxFrame extends JFrame
                 if (jTabbedPane.getSelectedComponent() == managerPanel)
                 {
                     managerPanel.getTreeScrollPane().setViewportView(managerTree);
-                }
-
-                if (jTabbedPane.getSelectedComponent() == programPanel)
-                {
-                    programPanel.getTreeScrollPane().setViewportView(managerTree);
                 }
 
                 if (jTabbedPane.getSelectedComponent() == timeSheetPanel)
@@ -235,27 +219,24 @@ public class ToolBoxFrame extends JFrame
         load.addActionListener(e -> plugin.getCreatorsPanel().openLoadSetupDialog());
         file.add(load);
 
-        if (CreatorsPlugin.test2_0)
-        {
-            JMenu timeSheet = new JMenu("Timesheet");
-            jMenuBar.add(timeSheet);
+        JMenu timeSheet = new JMenu("Timesheet");
+        jMenuBar.add(timeSheet);
 
-            JMenuItem copyKeyFrames = new JMenuItem("Copy KeyFrames");
-            copyKeyFrames.addActionListener(e -> timeSheetPanel.copyKeyFrames());
-            timeSheet.add(copyKeyFrames);
+        JMenuItem copyKeyFrames = new JMenuItem("Copy KeyFrames");
+        copyKeyFrames.addActionListener(e -> timeSheetPanel.copyKeyFrames());
+        timeSheet.add(copyKeyFrames);
 
-            JMenuItem pasteKeyFrames = new JMenuItem("Paste KeyFrames");
-            pasteKeyFrames.addActionListener(e -> timeSheetPanel.pasteKeyFrames());
-            timeSheet.add(pasteKeyFrames);
+        JMenuItem pasteKeyFrames = new JMenuItem("Paste KeyFrames");
+        pasteKeyFrames.addActionListener(e -> timeSheetPanel.pasteKeyFrames());
+        timeSheet.add(pasteKeyFrames);
 
-            JMenuItem undo = new JMenuItem("Undo KeyFrames");
-            undo.addActionListener(e -> timeSheetPanel.undo());
-            timeSheet.add(undo);
+        JMenuItem undo = new JMenuItem("Undo KeyFrames");
+        undo.addActionListener(e -> timeSheetPanel.undo());
+        timeSheet.add(undo);
 
-            JMenuItem redo = new JMenuItem("Redo KeyFrames");
-            redo.addActionListener(e -> timeSheetPanel.redo());
-            timeSheet.add(redo);
-        }
+        JMenuItem redo = new JMenuItem("Redo KeyFrames");
+        redo.addActionListener(e -> timeSheetPanel.redo());
+        timeSheet.add(redo);
 
         JMenu resources = new JMenu("Resources");
         jMenuBar.add(resources);

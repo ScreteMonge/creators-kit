@@ -1,19 +1,21 @@
 package com.creatorskit;
 
 import com.creatorskit.models.CustomModel;
-import com.creatorskit.programming.Program;
 import com.creatorskit.swing.ObjectPanel;
 import com.creatorskit.swing.ParentPanel;
+import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
+import net.runelite.api.Constants;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
+import java.awt.*;
 
 @Getter
 @Setter
@@ -27,12 +29,11 @@ public class Character
     private KeyFrame[] currentFrames;
     private DefaultMutableTreeNode linkedManagerNode;
     private DefaultMutableTreeNode parentManagerNode;
-    private Program program;
+    private Color color;
     private WorldPoint nonInstancedPoint;
     private LocalPoint instancedPoint;
-    private int[] instancedRegions;
     private int instancedPlane;
-    private boolean inInstance;
+    private boolean inPOH;
     private CustomModel storedModel;
     private ParentPanel parentPanel;
     private ObjectPanel objectPanel;
@@ -46,8 +47,6 @@ public class Character
     private JSpinner animationFrameSpinner;
     private JSpinner orientationSpinner;
     private JSpinner radiusSpinner;
-    private JLabel programmerLabel;
-    private JSpinner programmerIdleSpinner;
     private CKObject ckObject;
     private CKObject spotAnim1;
     private CKObject spotAnim2;
@@ -145,6 +144,21 @@ public class Character
     public void setCurrentKeyFrame(KeyFrame keyFrame, KeyFrameType type)
     {
         currentFrames[KeyFrameType.getIndex(type)] = keyFrame;
+    }
+
+    public void resetMovementKeyFrame(int clientTick, double currentTime)
+    {
+        KeyFrame kf = getCurrentKeyFrame(KeyFrameType.MOVEMENT);
+        if (kf == null)
+        {
+            return;
+        }
+
+        MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+        double diff = TimeSheetPanel.round(currentTime - keyFrame.getTick());
+        int cTickDiff = (int) (diff * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH);
+        int stepCTick = clientTick - cTickDiff;
+        keyFrame.setStepClientTick(stepCTick);
     }
 
     public KeyFrame[] getKeyFrames(KeyFrameType type)
@@ -677,5 +691,18 @@ public class Character
             keyFrame[i] = (SpotAnimKeyFrame) keyFrames[i];
         }
         return keyFrame;
+    }
+
+    public void setActive(boolean active)
+    {
+        if (active)
+        {
+            this.active = true;
+            this.spawnButton.setText("Spawn");
+            return;
+        }
+
+        this.active = false;
+        this.spawnButton.setText("Despawn");
     }
 }

@@ -51,7 +51,6 @@ public class ManagerTreeModel extends DefaultTreeModel
             String name = StringHandler.cleanString((String) newValue);
             character.setName(name);
             character.getNameField().setText(name);
-            character.getProgram().getNameLabel().setText(name);
             node.setUserObject(character);
         }
     }

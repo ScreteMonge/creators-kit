@@ -3,6 +3,8 @@ package com.creatorskit.swing.timesheet;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.DataFinder;
+import com.creatorskit.programming.MovementManager;
+import com.creatorskit.programming.MovementType;
 import com.creatorskit.programming.Programmer;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
@@ -18,6 +20,9 @@ import com.creatorskit.swing.timesheet.sheets.TimeSheet;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.Client;
+import net.runelite.api.WorldView;
+import net.runelite.api.coords.LocalPoint;
+import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.util.ImageUtil;
@@ -371,6 +376,48 @@ public class TimeSheetPanel extends JPanel
        addKeyFrameActions(kfa);
     }
 
+    public void initializeMovementKeyFrame(Character character, WorldView worldView, LocalPoint localPoint)
+    {
+        boolean poh = MovementManager.isInPOH(worldView);
+
+        KeyFrame keyFrame = character.findKeyFrame(KeyFrameType.MOVEMENT, currentTime);
+        if (keyFrame == null)
+        {
+            int x = localPoint.getSceneX();
+            int y = localPoint.getSceneY();
+            if (!poh)
+            {
+                WorldPoint wp = WorldPoint.fromLocalInstance(client, localPoint, worldView.getPlane());
+                x = wp.getX();
+                y = wp.getY();
+            }
+
+            KeyFrame kf = new MovementKeyFrame(
+                    currentTime,
+                    worldView.getPlane(),
+                    poh,
+                    new int[][]{new int[]{x, y}},
+                    0,
+                    0,
+                    false,
+                    1,
+                    MovementType.NORMAL);
+
+            KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(kf, character, KeyFrameCharacterActionType.ADD)};
+            KeyFrame keyFrameToReplace = addKeyFrame(character, kf);
+
+            if (keyFrameToReplace != null)
+            {
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, character, KeyFrameCharacterActionType.REMOVE));
+            }
+            addKeyFrameActions(kfa);
+            return;
+        }
+
+        removeKeyFrame(character, keyFrame);
+        KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(keyFrame, character, KeyFrameCharacterActionType.REMOVE)};
+        addKeyFrameActions(kfa);
+    }
 
     /**
      * Adds the keyframe to a specific character, or replaces a keyframe if the tick matches exactly
@@ -651,7 +698,7 @@ public class TimeSheetPanel extends JPanel
 
     private void setupAttributePanel()
     {
-        attributePanel = new AttributePanel(this, dataFinder);
+        attributePanel = new AttributePanel(client, this, dataFinder);
         summarySheet = new SummarySheet(toolBox, managerTree, attributePanel);
         attributeSheet = new AttributeSheet(toolBox, managerTree, attributePanel);
     }
@@ -934,6 +981,17 @@ public class TimeSheetPanel extends JPanel
             public void actionPerformed(ActionEvent e)
             {
                 toolBox.getProgrammer().togglePlay();
+            }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_T, InputEvent.CTRL_DOWN_MASK), "VK_T");
+        actionMap.put("VK_T", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                setCurrentTime(0, false);
+                toolBox.getProgrammer().togglePlay(false);
             }
         });
     }

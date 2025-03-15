@@ -32,6 +32,15 @@ public class CKObject extends RuneLiteObjectController
     @Override
     public void setLocation(LocalPoint point, int level)
     {
+        if (point == null)
+        {
+            return;
+        }
+
+        super.setLocation(point, level);
+        setZ(Perspective.getTileHeight(client, point, level));
+
+        /*
         boolean needReregister = isActive() && point.getWorldView() != getWorldView();
         if (needReregister)
         {
@@ -45,6 +54,8 @@ public class CKObject extends RuneLiteObjectController
         {
             setActive(true);
         }
+
+         */
     }
 
     private void setupAnimController(int animId)
@@ -89,18 +100,6 @@ public class CKObject extends RuneLiteObjectController
     {
         if (freeze)
         {
-            return;
-        }
-
-        if (!CreatorsPlugin.test2_0)
-        {
-            if (animationController == null)
-            {
-                setupAnimController(-1);
-            }
-
-            animationController.tick(ticksSinceLastFrame);
-
             return;
         }
 

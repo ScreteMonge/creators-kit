@@ -17,7 +17,24 @@ public class KeyFrame
         if (keyFrame instanceof MovementKeyFrame)
         {
             MovementKeyFrame kf = (MovementKeyFrame) keyFrame;
-            return new MovementKeyFrame(tick);
+            int[][] path = kf.getPath();
+            int[][] pathCopy = new int[path.length][];
+            for (int i = 0; i < path.length; i++)
+            {
+                int[] coordinates = path[i];
+                pathCopy[i] = new int[]{coordinates[0], coordinates[1]};
+            }
+
+            return new MovementKeyFrame(
+                    tick,
+                    kf.getPlane(),
+                    kf.isPoh(),
+                    pathCopy,
+                    kf.getCurrentStep(),
+                    kf.getStepClientTick(),
+                    kf.isLoop(),
+                    kf.getSpeed(),
+                    kf.getMovementType());
         }
 
         if (keyFrame instanceof AnimationKeyFrame)

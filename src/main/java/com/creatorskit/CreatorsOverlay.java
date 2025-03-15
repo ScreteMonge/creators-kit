@@ -1,8 +1,9 @@
 package com.creatorskit;
 
-import com.creatorskit.programming.Coordinate;
-import com.creatorskit.programming.Program;
-import com.creatorskit.programming.ProgramComp;
+import com.creatorskit.programming.MovementManager;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
+import com.creatorskit.swing.timesheet.keyframe.MovementKeyFrame;
 import net.runelite.api.*;
 import net.runelite.api.Point;
 import net.runelite.api.coords.LocalPoint;
@@ -65,19 +66,22 @@ public class CreatorsOverlay extends Overlay
             return null;
         }
 
-        renderRLObjects(graphics, keyHeld);
+        if (config.myObjectOverlay())
+        {
+            renderRLObjects(graphics, keyHeld);
+        }
 
         renderObjectsOverlay(graphics, worldView);
 
         if (config.pathOverlay())
         {
-            if (scene.isInstance())
+            if (MovementManager.isInPOH(worldView))
             {
-                renderInstancedProgramOverlay(graphics, worldView);
+                renderPOHProgramOverlay(graphics, worldView);
             }
             else
             {
-                renderNonInstancedProgramOverlay(graphics, worldView);
+                renderWorldProgramOverlay(graphics, worldView);
             }
         }
 
@@ -93,138 +97,189 @@ public class CreatorsOverlay extends Overlay
         return null;
     }
 
-    public void renderNonInstancedProgramOverlay(Graphics2D graphics, WorldView worldView)
+    public void renderWorldProgramOverlay(Graphics2D graphics, WorldView worldView)
     {
+        graphics.setStroke(new BasicStroke(1));
+        
         for (int e = 0; e < plugin.getCharacters().size(); e++)
         {
             Character character = plugin.getCharacters().get(e);
-            if (!plugin.isInScene(character))
-                continue;
-
-            Program program = character.getProgram();
-            if (program == null)
-                continue;
-
-            ProgramComp comp = program.getComp();
-
-            Coordinate[] coordinates = comp.getCoordinates();
-            for (int i = 0; i < coordinates.length - 1; i++)
+            KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
+            if (kf == null)
             {
-                if (coordinates[i] == null)
-                    continue;
+                continue;
+            }
+            
+            graphics.setColor(character.getColor());
 
-                if (!comp.isPathFound())
-                    continue;
+            MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+            int[][] path = keyFrame.getPath();
 
-                LocalPoint lpStart = LocalPoint.fromScene(coordinates[i].getColumn(), coordinates[i].getRow(), worldView.getScene());
-                LocalPoint lpEnd = LocalPoint.fromScene(coordinates[i + 1].getColumn(), coordinates[i + 1].getRow(), worldView.getScene());
+            if (path.length > 0)
+            {
+                WorldPoint startPoint = new WorldPoint(path[0][0], path[0][1], keyFrame.getPlane());
+                LocalPoint localPoint = LocalPoint.fromWorld(worldView, startPoint);
+                if (localPoint != null)
+                {
+                    Point p = Perspective.localToCanvas(client, localPoint, keyFrame.getPlane());
+                    String abbreviation = getAbbreviation(character);
+                    OverlayUtil.renderTextLocation(graphics, p, abbreviation, character.getColor());
+                }
+            }
+            
+            for (int i = 0; i < path.length - 1; i++)
+            {
+                WorldPoint wpStart = new WorldPoint(path[i][0], path[i][1], keyFrame.getPlane());
+                WorldPoint wpEnd = new WorldPoint(path[i + 1][0], path[i + 1][1], keyFrame.getPlane());
+
+                LocalPoint lpStart = LocalPoint.fromWorld(worldView, wpStart.getX(), wpStart.getY());
+                LocalPoint lpEnd = LocalPoint.fromWorld(worldView, wpEnd.getX(), wpEnd.getY());
+
+                if (lpStart == null && lpEnd == null)
+                {
+                    continue;
+                }
+
+                if (lpStart != null && lpEnd == null)
+                {
+                    Point startPoint = Perspective.localToCanvas(client, lpStart, worldView.getPlane());
+                    if (startPoint == null)
+                    {
+                        continue;
+                    }
+
+                    graphics.drawRect(startPoint.getX() - 5, startPoint.getY() - 5, 10, 10);
+                    continue;
+                }
+
+                if (lpStart == null && lpEnd != null)
+                {
+                    Point endPoint = Perspective.localToCanvas(client, lpEnd, worldView.getPlane());
+                    if (endPoint == null)
+                    {
+                        continue;
+                    }
+
+                    graphics.drawRect(endPoint.getX() - 5, endPoint.getY() - 5, 10, 10);
+                    continue;
+                }
+
                 Point startPoint = Perspective.localToCanvas(client, lpStart, worldView.getPlane());
+                if (startPoint == null)
+                {
+                    continue;
+                }
+
                 Point endPoint = Perspective.localToCanvas(client, lpEnd, worldView.getPlane());
-                if (startPoint == null || endPoint == null)
+                if (endPoint == null)
+                {
                     continue;
+                }
 
-                graphics.setColor(program.getColor());
-                graphics.setStroke(new BasicStroke(1));
                 graphics.drawLine(startPoint.getX(), startPoint.getY(), endPoint.getX(), endPoint.getY());
-            }
-
-            WorldPoint[] points = comp.getStepsWP();
-            String name = character.getName();
-            String abbreviation;
-            int abbreviationLength = 3;
-            int nameLength = name.length();
-
-            if (abbreviationLength > nameLength)
-            {
-                abbreviation = character.getName().substring(0, nameLength);
-            }
-            else
-            {
-                abbreviation = character.getName().substring(0, 3);
-            }
-
-            for (int i = 0; i < points.length; i++)
-            {
-                LocalPoint localPoint = LocalPoint.fromWorld(worldView, points[i]);
-                if (localPoint == null)
-                    continue;
-
-                Point textPoint = Perspective.getCanvasTextLocation(client, graphics, localPoint, abbreviation, 0);
-                if (textPoint == null)
-                    continue;
-
-                OverlayUtil.renderTextLocation(graphics, textPoint, abbreviation, program.getColor());
             }
         }
     }
 
-    public void renderInstancedProgramOverlay(Graphics2D graphics, WorldView worldView)
+    public void renderPOHProgramOverlay(Graphics2D graphics, WorldView worldView)
     {
+        graphics.setStroke(new BasicStroke(1));
+
         for (int e = 0; e < plugin.getCharacters().size(); e++)
         {
             Character character = plugin.getCharacters().get(e);
-            if (!plugin.isInScene(character))
-                continue;
-
-            LocalPoint savedLocation = character.getInstancedPoint();
-            if (savedLocation == null || !savedLocation.isInScene())
-                continue;
-
-            Program program = character.getProgram();
-            if (program == null)
-                continue;
-
-            ProgramComp comp = program.getComp();
-
-            Coordinate[] coordinates = comp.getCoordinates();
-            for (int i = 0; i < coordinates.length - 1; i++)
+            KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
+            if (kf == null)
             {
-                if (coordinates[i] == null)
-                    continue;
+                continue;
+            }
 
-                if (!comp.isPathFound())
-                    continue;
+            graphics.setColor(character.getColor());
 
-                LocalPoint lpStart = LocalPoint.fromScene(coordinates[i].getColumn(), coordinates[i].getRow(), worldView.getScene());
-                LocalPoint lpEnd = LocalPoint.fromScene(coordinates[i + 1].getColumn(), coordinates[i + 1].getRow(), worldView.getScene());
+            MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+            if (keyFrame.getPlane() != worldView.getPlane())
+            {
+                continue;
+            }
+
+            int[][] path = keyFrame.getPath();
+
+            if (path.length > 0)
+            {
+                LocalPoint localPoint = new LocalPoint(path[0][0], path[0][1], worldView);
+                Point p = Perspective.localToCanvas(client, localPoint, keyFrame.getPlane());
+                String abbreviation = getAbbreviation(character);
+                OverlayUtil.renderTextLocation(graphics, p, abbreviation, character.getColor());
+            }
+
+            for (int i = 0; i < path.length - 1; i++)
+            {
+                LocalPoint lpStart = new LocalPoint(path[i][0], path[i][1], worldView);
+                LocalPoint lpEnd = new LocalPoint(path[i + 1][0], path[i + 1][1], worldView);
+
+                if (!lpStart.isInScene() && !lpEnd.isInScene())
+                {
+                    continue;
+                }
+
+                if (lpStart.isInScene() && !lpEnd.isInScene())
+                {
+                    Point startPoint = Perspective.localToCanvas(client, lpStart, worldView.getPlane());
+                    if (startPoint == null)
+                    {
+                        continue;
+                    }
+
+                    graphics.drawRect(startPoint.getX() - 5, startPoint.getY() - 5, 10, 10);
+                    continue;
+                }
+
+                if (!lpStart.isInScene() && lpEnd.isInScene())
+                {
+                    Point endPoint = Perspective.localToCanvas(client, lpEnd, worldView.getPlane());
+                    if (endPoint == null)
+                    {
+                        continue;
+                    }
+
+                    graphics.drawRect(endPoint.getX() - 5, endPoint.getY() - 5, 10, 10);
+                    continue;
+                }
+
                 Point startPoint = Perspective.localToCanvas(client, lpStart, worldView.getPlane());
-                Point endPoint = Perspective.localToCanvas(client, lpEnd, worldView.getPlane());
-                if (startPoint == null || endPoint == null)
+                if (startPoint == null)
+                {
                     continue;
+                }
 
-                graphics.setColor(program.getColor());
-                graphics.setStroke(new BasicStroke(1));
+                Point endPoint = Perspective.localToCanvas(client, lpEnd, worldView.getPlane());
+                if (endPoint == null)
+                {
+                    continue;
+                }
+
                 graphics.drawLine(startPoint.getX(), startPoint.getY(), endPoint.getX(), endPoint.getY());
             }
-
-            LocalPoint[] points = comp.getStepsLP();
-            String name = character.getName();
-            String abbreviation;
-            int abbreviationLength = 3;
-            int nameLength = name.length();
-
-            if (abbreviationLength > nameLength)
-            {
-                abbreviation = character.getName().substring(0, nameLength - 1);
-            }
-            else
-            {
-                abbreviation = character.getName().substring(0, 3);
-            }
-
-            for (int i = 0; i < points.length; i++)
-            {
-                LocalPoint localPoint = points[i];
-                if (localPoint == null)
-                    continue;
-
-                Point textPoint = Perspective.getCanvasTextLocation(client, graphics, localPoint, abbreviation, 0);
-                if (textPoint == null)
-                    continue;
-
-                OverlayUtil.renderTextLocation(graphics, textPoint, abbreviation, program.getColor());
-            }
         }
+    }
+
+    private static String getAbbreviation(Character character)
+    {
+        String name = character.getName();
+        String abbreviation;
+        int abbreviationLength = 3;
+        int nameLength = name.length();
+
+        if (abbreviationLength > nameLength)
+        {
+            abbreviation = character.getName().substring(0, nameLength);
+        }
+        else
+        {
+            abbreviation = character.getName().substring(0, 3);
+        }
+
+        return abbreviation;
     }
 
     public void renderPlayerOverlay(Graphics2D graphics, WorldView worldView)

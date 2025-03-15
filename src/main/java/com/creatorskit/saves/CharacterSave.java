@@ -1,6 +1,5 @@
 package com.creatorskit.saves;
 
-import com.creatorskit.programming.ProgramComp;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -17,7 +16,6 @@ public class CharacterSave
     private boolean locationSet;
     private WorldPoint nonInstancedPoint;
     private LocalPoint instancedPoint;
-    private int[] instancedRegions;
     private int instancedPlane;
     private boolean inInstance;
     private int compId;
@@ -28,7 +26,7 @@ public class CharacterSave
     private int rotation;
     private int animationId;
     private int frame;
-    private ProgramComp programComp;
+    private int rgb;
     private MovementKeyFrame[] movementKeyFrames;
     private AnimationKeyFrame[] animationKeyFrames;
     private SpawnKeyFrame[] spawnKeyFrames;

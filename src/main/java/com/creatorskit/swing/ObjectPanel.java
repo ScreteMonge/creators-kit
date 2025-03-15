@@ -14,7 +14,6 @@ public class ObjectPanel extends JPanel
 {
     private String name;
     private Character character;
-    private JPanel programPanel;
 
     @Override
     public String toString()

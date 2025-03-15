@@ -2,6 +2,15 @@ package com.creatorskit.programming;
 
 public class Orientation
 {
+    public static boolean isDiagonal(double jAngle)
+    {
+        return jAngle != 0
+                && jAngle != 512
+                && jAngle != 1024
+                && jAngle != 1536
+                && jAngle != 2048;
+    }
+
     public static int orientationX(double orientation)
     {
         int direction = simplifyOrientation((int) orientation);
@@ -9,14 +18,13 @@ public class Orientation
         {
             return 1;
         }
-        else if (direction == 256 || direction == 512 || direction == 768)
+
+        if (direction == 256 || direction == 512 || direction == 768)
         {
             return -1;
         }
-        else
-        {
-            return 0;
-        }
+
+        return 0;
     }
 
     public static int orientationY(double orientation)
@@ -26,14 +34,13 @@ public class Orientation
         {
             return 1;
         }
-        else if (direction == 256 || direction == 0 || direction == 2048 || direction == 1792)
+
+        if (direction == 256 || direction == 0 || direction == 2048 || direction == 1792)
         {
             return -1;
         }
-        else
-        {
-            return 0;
-        }
+
+        return 0;
     }
 
     public static double radiansToJAngle(double radians, double changeX, double changeY)

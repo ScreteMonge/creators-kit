@@ -5,12 +5,14 @@ import com.creatorskit.models.CustomModel;
 import com.creatorskit.models.DataFinder;
 import com.creatorskit.models.datatypes.NPCData;
 import com.creatorskit.programming.Direction;
+import com.creatorskit.programming.MovementType;
 import com.creatorskit.swing.AutoCompletion;
 import com.creatorskit.swing.timesheet.attributes.*;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import com.creatorskit.swing.timesheet.keyframe.settings.*;
 import lombok.Getter;
 import lombok.Setter;
+import net.runelite.api.Client;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
@@ -28,6 +30,7 @@ import java.util.List;
 @Setter
 public class AttributePanel extends JPanel
 {
+    private Client client;
     private TimeSheetPanel timeSheetPanel;
     private DataFinder dataFinder;
 
@@ -56,6 +59,7 @@ public class AttributePanel extends JPanel
     private Component hoveredComponent;
     private KeyFrameType selectedKeyFramePage = KeyFrameType.MOVEMENT;
 
+    private final MovementAttributes movementAttributes = new MovementAttributes();
     private final AnimAttributes animAttributes = new AnimAttributes();
     private final OriAttributes oriAttributes = new OriAttributes();
     private final SpawnAttributes spawnAttributes = new SpawnAttributes();
@@ -67,8 +71,9 @@ public class AttributePanel extends JPanel
     private final SpotAnimAttributes spotAnim2Attributes = new SpotAnimAttributes();
 
     @Inject
-    public AttributePanel(TimeSheetPanel timeSheetPanel, DataFinder dataFinder)
+    public AttributePanel(Client client, TimeSheetPanel timeSheetPanel, DataFinder dataFinder)
     {
+        this.client = client;
         this.timeSheetPanel = timeSheetPanel;
         this.dataFinder = dataFinder;
 
@@ -157,11 +162,57 @@ public class AttributePanel extends JPanel
      */
     public KeyFrame createKeyFrame()
     {
-        switch (selectedKeyFramePage)
+        return createKeyFrame(selectedKeyFramePage);
+    }
+
+    /**
+     * Create a keyframe of a specified type out of the current AttributePanel settings for the given card of the specified KeyFrameType
+     * @param keyFrameType the type of keyframe to add
+     * @return a keyframe of indicated type, with settings based on what is displayed on that card
+     */
+    public KeyFrame createKeyFrame(KeyFrameType keyFrameType)
+    {
+        switch (keyFrameType)
         {
             default:
             case MOVEMENT:
-                break;
+                return null;
+                /*
+                if (client.getGameState() != GameState.LOGGED_IN)
+                {
+                    return null;
+                }
+
+                WorldView worldView = client.getTopLevelWorldView();
+                if (worldView == null)
+                {
+                    return null;
+                }
+
+                Tile tile = worldView.getSelectedSceneTile();
+                if (tile == null)
+                {
+                    return null;
+                }
+
+                LocalPoint localPoint = tile.getLocalLocation();
+                if (localPoint == null)
+                {
+                    return null;
+                }
+
+                boolean instance = worldView.isInstance();
+
+                return new MovementKeyFrame(
+                        timeSheetPanel.getCurrentTime(),
+                        movementProgram,
+                        new int[0][],
+                        movementAttributes.getLoop().getSelectedItem() == Toggle.ENABLE,
+                        (double) movementAttributes.getSpeed().getValue(),
+                        (MovementType) movementAttributes.getMovementType().getSelectedItem()
+                );
+
+                 */
             case ANIMATION:
                 return new AnimationKeyFrame(
                         timeSheetPanel.getCurrentTime(),
@@ -237,29 +288,92 @@ public class AttributePanel extends JPanel
                         spotAnim2Attributes.getLoop().getSelectedItem() == Toggle.ENABLE
                 );
         }
-
-        return null;
     }
 
     private void setupMoveCard(JPanel card)
     {
         card.setLayout(new GridBagLayout());
+        card.setBorder(new EmptyBorder(4, 4, 4, 4));
         card.setFocusable(true);
         addMouseFocusListener(card);
 
         c.fill = GridBagConstraints.HORIZONTAL;
         c.insets = new Insets(2, 2, 2, 2);
 
-        c.gridwidth = 1;
+        c.gridwidth = 4;
         c.gridheight = 1;
         c.weightx = 0;
         c.weighty = 0;
         c.gridx = 0;
         c.gridy = 0;
-        JLabel title = new JLabel("Movement");
-        title.setFont(FontManager.getRunescapeBoldFont());
-        title.setHorizontalAlignment(SwingConstants.LEFT);
-        card.add(title, c);
+        JPanel manualTitlePanel = new JPanel();
+        manualTitlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        card.add(manualTitlePanel, c);
+
+        JLabel manualTitle = new JLabel("Movement");
+        manualTitle.setHorizontalAlignment(SwingConstants.LEFT);
+        manualTitle.setFont(FontManager.getRunescapeBoldFont());
+        manualTitlePanel.add(manualTitle);
+
+        JLabel manualTitleHelp = new JLabel(new ImageIcon(HELP));
+        manualTitleHelp.setHorizontalAlignment(SwingConstants.LEFT);
+        manualTitleHelp.setBorder(new EmptyBorder(0, 4, 0, 4));
+        manualTitleHelp.setToolTipText("Set how the Object moves");
+        manualTitlePanel.add(manualTitleHelp);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 1;
+        JLabel loopLabel = new JLabel("Loop: ");
+        loopLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(loopLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 1;
+        JComboBox<Toggle> loop = movementAttributes.getLoop();
+        loop.setFocusable(false);
+        loop.addItem(Toggle.DISABLE);
+        loop.addItem(Toggle.ENABLE);
+        loop.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        card.add(loop, c);
+
+        c.gridx = 0;
+        c.gridy = 2;
+        JLabel speedLabel = new JLabel("Speed: ");
+        speedLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(speedLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 2;
+        JSpinner speed = movementAttributes.getSpeed();
+        speed.setModel(new SpinnerNumberModel(1, 0.5, 10, 0.5));
+        card.add(speed, c);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 3;
+        JLabel movementTypeLabel = new JLabel("Movement Type: ");
+        movementTypeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(movementTypeLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 3;
+        JComboBox<MovementType> movementType = movementAttributes.getMovementType();
+        movementType.setFocusable(false);
+        movementType.addItem(MovementType.NORMAL);
+        movementType.addItem(MovementType.GHOST);
+        movementType.addItem(MovementType.WATERBORNE);
+        movementType.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        card.add(movementType, c);
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.weightx = 1;
+        c.weighty = 1;
+        c.gridx = 8;
+        c.gridy = 15;
+        JLabel empty1 = new JLabel("");
+        card.add(empty1, c);
     }
 
     private void setupAnimCard(JPanel card)
@@ -1321,6 +1435,17 @@ public class AttributePanel extends JPanel
 
     private void setupKeyListeners()
     {
+        for (JComponent c : movementAttributes.getAllComponents())
+        {
+            if (c instanceof JComboBox)
+            {
+                addHoverListeners(c, KeyFrameType.MOVEMENT);
+                continue;
+            }
+
+            addHoverListenersWithChildren(c, KeyFrameType.MOVEMENT);
+        }
+
         for (JComponent c : animAttributes.getAllComponents())
         {
             if (c instanceof JComboBox)
@@ -1495,6 +1620,7 @@ public class AttributePanel extends JPanel
                 {
                     default:
                     case MOVEMENT:
+                        movementAttributes.setBackgroundColours(KeyFrameState.EMPTY);
                         break;
                     case ANIMATION:
                         animAttributes.setBackgroundColours(KeyFrameState.EMPTY);
@@ -1535,6 +1661,8 @@ public class AttributePanel extends JPanel
         {
             default:
             case MOVEMENT:
+                movementAttributes.setAttributes(keyFrame);
+                movementAttributes.setBackgroundColours(keyFrameState);
                 break;
             case ANIMATION:
                 animAttributes.setAttributes(keyFrame);
@@ -1580,6 +1708,7 @@ public class AttributePanel extends JPanel
         {
             default:
             case MOVEMENT:
+                movementAttributes.resetAttributes();
                 break;
             case ANIMATION:
                 animAttributes.resetAttributes();

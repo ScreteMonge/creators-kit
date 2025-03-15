@@ -25,15 +25,16 @@ public class Programmer
     private final CreatorsPlugin plugin;
     private final TimeSheetPanel timeSheetPanel;
     private final DataFinder dataFinder;
-    private int clientTickAtLastGameTick = -1;
-    private double subTick = 0;
-    private boolean delayTick = false;
     private int clientTickAtLastProgramTick = 0;
     private final int GOLDEN_CHIN = 29757;
+    private final int TILE_LENGTH = 128;
+    private final int TILE_DIAGONAL = 181; //Math.sqrt(Math.pow(128, 2) + Math.pow(128, 2))
+    private final int MOVEMENT_RATE = 32;
 
     @Getter
     @Setter
     private boolean playing = false;
+    private boolean triggerPause = false;
 
     @Inject
     public Programmer(Client client, ClientThread clientThread, CreatorsPlugin plugin, TimeSheetPanel timeSheetPanel, DataFinder dataFinder)
@@ -55,86 +56,305 @@ public class Programmer
 
         if (playing)
         {
+            if (clientTickAtLastProgramTick == 0 && triggerPause)
+            {
+                pause();
+                return;
+            }
+
             clientTickAtLastProgramTick++;
             if (clientTickAtLastProgramTick >= 3)
             {
                 clientTickAtLastProgramTick = 0;
                 incrementSubTime();
             }
+
+            updateCharacterLocations();
         }
-/*
-        if (clientTickAtLastGameTick == -1)
-        {
-            clientTickAtLastGameTick = client.getGameCycle();
-        }
-
-        if (delayTick)
-        {
-            return;
-        }
-
-
-        if (playing)
-        {
-            if (subTick == 0.9)
-            {
-                return;
-            }
-
-            int currentClientTick = client.getGameCycle();
-            int change = currentClientTick - clientTickAtLastGameTick;
-            if (change * Constants.CLIENT_TICK_LENGTH >= Constants.GAME_TICK_LENGTH)
-            {
-                return;
-            }
-
-            double nextSubTick = TimeSheetPanel.round(((double) change) / 30);
-            if (subTick < nextSubTick)
-            {
-                subTick = nextSubTick;
-                incrementSubTime();
-            }
-        }
-
-         */
     }
 
-    /*
-    @Subscribe
-    public void onGameTick(GameTick event)
+    private void updateCharacterLocations()
     {
-        if (client.getGameState() != GameState.LOGGED_IN)
+        WorldView worldView = client.getTopLevelWorldView();
+
+        ArrayList<Character> characters = plugin.getCharacters();
+        for (int i = 0; i < characters.size(); i++)
+        {
+            Character character = characters.get(i);
+            CKObject ckObject = character.getCkObject();
+            if (ckObject == null)
+            {
+                continue;
+            }
+
+            KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
+            if (kf == null)
+            {
+                continue;
+            }
+
+            MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+            if (keyFrame.getPlane() != worldView.getPlane())
+            {
+                continue;
+            }
+
+            int[][] path = keyFrame.getPath();
+            int currentStep = keyFrame.getCurrentStep();
+            //System.out.println("Currentstep: " + currentStep);
+
+            if (currentStep >= path.length)
+            {
+                continue;
+            }
+
+            double speed = keyFrame.getSpeed() / Constants.GAME_TICK_LENGTH * Constants.CLIENT_TICK_LENGTH;
+            double ticksPassed = client.getGameCycle() - keyFrame.getStepClientTick();
+            //System.out.println("Tickspassed: " + ticksPassed);
+            double stepsComplete = ticksPassed * speed;
+
+            moveLocation(worldView,
+                    character,
+                    keyFrame,
+                    currentStep,
+                    stepsComplete);
+        }
+    }
+
+    /**
+     * Set the location for the Character, with the intent to move it to the next subtile based on its current location and the predefined path
+     * @param worldView the current worldview
+     * @param character the Character to move
+     * @param keyFrame the MovementKeyFrame from which the location is being drawn
+     * @param currentStep the number of whole steps that have already been performed
+     * @param stepsComplete the number of whole + sub steps that have already been performed
+     */
+    private void moveLocation(WorldView worldView, Character character, MovementKeyFrame keyFrame, int currentStep, double stepsComplete)
+    {
+        CKObject ckObject = character.getCkObject();
+        if (ckObject == null)
         {
             return;
         }
 
-        clientTickAtLastGameTick = client.getGameCycle();
+        LocalPoint start = getLocation(keyFrame, currentStep);
+        LocalPoint current = ckObject.getLocation();
+        LocalPoint destination = getLocation(keyFrame, currentStep + 1);
 
-        if (playing)
+        if (current == null)
         {
-            if (delayTick)
+            current = start;
+        }
+
+        if (start == null && destination == null)
+        {
+            //ckObject.setActive(false);
+            return;
+        }
+
+        if (start != null && destination != null)
+        {
+            int startX = start.getX();
+            int startY = start.getY();
+            int currentX = current.getX();
+            int currentY = current.getY();
+            int destX = destination.getX();
+            int destY = destination.getY();
+
+            double directionX = destX - startX;
+            double directionY = destY - startY;
+            double angle = Orientation.radiansToJAngle(Math.atan(directionY / directionX), directionX, directionY);
+
+            double tileLength = TILE_LENGTH;
+            if (Orientation.isDiagonal(angle))
             {
-                delayTick = false;
-                return;
+                tileLength = TILE_DIAGONAL;
             }
 
-            incrementTime();
+            double difference = Math.sqrt(Math.pow(destX - currentX, 2) + Math.pow(destY - currentY, 2)) + tileLength * (stepsComplete - currentStep);
+            double endSpeed = difference / MOVEMENT_RATE;
+
+            int changeX = (int) (endSpeed * Orientation.orientationX(angle));
+            int diffX = Math.abs(destX - currentX);
+            currentX = currentX + changeX;
+            if (Math.abs(changeX) > diffX)
+            {
+                currentX = destX;
+            }
+
+            int changeY = (int) (endSpeed * Orientation.orientationY(angle));
+            int diffY = Math.abs(destY - currentY);
+            currentY = currentY + changeY;
+            if (Math.abs(changeY) > diffY)
+            {
+                currentY = destY;
+            }
+
+            if (currentX == destX && currentY == destY)
+            {
+                keyFrame.setCurrentStep(currentStep + 1);
+            }
+
+            LocalPoint finalPoint = new LocalPoint(currentX, currentY, worldView);
+            character.getCkObject().setLocation(finalPoint, keyFrame.getPlane());
+            return;
+        }
+
+        if (start == null)
+        {
+            ckObject.setLocation(destination, keyFrame.getPlane());
+            return;
+        }
+
+        if (destination == null)
+        {
+            ckObject.setLocation(start, keyFrame.getPlane());
         }
     }
 
+    /**
+     * Set the location for the Character, with the intent to move it to the next subtile based on its current location and the predefined path
+     * @param worldView the current worldview
+     * @param character the Character to move
+     * @param keyFrame the MovementKeyFrame from which the location is being drawn
+     * @param currentStep the number of whole steps that have already been performed
+     * @param stepsComplete the number of whole + sub steps that have already been performed
      */
+    public void setLocation(WorldView worldView, Character character, MovementKeyFrame keyFrame, int currentStep, double stepsComplete)
+    {
+        CKObject ckObject = character.getCkObject();
+        if (ckObject == null)
+        {
+            return;
+        }
+
+        if (keyFrame.getPlane() != worldView.getPlane())
+        {
+            return;
+        }
+
+        LocalPoint lp = getLocation(worldView, character, keyFrame, currentStep, stepsComplete);
+        if (lp == null)
+        {
+            return;
+        }
+
+        ckObject.setLocation(lp, keyFrame.getPlane());
+    }
+
+    /**
+     * Gets the LocalPoint corresponding to the exact tick for the current time, including both full tile and sub tile coordinates.
+     * @param worldView the current WorldView
+     * @param character the character to find the location for
+     * @param keyFrame the keyframe from the character to get the path from
+     * @param currentStep the current whole number step
+     * @param stepsComplete the current non-whole number step
+     * @return the LocalPoint corresponding to the current tick along the character's currently defined path
+     */
+    public LocalPoint getLocation(WorldView worldView, Character character, MovementKeyFrame keyFrame, int currentStep, double stepsComplete)
+    {
+        CKObject ckObject = character.getCkObject();
+        if (ckObject == null)
+        {
+            return null;
+        }
+
+        int pathLength = keyFrame.getPath().length;
+        if (currentStep >= pathLength)
+        {
+            return getLocation(keyFrame, pathLength - 1);
+        }
+
+        LocalPoint start = getLocation(keyFrame, currentStep);
+        LocalPoint destination = getLocation(keyFrame, currentStep + 1);
+
+        if (start == null && destination == null)
+        {
+            //ckObject.setActive(false);
+            return null;
+        }
+
+        if (start != null && destination != null)
+        {
+            int startX = start.getX();
+            int startY = start.getY();
+            int destX = destination.getX();
+            int destY = destination.getY();
+
+            double percentComplete = stepsComplete - currentStep;
+
+            double directionX = destX - startX;
+            double directionY = destY - startY;
+            double angle = Orientation.radiansToJAngle(Math.atan(directionY / directionX), directionX, directionY);
+
+            double subSteps = percentComplete * TILE_LENGTH;
+            //This algorithm assumes that, if diagonal, the character moves 1 space vertically and 1 space horizontally
+            //To make it work with non 45 degree angles, appropriate trigonometry must be used
+
+            int changeX = (int) (subSteps * Orientation.orientationX(angle));
+            int currentX = startX + changeX;
+
+            int changeY = (int) (subSteps * Orientation.orientationY(angle));
+            int currentY = startY + changeY;
+
+            return new LocalPoint(currentX, currentY, worldView);
+        }
+
+        if (start == null)
+        {
+            return destination;
+        }
+
+        return start;
+    }
+
+    /**
+     * Gets the LocalPoint of a specific integer step
+     * @param keyFrame the keyframe for which to grab the path
+     * @param step the number of whole number steps complete
+     * @return the LocalPoint pertaining to the current step for the keyframe
+     */
+    private LocalPoint getLocation(MovementKeyFrame keyFrame, int step)
+    {
+        WorldView worldView = client.getTopLevelWorldView();
+        boolean isInPOH = MovementManager.isInPOH(worldView);
+        if (keyFrame.isPoh() != isInPOH)
+        {
+            return null;
+        }
+
+        int[][] path = keyFrame.getPath();
+        if (step >= path.length)
+        {
+            return null;
+        }
+
+        int[] currentStep = path[step];
+
+        if (isInPOH)
+        {
+            LocalPoint lp = new LocalPoint(currentStep[0], currentStep[1], worldView);
+            if (!lp.isInScene())
+            {
+                return null;
+            }
+
+            return lp;
+        }
+
+        LocalPoint lp = LocalPoint.fromWorld(worldView, currentStep[0], currentStep[1]);
+        if (lp == null || !lp.isInScene())
+        {
+            return null;
+        }
+
+        return lp;
+    }
 
     private void incrementSubTime()
     {
         double time = TimeSheetPanel.round(timeSheetPanel.getCurrentTime() + 0.1);
         timeSheetPanel.setCurrentTime(time, true);
-    }
-
-    private void incrementTime()
-    {
-        subTick = 0;
-        int tick = (int) TimeSheetPanel.round(Math.floor(timeSheetPanel.getCurrentTime()) + 1);
-        timeSheetPanel.setCurrentTime(tick, true);
     }
 
     public void togglePlay()
@@ -146,20 +366,29 @@ public class Programmer
     {
         if (play)
         {
+            triggerPause = false;
             playing = true;
             timeSheetPanel.setPlayButtonIcon(true);
-            timeSheetPanel.setCurrentTime(Math.floor(timeSheetPanel.getCurrentTime()), false);
-            delayTick = true;
+            double currentTime = timeSheetPanel.getCurrentTime();
+            //timeSheetPanel.setCurrentTime(Math.floor(currentTime), false);
 
             ArrayList<Character> characters = plugin.getCharacters();
             for (int i = 0; i < characters.size(); i++)
             {
                 Character character = characters.get(i);
+
                 character.play();
+                character.resetMovementKeyFrame(client.getGameCycle(), currentTime);
             }
             return;
         }
 
+        triggerPause = true;
+    }
+
+    private void pause()
+    {
+        triggerPause = false;
         playing = false;
         ArrayList<Character> characters = plugin.getCharacters();
         for (int i = 0; i < characters.size(); i++)
@@ -189,6 +418,7 @@ public class Programmer
     public void updateProgram(Character character, double tick)
     {
         character.updateProgram(tick);
+        registerMovementChanges(character);
         registerModelChanges(character);
         registerSpotAnimChanges(character, KeyFrameType.SPOTANIM, tick);
         registerSpotAnimChanges(character, KeyFrameType.SPOTANIM2, tick);
@@ -243,7 +473,6 @@ public class Programmer
                 if (nextMovement.getTick() <= currentTime)
                 {
                     character.setCurrentKeyFrame(nextMovement, KeyFrameType.MOVEMENT);
-                    //register changes
                 }
             }
 
@@ -421,6 +650,46 @@ public class Programmer
         }
 
         clientThread.invokeLater(() -> ckObject.setActive(spawnKeyFrame.isSpawnActive()));
+    }
+
+    public void registerMovementChanges(Character character)
+    {
+        WorldView worldView = client.getTopLevelWorldView();
+        CKObject ckObject = character.getCkObject();
+        if (ckObject == null)
+        {
+            return;
+        }
+
+        KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
+        if (kf == null)
+        {
+            return;
+        }
+
+        MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+        if (keyFrame.getPlane() != worldView.getPlane())
+        {
+            return;
+        }
+
+        int[][] path = keyFrame.getPath();
+        int pathLength = path.length;
+
+        double speed = keyFrame.getSpeed();
+        double stepsComplete = (timeSheetPanel.getCurrentTime() - keyFrame.getTick()) * speed;
+        int wholeStepsComplete = (int) Math.floor(stepsComplete);
+        if (wholeStepsComplete > pathLength)
+        {
+            wholeStepsComplete = pathLength;
+        }
+        keyFrame.setCurrentStep(wholeStepsComplete);
+
+        setLocation(worldView,
+                character,
+                keyFrame,
+                wholeStepsComplete,
+                stepsComplete);
     }
 
     private void registerModelChanges(Character character)

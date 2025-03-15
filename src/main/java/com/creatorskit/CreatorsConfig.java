@@ -367,39 +367,15 @@ public interface CreatorsConfig extends Config
 	}
 
 	@ConfigItem(
-			keyName = "playPauseAllToggle",
-			name = "Play/Pause All",
-			description = "Hotkey to play/pause all programs",
-			section = programmer,
-			position = 4
-	)
-	default Keybind playPauseAllHotkey()
-	{
-		return new Keybind(KeyEvent.VK_END, KeyEvent.CTRL_DOWN_MASK);
-	}
-
-	@ConfigItem(
-			keyName = "resetLocations",
-			name = "Reset Locations",
-			description = "Hotkey to set selected object to its start location",
+			keyName = "resetTimeline",
+			name = "Reset Timeline",
+			description = "Hotkey to set reset the Timeline to 0",
 			section = programmer,
 			position = 5
 	)
-	default Keybind resetHotkey()
+	default Keybind resetTimelineHotkey()
 	{
-		return new Keybind(KeyEvent.VK_R, KeyEvent.CTRL_DOWN_MASK);
-	}
-
-	@ConfigItem(
-			keyName = "resetAllLocations",
-			name = "Reset All Locations",
-			description = "Hotkey to set all objects to their start location",
-			section = programmer,
-			position = 6
-	)
-	default Keybind resetAllHotkey()
-	{
-		return new Keybind(KeyEvent.VK_HOME, KeyEvent.CTRL_DOWN_MASK);
+		return new Keybind(KeyEvent.VK_T, KeyEvent.CTRL_DOWN_MASK);
 	}
 
 	@ConfigSection(

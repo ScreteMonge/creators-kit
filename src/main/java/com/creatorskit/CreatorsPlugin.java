@@ -6,6 +6,10 @@ import com.creatorskit.programming.*;
 import com.creatorskit.saves.TransmogLoadOption;
 import com.creatorskit.saves.TransmogSave;
 import com.creatorskit.swing.*;
+import com.creatorskit.swing.timesheet.TimeSheetPanel;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
+import com.creatorskit.swing.timesheet.keyframe.MovementKeyFrame;
 import com.google.gson.Gson;
 import com.google.inject.Provides;
 import javax.inject.Inject;
@@ -107,6 +111,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private PathFinder pathFinder;
 
 	@Inject
+	private MovementManager movementManager;
+
+	@Inject
 	private DataFinder dataFinder;
 
 	@Inject
@@ -141,8 +148,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private boolean autoSetupPathFound = true;
 	private boolean autoTransmogFound = true;
 	private boolean controlDown = false;
-
-	public static boolean test2_0 = false;
 
 	@Override
 	protected void startUp() throws Exception
@@ -182,10 +187,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.registerKeyListener(addProgramStepListener);
 		keyManager.registerKeyListener(removeProgramStepListener);
 		keyManager.registerKeyListener(clearProgramStepListener);
-		keyManager.registerKeyListener(resetListener);
 		keyManager.registerKeyListener(playPauseListener);
-		keyManager.registerKeyListener(playPauseAllListener);
-		keyManager.registerKeyListener(resetAllListener);
+		keyManager.registerKeyListener(resetTimelineListener);
 		mouseManager.registerMouseWheelListener(this::mouseWheelMoved);
 		mouseManager.registerMouseListener(this);
 
@@ -276,10 +279,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.unregisterKeyListener(addProgramStepListener);
 		keyManager.unregisterKeyListener(removeProgramStepListener);
 		keyManager.unregisterKeyListener(clearProgramStepListener);
-		keyManager.unregisterKeyListener(resetListener);
 		keyManager.unregisterKeyListener(playPauseListener);
-		keyManager.unregisterKeyListener(playPauseAllListener);
-		keyManager.unregisterKeyListener(resetAllListener);
+		keyManager.unregisterKeyListener(resetTimelineListener);
 		mouseManager.unregisterMouseWheelListener(this::mouseWheelMoved);
 		mouseManager.unregisterMouseListener(this);
 	}
@@ -324,8 +325,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			{
 				Character character = characters.get(i);
 				boolean active = character.isActive();
-				setLocation(character, false, false, false, true);
-				resetProgram(character, character.getProgram().getComp().isProgramActive());
+				setLocation(character, false, LocationOption.TO_CURRENT_TICK);
+				//resetProgram(character, character.getProgram().getComp().isProgramActive());
 				if (!active)
 					despawnCharacter(character);
 			}
@@ -361,6 +362,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		Player player = client.getLocalPlayer();
 		WorldView worldView = client.getTopLevelWorldView();
 
+		/*
 		for (int i = 0; i < characters.size(); i++)
 		{
 			Character character = characters.get(i);
@@ -395,7 +397,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			{
 				if (comp.isLoop())
 				{
-					resetProgram(character, true);
+					//resetProgram(character, true);
 					continue;
 				}
 
@@ -517,6 +519,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			LocalPoint finalPoint = new LocalPoint(endX, endY, worldView);
 			ckObject.setLocation(finalPoint, worldView.getPlane());
 		}
+
+		 */
 
 		TransmogPanel transmogPanel = creatorsPanel.getTransmogPanel();
 
@@ -687,19 +691,15 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	{
 		if (event.getGameState() == GameState.LOGGED_IN)
 		{
-			WorldView worldView = client.getTopLevelWorldView();
-			boolean instance = worldView.getScene().isInstance();
-
 			for (Character character : characters)
 			{
 				boolean active = character.isActive();
-				setLocation(character, false, false, false, true);
-				resetProgram(character, character.getProgram().getComp().isProgramActive());
-				if ((character.isInInstance() && instance && worldView.getPlane() == character.getInstancedPlane()) || (!character.isInInstance() && !instance))
-					updateProgramPath(character.getProgram(), true, character.isInInstance());
+				setLocation(character, false, LocationOption.TO_CURRENT_TICK);
 
 				if (!active)
+				{
 					despawnCharacter(character);
+				}
 			}
 
 			if (config.enableTransmog() && transmog != null)
@@ -747,7 +747,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 						.setOption(ColorUtil.prependColorTag("Relocate", Color.ORANGE))
 						.setTarget(ColorUtil.colorTag(Color.GREEN) + selectedCharacter.getName())
 						.setType(MenuAction.RUNELITE)
-						.onClick(e -> setLocation(selectedCharacter, true, false, true, false));
+						.onClick(e -> setLocation(selectedCharacter, true, LocationOption.TO_HOVERED_TILE));
 			}
 		}
 
@@ -873,85 +873,133 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 	}
 
-	public void setLocation(Character character, boolean newLocation, boolean setToPlayer, boolean setToHoveredTile, boolean setToPathStart)
+	public void setLocation(Character character, boolean newLocation, LocationOption locationOption)
 	{
 		if (client.getGameState() != GameState.LOGGED_IN)
-			return;
-
-		boolean instance = client.getTopLevelWorldView().getScene().isInstance();
-
-		if (!newLocation && !isInScene(character))
-			return;
-
-		if (instance)
 		{
-			setLocationInstance(character, setToPlayer, setToHoveredTile, setToPathStart);
 			return;
 		}
 
-		setLocationNonInstance(character, setToPlayer, setToHoveredTile, setToPathStart);
+		boolean poh = MovementManager.isInPOH(client.getTopLevelWorldView());
+
+		if (!newLocation && !isInScene(character))
+		{
+			return;
+		}
+
+		if (poh)
+		{
+			setLocationPOH(character, newLocation, locationOption);
+			return;
+		}
+
+		setLocationWorld(character, newLocation, locationOption);
 	}
 
-	public void setLocationNonInstance(Character character, boolean setToPlayer, boolean setToHoveredTile, boolean setToPathStart)
+	public void setLocationWorld(Character character, boolean newLocation, LocationOption locationOption)
 	{
-		clientThread.invoke(() ->
+		clientThread.invokeLater(() ->
 		{
 			WorldView worldView = client.getTopLevelWorldView();
-			LocalPoint localPoint;
-			WorldPoint[] steps = character.getProgram().getComp().getStepsWP();
+			LocalPoint localPoint = null;
+			if (character.getNonInstancedPoint() != null)
+			{
+				localPoint = LocalPoint.fromWorld(worldView, character.getNonInstancedPoint());
+			}
 
-			if (setToPlayer)
+			switch (locationOption)
 			{
-				localPoint = client.getLocalPlayer().getLocalLocation();
-			}
-			else if (setToHoveredTile)
-			{
-				Tile tile = worldView.getSelectedSceneTile();
-				if (tile == null)
-					return;
+				case TO_PATH_START:
+				case TO_CURRENT_TICK:
+					KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
+					if (kf == null)
+					{
+						break;
+					}
 
-				localPoint = tile.getLocalLocation();
-			}
-			else if (setToPathStart && steps.length > 0)
-			{
-				localPoint = LocalPoint.fromWorld(worldView, steps[0]);
-			}
-			else
-			{
-				if (character.getNonInstancedPoint() == null)
-				{
+					MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+					if (keyFrame.isPoh())
+					{
+						return;
+					}
+
+					if (keyFrame.getPlane() != worldView.getPlane())
+					{
+						return;
+					}
+
+					int[][] path = keyFrame.getPath();
+					int pathLength = path.length;
+					if (pathLength == 0)
+					{
+						break;
+					}
+
+					if (locationOption == LocationOption.TO_PATH_START)
+					{
+						WorldPoint worldPoint = new WorldPoint(path[0][0], path[0][1], keyFrame.getPlane());
+						localPoint = LocalPoint.fromWorld(worldView, worldPoint.getX(), worldPoint.getY());
+						break;
+					}
+
+					double speed = keyFrame.getSpeed();
+					double stepsComplete = (getCurrentTick() - keyFrame.getTick()) * speed;
+					int wholeStepsComplete = (int) Math.floor(stepsComplete);
+					if (wholeStepsComplete > pathLength)
+					{
+						wholeStepsComplete = pathLength;
+					}
+					keyFrame.setCurrentStep(wholeStepsComplete);
+
+					localPoint = creatorsPanel.getToolBox().getProgrammer().getLocation(worldView,
+							character,
+							keyFrame,
+							wholeStepsComplete,
+							stepsComplete);
+					break;
+				case TO_PLAYER:
 					localPoint = client.getLocalPlayer().getLocalLocation();
-				}
-				else
-				{
-					localPoint = LocalPoint.fromWorld(worldView, character.getNonInstancedPoint());
-				}
+					break;
+				case TO_HOVERED_TILE:
+					Tile tile = worldView.getSelectedSceneTile();
+					if (tile == null)
+					{
+						return;
+					}
+
+					localPoint = tile.getLocalLocation();
+					break;
+				case TO_SAVED_LOCATION:
+				default:
+					break;
 			}
 
 			if (localPoint == null)
-				return;
-
-			WorldPoint newLocation = WorldPoint.fromLocalInstance(client, localPoint);
-
-			character.setLocationSet(true);
-
-			if (newLocation != null)
 			{
-				pathFinder.transplantSteps(character, newLocation.getX(), newLocation.getY(), character.isInInstance(), false);
-				character.setInInstance(false);
-				character.setNonInstancedPoint(newLocation);
-				updateProgramPath(character.getProgram(), false, false);
+				return;
+			}
+
+			if (newLocation)
+			{
+				WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
+				pathFinder.transplantSteps(character, worldView, worldPoint.getX(), worldPoint.getY());
+				character.setLocationSet(true);
+				character.setNonInstancedPoint(worldPoint);
+				character.setInPOH(false);
 			}
 
 			CKObject ckObject = character.getCkObject();
 			ckObject.setActive(false);
 			ckObject.setLocation(localPoint, worldView.getPlane());
+			if (locationOption == LocationOption.TO_HOVERED_TILE)
+			{
+				creatorsPanel.getToolBox().getProgrammer().registerMovementChanges(character);
+			}
 			ckObject.setActive(true);
 			character.setActive(true);
 
 			int orientation = (int) character.getOrientationSpinner().getValue();
 			ckObject.setOrientation(orientation);
-			character.getSpawnButton().setText("Spawn");
 
 			CKObject spotanim1 = character.getSpotAnim1();
 			CKObject spotanim2 = character.getSpotAnim2();
@@ -974,49 +1022,105 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		});
 	}
 
-	public void setLocationInstance(Character character, boolean setToPlayer, boolean setToHoveredTile, boolean setToPathStart)
+	public void setLocationPOH(Character character, boolean newLocation, LocationOption locationOption)
 	{
-		clientThread.invoke(() ->
+		clientThread.invokeLater(() ->
 		{
 			WorldView worldView = client.getTopLevelWorldView();
-			LocalPoint localPoint;
-			LocalPoint[] steps = character.getProgram().getComp().getStepsLP();
-
-			if (setToPlayer)
-			{
-				localPoint = client.getLocalPlayer().getLocalLocation();
-			}
-			else if (setToHoveredTile)
-			{
-				Tile tile = worldView.getSelectedSceneTile();
-				if (tile == null)
-					return;
-
-				localPoint = tile.getLocalLocation();
-			}
-			else if (setToPathStart && steps.length > 0)
-			{
-				localPoint = steps[0];
-			}
-			else
+			LocalPoint localPoint = null;
+			if (character.getInstancedPoint() != null)
 			{
 				localPoint = character.getInstancedPoint();
 			}
 
-			if (localPoint == null)
-				return;
+			switch (locationOption)
+			{
+				case TO_PATH_START:
+				case TO_CURRENT_TICK:
+					KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
+					if (kf == null)
+					{
+						break;
+					}
 
-			character.setInstancedPoint(localPoint);
-			pathFinder.transplantSteps(character, localPoint.getSceneX(), localPoint.getSceneY(), character.isInInstance(), true);
-			character.setLocationSet(true);
-			character.setInInstance(true);
-			character.setInstancedRegions(client.getMapRegions());
-			character.setInstancedPlane(worldView.getPlane());
-			updateProgramPath(character.getProgram(), false, true);
+					MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+					if (keyFrame.isPoh())
+					{
+						return;
+					}
+
+					if (keyFrame.getPlane() != worldView.getPlane())
+					{
+						return;
+					}
+
+					int[][] path = keyFrame.getPath();
+					int pathLength = path.length;
+					if (pathLength == 0)
+					{
+						break;
+					}
+
+					if (locationOption == LocationOption.TO_PATH_START)
+					{
+						localPoint = new LocalPoint(path[0][0], path[0][1], worldView);
+						break;
+					}
+
+					double speed = keyFrame.getSpeed();
+					double stepsComplete = (getCurrentTick() - keyFrame.getTick()) * speed;
+					int wholeStepsComplete = (int) Math.floor(stepsComplete);
+					if (wholeStepsComplete > pathLength)
+					{
+						wholeStepsComplete = pathLength;
+					}
+					keyFrame.setCurrentStep(wholeStepsComplete);
+
+					localPoint = creatorsPanel.getToolBox().getProgrammer().getLocation(worldView,
+							character,
+							keyFrame,
+							wholeStepsComplete,
+							stepsComplete);
+					break;
+				case TO_PLAYER:
+					localPoint = client.getLocalPlayer().getLocalLocation();
+					break;
+				case TO_HOVERED_TILE:
+					Tile tile = worldView.getSelectedSceneTile();
+					if (tile == null)
+					{
+						return;
+					}
+
+					localPoint = tile.getLocalLocation();
+					break;
+				case TO_SAVED_LOCATION:
+				default:
+					break;
+			}
+
+			if (localPoint == null)
+			{
+				return;
+			}
+
+			if (newLocation)
+			{
+				pathFinder.transplantSteps(character, worldView, localPoint.getX(), localPoint.getY());
+				character.setLocationSet(true);
+				character.setInstancedPoint(localPoint);
+				character.setInstancedPlane(worldView.getPlane());
+				character.setInPOH(true);
+			}
+
 
 			CKObject ckObject = character.getCkObject();
 			ckObject.setActive(false);
 			ckObject.setLocation(localPoint, worldView.getPlane());
+			if (locationOption == LocationOption.TO_HOVERED_TILE)
+			{
+				creatorsPanel.getToolBox().getProgrammer().registerMovementChanges(character);
+			}
 			ckObject.setActive(true);
 			character.setActive(true);
 
@@ -1043,29 +1147,33 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				spotanim2.setOrientation(orientation);
 			}
 		});
+	}
+
+	public double getCurrentTick()
+	{
+		return creatorsPanel.getToolBox().getTimeSheetPanel().getCurrentTime();
 	}
 
 	public boolean isInScene(Character character)
 	{
 		WorldView worldView = client.getTopLevelWorldView();
-		boolean instance = worldView.getScene().isInstance();
-		int[] mapRegions = client.getMapRegions();
-		if (instance && character.isInInstance())
+		boolean poh = MovementManager.isInPOH(worldView);
+		if (poh && character.isInPOH())
 		{
 			if (character.getInstancedPoint() == null)
+			{
 				return false;
+			}
 
 			if (character.getInstancedPlane() != worldView.getPlane())
+			{
 				return false;
+			}
 
-			//This function is finicky with larger instances, in that only an exact region:region map will load
-			//The alternative of finding any match will otherwise make spawns off if the regions don't match because the scenes won't exactly match
-			Object[] mapRegionsObjects = {mapRegions};
-			Object[] instancedRegionObjects = {character.getInstancedRegions()};
-			return Arrays.deepEquals(mapRegionsObjects, instancedRegionObjects);
+			return true;
 		}
 
-		if (!instance && !character.isInInstance())
+		if (!poh && !character.isInPOH())
 		{
 			WorldPoint worldPoint = character.getNonInstancedPoint();
 			if (worldPoint == null)
@@ -1091,7 +1199,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		if (!character.isLocationSet())
 		{
-			setLocation(character, true, true, false, false);
+			setLocation(character, true, LocationOption.TO_PLAYER);
 		}
 	}
 
@@ -1205,7 +1313,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			setModel(character, character.isCustomMode(), (int) character.getModelSpinner().getValue());
 			setAnimation(character, (int) character.getAnimationSpinner().getValue());
 			setAnimationFrame(character, (int) character.getAnimationFrameSpinner().getValue(), true);
-			setLocation(character, !character.isLocationSet(), false, setHoveredTile, false);
+
+			LocationOption locationOption = setHoveredTile ? LocationOption.TO_HOVERED_TILE : LocationOption.TO_SAVED_LOCATION;
+			setLocation(character, !character.isLocationSet(), locationOption);
 
 			ckObject.setActive(active);
 			character.setActive(active);
@@ -1821,6 +1931,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		storedModels.remove(customModel);
 	}
 
+	/*
+
 	public void updateProgramPath(Program program, boolean gameStateChanged, boolean instanced)
 	{
 		if (client.getGameState() != GameState.LOGGED_IN)
@@ -1953,6 +2065,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		comp.setCoordinates(allCoordinates);
 	}
 
+	 */
+
+	/*
 	public void resetProgram(Character character, boolean restart)
 	{
 		Program program = character.getProgram();
@@ -1995,10 +2110,12 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 
 		if (resetLocation)
-			setLocation(character, false, false, false, true);
+			setLocation(character, false, LocationOption.TO_PATH_START);
 
 		comp.setProgramActive(restart);
 	}
+
+	 */
 
 	public void updatePanelComboBoxes()
 	{
@@ -2263,7 +2380,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		{
 			if (selectedCharacter != null)
 			{
-				setLocation(selectedCharacter, true, false, true, false);
+				setLocation(selectedCharacter, true, LocationOption.TO_HOVERED_TILE);
 			}
 		}
 	};
@@ -2351,6 +2468,49 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 	private void addProgramStep()
 	{
+		if (selectedCharacter == null)
+		{
+			return;
+		}
+
+		WorldView worldView = client.getTopLevelWorldView();
+		if (worldView == null)
+		{
+			return;
+		}
+
+		Tile tile = worldView.getSelectedSceneTile();
+		if (tile == null)
+		{
+			return;
+		}
+
+		LocalPoint localPoint = tile.getLocalLocation();
+		if (localPoint == null)
+		{
+			return;
+		}
+
+		KeyFrame kf = selectedCharacter.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
+		if (kf == null)
+		{
+			TimeSheetPanel timeSheetPanel = creatorsPanel.getToolBox().getTimeSheetPanel();
+			timeSheetPanel.initializeMovementKeyFrame(selectedCharacter, worldView, localPoint);
+			setLocation(selectedCharacter, true, LocationOption.TO_PATH_START);
+			return;
+		}
+
+		MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+		movementManager.addProgramStep(keyFrame, worldView, localPoint);
+		if (keyFrame.getPath().length == 1)
+		{
+			setLocation(selectedCharacter, true, LocationOption.TO_PATH_START);
+		}
+		else
+		{
+			setLocation(selectedCharacter, false, LocationOption.TO_CURRENT_TICK);
+		}
+		/*
 		if (selectedCharacter != null)
 		{
 			WorldView worldView = client.getTopLevelWorldView();
@@ -2373,7 +2533,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 				if (steps.length == 0)
 				{
-					setLocation(selectedCharacter, true, false, true, false);
+					setLocation(selectedCharacter, true, LocationOption.TO_HOVERED_TILE);
 				}
 
 				if (steps.length > 0)
@@ -2396,7 +2556,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			{
 				program.getComp().setStepsLP(new LocalPoint[]{localPoint});
 				program.getComp().setStepsWP(new WorldPoint[0]);
-				setLocation(selectedCharacter, true, false, true, false);
+				setLocation(selectedCharacter, true,  LocationOption.TO_HOVERED_TILE);
 				updateProgramPath(program, false, selectedCharacter.isInInstance());
 				return;
 			}
@@ -2407,7 +2567,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 				if (steps.length == 0)
 				{
-					setLocation(selectedCharacter, true, false, true, false);
+					setLocation(selectedCharacter, true, LocationOption.TO_HOVERED_TILE);
 				}
 
 				WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
@@ -2433,10 +2593,12 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
 				program.getComp().setStepsWP(new WorldPoint[]{worldPoint});
 				program.getComp().setStepsLP(new LocalPoint[0]);
-				setLocation(selectedCharacter, true, false, true, false);
+				setLocation(selectedCharacter, true, LocationOption.TO_HOVERED_TILE);
 				updateProgramPath(program, false, selectedCharacter.isInInstance());
 			}
 		}
+
+		 */
 	}
 
 	private final HotkeyListener removeProgramStepListener = new HotkeyListener(() -> config.removeProgramStepHotkey())
@@ -2450,37 +2612,25 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 	private void removeProgramStep()
 	{
-		if (selectedCharacter != null)
+		if (selectedCharacter == null)
 		{
-			if (!isInScene(selectedCharacter))
-				return;
-
-			WorldView worldView = client.getTopLevelWorldView();
-			Tile tile = worldView.getSelectedSceneTile();
-			if (tile == null)
-				return;
-
-			Program program = selectedCharacter.getProgram();
-			ProgramComp comp = program.getComp();
-
-			if (worldView.getScene().isInstance())
-			{
-				LocalPoint[] steps = comp.getStepsLP();
-				steps = ArrayUtils.removeElement(steps, tile.getLocalLocation());
-				comp.setStepsLP(steps);
-			}
-			else
-			{
-				WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, tile.getLocalLocation());
-				WorldPoint[] steps = comp.getStepsWP();
-				steps = ArrayUtils.removeElement(steps, worldPoint);
-				comp.setStepsWP(steps);
-			}
-
-			comp.setCurrentStep(0);
-			updateProgramPath(program, false, selectedCharacter.isInInstance());
-			setLocation(selectedCharacter, false, false, false, true);
+			return;
 		}
+
+		KeyFrame kf = selectedCharacter.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
+		if (kf == null)
+		{
+			return;
+		}
+
+		MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+		int[][] path = keyFrame.getPath();
+		if (path.length == 0)
+		{
+			return;
+		}
+
+		keyFrame.setPath(ArrayUtils.remove(path, path.length - 1));
 	}
 
 	private final HotkeyListener clearProgramStepListener = new HotkeyListener(() -> config.clearProgramStepHotkey())
@@ -2494,15 +2644,19 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 	private void clearProgramSteps()
 	{
-		if (selectedCharacter != null)
+		if (selectedCharacter == null)
 		{
-			Program program = selectedCharacter.getProgram();
-			program.getComp().setStepsWP(new WorldPoint[0]);
-			program.getComp().setStepsLP(new LocalPoint[0]);
-			program.getComp().setProgramActive(false);
-			updateProgramPath(program, false, selectedCharacter.isInInstance());
-			setLocation(selectedCharacter, false, false, false, false);
+			return;
 		}
+
+		KeyFrame kf = selectedCharacter.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
+		if (kf == null)
+		{
+			return;
+		}
+
+		MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+		keyFrame.setPath(new int[0][2]);
 	}
 
 	private final HotkeyListener playPauseListener = new HotkeyListener(() -> config.playPauseHotkey())
@@ -2510,43 +2664,18 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			if (selectedCharacter != null)
-			{
-				ProgramComp comp = selectedCharacter.getProgram().getComp();
-				comp.setProgramActive(!comp.isProgramActive());
-			}
+			creatorsPanel.getToolBox().getProgrammer().togglePlay();
 		}
 	};
 
-	private final HotkeyListener playPauseAllListener = new HotkeyListener(() -> config.playPauseAllHotkey())
+	private final HotkeyListener resetTimelineListener = new HotkeyListener(() -> config.resetTimelineHotkey())
 	{
 		@Override
 		public void hotkeyPressed()
 		{
-			pauseMode = !pauseMode;
-
-			for (Character character : characters)
-				character.getProgram().getComp().setProgramActive(!pauseMode);
-		}
-	};
-
-	private final HotkeyListener resetListener = new HotkeyListener(() -> config.resetHotkey())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			if (selectedCharacter != null)
-				resetProgram(selectedCharacter, false);
-		}
-	};
-
-	private final HotkeyListener resetAllListener = new HotkeyListener(() -> config.resetAllHotkey())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			for (Character character : characters)
-				resetProgram(character, false);
+			ToolBoxFrame toolBox = creatorsPanel.getToolBox();
+			toolBox.getTimeSheetPanel().setCurrentTime(0, false);
+			toolBox.getProgrammer().togglePlay(false);
 		}
 	};
 

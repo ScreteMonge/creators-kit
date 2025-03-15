@@ -532,13 +532,6 @@ public class ManagerTree extends JTree
 
     public void resetObjectHolder(ObjectPanel[] panelsToAdd, boolean sidePanel)
     {
-        JPanel[] programPanels = new JPanel[0];
-
-        for (ObjectPanel objectPanel : panelsToAdd)
-            programPanels = ArrayUtils.add(programPanels, objectPanel.getProgramPanel());
-
-        resetProgramHolder(programPanels);
-
         if (sidePanel)
         {
             objectHolder.removeAll();
@@ -556,49 +549,6 @@ public class ManagerTree extends JTree
 
         toolBox.getManagerPanel().revalidate();
         toolBox.getManagerPanel().repaint();
-    }
-
-    public void resetProgramHolder(JPanel[] panelsToAdd)
-    {
-        ProgrammerPanel programmerPanel = plugin.getCreatorsPanel().getProgrammerPanel();
-        GridBagConstraints cManager = programmerPanel.getC();
-        cManager.fill = GridBagConstraints.NONE;
-        cManager.insets = new Insets(2, 2, 2, 2);
-        cManager.gridx = 0;
-        cManager.gridy = 0;
-        cManager.weightx = 0;
-        cManager.weighty = 0;
-        cManager.gridheight = 1;
-        cManager.gridwidth = 1;
-        cManager.anchor = GridBagConstraints.FIRST_LINE_START;
-
-        JPanel programHolder = programmerPanel.getManagerProgramHolder();
-        programHolder.removeAll();
-        int rows = panelsToAdd.length / 5;
-
-        for (int i = 0; i < panelsToAdd.length; i++)
-        {
-            JPanel panel = panelsToAdd[i];
-
-            cManager.weightx = cManager.gridx == 4 ? 1 : 0;
-            if (cManager.gridx == panelsToAdd.length - 1)
-                cManager.weightx = 1;
-
-            cManager.weighty = cManager.gridy == rows ? 1 : 0;
-            if (i == panelsToAdd.length - 1)
-                cManager.weighty = 1;
-
-            programHolder.add(panel, cManager);
-            cManager.gridx++;
-            if (cManager.gridx > 4)
-            {
-                cManager.gridx = 0;
-                cManager.gridy++;
-            }
-        }
-
-        programmerPanel.revalidate();
-        programmerPanel.repaint();
     }
 
     public void onPanelScrolled(int scroll)
