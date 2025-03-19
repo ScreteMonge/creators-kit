@@ -493,9 +493,13 @@ public class ModelOrganizer extends JPanel
         CKObject transmog = plugin.getTransmog();
         if (transmog == null)
         {
-            transmog = new CKObject(client);
-            client.registerRuneLiteObject(transmog);
-            plugin.setTransmog(transmog);
+            clientThread.invokeLater(() ->
+            {
+                CKObject newTransmog = new CKObject(client);
+                client.registerRuneLiteObject(newTransmog);
+                plugin.setTransmog(newTransmog);
+            });
+            return;
         }
 
         plugin.setTransmogModel(customModel);

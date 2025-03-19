@@ -84,6 +84,14 @@ public class ManagerTree extends JTree
             }
         });
 
+        ActionMap actionMap = getActionMap();
+        actionMap.put("cut", null);
+        actionMap.put("copy", null);
+        actionMap.put("paste", null);
+        actionMap.getParent().put("cut", null);
+        actionMap.getParent().put("copy", null);
+        actionMap.getParent().put("paste", null);
+
         DefaultTreeCellRenderer renderer = new DefaultTreeCellRenderer();
         renderer.setOpenIcon(new ImageIcon(FOLDER_OPEN));
         renderer.setClosedIcon(new ImageIcon(FOLDER_CLOSED));
