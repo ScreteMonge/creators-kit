@@ -11,6 +11,7 @@ import lombok.Setter;
 import net.runelite.api.Constants;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.client.callback.ClientThread;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.swing.*;
@@ -693,16 +694,36 @@ public class Character
         return keyFrame;
     }
 
-    public void setActive(boolean active)
-    {
-        if (active)
-        {
-            this.active = true;
-            this.spawnButton.setText("Spawn");
-            return;
-        }
 
-        this.active = false;
-        this.spawnButton.setText("Despawn");
+    public void toggleActive(ClientThread clientThread)
+    {
+        setActive(!active, true, clientThread);
+    }
+
+    public void setVisible(boolean visible, ClientThread clientThread)
+    {
+        clientThread.invokeLater(() -> ckObject.setActive(visible));
+    }
+
+    public void setActive(boolean setActive, boolean reset, ClientThread clientThread)
+    {
+        clientThread.invokeLater(() ->
+        {
+            if (setActive)
+            {
+                active = true;
+                if (reset)
+                {
+                    ckObject.setActive(false);
+                }
+                ckObject.setActive(true);
+                spawnButton.setText("Spawn");
+                return;
+            }
+
+            active = false;
+            ckObject.setActive(false);
+            spawnButton.setText("Despawn");
+        });
     }
 }

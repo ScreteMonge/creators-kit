@@ -339,7 +339,7 @@ public interface CreatorsConfig extends Config
 	)
 	default Keybind removeProgramStepHotkey()
 	{
-		return new Keybind(KeyEvent.VK_R, KeyEvent.CTRL_DOWN_MASK);
+		return new Keybind(KeyEvent.VK_X, KeyEvent.CTRL_DOWN_MASK);
 	}
 
 	@ConfigItem(
@@ -375,7 +375,7 @@ public interface CreatorsConfig extends Config
 	)
 	default Keybind resetTimelineHotkey()
 	{
-		return new Keybind(KeyEvent.VK_T, KeyEvent.CTRL_DOWN_MASK);
+		return new Keybind(KeyEvent.VK_R, KeyEvent.CTRL_DOWN_MASK);
 	}
 
 	@ConfigSection(

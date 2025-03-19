@@ -521,7 +521,7 @@ public class CreatorsPanel extends PluginPanel
             }
         });
 
-        spawnButton.addActionListener(e -> plugin.toggleSpawn(spawnButton, character));
+        spawnButton.addActionListener(e -> character.toggleActive(clientThread));
 
         animationButton.addActionListener(e ->
         {
@@ -774,6 +774,8 @@ public class CreatorsPanel extends PluginPanel
         {
             npcPanels++;
         }
+
+        managerTree.setSelectedCharacter(character);
     }
 
     private void onFindButtonPressed(Character character)

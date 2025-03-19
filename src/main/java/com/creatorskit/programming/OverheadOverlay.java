@@ -61,11 +61,6 @@ public class OverheadOverlay extends Overlay
                 continue;
             }
 
-            if (!plugin.isInScene(character))
-            {
-                continue;
-            }
-
             OverheadKeyFrame overheadKeyFrame = (OverheadKeyFrame) character.getCurrentKeyFrame(KeyFrameType.OVERHEAD);
             if (overheadKeyFrame == null)
             {
@@ -81,7 +76,7 @@ public class OverheadOverlay extends Overlay
 
             CKObject ckObject = character.getCkObject();
             LocalPoint lp = ckObject.getLocation();
-            if (lp == null)
+            if (lp == null || !lp.isInScene())
             {
                 continue;
             }

@@ -29,7 +29,7 @@ public class Programmer
     private final int GOLDEN_CHIN = 29757;
     private final int TILE_LENGTH = 128;
     private final int TILE_DIAGONAL = 181; //Math.sqrt(Math.pow(128, 2) + Math.pow(128, 2))
-    private final int MOVEMENT_RATE = 32;
+    private final int MOVEMENT_RATE = 30;
 
     @Getter
     @Setter
@@ -101,23 +101,27 @@ public class Programmer
 
             int[][] path = keyFrame.getPath();
             int currentStep = keyFrame.getCurrentStep();
-            //System.out.println("Currentstep: " + currentStep);
-
-            if (currentStep >= path.length)
+            if (currentStep >= path.length || currentStep == -1)
             {
                 continue;
             }
 
             double speed = keyFrame.getSpeed() / Constants.GAME_TICK_LENGTH * Constants.CLIENT_TICK_LENGTH;
             double ticksPassed = client.getGameCycle() - keyFrame.getStepClientTick();
-            //System.out.println("Tickspassed: " + ticksPassed);
             double stepsComplete = ticksPassed * speed;
 
+            //if animKeyFrame = stallAnim, cancel step progression
+            keyFrame.setCurrentStep((int) stepsComplete);
+            setLocation(worldView, character, keyFrame, currentStep, stepsComplete);
+
+            /*
             moveLocation(worldView,
                     character,
                     keyFrame,
                     currentStep,
                     stepsComplete);
+
+             */
         }
     }
 
@@ -137,22 +141,24 @@ public class Programmer
             return;
         }
 
-        LocalPoint start = getLocation(keyFrame, currentStep);
+        LocalPoint start = getLocation(worldView, keyFrame, currentStep);
         LocalPoint current = ckObject.getLocation();
-        LocalPoint destination = getLocation(keyFrame, currentStep + 1);
+        LocalPoint destination = getLocation(worldView, keyFrame, currentStep + 1);
 
-        if (current == null)
+        if (!isValidPoint(start) && !isValidPoint(destination))
         {
-            current = start;
-        }
-
-        if (start == null && destination == null)
-        {
-            //ckObject.setActive(false);
+            character.setVisible(false, clientThread);
             return;
         }
 
-        if (start != null && destination != null)
+        if (!isValidPoint(current))
+        {
+            current = destination;
+        }
+
+        character.setVisible(true, clientThread);
+
+        if (isValidPoint(start) && isValidPoint(destination))
         {
             int startX = start.getX();
             int startY = start.getY();
@@ -196,20 +202,22 @@ public class Programmer
             }
 
             LocalPoint finalPoint = new LocalPoint(currentX, currentY, worldView);
-            character.getCkObject().setLocation(finalPoint, keyFrame.getPlane());
+            ckObject.setLocation(finalPoint, keyFrame.getPlane());
             return;
         }
 
-        if (start == null)
-        {
-            ckObject.setLocation(destination, keyFrame.getPlane());
-            return;
-        }
-
-        if (destination == null)
+        if (isValidPoint(start))
         {
             ckObject.setLocation(start, keyFrame.getPlane());
+            return;
         }
+
+        ckObject.setLocation(destination, keyFrame.getPlane());
+    }
+
+    public boolean isValidPoint(LocalPoint lp)
+    {
+        return lp != null && lp.isInScene();
     }
 
     /**
@@ -236,14 +244,17 @@ public class Programmer
         LocalPoint lp = getLocation(worldView, character, keyFrame, currentStep, stepsComplete);
         if (lp == null)
         {
+            character.setVisible(false, clientThread);
             return;
         }
 
         ckObject.setLocation(lp, keyFrame.getPlane());
+        character.setVisible(true, clientThread);
     }
 
     /**
      * Gets the LocalPoint corresponding to the exact tick for the current time, including both full tile and sub tile coordinates.
+     * Used primarily when setting the time in the TimeLine or when setting Location via hotkeys.
      * @param worldView the current WorldView
      * @param character the character to find the location for
      * @param keyFrame the keyframe from the character to get the path from
@@ -262,15 +273,14 @@ public class Programmer
         int pathLength = keyFrame.getPath().length;
         if (currentStep >= pathLength)
         {
-            return getLocation(keyFrame, pathLength - 1);
+            return getLocation(worldView, keyFrame, pathLength - 1);
         }
 
-        LocalPoint start = getLocation(keyFrame, currentStep);
-        LocalPoint destination = getLocation(keyFrame, currentStep + 1);
+        LocalPoint start = getLocation(worldView, keyFrame, currentStep);
+        LocalPoint destination = getLocation(worldView, keyFrame, currentStep + 1);
 
         if (start == null && destination == null)
         {
-            //ckObject.setActive(false);
             return null;
         }
 
@@ -309,14 +319,13 @@ public class Programmer
     }
 
     /**
-     * Gets the LocalPoint of a specific integer step
+     * Gets the LocalPoint of a specific integer step. Used primarily to assess the start and end tiles of a path in order to calculate the movement between
      * @param keyFrame the keyframe for which to grab the path
      * @param step the number of whole number steps complete
      * @return the LocalPoint pertaining to the current step for the keyframe
      */
-    private LocalPoint getLocation(MovementKeyFrame keyFrame, int step)
+    private LocalPoint getLocation(WorldView worldView, MovementKeyFrame keyFrame, int step)
     {
-        WorldView worldView = client.getTopLevelWorldView();
         boolean isInPOH = MovementManager.isInPOH(worldView);
         if (keyFrame.isPoh() != isInPOH)
         {
@@ -324,7 +333,7 @@ public class Programmer
         }
 
         int[][] path = keyFrame.getPath();
-        if (step >= path.length)
+        if (step >= path.length || step == -1)
         {
             return null;
         }

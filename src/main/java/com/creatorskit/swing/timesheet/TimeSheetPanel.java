@@ -984,8 +984,8 @@ public class TimeSheetPanel extends JPanel
             }
         });
 
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_T, InputEvent.CTRL_DOWN_MASK), "VK_T");
-        actionMap.put("VK_T", new AbstractAction()
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_T, InputEvent.CTRL_DOWN_MASK), "VK_R");
+        actionMap.put("VK_R", new AbstractAction()
         {
             @Override
             public void actionPerformed(ActionEvent e)

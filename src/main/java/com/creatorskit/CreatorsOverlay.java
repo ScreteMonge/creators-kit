@@ -23,7 +23,6 @@ public class CreatorsOverlay extends Overlay
     private final CreatorsConfig config;
     private static final Color HOVERED_COLOUR = new Color(146, 206, 193, 255);
     private static final Color SELECTED_COLOUR = new Color(220, 253, 245);
-    private static final Color MY_OBJECT_COLOUR = new Color(35, 208, 187);
     private static final Color GAME_OBJECT_COLOUR = new Color(255, 138, 18);
     private static final Color DYNAMIC_OBJECT_COLOUR = new Color(255, 190, 130);
     private static final Color GROUND_OBJECT_COLOUR = new Color(73, 255, 0);
@@ -53,7 +52,6 @@ public class CreatorsOverlay extends Overlay
         }
 
         WorldView worldView = client.getTopLevelWorldView();
-        Scene scene = worldView.getScene();
 
         boolean keyHeld = config.enableCtrlHotkeys() && client.isKeyPressed(KeyCode.KC_CONTROL);
         if (keyHeld)
@@ -109,28 +107,35 @@ public class CreatorsOverlay extends Overlay
             {
                 continue;
             }
-            
-            graphics.setColor(character.getColor());
 
             MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+            int plane = keyFrame.getPlane();
+            if (worldView.getPlane() != plane)
+            {
+                continue;
+            }
+
             int[][] path = keyFrame.getPath();
+
+            Color color = character.getColor();
+            Color shadow = character.getColor().darker().darker();
 
             if (path.length > 0)
             {
-                WorldPoint startPoint = new WorldPoint(path[0][0], path[0][1], keyFrame.getPlane());
+                WorldPoint startPoint = new WorldPoint(path[0][0], path[0][1], plane);
                 LocalPoint localPoint = LocalPoint.fromWorld(worldView, startPoint);
                 if (localPoint != null)
                 {
-                    Point p = Perspective.localToCanvas(client, localPoint, keyFrame.getPlane());
+                    Point p = Perspective.localToCanvas(client, localPoint, plane);
                     String abbreviation = getAbbreviation(character);
-                    OverlayUtil.renderTextLocation(graphics, p, abbreviation, character.getColor());
+                    OverlayUtil.renderTextLocation(graphics, p, abbreviation, color);
                 }
             }
             
             for (int i = 0; i < path.length - 1; i++)
             {
-                WorldPoint wpStart = new WorldPoint(path[i][0], path[i][1], keyFrame.getPlane());
-                WorldPoint wpEnd = new WorldPoint(path[i + 1][0], path[i + 1][1], keyFrame.getPlane());
+                WorldPoint wpStart = new WorldPoint(path[i][0], path[i][1], plane);
+                WorldPoint wpEnd = new WorldPoint(path[i + 1][0], path[i + 1][1], plane);
 
                 LocalPoint lpStart = LocalPoint.fromWorld(worldView, wpStart.getX(), wpStart.getY());
                 LocalPoint lpEnd = LocalPoint.fromWorld(worldView, wpEnd.getX(), wpEnd.getY());
@@ -142,40 +147,49 @@ public class CreatorsOverlay extends Overlay
 
                 if (lpStart != null && lpEnd == null)
                 {
-                    Point startPoint = Perspective.localToCanvas(client, lpStart, worldView.getPlane());
+                    Point startPoint = Perspective.localToCanvas(client, lpStart, plane);
                     if (startPoint == null)
                     {
                         continue;
                     }
 
+                    graphics.setColor(shadow);
+                    graphics.drawRect(startPoint.getX() - 4, startPoint.getY() - 4, 10, 10);
+                    graphics.setColor(color);
                     graphics.drawRect(startPoint.getX() - 5, startPoint.getY() - 5, 10, 10);
                     continue;
                 }
 
                 if (lpStart == null && lpEnd != null)
                 {
-                    Point endPoint = Perspective.localToCanvas(client, lpEnd, worldView.getPlane());
+                    Point endPoint = Perspective.localToCanvas(client, lpEnd, plane);
                     if (endPoint == null)
                     {
                         continue;
                     }
 
+                    graphics.setColor(shadow);
+                    graphics.drawRect(endPoint.getX() - 4, endPoint.getY() - 4, 10, 10);
+                    graphics.setColor(color);
                     graphics.drawRect(endPoint.getX() - 5, endPoint.getY() - 5, 10, 10);
                     continue;
                 }
 
-                Point startPoint = Perspective.localToCanvas(client, lpStart, worldView.getPlane());
+                Point startPoint = Perspective.localToCanvas(client, lpStart, plane);
                 if (startPoint == null)
                 {
                     continue;
                 }
 
-                Point endPoint = Perspective.localToCanvas(client, lpEnd, worldView.getPlane());
+                Point endPoint = Perspective.localToCanvas(client, lpEnd, plane);
                 if (endPoint == null)
                 {
                     continue;
                 }
 
+                graphics.setColor(shadow);
+                graphics.drawLine(startPoint.getX() + 1, startPoint.getY() + 1, endPoint.getX() + 1, endPoint.getY() + 1);
+                graphics.setColor(color);
                 graphics.drawLine(startPoint.getX(), startPoint.getY(), endPoint.getX(), endPoint.getY());
             }
         }
@@ -197,19 +211,23 @@ public class CreatorsOverlay extends Overlay
             graphics.setColor(character.getColor());
 
             MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
-            if (keyFrame.getPlane() != worldView.getPlane())
+            int plane = keyFrame.getPlane();
+            if (worldView.getPlane() != plane)
             {
                 continue;
             }
+
+            Color color = character.getColor();
+            Color shadow = character.getColor().darker().darker();
 
             int[][] path = keyFrame.getPath();
 
             if (path.length > 0)
             {
                 LocalPoint localPoint = new LocalPoint(path[0][0], path[0][1], worldView);
-                Point p = Perspective.localToCanvas(client, localPoint, keyFrame.getPlane());
+                Point p = Perspective.localToCanvas(client, localPoint, plane);
                 String abbreviation = getAbbreviation(character);
-                OverlayUtil.renderTextLocation(graphics, p, abbreviation, character.getColor());
+                OverlayUtil.renderTextLocation(graphics, p, abbreviation, color);
             }
 
             for (int i = 0; i < path.length - 1; i++)
@@ -224,40 +242,49 @@ public class CreatorsOverlay extends Overlay
 
                 if (lpStart.isInScene() && !lpEnd.isInScene())
                 {
-                    Point startPoint = Perspective.localToCanvas(client, lpStart, worldView.getPlane());
+                    Point startPoint = Perspective.localToCanvas(client, lpStart, plane);
                     if (startPoint == null)
                     {
                         continue;
                     }
 
+                    graphics.setColor(shadow);
+                    graphics.drawRect(startPoint.getX() - 4, startPoint.getY() - 4, 10, 10);
+                    graphics.setColor(color);
                     graphics.drawRect(startPoint.getX() - 5, startPoint.getY() - 5, 10, 10);
                     continue;
                 }
 
                 if (!lpStart.isInScene() && lpEnd.isInScene())
                 {
-                    Point endPoint = Perspective.localToCanvas(client, lpEnd, worldView.getPlane());
+                    Point endPoint = Perspective.localToCanvas(client, lpEnd, plane);
                     if (endPoint == null)
                     {
                         continue;
                     }
 
+                    graphics.setColor(shadow);
+                    graphics.drawRect(endPoint.getX() - 4, endPoint.getY() - 4, 10, 10);
+                    graphics.setColor(color);
                     graphics.drawRect(endPoint.getX() - 5, endPoint.getY() - 5, 10, 10);
                     continue;
                 }
 
-                Point startPoint = Perspective.localToCanvas(client, lpStart, worldView.getPlane());
+                Point startPoint = Perspective.localToCanvas(client, lpStart, plane);
                 if (startPoint == null)
                 {
                     continue;
                 }
 
-                Point endPoint = Perspective.localToCanvas(client, lpEnd, worldView.getPlane());
+                Point endPoint = Perspective.localToCanvas(client, lpEnd, plane);
                 if (endPoint == null)
                 {
                     continue;
                 }
 
+                graphics.setColor(shadow);
+                graphics.drawLine(startPoint.getX() + 1, startPoint.getY() + 1, endPoint.getX() + 1, endPoint.getY() + 1);
+                graphics.setColor(color);
                 graphics.drawLine(startPoint.getX(), startPoint.getY(), endPoint.getX(), endPoint.getY());
             }
         }
@@ -381,7 +408,7 @@ public class CreatorsOverlay extends Overlay
         }
 
         LocalPoint lp = ckObject.getLocation();
-        if (lp == null || !plugin.isInScene(character))
+        if (lp == null || !lp.isInScene())
         {
             return;
         }
@@ -398,7 +425,7 @@ public class CreatorsOverlay extends Overlay
         for (int i = 0; i < plugin.getCharacters().size(); i++)
         {
             Character character = plugin.getCharacters().get(i);
-            if (!plugin.isInScene(character) || !character.isActive())
+            if (!character.isActive())
             {
                 continue;
             }
@@ -410,7 +437,7 @@ public class CreatorsOverlay extends Overlay
             }
 
             LocalPoint lp = ckObject.getLocation();
-            if (lp == null)
+            if (lp == null || !lp.isInScene())
             {
                 continue;
             }
@@ -450,7 +477,7 @@ public class CreatorsOverlay extends Overlay
                 return;
             }
 
-            OverlayUtil.renderTextLocation(graphics, point, name, MY_OBJECT_COLOUR);
+            OverlayUtil.renderTextLocation(graphics, point, name, character.getColor());
         }
     }
 

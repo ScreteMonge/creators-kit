@@ -245,6 +245,16 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 
 		oculusOrbSpeed = config.orbSpeed();
+
+		String string = configManager.getConfiguration("creatorssuite", "overlaysActive");
+		try
+		{
+            overlaysActive = Boolean.parseBoolean(string);
+		}
+		catch (Exception e)
+		{
+			overlaysActive = false;
+		}
 	}
 
 	@Override
@@ -324,11 +334,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			for (int i = 0; i < characters.size(); i++)
 			{
 				Character character = characters.get(i);
-				boolean active = character.isActive();
-				setLocation(character, false, LocationOption.TO_CURRENT_TICK);
-				//resetProgram(character, character.getProgram().getComp().isProgramActive());
-				if (!active)
-					despawnCharacter(character);
+				setLocation(character, false, character.isActive(), LocationOption.TO_CURRENT_TICK);
 			}
 		}
 	}
@@ -691,15 +697,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	{
 		if (event.getGameState() == GameState.LOGGED_IN)
 		{
-			for (Character character : characters)
+			for (int i = 0; i < characters.size(); i++)
 			{
-				boolean active = character.isActive();
-				setLocation(character, false, LocationOption.TO_CURRENT_TICK);
-
-				if (!active)
-				{
-					despawnCharacter(character);
-				}
+				Character character = characters.get(i);
+				setLocation(character, false, character.isActive(), LocationOption.TO_CURRENT_TICK);
 			}
 
 			if (config.enableTransmog() && transmog != null)
@@ -747,7 +748,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 						.setOption(ColorUtil.prependColorTag("Relocate", Color.ORANGE))
 						.setTarget(ColorUtil.colorTag(Color.GREEN) + selectedCharacter.getName())
 						.setType(MenuAction.RUNELITE)
-						.onClick(e -> setLocation(selectedCharacter, true, LocationOption.TO_HOVERED_TILE));
+						.onClick(e -> setLocation(selectedCharacter, true, true, LocationOption.TO_HOVERED_TILE));
 			}
 		}
 
@@ -873,7 +874,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 	}
 
-	public void setLocation(Character character, boolean newLocation, LocationOption locationOption)
+	public void setLocation(Character character, boolean newLocation, boolean setActive, LocationOption locationOption)
 	{
 		if (client.getGameState() != GameState.LOGGED_IN)
 		{
@@ -882,21 +883,16 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		boolean poh = MovementManager.isInPOH(client.getTopLevelWorldView());
 
-		if (!newLocation && !isInScene(character))
-		{
-			return;
-		}
-
 		if (poh)
 		{
-			setLocationPOH(character, newLocation, locationOption);
+			setLocationPOH(character, newLocation, setActive, locationOption);
 			return;
 		}
 
-		setLocationWorld(character, newLocation, locationOption);
+		setLocationWorld(character, newLocation, setActive, locationOption);
 	}
 
-	public void setLocationWorld(Character character, boolean newLocation, LocationOption locationOption)
+	public void setLocationWorld(Character character, boolean newLocation, boolean setActive, LocationOption locationOption)
 	{
 		clientThread.invokeLater(() ->
 		{
@@ -968,6 +964,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					}
 
 					localPoint = tile.getLocalLocation();
+					if (localPoint == null || !localPoint.isInScene())
+					{
+						return;
+					}
+
 					break;
 				case TO_SAVED_LOCATION:
 				default:
@@ -989,14 +990,16 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			}
 
 			CKObject ckObject = character.getCkObject();
-			ckObject.setActive(false);
 			ckObject.setLocation(localPoint, worldView.getPlane());
 			if (locationOption == LocationOption.TO_HOVERED_TILE)
 			{
 				creatorsPanel.getToolBox().getProgrammer().registerMovementChanges(character);
 			}
-			ckObject.setActive(true);
-			character.setActive(true);
+
+			if (setActive)
+			{
+				character.setActive(true, true, clientThread);
+			}
 
 			int orientation = (int) character.getOrientationSpinner().getValue();
 			ckObject.setOrientation(orientation);
@@ -1022,7 +1025,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		});
 	}
 
-	public void setLocationPOH(Character character, boolean newLocation, LocationOption locationOption)
+	public void setLocationPOH(Character character, boolean newLocation, boolean setActive, LocationOption locationOption)
 	{
 		clientThread.invokeLater(() ->
 		{
@@ -1093,6 +1096,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					}
 
 					localPoint = tile.getLocalLocation();
+					if (localPoint == null || !localPoint.isInScene())
+					{
+						return;
+					}
 					break;
 				case TO_SAVED_LOCATION:
 				default:
@@ -1115,18 +1122,19 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 
 			CKObject ckObject = character.getCkObject();
-			ckObject.setActive(false);
 			ckObject.setLocation(localPoint, worldView.getPlane());
 			if (locationOption == LocationOption.TO_HOVERED_TILE)
 			{
 				creatorsPanel.getToolBox().getProgrammer().registerMovementChanges(character);
 			}
-			ckObject.setActive(true);
-			character.setActive(true);
+
+			if (setActive)
+			{
+				character.setActive(true, true, clientThread);
+			}
 
 			int orientation = (int) character.getOrientationSpinner().getValue();
 			ckObject.setOrientation(orientation);
-			character.getSpawnButton().setText("Spawn");
 
 			CKObject spotanim1 = character.getSpotAnim1();
 			CKObject spotanim2 = character.getSpotAnim2();
@@ -1152,77 +1160,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	public double getCurrentTick()
 	{
 		return creatorsPanel.getToolBox().getTimeSheetPanel().getCurrentTime();
-	}
-
-	public boolean isInScene(Character character)
-	{
-		WorldView worldView = client.getTopLevelWorldView();
-		boolean poh = MovementManager.isInPOH(worldView);
-		if (poh && character.isInPOH())
-		{
-			if (character.getInstancedPoint() == null)
-			{
-				return false;
-			}
-
-			if (character.getInstancedPlane() != worldView.getPlane())
-			{
-				return false;
-			}
-
-			return true;
-		}
-
-		if (!poh && !character.isInPOH())
-		{
-			WorldPoint worldPoint = character.getNonInstancedPoint();
-			if (worldPoint == null)
-				return false;
-
-			return worldPoint.isInScene(client);
-		}
-
-		return false;
-	}
-
-	public void toggleSpawn(JButton spawnButton, Character character)
-	{
-		if (character.isActive())
-		{
-			despawnCharacter(character);
-			spawnButton.setText("Depawn");
-			return;
-		}
-
-		spawnCharacter(character);
-		spawnButton.setText("Spawn");
-
-		if (!character.isLocationSet())
-		{
-			setLocation(character, true, LocationOption.TO_PLAYER);
-		}
-	}
-
-	public void spawnCharacter(Character character)
-	{
-		CKObject ckObject = character.getCkObject();
-		character.setActive(true);
-		clientThread.invokeLater(() -> ckObject.setActive(true));
-	}
-
-	public void despawnCharacter(Character character)
-	{
-		CKObject ckObject = character.getCkObject();
-		character.setActive(false);
-		clientThread.invokeLater(() ->
-		{
-			if (ckObject == null)
-			{
-				return;
-			}
-
-			ckObject.setActive(false);
-		});
 	}
 
 	public void setModel(Character character, boolean modelMode, int modelId)
@@ -1315,10 +1252,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			setAnimationFrame(character, (int) character.getAnimationFrameSpinner().getValue(), true);
 
 			LocationOption locationOption = setHoveredTile ? LocationOption.TO_HOVERED_TILE : LocationOption.TO_SAVED_LOCATION;
-			setLocation(character, !character.isLocationSet(), locationOption);
-
-			ckObject.setActive(active);
-			character.setActive(active);
+			setLocation(character, !character.isLocationSet(), active, locationOption);
 
 			creatorsPanel.getToolBox().getProgrammer().updateProgram(character);
 		});
@@ -2290,6 +2224,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		public void hotkeyPressed()
 		{
 			overlaysActive = !overlaysActive;
+			configManager.setConfiguration("creatorssuite", "overlaysActive", String.valueOf(overlaysActive));
 		}
 	};
 
@@ -2368,7 +2303,12 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		{
 			if (selectedCharacter != null)
 			{
-				toggleSpawn(selectedCharacter.getSpawnButton(), selectedCharacter);
+				selectedCharacter.toggleActive(clientThread);
+
+				if (!selectedCharacter.isLocationSet())
+				{
+					setLocation(selectedCharacter, true, true, LocationOption.TO_PLAYER);
+				}
 			}
 		}
 	};
@@ -2380,7 +2320,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		{
 			if (selectedCharacter != null)
 			{
-				setLocation(selectedCharacter, true, LocationOption.TO_HOVERED_TILE);
+				setLocation(selectedCharacter, true, true, LocationOption.TO_HOVERED_TILE);
 			}
 		}
 	};
@@ -2486,7 +2426,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 
 		LocalPoint localPoint = tile.getLocalLocation();
-		if (localPoint == null)
+		if (localPoint == null || !localPoint.isInScene())
 		{
 			return;
 		}
@@ -2496,7 +2436,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		{
 			TimeSheetPanel timeSheetPanel = creatorsPanel.getToolBox().getTimeSheetPanel();
 			timeSheetPanel.initializeMovementKeyFrame(selectedCharacter, worldView, localPoint);
-			setLocation(selectedCharacter, true, LocationOption.TO_PATH_START);
+			setLocation(selectedCharacter, true, true, LocationOption.TO_PATH_START);
 			return;
 		}
 
@@ -2504,11 +2444,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		movementManager.addProgramStep(keyFrame, worldView, localPoint);
 		if (keyFrame.getPath().length == 1)
 		{
-			setLocation(selectedCharacter, true, LocationOption.TO_PATH_START);
+			setLocation(selectedCharacter, true, true, LocationOption.TO_PATH_START);
 		}
 		else
 		{
-			setLocation(selectedCharacter, false, LocationOption.TO_CURRENT_TICK);
+			setLocation(selectedCharacter, false, true, LocationOption.TO_CURRENT_TICK);
 		}
 		/*
 		if (selectedCharacter != null)
@@ -2630,7 +2570,13 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 		}
 
-		keyFrame.setPath(ArrayUtils.remove(path, path.length - 1));
+		int newLength = path.length - 1;
+		if (keyFrame.getCurrentStep() > newLength)
+		{
+			keyFrame.setCurrentStep(newLength);
+		}
+
+		keyFrame.setPath(ArrayUtils.remove(path, newLength));
 	}
 
 	private final HotkeyListener clearProgramStepListener = new HotkeyListener(() -> config.clearProgramStepHotkey())
@@ -2657,6 +2603,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
 		keyFrame.setPath(new int[0][2]);
+		keyFrame.setCurrentStep(0);
 	}
 
 	private final HotkeyListener playPauseListener = new HotkeyListener(() -> config.playPauseHotkey())

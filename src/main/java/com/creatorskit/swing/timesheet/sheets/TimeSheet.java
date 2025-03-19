@@ -483,8 +483,14 @@ public class TimeSheet extends JPanel
                         }
                         else
                         {
-                            KeyFrame keyFrame = getClickedKeyFrames()[0];
-                            change = round(getCurrentTime() - keyFrame.getTick());
+                            KeyFrame[] clickedFrames = getClickedKeyFrames();
+                            change = 0;
+
+                            if (clickedFrames.length > 0)
+                            {
+                                KeyFrame keyFrame = clickedFrames[0];
+                                change = round(getCurrentTime() - keyFrame.getTick());
+                            }
                         }
 
                         for (KeyFrame keyFrame : keyFrames)
