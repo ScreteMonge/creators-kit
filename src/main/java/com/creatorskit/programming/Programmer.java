@@ -3,6 +3,7 @@ package com.creatorskit.programming;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.CKObject;
+import com.creatorskit.LocationOption;
 import com.creatorskit.models.*;
 import com.creatorskit.models.datatypes.SpotanimData;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
@@ -11,12 +12,14 @@ import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
+import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.ClientTick;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.Subscribe;
 
 import javax.inject.Inject;
 import java.util.ArrayList;
+import java.util.Collection;
 
 public class Programmer
 {
@@ -254,7 +257,6 @@ public class Programmer
 
     /**
      * Gets the LocalPoint corresponding to the exact tick for the current time, including both full tile and sub tile coordinates.
-     * Used primarily when setting the time in the TimeLine or when setting Location via hotkeys.
      * @param worldView the current WorldView
      * @param character the character to find the location for
      * @param keyFrame the keyframe from the character to get the path from
@@ -326,7 +328,7 @@ public class Programmer
      */
     private LocalPoint getLocation(WorldView worldView, MovementKeyFrame keyFrame, int step)
     {
-        boolean isInPOH = MovementManager.isInPOH(worldView);
+        boolean isInPOH = MovementManager.useLocalLocations(worldView);
         if (keyFrame.isPoh() != isInPOH)
         {
             return null;
@@ -342,7 +344,7 @@ public class Programmer
 
         if (isInPOH)
         {
-            LocalPoint lp = new LocalPoint(currentStep[0], currentStep[1], worldView);
+            LocalPoint lp = LocalPoint.fromScene(currentStep[0], currentStep[1], worldView);
             if (!lp.isInScene())
             {
                 return null;
@@ -351,7 +353,14 @@ public class Programmer
             return lp;
         }
 
-        LocalPoint lp = LocalPoint.fromWorld(worldView, currentStep[0], currentStep[1]);
+        WorldPoint wp = new WorldPoint(currentStep[0], currentStep[1], keyFrame.getPlane());
+        if (worldView.isInstance())
+        {
+            Collection<WorldPoint> wps = WorldPoint.toLocalInstance(worldView, wp);
+            wp = wps.iterator().next();
+        }
+
+        LocalPoint lp = LocalPoint.fromWorld(worldView, wp);
         if (lp == null || !lp.isInScene())
         {
             return null;
@@ -379,7 +388,6 @@ public class Programmer
             playing = true;
             timeSheetPanel.setPlayButtonIcon(true);
             double currentTime = timeSheetPanel.getCurrentTime();
-            //timeSheetPanel.setCurrentTime(Math.floor(currentTime), false);
 
             ArrayList<Character> characters = plugin.getCharacters();
             for (int i = 0; i < characters.size(); i++)
@@ -395,7 +403,7 @@ public class Programmer
         triggerPause = true;
     }
 
-    private void pause()
+    public void pause()
     {
         triggerPause = false;
         playing = false;
@@ -435,14 +443,6 @@ public class Programmer
     }
 
     /**
-     * Loops through all Characters and updates their current KeyFrame for the current time
-     */
-    public void updatePrograms()
-    {
-        updatePrograms(timeSheetPanel.getCurrentTime());
-    }
-
-    /**
      * Loops through all Characters and updates their current KeyFrame for the given time
      * Intended for use when manually setting the current tick in the program
      * @param tick the tick at which to look for KeyFrames
@@ -470,7 +470,7 @@ public class Programmer
             KeyFrame[] currentFrames = character.getCurrentFrames();
 
             KeyFrame currentMovement = currentFrames[KeyFrameType.getIndex(KeyFrameType.MOVEMENT)];
-            double lastMovementTick = 0;
+            double lastMovementTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
             if (currentMovement != null)
             {
                 lastMovementTick = currentMovement.getTick();
@@ -482,12 +482,14 @@ public class Programmer
                 if (nextMovement.getTick() <= currentTime)
                 {
                     character.setCurrentKeyFrame(nextMovement, KeyFrameType.MOVEMENT);
+                    character.resetMovementKeyFrame(client.getGameCycle(), currentTime);
+                    registerMovementChanges(character);
                 }
             }
 
 
             KeyFrame currentAnimation = currentFrames[KeyFrameType.getIndex(KeyFrameType.ANIMATION)];
-            double lastAnimationTick = 0;
+            double lastAnimationTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
             if (currentAnimation != null)
             {
                 lastAnimationTick = currentAnimation.getTick();
@@ -505,7 +507,7 @@ public class Programmer
 
 
             KeyFrame currentSpawn = currentFrames[KeyFrameType.getIndex(KeyFrameType.SPAWN)];
-            double lastSpawnTick = 0;
+            double lastSpawnTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
             if (currentSpawn != null)
             {
                 lastSpawnTick = currentSpawn.getTick();
@@ -523,7 +525,7 @@ public class Programmer
 
 
             KeyFrame currentModel = currentFrames[KeyFrameType.getIndex(KeyFrameType.MODEL)];
-            double lastModelTick = 0;
+            double lastModelTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
             if (currentModel != null)
             {
                 lastModelTick = currentModel.getTick();
@@ -541,7 +543,7 @@ public class Programmer
 
 
             KeyFrame currentOrientation = currentFrames[KeyFrameType.getIndex(KeyFrameType.ORIENTATION)];
-            double lastOrientationTick = 0;
+            double lastOrientationTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
             if (currentOrientation != null)
             {
                 lastOrientationTick = currentOrientation.getTick();
@@ -559,7 +561,7 @@ public class Programmer
 
 
             KeyFrame currentText = currentFrames[KeyFrameType.getIndex(KeyFrameType.TEXT)];
-            double lastTextTick = 0;
+            double lastTextTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
             if (currentText != null)
             {
                 lastTextTick = currentText.getTick();
@@ -576,7 +578,7 @@ public class Programmer
 
 
             KeyFrame currentOverhead = currentFrames[KeyFrameType.getIndex(KeyFrameType.OVERHEAD)];
-            double lastOverheadTick = 0;
+            double lastOverheadTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
             if (currentOverhead != null)
             {
                 lastOverheadTick = currentOverhead.getTick();
@@ -593,7 +595,7 @@ public class Programmer
 
 
             KeyFrame currentHealth = currentFrames[KeyFrameType.getIndex(KeyFrameType.HEALTH)];
-            double lastHealthTick = 0;
+            double lastHealthTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
             if (currentHealth != null)
             {
                 lastHealthTick = currentHealth.getTick();
@@ -610,7 +612,7 @@ public class Programmer
 
 
             KeyFrame currentSpotAnim = currentFrames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM)];
-            double lastSpotAnimTick = 0;
+            double lastSpotAnimTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
             if (currentSpotAnim != null)
             {
                 lastSpotAnimTick = currentSpotAnim.getTick();
@@ -627,7 +629,7 @@ public class Programmer
 
 
             KeyFrame currentSpotAnim2 = currentFrames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM2)];
-            double lastSpotAnim2Tick = 0;
+            double lastSpotAnim2Tick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
             if (currentSpotAnim2 != null)
             {
                 lastSpotAnim2Tick = currentSpotAnim2.getTick();
@@ -673,6 +675,28 @@ public class Programmer
         KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
         if (kf == null)
         {
+            kf = character.findNextKeyFrame(KeyFrameType.MOVEMENT, timeSheetPanel.getCurrentTime());
+            if (kf == null)
+            {
+                plugin.setLocation(character, false, true, LocationOption.TO_SAVED_LOCATION);
+                return;
+            }
+
+            MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+            if (keyFrame.getPlane() != worldView.getPlane())
+            {
+                return;
+            }
+
+            int[][] path = keyFrame.getPath();
+            if (path.length == 0)
+            {
+                plugin.setLocation(character, false, true, LocationOption.TO_SAVED_LOCATION);
+                return;
+            }
+
+            LocalPoint lp = getLocation(worldView, keyFrame, 0);
+            ckObject.setLocation(lp, keyFrame.getPlane());
             return;
         }
 

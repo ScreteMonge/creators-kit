@@ -59,7 +59,10 @@ public class TextOverlay extends Overlay
                 continue;
             }
 
-            if (!textKeyFrame.isEnabled())
+            int duration = textKeyFrame.getDuration();
+            double startTick = textKeyFrame.getTick();
+            double currentTick = plugin.getCurrentTick();
+            if (currentTick > duration + startTick)
             {
                 continue;
             }

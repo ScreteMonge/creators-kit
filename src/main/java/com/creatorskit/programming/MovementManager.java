@@ -1,11 +1,9 @@
 package com.creatorskit.programming;
 
-import com.creatorskit.Character;
+import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
-import com.creatorskit.LocationOption;
 import com.creatorskit.swing.timesheet.keyframe.MovementKeyFrame;
 import net.runelite.api.Client;
-import net.runelite.api.Tile;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
@@ -18,14 +16,17 @@ public class MovementManager
 {
     private Client client;
     private CreatorsPlugin plugin;
+    private CreatorsConfig config;
     private PathFinder pathFinder;
     private static final int[] POH_REGIONS = new int[]{7257, 7513, 7514, 7769, 7770, 8025, 8026};
+    private static final int[] GAUNTLET_REGIONS = new int[]{7512, 7768};
 
     @Inject
-    public MovementManager(Client client, CreatorsPlugin plugin, PathFinder pathFinder)
+    public MovementManager(Client client, CreatorsPlugin plugin, CreatorsConfig config, PathFinder pathFinder)
     {
         this.client = client;
         this.plugin = plugin;
+        this.config = config;
         this.pathFinder = pathFinder;
     }
 
@@ -36,15 +37,7 @@ public class MovementManager
             return;
         }
 
-        /*
-        if (!isInScene(keyFrame))
-        {
-            return;
-        }
-
-         */
-
-        if (isInPOH(worldView))
+        if (useLocalLocations(worldView))
         {
             addPOHStep(keyFrame, worldView, localPoint);
             return;
@@ -71,7 +64,7 @@ public class MovementManager
         }
 
         int[] lastStep = path[path.length - 1];
-        int[][] stepsToAdd = pathFinder.findPath(worldView, new WorldPoint(lastStep[0], lastStep[1], worldView.getPlane()), worldPoint, keyFrame.getMovementType());
+        int[][] stepsToAdd = pathFinder.findPath(worldView, new WorldPoint(lastStep[0], lastStep[1], worldView.getPlane()), worldPoint, config.movementAlgorithm());
 
         path = ArrayUtils.addAll(path, stepsToAdd);
         keyFrame.setPath(path);
@@ -89,25 +82,44 @@ public class MovementManager
         int[][] path = keyFrame.getPath();
         if (path.length == 0)
         {
-            keyFrame.setPath(new int[][]{new int[]{localPoint.getSceneX(), localPoint.getSceneY()}});
+            path = new int[][]{new int[]{localPoint.getSceneX(), localPoint.getSceneY()}};
+            keyFrame.setPath(path);
+            System.out.println("Checking path");
+            for (int[] i : path)
+            {
+                System.out.println("Path: " + i[0] + "," + i[1]);
+            }
+            System.out.println("Unchecking path");
             return;
         }
 
         int[] lastStep = path[path.length - 1];
-        int[][] stepsToAdd = pathFinder.findPath(new LocalPoint(lastStep[0], lastStep[1], worldView), localPoint, keyFrame.getMovementType());
+        int[][] stepsToAdd = pathFinder.findPath(LocalPoint.fromScene(lastStep[0], lastStep[1], worldView), localPoint, config.movementAlgorithm());
 
-        if (path[0] == null)
+        path = ArrayUtils.addAll(path, stepsToAdd);
+        keyFrame.setPath(path);
+
+        System.out.println("Checking path");
+        for (int[] i : path)
         {
-            keyFrame.setPath(stepsToAdd);
-            return;
+            System.out.println("Path: " + i[0] + "," + i[1]);
         }
-
-        keyFrame.setPath(ArrayUtils.addAll(path, stepsToAdd));
+        System.out.println("Unchecking path");
     }
 
-    public static boolean isInPOH(WorldView worldView)
+    public static boolean useLocalLocations(WorldView worldView)
     {
-        return Arrays.stream(worldView.getMapRegions()).anyMatch(x -> Arrays.stream(POH_REGIONS).anyMatch(y -> y == x));
+        if (Arrays.stream(worldView.getMapRegions()).anyMatch(x -> Arrays.stream(POH_REGIONS).anyMatch(y -> y == x)))
+        {
+            return true;
+        }
+
+        if (Arrays.stream(worldView.getMapRegions()).anyMatch(x -> Arrays.stream(GAUNTLET_REGIONS).anyMatch(y -> y == x)))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     /*

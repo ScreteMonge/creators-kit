@@ -1,6 +1,7 @@
 package com.creatorskit;
 
 import com.creatorskit.models.exporters.ExportFileFormat;
+import com.creatorskit.programming.MovementType;
 import net.runelite.client.config.*;
 
 import java.awt.event.KeyEvent;
@@ -319,11 +320,23 @@ public interface CreatorsConfig extends Config
 	String programmer = "programmer";
 
 	@ConfigItem(
+			keyName = "pathAlgorithm",
+			name = "Path Algorithm",
+			description = "The Object pathing algorithm by which to modify Movement Keyframes",
+			section = programmer,
+			position = 0
+	)
+	default MovementType movementAlgorithm()
+	{
+		return MovementType.NORMAL;
+	}
+
+	@ConfigItem(
 			keyName = "addStep",
 			name = "Add Program Step",
 			description = "Hotkey to add the hovered location to the selected object's program",
 			section = programmer,
-			position = 0
+			position = 1
 	)
 	default Keybind addProgramStepHotkey()
 	{
@@ -335,7 +348,7 @@ public interface CreatorsConfig extends Config
 			name = "Remove Program Step",
 			description = "Hotkey to remove the hovered location from the selected object's program",
 			section = programmer,
-			position = 1
+			position = 2
 	)
 	default Keybind removeProgramStepHotkey()
 	{
@@ -347,7 +360,7 @@ public interface CreatorsConfig extends Config
 			name = "Clear Program Steps",
 			description = "Hotkey to clear all steps from the selected object's program",
 			section = programmer,
-			position = 2
+			position = 3
 	)
 	default Keybind clearProgramStepHotkey()
 	{
@@ -359,7 +372,7 @@ public interface CreatorsConfig extends Config
 			name = "Play/Pause Toggle",
 			description = "Hotkey to play/pause selected object",
 			section = programmer,
-			position = 3
+			position = 4
 	)
 	default Keybind playPauseHotkey()
 	{

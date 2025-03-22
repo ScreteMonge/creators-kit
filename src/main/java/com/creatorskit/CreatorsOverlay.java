@@ -15,6 +15,7 @@ import net.runelite.client.ui.overlay.OverlayUtil;
 
 import javax.inject.Inject;
 import java.awt.*;
+import java.util.Collection;
 
 public class CreatorsOverlay extends Overlay
 {
@@ -73,7 +74,7 @@ public class CreatorsOverlay extends Overlay
 
         if (config.pathOverlay())
         {
-            if (MovementManager.isInPOH(worldView))
+            if (MovementManager.useLocalLocations(worldView))
             {
                 renderPOHProgramOverlay(graphics, worldView);
             }
@@ -123,12 +124,21 @@ public class CreatorsOverlay extends Overlay
             if (path.length > 0)
             {
                 WorldPoint startPoint = new WorldPoint(path[0][0], path[0][1], plane);
+                if (worldView.isInstance())
+                {
+                    Collection<WorldPoint> wps = WorldPoint.toLocalInstance(worldView, startPoint);
+                    startPoint = wps.iterator().next();
+                }
+
                 LocalPoint localPoint = LocalPoint.fromWorld(worldView, startPoint);
-                if (localPoint != null)
+                if (localPoint != null && localPoint.isInScene())
                 {
                     Point p = Perspective.localToCanvas(client, localPoint, plane);
                     String abbreviation = getAbbreviation(character);
-                    OverlayUtil.renderTextLocation(graphics, p, abbreviation, color);
+                    if (p != null)
+                    {
+                        OverlayUtil.renderTextLocation(graphics, p, abbreviation, color);
+                    }
                 }
             }
             
@@ -136,6 +146,14 @@ public class CreatorsOverlay extends Overlay
             {
                 WorldPoint wpStart = new WorldPoint(path[i][0], path[i][1], plane);
                 WorldPoint wpEnd = new WorldPoint(path[i + 1][0], path[i + 1][1], plane);
+
+                if (worldView.isInstance())
+                {
+                    Collection<WorldPoint> wpsStart = WorldPoint.toLocalInstance(worldView, wpStart);
+                    wpStart = wpsStart.iterator().next();
+                    Collection<WorldPoint> wpsEnd = WorldPoint.toLocalInstance(worldView, wpEnd);
+                    wpEnd = wpsEnd.iterator().next();
+                }
 
                 LocalPoint lpStart = LocalPoint.fromWorld(worldView, wpStart.getX(), wpStart.getY());
                 LocalPoint lpEnd = LocalPoint.fromWorld(worldView, wpEnd.getX(), wpEnd.getY());
@@ -224,16 +242,19 @@ public class CreatorsOverlay extends Overlay
 
             if (path.length > 0)
             {
-                LocalPoint localPoint = new LocalPoint(path[0][0], path[0][1], worldView);
+                LocalPoint localPoint = LocalPoint.fromScene(path[0][0], path[0][1], worldView);
                 Point p = Perspective.localToCanvas(client, localPoint, plane);
                 String abbreviation = getAbbreviation(character);
-                OverlayUtil.renderTextLocation(graphics, p, abbreviation, color);
+                if (p != null)
+                {
+                    OverlayUtil.renderTextLocation(graphics, p, abbreviation, color);
+                }
             }
 
             for (int i = 0; i < path.length - 1; i++)
             {
-                LocalPoint lpStart = new LocalPoint(path[i][0], path[i][1], worldView);
-                LocalPoint lpEnd = new LocalPoint(path[i + 1][0], path[i + 1][1], worldView);
+                LocalPoint lpStart = LocalPoint.fromScene(path[i][0], path[i][1], worldView);
+                LocalPoint lpEnd = LocalPoint.fromScene(path[i + 1][0], path[i + 1][1], worldView);
 
                 if (!lpStart.isInScene() && !lpEnd.isInScene())
                 {

@@ -5,7 +5,7 @@ import com.creatorskit.models.CustomModel;
 import com.creatorskit.models.DataFinder;
 import com.creatorskit.models.datatypes.NPCData;
 import com.creatorskit.programming.Direction;
-import com.creatorskit.programming.MovementType;
+import com.creatorskit.programming.MovementManager;
 import com.creatorskit.swing.AutoCompletion;
 import com.creatorskit.swing.timesheet.attributes.*;
 import com.creatorskit.swing.timesheet.keyframe.*;
@@ -13,6 +13,7 @@ import com.creatorskit.swing.timesheet.keyframe.settings.*;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.Client;
+import net.runelite.api.WorldView;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
@@ -109,12 +110,20 @@ public class AttributePanel extends JPanel
 
         c.gridx = 2;
         c.gridy = 0;
+        JButton update = new JButton("Update");
+        update.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        update.addActionListener(e -> timeSheetPanel.onUpdateButtonPressed());
+        add(update, c);
+
+        c.gridx = 3;
+        c.gridy = 0;
         keyFramed.setIcon(keyframeEmptyImage);
         keyFramed.setPreferredSize(new Dimension(18, 18));
+        keyFramed.setBackground(ColorScheme.DARK_GRAY_COLOR);
         keyFramed.addActionListener(e -> timeSheetPanel.onKeyFrameIconPressedEvent());
         add(keyFramed, c);
 
-        c.gridwidth = 3;
+        c.gridwidth = 4;
         c.weightx = 1;
         c.weighty = 1;
         c.gridx = 0;
@@ -160,9 +169,9 @@ public class AttributePanel extends JPanel
      * Create a keyframe out of the current AttributePanel settings, based on which card is currently being shown
      * @return a keyframe of type depending on which card is currently showing, with settings based on what is displayed on that card
      */
-    public KeyFrame createKeyFrame()
+    public KeyFrame createKeyFrame(double tick)
     {
-        return createKeyFrame(selectedKeyFramePage);
+        return createKeyFrame(selectedKeyFramePage, tick);
     }
 
     /**
@@ -170,52 +179,26 @@ public class AttributePanel extends JPanel
      * @param keyFrameType the type of keyframe to add
      * @return a keyframe of indicated type, with settings based on what is displayed on that card
      */
-    public KeyFrame createKeyFrame(KeyFrameType keyFrameType)
+    public KeyFrame createKeyFrame(KeyFrameType keyFrameType, double tick)
     {
         switch (keyFrameType)
         {
             default:
             case MOVEMENT:
-                return null;
-                /*
-                if (client.getGameState() != GameState.LOGGED_IN)
-                {
-                    return null;
-                }
-
                 WorldView worldView = client.getTopLevelWorldView();
-                if (worldView == null)
-                {
-                    return null;
-                }
-
-                Tile tile = worldView.getSelectedSceneTile();
-                if (tile == null)
-                {
-                    return null;
-                }
-
-                LocalPoint localPoint = tile.getLocalLocation();
-                if (localPoint == null)
-                {
-                    return null;
-                }
-
-                boolean instance = worldView.isInstance();
-
                 return new MovementKeyFrame(
-                        timeSheetPanel.getCurrentTime(),
-                        movementProgram,
+                        tick,
+                        worldView.getPlane(),
+                        MovementManager.useLocalLocations(worldView),
                         new int[0][],
+                        0,
+                        0,
                         movementAttributes.getLoop().getSelectedItem() == Toggle.ENABLE,
-                        (double) movementAttributes.getSpeed().getValue(),
-                        (MovementType) movementAttributes.getMovementType().getSelectedItem()
+                        (double) movementAttributes.getSpeed().getValue()
                 );
-
-                 */
             case ANIMATION:
                 return new AnimationKeyFrame(
-                        timeSheetPanel.getCurrentTime(),
+                        tick,
                         (int) animAttributes.getAction().getValue(),
                         animAttributes.getLoop().getSelectedItem() == Toggle.ENABLE,
                         (int) animAttributes.getIdle().getValue(),
@@ -229,37 +212,37 @@ public class AttributePanel extends JPanel
                 );
             case ORIENTATION:
                 return new OrientationKeyFrame(
-                        timeSheetPanel.getCurrentTime(),
+                        tick,
                         (int) oriAttributes.getManual().getValue(),
                         oriAttributes.getManualOverride().getSelectedItem() == OrientationToggle.MANUAL_ORIENTATION
                 );
             case SPAWN:
                 return new SpawnKeyFrame(
-                        timeSheetPanel.getCurrentTime(),
+                        tick,
                         spawnAttributes.getSpawn().getSelectedItem() == Toggle.ENABLE
                 );
             case MODEL:
                 return new ModelKeyFrame(
-                        timeSheetPanel.getCurrentTime(),
+                        tick,
                         modelAttributes.getModelOverride().getSelectedItem() == ModelToggle.CUSTOM_MODEL,
                         (int) modelAttributes.getModelId().getValue(),
                         (CustomModel) modelAttributes.getCustomModel().getSelectedItem()
                 );
             case TEXT:
                 return new TextKeyFrame(
-                        timeSheetPanel.getCurrentTime(),
-                        textAttributes.getEnableBox().getSelectedItem() == Toggle.ENABLE,
+                        tick,
+                        (int) textAttributes.getDuration().getValue(),
                         textAttributes.getText().getText()
                 );
             case OVERHEAD:
                 return new OverheadKeyFrame(
-                        timeSheetPanel.getCurrentTime(),
+                        tick,
                         (OverheadSprite) overheadAttributes.getSkullSprite().getSelectedItem(),
                         (OverheadSprite) overheadAttributes.getPrayerSprite().getSelectedItem()
                 );
             case HEALTH:
                 return new HealthKeyFrame(
-                        timeSheetPanel.getCurrentTime(),
+                        tick,
                         healthAttributes.getEnableBox().getSelectedItem() == Toggle.ENABLE,
                         (HealthbarSprite) healthAttributes.getHealthbarSprite().getSelectedItem(),
                         (int) healthAttributes.getMaxHealth().getValue(),
@@ -275,14 +258,14 @@ public class AttributePanel extends JPanel
                 );
             case SPOTANIM:
                 return new SpotAnimKeyFrame(
-                        timeSheetPanel.getCurrentTime(),
+                        tick,
                         KeyFrameType.SPOTANIM,
                         (int) spotAnimAttributes.getSpotAnimId().getValue(),
                         spotAnimAttributes.getLoop().getSelectedItem() == Toggle.ENABLE
                 );
             case SPOTANIM2:
                 return new SpotAnimKeyFrame(
-                        timeSheetPanel.getCurrentTime(),
+                        tick,
                         KeyFrameType.SPOTANIM2,
                         (int) spotAnim2Attributes.getSpotAnimId().getValue(),
                         spotAnim2Attributes.getLoop().getSelectedItem() == Toggle.ENABLE
@@ -348,23 +331,6 @@ public class AttributePanel extends JPanel
         JSpinner speed = movementAttributes.getSpeed();
         speed.setModel(new SpinnerNumberModel(1, 0.5, 10, 0.5));
         card.add(speed, c);
-
-        c.gridwidth = 1;
-        c.gridx = 0;
-        c.gridy = 3;
-        JLabel movementTypeLabel = new JLabel("Movement Type: ");
-        movementTypeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(movementTypeLabel, c);
-
-        c.gridx = 1;
-        c.gridy = 3;
-        JComboBox<MovementType> movementType = movementAttributes.getMovementType();
-        movementType.setFocusable(false);
-        movementType.addItem(MovementType.NORMAL);
-        movementType.addItem(MovementType.GHOST);
-        movementType.addItem(MovementType.WATERBORNE);
-        movementType.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        card.add(movementType, c);
 
         c.gridwidth = 1;
         c.gridheight = 1;
@@ -883,11 +849,16 @@ public class AttributePanel extends JPanel
         c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 1;
-        JComboBox<Toggle> toggleComboBox = textAttributes.getEnableBox();
-        toggleComboBox.setFocusable(false);
-        toggleComboBox.addItem(Toggle.DISABLE);
-        toggleComboBox.addItem(Toggle.ENABLE);
-        card.add(toggleComboBox, c);
+        JLabel durationLabel = new JLabel("Duration: ");
+        durationLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(durationLabel, c);
+
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.gridy = 1;
+        JSpinner duration = textAttributes.getDuration();
+        duration.setModel(new SpinnerNumberModel(5, 0, 1000000, 1));
+        card.add(duration, c);
 
         c.gridwidth = 1;
         c.gridx = 0;

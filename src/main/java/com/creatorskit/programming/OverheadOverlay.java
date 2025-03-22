@@ -95,7 +95,10 @@ public class OverheadOverlay extends Overlay
             TextKeyFrame textKeyFrame = (TextKeyFrame) character.getCurrentKeyFrame(KeyFrameType.TEXT);
             if (textKeyFrame != null)
             {
-                if (textKeyFrame.isEnabled())
+                int duration = textKeyFrame.getDuration();
+                double startTick = textKeyFrame.getTick();
+                double currentTick = plugin.getCurrentTick();
+                if (currentTick <= duration + startTick)
                 {
                     textBuffer = TEXT_BUFFER;
                 }

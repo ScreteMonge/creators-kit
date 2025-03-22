@@ -33,8 +33,7 @@ public class KeyFrame
                     kf.getCurrentStep(),
                     kf.getStepClientTick(),
                     kf.isLoop(),
-                    kf.getSpeed(),
-                    kf.getMovementType());
+                    kf.getSpeed());
         }
 
         if (keyFrame instanceof AnimationKeyFrame)
@@ -86,7 +85,7 @@ public class KeyFrame
             TextKeyFrame kf = (TextKeyFrame) keyFrame;
             return new TextKeyFrame(
                     tick,
-                    kf.isEnabled(),
+                    kf.getDuration(),
                     kf.getText());
         }
 

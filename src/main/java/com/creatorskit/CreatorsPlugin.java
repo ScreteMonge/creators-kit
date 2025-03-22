@@ -148,6 +148,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private boolean autoSetupPathFound = true;
 	private boolean autoTransmogFound = true;
 	private boolean controlDown = false;
+	private boolean addProgramStep = false;
 
 	@Override
 	protected void startUp() throws Exception
@@ -346,6 +347,12 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 
 		updatePreviewObject(client.getTopLevelWorldView().getSelectedSceneTile());
+
+		if (addProgramStep)
+		{
+			addProgramStep = false;
+			addProgramStep();
+		}
 
 		switch (autoRotateYaw)
 		{
@@ -881,7 +888,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 		}
 
-		boolean poh = MovementManager.isInPOH(client.getTopLevelWorldView());
+		boolean poh = MovementManager.useLocalLocations(client.getTopLevelWorldView());
 
 		if (poh)
 		{
@@ -964,18 +971,13 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					}
 
 					localPoint = tile.getLocalLocation();
-					if (localPoint == null || !localPoint.isInScene())
-					{
-						return;
-					}
-
 					break;
 				case TO_SAVED_LOCATION:
 				default:
 					break;
 			}
 
-			if (localPoint == null)
+			if (localPoint == null || !localPoint.isInScene())
 			{
 				return;
 			}
@@ -1066,7 +1068,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 					if (locationOption == LocationOption.TO_PATH_START)
 					{
-						localPoint = new LocalPoint(path[0][0], path[0][1], worldView);
+						localPoint = LocalPoint.fromScene(path[0][0], path[0][1], worldView);
 						break;
 					}
 
@@ -1096,24 +1098,20 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					}
 
 					localPoint = tile.getLocalLocation();
-					if (localPoint == null || !localPoint.isInScene())
-					{
-						return;
-					}
 					break;
 				case TO_SAVED_LOCATION:
 				default:
 					break;
 			}
 
-			if (localPoint == null)
+			if (localPoint == null || !localPoint.isInScene())
 			{
 				return;
 			}
 
 			if (newLocation)
 			{
-				pathFinder.transplantSteps(character, worldView, localPoint.getX(), localPoint.getY());
+				pathFinder.transplantSteps(character, worldView, localPoint.getSceneX(), localPoint.getSceneY());
 				character.setLocationSet(true);
 				character.setInstancedPoint(localPoint);
 				character.setInstancedPlane(worldView.getPlane());
@@ -1252,7 +1250,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			setAnimationFrame(character, (int) character.getAnimationFrameSpinner().getValue(), true);
 
 			LocationOption locationOption = setHoveredTile ? LocationOption.TO_HOVERED_TILE : LocationOption.TO_SAVED_LOCATION;
-			setLocation(character, !character.isLocationSet(), active, locationOption);
+			setLocation(character, true, active, locationOption);
 
 			creatorsPanel.getToolBox().getProgrammer().updateProgram(character);
 		});
@@ -1865,192 +1863,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		storedModels.remove(customModel);
 	}
 
-	/*
-
-	public void updateProgramPath(Program program, boolean gameStateChanged, boolean instanced)
-	{
-		if (client.getGameState() != GameState.LOGGED_IN)
-		{
-			return;
-		}
-
-		if (instanced)
-		{
-			updateInstancedProgramPath(program, gameStateChanged);
-			return;
-		}
-
-		updateNonInstancedProgramPath(program, gameStateChanged);
-	}
-
-	public void updateInstancedProgramPath(Program program, boolean gameStateChanged)
-	{
-		Scene scene = client.getTopLevelWorldView().getScene();
-		ProgramComp comp = program.getComp();
-		LocalPoint[] stepsLP = comp.getStepsLP();
-		LocalPoint[] pathLP = new LocalPoint[0];
-		Coordinate[] allCoordinates = new Coordinate[0];
-
-		if (stepsLP.length < 2)
-		{
-			comp.setPathLP(pathLP);
-			comp.setCoordinates(allCoordinates);
-			return;
-		}
-
-		for (int i = 0; i < stepsLP.length - 1; i++)
-		{
-			Coordinate[] coordinates;
-			coordinates = pathFinder.getPath(stepsLP[i], stepsLP[i + 1], comp.getMovementType());
-
-			if (coordinates == null)
-			{
-				if (!gameStateChanged)
-					sendChatMessage("A path could not be found.");
-
-				comp.setPathFound(false);
-				return;
-			}
-
-			comp.setPathFound(true);
-			allCoordinates = ArrayUtils.addAll(allCoordinates, coordinates);
-
-			Direction direction = Direction.UNSET;
-
-			for (int c = 0; c < coordinates.length - 1; c++)
-			{
-				int x = coordinates[c].getColumn();
-				int y = coordinates[c].getRow();
-				int nextX = coordinates[c + 1].getColumn();
-				int nextY = coordinates[c + 1].getRow();
-				int changeX = nextX - x;
-				int changeY = nextY - y;
-
-				Direction newDirection = Direction.getDirection(changeX, changeY);
-				if (direction == Direction.UNSET || direction != newDirection)
-				{
-					direction = newDirection;
-					LocalPoint localPoint = LocalPoint.fromScene(x, y, scene);
-					pathLP = ArrayUtils.add(pathLP, localPoint);
-				}
-			}
-		}
-
-		pathLP = ArrayUtils.add(pathLP, stepsLP[stepsLP.length - 1]);
-		comp.setPathLP(pathLP);
-		comp.setCoordinates(allCoordinates);
-	}
-
-	public void updateNonInstancedProgramPath(Program program, boolean gameStateChanged)
-	{
-		Scene scene = client.getTopLevelWorldView().getScene();
-		ProgramComp comp = program.getComp();
-		WorldPoint[] stepsWP = comp.getStepsWP();
-		WorldPoint[] pathWP = new WorldPoint[0];
-		Coordinate[] allCoordinates = new Coordinate[0];
-
-		if (stepsWP.length < 2)
-		{
-			comp.setPathWP(pathWP);
-			comp.setCoordinates(allCoordinates);
-			return;
-		}
-
-		for (int i = 0; i < stepsWP.length - 1; i++)
-		{
-			Coordinate[] coordinates;
-			coordinates = pathFinder.getPath(stepsWP[i], stepsWP[i + 1], comp.getMovementType());
-
-			if (coordinates == null) {
-				if (!gameStateChanged)
-					sendChatMessage("A path could not be found.");
-
-				comp.setPathFound(false);
-				return;
-			}
-
-			comp.setPathFound(true);
-			allCoordinates = ArrayUtils.addAll(allCoordinates, coordinates);
-
-			Direction direction = Direction.UNSET;
-
-			for (int c = 0; c < coordinates.length - 1; c++)
-			{
-				int x = coordinates[c].getColumn();
-				int y = coordinates[c].getRow();
-				int nextX = coordinates[c + 1].getColumn();
-				int nextY = coordinates[c + 1].getRow();
-				int changeX = nextX - x;
-				int changeY = nextY - y;
-
-				Direction newDirection = Direction.getDirection(changeX, changeY);
-				if (direction == Direction.UNSET || direction != newDirection)
-				{
-					direction = newDirection;
-					LocalPoint localPoint = LocalPoint.fromScene(x, y, scene);
-					pathWP = ArrayUtils.add(pathWP, WorldPoint.fromLocalInstance(client, localPoint));
-
-				}
-			}
-		}
-
-		pathWP = ArrayUtils.add(pathWP, stepsWP[stepsWP.length - 1]);
-		comp.setPathWP(pathWP);
-		comp.setCoordinates(allCoordinates);
-	}
-
-	 */
-
-	/*
-	public void resetProgram(Character character, boolean restart)
-	{
-		Program program = character.getProgram();
-		ProgramComp comp = program.getComp();
-		comp.setCurrentStep(0);
-
-		if (!isInScene(character))
-			return;
-
-		boolean resetLocation = true;
-		if (character.isInInstance())
-		{
-			if (comp.getStepsLP().length == 0)
-				return;
-
-			LocalPoint lp = comp.getStepsLP()[0];
-			if (lp == null)
-				return;
-
-			if (!lp.isInScene())
-				return;
-
-			int arrayLength = comp.getStepsLP().length;
-			if (restart && lp.distanceTo(comp.getStepsLP()[arrayLength - 1]) == 0)
-				resetLocation = false;
-		}
-
-		if (!character.isInInstance())
-		{
-			if (comp.getStepsWP().length == 0)
-				return;
-
-			WorldPoint wp = comp.getStepsWP()[0];
-			if (wp == null)
-				return;
-
-			int arrayLength = comp.getStepsWP().length;
-			if (restart && wp.distanceTo(comp.getStepsWP()[arrayLength - 1]) == 0)
-				resetLocation = false;
-		}
-
-		if (resetLocation)
-			setLocation(character, false, LocationOption.TO_PATH_START);
-
-		comp.setProgramActive(restart);
-	}
-
-	 */
-
 	public void updatePanelComboBoxes()
 	{
 		SwingUtilities.invokeLater(() ->
@@ -2189,7 +2001,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			}
 		}
 
-		if (lp == null)
+		if (lp == null || !lp.isInScene())
 		{
 			return;
 		}
@@ -2402,7 +2214,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			addProgramStep();
+			addProgramStep = true;
 		}
 	};
 
@@ -2450,95 +2262,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		{
 			setLocation(selectedCharacter, false, true, LocationOption.TO_CURRENT_TICK);
 		}
-		/*
-		if (selectedCharacter != null)
-		{
-			WorldView worldView = client.getTopLevelWorldView();
-			boolean instance = worldView.getScene().isInstance();
-
-			Tile tile = worldView.getSelectedSceneTile();
-			if (tile == null)
-				return;
-
-			LocalPoint localPoint = tile.getLocalLocation();
-			if (localPoint == null)
-				return;
-
-			Program program = selectedCharacter.getProgram();
-			boolean isInScene = isInScene(selectedCharacter);
-
-			if (isInScene && instance)
-			{
-				LocalPoint[] steps = program.getComp().getStepsLP();
-
-				if (steps.length == 0)
-				{
-					setLocation(selectedCharacter, true, LocationOption.TO_HOVERED_TILE);
-				}
-
-				if (steps.length > 0)
-				{
-					Coordinate[] coordinates = pathFinder.getPath(steps[steps.length - 1], localPoint, program.getComp().getMovementType());
-					if (coordinates == null)
-					{
-						sendChatMessage("A path could not be found to this tile");
-						return;
-					}
-				}
-
-				steps = ArrayUtils.add(steps, localPoint);
-				program.getComp().setStepsLP(steps);
-				updateProgramPath(program, false, selectedCharacter.isInInstance());
-				return;
-			}
-
-			if (!isInScene && instance)
-			{
-				program.getComp().setStepsLP(new LocalPoint[]{localPoint});
-				program.getComp().setStepsWP(new WorldPoint[0]);
-				setLocation(selectedCharacter, true,  LocationOption.TO_HOVERED_TILE);
-				updateProgramPath(program, false, selectedCharacter.isInInstance());
-				return;
-			}
-
-			if (isInScene && !instance)
-			{
-				WorldPoint[] steps = program.getComp().getStepsWP();
-
-				if (steps.length == 0)
-				{
-					setLocation(selectedCharacter, true, LocationOption.TO_HOVERED_TILE);
-				}
-
-				WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
-
-				if (steps.length > 0)
-				{
-					Coordinate[] coordinates = pathFinder.getPath(steps[steps.length - 1], worldPoint, program.getComp().getMovementType());
-					if (coordinates == null)
-					{
-						sendChatMessage("A path could not be found to this tile");
-						return;
-					}
-				}
-
-				steps = ArrayUtils.add(steps, worldPoint);
-				program.getComp().setStepsWP(steps);
-				updateProgramPath(program, false, selectedCharacter.isInInstance());
-				return;
-			}
-
-			if (!isInScene && !instance)
-			{
-				WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
-				program.getComp().setStepsWP(new WorldPoint[]{worldPoint});
-				program.getComp().setStepsLP(new LocalPoint[0]);
-				setLocation(selectedCharacter, true, LocationOption.TO_HOVERED_TILE);
-				updateProgramPath(program, false, selectedCharacter.isInInstance());
-			}
-		}
-
-		 */
 	}
 
 	private final HotkeyListener removeProgramStepListener = new HotkeyListener(() -> config.removeProgramStepHotkey())
@@ -2621,8 +2344,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		public void hotkeyPressed()
 		{
 			ToolBoxFrame toolBox = creatorsPanel.getToolBox();
+			toolBox.getProgrammer().pause();
 			toolBox.getTimeSheetPanel().setCurrentTime(0, false);
-			toolBox.getProgrammer().togglePlay(false);
 		}
 	};
 

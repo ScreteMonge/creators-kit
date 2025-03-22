@@ -4,7 +4,6 @@ import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.DataFinder;
 import com.creatorskit.programming.MovementManager;
-import com.creatorskit.programming.MovementType;
 import com.creatorskit.programming.Programmer;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
@@ -67,7 +66,7 @@ public class TimeSheetPanel extends JPanel
     private final BufferedImage SKIP_LEFT = ImageUtil.loadImageResource(getClass(), "/Skip_Left.png");
     private final BufferedImage SKIP_RIGHT = ImageUtil.loadImageResource(getClass(), "/Skip_Right.png");
 
-    private static final int ABSOLUTE_MAX_SEQUENCE_LENGTH = 100000;
+    public static final int ABSOLUTE_MAX_SEQUENCE_LENGTH = 100000;
     private static final int DEFAULT_MIN_H_SCROLL = -10;
     private static final int DEFAULT_MAX_H_SCROLL = 200;
     private static final int ZOOM_MAX = 500;
@@ -354,7 +353,7 @@ public class TimeSheetPanel extends JPanel
         KeyFrame keyFrame = selectedCharacter.findKeyFrame(attributePanel.getSelectedKeyFramePage(), currentTime);
         if (keyFrame == null)
         {
-            KeyFrame kf = attributePanel.createKeyFrame();
+            KeyFrame kf = attributePanel.createKeyFrame(currentTime);
             if (kf == null)
             {
                 return;
@@ -376,9 +375,33 @@ public class TimeSheetPanel extends JPanel
        addKeyFrameActions(kfa);
     }
 
+    public void onUpdateButtonPressed()
+    {
+        if (selectedCharacter == null)
+        {
+            return;
+        }
+
+        KeyFrame keyFrame = selectedCharacter.findPreviousKeyFrame(attributePanel.getSelectedKeyFramePage(), currentTime, true);
+        if (keyFrame == null)
+        {
+            return;
+        }
+
+        KeyFrame kf = attributePanel.createKeyFrame(keyFrame.getTick());
+        if (kf == null)
+        {
+            return;
+        }
+
+        KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(kf, selectedCharacter, KeyFrameCharacterActionType.ADD), new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.REMOVE)};
+        addKeyFrame(selectedCharacter, kf);
+        addKeyFrameActions(kfa);
+    }
+
     public void initializeMovementKeyFrame(Character character, WorldView worldView, LocalPoint localPoint)
     {
-        boolean poh = MovementManager.isInPOH(worldView);
+        boolean poh = MovementManager.useLocalLocations(worldView);
 
         KeyFrame keyFrame = character.findKeyFrame(KeyFrameType.MOVEMENT, currentTime);
         if (keyFrame == null)
@@ -400,8 +423,7 @@ public class TimeSheetPanel extends JPanel
                     0,
                     0,
                     false,
-                    1,
-                    MovementType.NORMAL);
+                    1);
 
             KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(kf, character, KeyFrameCharacterActionType.ADD)};
             KeyFrame keyFrameToReplace = addKeyFrame(character, kf);
@@ -890,7 +912,7 @@ public class TimeSheetPanel extends JPanel
 
                 if (attributeSheet.getBounds().contains(MouseInfo.getPointerInfo().getLocation()))
                 {
-                    KeyFrame keyFrame = attributePanel.createKeyFrame();
+                    KeyFrame keyFrame = attributePanel.createKeyFrame(currentTime);
                     KeyFrame keyFrameToReplace = addKeyFrame(selectedCharacter, keyFrame);
                     KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(keyFrameToReplace, selectedCharacter, KeyFrameCharacterActionType.ADD)};
 
@@ -922,7 +944,7 @@ public class TimeSheetPanel extends JPanel
                     return;
                 }
 
-                KeyFrame keyFrame = attributePanel.createKeyFrame();
+                KeyFrame keyFrame = attributePanel.createKeyFrame(currentTime);
                 KeyFrame keyFrameToReplace = addKeyFrame(selectedCharacter, keyFrame);
                 KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.ADD)};
 
@@ -984,7 +1006,7 @@ public class TimeSheetPanel extends JPanel
             }
         });
 
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_T, InputEvent.CTRL_DOWN_MASK), "VK_R");
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.CTRL_DOWN_MASK), "VK_R");
         actionMap.put("VK_R", new AbstractAction()
         {
             @Override

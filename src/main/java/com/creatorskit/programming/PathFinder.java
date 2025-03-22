@@ -109,7 +109,7 @@ public class PathFinder
 
     public int[][] findPath(WorldView worldView, WorldPoint startLocation, WorldPoint destLocation, MovementType movementType)
     {
-        Coordinate[] coordinates = getPath(startLocation, destLocation, movementType);
+        Coordinate[] coordinates = getPath(worldView.isInstance(), startLocation, destLocation, movementType);
         if (coordinates == null || coordinates.length == 0)
         {
             return null;
@@ -128,7 +128,7 @@ public class PathFinder
         return path;
     }
 
-    public Coordinate[] getPath(WorldPoint startLocation, WorldPoint destLocation, MovementType movementType)
+    public Coordinate[] getPath(boolean instance, WorldPoint startLocation, WorldPoint destLocation, MovementType movementType)
     {
         WorldView worldView = client.getTopLevelWorldView();
         Scene scene = worldView.getScene();
@@ -138,14 +138,17 @@ public class PathFinder
         final Coordinate[][] path = new Coordinate[Constants.SCENE_SIZE][Constants.SCENE_SIZE];
 
         boolean reachedEnd = false;
-        Collection<WorldPoint> startPoints = WorldPoint.toLocalInstance(scene, startLocation);
-        WorldPoint startPoint = startPoints.iterator().next();
+        if (instance)
+        {
+            Collection<WorldPoint> startPoints = WorldPoint.toLocalInstance(scene, startLocation);
+            startLocation = startPoints.iterator().next();
 
-        Collection<WorldPoint> destPoints = WorldPoint.toLocalInstance(scene, destLocation);
-        WorldPoint destPoint = destPoints.iterator().next();
+            Collection<WorldPoint> destPoints = WorldPoint.toLocalInstance(scene, destLocation);
+            destLocation = destPoints.iterator().next();
+        }
 
-        LocalPoint startLoc = LocalPoint.fromWorld(worldView, startPoint);
-        LocalPoint destLoc = LocalPoint.fromWorld(worldView, destPoint);
+        LocalPoint startLoc = LocalPoint.fromWorld(worldView, startLocation);
+        LocalPoint destLoc = LocalPoint.fromWorld(worldView, destLocation);
 
         if (startLoc == null || destLoc == null)
         {
@@ -287,6 +290,11 @@ public class PathFinder
         }
 
         MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+
+        boolean poh = MovementManager.useLocalLocations(worldView);
+        keyFrame.setPoh(poh);
+        keyFrame.setPlane(worldView.getPlane());
+
         int[][] path = keyFrame.getPath();
         if (path.length == 0)
         {
@@ -296,10 +304,6 @@ public class PathFinder
         int[] start = path[0];
         int changeX = newX - start[0];
         int changeY = newY - start[1];
-
-        keyFrame.setPlane(worldView.getPlane());
-        boolean poh = MovementManager.isInPOH(worldView);
-        keyFrame.setPoh(poh);
 
         for (int[] coordinates : path)
         {
