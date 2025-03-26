@@ -61,7 +61,7 @@ public class Character
 
     public void play()
     {
-        //ckObject.play();
+        ckObject.setPlaying(true);
         if (spotAnim1 != null)
         {
             spotAnim1.setPlaying(true);
@@ -75,7 +75,7 @@ public class Character
 
     public void pause()
     {
-        //ckObject.pause();
+        ckObject.setPlaying(false);
         if (spotAnim1 != null)
         {
             spotAnim1.setPlaying(false);

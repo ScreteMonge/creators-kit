@@ -561,7 +561,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				if (playerAnimation == -1)
 				{
 					if (transmogAnimation != playerPose)
-						transmog.setAnimation(playerPose);
+						transmog.setAnimation(AnimationType.ACTIVE, playerPose);
 				}
 			}
 
@@ -600,46 +600,46 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					if (pose != -1 && poseAnimation == PoseAnimation.POSE)
 					{
 						if (transmogAnimation != pose)
-							transmog.setAnimation(pose);
+							transmog.setAnimation(AnimationType.ACTIVE, pose);
 					}
 					else if (walk != -1 && poseAnimation == PoseAnimation.WALK)
 					{
 						if (transmogAnimation != walk)
-							transmog.setAnimation(walk);
+							transmog.setAnimation(AnimationType.ACTIVE, walk);
 					}
 					else if (run != -1 && poseAnimation == PoseAnimation.RUN)
 					{
 						if (transmogAnimation != run)
-							transmog.setAnimation(run);
+							transmog.setAnimation(AnimationType.ACTIVE, run);
 					}
 					else if (backwards != -1 && poseAnimation == PoseAnimation.BACKWARDS)
 					{
 						if (transmogAnimation != backwards)
-							transmog.setAnimation(backwards);
+							transmog.setAnimation(AnimationType.ACTIVE, backwards);
 					}
 					else if (right != -1 && poseAnimation == PoseAnimation.SHUFFLE_RIGHT)
 					{
 						if (transmogAnimation != right)
-							transmog.setAnimation(right);
+							transmog.setAnimation(AnimationType.ACTIVE, right);
 					}
 					else if (left != -1 && poseAnimation == PoseAnimation.SHUFFLE_LEFT)
 					{
 						if (transmogAnimation != left)
-							transmog.setAnimation(left);
+							transmog.setAnimation(AnimationType.ACTIVE, left);
 					}
 					else if (rotate != -1 && poseAnimation == PoseAnimation.ROTATE)
 					{
 						if (transmogAnimation != rotate)
-							transmog.setAnimation(rotate);
+							transmog.setAnimation(AnimationType.ACTIVE, rotate);
 					}
 					else if (animationMode == TransmogAnimationMode.MODIFIED)
 					{
-						transmog.setAnimation(playerPose);
+						transmog.setAnimation(AnimationType.ACTIVE, playerPose);
 					}
 					else
 					{
 						if (transmogAnimation != walk)
-							transmog.setAnimation(walk);
+							transmog.setAnimation(AnimationType.ACTIVE, walk);
 					}
 				}
 			}
@@ -674,7 +674,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			if (animationMode == TransmogAnimationMode.PLAYER && transmogAnimation != playerAnimation)
 			{
-				transmog.setAnimation(playerAnimation);
+				transmog.setAnimation(AnimationType.ACTIVE, playerAnimation);
 				return;
 			}
 
@@ -683,19 +683,19 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			{
 				if (swap[0] == player.getAnimation() && transmogAnimation != swap[1])
 				{
-					transmog.setAnimation(swap[1]);
+					transmog.setAnimation(AnimationType.ACTIVE, swap[1]);
 					return;
 				}
 			}
 
 			if (animationMode == TransmogAnimationMode.MODIFIED && transmogAnimation != playerAnimation && action == -1)
-				transmog.setAnimation(playerAnimation);
+				transmog.setAnimation(AnimationType.ACTIVE, playerAnimation);
 
 			if (animationMode == TransmogAnimationMode.MODIFIED && transmogAnimation != action && action != -1)
-				transmog.setAnimation(action);
+				transmog.setAnimation(AnimationType.ACTIVE, action);
 
 			if (animationMode == TransmogAnimationMode.CUSTOM && transmogAnimation != action)
-				transmog.setAnimation(action);
+				transmog.setAnimation(AnimationType.ACTIVE, action);
 		}
 	}
 
@@ -738,7 +738,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				transmog.setActive(enableTransmog);
 				if (!enableTransmog)
 				{
-					transmog.setAnimation(-1);
+					transmog.setAnimation(AnimationType.ACTIVE, -1);
 				}
 			});
 		}
@@ -954,11 +954,13 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					}
 					keyFrame.setCurrentStep(wholeStepsComplete);
 
-					localPoint = creatorsPanel.getToolBox().getProgrammer().getLocation(worldView,
+					MovementComposition mc = creatorsPanel.getToolBox().getProgrammer().getMovementComposition(worldView,
 							character,
 							keyFrame,
 							wholeStepsComplete,
 							stepsComplete);
+
+					localPoint = mc.getLocalPoint();
 					break;
 				case TO_PLAYER:
 					localPoint = client.getLocalPlayer().getLocalLocation();
@@ -1081,11 +1083,13 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					}
 					keyFrame.setCurrentStep(wholeStepsComplete);
 
-					localPoint = creatorsPanel.getToolBox().getProgrammer().getLocation(worldView,
+					MovementComposition mc = creatorsPanel.getToolBox().getProgrammer().getMovementComposition(worldView,
 							character,
 							keyFrame,
 							wholeStepsComplete,
 							stepsComplete);
+
+					localPoint = mc.getLocalPoint();
 					break;
 				case TO_PLAYER:
 					localPoint = client.getLocalPlayer().getLocalLocation();
@@ -1188,13 +1192,30 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 
 		CKObject ckObject = character.getCkObject();
-		clientThread.invoke(() -> ckObject.setAnimation(animationId));
+		clientThread.invokeLater(() ->
+		{
+			ckObject.setAnimation(AnimationType.ACTIVE, animationId);
+			KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.ANIMATION);
+			if (kf == null)
+			{
+				character.play();
+				ckObject.setLoop(AnimationType.ACTIVE, true);
+			}
+			else
+			{
+				character.pause();
+			}
+		});
 	}
 
 	public void unsetAnimation(Character character)
 	{
 		CKObject ckObject = character.getCkObject();
-		clientThread.invoke(() -> ckObject.setAnimation(-1));
+		clientThread.invokeLater(() ->
+				{
+						ckObject.setAnimation(AnimationType.ACTIVE, -1);
+						ckObject.setAnimation(AnimationType.POSE, -1);
+				});
 	}
 
 	public void setAnimationFrame(Character character, int animFrame, boolean allowPause)
@@ -1203,7 +1224,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 
 		CKObject ckObject = character.getCkObject();
-		clientThread.invoke(() -> ckObject.setAnimationFrame(animFrame, allowPause));
+		clientThread.invoke(() -> ckObject.setAnimationFrame(AnimationType.ACTIVE, animFrame, allowPause));
 	}
 
 	public void setRadius(Character character, int radius)
@@ -2016,10 +2037,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			animId = ckObject.getAnimationId();
 		}
 
+		AnimationController ac = ckObject.getAnimationController();
 		previewObject.setModel(model);
 		previewObject.setOrientation(orientation);
-		previewObject.setAnimation(animId);
-		previewObject.setAnimationFrame(ckObject.getAnimationFrame(), true);
+		previewObject.setAnimation(AnimationType.ACTIVE, animId);
+		previewObject.setAnimationFrame(AnimationType.ACTIVE, ckObject.getAnimationFrame(AnimationType.ACTIVE), true);
 		previewObject.setLocation(lp, client.getTopLevelWorldView().getPlane());
 		previewObject.setRadius(ckObject.getRadius());
 		previewObject.setActive(true);
@@ -2288,15 +2310,17 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
 		int[][] path = keyFrame.getPath();
-		if (path.length == 0)
-		{
-			return;
-		}
 
 		int newLength = path.length - 1;
 		if (keyFrame.getCurrentStep() > newLength)
 		{
 			keyFrame.setCurrentStep(newLength);
+		}
+
+		if (path.length == 0)
+		{
+			keyFrame.setCurrentStep(0);
+			return;
 		}
 
 		keyFrame.setPath(ArrayUtils.remove(path, newLength));

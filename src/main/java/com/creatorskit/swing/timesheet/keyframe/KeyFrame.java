@@ -41,16 +41,18 @@ public class KeyFrame
             AnimationKeyFrame kf = (AnimationKeyFrame) keyFrame;
             return new AnimationKeyFrame(
                     tick,
-                    kf.getActionAnim(),
+                    kf.isFreeze(),
+                    kf.getActive(),
+                    kf.getStartFrame(),
                     kf.isLoop(),
-                    kf.getIdleAnim(),
-                    kf.getWalkAnim(),
-                    kf.getRunAnim(),
-                    kf.getWalk180Anim(),
-                    kf.getWalkRAnim(),
-                    kf.getWalkLAnim(),
-                    kf.getIdleRAnim(),
-                    kf.getIdleLAnim());
+                    kf.getIdle(),
+                    kf.getWalk(),
+                    kf.getRun(),
+                    kf.getWalk180(),
+                    kf.getWalkRight(),
+                    kf.getWalkLeft(),
+                    kf.getIdleRight(),
+                    kf.getIdleLeft());
         }
 
         if (keyFrame instanceof OrientationKeyFrame)

@@ -219,7 +219,7 @@ public class ToolBoxFrame extends JFrame
         load.addActionListener(e -> plugin.getCreatorsPanel().openLoadSetupDialog());
         file.add(load);
 
-        JMenu timeSheet = new JMenu("Timesheet");
+        JMenu timeSheet = new JMenu("Timeline");
         jMenuBar.add(timeSheet);
 
         JMenuItem copyKeyFrames = new JMenuItem("Copy KeyFrames");

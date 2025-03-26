@@ -2,15 +2,6 @@ package com.creatorskit.programming;
 
 public class Orientation
 {
-    public static boolean isDiagonal(double jAngle)
-    {
-        return jAngle != 0
-                && jAngle != 512
-                && jAngle != 1024
-                && jAngle != 1536
-                && jAngle != 2048;
-    }
-
     public static int orientationX(double orientation)
     {
         int direction = simplifyOrientation((int) orientation);

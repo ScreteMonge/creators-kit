@@ -12,8 +12,10 @@ import com.creatorskit.swing.timesheet.keyframe.*;
 import com.creatorskit.swing.timesheet.keyframe.settings.*;
 import lombok.Getter;
 import lombok.Setter;
+import net.runelite.api.Animation;
 import net.runelite.api.Client;
 import net.runelite.api.WorldView;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
@@ -26,12 +28,14 @@ import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 @Getter
 @Setter
 public class AttributePanel extends JPanel
 {
     private Client client;
+    private ClientThread clientThread;
     private TimeSheetPanel timeSheetPanel;
     private DataFinder dataFinder;
 
@@ -71,10 +75,13 @@ public class AttributePanel extends JPanel
     private final SpotAnimAttributes spotAnimAttributes = new SpotAnimAttributes();
     private final SpotAnimAttributes spotAnim2Attributes = new SpotAnimAttributes();
 
+    private final Random random = new Random();
+
     @Inject
-    public AttributePanel(Client client, TimeSheetPanel timeSheetPanel, DataFinder dataFinder)
+    public AttributePanel(Client client, ClientThread clientThread, TimeSheetPanel timeSheetPanel, DataFinder dataFinder)
     {
         this.client = client;
+        this.clientThread = clientThread;
         this.timeSheetPanel = timeSheetPanel;
         this.dataFinder = dataFinder;
 
@@ -199,7 +206,9 @@ public class AttributePanel extends JPanel
             case ANIMATION:
                 return new AnimationKeyFrame(
                         tick,
-                        (int) animAttributes.getAction().getValue(),
+                        animAttributes.getFreeze().getSelectedItem() == Toggle.ENABLE,
+                        (int) animAttributes.getActive().getValue(),
+                        (int) animAttributes.getStartFrame().getValue(),
                         animAttributes.getLoop().getSelectedItem() == Toggle.ENABLE,
                         (int) animAttributes.getIdle().getValue(),
                         (int) animAttributes.getWalk().getValue(),
@@ -359,153 +368,199 @@ public class AttributePanel extends JPanel
         c.weighty = 0;
         c.gridx = 0;
         c.gridy = 0;
-        JPanel manualTitlePanel = new JPanel();
-        manualTitlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        card.add(manualTitlePanel, c);
+        JPanel generalTitlePanel = new JPanel();
+        generalTitlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        card.add(generalTitlePanel, c);
 
-        JLabel manualTitle = new JLabel("Manual Animation");
-        manualTitle.setHorizontalAlignment(SwingConstants.LEFT);
-        manualTitle.setFont(FontManager.getRunescapeBoldFont());
-        manualTitlePanel.add(manualTitle);
+        JLabel generalTitle = new JLabel("General");
+        generalTitle.setHorizontalAlignment(SwingConstants.LEFT);
+        generalTitle.setFont(FontManager.getRunescapeBoldFont());
+        generalTitlePanel.add(generalTitle);
 
-        JLabel manualTitleHelp = new JLabel(new ImageIcon(HELP));
-        manualTitleHelp.setHorizontalAlignment(SwingConstants.LEFT);
-        manualTitleHelp.setBorder(new EmptyBorder(0, 4, 0, 4));
-        manualTitleHelp.setToolTipText("<html>Enabling manual animation override lets you exactly control what animation is played at a given time" +
+        JLabel help = new JLabel(new ImageIcon(HELP));
+        help.setHorizontalAlignment(SwingConstants.LEFT);
+        help.setBorder(new EmptyBorder(0, 4, 0, 4));
+        help.setToolTipText("<html>Enabling manual animation override lets you exactly control what animation is played at a given time" +
                 "<br>Smart animation instead bases your animations off the Object's movement. For example:" +
                 "<br>The Idle animation plays when your character is not moving, while the Run animation plays while the Object is moving >1 tile/tick</html>");
-        manualTitlePanel.add(manualTitleHelp);
+        generalTitlePanel.add(help);
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.gridx = 0;
+        c.gridy = 1;
+        JLabel freezeLabel = new JLabel("Freeze: ");
+        freezeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(freezeLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 1;
+        JComboBox<Toggle> freeze = animAttributes.getFreeze();
+        freeze.setFocusable(false);
+        freeze.addItem(Toggle.DISABLE);
+        freeze.addItem(Toggle.ENABLE);
+        card.add(freeze, c);
+
+        c.gridx = 0;
+        c.gridy = 2;
+        JLabel startFrameLabel = new JLabel("1st Frame: ");
+        startFrameLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(startFrameLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 2;
+        JSpinner startFrame = animAttributes.getStartFrame();
+        startFrame.setModel(new SpinnerNumberModel(0, 0, 99999, 1));
+        startFrame.setPreferredSize(spinnerSize);
+        card.add(startFrame, c);
+
+        c.gridx = 2;
+        c.gridy = 2;
+        JButton randomize = new JButton("Random");
+        card.add(randomize, c);
+
+        c.gridwidth = 4;
+        c.gridx = 0;
+        c.gridy = 3;
+        JLabel manualTitle = new JLabel("Manual Animation");
+        manualTitle.setFont(FontManager.getRunescapeBoldFont());
+        card.add(manualTitle, c);
 
         c.gridwidth = 1;
         c.gridx = 0;
-        c.gridy = 1;
+        c.gridy = 4;
         JLabel manualLabel = new JLabel("Manual: ");
         manualLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(manualLabel, c);
 
         c.gridx = 1;
-        c.gridy = 1;
-        JSpinner manual = animAttributes.getAction();
+        c.gridy = 4;
+        JSpinner manual = animAttributes.getActive();
         manual.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
         manual.setPreferredSize(spinnerSize);
         card.add(manual, c);
 
-        c.gridwidth = 3;
         c.gridx = 2;
-        c.gridy = 1;
-        JComboBox<Toggle> manualComboBox = animAttributes.getLoop();
-        manualComboBox.setFocusable(false);
-        manualComboBox.addItem(Toggle.DISABLE);
-        manualComboBox.addItem(Toggle.ENABLE);
-        card.add(manualComboBox, c);
+        c.gridy = 4;
+        JLabel loopLabel = new JLabel("Loop: ");
+        loopLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(loopLabel, c);
+
+        c.gridx = 3;
+        c.gridy = 4;
+        JComboBox<Toggle> loop = animAttributes.getLoop();
+        loop.setFocusable(false);
+        loop.addItem(Toggle.DISABLE);
+        loop.addItem(Toggle.ENABLE);
+        card.add(loop, c);
 
         c.gridwidth = 4;
         c.gridx = 0;
-        c.gridy = 2;
+        c.gridy = 5;
         JLabel smartTitle = new JLabel("Smart Animation");
         smartTitle.setFont(FontManager.getRunescapeBoldFont());
         card.add(smartTitle, c);
 
         c.gridwidth = 1;
         c.gridx = 0;
-        c.gridy = 3;
+        c.gridy = 6;
         JLabel idleLabel = new JLabel("Idle: ");
         idleLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(idleLabel, c);
 
         c.gridx = 1;
-        c.gridy = 3;
+        c.gridy = 6;
         JSpinner idle = animAttributes.getIdle();
         idle.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
         idle.setPreferredSize(spinnerSize);
         card.add(idle, c);
 
         c.gridx = 2;
-        c.gridy = 3;
+        c.gridy = 6;
         JLabel walk180Label = new JLabel("Walk 180: ");
         walk180Label.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(walk180Label, c);
 
         c.gridx = 3;
-        c.gridy = 3;
+        c.gridy = 6;
         JSpinner walk180 = animAttributes.getWalk180();
         walk180.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
         walk180.setPreferredSize(spinnerSize);
         card.add(walk180, c);
 
         c.gridx = 0;
-        c.gridy = 4;
+        c.gridy = 7;
         JLabel walkLabel = new JLabel("Walk: ");
         walkLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(walkLabel, c);
 
         c.gridx = 1;
-        c.gridy = 4;
+        c.gridy = 7;
         JSpinner walk = animAttributes.getWalk();
         walk.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
         walk.setPreferredSize(spinnerSize);
         card.add(walk, c);
 
         c.gridx = 2;
-        c.gridy = 4;
+        c.gridy = 7;
         JLabel walkRLabel = new JLabel("Walk Right: ");
         walkRLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(walkRLabel, c);
 
         c.gridx = 3;
-        c.gridy = 4;
+        c.gridy = 7;
         JSpinner walkRight = animAttributes.getWalkRight();
         walkRight.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
         walkRight.setPreferredSize(spinnerSize);
         card.add(walkRight, c);
 
+        c.gridx = 4;
+        c.gridy = 7;
+        JLabel idleRLabel = new JLabel("Idle Right: ");
+        idleRLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(idleRLabel, c);
+
+        c.gridx = 5;
+        c.gridy = 7;
+        JSpinner idleRight = animAttributes.getIdleRight();
+        idleRight.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
+        idleRight.setPreferredSize(spinnerSize);
+        card.add(idleRight, c);
+
         c.gridx = 0;
-        c.gridy = 5;
+        c.gridy = 8;
         JLabel runLabel = new JLabel("Run: ");
         runLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(runLabel, c);
 
         c.gridx = 1;
-        c.gridy = 5;
+        c.gridy = 8;
         JSpinner run = animAttributes.getRun();
         run.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
         run.setPreferredSize(spinnerSize);
         card.add(run, c);
 
         c.gridx = 2;
-        c.gridy = 5;
+        c.gridy = 8;
         JLabel walkLLabel = new JLabel("Walk Left: ");
         walkLLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(walkLLabel, c);
 
         c.gridx = 3;
-        c.gridy = 5;
+        c.gridy = 8;
         JSpinner walkLeft = animAttributes.getWalkLeft();
         walkLeft.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
         walkLeft.setPreferredSize(spinnerSize);
         card.add(walkLeft, c);
 
-        c.gridx = 2;
-        c.gridy = 6;
-        JLabel idleRLabel = new JLabel("Idle Right: ");
-        idleRLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(idleRLabel, c);
-
-        c.gridx = 3;
-        c.gridy = 6;
-        JSpinner idleRight = animAttributes.getIdleRight();
-        idleRight.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
-        idleRight.setPreferredSize(spinnerSize);
-        card.add(idleRight, c);
-
-        c.gridx = 2;
-        c.gridy = 7;
+        c.gridx = 4;
+        c.gridy = 8;
         JLabel idleLLabel = new JLabel("Idle Left: ");
         idleLLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(idleLLabel, c);
 
-        c.gridx = 3;
-        c.gridy = 7;
+        c.gridx = 5;
+        c.gridy = 8;
         JSpinner idleLeft = animAttributes.getIdleLeft();
         idleLeft.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
         idleLeft.setPreferredSize(spinnerSize);
@@ -513,14 +568,14 @@ public class AttributePanel extends JPanel
 
         c.gridwidth = 2;
         c.gridx = 0;
-        c.gridy = 8;
+        c.gridy = 11;
         JLabel searcherLabel = new JLabel("NPC Animation Presets: ");
-        searcherLabel.setHorizontalAlignment(SwingConstants.LEFT);
+        searcherLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(searcherLabel, c);
 
-        c.gridwidth = 3;
+        c.gridwidth = 4;
         c.gridx = 2;
-        c.gridy = 8;
+        c.gridy = 11;
         JComboBox<NPCData> searcher = new JComboBox<>();
         AutoCompletion.enable(searcher);
         List<NPCData> npcData = dataFinder.getNpcData();
@@ -550,8 +605,8 @@ public class AttributePanel extends JPanel
         card.add(searcher, c);
 
         c.gridwidth = 1;
-        c.gridx = 5;
-        c.gridy = 8;
+        c.gridx = 6;
+        c.gridy = 11;
         JButton searchApply = new JButton("Apply");
         searchApply.addActionListener(e ->
         {
@@ -572,6 +627,27 @@ public class AttributePanel extends JPanel
         });
         card.add(searchApply, c);
 
+        randomize.addActionListener(e ->
+        {
+            int animId = (int) manual.getValue();
+            if (animId == -1)
+            {
+                return;
+            }
+
+            clientThread.invokeLater(() ->
+            {
+                Animation animation = client.loadAnimation(animId);
+                if (animation == null)
+                {
+                    return;
+                }
+
+                int frames = animation.getNumFrames();
+                int randomFrame = random.nextInt(frames);
+                startFrame.setValue(randomFrame);
+            });
+        });
 
         c.gridwidth = 1;
         c.gridheight = 1;

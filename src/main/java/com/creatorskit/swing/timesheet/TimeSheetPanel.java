@@ -720,7 +720,7 @@ public class TimeSheetPanel extends JPanel
 
     private void setupAttributePanel()
     {
-        attributePanel = new AttributePanel(client, this, dataFinder);
+        attributePanel = new AttributePanel(client, clientThread, this, dataFinder);
         summarySheet = new SummarySheet(toolBox, managerTree, attributePanel);
         attributeSheet = new AttributeSheet(toolBox, managerTree, attributePanel);
     }

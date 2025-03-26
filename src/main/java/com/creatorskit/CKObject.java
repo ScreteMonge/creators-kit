@@ -1,5 +1,7 @@
 package com.creatorskit;
 
+import com.creatorskit.programming.AnimationType;
+import com.creatorskit.programming.CKAnimationController;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.*;
@@ -13,9 +15,9 @@ public class CKObject extends RuneLiteObjectController
     private Model baseModel;
     private boolean freeze;
     private boolean playing;
-    private boolean loop = true;
-    private AnimationController animationController;
-    private AnimationController poseAnimationController;
+    private Animation activeAnimation;
+    private CKAnimationController animationController;
+    private CKAnimationController poseAnimationController;
 
     public CKObject(Client client)
     {
@@ -58,22 +60,49 @@ public class CKObject extends RuneLiteObjectController
          */
     }
 
-    private void setupAnimController(int animId)
+    private void setupAnimController(AnimationType type, int animId)
     {
-        animationController = new AnimationController(client, animId);
-        poseAnimationController = new AnimationController(client, -1);
-
-        animationController.setOnFinished(e ->
+        if (type == AnimationType.ACTIVE)
         {
-            if (loop)
+            animationController = new CKAnimationController(client, animId, false);
+            setOnFinished(AnimationType.ACTIVE);
+        }
+        else
+        {
+            poseAnimationController = new CKAnimationController(client, animId, true);
+            setOnFinished(AnimationType.POSE);
+        }
+    }
+
+    private void setupAnimController(AnimationType type, Animation animation)
+    {
+        if (type == AnimationType.ACTIVE)
+        {
+            animationController = new CKAnimationController(client, animation, false);
+            setOnFinished(AnimationType.ACTIVE);
+        }
+        else
+        {
+            poseAnimationController = new CKAnimationController(client, animation, true);
+            setOnFinished(AnimationType.POSE);
+        }
+    }
+
+    private void setOnFinished(AnimationType type)
+    {
+        CKAnimationController ac = getController(type);
+        ac.setOnFinished(e ->
+        {
+            if (ac.isLoop())
             {
                 setActive(true);
-                animationController.loop();
+                ac.setFinished(false);
+                ac.loop();
             }
             else
             {
-                setActive(false);
-                animationController.reset();
+                ac.setFinished(true);
+                setAnimation(type, -1);
             }
         });
     }
@@ -95,6 +124,17 @@ public class CKObject extends RuneLiteObjectController
         return client.isRuneLiteObjectRegistered(this);
     }
 
+    public void setLoop(AnimationType type, boolean loop)
+    {
+        CKAnimationController ac = getController(type);
+        if (ac == null)
+        {
+            return;
+        }
+
+        ac.setLoop(loop);
+    }
+
     @Override
     public void tick(int ticksSinceLastFrame)
     {
@@ -105,15 +145,21 @@ public class CKObject extends RuneLiteObjectController
 
         if (!playing)
         {
-            //return;
+            return;
         }
 
         if (animationController == null)
         {
-            setupAnimController(-1);
+            setupAnimController(AnimationType.ACTIVE, -1);
+        }
+
+        if (poseAnimationController == null)
+        {
+            setupAnimController(AnimationType.POSE, -1);
         }
 
         animationController.tick(ticksSinceLastFrame);
+        poseAnimationController.tick(ticksSinceLastFrame);
     }
 
     @Override
@@ -133,35 +179,76 @@ public class CKObject extends RuneLiteObjectController
         }
     }
 
-    public void setAnimation(int animId)
+    public boolean isFinished(AnimationType type)
     {
-        if (animationController == null)
+        CKAnimationController ac = getController(type);
+        if (ac == null)
         {
-            setupAnimController(animId);
-            return;
+            return true;
         }
 
-        animationController.setAnimation(client.loadAnimation(animId));
+        return ac.isFinished();
     }
 
-    public Animation getAnimation()
+    public void setFinished(AnimationType type, boolean finished)
     {
-        if (animationController == null)
-        {
-            setupAnimController(-1);
-        }
-
-        return animationController.getAnimation();
-    }
-
-    public void setAnimationFrame(int animFrame, boolean allowFreeze)
-    {
-        if (animationController == null)
+        CKAnimationController ac = getController(type);
+        if (ac == null)
         {
             return;
         }
 
-        Animation animation = animationController.getAnimation();
+        ac.setFinished(finished);
+    }
+
+    public void setAnimation(AnimationType type, Animation animation)
+    {
+        CKAnimationController ac = getController(type);
+        if (ac == null)
+        {
+            setupAnimController(type, animation);
+            return;
+        }
+
+        ac.setAnimation(animation);
+    }
+
+    public void setAnimation(AnimationType type, int animId)
+    {
+        CKAnimationController ac = getController(type);
+        if (ac == null)
+        {
+            setupAnimController(type, animId);
+            return;
+        }
+
+        ac.setAnimation(client.loadAnimation(animId));
+    }
+
+    public Animation[] getAnimations()
+    {
+        if (animationController == null)
+        {
+            setupAnimController(AnimationType.ACTIVE, -1);
+        }
+
+        if (poseAnimationController == null)
+        {
+            setupAnimController(AnimationType.POSE, -1);
+        }
+
+        return new Animation[]{animationController.getAnimation(), poseAnimationController.getAnimation()};
+    }
+
+    public void setAnimationFrame(AnimationType type, int animFrame, boolean allowFreeze)
+    {
+        CKAnimationController ac = getController(type);
+        if (ac == null)
+        {
+            return;
+        }
+
+        Animation animation = ac.getAnimation();
         if (animation == null)
         {
             return;
@@ -177,27 +264,28 @@ public class CKObject extends RuneLiteObjectController
             if (animFrame == -1)
             {
                 freeze = false;
-                animationController.setFrame(0);
+                ac.setFrame(0);
                 return;
             }
 
             freeze = true;
-            animationController.setFrame(animFrame);
+            ac.setFrame(animFrame);
             return;
         }
 
         freeze = false;
-        animationController.setFrame(animFrame);
+        ac.setFrame(animFrame);
     }
 
-    public int getAnimationFrame()
+    public int getAnimationFrame(AnimationType type)
     {
-        if (animationController == null)
+        CKAnimationController ac = getController(type);
+        if (ac == null)
         {
             return 0;
         }
 
-        Animation animation = animationController.getAnimation();
+        Animation animation = ac.getAnimation();
         if (animation == null)
         {
             return 0;
@@ -206,20 +294,21 @@ public class CKObject extends RuneLiteObjectController
         return animationController.getFrame();
     }
 
-    public int getMaxAnimFrames()
+    public int getMaxAnimFrames(AnimationType type)
     {
-        if (animationController == null)
+        CKAnimationController ac = getController(type);
+        if (ac == null)
         {
             return 0;
         }
 
-        Animation animation = animationController.getAnimation();
+        Animation animation = ac.getAnimation();
         if (animation == null)
         {
             return 0;
         }
 
-        return animationController.getAnimation().getDuration();
+        return animation.getDuration();
     }
 
     public int getAnimationId()
@@ -243,5 +332,15 @@ public class CKObject extends RuneLiteObjectController
         }
 
         return -1;
+    }
+
+    private CKAnimationController getController(AnimationType type)
+    {
+        if (type == AnimationType.ACTIVE)
+        {
+            return animationController;
+        }
+
+        return poseAnimationController;
     }
 }

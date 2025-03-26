@@ -5,6 +5,7 @@ import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.CKObject;
 import com.creatorskit.models.exporters.ModelExporter;
+import com.creatorskit.programming.AnimationType;
 import com.creatorskit.swing.CreatorsPanel;
 import com.creatorskit.swing.ParentPanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
@@ -1909,7 +1910,7 @@ public class ModelGetter
         exportObject = new CKObject(client);
         client.registerRuneLiteObject(exportObject);
 
-        exportObject.setAnimation(animId);
+        exportObject.setAnimation(AnimationType.ACTIVE, animId);
         exportObject.setModel(model);
         exportObject.setActive(true);
         exportObject.setLocation(client.getLocalPlayer().getLocalLocation(), client.getTopLevelWorldView().getPlane());
@@ -1957,12 +1958,12 @@ public class ModelGetter
             }
         }
 
-        int maxAnimFrames = exportObject.getMaxAnimFrames();
+        int maxAnimFrames = exportObject.getMaxAnimFrames(AnimationType.ACTIVE);
         int[][][] animVerts = new int[maxAnimFrames][model.getVerticesCount()][3];
 
         for (int e = 0; e < maxAnimFrames; e++)
         {
-            exportObject.setAnimationFrame(e, true);
+            exportObject.setAnimationFrame(AnimationType.ACTIVE, e, true);
             Model m = exportObject.getModel();
 
             int[][] verts = animVerts[e];
