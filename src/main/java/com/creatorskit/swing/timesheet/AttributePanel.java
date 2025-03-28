@@ -2,6 +2,7 @@ package com.creatorskit.swing.timesheet;
 
 import com.creatorskit.Character;
 import com.creatorskit.models.DataFinder;
+import com.creatorskit.models.DataFinder.DataType;
 import com.creatorskit.models.datatypes.NPCData;
 import com.creatorskit.programming.Direction;
 import com.creatorskit.swing.AutoCompletion;
@@ -25,7 +26,6 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
-import java.util.List;
 
 @Getter
 @Setter
@@ -43,6 +43,8 @@ public class AttributePanel extends JPanel
     private final JLabel objectLabel = new JLabel("Pick an Object");
     private final JLabel cardLabel = new JLabel("");
     private final JLabel keyFramed = new JLabel();
+
+    private JComboBox<NPCData> searcher = new JComboBox<>();
 
     private final String MOVE_CARD = "Movement";
     private final String ANIM_CARD = "Animation";
@@ -394,9 +396,9 @@ public class AttributePanel extends JPanel
         c.gridwidth = 3;
         c.gridx = 2;
         c.gridy = 8;
-        JComboBox<NPCData> searcher = new JComboBox<>();
         AutoCompletion.enable(searcher);
-        List<NPCData> npcData = dataFinder.getNpcData();
+        searcher.setPreferredSize(new Dimension(270, 25));
+
         NPCData player = new NPCData(
                 -1,
                 "Player",
@@ -415,11 +417,10 @@ public class AttributePanel extends JPanel
                 new int[0],
                 new int[0]);
         searcher.addItem(player);
-        for (NPCData n : npcData)
-        {
-            searcher.addItem(n);
-        }
-        searcher.setPreferredSize(new Dimension(270, 25));
+        if (dataFinder.isCompleted(DataType.NPC)) dataFinder.getNpcData().forEach(searcher::addItem);
+        else dataFinder.addSwingCallback(DataType.NPC, () -> {
+            dataFinder.getNpcData().forEach(searcher::addItem);
+        });
         card.add(searcher, c);
 
         c.gridwidth = 1;
@@ -444,7 +445,6 @@ public class AttributePanel extends JPanel
             idleLeft.setValue(data.getIdleRotateLeftAnimation());
         });
         card.add(searchApply, c);
-
 
         c.gridwidth = 1;
         c.gridheight = 1;
