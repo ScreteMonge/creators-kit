@@ -11,7 +11,6 @@ import okhttp3.*;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.inject.Inject;
-import javax.swing.SwingUtilities;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
@@ -38,17 +37,17 @@ public class DataFinder
     }
 
     @Data
-    private static class SwingCallback
+    private static class LoadCallback
     {
         private final Runnable callback;
         private boolean done = false;
-        public void run() { if (!done) { done = true; SwingUtilities.invokeLater(callback); } }
+        public void run() { if (!done) { done = true; callback.run(); } }
     }
 
-    private final ConcurrentHashMap<DataType, List<SwingCallback>> swingCallbacks = new ConcurrentHashMap<>(){{
+    private final ConcurrentHashMap<DataType, List<LoadCallback>> loadCallbacks = new ConcurrentHashMap<>(){{
         Arrays.stream(DataType.values()).forEach(d -> this.put(d, new ArrayList<>()));
     }};
-    private final ConcurrentHashMap<DataType, Boolean> completedRequests = new ConcurrentHashMap<>(){{
+    private final ConcurrentHashMap<DataType, Boolean> loadState = new ConcurrentHashMap<>(){{
         Arrays.stream(DataType.values()).forEach(d -> this.put(d, false));
     }};
 
@@ -96,21 +95,28 @@ public class DataFinder
         lookupSeqData();
     }
 
-    public void addSwingCallback(DataType dataType, Runnable callback)
+    /**
+     * <p>Adds a callback to be executed once the specified data type has been loaded.</p>
+     * <p>The callback will run on the same thread that executes the load operation.</p>
+     * <p>If thread-specific execution is needed, it should be handled within the callback.</p>
+     * @param dataType The DataType for which to add the callback
+     * @param callback The Runnable to execute once the data has been loaded
+     */
+    public void addLoadCallback(DataType dataType, Runnable callback)
     {
-        SwingCallback cbe = new SwingCallback(callback);
-        if (completedRequests.get(dataType)) cbe.run();
-        else swingCallbacks.get(dataType).add(cbe);
+        LoadCallback cbe = new LoadCallback(callback);
+        if (loadState.get(dataType)) cbe.run();
+        else loadCallbacks.get(dataType).add(cbe);
     }
 
-    private void doCallbacks(DataFinder.DataType dataType)
+    private void executeCallbacks(DataType dataType)
     {
-        completedRequests.put(dataType, true);
-        swingCallbacks.get(dataType).forEach(SwingCallback::run);
-        swingCallbacks.get(dataType).clear();
+        loadState.put(dataType, true);
+        loadCallbacks.get(dataType).forEach(LoadCallback::run);
+        loadCallbacks.get(dataType).clear();
     }
 
-    public boolean isCompleted(DataType dataType) { return completedRequests.get(dataType); }
+    public boolean isDataLoaded(DataType dataType) { return loadState.get(dataType); }
 
     private void lookupKitData()
     {
@@ -124,7 +130,7 @@ public class DataFinder
             public void onFailure(Call call, IOException e)
             {
                 log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/kit.json");
-                doCallbacks(DataType.KIT);
+                executeCallbacks(DataType.KIT);
             }
 
             @Override
@@ -139,7 +145,7 @@ public class DataFinder
 
                     response.body().close();
                 }
-                doCallbacks(DataType.KIT);
+                executeCallbacks(DataType.KIT);
             }
         });
     }
@@ -156,7 +162,7 @@ public class DataFinder
             public void onFailure(Call call, IOException e)
             {
                 log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/sequences.json");
-                doCallbacks(DataType.SEQ);
+                executeCallbacks(DataType.SEQ);
             }
 
             @Override
@@ -171,7 +177,7 @@ public class DataFinder
 
                     response.body().close();
                 }
-                doCallbacks(DataType.SEQ);
+                executeCallbacks(DataType.SEQ);
             }
         });
     }
@@ -647,7 +653,7 @@ public class DataFinder
             public void onFailure(Call call, IOException e)
             {
                 log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/spotanims.json");
-                doCallbacks(DataType.SPOTANIM);
+                executeCallbacks(DataType.SPOTANIM);
             }
 
             @Override
@@ -663,7 +669,7 @@ public class DataFinder
                     spotanimData.addAll(list);
                     response.body().close();
                 }
-                doCallbacks(DataType.SPOTANIM);
+                executeCallbacks(DataType.SPOTANIM);
             }
         });
     }
@@ -751,7 +757,7 @@ public class DataFinder
             public void onFailure(Call call, IOException e)
             {
                 log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/npc_defs.json");
-                doCallbacks(DataType.NPC);
+                executeCallbacks(DataType.NPC);
             }
 
             @Override
@@ -768,7 +774,7 @@ public class DataFinder
                     npcData.sort(Comparator.comparing(NPCData::getName));
                     response.body().close();
                 }
-                doCallbacks(DataType.NPC);
+                executeCallbacks(DataType.NPC);
             }
         });
     }
@@ -861,7 +867,7 @@ public class DataFinder
             public void onFailure(Call call, IOException e)
             {
                 log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/object_defs.json");
-                doCallbacks(DataType.OBJECT);
+                executeCallbacks(DataType.OBJECT);
             }
 
             @Override
@@ -879,7 +885,7 @@ public class DataFinder
                     objectData.sort(Comparator.comparing(ObjectData::getName));
                     response.body().close();
                 }
-                doCallbacks(DataType.OBJECT);
+                executeCallbacks(DataType.OBJECT);
             }
         });
     }
@@ -1017,7 +1023,7 @@ public class DataFinder
             {
                 log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/item_defs.json");
                 countDownLatch.countDown();
-                doCallbacks(DataType.ITEM);
+                executeCallbacks(DataType.ITEM);
             }
 
             @Override
@@ -1033,7 +1039,7 @@ public class DataFinder
 
                     response.body().close();
                 }
-                doCallbacks(DataType.ITEM);
+                executeCallbacks(DataType.ITEM);
             }
         });
     }

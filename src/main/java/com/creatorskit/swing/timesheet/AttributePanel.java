@@ -417,10 +417,16 @@ public class AttributePanel extends JPanel
                 new int[0],
                 new int[0]);
         searcher.addItem(player);
-        if (dataFinder.isCompleted(DataType.NPC)) dataFinder.getNpcData().forEach(searcher::addItem);
-        else dataFinder.addSwingCallback(DataType.NPC, () -> {
+        if (dataFinder.isDataLoaded(DataType.NPC))
+        {
             dataFinder.getNpcData().forEach(searcher::addItem);
-        });
+        }
+        else
+        {
+            dataFinder.addLoadCallback(DataType.NPC, () -> {
+                SwingUtilities.invokeLater(() -> dataFinder.getNpcData().forEach(searcher::addItem));
+            });
+        }
         card.add(searcher, c);
 
         c.gridwidth = 1;
