@@ -3,6 +3,7 @@ package com.creatorskit.models;
 import com.creatorskit.models.datatypes.*;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.NPCComposition;
@@ -19,12 +20,39 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 
 @Slf4j
 @Getter
 public class DataFinder
 {
+
+    public enum DataType
+    {
+        NPC,
+        OBJECT,
+        SPOTANIM,
+        ITEM,
+        KIT,
+        SEQ
+    }
+
+    @Data
+    private static class LoadCallback
+    {
+        private final Runnable callback;
+        private boolean done = false;
+        public void run() { if (!done) { done = true; callback.run(); } }
+    }
+
+    private final ConcurrentHashMap<DataType, List<LoadCallback>> loadCallbacks = new ConcurrentHashMap<>(){{
+        Arrays.stream(DataType.values()).forEach(d -> this.put(d, new ArrayList<>()));
+    }};
+    private final ConcurrentHashMap<DataType, Boolean> loadState = new ConcurrentHashMap<>(){{
+        Arrays.stream(DataType.values()).forEach(d -> this.put(d, false));
+    }};
+
     private Gson gson;
     OkHttpClient httpClient;
 
@@ -69,6 +97,29 @@ public class DataFinder
         lookupSeqData();
     }
 
+    /**
+     * <p>Adds a callback to be executed once the specified data type has been loaded.</p>
+     * <p>The callback will run on the same thread that executes the load operation.</p>
+     * <p>If thread-specific execution is needed, it should be handled within the callback.</p>
+     * @param dataType The DataType for which to add the callback
+     * @param callback The Runnable to execute once the data has been loaded
+     */
+    public void addLoadCallback(DataType dataType, Runnable callback)
+    {
+        LoadCallback cbe = new LoadCallback(callback);
+        if (loadState.get(dataType)) cbe.run();
+        else loadCallbacks.get(dataType).add(cbe);
+    }
+
+    private void executeCallbacks(DataType dataType)
+    {
+        loadState.put(dataType, true);
+        loadCallbacks.get(dataType).forEach(LoadCallback::run);
+        loadCallbacks.get(dataType).clear();
+    }
+
+    public boolean isDataLoaded(DataType dataType) { return loadState.get(dataType); }
+
     private void lookupKitData()
     {
         Request kitRequest = new Request.Builder()
@@ -81,20 +132,22 @@ public class DataFinder
             public void onFailure(Call call, IOException e)
             {
                 log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/kit.json");
+                executeCallbacks(DataType.KIT);
             }
 
             @Override
             public void onResponse(Call call, Response response)
             {
-                if (!response.isSuccessful() || response.body() == null)
-                    return;
+                if (response.isSuccessful() || response.body() != null)
+                {
+                    InputStreamReader reader = new InputStreamReader(response.body().byteStream());
+                    Type listType = new TypeToken<List<KitData>>() {}.getType();
+                    List<KitData> list = gson.fromJson(reader, listType);
+                    kitData.addAll(list);
 
-                InputStreamReader reader = new InputStreamReader(response.body().byteStream());
-                Type listType = new TypeToken<List<KitData>>(){}.getType();
-                List<KitData> list = gson.fromJson(reader, listType);
-                kitData.addAll(list);
-
-                response.body().close();
+                    response.body().close();
+                }
+                executeCallbacks(DataType.KIT);
             }
         });
     }
@@ -111,20 +164,22 @@ public class DataFinder
             public void onFailure(Call call, IOException e)
             {
                 log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/sequences.json");
+                executeCallbacks(DataType.SEQ);
             }
 
             @Override
             public void onResponse(Call call, Response response)
             {
-                if (!response.isSuccessful() || response.body() == null)
-                    return;
+                if (response.isSuccessful() || response.body() != null)
+                {
+                    InputStreamReader reader = new InputStreamReader(response.body().byteStream());
+                    Type listType = new TypeToken<List<SeqData>>() {}.getType();
+                    List<SeqData> list = gson.fromJson(reader, listType);
+                    seqData.addAll(list);
 
-                InputStreamReader reader = new InputStreamReader(response.body().byteStream());
-                Type listType = new TypeToken<List<SeqData>>(){}.getType();
-                List<SeqData> list = gson.fromJson(reader, listType);
-                seqData.addAll(list);
-
-                response.body().close();
+                    response.body().close();
+                }
+                executeCallbacks(DataType.SEQ);
             }
         });
     }
@@ -600,20 +655,23 @@ public class DataFinder
             public void onFailure(Call call, IOException e)
             {
                 log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/spotanims.json");
+                executeCallbacks(DataType.SPOTANIM);
             }
 
             @Override
             public void onResponse(Call call, Response response)
             {
-                if (!response.isSuccessful() || response.body() == null)
-                    return;
+                if (response.isSuccessful() || response.body() != null)
+                {
 
-                InputStreamReader reader = new InputStreamReader(response.body().byteStream());
-                Type listType = new TypeToken<List<SpotanimData>>(){}.getType();
-                List<SpotanimData> list = gson.fromJson(reader, listType);
+                    InputStreamReader reader = new InputStreamReader(response.body().byteStream());
+                    Type listType = new TypeToken<List<SpotanimData>>() {}.getType();
+                    List<SpotanimData> list = gson.fromJson(reader, listType);
 
-                spotanimData.addAll(list);
-                response.body().close();
+                    spotanimData.addAll(list);
+                    response.body().close();
+                }
+                executeCallbacks(DataType.SPOTANIM);
             }
         });
     }
@@ -781,22 +839,24 @@ public class DataFinder
             public void onFailure(Call call, IOException e)
             {
                 log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/npc_defs.json");
+                executeCallbacks(DataType.NPC);
             }
 
             @Override
             public void onResponse(Call call, Response response)
             {
-                if (!response.isSuccessful() || response.body() == null)
-                    return;
+                if (response.isSuccessful() || response.body() != null)
+                {
+                    InputStreamReader reader = new InputStreamReader(response.body().byteStream());
 
-                InputStreamReader reader = new InputStreamReader(response.body().byteStream());
+                    Type listType = new TypeToken<List<NPCData>>() {}.getType();
+                    List<NPCData> list = gson.fromJson(reader, listType);
 
-                Type listType = new TypeToken<List<NPCData>>(){}.getType();
-                List<NPCData> list = gson.fromJson(reader, listType);
-
-                npcData.addAll(list);
-                npcData.sort(Comparator.comparing(NPCData::getName));
-                response.body().close();
+                    npcData.addAll(list);
+                    npcData.sort(Comparator.comparing(NPCData::getName));
+                    response.body().close();
+                }
+                executeCallbacks(DataType.NPC);
             }
         });
     }
@@ -997,23 +1057,25 @@ public class DataFinder
             public void onFailure(Call call, IOException e)
             {
                 log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/object_defs.json");
+                executeCallbacks(DataType.OBJECT);
             }
 
             @Override
             public void onResponse(Call call, Response response)
             {
-                if (!response.isSuccessful() || response.body() == null)
-                    return;
+                if (response.isSuccessful() || response.body() != null)
+                {
+                    //create a reader to read the URL
+                    InputStreamReader reader = new InputStreamReader(response.body().byteStream());
 
-                //create a reader to read the URL
-                InputStreamReader reader = new InputStreamReader(response.body().byteStream());
+                    Type listType = new TypeToken<List<ObjectData>>() {}.getType();
+                    List<ObjectData> list = gson.fromJson(reader, listType);
 
-                Type listType = new TypeToken<List<ObjectData>>(){}.getType();
-                List<ObjectData> list = gson.fromJson(reader, listType);
-
-                objectData.addAll(list);
-                objectData.sort(Comparator.comparing(ObjectData::getName));
-                response.body().close();
+                    objectData.addAll(list);
+                    objectData.sort(Comparator.comparing(ObjectData::getName));
+                    response.body().close();
+                }
+                executeCallbacks(DataType.OBJECT);
             }
         });
     }
@@ -1151,21 +1213,23 @@ public class DataFinder
             {
                 log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/item_defs.json");
                 countDownLatch.countDown();
+                executeCallbacks(DataType.ITEM);
             }
 
             @Override
             public void onResponse(Call call, Response response)
             {
-                if (!response.isSuccessful() || response.body() == null)
-                    return;
+                if (response.isSuccessful() || response.body() != null)
+                {
+                    InputStreamReader reader = new InputStreamReader(response.body().byteStream());
+                    Type listType = new TypeToken<List<ItemData>>() {}.getType();
+                    List<ItemData> list = gson.fromJson(reader, listType);
+                    itemData.addAll(list);
+                    itemData.sort(Comparator.comparing(ItemData::getName));
 
-                InputStreamReader reader = new InputStreamReader(response.body().byteStream());
-                Type listType = new TypeToken<List<ItemData>>(){}.getType();
-                List<ItemData> list = gson.fromJson(reader, listType);
-                itemData.addAll(list);
-                itemData.sort(Comparator.comparing(ItemData::getName));
-
-                response.body().close();
+                    response.body().close();
+                }
+                executeCallbacks(DataType.ITEM);
             }
         });
     }
