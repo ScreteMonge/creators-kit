@@ -138,7 +138,7 @@ public class DataFinder
             @Override
             public void onResponse(Call call, Response response)
             {
-                if (response.isSuccessful() || response.body() != null)
+                if (response.isSuccessful() && response.body() != null)
                 {
                     InputStreamReader reader = new InputStreamReader(response.body().byteStream());
                     Type listType = new TypeToken<List<KitData>>() {}.getType();
@@ -170,7 +170,7 @@ public class DataFinder
             @Override
             public void onResponse(Call call, Response response)
             {
-                if (response.isSuccessful() || response.body() != null)
+                if (response.isSuccessful() && response.body() != null)
                 {
                     InputStreamReader reader = new InputStreamReader(response.body().byteStream());
                     Type listType = new TypeToken<List<SeqData>>() {}.getType();
@@ -661,7 +661,7 @@ public class DataFinder
             @Override
             public void onResponse(Call call, Response response)
             {
-                if (response.isSuccessful() || response.body() != null)
+                if (response.isSuccessful() && response.body() != null)
                 {
 
                     InputStreamReader reader = new InputStreamReader(response.body().byteStream());
@@ -845,7 +845,7 @@ public class DataFinder
             @Override
             public void onResponse(Call call, Response response)
             {
-                if (response.isSuccessful() || response.body() != null)
+                if (response.isSuccessful() && response.body() != null)
                 {
                     InputStreamReader reader = new InputStreamReader(response.body().byteStream());
 
@@ -1063,7 +1063,7 @@ public class DataFinder
             @Override
             public void onResponse(Call call, Response response)
             {
-                if (response.isSuccessful() || response.body() != null)
+                if (response.isSuccessful() && response.body() != null)
                 {
                     //create a reader to read the URL
                     InputStreamReader reader = new InputStreamReader(response.body().byteStream());
@@ -1219,7 +1219,7 @@ public class DataFinder
             @Override
             public void onResponse(Call call, Response response)
             {
-                if (response.isSuccessful() || response.body() != null)
+                if (response.isSuccessful() && response.body() != null)
                 {
                     InputStreamReader reader = new InputStreamReader(response.body().byteStream());
                     Type listType = new TypeToken<List<ItemData>>() {}.getType();
