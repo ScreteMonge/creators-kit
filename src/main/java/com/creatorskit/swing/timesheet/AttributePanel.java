@@ -3,6 +3,7 @@ package com.creatorskit.swing.timesheet;
 import com.creatorskit.Character;
 import com.creatorskit.models.CustomModel;
 import com.creatorskit.models.DataFinder;
+import com.creatorskit.models.DataFinder.DataType;
 import com.creatorskit.models.datatypes.NPCData;
 import com.creatorskit.programming.Direction;
 import com.creatorskit.programming.MovementManager;
@@ -48,6 +49,8 @@ public class AttributePanel extends JPanel
     private final JLabel objectLabel = new JLabel("Pick an Object");
     private final JLabel cardLabel = new JLabel("");
     private final JButton keyFramed = new JButton();
+
+    private JComboBox<NPCData> searcher = new JComboBox<>();
 
     private final String MOVE_CARD = "Movement";
     private final String ANIM_CARD = "Animation";
@@ -576,9 +579,9 @@ public class AttributePanel extends JPanel
         c.gridwidth = 4;
         c.gridx = 2;
         c.gridy = 11;
-        JComboBox<NPCData> searcher = new JComboBox<>();
         AutoCompletion.enable(searcher);
-        List<NPCData> npcData = dataFinder.getNpcData();
+        searcher.setPreferredSize(new Dimension(270, 25));
+
         NPCData player = new NPCData(
                 -1,
                 "Player",
@@ -597,9 +600,15 @@ public class AttributePanel extends JPanel
                 new int[0],
                 new int[0]);
         searcher.addItem(player);
-        for (NPCData n : npcData)
+        if (dataFinder.isDataLoaded(DataType.NPC))
         {
-            searcher.addItem(n);
+            dataFinder.getNpcData().forEach(searcher::addItem);
+        }
+        else
+        {
+            dataFinder.addLoadCallback(DataType.NPC, () -> {
+                SwingUtilities.invokeLater(() -> dataFinder.getNpcData().forEach(searcher::addItem));
+            });
         }
         searcher.setPreferredSize(new Dimension(270, 25));
         card.add(searcher, c);
