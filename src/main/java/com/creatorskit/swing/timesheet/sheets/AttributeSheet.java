@@ -87,7 +87,8 @@ public class AttributeSheet extends TimeSheet
                     int steps = (movementKeyFrame.getPath().length - 1);
                     if (steps > 0)
                     {
-                        int pathLength = (int) (steps * zoomFactor / movementKeyFrame.getSpeed());
+                        double ticks = Math.ceil(steps / movementKeyFrame.getSpeed());
+                        int pathLength = (int) (ticks * zoomFactor);
                         g.drawLine(x, y + image.getHeight() / 2, x + pathLength - 1, y + image.getHeight() / 2);
                     }
                 }
@@ -157,7 +158,8 @@ public class AttributeSheet extends TimeSheet
                 int steps = (movementKeyFrame.getPath().length - 1);
                 if (steps > 0)
                 {
-                    int pathLength = (int) (steps * zoomFactor / movementKeyFrame.getSpeed());
+                    double ticks = Math.ceil(steps / movementKeyFrame.getSpeed());
+                    int pathLength = (int) (ticks * zoomFactor);
                     g.drawLine(x, y + image.getHeight() / 2, x + pathLength - 1, y + image.getHeight() / 2);
                 }
             }
