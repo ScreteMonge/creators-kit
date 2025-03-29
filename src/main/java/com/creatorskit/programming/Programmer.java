@@ -126,7 +126,7 @@ public class Programmer
                 if (jumps != 0)
                 {
                     double ticksPreSlowdown = (pathLength - 1 - endSpeed) / tileSpeed;
-                    int stepsPreSlowdown = (int) (ticksPreSlowdown * tileSpeed);
+                    double stepsPreSlowdown = ticksPreSlowdown * tileSpeed;
 
                     stepsComplete = ((clientTicksPassed) - (ticksPreSlowdown * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH)) * endSpeed * Constants.CLIENT_TICK_LENGTH / Constants.GAME_TICK_LENGTH + stepsPreSlowdown;
                     currentStep = (int) (stepsComplete);
@@ -890,7 +890,7 @@ public class Programmer
             if (jumps != 0)
             {
                 double ticksPreSlowdown = (pathLength - 1 - endSpeed) / tileSpeed;
-                int stepsPreSlowdown = (int) (ticksPreSlowdown * tileSpeed);
+                double stepsPreSlowdown = ticksPreSlowdown * tileSpeed;
 
                 stepsComplete = (timePassed - ticksPreSlowdown) * endSpeed + stepsPreSlowdown;
                 currentStep = (int) (stepsComplete);
