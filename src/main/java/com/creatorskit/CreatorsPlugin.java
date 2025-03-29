@@ -786,7 +786,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					}
 
 					double speed = keyFrame.getSpeed();
-					double stepsComplete = (getCurrentTick() - keyFrame.getTick()) * speed;
+					int ticksPassed = (int) (getCurrentTick() - keyFrame.getTick());
+					double stepsComplete = ticksPassed * speed;
 					int wholeStepsComplete = (int) Math.floor(stepsComplete);
 					if (wholeStepsComplete > pathLength)
 					{
@@ -798,7 +799,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 							character,
 							keyFrame,
 							wholeStepsComplete,
-							stepsComplete);
+							stepsComplete,
+							OrientationAction.SET,
+							ticksPassed);
 
 					localPoint = mc.getLocalPoint();
 					break;
@@ -915,7 +918,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					}
 
 					double speed = keyFrame.getSpeed();
-					double stepsComplete = (getCurrentTick() - keyFrame.getTick()) * speed;
+					int ticksPassed = (int) (getCurrentTick() - keyFrame.getTick());
+					double stepsComplete = ticksPassed * speed;
 					int wholeStepsComplete = (int) Math.floor(stepsComplete);
 					if (wholeStepsComplete > pathLength)
 					{
@@ -927,7 +931,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 							character,
 							keyFrame,
 							wholeStepsComplete,
-							stepsComplete);
+							stepsComplete,
+							OrientationAction.SET,
+							ticksPassed);
 
 					localPoint = mc.getLocalPoint();
 					break;

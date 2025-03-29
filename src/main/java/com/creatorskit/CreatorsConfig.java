@@ -344,9 +344,9 @@ public interface CreatorsConfig extends Config
 	}
 
 	@ConfigItem(
-			keyName = "removeStep",
+			keyName = "deleteStep",
 			name = "Remove Program Step",
-			description = "Hotkey to remove the hovered location from the selected object's program",
+			description = "Hotkey to remove the last step from the selected object's program",
 			section = programmer,
 			position = 2
 	)

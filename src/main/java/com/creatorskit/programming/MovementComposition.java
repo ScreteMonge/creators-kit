@@ -10,6 +10,6 @@ public class MovementComposition
 {
     private boolean moving;
     private LocalPoint localPoint;
-    private boolean useOrientation;
-    private int orientation;
+    private OrientationAction orientationAction;
+    private int orientationGoal;
 }

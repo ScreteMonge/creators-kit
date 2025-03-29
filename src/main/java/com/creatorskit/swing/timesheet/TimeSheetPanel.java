@@ -1025,8 +1025,8 @@ public class TimeSheetPanel extends JPanel
             @Override
             public void actionPerformed(ActionEvent e)
             {
-                setCurrentTime(0, false);
-                toolBox.getProgrammer().togglePlay(false);
+                toolBox.getProgrammer().pause();
+                toolBox.getTimeSheetPanel().setCurrentTime(0, false);
             }
         });
     }

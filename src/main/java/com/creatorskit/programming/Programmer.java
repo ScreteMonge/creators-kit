@@ -32,7 +32,7 @@ public class Programmer
     private final int GOLDEN_CHIN = 29757;
     private final int TILE_LENGTH = 128;
     private final int TILE_DIAGONAL = 181; //Math.sqrt(Math.pow(128, 2) + Math.pow(128, 2))
-    private final double TURN_RATE = 256 / 7.5;
+    private final double TURN_RATE = 256 / 7.5; //In JUnits/clientTick; Derived by examining turn rates in game
 
     @Getter
     @Setter
@@ -113,7 +113,7 @@ public class Programmer
 
             double tileSpeed = keyFrame.getSpeed();
             double speed = tileSpeed * Constants.CLIENT_TICK_LENGTH / Constants.GAME_TICK_LENGTH;
-            double clientTicksPassed = client.getGameCycle() - keyFrame.getStepClientTick();
+            int clientTicksPassed = client.getGameCycle() - keyFrame.getStepClientTick();
             double stepsComplete = clientTicksPassed * speed;
             currentStep = (int) Math.floor(stepsComplete);
 
@@ -141,7 +141,7 @@ public class Programmer
 
             keyFrame.setCurrentStep(currentStep);
 
-            transform3D(worldView, character, keyFrame, currentStep, stepsComplete, finalSpeed);
+            transform3D(worldView, character, keyFrame, OrientationAction.ADJUST, currentStep, stepsComplete, clientTicksPassed, finalSpeed);
         }
     }
 
@@ -162,7 +162,7 @@ public class Programmer
      * @param currentStep the number of whole steps that have already been performed
      * @param stepsComplete the number of whole + sub steps that have already been performed
      */
-    public void transform3D(WorldView worldView, Character character, MovementKeyFrame keyFrame, int currentStep, double stepsComplete, double finalSpeed)
+    public void transform3D(WorldView worldView, Character character, MovementKeyFrame keyFrame, OrientationAction orientationAction, int currentStep, double stepsComplete, int clientTicksPassed, double finalSpeed)
     {
         CKObject ckObject = character.getCkObject();
         if (ckObject == null)
@@ -175,7 +175,7 @@ public class Programmer
             return;
         }
 
-        MovementComposition mc = getMovementComposition(worldView, character, keyFrame, currentStep, stepsComplete);
+        MovementComposition mc = getMovementComposition(worldView, character, keyFrame, currentStep, stepsComplete, orientationAction, clientTicksPassed);
         if (mc == null)
         {
             setAnimation(character, false, 0, 0);
@@ -185,10 +185,10 @@ public class Programmer
         setLocation(character, keyFrame, mc);
 
         int orientation = ckObject.getOrientation();
-        int orientationGoal = mc.getOrientation();
+        int orientationGoal = mc.getOrientationGoal();
         int difference = Orientation.subtract(orientationGoal, orientation);
 
-        setOrientation(character, mc, difference, keyFrame.getSpeed());
+        setOrientation(character, mc, difference, stepsComplete, keyFrame.getSpeed());
         setAnimation(character, mc.isMoving(), difference, finalSpeed);
     }
 
@@ -205,33 +205,47 @@ public class Programmer
         character.getCkObject().setLocation(lp, keyFrame.getPlane());
     }
 
-    private void setOrientation(Character character, MovementComposition mc, int difference, double speed)
+    private void setOrientation(Character character, MovementComposition mc, int difference, double stepsComplete, double speed)
     {
-        CKObject ckObject = character.getCkObject();
-        if (mc.isUseOrientation())
+        OrientationAction orientationAction = mc.getOrientationAction();
+        if (orientationAction == OrientationAction.FREEZE)
         {
+            return;
+        }
+
+        CKObject ckObject = character.getCkObject();
+        if (orientationAction == OrientationAction.SET)
+        {
+            ckObject.setOrientation(mc.getOrientationGoal());
+            return;
+        }
+
+        if (difference != 0)
+        {
+            if (Math.ceil(stepsComplete) == Math.floor(stepsComplete))
+            {
+                return;
+            }
+
             int orientation = ckObject.getOrientation();
-            int orientationGoal = mc.getOrientation();
+            int orientationGoal = mc.getOrientationGoal();
             int turnSpeed = (int) (speed * TURN_RATE);
 
-            if (difference != 0)
+            int newOrientation;
+            if (difference > (turnSpeed * -1) && difference < turnSpeed)
             {
-                int newOrientation;
-                if (difference > (turnSpeed * -1) && difference < turnSpeed)
-                {
-                    newOrientation = orientationGoal;
-                }
-                else if (difference > 0)
-                {
-                    newOrientation = Orientation.boundOrientation(orientation + turnSpeed);
-                }
-                else
-                {
-                    newOrientation = Orientation.boundOrientation(orientation - turnSpeed);
-                }
-
-                ckObject.setOrientation(newOrientation);
+                newOrientation = orientationGoal;
             }
+            else if (difference > 0)
+            {
+                newOrientation = Orientation.boundOrientation(orientation + turnSpeed);
+            }
+            else
+            {
+                newOrientation = Orientation.boundOrientation(orientation - turnSpeed);
+            }
+
+            ckObject.setOrientation(newOrientation);
         }
     }
 
@@ -338,7 +352,7 @@ public class Programmer
             move = keyFrame.getRun();
         }
 
-        if (orientationDifference < 256 && orientationDifference > -256)
+        if (orientationDifference <= 256 && orientationDifference >= -256)
         {
             if (move == -1)
             {
@@ -348,7 +362,7 @@ public class Programmer
             return move;
         }
 
-        if (orientationDifference >= 256 && orientationDifference < 736)
+        if (orientationDifference > 256 && orientationDifference < 736)
         {
             int animId = keyFrame.getWalkRight();
             if (animId == -1)
@@ -364,7 +378,7 @@ public class Programmer
             return animId;
         }
 
-        if (orientationDifference <= -256 && orientationDifference > -736)
+        if (orientationDifference < -256 && orientationDifference > -736)
         {
             int animId = keyFrame.getWalkLeft();
             if (animId == -1)
@@ -403,16 +417,13 @@ public class Programmer
      * @param stepsComplete the current non-whole number step
      * @return the LocalPoint corresponding to the current tick along the character's currently defined path
      */
-    public MovementComposition getMovementComposition(WorldView worldView, Character character, MovementKeyFrame keyFrame, int currentStep, double stepsComplete)
+    public MovementComposition getMovementComposition(WorldView worldView, Character character, MovementKeyFrame keyFrame, int currentStep, double stepsComplete, OrientationAction orientationAction, int clientTicksPassed)
     {
         CKObject ckObject = character.getCkObject();
         if (ckObject == null)
         {
             return null;
         }
-
-        //System.out.println("Currentstep: " + currentStep);
-        //System.out.println("Stepscomplete: " + stepsComplete);
 
         int pathLength = keyFrame.getPath().length;
         if (currentStep >= pathLength)
@@ -426,15 +437,16 @@ public class Programmer
 
             if (secondLast == null)
             {
-                return new MovementComposition(false, last, false, 0);
+                return new MovementComposition(false, last, OrientationAction.FREEZE, 0);
             }
 
             double directionX = last.getSceneX() - secondLast.getSceneX();
             double directionY = last.getSceneY() - secondLast.getSceneY();
             double angle = Orientation.radiansToJAngle(Math.atan(directionY / directionX), directionX, directionY);
-            return new MovementComposition(false, last, true, (int) angle);
+            return new MovementComposition(false, last, OrientationAction.SET, (int) angle);
         }
 
+        LocalPoint previous = getLocation(worldView, keyFrame, currentStep - 1);
         LocalPoint start = getLocation(worldView, keyFrame, currentStep);
         LocalPoint destination = getLocation(worldView, keyFrame, currentStep + 1);
 
@@ -445,18 +457,12 @@ public class Programmer
 
         if (start != null && destination != null)
         {
+            double percentComplete = stepsComplete - currentStep;
+            double subSteps = percentComplete * TILE_LENGTH;
+
+            double angle = getOrientationDifference(start, destination);
             int startX = start.getX();
             int startY = start.getY();
-            int destX = destination.getX();
-            int destY = destination.getY();
-
-            double percentComplete = stepsComplete - currentStep;
-
-            double directionX = destX - startX;
-            double directionY = destY - startY;
-            double angle = Orientation.radiansToJAngle(Math.atan(directionY / directionX), directionX, directionY);
-
-            double subSteps = percentComplete * TILE_LENGTH;
 
             int changeX = (int) (subSteps * Orientation.orientationX(angle));
             int currentX = startX + changeX;
@@ -465,26 +471,82 @@ public class Programmer
             int currentY = startY + changeY;
 
             LocalPoint lp = new LocalPoint(currentX, currentY, worldView);
-            return new MovementComposition(true, lp, true, (int) angle);
+            if (orientationAction == OrientationAction.ADJUST)
+            {
+                return new MovementComposition(true, lp, OrientationAction.ADJUST, (int) angle);
+            }
+
+            int orientationFromTick = getOrientationFromTick(previous, start, angle, clientTicksPassed, currentStep, keyFrame.getSpeed());
+            return new MovementComposition(true, lp, OrientationAction.SET, orientationFromTick);
         }
 
         if (start == null)
         {
-            LocalPoint previous = getLocation(worldView, keyFrame, currentStep - 1);
-
             if (previous == null)
             {
-                return new MovementComposition(false, destination, false, 0);
+                return new MovementComposition(false, destination, OrientationAction.FREEZE, 0);
             }
 
             double directionX = destination.getSceneX() - previous.getSceneX();
             double directionY = destination.getSceneY() - previous.getSceneY();
             double angle = Orientation.radiansToJAngle(Math.atan(directionY / directionX), directionX, directionY);
 
-            return new MovementComposition(false, destination, true, (int) angle);
+            return new MovementComposition(false, destination, orientationAction, (int) angle);
         }
 
-        return new MovementComposition(false, start, false, 0);
+        if (previous == null)
+        {
+            return new MovementComposition(false, start, OrientationAction.FREEZE, 0);
+        }
+
+        double angle = getOrientationDifference(previous, start);
+        return new MovementComposition(false, start, OrientationAction.SET, (int) angle);
+    }
+
+    private int getOrientationFromTick(LocalPoint previous, LocalPoint start, double angle, int clientTicksPassed, int currentStep, double speed)
+    {
+        if (previous == null)
+        {
+            return (int) angle;
+        }
+
+        double originalAngle = getOrientationDifference(previous, start);
+
+        int angleDifference = (int) (angle - originalAngle);
+        if (angleDifference == 0)
+        {
+            return (int) angle;
+        }
+
+        double ticksSinceLastStep = clientTicksPassed - (((double) currentStep) * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH);
+        double change = speed * TURN_RATE * ticksSinceLastStep;
+
+        int newOrientation;
+        if (angleDifference > (change * -1) && angleDifference < change)
+        {
+            newOrientation = (int) angle;
+        }
+        else if (angleDifference > 0)
+        {
+            newOrientation = Orientation.boundOrientation((int) (originalAngle + change));
+        }
+        else
+        {
+            newOrientation = Orientation.boundOrientation((int) (originalAngle - change));
+        }
+
+        return newOrientation;
+    }
+
+    private double getOrientationDifference(LocalPoint firstPoint, LocalPoint secondPoint)
+    {
+        int secondX = secondPoint.getX();
+        int secondY = secondPoint.getY();
+        int firstX = firstPoint.getX();
+        int firstY = firstPoint.getY();
+        double differenceX = secondX - firstX;
+        double differenceY = secondY - firstY;
+        return Orientation.radiansToJAngle(Math.atan(differenceY / differenceX), differenceX, differenceY);
     }
 
     /**
@@ -879,6 +941,7 @@ public class Programmer
 
         double tileSpeed = keyFrame.getSpeed();
         double timePassed = timeSheetPanel.getCurrentTime() - keyFrame.getTick();
+        int clientTicksPassed = (int) (timePassed * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH);
         double stepsComplete = timePassed * tileSpeed;
         int currentStep = (int) Math.floor(stepsComplete);
         double endSpeed = (pathLength - 1) - (Math.floor(((pathLength - 1) / tileSpeed)) * tileSpeed);
@@ -908,8 +971,10 @@ public class Programmer
         transform3D(worldView,
                 character,
                 keyFrame,
+                OrientationAction.SET,
                 currentStep,
                 stepsComplete,
+                clientTicksPassed,
                 finalSpeed);
     }
 
