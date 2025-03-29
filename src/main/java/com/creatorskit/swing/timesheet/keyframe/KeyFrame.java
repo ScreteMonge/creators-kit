@@ -41,7 +41,7 @@ public class KeyFrame
             AnimationKeyFrame kf = (AnimationKeyFrame) keyFrame;
             return new AnimationKeyFrame(
                     tick,
-                    kf.isFreeze(),
+                    kf.isStall(),
                     kf.getActive(),
                     kf.getStartFrame(),
                     kf.isLoop(),

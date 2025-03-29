@@ -105,18 +105,43 @@ public class Programmer
 
             int[][] path = keyFrame.getPath();
             int currentStep = keyFrame.getCurrentStep();
-            if (currentStep >= path.length || currentStep == -1)
+            int pathLength = path.length;
+            if (currentStep >= pathLength || currentStep == -1)
             {
                 continue;
             }
 
-            double speed = keyFrame.getSpeed() / Constants.GAME_TICK_LENGTH * Constants.CLIENT_TICK_LENGTH;
-            double ticksPassed = client.getGameCycle() - keyFrame.getStepClientTick();
-            double stepsComplete = ticksPassed * speed;
+            double tileSpeed = keyFrame.getSpeed();
+            double speed = tileSpeed * Constants.CLIENT_TICK_LENGTH / Constants.GAME_TICK_LENGTH;
+            double clientTicksPassed = client.getGameCycle() - keyFrame.getStepClientTick();
+            double stepsComplete = clientTicksPassed * speed;
+            currentStep = (int) Math.floor(stepsComplete);
 
-            //if animKeyFrame = stallAnim, cancel step progression
-            keyFrame.setCurrentStep((int) stepsComplete);
-            transform3D(worldView, character, keyFrame, currentStep, stepsComplete);
+            double endSpeed = (pathLength - 1) - (Math.floor(((pathLength - 1) / tileSpeed)) * tileSpeed);
+            double finalSpeed = tileSpeed;
+
+            if (stepsComplete + endSpeed > pathLength - 1)
+            {
+                double jumps = (pathLength - 1) % tileSpeed;
+                if (jumps != 0)
+                {
+                    double ticksPreSlowdown = (pathLength - 1 - endSpeed) / tileSpeed;
+                    int stepsPreSlowdown = (int) (ticksPreSlowdown * tileSpeed);
+
+                    stepsComplete = ((clientTicksPassed) - (ticksPreSlowdown * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH)) * endSpeed * Constants.CLIENT_TICK_LENGTH / Constants.GAME_TICK_LENGTH + stepsPreSlowdown;
+                    currentStep = (int) (stepsComplete);
+                    finalSpeed = endSpeed;
+                }
+            }
+
+            if (currentStep > pathLength)
+            {
+                currentStep = pathLength;
+            }
+
+            keyFrame.setCurrentStep(currentStep);
+
+            transform3D(worldView, character, keyFrame, currentStep, stepsComplete, finalSpeed);
         }
     }
 
@@ -126,7 +151,7 @@ public class Programmer
      */
     public void transform3D(Character character)
     {
-        setAnimation(character, false, 0);
+        setAnimation(character, false, 0, 0);
     }
 
     /**
@@ -137,7 +162,7 @@ public class Programmer
      * @param currentStep the number of whole steps that have already been performed
      * @param stepsComplete the number of whole + sub steps that have already been performed
      */
-    public void transform3D(WorldView worldView, Character character, MovementKeyFrame keyFrame, int currentStep, double stepsComplete)
+    public void transform3D(WorldView worldView, Character character, MovementKeyFrame keyFrame, int currentStep, double stepsComplete, double finalSpeed)
     {
         CKObject ckObject = character.getCkObject();
         if (ckObject == null)
@@ -153,7 +178,7 @@ public class Programmer
         MovementComposition mc = getMovementComposition(worldView, character, keyFrame, currentStep, stepsComplete);
         if (mc == null)
         {
-            setAnimation(character, false, 0);
+            setAnimation(character, false, 0, 0);
             return;
         }
 
@@ -164,7 +189,7 @@ public class Programmer
         int difference = Orientation.subtract(orientationGoal, orientation);
 
         setOrientation(character, mc, difference, keyFrame.getSpeed());
-        setAnimation(character, mc.isMoving(), difference);
+        setAnimation(character, mc.isMoving(), difference, finalSpeed);
     }
 
     private void setLocation(Character character, MovementKeyFrame keyFrame, MovementComposition mc)
@@ -210,7 +235,7 @@ public class Programmer
         }
     }
 
-    private void setAnimation(Character character, boolean isMoving, int orientationDifference)
+    private void setAnimation(Character character, boolean isMoving, int orientationDifference, double speed)
     {
         CKObject ckObject = character.getCkObject();
 
@@ -222,7 +247,7 @@ public class Programmer
 
         AnimationKeyFrame keyFrame = (AnimationKeyFrame) kf;
         int active = keyFrame.getActive();
-        int pose = getPoseAnimation(keyFrame, isMoving, orientationDifference);
+        int pose = getPoseAnimation(keyFrame, isMoving, orientationDifference, speed);
 
         clientThread.invokeLater(() ->
         {
@@ -234,9 +259,9 @@ public class Programmer
             {
                 if (currentActive != null && currentActive.getId() != -1)
                 {
-                    ckObject.setAnimation(AnimationType.ACTIVE, -1);
-                    ckObject.setFinished(AnimationType.ACTIVE, true);
-                    ckObject.setLoop(AnimationType.ACTIVE, false);
+                    ckObject.unsetAnimation(AnimationType.ACTIVE);
+                    ckObject.setFinished(true);
+                    ckObject.setLoop(false);
                 }
             }
 
@@ -244,12 +269,13 @@ public class Programmer
             {
                 if (currentActive != ckObject.getActiveAnimation())
                 {
-                    if (!ckObject.isFinished(AnimationType.ACTIVE))
+                    if (!ckObject.isFinished())
                     {
                         if (currentActive == null || currentActive.getId() != active)
                         {
                             ckObject.setAnimation(AnimationType.ACTIVE, active);
-                            ckObject.setLoop(AnimationType.ACTIVE, keyFrame.isLoop());
+                            ckObject.setAnimationFrame(AnimationType.ACTIVE, keyFrame.getStartFrame(), false);
+                            ckObject.setLoop(keyFrame.isLoop());
                         }
                     }
                 }
@@ -259,30 +285,28 @@ public class Programmer
             {
                 if (currentPose != null && currentPose.getId() != -1)
                 {
-                    ckObject.setAnimation(AnimationType.POSE, -1);
-                    ckObject.setLoop(AnimationType.POSE, false);
+                    ckObject.unsetAnimation(AnimationType.POSE);
                 }
             }
 
             if (pose != -1)
             {
-                if (currentPose == null)
+                if (currentPose == null || currentPose.getId() != pose)
                 {
                     ckObject.setAnimation(AnimationType.POSE, pose);
-                }
-                else if (currentPose.getId() != pose)
-                {
-                    ckObject.setAnimation(AnimationType.POSE, pose);
+                    ckObject.setAnimationFrame(AnimationType.POSE, keyFrame.getStartFrame(), false);
+
                 }
             }
         });
     }
 
-    private int getPoseAnimation(AnimationKeyFrame keyFrame, boolean isMoving, int orientationDifference)
+    private int getPoseAnimation(AnimationKeyFrame keyFrame, boolean isMoving, int orientationDifference, double speed)
     {
-        if (!isMoving)
+        if (speed == 0 || !isMoving)
         {
             int animId = keyFrame.getIdle();
+            /*
             if (orientationDifference > 0)
             {
                 int idleRight = keyFrame.getIdleRight();
@@ -301,20 +325,27 @@ public class Programmer
                 }
             }
 
+             */
+
             return animId;
         }
 
         int idle = keyFrame.getIdle();
-        int walk = keyFrame.getWalk();
+        int move = keyFrame.getWalk();
+        int run = keyFrame.getRun();
+        if (speed > 1 && run != -1)
+        {
+            move = keyFrame.getRun();
+        }
 
         if (orientationDifference < 256 && orientationDifference > -256)
         {
-            if (walk == -1)
+            if (move == -1)
             {
                 return idle;
             }
 
-            return walk;
+            return move;
         }
 
         if (orientationDifference >= 256 && orientationDifference < 736)
@@ -322,12 +353,12 @@ public class Programmer
             int animId = keyFrame.getWalkRight();
             if (animId == -1)
             {
-                if (walk == -1)
+                if (move == -1)
                 {
                     return idle;
                 }
 
-                return walk;
+                return move;
             }
 
             return animId;
@@ -338,12 +369,12 @@ public class Programmer
             int animId = keyFrame.getWalkLeft();
             if (animId == -1)
             {
-                if (walk == -1)
+                if (move == -1)
                 {
                     return idle;
                 }
 
-                return walk;
+                return move;
             }
 
             return animId;
@@ -352,12 +383,12 @@ public class Programmer
         int animId = keyFrame.getWalk180();
         if (animId == -1)
         {
-            if (walk == -1)
+            if (move == -1)
             {
                 return idle;
             }
 
-            return walk;
+            return move;
         }
 
         return animId;
@@ -379,6 +410,9 @@ public class Programmer
         {
             return null;
         }
+
+        //System.out.println("Currentstep: " + currentStep);
+        //System.out.println("Stepscomplete: " + stepsComplete);
 
         int pathLength = keyFrame.getPath().length;
         if (currentStep >= pathLength)
@@ -423,8 +457,6 @@ public class Programmer
             double angle = Orientation.radiansToJAngle(Math.atan(directionY / directionX), directionX, directionY);
 
             double subSteps = percentComplete * TILE_LENGTH;
-            //This algorithm assumes that, if diagonal, the character moves 1 space vertically and 1 space horizontally
-            //To make it work with non 45 degree angles, appropriate trigonometry must be used
 
             int changeX = (int) (subSteps * Orientation.orientationX(angle));
             int currentX = startX + changeX;
@@ -845,20 +877,40 @@ public class Programmer
         int[][] path = keyFrame.getPath();
         int pathLength = path.length;
 
-        double speed = keyFrame.getSpeed();
-        double stepsComplete = (timeSheetPanel.getCurrentTime() - keyFrame.getTick()) * speed;
-        int wholeStepsComplete = (int) Math.floor(stepsComplete);
-        if (wholeStepsComplete > pathLength)
+        double tileSpeed = keyFrame.getSpeed();
+        double timePassed = timeSheetPanel.getCurrentTime() - keyFrame.getTick();
+        double stepsComplete = timePassed * tileSpeed;
+        int currentStep = (int) Math.floor(stepsComplete);
+        double endSpeed = (pathLength - 1) - (Math.floor(((pathLength - 1) / tileSpeed)) * tileSpeed);
+        double finalSpeed = tileSpeed;
+
+        if (stepsComplete + endSpeed > pathLength - 1)
         {
-            wholeStepsComplete = pathLength;
+            double jumps = (pathLength - 1) % tileSpeed;
+            if (jumps != 0)
+            {
+                double ticksPreSlowdown = (pathLength - 1 - endSpeed) / tileSpeed;
+                int stepsPreSlowdown = (int) (ticksPreSlowdown * tileSpeed);
+
+                stepsComplete = (timePassed - ticksPreSlowdown) * endSpeed + stepsPreSlowdown;
+                currentStep = (int) (stepsComplete);
+                finalSpeed = endSpeed;
+            }
         }
-        keyFrame.setCurrentStep(wholeStepsComplete);
+
+        if (currentStep > pathLength)
+        {
+            currentStep = pathLength;
+        }
+
+        keyFrame.setCurrentStep(currentStep);
 
         transform3D(worldView,
                 character,
                 keyFrame,
-                wholeStepsComplete,
-                stepsComplete);
+                currentStep,
+                stepsComplete,
+                finalSpeed);
     }
 
     private void registerAnimationChanges(Character character)
@@ -887,9 +939,9 @@ public class Programmer
         AnimationKeyFrame keyFrame = (AnimationKeyFrame) kf;
         clientThread.invokeLater(() ->
         {
-            ckObject.setLoop(AnimationType.ACTIVE, keyFrame.isLoop());
+            ckObject.setLoop(keyFrame.isLoop());
             ckObject.setActiveAnimation(client.loadAnimation(keyFrame.getActive()));
-            ckObject.setFinished(AnimationType.ACTIVE, false);
+            ckObject.setFinished(false);
             setAnimationFrames(ckObject, timeSheetPanel.getCurrentTime(), keyFrame.getTick(), keyFrame.getStartFrame(), keyFrame.isLoop());
 
             if (playing)
@@ -1058,7 +1110,7 @@ public class Programmer
         {
             if (savedAnimation == null || savedAnimation.getId() == -1)
             {
-                ckObject.setFinished(AnimationType.ACTIVE,true);
+                ckObject.setFinished(true);
             }
             else
             {
@@ -1073,7 +1125,7 @@ public class Programmer
             {
                 if (savedAnimation == null)
                 {
-                    ckObject.setFinished(AnimationType.ACTIVE,true);
+                    ckObject.setFinished(true);
                 }
                 else
                 {
@@ -1090,8 +1142,8 @@ public class Programmer
         int[] animFrame = getAnimFrame(animation, currentTime, startTime, startFrame, loop);
         if (animFrame[0] == -1)
         {
-            ckObject.setFinished(AnimationType.ACTIVE,true);
-            ckObject.setAnimation(AnimationType.ACTIVE, -1);
+            ckObject.setFinished(true);
+            ckObject.unsetAnimation(AnimationType.ACTIVE);
         }
         else
         {
@@ -1101,8 +1153,8 @@ public class Programmer
                 ckObject.setAnimation(AnimationType.ACTIVE, animation);
                 ckObject.setAnimationFrame(AnimationType.ACTIVE, animFrame[0], false);
                 ckObject.tick(animFrame[1]);
-                ckObject.setLoop(AnimationType.ACTIVE, loop);
-                ckObject.setFinished(AnimationType.ACTIVE,false);
+                ckObject.setLoop(loop);
+                ckObject.setFinished(false);
             });
         }
     }
@@ -1122,7 +1174,6 @@ public class Programmer
                     ckObject.setActive(true);
                     ckObject.setAnimationFrame(AnimationType.POSE, animFrame[0], false);
                     ckObject.tick(animFrame[1]);
-                    ckObject.setLoop(AnimationType.POSE, true);
                 });
             }
         }

@@ -382,16 +382,29 @@ public class TimeSheetPanel extends JPanel
             return;
         }
 
-        KeyFrame keyFrame = selectedCharacter.findPreviousKeyFrame(attributePanel.getSelectedKeyFramePage(), currentTime, true);
+        KeyFrameType type = attributePanel.getSelectedKeyFramePage();
+        KeyFrame keyFrame = selectedCharacter.findPreviousKeyFrame(type, currentTime, true);
         if (keyFrame == null)
         {
             return;
         }
 
-        KeyFrame kf = attributePanel.createKeyFrame(keyFrame.getTick());
+        KeyFrame kf = attributePanel.createKeyFrame(type, keyFrame.getTick());
         if (kf == null)
         {
             return;
+        }
+
+        if (type == KeyFrameType.MOVEMENT)
+        {
+            MovementKeyFrame oldKF = (MovementKeyFrame) keyFrame;
+
+            MovementKeyFrame newKF = (MovementKeyFrame) kf;
+            newKF.setPlane(oldKF.getPlane());
+            newKF.setPoh(oldKF.isPoh());
+            newKF.setPath(oldKF.getPath());
+            newKF.setCurrentStep(0);
+            newKF.setStepClientTick(0);
         }
 
         KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(kf, selectedCharacter, KeyFrameCharacterActionType.ADD), new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.REMOVE)};

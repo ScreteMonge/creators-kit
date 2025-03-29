@@ -7,7 +7,7 @@ import lombok.Setter;
 @Setter
 public class AnimationKeyFrame extends KeyFrame
 {
-    private boolean freeze;
+    private boolean stall;
     private int active;
     private int startFrame;
     private boolean loop;
@@ -20,10 +20,10 @@ public class AnimationKeyFrame extends KeyFrame
     private int idleRight;
     private int idleLeft;
 
-    public AnimationKeyFrame(double tick, boolean freeze, int active, int startFrame, boolean loop, int idle, int walk, int run, int walk180, int walkRight, int walkLeft, int idleRight, int idleLeft)
+    public AnimationKeyFrame(double tick, boolean stall, int active, int startFrame, boolean loop, int idle, int walk, int run, int walk180, int walkRight, int walkLeft, int idleRight, int idleLeft)
     {
         super(KeyFrameType.ANIMATION, tick);
-        this.freeze = freeze;
+        this.stall = stall;
         this.active = active;
         this.startFrame = startFrame;
         this.loop = loop;

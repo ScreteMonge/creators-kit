@@ -209,7 +209,7 @@ public class AttributePanel extends JPanel
             case ANIMATION:
                 return new AnimationKeyFrame(
                         tick,
-                        animAttributes.getFreeze().getSelectedItem() == Toggle.ENABLE,
+                        animAttributes.getStall().getSelectedItem() == Toggle.ENABLE,
                         (int) animAttributes.getActive().getValue(),
                         (int) animAttributes.getStartFrame().getValue(),
                         animAttributes.getLoop().getSelectedItem() == Toggle.ENABLE,
@@ -383,56 +383,56 @@ public class AttributePanel extends JPanel
         JLabel help = new JLabel(new ImageIcon(HELP));
         help.setHorizontalAlignment(SwingConstants.LEFT);
         help.setBorder(new EmptyBorder(0, 4, 0, 4));
-        help.setToolTipText("<html>Enabling manual animation override lets you exactly control what animation is played at a given time" +
-                "<br>Smart animation instead bases your animations off the Object's movement. For example:" +
-                "<br>The Idle animation plays when your character is not moving, while the Run animation plays while the Object is moving >1 tile/tick</html>");
+        help.setToolTipText("<html>Movement Animations dynamically update your Object based on its current movement trajectory" +
+                "<br>For example: an Object that isn't moving will use the given Idle animation; an Object taking a 90 degree right turn will use Walk Right animation." +
+                "<br>Active Animations will instead override the current Movement Animation, playing regardless of the Object's movement trajectory</html>");
         generalTitlePanel.add(help);
 
         c.gridwidth = 1;
         c.gridheight = 1;
         c.gridx = 0;
         c.gridy = 1;
-        JLabel freezeLabel = new JLabel("Freeze: ");
-        freezeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(freezeLabel, c);
-
-        c.gridx = 1;
-        c.gridy = 1;
-        JComboBox<Toggle> freeze = animAttributes.getFreeze();
-        freeze.setFocusable(false);
-        freeze.addItem(Toggle.DISABLE);
-        freeze.addItem(Toggle.ENABLE);
-        card.add(freeze, c);
-
-        c.gridx = 0;
-        c.gridy = 2;
         JLabel startFrameLabel = new JLabel("1st Frame: ");
         startFrameLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(startFrameLabel, c);
 
         c.gridx = 1;
-        c.gridy = 2;
+        c.gridy = 1;
         JSpinner startFrame = animAttributes.getStartFrame();
         startFrame.setModel(new SpinnerNumberModel(0, 0, 99999, 1));
         startFrame.setPreferredSize(spinnerSize);
         card.add(startFrame, c);
 
         c.gridx = 2;
-        c.gridy = 2;
+        c.gridy = 1;
         JButton randomize = new JButton("Random");
         card.add(randomize, c);
+
+        c.gridx = 0;
+        c.gridy = 2;
+        JLabel stallLabel = new JLabel("Stall: ");
+        stallLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(stallLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 2;
+        JComboBox<Toggle> stall = animAttributes.getStall();
+        stall.setFocusable(false);
+        stall.addItem(Toggle.DISABLE);
+        stall.addItem(Toggle.ENABLE);
+        card.add(stall, c);
 
         c.gridwidth = 4;
         c.gridx = 0;
         c.gridy = 3;
-        JLabel manualTitle = new JLabel("Manual Animation");
+        JLabel manualTitle = new JLabel("Active Animation");
         manualTitle.setFont(FontManager.getRunescapeBoldFont());
         card.add(manualTitle, c);
 
         c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 4;
-        JLabel manualLabel = new JLabel("Manual: ");
+        JLabel manualLabel = new JLabel("Active: ");
         manualLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(manualLabel, c);
 
@@ -460,7 +460,7 @@ public class AttributePanel extends JPanel
         c.gridwidth = 4;
         c.gridx = 0;
         c.gridy = 5;
-        JLabel smartTitle = new JLabel("Smart Animation");
+        JLabel smartTitle = new JLabel("Movement Animations");
         smartTitle.setFont(FontManager.getRunescapeBoldFont());
         card.add(smartTitle, c);
 

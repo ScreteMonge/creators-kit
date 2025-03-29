@@ -12,7 +12,7 @@ import java.awt.*;
 @Getter
 public class AnimAttributes extends Attributes
 {
-    private final JComboBox<Toggle> freeze = new JComboBox<>();
+    private final JComboBox<Toggle> stall = new JComboBox<>();
     private final JSpinner active = new JSpinner();
     private final JSpinner startFrame = new JSpinner();
     private final JComboBox<Toggle> loop = new JComboBox<>();
@@ -37,7 +37,7 @@ public class AnimAttributes extends Attributes
     public void setAttributes(KeyFrame keyFrame)
     {
         AnimationKeyFrame kf = (AnimationKeyFrame) keyFrame;
-        freeze.setSelectedItem(kf.isFreeze() ? Toggle.ENABLE : Toggle.DISABLE);
+        stall.setSelectedItem(kf.isStall() ? Toggle.ENABLE : Toggle.DISABLE);
         active.setValue(kf.getActive());
         startFrame.setValue(kf.getStartFrame());
         loop.setSelectedItem(kf.isLoop() ? Toggle.ENABLE : Toggle.DISABLE);
@@ -54,7 +54,7 @@ public class AnimAttributes extends Attributes
     @Override
     public void setBackgroundColours(Color color)
     {
-        freeze.setBackground(color);
+        stall.setBackground(color);
         active.setBackground(color);
         startFrame.setBackground(color);
         loop.setBackground(color);
@@ -73,7 +73,7 @@ public class AnimAttributes extends Attributes
     {
         return new JComponent[]
                 {
-                        freeze,
+                        stall,
                         active,
                         startFrame,
                         loop,
@@ -91,9 +91,9 @@ public class AnimAttributes extends Attributes
     @Override
     public void addChangeListeners()
     {
-        freeze.addItemListener(e ->
+        stall.addItemListener(e ->
         {
-            freeze.setBackground(getRed());
+            stall.setBackground(getRed());
         });
 
         active.addChangeListener(e ->
@@ -155,7 +155,7 @@ public class AnimAttributes extends Attributes
     @Override
     public void resetAttributes()
     {
-        freeze.setSelectedItem(Toggle.DISABLE);
+        stall.setSelectedItem(Toggle.DISABLE);
         active.setValue(-1);
         startFrame.setValue(0);
         loop.setSelectedItem(Toggle.DISABLE);

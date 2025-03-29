@@ -124,15 +124,14 @@ public class CKObject extends RuneLiteObjectController
         return client.isRuneLiteObjectRegistered(this);
     }
 
-    public void setLoop(AnimationType type, boolean loop)
+    public void setLoop(boolean loop)
     {
-        CKAnimationController ac = getController(type);
-        if (ac == null)
+        if (animationController == null)
         {
             return;
         }
 
-        ac.setLoop(loop);
+        animationController.setLoop(loop);
     }
 
     @Override
@@ -179,26 +178,36 @@ public class CKObject extends RuneLiteObjectController
         }
     }
 
-    public boolean isFinished(AnimationType type)
+    public boolean isFinished()
     {
-        CKAnimationController ac = getController(type);
-        if (ac == null)
+        if (animationController == null)
         {
             return true;
         }
 
-        return ac.isFinished();
+        return animationController.isFinished();
     }
 
-    public void setFinished(AnimationType type, boolean finished)
+    public void setFinished(boolean finished)
     {
-        CKAnimationController ac = getController(type);
-        if (ac == null)
+        if (animationController == null)
         {
             return;
         }
 
-        ac.setFinished(finished);
+        animationController.setFinished(finished);
+    }
+
+    public void unsetAnimation(AnimationType type)
+    {
+        CKAnimationController ac = getController(type);
+        if (ac == null)
+        {
+            setupAnimController(type, -1);
+            return;
+        }
+
+        ac.setAnimation(client.loadAnimation(-1));
     }
 
     public void setAnimation(AnimationType type, Animation animation)
