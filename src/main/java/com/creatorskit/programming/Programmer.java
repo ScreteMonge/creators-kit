@@ -59,12 +59,6 @@ public class Programmer
 
         if (playing)
         {
-            if (clientTickAtLastProgramTick == 0 && triggerPause)
-            {
-                pause();
-                return;
-            }
-
             clientTickAtLastProgramTick++;
             if (clientTickAtLastProgramTick >= 3)
             {
@@ -73,6 +67,10 @@ public class Programmer
             }
 
             updateCharacter3D();
+            if (clientTickAtLastProgramTick == 0 && triggerPause)
+            {
+                pause();
+            }
         }
     }
 
@@ -155,12 +153,16 @@ public class Programmer
     }
 
     /**
-     * Set the location for the Character, with the intent to move it to the next subtile based on its current location and the predefined path
+     * Transforms the Character's 3D model, by location with the intent to move it to the next subtile based on its current location and the predefined path,
+     * by orientation to align with the current trajectory, and by animation according to what idle pose should be playing based on the direction of motion and orientation
      * @param worldView the current worldview
-     * @param character the Character to move
+     * @param character the Character to transform
      * @param keyFrame the MovementKeyFrame from which the location is being drawn
+     * @param orientationAction indicate whether to set, adjust, or freeze orientation
      * @param currentStep the number of whole steps that have already been performed
      * @param stepsComplete the number of whole + sub steps that have already been performed
+     * @param clientTicksPassed the number of client ticks that have passed since the start of the keyframe
+     * @param finalSpeed the speed of the keyframe
      */
     public void transform3D(WorldView worldView, Character character, MovementKeyFrame keyFrame, OrientationAction orientationAction, int currentStep, double stepsComplete, int clientTicksPassed, double finalSpeed)
     {
@@ -512,7 +514,8 @@ public class Programmer
 
         double originalAngle = getOrientationDifference(previous, start);
 
-        int angleDifference = (int) (angle - originalAngle);
+
+        int angleDifference = Orientation.subtract((int) angle, (int) originalAngle);
         if (angleDifference == 0)
         {
             return (int) angle;
@@ -521,21 +524,17 @@ public class Programmer
         double ticksSinceLastStep = clientTicksPassed - (((double) currentStep) * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH);
         double change = speed * TURN_RATE * ticksSinceLastStep;
 
-        int newOrientation;
         if (angleDifference > (change * -1) && angleDifference < change)
         {
-            newOrientation = (int) angle;
-        }
-        else if (angleDifference > 0)
-        {
-            newOrientation = Orientation.boundOrientation((int) (originalAngle + change));
-        }
-        else
-        {
-            newOrientation = Orientation.boundOrientation((int) (originalAngle - change));
+            return (int) angle;
         }
 
-        return newOrientation;
+        if (angleDifference > 0)
+        {
+            return Orientation.boundOrientation((int) (originalAngle + change));
+        }
+
+        return Orientation.boundOrientation((int) (originalAngle - change));
     }
 
     private double getOrientationDifference(LocalPoint firstPoint, LocalPoint secondPoint)

@@ -121,7 +121,12 @@ public class Orientation
         int product = boundOrientation(first - second);
         if (product > 1024)
         {
-            return (product - 1024) * -1;
+            return (2048 - product) * -1;
+        }
+
+        if (product < -1024)
+        {
+            return 2048 + product;
         }
 
         return product;

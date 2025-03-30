@@ -752,59 +752,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			switch (locationOption)
 			{
-				case TO_PATH_START:
-				case TO_CURRENT_TICK:
-					KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
-					if (kf == null)
-					{
-						break;
-					}
-
-					MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
-					if (keyFrame.isPoh())
-					{
-						return;
-					}
-
-					if (keyFrame.getPlane() != worldView.getPlane())
-					{
-						return;
-					}
-
-					int[][] path = keyFrame.getPath();
-					int pathLength = path.length;
-					if (pathLength == 0)
-					{
-						break;
-					}
-
-					if (locationOption == LocationOption.TO_PATH_START)
-					{
-						WorldPoint worldPoint = new WorldPoint(path[0][0], path[0][1], keyFrame.getPlane());
-						localPoint = LocalPoint.fromWorld(worldView, worldPoint.getX(), worldPoint.getY());
-						break;
-					}
-
-					double speed = keyFrame.getSpeed();
-					int ticksPassed = (int) (getCurrentTick() - keyFrame.getTick());
-					double stepsComplete = ticksPassed * speed;
-					int wholeStepsComplete = (int) Math.floor(stepsComplete);
-					if (wholeStepsComplete > pathLength)
-					{
-						wholeStepsComplete = pathLength;
-					}
-					keyFrame.setCurrentStep(wholeStepsComplete);
-
-					MovementComposition mc = creatorsPanel.getToolBox().getProgrammer().getMovementComposition(worldView,
-							character,
-							keyFrame,
-							wholeStepsComplete,
-							stepsComplete,
-							OrientationAction.SET,
-							ticksPassed);
-
-					localPoint = mc.getLocalPoint();
-					break;
 				case TO_PLAYER:
 					localPoint = client.getLocalPlayer().getLocalLocation();
 					break;
@@ -818,6 +765,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					localPoint = tile.getLocalLocation();
 					break;
 				case TO_SAVED_LOCATION:
+				case TO_CURRENT_TICK:
 				default:
 					break;
 			}
@@ -837,7 +785,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			}
 
 			CKObject ckObject = character.getCkObject();
+
 			ckObject.setLocation(localPoint, worldView.getPlane());
+			int orientation = (int) character.getOrientationSpinner().getValue();
+			ckObject.setOrientation(orientation);
+
 			if (locationOption == LocationOption.TO_HOVERED_TILE)
 			{
 				creatorsPanel.getToolBox().getProgrammer().registerMovementChanges(character);
@@ -848,8 +800,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				character.setActive(true, true, clientThread);
 			}
 
-			int orientation = (int) character.getOrientationSpinner().getValue();
-			ckObject.setOrientation(orientation);
+			LocalPoint endPoint = ckObject.getLocation();
+			int endOrientation = ckObject.getOrientation();
 
 			CKObject spotanim1 = character.getSpotAnim1();
 			CKObject spotanim2 = character.getSpotAnim2();
@@ -857,17 +809,17 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			if (spotanim1 != null)
 			{
 				spotanim1.setActive(false);
-				spotanim1.setLocation(localPoint, worldView.getPlane());
+				spotanim1.setLocation(endPoint, worldView.getPlane());
 				spotanim1.setActive(true);
-				spotanim1.setOrientation(orientation);
+				spotanim1.setOrientation(endOrientation);
 			}
 
 			if (spotanim2 != null)
 			{
 				spotanim2.setActive(false);
-				spotanim2.setLocation(localPoint, worldView.getPlane());
+				spotanim2.setLocation(endPoint, worldView.getPlane());
 				spotanim2.setActive(true);
-				spotanim2.setOrientation(orientation);
+				spotanim2.setOrientation(endOrientation);
 			}
 		});
 	}
@@ -885,58 +837,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			switch (locationOption)
 			{
-				case TO_PATH_START:
-				case TO_CURRENT_TICK:
-					KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
-					if (kf == null)
-					{
-						break;
-					}
-
-					MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
-					if (keyFrame.isPoh())
-					{
-						return;
-					}
-
-					if (keyFrame.getPlane() != worldView.getPlane())
-					{
-						return;
-					}
-
-					int[][] path = keyFrame.getPath();
-					int pathLength = path.length;
-					if (pathLength == 0)
-					{
-						break;
-					}
-
-					if (locationOption == LocationOption.TO_PATH_START)
-					{
-						localPoint = LocalPoint.fromScene(path[0][0], path[0][1], worldView);
-						break;
-					}
-
-					double speed = keyFrame.getSpeed();
-					int ticksPassed = (int) (getCurrentTick() - keyFrame.getTick());
-					double stepsComplete = ticksPassed * speed;
-					int wholeStepsComplete = (int) Math.floor(stepsComplete);
-					if (wholeStepsComplete > pathLength)
-					{
-						wholeStepsComplete = pathLength;
-					}
-					keyFrame.setCurrentStep(wholeStepsComplete);
-
-					MovementComposition mc = creatorsPanel.getToolBox().getProgrammer().getMovementComposition(worldView,
-							character,
-							keyFrame,
-							wholeStepsComplete,
-							stepsComplete,
-							OrientationAction.SET,
-							ticksPassed);
-
-					localPoint = mc.getLocalPoint();
-					break;
 				case TO_PLAYER:
 					localPoint = client.getLocalPlayer().getLocalLocation();
 					break;
@@ -949,6 +849,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 					localPoint = tile.getLocalLocation();
 					break;
+				case TO_CURRENT_TICK:
 				case TO_SAVED_LOCATION:
 				default:
 					break;
@@ -970,7 +871,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 
 			CKObject ckObject = character.getCkObject();
+
 			ckObject.setLocation(localPoint, worldView.getPlane());
+			int orientation = (int) character.getOrientationSpinner().getValue();
+			ckObject.setOrientation(orientation);
+
 			if (locationOption == LocationOption.TO_HOVERED_TILE)
 			{
 				creatorsPanel.getToolBox().getProgrammer().registerMovementChanges(character);
@@ -981,8 +886,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				character.setActive(true, true, clientThread);
 			}
 
-			int orientation = (int) character.getOrientationSpinner().getValue();
-			ckObject.setOrientation(orientation);
+
+			LocalPoint endPoint = ckObject.getLocation();
+			int endOrientation = ckObject.getOrientation();
 
 			CKObject spotanim1 = character.getSpotAnim1();
 			CKObject spotanim2 = character.getSpotAnim2();
@@ -990,17 +896,17 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			if (spotanim1 != null)
 			{
 				spotanim1.setActive(false);
-				spotanim1.setLocation(localPoint, worldView.getPlane());
+				spotanim1.setLocation(endPoint, worldView.getPlane());
 				spotanim1.setActive(true);
-				spotanim1.setOrientation(orientation);
+				spotanim1.setOrientation(endOrientation);
 			}
 
 			if (spotanim2 != null)
 			{
 				spotanim2.setActive(false);
-				spotanim2.setLocation(localPoint, worldView.getPlane());
+				spotanim2.setLocation(endPoint, worldView.getPlane());
 				spotanim2.setActive(true);
-				spotanim2.setOrientation(orientation);
+				spotanim2.setOrientation(endOrientation);
 			}
 		});
 	}
@@ -2111,25 +2017,20 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 		}
 
+		Programmer programmer = creatorsPanel.getToolBox().getProgrammer();
+
 		KeyFrame kf = selectedCharacter.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
 		if (kf == null)
 		{
 			TimeSheetPanel timeSheetPanel = creatorsPanel.getToolBox().getTimeSheetPanel();
 			timeSheetPanel.initializeMovementKeyFrame(selectedCharacter, worldView, localPoint);
-			setLocation(selectedCharacter, true, true, LocationOption.TO_PATH_START);
+			programmer.registerMovementChanges(selectedCharacter);
 			return;
 		}
 
 		MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
 		movementManager.addProgramStep(keyFrame, worldView, localPoint);
-		if (keyFrame.getPath().length == 1)
-		{
-			setLocation(selectedCharacter, true, true, LocationOption.TO_PATH_START);
-		}
-		else
-		{
-			setLocation(selectedCharacter, false, true, LocationOption.TO_CURRENT_TICK);
-		}
+		programmer.registerMovementChanges(selectedCharacter);
 	}
 
 	private final HotkeyListener removeProgramStepListener = new HotkeyListener(() -> config.removeProgramStepHotkey())
@@ -2157,19 +2058,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
 		int[][] path = keyFrame.getPath();
 
-		int newLength = path.length - 1;
-		if (keyFrame.getCurrentStep() > newLength)
-		{
-			keyFrame.setCurrentStep(newLength);
-		}
-
 		if (path.length == 0)
 		{
-			keyFrame.setCurrentStep(0);
 			return;
 		}
 
+		int newLength = path.length - 1;
 		keyFrame.setPath(ArrayUtils.remove(path, newLength));
+		creatorsPanel.getToolBox().getProgrammer().registerMovementChanges(selectedCharacter);
 	}
 
 	private final HotkeyListener clearProgramStepListener = new HotkeyListener(() -> config.clearProgramStepHotkey())
