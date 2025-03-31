@@ -1,5 +1,6 @@
 package com.creatorskit.swing.timesheet.keyframe;
 
+import com.creatorskit.programming.OrientationType;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -8,12 +9,14 @@ import lombok.Setter;
 public class OrientationKeyFrame extends KeyFrame
 {
     private int manualOrientation;
-    private boolean manualOverride;
+    private OrientationType type;
+    private boolean override;
 
-    public OrientationKeyFrame(double tick, int manualOrientation, boolean manualOverride)
+    public OrientationKeyFrame(double tick, OrientationType type, int manualOrientation, boolean override)
     {
         super(KeyFrameType.ORIENTATION, tick);
         this.manualOrientation = manualOrientation;
-        this.manualOverride = manualOverride;
+        this.type = type;
+        this.override = override;
     }
 }

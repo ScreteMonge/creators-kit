@@ -157,14 +157,14 @@ public class Programmer
      * by orientation to align with the current trajectory, and by animation according to what idle pose should be playing based on the direction of motion and orientation
      * @param worldView the current worldview
      * @param character the Character to transform
-     * @param keyFrame the MovementKeyFrame from which the location is being drawn
+     * @param mkf the MovementKeyFrame from which the location is being drawn
      * @param orientationAction indicate whether to set, adjust, or freeze orientation
      * @param currentStep the number of whole steps that have already been performed
      * @param stepsComplete the number of whole + sub steps that have already been performed
      * @param clientTicksPassed the number of client ticks that have passed since the start of the keyframe
      * @param finalSpeed the speed of the keyframe
      */
-    public void transform3D(WorldView worldView, Character character, MovementKeyFrame keyFrame, OrientationAction orientationAction, int currentStep, double stepsComplete, int clientTicksPassed, double finalSpeed)
+    public void transform3D(WorldView worldView, Character character, MovementKeyFrame mkf, OrientationAction orientationAction, int currentStep, double stepsComplete, int clientTicksPassed, double finalSpeed)
     {
         CKObject ckObject = character.getCkObject();
         if (ckObject == null)
@@ -172,25 +172,50 @@ public class Programmer
             return;
         }
 
-        if (keyFrame.getPlane() != worldView.getPlane())
+        if (mkf.getPlane() != worldView.getPlane())
         {
             return;
         }
 
-        MovementComposition mc = getMovementComposition(worldView, character, keyFrame, currentStep, stepsComplete, orientationAction, clientTicksPassed);
+        MovementComposition mc = getMovementComposition(worldView, character, mkf, currentStep, stepsComplete, orientationAction, clientTicksPassed);
         if (mc == null)
         {
             setAnimation(character, false, 0, 0);
             return;
         }
 
-        setLocation(character, keyFrame, mc);
+        setLocation(character, mkf, mc);
 
+        boolean instant = false;
         int orientation = ckObject.getOrientation();
         int orientationGoal = mc.getOrientationGoal();
         int difference = Orientation.subtract(orientationGoal, orientation);
 
-        setOrientation(character, mc, difference, stepsComplete, keyFrame.getSpeed());
+        KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.ORIENTATION);
+        if (kf == null)
+        {
+            setOrientation(character, mc, instant, orientationGoal, difference, stepsComplete, mkf.getSpeed());
+            setAnimation(character, mc.isMoving(), difference, finalSpeed);
+            return;
+        }
+
+        OrientationKeyFrame okf = (OrientationKeyFrame) kf;
+        if (okf.isOverride())
+        {
+            orientationGoal = okf.getManualOrientation();
+
+            if (okf.getType() == OrientationType.INSTANT)
+            {
+                instant = true;
+                difference = 0;
+            }
+            else
+            {
+                difference = Orientation.subtract(orientationGoal, orientation);
+            }
+        }
+
+        setOrientation(character, mc, instant, orientationGoal, difference, stepsComplete, mkf.getSpeed());
         setAnimation(character, mc.isMoving(), difference, finalSpeed);
     }
 
@@ -207,18 +232,22 @@ public class Programmer
         character.getCkObject().setLocation(lp, keyFrame.getPlane());
     }
 
-    private void setOrientation(Character character, MovementComposition mc, int difference, double stepsComplete, double speed)
+    private void setOrientation(Character character, MovementComposition mc, boolean instant, int orientationGoal, int difference, double stepsComplete, double speed)
     {
         OrientationAction orientationAction = mc.getOrientationAction();
-        if (orientationAction == OrientationAction.FREEZE)
+        CKObject ckObject = character.getCkObject();
+        if (orientationAction == OrientationAction.SET || instant)
         {
+            if (ckObject.getOrientation() != orientationGoal)
+            {
+                ckObject.setOrientation(orientationGoal);
+            }
+
             return;
         }
 
-        CKObject ckObject = character.getCkObject();
-        if (orientationAction == OrientationAction.SET)
+        if (orientationAction == OrientationAction.FREEZE)
         {
-            ckObject.setOrientation(mc.getOrientationGoal());
             return;
         }
 
@@ -230,7 +259,6 @@ public class Programmer
             }
 
             int orientation = ckObject.getOrientation();
-            int orientationGoal = mc.getOrientationGoal();
             int turnSpeed = (int) (speed * TURN_RATE);
 
             int newOrientation;

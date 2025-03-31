@@ -60,8 +60,9 @@ public class KeyFrame
             OrientationKeyFrame kf = (OrientationKeyFrame) keyFrame;
             return new OrientationKeyFrame(
                     tick,
+                    kf.getType(),
                     kf.getManualOrientation(),
-                    kf.isManualOverride());
+                    kf.isOverride());
         }
 
         if (keyFrame instanceof SpawnKeyFrame)

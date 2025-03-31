@@ -7,6 +7,7 @@ import com.creatorskit.models.DataFinder.DataType;
 import com.creatorskit.models.datatypes.NPCData;
 import com.creatorskit.programming.Direction;
 import com.creatorskit.programming.MovementManager;
+import com.creatorskit.programming.OrientationType;
 import com.creatorskit.swing.AutoCompletion;
 import com.creatorskit.swing.timesheet.attributes.*;
 import com.creatorskit.swing.timesheet.keyframe.*;
@@ -28,7 +29,6 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
 @Getter
@@ -225,8 +225,9 @@ public class AttributePanel extends JPanel
             case ORIENTATION:
                 return new OrientationKeyFrame(
                         tick,
+                        (OrientationType) oriAttributes.getType().getSelectedItem(),
                         (int) oriAttributes.getManual().getValue(),
-                        oriAttributes.getManualOverride().getSelectedItem() == OrientationToggle.MANUAL_ORIENTATION
+                        oriAttributes.getOverride().getSelectedItem() == Toggle.ENABLE
                 );
             case SPAWN:
                 return new SpawnKeyFrame(
@@ -698,34 +699,50 @@ public class AttributePanel extends JPanel
         manualTitleHelp.setHorizontalAlignment(SwingConstants.LEFT);
         manualTitleHelp.setBorder(new EmptyBorder(0, 4, 0, 4));
         manualTitleHelp.setToolTipText("<html>Enabling manual orientation override lets you exactly control what orientation your Object will face" +
-                "<br>Otherwise, the Object's orientation is instead based off of the direction of its movement</html>");
+                "<br>Otherwise, the Object's orientation is instead based off of the direction of its movement." +
+                "<br>The Orientation Type will determine whether the Object instantly rotates to the indicated orientation, or whether it will gradually do so</html>");
         manualTitlePanel.add(manualTitleHelp);
+
+        c.gridwidth = 2;
+        c.gridx = 0;
+        c.gridy = 1;
+        JComboBox<Toggle> override = oriAttributes.getOverride();
+        override.setFocusable(false);
+        override.addItem(Toggle.DISABLE);
+        override.addItem(Toggle.ENABLE);
+        card.add(override, c);
 
         c.gridwidth = 1;
         c.gridx = 0;
-        c.gridy = 1;
-        JLabel manualLabel = new JLabel("Manual: ");
+        c.gridy = 2;
+        JLabel manualLabel = new JLabel("Orientation: ");
         manualLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(manualLabel, c);
 
         c.gridx = 1;
-        c.gridy = 1;
+        c.gridy = 2;
         JSpinner manual = oriAttributes.getManual();
         manual.setModel(new SpinnerNumberModel(0, 0, 2048, 1));
         manual.setPreferredSize(spinnerSize);
         card.add(manual, c);
 
-        c.gridwidth = 2;
-        c.gridx = 2;
-        c.gridy = 1;
-        JComboBox<OrientationToggle> manualCheckbox = oriAttributes.getManualOverride();
-        manualCheckbox.setFocusable(false);
-        manualCheckbox.addItem(OrientationToggle.SMART_ORIENTATION);
-        manualCheckbox.addItem(OrientationToggle.MANUAL_ORIENTATION);
-        card.add(manualCheckbox, c);
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 3;
+        JLabel typeLabel = new JLabel("Type: ");
+        typeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(typeLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 3;
+        JComboBox<OrientationType> type = oriAttributes.getType();
+        type.setFocusable(false);
+        type.addItem(OrientationType.GRADUAL);
+        type.addItem(OrientationType.INSTANT);
+        card.add(type, c);
 
         c.gridx = 0;
-        c.gridy = 2;
+        c.gridy = 4;
         c.gridwidth = 1;
         JLabel presetLabel = new JLabel("Presets: ");
         presetLabel.setHorizontalAlignment(SwingConstants.LEFT);
@@ -733,7 +750,7 @@ public class AttributePanel extends JPanel
 
         c.gridwidth = 3;
         c.gridx = 1;
-        c.gridy = 2;
+        c.gridy = 4;
         JComboBox<Direction> searcher = new JComboBox<>();
         AutoCompletion.enable(searcher);
         Direction[] directions = Direction.getAllDirections();
@@ -746,7 +763,7 @@ public class AttributePanel extends JPanel
 
         c.gridwidth = 1;
         c.gridx = 4;
-        c.gridy = 2;
+        c.gridy = 4;
         JButton searchApply = new JButton("Apply");
         searchApply.addActionListener(e ->
         {
