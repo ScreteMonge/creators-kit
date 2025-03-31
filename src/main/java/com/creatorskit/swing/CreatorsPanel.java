@@ -256,7 +256,7 @@ public class CreatorsPanel extends PluginPanel
         topButtonsPanel.setLayout(new GridLayout(1, 3, 0, 0));
 
         JButton findButton = new JButton(new ImageIcon(FIND));
-        findButton.setToolTipText("Find this object and select it in the Manager");
+        findButton.setToolTipText("Find this Object and select it in the Manager");
         findButton.setFocusable(false);
 
         JButton switchButton = new JButton(new ImageIcon(SWITCH));
@@ -264,11 +264,11 @@ public class CreatorsPanel extends PluginPanel
         switchButton.setFocusable(false);
 
         JButton duplicateButton = new JButton(new ImageIcon(DUPLICATE));
-        duplicateButton.setToolTipText("Duplicate object");
+        duplicateButton.setToolTipText("Duplicate Object");
         duplicateButton.setFocusable(false);
 
         JButton deleteButton = new JButton(new ImageIcon(CLOSE));
-        deleteButton.setToolTipText("Delete object");
+        deleteButton.setToolTipText("Delete Object");
         deleteButton.setFocusable(false);
 
         //Buttons
@@ -282,15 +282,16 @@ public class CreatorsPanel extends PluginPanel
         JButton spawnButton = new JButton();
         spawnButton.setFont(FontManager.getRunescapeFont());
         spawnButton.setText(active ? "Spawn" : "Despawn");
-        spawnButton.setToolTipText("Toggle the NPC on or off");
+        spawnButton.setToolTipText("Toggle the Object on or off");
         spawnButton.setFocusable(false);
 
-        JButton animationButton = new JButton();
-        animationButton.setFont(FontManager.getRunescapeFont());
-        animationButton.setText("Anim Off");
-        animationButton.setToolTipText("Toggle the playing animation");
-        animationButton.setPreferredSize(new Dimension(90, 25));
-        animationButton.setFocusable(false);
+        JButton colourButton = new JButton();
+        colourButton.setFont(FontManager.getRunescapeFont());
+        colourButton.setText("Recolour");
+        colourButton.setToolTipText("Rerolls the Object's colour overlays");
+        colourButton.setPreferredSize(new Dimension(90, 25));
+        colourButton.setFocusable(false);
+        colourButton.setForeground(color);
 
         JPanel framePanel = new JPanel();
         framePanel.setLayout(new BorderLayout());
@@ -384,7 +385,7 @@ public class CreatorsPanel extends PluginPanel
             objectPanel.add(spawnButton, c);
 
             c.gridy++;
-            objectPanel.add(animationButton, c);
+            objectPanel.add(colourButton, c);
 
             c.gridy++;
             objectPanel.add(framePanel, c);
@@ -523,18 +524,11 @@ public class CreatorsPanel extends PluginPanel
 
         spawnButton.addActionListener(e -> character.toggleActive(clientThread));
 
-        animationButton.addActionListener(e ->
+        colourButton.addActionListener(e ->
         {
-            int animId = character.getCkObject().getAnimationId();
-            if (animId == -1)
-            {
-                animationButton.setText("Anim Off");
-                plugin.setAnimation(character, (int) animationSpinner.getValue());
-                return;
-            }
-
-            animationButton.setText("Anim On");
-            plugin.unsetAnimation(character);
+            Color colour = getRandomColor();
+            character.setColor(colour);
+            colourButton.setForeground(colour);
         });
 
         modelButton.addActionListener(e ->
@@ -579,7 +573,6 @@ public class CreatorsPanel extends PluginPanel
 
         animationSpinner.addChangeListener(e ->
         {
-            animationButton.setText("Anim Off");
             int animationNumber = (int) animationSpinner.getValue();
             plugin.setAnimation(character, animationNumber);
             plugin.setAnimationFrame(character, (int) animationFrameSpinner.getValue(), true);
@@ -608,7 +601,7 @@ public class CreatorsPanel extends PluginPanel
                 deleteButton,
                 modelButton,
                 spawnButton,
-                animationButton,
+                colourButton,
                 animationFrameSpinner,
                 frameLabel,
                 modelLabel,
@@ -642,7 +635,7 @@ public class CreatorsPanel extends PluginPanel
             JButton deleteButton,
             JButton modelButton,
             JButton spawnButton,
-            JButton animationButton,
+            JButton colourButton,
             JSpinner animationFrameSpinner,
             JLabel frameLabel,
             JLabel modelLabel,
@@ -664,7 +657,7 @@ public class CreatorsPanel extends PluginPanel
         addSelectListeners(deleteButton, character, objectPanel, false);
         addSelectListeners(modelButton, character, objectPanel, true);
         addSelectListeners(spawnButton, character, objectPanel, true);
-        addSelectListeners(animationButton, character, objectPanel, true);
+        addSelectListeners(colourButton, character, objectPanel, true);
         addSelectListeners(animationFrameSpinner, character, objectPanel, true);
         addSelectListeners(frameLabel, character, objectPanel, true);
         addSelectListeners(modelLabel, character, objectPanel, true);

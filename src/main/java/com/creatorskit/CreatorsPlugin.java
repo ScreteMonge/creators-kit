@@ -2025,12 +2025,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			TimeSheetPanel timeSheetPanel = creatorsPanel.getToolBox().getTimeSheetPanel();
 			timeSheetPanel.initializeMovementKeyFrame(selectedCharacter, worldView, localPoint);
 			programmer.registerMovementChanges(selectedCharacter);
+			selectedCharacter.setVisible(true, clientThread);
 			return;
 		}
 
 		MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
 		movementManager.addProgramStep(keyFrame, worldView, localPoint);
 		programmer.registerMovementChanges(selectedCharacter);
+		selectedCharacter.setVisible(true, clientThread);
 	}
 
 	private final HotkeyListener removeProgramStepListener = new HotkeyListener(() -> config.removeProgramStepHotkey())
