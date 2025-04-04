@@ -15,8 +15,9 @@ public class MovementKeyFrame extends KeyFrame
     private int stepClientTick;
     private boolean loop;
     private double speed;
+    private int turnRate;
 
-    public MovementKeyFrame(double tick, int plane, boolean poh, int[][] path, int currentStep, int stepClientTick, boolean loop, double speed)
+    public MovementKeyFrame(double tick, int plane, boolean poh, int[][] path, int currentStep, int stepClientTick, boolean loop, double speed, int turnRate)
     {
         super(KeyFrameType.MOVEMENT, tick);
         this.plane = plane;
@@ -26,5 +27,6 @@ public class MovementKeyFrame extends KeyFrame
         this.stepClientTick = stepClientTick;
         this.loop = loop;
         this.speed = speed;
+        this.turnRate = turnRate;
     }
 }

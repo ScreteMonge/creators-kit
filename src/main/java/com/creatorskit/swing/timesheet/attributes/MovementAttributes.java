@@ -15,6 +15,7 @@ public class MovementAttributes extends Attributes
 {
     private final JComboBox<Toggle> loop = new JComboBox<>();
     private final JSpinner speed = new JSpinner();
+    private final JSpinner turnRate = new JSpinner();
 
     public MovementAttributes()
     {
@@ -28,6 +29,7 @@ public class MovementAttributes extends Attributes
         MovementKeyFrame kf = (MovementKeyFrame) keyFrame;
         loop.setSelectedItem(kf.isLoop() ? Toggle.ENABLE : Toggle.DISABLE);
         speed.setValue(kf.getSpeed());
+        turnRate.setValue(kf.getTurnRate());
     }
 
     @Override
@@ -35,6 +37,7 @@ public class MovementAttributes extends Attributes
     {
         loop.setBackground(color);
         speed.setBackground(color);
+        turnRate.setBackground(color);
     }
 
     @Override
@@ -43,7 +46,8 @@ public class MovementAttributes extends Attributes
         return new JComponent[]
                 {
                         loop,
-                        speed
+                        speed,
+                        turnRate
                 };
     }
 
@@ -59,6 +63,11 @@ public class MovementAttributes extends Attributes
         {
             speed.setBackground(getRed());
         });
+
+        turnRate.addChangeListener(e ->
+        {
+            turnRate.setBackground(getRed());
+        });
     }
 
     @Override
@@ -66,6 +75,7 @@ public class MovementAttributes extends Attributes
     {
         loop.setSelectedItem(Toggle.DISABLE);
         speed.setValue(1);
+        turnRate.setValue(-1);
         setBackgroundColours(KeyFrameState.EMPTY);
     }
 }

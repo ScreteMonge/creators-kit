@@ -6,6 +6,7 @@ import com.creatorskit.swing.timesheet.AttributePanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import com.creatorskit.swing.timesheet.keyframe.MovementKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.OrientationKeyFrame;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.lang3.ArrayUtils;
@@ -59,7 +60,7 @@ public class AttributeSheet extends TimeSheet
         KeyFrame[][] frames = getSelectedCharacter().getFrames();
         for (int i = 0; i < frames.length; i++)
         {
-            boolean movementKF = i == KeyFrameType.getIndex(KeyFrameType.MOVEMENT);
+            KeyFrameType type = KeyFrameType.getKeyFrameType(i);
 
             KeyFrame[] keyFrames = frames[i];
             if (keyFrames == null)
@@ -81,7 +82,7 @@ public class AttributeSheet extends TimeSheet
                 int x = (int) ((frame.getTick() + getHScroll()) * zoomFactor);
                 int y = ROW_HEIGHT_OFFSET + ROW_HEIGHT + ROW_HEIGHT * i - yImageOffset;
 
-                if (movementKF)
+                if (type == KeyFrameType.MOVEMENT)
                 {
                     MovementKeyFrame movementKeyFrame = (MovementKeyFrame) frame;
                     int steps = (movementKeyFrame.getPath().length - 1);
@@ -91,6 +92,13 @@ public class AttributeSheet extends TimeSheet
                         int pathLength = (int) (ticks * zoomFactor);
                         g.drawLine(x, y + image.getHeight() / 2, x + pathLength - 1, y + image.getHeight() / 2);
                     }
+                }
+
+                if (type == KeyFrameType.ORIENTATION)
+                {
+                    OrientationKeyFrame orientationKeyFrame = (OrientationKeyFrame) frame;
+                    int pathLength = (int) (orientationKeyFrame.getDuration() * zoomFactor);
+                    g.drawLine(x, y + image.getHeight() / 2, x + pathLength - 1, y + image.getHeight() / 2);
                 }
 
                 g.drawImage(endImage, x - xImageOffset, y, null);
@@ -147,12 +155,12 @@ public class AttributeSheet extends TimeSheet
         {
             KeyFrame frame = selectedKeyFrames[e];
             int i = KeyFrameType.getIndex(frame.getKeyFrameType());
-            boolean movementKF = i == KeyFrameType.getIndex(KeyFrameType.MOVEMENT);
+            KeyFrameType type = KeyFrameType.getKeyFrameType(i);
 
             int x = (int) ((frame.getTick() + getHScroll() + change) * zoomFactor);
             int y = ROW_HEIGHT_OFFSET + ROW_HEIGHT + ROW_HEIGHT * i - yImageOffset;
 
-            if (movementKF)
+            if (type == KeyFrameType.MOVEMENT)
             {
                 MovementKeyFrame movementKeyFrame = (MovementKeyFrame) frame;
                 int steps = (movementKeyFrame.getPath().length - 1);
@@ -162,6 +170,13 @@ public class AttributeSheet extends TimeSheet
                     int pathLength = (int) (ticks * zoomFactor);
                     g.drawLine(x, y + image.getHeight() / 2, x + pathLength - 1, y + image.getHeight() / 2);
                 }
+            }
+
+            if (type == KeyFrameType.ORIENTATION)
+            {
+                OrientationKeyFrame orientationKeyFrame = (OrientationKeyFrame) frame;
+                int pathLength = (int) (orientationKeyFrame.getDuration() * zoomFactor);
+                g.drawLine(x, y + image.getHeight() / 2, x + pathLength - 1, y + image.getHeight() / 2);
             }
 
             g.drawImage(bufferedImage, x - xImageOffset, y, null);

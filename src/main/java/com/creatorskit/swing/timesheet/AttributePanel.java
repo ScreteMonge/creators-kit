@@ -1,13 +1,13 @@
 package com.creatorskit.swing.timesheet;
 
+import com.creatorskit.CKObject;
 import com.creatorskit.Character;
 import com.creatorskit.models.CustomModel;
 import com.creatorskit.models.DataFinder;
 import com.creatorskit.models.DataFinder.DataType;
 import com.creatorskit.models.datatypes.NPCData;
-import com.creatorskit.programming.Direction;
 import com.creatorskit.programming.MovementManager;
-import com.creatorskit.programming.OrientationType;
+import com.creatorskit.programming.orientation.OrientationGoal;
 import com.creatorskit.swing.AutoCompletion;
 import com.creatorskit.swing.timesheet.attributes.*;
 import com.creatorskit.swing.timesheet.keyframe.*;
@@ -41,6 +41,7 @@ public class AttributePanel extends JPanel
     private DataFinder dataFinder;
 
     private final BufferedImage HELP = ImageUtil.loadImageResource(getClass(), "/Help.png");
+    private final BufferedImage COMPASS = ImageUtil.loadImageResource(getClass(), "/Orientation_compass.png");
     private final Icon keyframeImage = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/Keyframe.png"));
     private final Icon keyframeEmptyImage = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/Keyframe_Empty.png"));
 
@@ -204,7 +205,8 @@ public class AttributePanel extends JPanel
                         0,
                         0,
                         movementAttributes.getLoop().getSelectedItem() == Toggle.ENABLE,
-                        (double) movementAttributes.getSpeed().getValue()
+                        (double) movementAttributes.getSpeed().getValue(),
+                        (int) movementAttributes.getTurnRate().getValue()
                 );
             case ANIMATION:
                 return new AnimationKeyFrame(
@@ -225,9 +227,11 @@ public class AttributePanel extends JPanel
             case ORIENTATION:
                 return new OrientationKeyFrame(
                         tick,
-                        (OrientationType) oriAttributes.getType().getSelectedItem(),
-                        (int) oriAttributes.getManual().getValue(),
-                        oriAttributes.getOverride().getSelectedItem() == Toggle.ENABLE
+                        OrientationGoal.POINT,
+                        (int) oriAttributes.getStart().getValue(),
+                        (int) oriAttributes.getEnd().getValue(),
+                        (double) oriAttributes.getDuration().getValue(),
+                        (int) oriAttributes.getTurnRate().getValue()
                 );
             case SPAWN:
                 return new SpawnKeyFrame(
@@ -344,6 +348,19 @@ public class AttributePanel extends JPanel
         JSpinner speed = movementAttributes.getSpeed();
         speed.setModel(new SpinnerNumberModel(1, 0.5, 10, 0.5));
         card.add(speed, c);
+
+        c.gridx = 0;
+        c.gridy = 3;
+        JLabel turnRateLabel = new JLabel("Turn Rate: ");
+        turnRateLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(turnRateLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 3;
+        JSpinner turnRate = movementAttributes.getTurnRate();
+        turnRate.setToolTipText("Determines the rate at which the Object rotates during movement. -1 sets it to default value of 256 / 7.5");
+        turnRate.setModel(new SpinnerNumberModel(-1, -1, 2048, 1));
+        card.add(turnRate, c);
 
         c.gridwidth = 1;
         c.gridheight = 1;
@@ -690,7 +707,7 @@ public class AttributePanel extends JPanel
         manualTitlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
         card.add(manualTitlePanel, c);
 
-        JLabel manualTitle = new JLabel("Manual Orientation");
+        JLabel manualTitle = new JLabel("Orientation");
         manualTitle.setHorizontalAlignment(SwingConstants.LEFT);
         manualTitle.setFont(FontManager.getRunescapeBoldFont());
         manualTitlePanel.add(manualTitle);
@@ -698,94 +715,118 @@ public class AttributePanel extends JPanel
         JLabel manualTitleHelp = new JLabel(new ImageIcon(HELP));
         manualTitleHelp.setHorizontalAlignment(SwingConstants.LEFT);
         manualTitleHelp.setBorder(new EmptyBorder(0, 4, 0, 4));
-        manualTitleHelp.setToolTipText("<html>Enabling manual orientation override lets you exactly control what orientation your Object will face" +
+        manualTitleHelp.setToolTipText("<html>Setting an Orientation keyframe allows you to take direct control of an Object's orientation" +
                 "<br>Otherwise, the Object's orientation is instead based off of the direction of its movement." +
-                "<br>The Orientation Type will determine whether the Object instantly rotates to the indicated orientation, or whether it will gradually do so</html>");
+                "<br>Start is the orientaiton to set at the start of the keyframe, while End determines where the Object will eventually point</html>");
         manualTitlePanel.add(manualTitleHelp);
 
-        c.gridwidth = 2;
+        c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 1;
-        JComboBox<Toggle> override = oriAttributes.getOverride();
-        override.setFocusable(false);
-        override.addItem(Toggle.DISABLE);
-        override.addItem(Toggle.ENABLE);
-        card.add(override, c);
+        JLabel startLabel = new JLabel("Start Orientation: ");
+        startLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(startLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 1;
+        JSpinner start = oriAttributes.getStart();
+        start.setModel(new SpinnerNumberModel(0, 0, 2048, 1));
+        start.setPreferredSize(spinnerSize);
+        card.add(start, c);
 
         c.gridwidth = 1;
-        c.gridx = 0;
-        c.gridy = 2;
-        JLabel manualLabel = new JLabel("Orientation: ");
-        manualLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(manualLabel, c);
+        c.gridx = 2;
+        c.gridy = 1;
+        JLabel endLabel = new JLabel("End Orientation: ");
+        endLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(endLabel, c);
 
+        c.gridx = 3;
+        c.gridy = 1;
+        JSpinner end = oriAttributes.getEnd();
+        end.setModel(new SpinnerNumberModel(0, 0, 2048, 1));
+        end.setPreferredSize(spinnerSize);
+        card.add(end, c);
+
+        c.gridwidth = 1;
         c.gridx = 1;
         c.gridy = 2;
-        JSpinner manual = oriAttributes.getManual();
-        manual.setModel(new SpinnerNumberModel(0, 0, 2048, 1));
-        manual.setPreferredSize(spinnerSize);
-        card.add(manual, c);
-
-        c.gridwidth = 1;
-        c.gridx = 0;
-        c.gridy = 3;
-        JLabel typeLabel = new JLabel("Type: ");
-        typeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(typeLabel, c);
-
-        c.gridx = 1;
-        c.gridy = 3;
-        JComboBox<OrientationType> type = oriAttributes.getType();
-        type.setFocusable(false);
-        type.addItem(OrientationType.GRADUAL);
-        type.addItem(OrientationType.INSTANT);
-        card.add(type, c);
-
-        c.gridx = 0;
-        c.gridy = 4;
-        c.gridwidth = 1;
-        JLabel presetLabel = new JLabel("Presets: ");
-        presetLabel.setHorizontalAlignment(SwingConstants.LEFT);
-        card.add(presetLabel, c);
-
-        c.gridwidth = 3;
-        c.gridx = 1;
-        c.gridy = 4;
-        JComboBox<Direction> searcher = new JComboBox<>();
-        AutoCompletion.enable(searcher);
-        Direction[] directions = Direction.getAllDirections();
-        for (Direction d : directions)
+        JButton getStart = new JButton("Grab");
+        getStart.addActionListener(e ->
         {
-            searcher.addItem(d);
-        }
-        searcher.setPreferredSize(new Dimension(100, 25));
-        card.add(searcher, c);
-
-        c.gridwidth = 1;
-        c.gridx = 4;
-        c.gridy = 4;
-        JButton searchApply = new JButton("Apply");
-        searchApply.addActionListener(e ->
-        {
-            Direction direction = (Direction) searcher.getSelectedItem();
-            if (direction == null)
+            Character selectedCharacter = timeSheetPanel.getSelectedCharacter();
+            if (selectedCharacter == null)
             {
                 return;
             }
 
-            manual.setValue(direction.getJUnit());
-        });
-        card.add(searchApply, c);
+            CKObject ckObject = selectedCharacter.getCkObject();
+            if (ckObject == null)
+            {
+                return;
+            }
 
+            start.setValue(ckObject.getOrientation());
+        });
+        card.add(getStart, c);
 
         c.gridwidth = 1;
-        c.gridheight = 1;
+        c.gridx = 3;
+        c.gridy = 2;
+        JButton getEnd = new JButton("Grab");
+        getEnd.addActionListener(e ->
+        {
+            Character selectedCharacter = timeSheetPanel.getSelectedCharacter();
+            if (selectedCharacter == null)
+            {
+                return;
+            }
+
+            CKObject ckObject = selectedCharacter.getCkObject();
+            if (ckObject == null)
+            {
+                return;
+            }
+
+            end.setValue(ckObject.getOrientation());
+        });
+        card.add(getEnd, c);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 3;
+        JLabel durationLabel = new JLabel("Duration: ");
+        durationLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(durationLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 3;
+        JSpinner duration = oriAttributes.getDuration();
+        duration.setModel(new SpinnerNumberModel(2.0, 0, TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.1));
+        duration.setPreferredSize(spinnerSize);
+        card.add(duration, c);
+
+        c.gridx = 0;
+        c.gridy = 4;
+        JLabel turnRateLabel = new JLabel("Turn Rate: ");
+        turnRateLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(turnRateLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 4;
+        JSpinner turnRate = oriAttributes.getTurnRate();
+        turnRate.setToolTipText("Determines the rate at which the Object rotates. -1 sets it to default value of 256 / 7.5");
+        turnRate.setModel(new SpinnerNumberModel(-1, -1, 2048, 1));
+        card.add(turnRate, c);
+
+        c.gridx = 5;
+        c.gridy = 5;
         c.weightx = 1;
         c.weighty = 1;
-        c.gridx = 8;
-        c.gridy = 15;
-        JLabel empty1 = new JLabel("");
-        card.add(empty1, c);
+        c.gridwidth = 1;
+        JLabel compass = new JLabel(new ImageIcon(COMPASS));
+        compass.setHorizontalAlignment(SwingConstants.CENTER);
+        card.add(compass, c);
     }
 
     private void setupSpawnCard(JPanel card)

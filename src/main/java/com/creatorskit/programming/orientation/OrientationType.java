@@ -1,4 +1,4 @@
-package com.creatorskit.programming;
+package com.creatorskit.programming.orientation;
 
 import lombok.AllArgsConstructor;
 

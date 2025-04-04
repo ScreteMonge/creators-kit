@@ -792,7 +792,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			if (locationOption == LocationOption.TO_HOVERED_TILE)
 			{
-				creatorsPanel.getToolBox().getProgrammer().registerMovementChanges(character);
+				creatorsPanel.getToolBox().getProgrammer().register3DChanges(character);
 			}
 
 			if (setActive)
@@ -878,7 +878,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			if (locationOption == LocationOption.TO_HOVERED_TILE)
 			{
-				creatorsPanel.getToolBox().getProgrammer().registerMovementChanges(character);
+				creatorsPanel.getToolBox().getProgrammer().register3DChanges(character);
 			}
 
 			if (setActive)
@@ -2024,14 +2024,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		{
 			TimeSheetPanel timeSheetPanel = creatorsPanel.getToolBox().getTimeSheetPanel();
 			timeSheetPanel.initializeMovementKeyFrame(selectedCharacter, worldView, localPoint);
-			programmer.registerMovementChanges(selectedCharacter);
+			programmer.register3DChanges(selectedCharacter);
 			selectedCharacter.setVisible(true, clientThread);
 			return;
 		}
 
 		MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
 		movementManager.addProgramStep(keyFrame, worldView, localPoint);
-		programmer.registerMovementChanges(selectedCharacter);
+		programmer.register3DChanges(selectedCharacter);
 		selectedCharacter.setVisible(true, clientThread);
 	}
 
@@ -2067,7 +2067,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		int newLength = path.length - 1;
 		keyFrame.setPath(ArrayUtils.remove(path, newLength));
-		creatorsPanel.getToolBox().getProgrammer().registerMovementChanges(selectedCharacter);
+		creatorsPanel.getToolBox().getProgrammer().register3DChanges(selectedCharacter);
 	}
 
 	private final HotkeyListener clearProgramStepListener = new HotkeyListener(() -> config.clearProgramStepHotkey())

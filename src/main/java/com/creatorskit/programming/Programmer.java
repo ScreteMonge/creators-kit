@@ -6,7 +6,10 @@ import com.creatorskit.CKObject;
 import com.creatorskit.LocationOption;
 import com.creatorskit.models.*;
 import com.creatorskit.models.datatypes.SpotanimData;
+import com.creatorskit.programming.orientation.Orientation;
+import com.creatorskit.programming.orientation.OrientationAction;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
+import com.creatorskit.swing.timesheet.attributes.OrientationInstruction;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -77,6 +80,7 @@ public class Programmer
     private void updateCharacter3D()
     {
         WorldView worldView = client.getTopLevelWorldView();
+        double currentClientTick = (timeSheetPanel.getCurrentTime() * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH) + clientTickAtLastProgramTick;
 
         ArrayList<Character> characters = plugin.getCharacters();
         for (int i = 0; i < characters.size(); i++)
@@ -91,7 +95,7 @@ public class Programmer
             KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
             if (kf == null)
             {
-                transform3D(character);
+                transform3D(character, currentClientTick);
                 continue;
             }
 
@@ -106,6 +110,7 @@ public class Programmer
             int pathLength = path.length;
             if (currentStep >= pathLength || currentStep == -1)
             {
+                transform3D(character, currentClientTick);
                 continue;
             }
 
@@ -139,7 +144,7 @@ public class Programmer
 
             keyFrame.setCurrentStep(currentStep);
 
-            transform3D(worldView, character, keyFrame, OrientationAction.ADJUST, currentStep, stepsComplete, clientTicksPassed, finalSpeed);
+            transform3D(worldView, character, keyFrame, OrientationAction.ADJUST, currentStep, stepsComplete, clientTicksPassed, currentClientTick, finalSpeed);
         }
     }
 
@@ -147,14 +152,16 @@ public class Programmer
      * Animates the Character. For intended use when no MovementKeyFrame exists
      * @param character the Character to animate
      */
-    public void transform3D(Character character)
+    public void transform3D(Character character, double currentClientTick)
     {
         setAnimation(character, false, 0, 0);
+        setOrientation(character, currentClientTick);
     }
 
     /**
      * Transforms the Character's 3D model, by location with the intent to move it to the next subtile based on its current location and the predefined path,
-     * by orientation to align with the current trajectory, and by animation according to what idle pose should be playing based on the direction of motion and orientation
+     * by orientation to align with the current trajectory, and by animation according to what idle pose should be playing based on the direction of motion and orientation.
+     * For intended use when playing the Programmer, not when setting the time manually
      * @param worldView the current worldview
      * @param character the Character to transform
      * @param mkf the MovementKeyFrame from which the location is being drawn
@@ -164,7 +171,7 @@ public class Programmer
      * @param clientTicksPassed the number of client ticks that have passed since the start of the keyframe
      * @param finalSpeed the speed of the keyframe
      */
-    public void transform3D(WorldView worldView, Character character, MovementKeyFrame mkf, OrientationAction orientationAction, int currentStep, double stepsComplete, int clientTicksPassed, double finalSpeed)
+    public void transform3D(WorldView worldView, Character character, MovementKeyFrame mkf, OrientationAction orientationAction, int currentStep, double stepsComplete, int clientTicksPassed, double currentClientTick, double finalSpeed)
     {
         CKObject ckObject = character.getCkObject();
         if (ckObject == null)
@@ -177,16 +184,22 @@ public class Programmer
             return;
         }
 
-        MovementComposition mc = getMovementComposition(worldView, character, mkf, currentStep, stepsComplete, orientationAction, clientTicksPassed);
+        double turnRate = mkf.getTurnRate();
+        if (turnRate == -1)
+        {
+            turnRate = TURN_RATE;
+        }
+
+        MovementComposition mc = getMovementComposition(worldView, character, mkf, currentStep, stepsComplete, orientationAction, clientTicksPassed, turnRate);
         if (mc == null)
         {
             setAnimation(character, false, 0, 0);
+            setOrientation(character, currentClientTick);
             return;
         }
 
         setLocation(character, mkf, mc);
 
-        boolean instant = false;
         int orientation = ckObject.getOrientation();
         int orientationGoal = mc.getOrientationGoal();
         int difference = Orientation.subtract(orientationGoal, orientation);
@@ -194,29 +207,125 @@ public class Programmer
         KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.ORIENTATION);
         if (kf == null)
         {
-            setOrientation(character, mc, instant, orientationGoal, difference, stepsComplete, mkf.getSpeed());
+            setOrientation(character, mc, orientationGoal, difference, stepsComplete, mkf.getSpeed(), turnRate);
             setAnimation(character, mc.isMoving(), difference, finalSpeed);
             return;
         }
 
         OrientationKeyFrame okf = (OrientationKeyFrame) kf;
-        if (okf.isOverride())
+        OrientationInstruction instruction = findLastOrientation(mkf, okf, currentClientTick);
+        if (instruction.getType() == KeyFrameType.ORIENTATION)
         {
-            orientationGoal = okf.getManualOrientation();
-
-            if (okf.getType() == OrientationType.INSTANT)
-            {
-                instant = true;
-                difference = 0;
-            }
-            else
-            {
-                difference = Orientation.subtract(orientationGoal, orientation);
-            }
+            setOrientation(character, okf, mkf.getSpeed());
+            setAnimation(character, mc.isMoving(), difference, finalSpeed);
+            return;
         }
 
-        setOrientation(character, mc, instant, orientationGoal, difference, stepsComplete, mkf.getSpeed());
+        if (instruction.isSetOrientation())
+        {
+            mc.setOrientationAction(OrientationAction.SET);
+        }
+
+        setOrientation(character, mc, orientationGoal, difference, stepsComplete, mkf.getSpeed(), turnRate);
         setAnimation(character, mc.isMoving(), difference, finalSpeed);
+    }
+
+    private OrientationInstruction findLastOrientation(MovementKeyFrame mkf, OrientationKeyFrame okf, double clientTicksForCurrentTime)
+    {
+        double oriEndClientTick = (okf.getTick() + okf.getDuration()) * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH;
+
+        if (clientTicksForCurrentTime <= oriEndClientTick)
+        {
+            return new OrientationInstruction(KeyFrameType.ORIENTATION, false);
+        }
+
+        double pathDuration = Math.ceil((mkf.getPath().length - 1) / mkf.getSpeed());
+        double movementEndTick = (mkf.getTick() + pathDuration) * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH;
+
+        if (oriEndClientTick >= movementEndTick)
+        {
+            return new OrientationInstruction(KeyFrameType.ORIENTATION, false);
+        }
+
+        boolean setOrientation = Math.round(clientTicksForCurrentTime - oriEndClientTick) == 1;
+        return new OrientationInstruction(KeyFrameType.MOVEMENT, setOrientation);
+    }
+
+
+    /**
+     * Transforms the Character's 3D model, by location according to the last MovementKeyFrame, by orientation based on the last OrientationKeyFrame (or MovementKeyFrame, if later),
+     * and by animation according to what idle pose should be playing based on the direction of motion and orientation.
+     * For intended use when setting the keyframe manually
+     * @param worldView the current worldview
+     * @param character the Character to transform
+     * @param mkf the MovementKeyFrame from which the location is being drawn
+     * @param currentStep the number of whole steps that have already been performed
+     * @param stepsComplete the number of whole + sub steps that have already been performed
+     * @param clientTicksPassed the number of client ticks that have passed since the start of the keyframe
+     * @param finalSpeed the speed of the keyframe
+     */
+    public void transform3DStatic(WorldView worldView, Character character, MovementKeyFrame mkf, int currentStep, double stepsComplete, int clientTicksPassed, double finalSpeed)
+    {
+        CKObject ckObject = character.getCkObject();
+        if (ckObject == null)
+        {
+            return;
+        }
+
+        if (mkf.getPlane() != worldView.getPlane())
+        {
+            return;
+        }
+
+        double turnRate = mkf.getTurnRate();
+        if (turnRate == -1)
+        {
+            turnRate = TURN_RATE;
+        }
+
+        MovementComposition mc = getMovementComposition(worldView, character, mkf, currentStep, stepsComplete, OrientationAction.SET, clientTicksPassed, turnRate);
+
+        int orientation = ckObject.getOrientation();
+        int orientationGoal;
+        int difference = 0;
+        boolean isMoving = false;
+
+        if (mc == null)
+        {
+            setAnimation(character, false, 0, 0);
+        }
+        else
+        {
+            setLocation(character, mkf, mc);
+            orientationGoal = mc.getOrientationGoal();
+            difference = Orientation.subtract(orientationGoal, orientation);
+            isMoving = mc.isMoving();
+        }
+
+        KeyFrameType orientationDeterminant = findLastOrientation(character);
+
+        if (orientationDeterminant == KeyFrameType.ORIENTATION)
+        {
+            setOrientationStatic(character);
+            setAnimation(character, isMoving, difference, finalSpeed);
+            return;
+        }
+
+        if (orientationDeterminant == KeyFrameType.MOVEMENT)
+        {
+            if (mc == null)
+            {
+                setAnimation(character, false, 0, 0);
+                return;
+            }
+
+            orientationGoal = mc.getOrientationGoal();
+            setOrientation(character, mc, orientationGoal, difference, stepsComplete, mkf.getSpeed(), turnRate);
+            setAnimation(character, mc.isMoving(), difference, finalSpeed);
+            return;
+        }
+
+        setAnimation(character, false, 0, 0);
     }
 
     private void setLocation(Character character, MovementKeyFrame keyFrame, MovementComposition mc)
@@ -232,11 +341,200 @@ public class Programmer
         character.getCkObject().setLocation(lp, keyFrame.getPlane());
     }
 
-    private void setOrientation(Character character, MovementComposition mc, boolean instant, int orientationGoal, int difference, double stepsComplete, double speed)
+    /**
+     * Sets the orientation of the Character based on its Orientation KeyFrame
+     * Intended for use when playing the programmer
+     * @param character the character to modify
+     * @param currentClientTick the current time, in client ticks
+     */
+    private void setOrientation(Character character, double currentClientTick)
+    {
+        KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.ORIENTATION);
+        if (kf == null)
+        {
+            return;
+        }
+
+        OrientationKeyFrame keyFrame = (OrientationKeyFrame) kf;
+        double ticksPassed = currentClientTick - (keyFrame.getTick() * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH);
+        double duration = keyFrame.getDuration() * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH;
+        if (ticksPassed > duration)
+        {
+            return;
+        }
+
+        int orientation = getOrientation(keyFrame, ticksPassed, duration);
+        character.getCkObject().setOrientation(orientation);
+    }
+
+    /**
+     * Gets the current intended orientation of the Character, assuming that no movement keyframe exists, or the last movement keyframe has ended.
+     * Intended for use when playing the programmer
+     * @param keyFrame the Orientation keyframe of interest
+     * @param ticksPassed the current time, in client ticks
+     * @param duration the keyframe duration, in client ticks
+     * @return the orientation the Character should be set to
+     */
+    private int getOrientation(OrientationKeyFrame keyFrame, double ticksPassed, double duration)
+    {
+        if (ticksPassed > duration)
+        {
+            ticksPassed = duration;
+        }
+
+        int start = keyFrame.getStart();
+        int end = keyFrame.getEnd();
+
+        int difference = Orientation.subtract(end, start);
+        double turnRate = keyFrame.getTurnRate();
+        if (turnRate == -1)
+        {
+            turnRate = TURN_RATE;
+        }
+
+        double rotation = turnRate * ticksPassed;
+
+        int newOrientation;
+        if (difference > (rotation * -1) && difference < rotation)
+        {
+            newOrientation = end;
+        }
+        else if (difference > 0)
+        {
+            newOrientation = Orientation.boundOrientation((int) (start + rotation));
+        }
+        else
+        {
+            newOrientation = Orientation.boundOrientation((int) (start - rotation));
+        }
+
+        return newOrientation;
+    }
+
+    /**
+     * Sets the orientation of the Character based on its Orientation KeyFrame
+     * Intended for use when manually setting the program time
+     * @param character the character to modify
+     */
+    private void setOrientationStatic(Character character)
+    {
+        KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.ORIENTATION);
+        if (kf == null)
+        {
+            return;
+        }
+
+        OrientationKeyFrame keyFrame = (OrientationKeyFrame) kf;
+        int orientation = getOrientationStatic(keyFrame);
+        character.getCkObject().setOrientation(orientation);
+    }
+
+    /**
+     * Gets the orientation dictated by the current OrientationKeyFrame for the current tick. Intended for use when setting the time, not running the program
+     * @param keyFrame the keyframe to examine
+     * @return the appropriate orientation for the given keyframe
+     */
+    private int getOrientationStatic(OrientationKeyFrame keyFrame)
+    {
+        double ticksPassed = timeSheetPanel.getCurrentTime() - keyFrame.getTick();
+        double duration = keyFrame.getDuration();
+        if (ticksPassed > duration)
+        {
+            ticksPassed = duration;
+        }
+
+        int start = keyFrame.getStart();
+        int end = keyFrame.getEnd();
+
+        int difference = Orientation.subtract(end, start);
+        double turnRate = keyFrame.getTurnRate();
+        if (turnRate == -1)
+        {
+            turnRate = TURN_RATE;
+        }
+
+        double rotation = turnRate * ticksPassed * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH;
+
+        int newOrientation;
+        if (difference > (rotation * -1) && difference < rotation)
+        {
+            newOrientation = end;
+        }
+        else if (difference > 0)
+        {
+            newOrientation = Orientation.boundOrientation((int) (start + rotation));
+        }
+        else
+        {
+            newOrientation = Orientation.boundOrientation((int) (start - rotation));
+        }
+
+        return newOrientation;
+    }
+
+    /**
+     * Sets the orientation of the character based on its orientation keyframe
+     * Intended for use while playing the programmer
+     * @param character the character to set orientation
+     * @param speed the movement speed (in gameTicks) determined by the movement keyframe
+     */
+    private void setOrientation(Character character, OrientationKeyFrame keyFrame, double speed)
+    {
+        CKObject ckObject = character.getCkObject();
+        int orientationGoal = keyFrame.getEnd();
+        int current = ckObject.getOrientation();
+        int difference = Orientation.subtract(orientationGoal, current);
+        double turnRate = keyFrame.getTurnRate();
+
+        if (speed == 0)
+        {
+            speed = 1;
+        }
+
+        if (turnRate == -1)
+        {
+            turnRate = TURN_RATE;
+        }
+
+        if (difference != 0)
+        {
+            int orientation = ckObject.getOrientation();
+            int turnSpeed = (int) (speed * turnRate);
+
+            int newOrientation;
+            if (difference > (turnSpeed * -1) && difference < turnSpeed)
+            {
+                newOrientation = orientationGoal;
+            }
+            else if (difference > 0)
+            {
+                newOrientation = Orientation.boundOrientation(orientation + turnSpeed);
+            }
+            else
+            {
+                newOrientation = Orientation.boundOrientation(orientation - turnSpeed);
+            }
+
+            ckObject.setOrientation(newOrientation);
+        }
+    }
+
+    /**
+     * Sets the orientation of the character based on its movement keyframe
+     * Intended for use while playing the programmer
+     * @param character the character to modify
+     * @param mc the MovementComposition, based on its movement keyframe
+     * @param orientationGoal the orientation end-goal, determined by the trajectory of movement
+     * @param difference the difference between the current orientation and end goal orientation
+     * @param stepsComplete the number of steps complete
+     * @param speed the speed at which the Character moves
+     * @param turnRate the rate at which the Character should turn
+     */
+    private void setOrientation(Character character, MovementComposition mc, int orientationGoal, int difference, double stepsComplete, double speed, double turnRate)
     {
         OrientationAction orientationAction = mc.getOrientationAction();
         CKObject ckObject = character.getCkObject();
-        if (orientationAction == OrientationAction.SET || instant)
+        if (orientationAction == OrientationAction.SET)
         {
             if (ckObject.getOrientation() != orientationGoal)
             {
@@ -259,7 +557,7 @@ public class Programmer
             }
 
             int orientation = ckObject.getOrientation();
-            int turnSpeed = (int) (speed * TURN_RATE);
+            int turnSpeed = (int) (speed * turnRate);
 
             int newOrientation;
             if (difference > (turnSpeed * -1) && difference < turnSpeed)
@@ -447,7 +745,7 @@ public class Programmer
      * @param stepsComplete the current non-whole number step
      * @return the LocalPoint corresponding to the current tick along the character's currently defined path
      */
-    public MovementComposition getMovementComposition(WorldView worldView, Character character, MovementKeyFrame keyFrame, int currentStep, double stepsComplete, OrientationAction orientationAction, int clientTicksPassed)
+    public MovementComposition getMovementComposition(WorldView worldView, Character character, MovementKeyFrame keyFrame, int currentStep, double stepsComplete, OrientationAction orientationAction, int clientTicksPassed, double turnRate)
     {
         CKObject ckObject = character.getCkObject();
         if (ckObject == null)
@@ -506,7 +804,7 @@ public class Programmer
                 return new MovementComposition(true, lp, OrientationAction.ADJUST, (int) angle);
             }
 
-            int orientationFromTick = getOrientationFromTick(previous, start, angle, clientTicksPassed, currentStep, keyFrame.getSpeed());
+            int orientationFromTick = getOrientationFromTick(previous, start, angle, clientTicksPassed, currentStep, keyFrame.getSpeed(), turnRate);
             return new MovementComposition(true, lp, OrientationAction.SET, orientationFromTick);
         }
 
@@ -533,7 +831,7 @@ public class Programmer
         return new MovementComposition(false, start, OrientationAction.SET, (int) angle);
     }
 
-    private int getOrientationFromTick(LocalPoint previous, LocalPoint start, double angle, int clientTicksPassed, int currentStep, double speed)
+    private int getOrientationFromTick(LocalPoint previous, LocalPoint start, double angle, int clientTicksPassed, int currentStep, double speed, double turnRate)
     {
         if (previous == null)
         {
@@ -550,7 +848,7 @@ public class Programmer
         }
 
         double ticksSinceLastStep = clientTicksPassed - (((double) currentStep) * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH);
-        double change = speed * TURN_RATE * ticksSinceLastStep;
+        double change = speed * turnRate * ticksSinceLastStep;
 
         if (angleDifference > (change * -1) && angleDifference < change)
         {
@@ -691,8 +989,7 @@ public class Programmer
     public void updateProgram(Character character, double tick)
     {
         character.updateProgram(tick);
-        registerAnimationChanges(character);
-        registerMovementChanges(character);
+        register3DChanges(character);
         registerModelChanges(character);
         registerSpotAnimChanges(character, KeyFrameType.SPOTANIM, tick);
         registerSpotAnimChanges(character, KeyFrameType.SPOTANIM2, tick);
@@ -740,7 +1037,7 @@ public class Programmer
                 {
                     character.setCurrentKeyFrame(nextMovement, KeyFrameType.MOVEMENT);
                     character.resetMovementKeyFrame(client.getGameCycle(), currentTime);
-                    registerMovementChanges(character);
+                    register3DChanges(character);
                 }
             }
 
@@ -812,7 +1109,7 @@ public class Programmer
                 if (nextOrientation.getTick() <= currentTime)
                 {
                     character.setCurrentKeyFrame(nextOrientation, KeyFrameType.ORIENTATION);
-                    //register changes
+                    registerOrientationChanges(character);
                 }
             }
 
@@ -920,7 +1217,7 @@ public class Programmer
         clientThread.invokeLater(() -> ckObject.setActive(spawnKeyFrame.isSpawnActive()));
     }
 
-    public void registerMovementChanges(Character character)
+    public void register3DChanges(Character character)
     {
         WorldView worldView = client.getTopLevelWorldView();
         CKObject ckObject = character.getCkObject();
@@ -995,14 +1292,75 @@ public class Programmer
 
         keyFrame.setCurrentStep(currentStep);
 
-        transform3D(worldView,
+        transform3DStatic(worldView,
                 character,
                 keyFrame,
-                OrientationAction.SET,
                 currentStep,
                 stepsComplete,
                 clientTicksPassed,
                 finalSpeed);
+    }
+
+    private void registerOrientationChanges(Character character)
+    {
+        CKObject ckObject = character.getCkObject();
+
+        KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.ORIENTATION);
+        if (kf == null)
+        {
+            return;
+        }
+
+        OrientationKeyFrame keyFrame = (OrientationKeyFrame) kf;
+        double ticksPassed = timeSheetPanel.getCurrentTime() - keyFrame.getTick();
+        double duration = keyFrame.getDuration();
+        if (ticksPassed > duration)
+        {
+            return;
+        }
+
+        int orientation = getOrientationStatic(keyFrame);
+        ckObject.setOrientation(orientation);
+    }
+
+    private KeyFrameType findLastOrientation(Character character)
+    {
+        KeyFrame movement = character.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
+        KeyFrame orientation = character.getCurrentKeyFrame(KeyFrameType.ORIENTATION);
+
+        if (movement == null && orientation == null)
+        {
+            return null;
+        }
+
+        if (movement == null)
+        {
+            return KeyFrameType.ORIENTATION;
+        }
+
+        if (orientation == null)
+        {
+            return KeyFrameType.MOVEMENT;
+        }
+
+        MovementKeyFrame mkf = (MovementKeyFrame) movement;
+        OrientationKeyFrame okf = (OrientationKeyFrame) orientation;
+
+        double oriEndTick = okf.getTick() + okf.getDuration();
+        if (timeSheetPanel.getCurrentTime() <= oriEndTick)
+        {
+            return KeyFrameType.ORIENTATION;
+        }
+
+        double pathDuration = Math.ceil((mkf.getPath().length - 1) / mkf.getSpeed());
+        double movementEndTick = mkf.getTick() + pathDuration;
+
+        if (oriEndTick >= movementEndTick)
+        {
+            return KeyFrameType.ORIENTATION;
+        }
+
+        return KeyFrameType.MOVEMENT;
     }
 
     private void registerAnimationChanges(Character character)

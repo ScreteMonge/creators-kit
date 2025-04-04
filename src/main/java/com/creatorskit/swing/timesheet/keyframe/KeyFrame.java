@@ -33,7 +33,8 @@ public class KeyFrame
                     kf.getCurrentStep(),
                     kf.getStepClientTick(),
                     kf.isLoop(),
-                    kf.getSpeed());
+                    kf.getSpeed(),
+                    kf.getTurnRate());
         }
 
         if (keyFrame instanceof AnimationKeyFrame)
@@ -60,9 +61,11 @@ public class KeyFrame
             OrientationKeyFrame kf = (OrientationKeyFrame) keyFrame;
             return new OrientationKeyFrame(
                     tick,
-                    kf.getType(),
-                    kf.getManualOrientation(),
-                    kf.isOverride());
+                    kf.getGoal(),
+                    kf.getStart(),
+                    kf.getEnd(),
+                    kf.getDuration(),
+                    kf.getTurnRate());
         }
 
         if (keyFrame instanceof SpawnKeyFrame)

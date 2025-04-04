@@ -436,7 +436,8 @@ public class TimeSheetPanel extends JPanel
                     0,
                     0,
                     false,
-                    1);
+                    1,
+                    -1);
 
             KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(kf, character, KeyFrameCharacterActionType.ADD)};
             KeyFrame keyFrameToReplace = addKeyFrame(character, kf);
