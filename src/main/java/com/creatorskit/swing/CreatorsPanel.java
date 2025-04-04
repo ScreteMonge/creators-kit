@@ -1189,8 +1189,8 @@ public class CreatorsPanel extends PluginPanel
 
     public Color getRandomColor()
     {
-        int max = 100;
-        int min = 30;
+        int max = 90;
+        int min = 35;
         float r = (float) (random.nextInt(max - min + 1) + min) / 100;
         float g = (float) (random.nextInt(max - min + 1) + min) / 100;
         float b = (float) (random.nextInt(max - min + 1) + min) / 100;

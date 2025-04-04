@@ -33,6 +33,8 @@ public class CreatorsOverlay extends Overlay
     private static final Color NPC_COLOUR = new Color(188, 198, 255);
     private static final Color PLAYER_COLOUR = new Color(221, 133, 255);
     private static final int MAX_DISTANCE = 2400;
+    private final BasicStroke dashedLine = new BasicStroke(2.75f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND, 1f, new float[] { 5, 5, 5, 5 }, 0f);
+
 
     @Inject
     private CreatorsOverlay(Client client, CreatorsPlugin plugin, CreatorsConfig config)
@@ -118,8 +120,12 @@ public class CreatorsOverlay extends Overlay
 
             int[][] path = keyFrame.getPath();
 
+            boolean selectedCharacter = character == plugin.getSelectedCharacter();
             Color color = character.getColor();
-            Color shadow = character.getColor().darker().darker();
+            if (selectedCharacter)
+            {
+                color = SELECTED_COLOUR;
+            }
 
             if (path.length > 0)
             {
@@ -171,8 +177,6 @@ public class CreatorsOverlay extends Overlay
                         continue;
                     }
 
-                    graphics.setColor(shadow);
-                    graphics.drawRect(startPoint.getX() - 4, startPoint.getY() - 4, 10, 10);
                     graphics.setColor(color);
                     graphics.drawRect(startPoint.getX() - 5, startPoint.getY() - 5, 10, 10);
                     continue;
@@ -186,8 +190,6 @@ public class CreatorsOverlay extends Overlay
                         continue;
                     }
 
-                    graphics.setColor(shadow);
-                    graphics.drawRect(endPoint.getX() - 4, endPoint.getY() - 4, 10, 10);
                     graphics.setColor(color);
                     graphics.drawRect(endPoint.getX() - 5, endPoint.getY() - 5, 10, 10);
                     continue;
@@ -205,9 +207,13 @@ public class CreatorsOverlay extends Overlay
                     continue;
                 }
 
-                graphics.setColor(shadow);
-                graphics.drawLine(startPoint.getX() + 1, startPoint.getY() + 1, endPoint.getX() + 1, endPoint.getY() + 1);
                 graphics.setColor(color);
+                graphics.setStroke(new BasicStroke(3));
+                if (!selectedCharacter)
+                {
+                    graphics.setStroke(dashedLine);
+                }
+
                 graphics.drawLine(startPoint.getX(), startPoint.getY(), endPoint.getX(), endPoint.getY());
             }
         }
@@ -226,8 +232,6 @@ public class CreatorsOverlay extends Overlay
                 continue;
             }
 
-            graphics.setColor(character.getColor());
-
             MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
             int plane = keyFrame.getPlane();
             if (worldView.getPlane() != plane)
@@ -235,8 +239,12 @@ public class CreatorsOverlay extends Overlay
                 continue;
             }
 
-            Color color = character.getColor();
-            Color shadow = character.getColor().darker().darker();
+            boolean selectedCharacter = character == plugin.getSelectedCharacter();
+            Color color = character.getColor().brighter();
+            if (selectedCharacter)
+            {
+                color = SELECTED_COLOUR;
+            }
 
             int[][] path = keyFrame.getPath();
 
@@ -269,8 +277,6 @@ public class CreatorsOverlay extends Overlay
                         continue;
                     }
 
-                    graphics.setColor(shadow);
-                    graphics.drawRect(startPoint.getX() - 4, startPoint.getY() - 4, 10, 10);
                     graphics.setColor(color);
                     graphics.drawRect(startPoint.getX() - 5, startPoint.getY() - 5, 10, 10);
                     continue;
@@ -284,8 +290,6 @@ public class CreatorsOverlay extends Overlay
                         continue;
                     }
 
-                    graphics.setColor(shadow);
-                    graphics.drawRect(endPoint.getX() - 4, endPoint.getY() - 4, 10, 10);
                     graphics.setColor(color);
                     graphics.drawRect(endPoint.getX() - 5, endPoint.getY() - 5, 10, 10);
                     continue;
@@ -303,9 +307,13 @@ public class CreatorsOverlay extends Overlay
                     continue;
                 }
 
-                graphics.setColor(shadow);
-                graphics.drawLine(startPoint.getX() + 1, startPoint.getY() + 1, endPoint.getX() + 1, endPoint.getY() + 1);
                 graphics.setColor(color);
+                graphics.setStroke(new BasicStroke(3));
+                if (!selectedCharacter)
+                {
+                    graphics.setStroke(dashedLine);
+                }
+
                 graphics.drawLine(startPoint.getX(), startPoint.getY(), endPoint.getX(), endPoint.getY());
             }
         }
@@ -498,7 +506,13 @@ public class CreatorsOverlay extends Overlay
                 return;
             }
 
-            OverlayUtil.renderTextLocation(graphics, point, name, character.getColor());
+            Color colour = character.getColor();
+            if (plugin.getSelectedCharacter() == character)
+            {
+                colour = SELECTED_COLOUR;
+            }
+
+            OverlayUtil.renderTextLocation(graphics, point, name, colour);
         }
     }
 
