@@ -33,7 +33,7 @@ public class CreatorsOverlay extends Overlay
     private static final Color NPC_COLOUR = new Color(188, 198, 255);
     private static final Color PLAYER_COLOUR = new Color(221, 133, 255);
     private static final int MAX_DISTANCE = 2400;
-    private final BasicStroke dashedLine = new BasicStroke(2.75f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND, 1f, new float[] { 5, 5, 5, 5 }, 0f);
+    private final BasicStroke dashedLine = new BasicStroke(2.5f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND, 1f, new float[] { 5, 5, 5, 5 }, 0f);
 
 
     @Inject
