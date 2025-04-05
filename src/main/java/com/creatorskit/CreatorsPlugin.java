@@ -2121,7 +2121,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	{
 		if (config.enableCtrlHotkeys() && event.isControlDown())
 		{
-			creatorsPanel.scrollSelectedCharacter(selectedCharacter, event.getWheelRotation());
+			creatorsPanel.scrollSelectedCharacter(event.getWheelRotation());
 			event.consume();
 		}
 
