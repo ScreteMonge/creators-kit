@@ -263,10 +263,6 @@ public class CreatorsPanel extends PluginPanel
         topButtonsPanel.setMinimumSize(topButtonsPanelSize);
         topButtonsPanel.setLayout(new GridLayout(1, 3, 0, 0));
 
-        JButton findButton = new JButton(new ImageIcon(FIND));
-        findButton.setToolTipText("Find this object and select it in the Manager");
-        findButton.setFocusable(false);
-
         JButton switchButton = new JButton(new ImageIcon(SWITCH));
         switchButton.setToolTipText("Switch this Object between the Manager and Side Panel");
         switchButton.setFocusable(false);
@@ -375,7 +371,6 @@ public class CreatorsPanel extends PluginPanel
             c.gridy = 0;
             c.weightx = 0;
             objectPanel.add(topButtonsPanel, c);
-            topButtonsPanel.add(findButton);
             topButtonsPanel.add(switchButton);
             topButtonsPanel.add(duplicateButton);
             topButtonsPanel.add(deleteButton);
@@ -508,8 +503,6 @@ public class CreatorsPanel extends PluginPanel
             }
         });
 
-        findButton.addActionListener(e -> onFindButtonPressed(character));
-
         switchButton.addActionListener(e -> onSwitchButtonPressed(character));
 
         deleteButton.addActionListener(e -> onDeleteButtonPressed(character));
@@ -624,7 +617,6 @@ public class CreatorsPanel extends PluginPanel
                 textField,
                 topButtonsPanel,
                 duplicateButton,
-                findButton,
                 switchButton,
                 deleteButton,
                 modelButton,
@@ -643,8 +635,6 @@ public class CreatorsPanel extends PluginPanel
                 animationSpinner
         );
 
-        setSelectedCharacter(character);
-
         plugin.setupRLObject(character, setHoveredLocation);
         plugin.getCharacters().add(character);
 
@@ -658,7 +648,6 @@ public class CreatorsPanel extends PluginPanel
             JTextField textField,
             JPanel topButtonsPanel,
             JButton duplicateButton,
-            JButton findButton,
             JButton switchButton,
             JButton deleteButton,
             JButton modelButton,
@@ -679,7 +668,6 @@ public class CreatorsPanel extends PluginPanel
         addSelectListeners(objectPanel, character, objectPanel, true);
         addSelectListeners(textField, character, objectPanel, true);
         addSelectListeners(topButtonsPanel, character, objectPanel, true);
-        addSelectListeners(findButton, character, objectPanel, true);
         addSelectListeners(switchButton, character, objectPanel, true);
         addSelectListeners(duplicateButton, character, objectPanel, false);
         addSelectListeners(deleteButton, character, objectPanel, false);
@@ -795,12 +783,8 @@ public class CreatorsPanel extends PluginPanel
         {
             npcPanels++;
         }
-    }
 
-    private void onFindButtonPressed(Character character)
-    {
-        ManagerTree tree = toolBox.getManagerPanel().getManagerTree();
-        tree.setSelectedCharacter(character);
+        setSelectedCharacter(character);
     }
 
     public void onSwitchButtonPressed(Character character)
@@ -1060,6 +1044,11 @@ public class CreatorsPanel extends PluginPanel
 
     public void setSelectedCharacter(Character selected)
     {
+        setSelectedCharacter(selected, true);
+    }
+
+    public void setSelectedCharacter(Character selected, boolean updateManagerTree)
+    {
         ArrayList<Character> characters = plugin.getCharacters();
 
         for (int i = 0; i < characters.size(); i++)
@@ -1068,64 +1057,24 @@ public class CreatorsPanel extends PluginPanel
             panel.setBorder(defaultBorder);
         }
 
-        selected.getObjectPanel().setBorder(selectedBorder);
         plugin.setSelectedCharacter(selected);
-    }
 
-    public void scrollSelectedCharacter(Character selected, int clicks)
-    {
-        int sidePanelSize = sidePanelCharacters.size();
-        Character[] shownCharacters = toolBox.getManagerPanel().getShownCharacters();
-        int managerSize = shownCharacters.length;
-
-        boolean selectionFound = false;
+        if (updateManagerTree)
+        {
+            toolBox.getManagerPanel().getManagerTree().setTreeSelection(selected);
+        }
 
         if (selected != null)
         {
-            ParentPanel selectedParent = selected.getParentPanel();
-            Character[] list = selectedParent == ParentPanel.SIDE_PANEL ? sidePanelCharacters.toArray(new Character[sidePanelCharacters.size()]) : shownCharacters;
-            int length = list.length;
-            for (int i = 0; i < length; i++)
-            {
-                if (selected == list[i])
-                {
-                    int index = clicks + i;
-                    while (index >= length)
-                    {
-                        index -= length;
-                    }
-
-                    while (index < 0)
-                    {
-                        index += length;
-                    }
-
-                    unsetSelectedCharacter();
-                    setSelectedCharacter(list[index]);
-                    selectionFound = true;
-                    break;
-                }
-            }
+            selected.getObjectPanel().setBorder(selectedBorder);
         }
+    }
 
-        if (!selectionFound)
-        {
-            if (toolBox.isFocused())
-            {
-                if (managerSize > 0)
-                {
-                    unsetSelectedCharacter();
-                    setSelectedCharacter(shownCharacters[0]);
-                    return;
-                }
-            }
-
-            if (sidePanelSize > 0)
-            {
-                unsetSelectedCharacter();
-                setSelectedCharacter(sidePanelCharacters.get(0));
-            }
-        }
+    public void scrollSelectedCharacter(int clicks)
+    {
+        toolBox.getManagerPanel().
+                getManagerTree().
+                scrollSelectedIndex(clicks);
     }
 
     public void unsetSelectedCharacter()

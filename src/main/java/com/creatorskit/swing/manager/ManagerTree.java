@@ -398,6 +398,16 @@ public class ManagerTree extends JTree
 
             updateTreeSelectionIndex();
 
+            DefaultMutableTreeNode first = (DefaultMutableTreeNode) (treePaths[0].getLastPathComponent());
+            if (first.getUserObject() instanceof Character)
+            {
+                plugin.getCreatorsPanel().setSelectedCharacter((Character) first.getUserObject(), false);
+            }
+            else
+            {
+                plugin.getCreatorsPanel().setSelectedCharacter(null, false);
+            }
+
             JPanel objectHolder = toolBox.getManagerPanel().getObjectHolder();
 
             boolean containsSidePanel = false;
@@ -614,11 +624,48 @@ public class ManagerTree extends JTree
         toolBox.getTimeSheetPanel().getSummarySheet().onVerticalScrollEvent(scroll);
     }
 
-    public void setSelectedCharacter(Character character)
+    public void setTreeSelection(Character character)
     {
+        if (character == null)
+        {
+            return;
+        }
+
         TreePath treePath = new TreePath(character.getLinkedManagerNode().getPath());
         setSelectionPath(treePath);
         scrollPathToVisible(treePath);
+    }
+
+    public void scrollSelectedIndex(int direction)
+    {
+        int current = getLeadSelectionRow();
+        int rows = getRowCount();
+
+        int index = current + direction;
+        if (current == -1)
+        {
+            if (direction >= 0)
+            {
+                index = 0;
+            }
+
+            if (direction < 0)
+            {
+                index = rows - 1;
+            }
+        }
+
+        if (index > rows - 1)
+        {
+            index = 0;
+        }
+
+        if (index < 0)
+        {
+            index = rows - 1;
+        }
+
+        setSelectionRow(index);
     }
 
     private void updateTreeSelectionIndex()
