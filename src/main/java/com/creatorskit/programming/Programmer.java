@@ -502,10 +502,10 @@ public class Programmer
         LocalPoint lp = ckObject.getLocation();
         int plane = ckObject.getLevel();
 
-        updateSpotAnim(keyFrameType, spotAnimKeyFrame.getSpotAnimId(), character, currentTime, spotAnimKeyFrame.getTick(), spotAnimKeyFrame.isLoop(), lp, plane);
+        updateSpotAnim(keyFrameType, spotAnimKeyFrame.getSpotAnimId(), spotAnimKeyFrame.getHeight(), character, currentTime, spotAnimKeyFrame.getTick(), spotAnimKeyFrame.isLoop(), lp, plane);
     }
 
-    private void updateSpotAnim(KeyFrameType keyFrameType, int spotAnimId, Character character, double currentTime, double startTick, boolean loop, LocalPoint lp, int plane)
+    private void updateSpotAnim(KeyFrameType keyFrameType, int spotAnimId, int height, Character character, double currentTime, double startTick, boolean loop, LocalPoint lp, int plane)
     {
         CKObject spotAnim;
         if (keyFrameType == KeyFrameType.SPOTANIM)
@@ -530,6 +530,11 @@ public class Programmer
                     {
                         LightingStyle ls = LightingStyle.SPOTANIM;
                         CustomLighting cl = new CustomLighting(ls.getAmbient() + data.getAmbient(), ls.getContrast() + data.getContrast(), ls.getX(), ls.getY(), ls.getZ());
+                        for (ModelStats ms : stats)
+                        {
+                            ms.setTranslateZ(height);
+                        }
+
                         Model model = plugin.constructModelFromCache(stats, new int[0], false, LightingStyle.CUSTOM, cl);
 
                         CKObject ckObject = new CKObject(client);

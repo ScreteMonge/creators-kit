@@ -108,7 +108,8 @@ public class KeyFrame
                     tick,
                     kf.getSpotAnimType(),
                     kf.getSpotAnimId(),
-                    kf.isLoop());
+                    kf.isLoop(),
+                    kf.getHeight());
         }
 
         return null;

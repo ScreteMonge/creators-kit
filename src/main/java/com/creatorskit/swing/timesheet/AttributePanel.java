@@ -229,14 +229,16 @@ public class AttributePanel extends JPanel
                         timeSheetPanel.getCurrentTime(),
                         KeyFrameType.SPOTANIM,
                         (int) spotAnimAttributes.getSpotAnimId().getValue(),
-                        spotAnimAttributes.getLoop().getSelectedItem() == Toggle.ENABLE
+                        spotAnimAttributes.getLoop().getSelectedItem() == Toggle.ENABLE,
+                        (int) spotAnimAttributes.getHeight().getValue()
                 );
             case SPOTANIM2:
                 return new SpotAnimKeyFrame(
                         timeSheetPanel.getCurrentTime(),
                         KeyFrameType.SPOTANIM2,
                         (int) spotAnim2Attributes.getSpotAnimId().getValue(),
-                        spotAnim2Attributes.getLoop().getSelectedItem() == Toggle.ENABLE
+                        spotAnim2Attributes.getLoop().getSelectedItem() == Toggle.ENABLE,
+                        (int) spotAnim2Attributes.getHeight().getValue()
                 );
         }
 
