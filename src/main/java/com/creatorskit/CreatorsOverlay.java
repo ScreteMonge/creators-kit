@@ -351,6 +351,8 @@ public class CreatorsOverlay extends Overlay
             {
                 spotAnims.append(", G: ");
                 spotAnims.append(spotAnim.getId());
+                spotAnims.append(", H: ");
+                spotAnims.append(spotAnim.getHeight());
             }
 
             OverlayUtil.renderActorOverlay(graphics, player, "A: " + player.getAnimation() + ", P: " + player.getPoseAnimation() + spotAnims, PLAYER_COLOUR);
@@ -370,6 +372,8 @@ public class CreatorsOverlay extends Overlay
             {
                 spotAnims.append(", G: ");
                 spotAnims.append(spotAnim.getId());
+                spotAnims.append(", H: ");
+                spotAnims.append(spotAnim.getHeight());
             }
 
             OverlayUtil.renderActorOverlay(graphics, npc, "ID: " + npc.getId() + ", A: " + npc.getAnimation() + ", P: " + npc.getPoseAnimation() + spotAnims, NPC_COLOUR);

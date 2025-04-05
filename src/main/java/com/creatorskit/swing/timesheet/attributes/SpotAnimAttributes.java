@@ -15,6 +15,7 @@ public class SpotAnimAttributes extends Attributes
 {
     private final JSpinner spotAnimId = new JSpinner();
     private final JComboBox<Toggle> loop = new JComboBox<>();
+    private final JSpinner height = new JSpinner();
 
     public SpotAnimAttributes()
     {
@@ -27,6 +28,7 @@ public class SpotAnimAttributes extends Attributes
         SpotAnimKeyFrame kf = (SpotAnimKeyFrame) keyFrame;
         spotAnimId.setValue(kf.getSpotAnimId());
         loop.setSelectedItem(kf.isLoop() ? Toggle.ENABLE : Toggle.DISABLE);
+        height.setValue(kf.getHeight());
     }
 
     @Override
@@ -34,6 +36,7 @@ public class SpotAnimAttributes extends Attributes
     {
         spotAnimId.setBackground(color);
         loop.setBackground(color);
+        height.setBackground(color);
     }
 
     @Override
@@ -42,7 +45,8 @@ public class SpotAnimAttributes extends Attributes
         return new JComponent[]
                 {
                         spotAnimId,
-                        loop
+                        loop,
+                        height
                 };
     }
 
@@ -58,6 +62,11 @@ public class SpotAnimAttributes extends Attributes
         {
             loop.setBackground(getRed());
         });
+
+        height.addChangeListener(e ->
+        {
+            height.setBackground(getRed());
+        });
     }
 
     @Override
@@ -65,6 +74,7 @@ public class SpotAnimAttributes extends Attributes
     {
         spotAnimId.setValue(-1);
         loop.setSelectedItem(Toggle.DISABLE);
+        height.setValue(92);
         setBackgroundColours(KeyFrameState.EMPTY);
     }
 }
