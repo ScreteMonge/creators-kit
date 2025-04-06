@@ -197,6 +197,11 @@ public class AttributePanel extends JPanel
             default:
             case MOVEMENT:
                 WorldView worldView = client.getTopLevelWorldView();
+                if (worldView == null || worldView.getMapRegions() == null)
+                {
+                    return null;
+                }
+
                 return new MovementKeyFrame(
                         tick,
                         worldView.getPlane(),

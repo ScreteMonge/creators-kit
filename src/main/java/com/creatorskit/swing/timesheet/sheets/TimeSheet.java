@@ -494,9 +494,12 @@ public class TimeSheet extends JPanel
                             }
                         }
 
-                        for (KeyFrame keyFrame : keyFrames)
+                        KeyFrame[] copies = new KeyFrame[keyFrames.length];
+                        for (int i = 0; i < keyFrames.length; i++)
                         {
+                            KeyFrame keyFrame = keyFrames[i];
                             KeyFrame copy = KeyFrame.createCopy(keyFrame, round(keyFrame.getTick() + change));
+                            copies[i] = copy;
                             KeyFrame keyFrameToReplace = timeSheetPanel.addKeyFrame(selectedCharacter, copy);
                             if (keyFrameToReplace != null)
                             {
@@ -506,7 +509,7 @@ public class TimeSheet extends JPanel
                             kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(copy, selectedCharacter, KeyFrameCharacterActionType.ADD));
                         }
 
-                        setSelectedKeyFrames(keyFrames);
+                        setSelectedKeyFrames(copies);
                         timeSheetPanel.addKeyFrameActions(kfa);
                     }
 

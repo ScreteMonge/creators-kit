@@ -9,7 +9,7 @@ import com.creatorskit.models.datatypes.SpotanimData;
 import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.programming.orientation.OrientationAction;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
-import com.creatorskit.swing.timesheet.attributes.OrientationInstruction;
+import com.creatorskit.programming.orientation.OrientationInstruction;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -1178,6 +1178,7 @@ public class Programmer
                 if (nextSpotAnim.getTick() <= currentTime)
                 {
                     character.setCurrentKeyFrame(nextSpotAnim, KeyFrameType.SPOTANIM);
+                    registerSpotAnimChanges(character, KeyFrameType.SPOTANIM, currentTime);
                 }
             }
 
@@ -1195,6 +1196,7 @@ public class Programmer
                 if (nextSpotAnim2.getTick() <= currentTime)
                 {
                     character.setCurrentKeyFrame(nextSpotAnim2, KeyFrameType.SPOTANIM2);
+                    registerSpotAnimChanges(character, KeyFrameType.SPOTANIM, currentTime);
                 }
             }
         }
@@ -1392,7 +1394,7 @@ public class Programmer
             ckObject.setLoop(keyFrame.isLoop());
             ckObject.setActiveAnimation(client.loadAnimation(keyFrame.getActive()));
             ckObject.setFinished(false);
-            setAnimationFrames(ckObject, timeSheetPanel.getCurrentTime(), keyFrame.getTick(), keyFrame.getStartFrame(), keyFrame.isLoop());
+            setAnimationFrames(ckObject, timeSheetPanel.getCurrentTime(), keyFrame.getTick(), keyFrame.getStartFrame(), keyFrame.isLoop(), false);
 
             if (playing)
             {
@@ -1484,10 +1486,10 @@ public class Programmer
         LocalPoint lp = ckObject.getLocation();
         int plane = ckObject.getLevel();
 
-        updateSpotAnim(keyFrameType, spotAnimKeyFrame.getSpotAnimId(), spotAnimKeyFrame.getHeight(), character, currentTime, spotAnimKeyFrame.getTick(), spotAnimKeyFrame.isLoop(), lp, plane);
+        updateSpotAnim(keyFrameType, spotAnimKeyFrame.getSpotAnimId(), spotAnimKeyFrame.getHeight(), character, currentTime, spotAnimKeyFrame.getTick(), spotAnimKeyFrame.isLoop(), lp, plane, ckObject.getOrientation());
     }
 
-    private void updateSpotAnim(KeyFrameType keyFrameType, int spotAnimId, int height, Character character, double currentTime, double startTick, boolean loop, LocalPoint lp, int plane)
+    private void updateSpotAnim(KeyFrameType keyFrameType, int spotAnimId, int height, Character character, double currentTime, double startTick, boolean loop, LocalPoint lp, int plane, int orientation)
     {
         CKObject spotAnim;
         if (keyFrameType == KeyFrameType.SPOTANIM)
@@ -1501,60 +1503,59 @@ public class Programmer
 
         if (spotAnim == null)
         {
-            if (spotAnimId > -1)
+            if (spotAnimId == -1)
             {
-                SpotanimData data = dataFinder.getSpotAnimData(spotAnimId);
-
-                if (data != null)
-                {
-                    ModelStats[] stats = dataFinder.findSpotAnim(data);
-                    clientThread.invokeLater(() ->
-                    {
-                        LightingStyle ls = LightingStyle.SPOTANIM;
-                        CustomLighting cl = new CustomLighting(ls.getAmbient() + data.getAmbient(), ls.getContrast() + data.getContrast(), ls.getX(), ls.getY(), ls.getZ());
-                        for (ModelStats ms : stats)
-                        {
-                            ms.setTranslateZ(height);
-                        }
-
-                        Model model = plugin.constructModelFromCache(stats, new int[0], false, LightingStyle.CUSTOM, cl);
-
-                        CKObject ckObject = new CKObject(client);
-                        client.registerRuneLiteObject(ckObject);
-                        ckObject.setModel(model);
-                        ckObject.setAnimation(AnimationType.ACTIVE, data.getAnimationId());
-                        ckObject.setLocation(lp, plane);
-                        ckObject.setActive(true);
-                        ckObject.setDrawFrontTilesFirst(true);
-                        setActiveAnimationFrame(ckObject, currentTime, startTick, 0, loop);
-                        character.setSpotAnim(ckObject, keyFrameType);
-                    });
-                }
+                return;
             }
         }
-        else
+
+        SpotanimData data = dataFinder.getSpotAnimData(spotAnimId);
+
+        if (data != null)
         {
-            if (spotAnimId > -1)
+            ModelStats[] stats = dataFinder.findSpotAnim(data);
+            clientThread.invokeLater(() ->
             {
-                clientThread.invokeLater(() ->
+                CKObject ckObject;
+                if (spotAnim == null)
                 {
-                    setActiveAnimationFrame(spotAnim, currentTime, startTick, 0, loop);
-                });
-            }
-            else
-            {
-                character.setSpotAnim1(null);
-            }
+                    ckObject = new CKObject(client);
+                    client.registerRuneLiteObject(ckObject);
+                    ckObject.setDrawFrontTilesFirst(true);
+                    ckObject.setDespawnOnFinish(true);
+                    character.setSpotAnim(ckObject, keyFrameType);
+                }
+                else
+                {
+                    ckObject = spotAnim;
+                }
+
+                LightingStyle ls = LightingStyle.SPOTANIM;
+                CustomLighting cl = new CustomLighting(ls.getAmbient() + data.getAmbient(), ls.getContrast() + data.getContrast(), ls.getX(), ls.getY(), ls.getZ());
+                for (ModelStats ms : stats)
+                {
+                    ms.setTranslateZ(height);
+                }
+
+                Model model = plugin.constructModelFromCache(stats, new int[0], false, LightingStyle.CUSTOM, cl);
+
+                ckObject.setModel(model);
+                ckObject.setAnimation(AnimationType.ACTIVE, data.getAnimationId());
+                ckObject.setLocation(lp, plane);
+                ckObject.setOrientation(orientation);
+                ckObject.setActive(true);
+                setActiveAnimationFrame(ckObject, currentTime, startTick, 0, loop, true);
+            });
         }
     }
 
-    public void setAnimationFrames(CKObject ckObject, double currentTime, double startTime, int startFrame, boolean loop)
+    public void setAnimationFrames(CKObject ckObject, double currentTime, double startTime, int startFrame, boolean loop, boolean despawnOnFinished)
     {
-        setActiveAnimationFrame(ckObject, currentTime, startTime, startFrame, loop);
+        setActiveAnimationFrame(ckObject, currentTime, startTime, startFrame, loop, despawnOnFinished);
         setPoseAnimationFrame(ckObject, currentTime, startTime, startFrame, loop);
     }
 
-    public void setActiveAnimationFrame(CKObject ckObject, double currentTime, double startTime, int startFrame, boolean loop)
+    public void setActiveAnimationFrame(CKObject ckObject, double currentTime, double startTime, int startFrame, boolean loop, boolean despawnOnFinished)
     {
         Animation[] animations = ckObject.getAnimations();
 
@@ -1569,7 +1570,7 @@ public class Programmer
             }
             else
             {
-                setActiveAnimationFrame(ckObject, savedAnimation, currentTime, startTime, startFrame, loop);
+                setActiveAnimationFrame(ckObject, savedAnimation, currentTime, startTime, startFrame, loop, despawnOnFinished);
             }
         }
 
@@ -1588,17 +1589,21 @@ public class Programmer
                 }
             }
 
-            setActiveAnimationFrame(ckObject, nextAnimation, currentTime, startTime, startFrame, loop);
+            setActiveAnimationFrame(ckObject, nextAnimation, currentTime, startTime, startFrame, loop, despawnOnFinished);
         }
     }
 
-    public void setActiveAnimationFrame(CKObject ckObject, Animation animation, double currentTime, double startTime, int startFrame, boolean loop)
+    public void setActiveAnimationFrame(CKObject ckObject, Animation animation, double currentTime, double startTime, int startFrame, boolean loop, boolean despawnOnFinished)
     {
         int[] animFrame = getAnimFrame(animation, currentTime, startTime, startFrame, loop);
         if (animFrame[0] == -1)
         {
             ckObject.setFinished(true);
             ckObject.unsetAnimation(AnimationType.ACTIVE);
+            if (despawnOnFinished)
+            {
+                clientThread.invokeLater(() -> ckObject.setActive(false));
+            }
         }
         else
         {

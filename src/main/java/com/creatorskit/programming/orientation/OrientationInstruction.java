@@ -1,4 +1,4 @@
-package com.creatorskit.swing.timesheet.attributes;
+package com.creatorskit.programming.orientation;
 
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import lombok.AllArgsConstructor;

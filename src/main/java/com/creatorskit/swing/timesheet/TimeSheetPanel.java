@@ -1030,6 +1030,21 @@ public class TimeSheetPanel extends JPanel
                 toolBox.getTimeSheetPanel().setCurrentTime(0, false);
             }
         });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_A, InputEvent.CTRL_DOWN_MASK), "VK_A");
+        actionMap.put("VK_A", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                if (selectedCharacter == null)
+                {
+                    return;
+                }
+
+                setSelectedKeyFrames(selectedCharacter.getAllKeyFrames());
+            }
+        });
     }
 
     private void setMouseListeners()

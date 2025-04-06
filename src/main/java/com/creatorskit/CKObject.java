@@ -15,6 +15,7 @@ public class CKObject extends RuneLiteObjectController
     private Model baseModel;
     private boolean freeze;
     private boolean playing;
+    private boolean despawnOnFinish;
     private Animation activeAnimation;
     private CKAnimationController animationController;
     private CKAnimationController poseAnimationController;
@@ -103,6 +104,11 @@ public class CKObject extends RuneLiteObjectController
             {
                 ac.setFinished(true);
                 setAnimation(type, -1);
+            }
+
+            if (ac.isFinished() && despawnOnFinish)
+            {
+                setActive(false);
             }
         });
     }
