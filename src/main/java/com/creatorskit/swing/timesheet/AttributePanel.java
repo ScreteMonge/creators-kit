@@ -428,6 +428,7 @@ public class AttributePanel extends JPanel
         JButton randomize = new JButton("Random");
         card.add(randomize, c);
 
+        /*
         c.gridx = 0;
         c.gridy = 2;
         JLabel stallLabel = new JLabel("Stall: ");
@@ -441,6 +442,8 @@ public class AttributePanel extends JPanel
         stall.addItem(Toggle.DISABLE);
         stall.addItem(Toggle.ENABLE);
         card.add(stall, c);
+
+         */
 
         c.gridwidth = 4;
         c.gridx = 0;
