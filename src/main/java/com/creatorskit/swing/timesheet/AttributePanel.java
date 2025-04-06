@@ -1461,43 +1461,51 @@ public class AttributePanel extends JPanel
 
     public void switchCards(String cardName)
     {
-        CardLayout cl = (CardLayout)(cardPanel.getLayout());
-        cl.show(cardPanel, cardName);
-        cardLabel.setText(cardName);
-
+        KeyFrameType type;
         switch (cardName)
         {
             default:
             case MOVE_CARD:
-                selectedKeyFramePage = KeyFrameType.MOVEMENT;
+                type = KeyFrameType.MOVEMENT;
                 break;
             case ANIM_CARD:
-                selectedKeyFramePage = KeyFrameType.ANIMATION;
+                type = KeyFrameType.ANIMATION;
                 break;
             case ORI_CARD:
-                selectedKeyFramePage = KeyFrameType.ORIENTATION;
+                type = KeyFrameType.ORIENTATION;
                 break;
             case SPAWN_CARD:
-                selectedKeyFramePage = KeyFrameType.SPAWN;
+                type = KeyFrameType.SPAWN;
                 break;
             case MODEL_CARD:
-                selectedKeyFramePage = KeyFrameType.MODEL;
+                type = KeyFrameType.MODEL;
                 break;
             case TEXT_CARD:
-                selectedKeyFramePage = KeyFrameType.TEXT;
+                type = KeyFrameType.TEXT;
                 break;
             case OVER_CARD:
-                selectedKeyFramePage = KeyFrameType.OVERHEAD;
+                type = KeyFrameType.OVERHEAD;
                 break;
             case HEALTH_CARD:
-                selectedKeyFramePage = KeyFrameType.HEALTH;
+                type = KeyFrameType.HEALTH;
                 break;
             case SPOTANIM_CARD:
-                selectedKeyFramePage = KeyFrameType.SPOTANIM;
+                type = KeyFrameType.SPOTANIM;
                 break;
             case SPOTANIM2_CARD:
-                selectedKeyFramePage = KeyFrameType.SPOTANIM2;
+                type = KeyFrameType.SPOTANIM2;
         }
+
+        switchCards(type);
+    }
+
+    public void switchCards(KeyFrameType type)
+    {
+        selectedKeyFramePage = type;
+        String cardName = selectedKeyFramePage.getName();
+        CardLayout cl = (CardLayout)(cardPanel.getLayout());
+        cl.show(cardPanel, cardName);
+        cardLabel.setText(cardName);
 
         JLabel[] labels = timeSheetPanel.getLabels();
         JLabel selectedLabel;
