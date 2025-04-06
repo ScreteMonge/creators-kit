@@ -6,6 +6,7 @@ import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.AttributePanel;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameCharacterAction;
 import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameAction;
 import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameCharacterActionType;
@@ -684,5 +685,10 @@ public class TimeSheet extends JPanel
     public void setSelectedKeyFrames(KeyFrame[] keyFrames)
     {
         getTimeSheetPanel().setSelectedKeyFrames(keyFrames);
+        if (keyFrames != null && keyFrames.length > 0)
+        {
+            KeyFrameType type = keyFrames[keyFrames.length - 1].getKeyFrameType();
+            attributePanel.switchCards(type);
+        }
     }
 }

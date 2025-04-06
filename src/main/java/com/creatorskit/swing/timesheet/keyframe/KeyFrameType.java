@@ -1,8 +1,10 @@
 package com.creatorskit.swing.timesheet.keyframe;
 
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 @AllArgsConstructor
+@Getter
 public enum KeyFrameType
 {
     NULL("Null"),
