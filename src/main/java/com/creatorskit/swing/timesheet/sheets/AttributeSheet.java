@@ -88,7 +88,24 @@ public class AttributeSheet extends TimeSheet
                     int steps = (movementKeyFrame.getPath().length - 1);
                     if (steps > 0)
                     {
-                        double ticks = Math.ceil(steps / movementKeyFrame.getSpeed());
+                        double ticks = steps / movementKeyFrame.getSpeed();
+                        boolean round = true;
+                        if (e + 1 < keyFrames.length)
+                        {
+                            KeyFrame next = keyFrames[e + 1];
+                            double difference = next.getTick() - frame.getTick();
+                            if (difference < ticks)
+                            {
+                                ticks = difference;
+                                round = false;
+                            }
+                        }
+
+                        if (round)
+                        {
+                            ticks = Math.ceil(ticks);
+                        }
+
                         int pathLength = (int) (ticks * zoomFactor);
                         g.drawLine(x, y + image.getHeight() / 2, x + pathLength - 1, y + image.getHeight() / 2);
                     }
@@ -97,7 +114,19 @@ public class AttributeSheet extends TimeSheet
                 if (type == KeyFrameType.ORIENTATION)
                 {
                     OrientationKeyFrame orientationKeyFrame = (OrientationKeyFrame) frame;
-                    int pathLength = (int) (orientationKeyFrame.getDuration() * zoomFactor);
+                    double ticks = orientationKeyFrame.getDuration();
+                    if (e + 1 < keyFrames.length)
+                    {
+                        KeyFrame next = keyFrames[e + 1];
+                        double difference = next.getTick() - frame.getTick();
+                        if (difference < ticks)
+                        {
+                            ticks = difference;
+                        }
+                    }
+
+
+                    int pathLength = (int) (ticks * zoomFactor);
                     g.drawLine(x, y + image.getHeight() / 2, x + pathLength - 1, y + image.getHeight() / 2);
                 }
 
