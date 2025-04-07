@@ -10,6 +10,7 @@ import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import com.creatorskit.swing.timesheet.keyframe.MovementKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.SubMenuCreator;
 import com.google.gson.Gson;
 import com.google.inject.Provides;
 import javax.inject.Inject;
@@ -19,6 +20,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
+import net.runelite.api.Menu;
 import net.runelite.api.Point;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
@@ -596,6 +598,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 						.setTarget(ColorUtil.colorTag(Color.GREEN) + selectedCharacter.getName())
 						.setType(MenuAction.RUNELITE)
 						.onClick(e -> setLocation(selectedCharacter, true, true, LocationOption.TO_HOVERED_TILE));
+
+				MenuEntry me = client.getMenu().createMenuEntry(-2)
+						.setOption(ColorUtil.prependColorTag("Keyframe", Color.ORANGE))
+						.setTarget(ColorUtil.colorTag(Color.GREEN) + selectedCharacter.getName())
+						.setType(MenuAction.RUNELITE);
+
+				Menu menu = me.createSubMenu();
+				SubMenuCreator.createSubMenus(creatorsPanel.getToolBox().getTimeSheetPanel(), menu);
 			}
 		}
 

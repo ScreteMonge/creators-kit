@@ -345,15 +345,20 @@ public class TimeSheetPanel extends JPanel
 
     public void onKeyFrameIconPressedEvent()
     {
+        onKeyFrameIconPressedEvent(currentTime, attributePanel.getSelectedKeyFramePage());
+    }
+
+    public void onKeyFrameIconPressedEvent(double currentTick, KeyFrameType type)
+    {
         if (selectedCharacter == null)
         {
             return;
         }
 
-        KeyFrame keyFrame = selectedCharacter.findKeyFrame(attributePanel.getSelectedKeyFramePage(), currentTime);
+        KeyFrame keyFrame = selectedCharacter.findKeyFrame(type, currentTick);
         if (keyFrame == null)
         {
-            KeyFrame kf = attributePanel.createKeyFrame(currentTime);
+            KeyFrame kf = attributePanel.createKeyFrame(type, currentTick);
             if (kf == null)
             {
                 return;

@@ -74,7 +74,7 @@ public class MovementAttributes extends Attributes
     public void resetAttributes()
     {
         loop.setSelectedItem(Toggle.DISABLE);
-        speed.setValue(1);
+        speed.setValue(1.0);
         turnRate.setValue(-1);
         setBackgroundColours(KeyFrameState.EMPTY);
     }

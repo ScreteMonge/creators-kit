@@ -353,7 +353,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 2;
         JSpinner speed = movementAttributes.getSpeed();
-        speed.setModel(new SpinnerNumberModel(1, 0.5, 10, 0.5));
+        speed.setModel(new SpinnerNumberModel(1.0, 0.5, 10, 0.5));
         card.add(speed, c);
 
         c.gridx = 0;
