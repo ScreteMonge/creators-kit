@@ -751,6 +751,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			}
 		}
 
+		if (!config.rightClick())
+		{
+			return;
+		}
+
 		WorldView worldView = client.getTopLevelWorldView();
 		Tile tile = worldView.getSelectedSceneTile();
 		if (tile == null)
@@ -783,8 +788,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	@Subscribe
 	public void onMenuEntryAdded(MenuEntryAdded event)
 	{
-		if (!config.rightClick() && !config.transmogRightClick() && !config.rightSpotAnim() && !config.exportRightClick())
+		if (!config.rightClick())
+		{
 			return;
+		}
 
 		String target = event.getTarget();
 		String option = event.getOption();
@@ -792,84 +799,13 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		NPC npc = event.getMenuEntry().getNpc();
 		if (npc != null && option.equals("Examine"))
 		{
-			if (config.rightClick())
-			{
-				if (client.isKeyPressed(KeyCode.KC_CONTROL))
-				{
-					modelGetter.storeNPC(1, target, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), npc, ModelMenuOption.STORE_AND_ADD);
-				}
-				else
-				{
-					modelGetter.storeNPC(1, target, ColorUtil.prependColorTag("Store", Color.ORANGE), npc, ModelMenuOption.STORE);
-				}
-				modelGetter.sendToAnvilNPC(1, target, npc);
-			}
-
-			if (config.transmogRightClick())
-			{
-				modelGetter.storeNPC(1, target, ColorUtil.prependColorTag("Transmog", Color.ORANGE), npc, ModelMenuOption.TRANSMOG);
-			}
-
-			if (config.rightSpotAnim())
-			{
-				if (client.isKeyPressed(KeyCode.KC_CONTROL))
-				{
-					modelGetter.addSpotAnimGetter(1, target, ColorUtil.prependColorTag("SpotAnim-Store-Add", Color.ORANGE), npc.getSpotAnims(), ModelMenuOption.STORE_AND_ADD);
-				}
-				else
-				{
-					modelGetter.addSpotAnimGetter(1, target, ColorUtil.prependColorTag("SpotAnim-Store", Color.ORANGE), npc.getSpotAnims(), ModelMenuOption.STORE);
-				}
-				modelGetter.addSpotAnimGetter(1, target, ColorUtil.prependColorTag("SpotAnim-Anvil", Color.ORANGE), npc.getSpotAnims(), ModelMenuOption.ANVIL);
-			}
-
-			if (config.exportRightClick())
-			{
-				modelGetter.addNPCExporter(1, target, npc, false);
-				modelGetter.addNPCExporter(1, target, npc, true);
-			}
+			modelGetter.addNPCMenuEntries(target, npc);
 		}
 
 		Player player = event.getMenuEntry().getPlayer();
 		if (player != null && option.equals("Trade with"))
 		{
-			if (config.rightClick())
-			{
-				if (client.isKeyPressed(KeyCode.KC_CONTROL))
-				{
-					modelGetter.addPlayerGetter(1, target, ColorUtil.prependColorTag("Store-Add", Color.ORANGE), player, ModelMenuOption.STORE_AND_ADD);
-				}
-				else
-				{
-					modelGetter.addPlayerGetter(1, target, ColorUtil.prependColorTag("Store", Color.ORANGE), player, ModelMenuOption.STORE);
-				}
-
-				modelGetter.addPlayerGetter(1, target, ColorUtil.prependColorTag("Anvil", Color.ORANGE), player, ModelMenuOption.ANVIL);
-			}
-
-			if (config.transmogRightClick())
-			{
-				modelGetter.addPlayerGetter(1, target, ColorUtil.prependColorTag("Transmog", Color.ORANGE), player, ModelMenuOption.TRANSMOG);
-			}
-
-			if (config.rightSpotAnim())
-			{
-				if (client.isKeyPressed(KeyCode.KC_CONTROL))
-				{
-					modelGetter.addSpotAnimGetter(1, target, ColorUtil.prependColorTag("SpotAnim-Store-Add", Color.ORANGE), player.getSpotAnims(), ModelMenuOption.STORE_AND_ADD);
-				}
-				else
-				{
-					modelGetter.addSpotAnimGetter(1, target, ColorUtil.prependColorTag("SpotAnim-Store", Color.ORANGE), player.getSpotAnims(), ModelMenuOption.STORE);
-				}
-				modelGetter.addSpotAnimGetter(1, target, ColorUtil.prependColorTag("SpotAnim-Anvil", Color.ORANGE), player.getSpotAnims(), ModelMenuOption.ANVIL);
-			}
-
-			if (config.exportRightClick())
-			{
-				modelGetter.addPlayerExporter(1, target, player, false);
-				modelGetter.addPlayerExporter(1, target, player, true);
-			}
+			modelGetter.addPlayerMenuEntries(target, player);
 		}
 	}
 
