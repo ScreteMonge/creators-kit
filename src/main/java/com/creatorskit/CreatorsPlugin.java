@@ -31,6 +31,7 @@ import net.runelite.client.chat.ChatMessageBuilder;
 import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.config.Keybind;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
@@ -48,6 +49,8 @@ import net.runelite.client.util.ImageUtil;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.awt.*;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
@@ -192,6 +195,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.registerKeyListener(clearProgramStepListener);
 		keyManager.registerKeyListener(playPauseListener);
 		keyManager.registerKeyListener(resetTimelineListener);
+		keyManager.registerKeyListener(skipForwardListener);
+		keyManager.registerKeyListener(skipSubForwardListener);
+		keyManager.registerKeyListener(skipBackwardListener);
+		keyManager.registerKeyListener(skipSubBackwardListener);
 		mouseManager.registerMouseWheelListener(this::mouseWheelMoved);
 		mouseManager.registerMouseListener(this);
 
@@ -294,6 +301,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.unregisterKeyListener(clearProgramStepListener);
 		keyManager.unregisterKeyListener(playPauseListener);
 		keyManager.unregisterKeyListener(resetTimelineListener);
+		keyManager.unregisterKeyListener(skipForwardListener);
+		keyManager.unregisterKeyListener(skipSubForwardListener);
+		keyManager.unregisterKeyListener(skipBackwardListener);
+		keyManager.unregisterKeyListener(skipSubBackwardListener);
 		mouseManager.unregisterMouseWheelListener(this::mouseWheelMoved);
 		mouseManager.unregisterMouseListener(this);
 	}
@@ -2060,6 +2071,42 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			ToolBoxFrame toolBox = creatorsPanel.getToolBox();
 			toolBox.getProgrammer().pause();
 			toolBox.getTimeSheetPanel().setCurrentTime(0, false);
+		}
+	};
+
+	private final HotkeyListener skipForwardListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_RIGHT, InputEvent.CTRL_DOWN_MASK))
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			creatorsPanel.getToolBox().getTimeSheetPanel().skipListener(1);
+		}
+	};
+
+	private final HotkeyListener skipBackwardListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_LEFT, InputEvent.CTRL_DOWN_MASK))
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			creatorsPanel.getToolBox().getTimeSheetPanel().skipListener(-1);
+		}
+	};
+
+	private final HotkeyListener skipSubForwardListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_RIGHT, InputEvent.CTRL_DOWN_MASK | InputEvent.ALT_DOWN_MASK))
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			creatorsPanel.getToolBox().getTimeSheetPanel().skipListener(0.1);
+		}
+	};
+
+	private final HotkeyListener skipSubBackwardListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_LEFT, InputEvent.CTRL_DOWN_MASK | InputEvent.ALT_DOWN_MASK))
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			creatorsPanel.getToolBox().getTimeSheetPanel().skipListener(-0.1);
 		}
 	};
 

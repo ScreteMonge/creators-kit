@@ -1050,6 +1050,31 @@ public class TimeSheetPanel extends JPanel
                 setSelectedKeyFrames(selectedCharacter.getAllKeyFrames());
             }
         });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, InputEvent.CTRL_DOWN_MASK), "VK_RIGHT");
+        actionMap.put("VK_RIGHT", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                skipListener(1);
+            }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, InputEvent.CTRL_DOWN_MASK), "VK_LEFT");
+        actionMap.put("VK_LEFT", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                skipListener(-1);
+            }
+        });
+    }
+
+    public void skipListener(double modifier)
+    {
+        setCurrentTime(round(currentTime + modifier), false);
     }
 
     private void setMouseListeners()
