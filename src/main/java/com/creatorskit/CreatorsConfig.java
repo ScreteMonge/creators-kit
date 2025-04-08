@@ -18,8 +18,8 @@ public interface CreatorsConfig extends Config
 
 	@ConfigItem(
 			keyName = "enableRightClick",
-			name = "Enable Right-Click Store/Anvil",
-			description = "Enables Right-Click menu options Store & Anvil on Objects, NPCs, and Players",
+			name = "Enable Right-Click Options",
+			description = "Enables Right-Click menu options for on Objects, NPCs, and Players",
 			section = sceneSettings,
 			position = 0
 	)
@@ -36,54 +36,6 @@ public interface CreatorsConfig extends Config
 			position = 1
 	)
 	default boolean enableCtrlHotkeys()
-	{
-		return false;
-	}
-
-	@ConfigItem(
-			keyName = "enableSelect",
-			name = "Enable Right-Click Select",
-			description = "Enables Right-Click menu option to Select an Object you've spawned",
-			section = sceneSettings,
-			position = 2
-	)
-	default boolean rightSelect()
-	{
-		return true;
-	}
-
-	@ConfigItem(
-			keyName = "enableSpotAnim",
-			name = "Enable Right-Click SpotAnim",
-			description = "Enables Right-Click menu option to grab a Player's SpotAnims",
-			section = sceneSettings,
-			position = 3
-	)
-	default boolean rightSpotAnim()
-	{
-		return false;
-	}
-
-	@ConfigItem(
-			keyName = "exportRightClick",
-			name = "Enable Right-Click Export",
-			description = "Enables Right-Click menu option to Export an Object, NPC, or Player to a .json for Blender",
-			section = sceneSettings,
-			position = 4
-	)
-	default boolean exportRightClick()
-	{
-		return false;
-	}
-
-	@ConfigItem(
-			keyName = "transmogRightClick",
-			name = "Enable Right-Click Transmog",
-			description = "Provides a right-click option to Transmog on Objects, NPCs, and Players",
-			section = transmogrification,
-			position = 5
-	)
-	default boolean transmogRightClick()
 	{
 		return false;
 	}

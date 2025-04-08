@@ -1157,7 +1157,7 @@ public class DataFinder
                 short[] rtFrom = new short[0];
                 short[] rtTo = new short[0];
 
-                if (objectData.getTextureToReplace() != null)
+                if (objectData.getTextureToReplace() != null && objectData.getRetextureToFind() != null)
                 {
                     int[] textureToReplace = objectData.getTextureToReplace();
                     int[] retextureToFind = objectData.getRetextureToFind();
