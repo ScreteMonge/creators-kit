@@ -5,10 +5,14 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public class SeqData
+public class AnimData
 {
-    private final String name;
     private final int id;
-    private final int leftHandItem;
-    private final int rightHandItem;
+    private final String name;
+
+    @Override
+    public String toString()
+    {
+        return name + " (" + id + ")";
+    }
 }
