@@ -1,22 +1,17 @@
-package com.creatorskit.swing.combobox;
+package com.creatorskit.swing.searchabletable;
+
+import net.runelite.client.ui.ColorScheme;
 
 import javax.swing.*;
-import javax.swing.plaf.basic.BasicComboBoxRenderer;
+import javax.swing.table.TableCellRenderer;
 import java.awt.*;
 import java.util.ArrayList;
 
-//Code adapted from trashgod, see: https://stackoverflow.com/a/7605780
-public class SearchRenderer extends BasicComboBoxRenderer
+public class JFilterableRenderer extends JLabel implements TableCellRenderer
 {
     @Override
-    public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus)
+    public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
     {
-        if (index == 0)
-        {
-            setText("");
-            return this;
-        }
-
         Object[] v = (Object[]) value;
         String s = v[0].toString();
         String lowerS = s.toLowerCase();
@@ -56,6 +51,16 @@ public class SearchRenderer extends BasicComboBoxRenderer
         }
 
         this.setText("<html><head></head><body style=\"color: gray;\">" + html + "</body></head>");
+
+        if (isSelected)
+        {
+            setOpaque(true);
+            setBackground(Color.DARK_GRAY);
+        }
+        else
+        {
+            setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        }
         return this;
     }
 }

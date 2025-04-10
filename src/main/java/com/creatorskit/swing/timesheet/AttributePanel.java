@@ -3,11 +3,10 @@ package com.creatorskit.swing.timesheet;
 import com.creatorskit.Character;
 import com.creatorskit.models.CustomModel;
 import com.creatorskit.models.DataFinder;
-import com.creatorskit.models.DataFinder.DataType;
 import com.creatorskit.models.datatypes.AnimData;
 import com.creatorskit.models.datatypes.NPCData;
 import com.creatorskit.programming.Direction;
-import com.creatorskit.swing.combobox.JSearchableComboBox;
+import com.creatorskit.swing.searchabletable.JFilterableTable;
 import com.creatorskit.swing.timesheet.attributes.*;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import com.creatorskit.swing.timesheet.keyframe.settings.*;
@@ -43,7 +42,7 @@ public class AttributePanel extends JPanel
     private final JLabel cardLabel = new JLabel("");
     private final JButton keyFramed = new JButton();
 
-    private JSearchableComboBox searcher = new JSearchableComboBox();
+    private final JFilterableTable npcTable = new JFilterableTable("NPCs");
 
     private final String MOVE_CARD = "Movement";
     private final String ANIM_CARD = "Animation";
@@ -447,24 +446,65 @@ public class AttributePanel extends JPanel
         c.gridwidth = 3;
         c.gridx = 2;
         c.gridy = 8;
-        searcher.setPreferredSize(new Dimension(270, 25));
+        JTextField field = new JTextField("");
+        card.add(field, c);
 
-        if (dataFinder.isDataLoaded(DataType.NPC))
+        JPopupMenu popup = new JPopupMenu("NPCs");
+        JScrollPane scrollPane = new JScrollPane(npcTable);
+        popup.add(scrollPane);
+
+        KeyListener keyListener = new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e)
+            {
+                String text = field.getText();
+                npcTable.searchAndListEntries(text);
+                popup.setVisible(true);
+                popup.setLocation(MouseInfo.getPointerInfo().getLocation());
+            }
+        };
+        field.addKeyListener(keyListener);
+
+        field.addFocusListener(new FocusListener()
+        {
+            @Override
+            public void focusGained(FocusEvent e)
+            {
+
+            }
+
+            @Override
+            public void focusLost(FocusEvent e)
+            {
+                popup.setVisible(false);
+            }
+        });
+
+        if (dataFinder.isDataLoaded(DataFinder.DataType.NPC))
         {
             List<NPCData> dataList = dataFinder.getNpcData();
             List<Object> list = new ArrayList<>(dataList);
-            searcher.initialize(list);
+            npcTable.initialize(list);
         }
         else
         {
-            dataFinder.addLoadCallback(DataType.NPC, () ->
+            dataFinder.addLoadCallback(DataFinder.DataType.NPC, () ->
             {
                 List<NPCData> dataList = dataFinder.getNpcData();
                 List<Object> list = new ArrayList<>(dataList);
-                searcher.initialize(list);
+                npcTable.initialize(list);
             });
         }
-        card.add(searcher, c);
 
         c.gridwidth = 1;
         c.gridx = 5;
@@ -472,7 +512,7 @@ public class AttributePanel extends JPanel
         JButton searchApply = new JButton("Apply");
         searchApply.addActionListener(e ->
         {
-            Object o = searcher.getSelectedData();
+            Object o = npcTable.getSelectedObject();
             if (o instanceof NPCData)
             {
                 NPCData data = (NPCData) o;
