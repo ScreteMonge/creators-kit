@@ -481,7 +481,7 @@ public class ModelGetter
             clientThread.invokeLater(() ->
             {
                 CustomLighting lighting = modelStats[0].getLighting();
-                CustomModelComp comp = new CustomModelComp(0, CustomModelType.CACHE_OBJECT, spotAnim.getId(), modelStats, null, null, null, LightingStyle.CUSTOM, lighting, false, name);
+                CustomModelComp comp = new CustomModelComp(0, CustomModelType.CACHE_SPOTANIM, spotAnim.getId(), modelStats, null, null, null, LightingStyle.CUSTOM, lighting, false, name);
 
                 ModelData modelData = client.loadModelData(modelStats[0].getModelId()).cloneColors().cloneVertices();
                 short[] recolFrom = modelStats[0].getRecolourFrom();
@@ -1051,6 +1051,7 @@ public class ModelGetter
                             default:
                             case CACHE_NPC:
                             case CACHE_OBJECT:
+                            case CACHE_SPOTANIM:
                             case CACHE_GROUND_ITEM:
                             case CACHE_MAN_WEAR:
                             case CACHE_WOMAN_WEAR:
@@ -1161,6 +1162,7 @@ public class ModelGetter
                         default:
                         case CACHE_NPC:
                         case CACHE_OBJECT:
+                        case CACHE_SPOTANIM:
                         case CACHE_GROUND_ITEM:
                         case CACHE_MAN_WEAR:
                         case CACHE_WOMAN_WEAR:
@@ -1210,6 +1212,7 @@ public class ModelGetter
                             default:
                             case CACHE_NPC:
                             case CACHE_OBJECT:
+                            case CACHE_SPOTANIM:
                             case CACHE_GROUND_ITEM:
                             case CACHE_MAN_WEAR:
                             case CACHE_WOMAN_WEAR:

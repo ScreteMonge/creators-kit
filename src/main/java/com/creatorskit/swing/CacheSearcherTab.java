@@ -4,6 +4,7 @@ import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.*;
 import com.creatorskit.models.datatypes.*;
+import com.creatorskit.swing.combobox.JSearchableComboBox;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import net.runelite.api.Model;
@@ -15,9 +16,8 @@ import javax.inject.Inject;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
-import javax.swing.event.PopupMenuEvent;
-import javax.swing.event.PopupMenuListener;
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.List;
 
 public class CacheSearcherTab extends JPanel
@@ -36,12 +36,6 @@ public class CacheSearcherTab extends JPanel
     private final JPanel itemPanel = new JPanel();
     private final JPanel animPanel = new JPanel();
     private final JPanel spotAnimPanel = new JPanel();
-
-    private boolean npcsFound = false;
-    private boolean objectsFound = false;
-    private boolean itemsFound = false;
-    private boolean spotAnimsFound = false;
-    private boolean animsFound = false;
 
     @Inject
     public CacheSearcherTab(CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder)
@@ -179,37 +173,32 @@ public class CacheSearcherTab extends JPanel
         nameLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         nameCard.add(nameLabel);
 
-        JComboBox<NPCData> nameBox = new JComboBox<>();
+        JSearchableComboBox nameBox = new JSearchableComboBox();
         nameBox.setBackground(ENTRY_COLOUR);
         nameBox.setPreferredSize(new Dimension(270, 25));
-        nameBox.addPopupMenuListener(new PopupMenuListener()
+        if (dataFinder.isDataLoaded(DataFinder.DataType.NPC))
         {
-            @Override
-            public void popupMenuWillBecomeVisible(PopupMenuEvent e)
+            List<NPCData> dataList = dataFinder.getNpcData();
+            List<Object> list = new ArrayList<>(dataList);
+            nameBox.initialize(list);
+        }
+        else
+        {
+            dataFinder.addLoadCallback(DataFinder.DataType.NPC, () ->
             {
-                if (!npcsFound)
-                {
-                    List<NPCData> dataList = dataFinder.getNpcData();
-                    npcsFound = true;
-                    for (NPCData data : dataList)
-                    {
-                        nameBox.addItem(data);
-                    }
-                }
-            }
-
-            @Override
-            public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {
-
-            }
-
-            @Override
-            public void popupMenuCanceled(PopupMenuEvent e) {
-
-            }
-        });
-        AutoCompletion.enable(nameBox);
+                List<NPCData> dataList = dataFinder.getNpcData();
+                List<Object> list = new ArrayList<>(dataList);
+                nameBox.initialize(list);
+            });
+        }
         nameCard.add(nameBox);
+
+        JButton showAllButton = new JButton("Show All");
+        showAllButton.addActionListener(e ->
+        {
+            nameBox.showAll();
+        });
+        nameCard.add(showAllButton);
 
         JLabel idLabel = new JLabel("NPC Id: ");
         idLabel.setHorizontalAlignment(SwingConstants.RIGHT);
@@ -249,13 +238,11 @@ public class CacheSearcherTab extends JPanel
 
             if (modeString.equals("Name"))
             {
-                NPCData npcData = (NPCData) nameBox.getSelectedItem();
-                if (npcData == null)
+                Object o = nameBox.getSelectedData();
+                if (o instanceof NPCData)
                 {
-                    return;
+                    addNPCObject((NPCData) nameBox.getSelectedData());
                 }
-
-                addNPCObject((NPCData) nameBox.getSelectedItem());
             }
             else
             {
@@ -273,13 +260,12 @@ public class CacheSearcherTab extends JPanel
 
             if (modeString.equals("Name"))
             {
-                NPCData npcData = (NPCData) nameBox.getSelectedItem();
-                if (npcData == null)
+                Object o = nameBox.getSelectedData();
+                if (o instanceof NPCData)
                 {
-                    return;
+                    NPCData npcData = (NPCData) o;
+                    addCustomModel(CustomModelType.CACHE_NPC, npcData.getId());
                 }
-
-                addCustomModel(CustomModelType.CACHE_NPC, npcData.getId());
             }
             else
             {
@@ -297,13 +283,12 @@ public class CacheSearcherTab extends JPanel
 
             if (modeString.equals("Name"))
             {
-                NPCData npcData = (NPCData) nameBox.getSelectedItem();
-                if (npcData == null)
+                Object o = nameBox.getSelectedData();
+                if (o instanceof NPCData)
                 {
-                    return;
+                    NPCData npcData = (NPCData) o;
+                    addToAnvil(CustomModelType.CACHE_NPC, npcData.getId());
                 }
-
-                addToAnvil(CustomModelType.CACHE_NPC, npcData.getId());
             }
             else
             {
@@ -392,46 +377,32 @@ public class CacheSearcherTab extends JPanel
         nameLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         nameCard.add(nameLabel);
 
-        JComboBox<ObjectData> nameBox = new JComboBox<>();
+        JSearchableComboBox nameBox = new JSearchableComboBox();
         nameBox.setBackground(ENTRY_COLOUR);
         nameBox.setPreferredSize(new Dimension(270, 25));
-        nameBox.addPopupMenuListener(new PopupMenuListener()
+        if (dataFinder.isDataLoaded(DataFinder.DataType.OBJECT))
         {
-            @Override
-            public void popupMenuWillBecomeVisible(PopupMenuEvent e)
+            List<ObjectData> dataList = dataFinder.getObjectData();
+            List<Object> list = new ArrayList<>(dataList);
+            nameBox.initialize(list);
+        }
+        else
+        {
+            dataFinder.addLoadCallback(DataFinder.DataType.OBJECT, () ->
             {
-                if (!objectsFound)
-                {
-                    List<ObjectData> dataList = dataFinder.getObjectData();
-                    objectsFound = true;
-                    for (ObjectData data : dataList)
-                    {
-                        String name = data.getName();
-                        if (name.isEmpty()) {
-                            continue;
-                        }
-
-                        if (name.equals("null")) {
-                            continue;
-                        }
-
-                        nameBox.addItem(data);
-                    }
-                }
-            }
-
-            @Override
-            public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {
-
-            }
-
-            @Override
-            public void popupMenuCanceled(PopupMenuEvent e) {
-
-            }
-        });
-        AutoCompletion.enable(nameBox);
+                List<ObjectData> dataList = dataFinder.getObjectData();
+                List<Object> list = new ArrayList<>(dataList);
+                nameBox.initialize(list);
+            });
+        }
         nameCard.add(nameBox);
+
+        JButton showAllButton = new JButton("Show All");
+        showAllButton.addActionListener(e ->
+        {
+            nameBox.showAll();
+        });
+        nameCard.add(showAllButton);
 
         JLabel idLabel = new JLabel("Object Id: ");
         idLabel.setHorizontalAlignment(SwingConstants.RIGHT);
@@ -471,13 +442,11 @@ public class CacheSearcherTab extends JPanel
 
             if (modeString.equals("Name"))
             {
-                ObjectData objectData = (ObjectData) nameBox.getSelectedItem();
-                if (objectData == null)
+                Object o = nameBox.getSelectedData();
+                if (o instanceof ObjectData)
                 {
-                    return;
+                    addObjectObject((ObjectData) o);
                 }
-
-                addObjectObject((ObjectData) nameBox.getSelectedItem());
             }
             else
             {
@@ -495,13 +464,12 @@ public class CacheSearcherTab extends JPanel
 
             if (modeString.equals("Name"))
             {
-                ObjectData objectData = (ObjectData) nameBox.getSelectedItem();
-                if (objectData == null)
+                Object o = nameBox.getSelectedData();
+                if (o instanceof ObjectData)
                 {
-                    return;
+                    ObjectData objectData = (ObjectData) o;
+                    addCustomModel(CustomModelType.CACHE_OBJECT, objectData.getId());
                 }
-
-                addCustomModel(CustomModelType.CACHE_OBJECT, objectData.getId());
             }
             else
             {
@@ -519,13 +487,12 @@ public class CacheSearcherTab extends JPanel
 
             if (modeString.equals("Name"))
             {
-                ObjectData objectData = (ObjectData) nameBox.getSelectedItem();
-                if (objectData == null)
+                Object o = nameBox.getSelectedData();
+                if (o instanceof ObjectData)
                 {
-                    return;
+                    ObjectData objectData = (ObjectData) o;
+                    addToAnvil(CustomModelType.CACHE_OBJECT, objectData.getId());
                 }
-
-                addToAnvil(CustomModelType.CACHE_OBJECT, objectData.getId());
             }
             else
             {
@@ -629,48 +596,32 @@ public class CacheSearcherTab extends JPanel
         nameLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         nameCard.add(nameLabel);
 
-        JComboBox<ItemData> nameBox = new JComboBox<>();
+        JSearchableComboBox nameBox = new JSearchableComboBox();
         nameBox.setBackground(ENTRY_COLOUR);
         nameBox.setPreferredSize(new Dimension(270, 25));
-        nameBox.addPopupMenuListener(new PopupMenuListener()
+        if (dataFinder.isDataLoaded(DataFinder.DataType.ITEM))
         {
-            @Override
-            public void popupMenuWillBecomeVisible(PopupMenuEvent e)
+            List<ItemData> dataList = dataFinder.getItemData();
+            List<Object> list = new ArrayList<>(dataList);
+            nameBox.initialize(list);
+        }
+        else
+        {
+            dataFinder.addLoadCallback(DataFinder.DataType.ITEM, () ->
             {
-                if (!itemsFound)
-                {
-                    List<ItemData> dataList = dataFinder.getItemData();
-                    itemsFound = true;
-                    for (ItemData data : dataList)
-                    {
-                        String name = data.getName();
-                        if (name.isEmpty())
-                        {
-                            continue;
-                        }
-
-                        if (name.equals("null"))
-                        {
-                            continue;
-                        }
-
-                        nameBox.addItem(data);
-                    }
-                }
-            }
-
-            @Override
-            public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {
-
-            }
-
-            @Override
-            public void popupMenuCanceled(PopupMenuEvent e) {
-
-            }
-        });
-        AutoCompletion.enable(nameBox);
+                List<ItemData> dataList = dataFinder.getItemData();
+                List<Object> list = new ArrayList<>(dataList);
+                nameBox.initialize(list);
+            });
+        }
         nameCard.add(nameBox);
+
+        JButton showAllButton = new JButton("Show All");
+        showAllButton.addActionListener(e ->
+        {
+            nameBox.showAll();
+        });
+        nameCard.add(showAllButton);
 
         JLabel idLabel = new JLabel("Item Id: ");
         idLabel.setHorizontalAlignment(SwingConstants.RIGHT);
@@ -712,13 +663,11 @@ public class CacheSearcherTab extends JPanel
 
             if (modeString.equals("Name"))
             {
-                ItemData itemData = (ItemData) nameBox.getSelectedItem();
-                if (itemData == null)
+                Object o = nameBox.getSelectedData();
+                if (o instanceof ItemData)
                 {
-                    return;
+                    addItemObject((ItemData) o, customModelType);
                 }
-
-                addItemObject((ItemData) nameBox.getSelectedItem(), customModelType);
             }
             else
             {
@@ -738,13 +687,12 @@ public class CacheSearcherTab extends JPanel
 
             if (modeString.equals("Name"))
             {
-                ItemData itemData = (ItemData) nameBox.getSelectedItem();
-                if (itemData == null)
+                Object o = nameBox.getSelectedData();
+                if (o instanceof ItemData)
                 {
-                    return;
+                    ItemData itemData = (ItemData) o;
+                    addCustomModel(customModelType, itemData.getId());
                 }
-
-                addCustomModel(customModelType, itemData.getId());
             }
             else
             {
@@ -764,13 +712,12 @@ public class CacheSearcherTab extends JPanel
 
             if (modeString.equals("Name"))
             {
-                ItemData itemData = (ItemData) nameBox.getSelectedItem();
-                if (itemData == null)
+                Object o = nameBox.getSelectedData();
+                if (o instanceof ItemData)
                 {
-                    return;
+                    ItemData itemData = (ItemData) o;
+                    addToAnvil(customModelType, itemData.getId());
                 }
-
-                addToAnvil(customModelType, itemData.getId());
             }
             else
             {
@@ -812,41 +759,40 @@ public class CacheSearcherTab extends JPanel
         nameLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         holderPanel.add(nameLabel, c);
 
-        c.gridwidth = 4;
+        c.gridwidth = 3;
         c.weightx = 1;
         c.gridx = 1;
         c.gridy = 2;
-        JComboBox<AnimData> nameBox = new JComboBox<>();
+        JSearchableComboBox nameBox = new JSearchableComboBox();
         nameBox.setBackground(ENTRY_COLOUR);
         nameBox.setPreferredSize(new Dimension(350, 25));
-        nameBox.addPopupMenuListener(new PopupMenuListener()
+        if (dataFinder.isDataLoaded(DataFinder.DataType.ANIM))
         {
-            @Override
-            public void popupMenuWillBecomeVisible(PopupMenuEvent e)
+            List<AnimData> dataList = dataFinder.getAnimData();
+            List<Object> list = new ArrayList<>(dataList);
+            nameBox.initialize(list);
+        }
+        else
+        {
+            dataFinder.addLoadCallback(DataFinder.DataType.ANIM, () ->
             {
-                if (!animsFound)
-                {
-                    List<AnimData> dataList = dataFinder.getAnimData();
-                    animsFound = true;
-                    for (AnimData data : dataList)
-                    {
-                        nameBox.addItem(data);
-                    }
-                }
-            }
-
-            @Override
-            public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {
-
-            }
-
-            @Override
-            public void popupMenuCanceled(PopupMenuEvent e) {
-
-            }
-        });
-        AutoCompletion.enable(nameBox);
+                List<AnimData> dataList = dataFinder.getAnimData();
+                List<Object> list = new ArrayList<>(dataList);
+                nameBox.initialize(list);
+            });
+        }
         holderPanel.add(nameBox, c);
+
+        c.gridwidth = 1;
+        c.weightx = 0;
+        c.gridx = 4;
+        c.gridy = 2;
+        JButton showAllButton = new JButton("Show All");
+        showAllButton.addActionListener(e ->
+        {
+            nameBox.showAll();
+        });
+        holderPanel.add(showAllButton, c);
 
         c.gridwidth = 1;
         c.weightx = 0;
@@ -865,8 +811,12 @@ public class CacheSearcherTab extends JPanel
 
         nameBox.addItemListener(e ->
         {
-            AnimData animData = (AnimData) e.getItem();
-            id.setText("" + animData.getId());
+            Object o = nameBox.getSelectedData();
+            if (o instanceof AnimData)
+            {
+                AnimData data = (AnimData) o;
+                id.setText("" + data.getId());
+            }
         });
     }
 
@@ -949,37 +899,32 @@ public class CacheSearcherTab extends JPanel
         nameLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         nameCard.add(nameLabel);
 
-        JComboBox<SpotanimData> nameBox = new JComboBox<>();
+        JSearchableComboBox nameBox = new JSearchableComboBox();
         nameBox.setBackground(ENTRY_COLOUR);
         nameBox.setPreferredSize(new Dimension(270, 25));
-        nameBox.addPopupMenuListener(new PopupMenuListener()
+        if (dataFinder.isDataLoaded(DataFinder.DataType.SPOTANIM))
         {
-            @Override
-            public void popupMenuWillBecomeVisible(PopupMenuEvent e)
+            List<SpotanimData> dataList = dataFinder.getSpotanimData();
+            List<Object> list = new ArrayList<>(dataList);
+            nameBox.initialize(list);
+        }
+        else
+        {
+            dataFinder.addLoadCallback(DataFinder.DataType.SPOTANIM, () ->
             {
-                if (!spotAnimsFound)
-                {
-                    List<SpotanimData> dataList = dataFinder.getSpotanimData();
-                    spotAnimsFound = true;
-                    for (SpotanimData data : dataList)
-                    {
-                        nameBox.addItem(data);
-                    }
-                }
-            }
-
-            @Override
-            public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {
-
-            }
-
-            @Override
-            public void popupMenuCanceled(PopupMenuEvent e) {
-
-            }
-        });
-        AutoCompletion.enable(nameBox);
+                List<SpotanimData> dataList = dataFinder.getSpotanimData();
+                List<Object> list = new ArrayList<>(dataList);
+                nameBox.initialize(list);
+            });
+        }
         nameCard.add(nameBox);
+
+        JButton showAllButton = new JButton("Show All");
+        showAllButton.addActionListener(e ->
+        {
+            nameBox.showAll();
+        });
+        nameCard.add(showAllButton);
 
         JLabel idLabel = new JLabel("SpotAnim Id: ");
         idLabel.setHorizontalAlignment(SwingConstants.RIGHT);
@@ -1019,13 +964,11 @@ public class CacheSearcherTab extends JPanel
 
             if (modeString.equals("Name"))
             {
-                SpotanimData spotanimData = (SpotanimData) nameBox.getSelectedItem();
-                if (spotanimData == null)
+                Object o = nameBox.getSelectedData();
+                if (o instanceof SpotanimData)
                 {
-                    return;
+                    addSpotAnimObject((SpotanimData) o);
                 }
-
-                addSpotAnimObject((SpotanimData) nameBox.getSelectedItem());
             }
             else
             {
@@ -1043,17 +986,16 @@ public class CacheSearcherTab extends JPanel
 
             if (modeString.equals("Name"))
             {
-                SpotanimData spotanimData = (SpotanimData) nameBox.getSelectedItem();
-                if (spotanimData == null)
+                Object o = nameBox.getSelectedData();
+                if (o instanceof SpotanimData)
                 {
-                    return;
+                    SpotanimData spotanimData = (SpotanimData) o;
+                    addCustomModel(CustomModelType.CACHE_SPOTANIM, spotanimData.getId());
                 }
-
-                addCustomModel(CustomModelType.CACHE_OBJECT, spotanimData.getId());
             }
             else
             {
-                addCustomModel(CustomModelType.CACHE_OBJECT, (int) idSpinner.getValue());
+                addCustomModel(CustomModelType.CACHE_SPOTANIM, (int) idSpinner.getValue());
             }
         });
 
@@ -1067,17 +1009,16 @@ public class CacheSearcherTab extends JPanel
 
             if (modeString.equals("Name"))
             {
-                SpotanimData spotanimData = (SpotanimData) nameBox.getSelectedItem();
-                if (spotanimData == null)
+                Object o = nameBox.getSelectedData();
+                if (o instanceof SpotanimData)
                 {
-                    return;
+                    SpotanimData spotanimData = (SpotanimData) o;
+                    addToAnvil(CustomModelType.CACHE_SPOTANIM, spotanimData.getId());
                 }
-
-                addToAnvil(CustomModelType.CACHE_OBJECT, spotanimData.getId());
             }
             else
             {
-                addToAnvil(CustomModelType.CACHE_OBJECT, (int) idSpinner.getValue());
+                addToAnvil(CustomModelType.CACHE_SPOTANIM, (int) idSpinner.getValue());
             }
 
         });
@@ -1313,7 +1254,7 @@ public class CacheSearcherTab extends JPanel
             LightingStyle ls = LightingStyle.SPOTANIM;
             CustomLighting lighting = new CustomLighting(ls.getAmbient() + data.getAmbient(), ls.getContrast() + data.getContrast(), ls.getX(), ls.getY(), ls.getZ());
             Model model = plugin.constructModelFromCache(modelStats, new int[0], false, LightingStyle.CUSTOM, lighting);
-            CustomModelComp comp = new CustomModelComp(0, CustomModelType.CACHE_OBJECT, data.getId(), modelStats, null, null, null, LightingStyle.CUSTOM, lighting, false, data.getName());
+            CustomModelComp comp = new CustomModelComp(0, CustomModelType.CACHE_SPOTANIM, data.getId(), modelStats, null, null, null, LightingStyle.CUSTOM, lighting, false, data.getName());
             CustomModel customModel = new CustomModel(model, comp);
             plugin.addCustomModel(customModel, false);
 

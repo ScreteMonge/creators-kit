@@ -731,7 +731,7 @@ public class DataFinder
             {
                 int modelId = spotanimData.getModelId();
 
-                lastFound = "SpotAnim " + spotAnimId;
+                lastFound = spotanimData.getName();
                 lastAnim = spotanimData.getAnimationId();
 
                 short[] rf = new short[0];
@@ -805,7 +805,7 @@ public class DataFinder
         ArrayList<ModelStats> modelStats = new ArrayList<>();
         int modelId = spotanimData.getModelId();
 
-        lastFound = "SpotAnim " + spotanimData.getId();
+        lastFound = spotanimData.getName();
         lastAnim = spotanimData.getAnimationId();
 
         short[] rf = new short[0];
