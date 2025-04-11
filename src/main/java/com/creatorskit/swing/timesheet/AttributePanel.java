@@ -4,12 +4,9 @@ import com.creatorskit.CKObject;
 import com.creatorskit.Character;
 import com.creatorskit.models.CustomModel;
 import com.creatorskit.models.DataFinder;
-import com.creatorskit.models.datatypes.AnimData;
 import com.creatorskit.models.datatypes.NPCData;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.orientation.OrientationGoal;
-import com.creatorskit.swing.AutoCompletion;
-import com.creatorskit.programming.Direction;
 import com.creatorskit.swing.searchabletable.JFilterableTable;
 import com.creatorskit.swing.timesheet.attributes.*;
 import com.creatorskit.swing.timesheet.keyframe.*;
@@ -739,7 +736,7 @@ public class AttributePanel extends JPanel
 
         c.gridwidth = 1;
         c.gridx = 6;
-        c.gridy = 8;
+        c.gridy = 12;
         JButton addPlayer = new JButton("Player");
         addPlayer.addActionListener(e ->
         {

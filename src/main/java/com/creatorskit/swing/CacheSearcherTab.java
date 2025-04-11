@@ -1272,11 +1272,10 @@ public class CacheSearcherTab extends JPanel
                     -1,
                     60,
                     new KeyFrame[KeyFrameType.getTotalFrameTypes()][],
-                    creatorsPanel.createEmptyProgram(data.getAnimationId(), -1),
+                    creatorsPanel.getRandomColor(),
                     false,
                     null,
                     null,
-                    new int[0],
                     -1,
                     false,
                     false);
