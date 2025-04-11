@@ -6,6 +6,7 @@ import com.google.gson.reflect.TypeToken;
 import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.AnimationID;
 import net.runelite.api.NPCComposition;
 import net.runelite.api.NpcOverrides;
 import net.runelite.api.PlayerComposition;
@@ -35,7 +36,8 @@ public class DataFinder
         SPOTANIM,
         ITEM,
         KIT,
-        SEQ
+        SEQ,
+        ANIM
     }
 
     @Data
@@ -65,6 +67,7 @@ public class DataFinder
     private final List<ItemData> itemData = new ArrayList<>();
     private final List<KitData> kitData = new ArrayList<>();
     private final List<SeqData> seqData = new ArrayList<>();
+    private final List<AnimData> animData = new ArrayList<>();
 
     private static final BodyPart[] bodyParts = new BodyPart[]{
             BodyPart.HEAD,
@@ -95,6 +98,7 @@ public class DataFinder
         lookupItemData();
         lookupKitData();
         lookupSeqData();
+        lookupAnimData();
     }
 
     /**
@@ -190,6 +194,38 @@ public class DataFinder
                     response.body().close();
                 }
                 executeCallbacks(DataType.SEQ);
+            }
+        });
+    }
+
+    private void lookupAnimData()
+    {
+        Request animRequest = new Request.Builder()
+                .url("https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/anims.json")
+                .build();
+        Call call = httpClient.newCall(animRequest);
+        call.enqueue(new Callback()
+        {
+            @Override
+            public void onFailure(Call call, IOException e)
+            {
+                log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/anims.json");
+                executeCallbacks(DataType.ANIM);
+            }
+
+            @Override
+            public void onResponse(Call call, Response response)
+            {
+                if (response.isSuccessful() && response.body() != null)
+                {
+                    InputStreamReader reader = new InputStreamReader(response.body().byteStream());
+                    Type listType = new TypeToken<List<AnimData>>() {}.getType();
+                    List<AnimData> list = gson.fromJson(reader, listType);
+                    animData.addAll(list);
+
+                    response.body().close();
+                }
+                executeCallbacks(DataType.ANIM);
             }
         });
     }
@@ -695,7 +731,7 @@ public class DataFinder
             {
                 int modelId = spotanimData.getModelId();
 
-                lastFound = "SpotAnim " + spotAnimId;
+                lastFound = spotanimData.getName();
                 lastAnim = spotanimData.getAnimationId();
 
                 short[] rf = new short[0];
@@ -769,7 +805,7 @@ public class DataFinder
         ArrayList<ModelStats> modelStats = new ArrayList<>();
         int modelId = spotanimData.getModelId();
 
-        lastFound = "SpotAnim " + spotanimData.getId();
+        lastFound = spotanimData.getName();
         lastAnim = spotanimData.getAnimationId();
 
         short[] rf = new short[0];

@@ -1239,6 +1239,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				case CACHE_WOMAN_WEAR:
 					modelStats = dataFinder.findModelsForGroundItem(id, CustomModelType.CACHE_WOMAN_WEAR);
 					name = dataFinder.getLastFound();
+					break;
+				case CACHE_SPOTANIM:
+					modelStats = dataFinder.findSpotAnim(id);
+					name = dataFinder.getLastFound();
 			}
 
 			if (modelStats == null || modelStats.length == 0)
@@ -1279,6 +1283,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					break;
 				case CACHE_WOMAN_WEAR:
 					modelStats = dataFinder.findModelsForGroundItem(id, CustomModelType.CACHE_WOMAN_WEAR);
+					break;
+				case CACHE_SPOTANIM:
+					modelStats = dataFinder.findSpotAnim(id);
 			}
 
 			if (modelStats == null || modelStats.length == 0)
@@ -1314,6 +1321,12 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					name = dataFinder.getLastFound();
 					lighting = new CustomLighting(64, 768, -50, -50, 10);
 					comp = new CustomModelComp(0, CustomModelType.CACHE_WOMAN_WEAR, id, modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, name);
+					break;
+				case CACHE_SPOTANIM:
+					name = dataFinder.getLastFound();
+					lighting = modelStats[0].getLighting();
+					comp = new CustomModelComp(0, CustomModelType.CACHE_SPOTANIM, id, modelStats, null, null, null, LightingStyle.CUSTOM, lighting, false, name);
+					break;
 			}
 
 			clientThread.invokeLater(() ->
@@ -1448,6 +1461,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			switch(comp.getType())
 			{
 				case FORGED:
+				case CACHE_SPOTANIM:
 				case CACHE_NPC:
 				case CACHE_OBJECT:
 				case CACHE_GROUND_ITEM:

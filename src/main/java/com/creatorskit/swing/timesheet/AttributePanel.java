@@ -4,11 +4,13 @@ import com.creatorskit.CKObject;
 import com.creatorskit.Character;
 import com.creatorskit.models.CustomModel;
 import com.creatorskit.models.DataFinder;
-import com.creatorskit.models.DataFinder.DataType;
+import com.creatorskit.models.datatypes.AnimData;
 import com.creatorskit.models.datatypes.NPCData;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.orientation.OrientationGoal;
 import com.creatorskit.swing.AutoCompletion;
+import com.creatorskit.programming.Direction;
+import com.creatorskit.swing.searchabletable.JFilterableTable;
 import com.creatorskit.swing.timesheet.attributes.*;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import com.creatorskit.swing.timesheet.keyframe.settings.*;
@@ -29,6 +31,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 @Getter
@@ -51,7 +54,7 @@ public class AttributePanel extends JPanel
     private final JLabel cardLabel = new JLabel("");
     private final JButton keyFramed = new JButton();
 
-    private JComboBox<NPCData> searcher = new JComboBox<>();
+    private final JFilterableTable npcTable = new JFilterableTable("NPCs");
 
     private final String MOVE_CARD = "Movement";
     private final String ANIM_CARD = "Animation";
@@ -607,8 +610,114 @@ public class AttributePanel extends JPanel
         c.gridwidth = 4;
         c.gridx = 2;
         c.gridy = 11;
-        AutoCompletion.enable(searcher);
-        searcher.setPreferredSize(new Dimension(270, 25));
+        JTextField field = new JTextField("");
+        card.add(field, c);
+
+        JPopupMenu popup = new JPopupMenu("NPCs");
+        JScrollPane scrollPane = new JScrollPane(npcTable);
+        popup.add(scrollPane);
+
+        KeyListener keyListener = new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e)
+            {
+                String text = field.getText();
+                npcTable.searchAndListEntries(text);
+                popup.setVisible(true);
+                popup.setLocation(MouseInfo.getPointerInfo().getLocation());
+            }
+        };
+        field.addKeyListener(keyListener);
+
+        field.addFocusListener(new FocusListener()
+        {
+            @Override
+            public void focusGained(FocusEvent e)
+            {
+
+            }
+
+            @Override
+            public void focusLost(FocusEvent e)
+            {
+                popup.setVisible(false);
+            }
+        });
+
+        npcTable.addMouseListener(new MouseAdapter()
+        {
+            @Override
+            public void mouseClicked(MouseEvent e)
+            {
+                super.mouseClicked(e);
+                if (e.getClickCount() == 2 && e.getButton() == MouseEvent.BUTTON1)
+                {
+                    Object o = npcTable.getSelectedObject();
+                    if (o instanceof NPCData)
+                    {
+                        NPCData data = (NPCData) o;
+                        idle.setValue(data.getStandingAnimation());
+                        walk.setValue(data.getWalkingAnimation());
+                        run.setValue(data.getRunAnimation());
+                        walk180.setValue(data.getRotate180Animation());
+                        walkRight.setValue(data.getRotateRightAnimation());
+                        walkLeft.setValue(data.getRotateLeftAnimation());
+                        idleRight.setValue(data.getIdleRotateRightAnimation());
+                        idleLeft.setValue(data.getIdleRotateLeftAnimation());
+                    }
+
+                    popup.setVisible(false);
+                }
+            }
+        });
+
+        if (dataFinder.isDataLoaded(DataFinder.DataType.NPC))
+        {
+            List<NPCData> dataList = dataFinder.getNpcData();
+            List<Object> list = new ArrayList<>(dataList);
+            npcTable.initialize(list);
+        }
+        else
+        {
+            dataFinder.addLoadCallback(DataFinder.DataType.NPC, () ->
+            {
+                List<NPCData> dataList = dataFinder.getNpcData();
+                List<Object> list = new ArrayList<>(dataList);
+                npcTable.initialize(list);
+            });
+        }
+
+        c.gridwidth = 1;
+        c.gridx = 6;
+        c.gridy = 11;
+        JButton searchApply = new JButton("Apply");
+        searchApply.addActionListener(e ->
+        {
+            Object o = npcTable.getSelectedObject();
+            if (o instanceof NPCData)
+            {
+                NPCData data = (NPCData) o;
+                idle.setValue(data.getStandingAnimation());
+                walk.setValue(data.getWalkingAnimation());
+                run.setValue(data.getRunAnimation());
+                walk180.setValue(data.getRotate180Animation());
+                walkRight.setValue(data.getRotateRightAnimation());
+                walkLeft.setValue(data.getRotateLeftAnimation());
+                idleRight.setValue(data.getIdleRotateRightAnimation());
+                idleLeft.setValue(data.getIdleRotateLeftAnimation());
+            }
+        });
+        card.add(searchApply, c);
 
         NPCData player = new NPCData(
                 -1,
@@ -627,42 +736,23 @@ public class AttributePanel extends JPanel
                 1,
                 new int[0],
                 new int[0]);
-        searcher.addItem(player);
-        if (dataFinder.isDataLoaded(DataType.NPC))
-        {
-            dataFinder.getNpcData().forEach(searcher::addItem);
-        }
-        else
-        {
-            dataFinder.addLoadCallback(DataType.NPC, () -> {
-                SwingUtilities.invokeLater(() -> dataFinder.getNpcData().forEach(searcher::addItem));
-            });
-        }
-        searcher.setPreferredSize(new Dimension(270, 25));
-        card.add(searcher, c);
 
         c.gridwidth = 1;
         c.gridx = 6;
-        c.gridy = 11;
-        JButton searchApply = new JButton("Apply");
-        searchApply.addActionListener(e ->
+        c.gridy = 8;
+        JButton addPlayer = new JButton("Player");
+        addPlayer.addActionListener(e ->
         {
-            NPCData data = (NPCData) searcher.getSelectedItem();
-            if (data == null)
-            {
-                return;
-            }
-
-            idle.setValue(data.getStandingAnimation());
-            walk.setValue(data.getWalkingAnimation());
-            run.setValue(data.getRunAnimation());
-            walk180.setValue(data.getRotate180Animation());
-            walkRight.setValue(data.getRotateRightAnimation());
-            walkLeft.setValue(data.getRotateLeftAnimation());
-            idleRight.setValue(data.getIdleRotateRightAnimation());
-            idleLeft.setValue(data.getIdleRotateLeftAnimation());
+            idle.setValue(player.getStandingAnimation());
+            walk.setValue(player.getWalkingAnimation());
+            run.setValue(player.getRunAnimation());
+            walk180.setValue(player.getRotate180Animation());
+            walkRight.setValue(player.getRotateRightAnimation());
+            walkLeft.setValue(player.getRotateLeftAnimation());
+            idleRight.setValue(player.getIdleRotateRightAnimation());
+            idleLeft.setValue(player.getIdleRotateLeftAnimation());
         });
-        card.add(searchApply, c);
+        card.add(addPlayer, c);
 
         randomize.addActionListener(e ->
         {

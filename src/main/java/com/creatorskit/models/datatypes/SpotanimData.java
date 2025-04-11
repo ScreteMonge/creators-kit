@@ -7,6 +7,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public class SpotanimData
 {
+    private final String name;
     private final int id;
     private final int modelId;
     private final int animationId;
@@ -16,4 +17,10 @@ public class SpotanimData
     private final int contrast;
     private final int[] recolorToReplace;
     private final int[] recolorToFind;
+
+    @Override
+    public String toString()
+    {
+        return name + " (" + id + ")";
+    }
 }

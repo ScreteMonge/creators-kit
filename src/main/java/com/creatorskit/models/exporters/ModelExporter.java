@@ -617,6 +617,7 @@ public class ModelExporter
             default:
             case CACHE_NPC:
             case CACHE_OBJECT:
+            case CACHE_SPOTANIM:
             case CACHE_GROUND_ITEM:
             case CACHE_MAN_WEAR:
             case CACHE_WOMAN_WEAR:

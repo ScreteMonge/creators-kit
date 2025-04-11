@@ -1480,6 +1480,7 @@ public class CreatorsPanel extends PluginPanel
                     break;
                 default:
                 case CACHE_OBJECT:
+                case CACHE_SPOTANIM:
                 case CACHE_GROUND_ITEM:
                 case CACHE_MAN_WEAR:
                 case CACHE_WOMAN_WEAR:
