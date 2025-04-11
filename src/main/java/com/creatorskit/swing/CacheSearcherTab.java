@@ -17,10 +17,7 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
+import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -514,6 +511,40 @@ public class CacheSearcherTab extends JPanel
         JScrollPane scrollPane = new JScrollPane(animTable);
         scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
         card.add(scrollPane, c);
+
+        animTable.addMouseListener(new MouseAdapter()
+        {
+            @Override
+            public void mouseClicked(MouseEvent e)
+            {
+                if (e.getClickCount() == 2 && e.getButton() == MouseEvent.BUTTON1)
+                {
+                    Object o = animTable.getSelectedObject();
+                    if (o instanceof AnimData)
+                    {
+                        AnimData data = (AnimData) o;
+                        Character character = plugin.getSelectedCharacter();
+                        if (character != null)
+                        {
+                            int animId = data.getId();
+                            character.getAnimationSpinner().setValue(animId);
+                        }
+                    }
+                }
+            }
+        });
+
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 2;
+        JLabel buffer = new JLabel(" ");
+        card.add(buffer, c);
+
+        c.gridx = 0;
+        c.gridy = 3;
+        JLabel instructionLabel = new JLabel("Double click any Animation to set it to the currently selected Object");
+        card.add(instructionLabel, c);
     }
 
     private void switchCards(String cardName)

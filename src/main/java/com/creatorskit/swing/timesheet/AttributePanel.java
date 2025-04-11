@@ -490,6 +490,33 @@ public class AttributePanel extends JPanel
             }
         });
 
+        npcTable.addMouseListener(new MouseAdapter()
+        {
+            @Override
+            public void mouseClicked(MouseEvent e)
+            {
+                super.mouseClicked(e);
+                if (e.getClickCount() == 2 && e.getButton() == MouseEvent.BUTTON1)
+                {
+                    Object o = npcTable.getSelectedObject();
+                    if (o instanceof NPCData)
+                    {
+                        NPCData data = (NPCData) o;
+                        idle.setValue(data.getStandingAnimation());
+                        walk.setValue(data.getWalkingAnimation());
+                        run.setValue(data.getRunAnimation());
+                        walk180.setValue(data.getRotate180Animation());
+                        walkRight.setValue(data.getRotateRightAnimation());
+                        walkLeft.setValue(data.getRotateLeftAnimation());
+                        idleRight.setValue(data.getIdleRotateRightAnimation());
+                        idleLeft.setValue(data.getIdleRotateLeftAnimation());
+                    }
+
+                    popup.setVisible(false);
+                }
+            }
+        });
+
         if (dataFinder.isDataLoaded(DataFinder.DataType.NPC))
         {
             List<NPCData> dataList = dataFinder.getNpcData();
