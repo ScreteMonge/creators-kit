@@ -191,12 +191,12 @@ public class CacheSearcherTab extends JPanel
         grid.setLayout(new GridLayout(0, 3, 2, 0));
         card.add(grid, c);
 
-        JButton addObject = new JButton("Add Object w/Model");
-        addObject.setToolTipText("Adds the selected NPC as a new Object and Custom Model, applying the Model to the new Object");
+        JButton addObject = new JButton("Store & Add");
+        addObject.setToolTipText("Stores the selected NPC as a Custom Model, then creates a new Object and attaches the model");
         grid.add(addObject);
 
-        JButton addModel = new JButton("Add Model");
-        addModel.setToolTipText("Adds the selected NPC as a new Custom Model");
+        JButton addModel = new JButton("Store");
+        addModel.setToolTipText("Stores the selected NPC as a new Custom Model");
         grid.add(addModel);
 
         JButton addAnvil = new JButton("Add to Anvil");
@@ -274,12 +274,12 @@ public class CacheSearcherTab extends JPanel
         grid.setLayout(new GridLayout(0, 3, 2, 0));
         card.add(grid, c);
 
-        JButton addObject = new JButton("Add Object w/Model");
-        addObject.setToolTipText("Adds the selected Object as a new Object and Custom Model, applying the Model to the new Object");
+        JButton addObject = new JButton("Store & Add");
+        addObject.setToolTipText("Stores the selected Object as a Custom Model, then creates a new Object and attaches the model");
         grid.add(addObject);
 
-        JButton addModel = new JButton("Add Model");
-        addModel.setToolTipText("Adds the selected Object as a new Custom Model");
+        JButton addModel = new JButton("Store");
+        addModel.setToolTipText("Stores the selected Object as a new Custom Model");
         grid.add(addModel);
 
         JButton addAnvil = new JButton("Add to Anvil");
@@ -357,12 +357,12 @@ public class CacheSearcherTab extends JPanel
         grid.setLayout(new GridLayout(0, 3, 2, 0));
         card.add(grid, c);
 
-        JButton addObject = new JButton("Add Object w/Model");
-        addObject.setToolTipText("Adds the selected Item as a new Object and Custom Model, applying the Model to the new Object");
+        JButton addObject = new JButton("Store & Add");
+        addObject.setToolTipText("Stores the selected Item as a Custom Model, then creates a new Object and attaches the model");
         grid.add(addObject);
 
-        JButton addModel = new JButton("Add Model");
-        addModel.setToolTipText("Adds the selected Item as a new Custom Model");
+        JButton addModel = new JButton("Store");
+        addModel.setToolTipText("Stores the selected Item as a new Custom Model");
         grid.add(addModel);
 
         JButton addAnvil = new JButton("Add to Anvil");
@@ -443,12 +443,12 @@ public class CacheSearcherTab extends JPanel
         grid.setLayout(new GridLayout(0, 3, 2, 0));
         card.add(grid, c);
 
-        JButton addObject = new JButton("Add Object w/Model");
-        addObject.setToolTipText("Adds the selected SpotAnim as a new Object and Custom Model, applying the Model to the new Object");
+        JButton addObject = new JButton("Store & Add");
+        addObject.setToolTipText("Stores the selected SpotAnim as a Custom Model, then creates a new Object and attaches the model");
         grid.add(addObject);
 
-        JButton addModel = new JButton("Add Model");
-        addModel.setToolTipText("Adds the selected SpotAnim as a new Custom Model");
+        JButton addModel = new JButton("Store");
+        addModel.setToolTipText("Stores the selected SpotAnim as a new Custom Model");
         grid.add(addModel);
 
         JButton addAnvil = new JButton("Add to Anvil");
