@@ -590,6 +590,8 @@ public class CacheSearcherTab extends JPanel
         c.gridx = 1;
         c.gridy = 1;
         JTextField field = new JTextField("");
+        field.setFont(FontManager.getRunescapeBoldFont());
+        field.setForeground(ColorScheme.BRAND_ORANGE);
         holderPanel.add(field, c);
 
         field.addFocusListener(new FocusListener()
@@ -682,6 +684,8 @@ public class CacheSearcherTab extends JPanel
         c.gridx = 1;
         c.gridy = 1;
         JTextField field = new JTextField("");
+        field.setFont(FontManager.getRunescapeBoldFont());
+        field.setForeground(ColorScheme.BRAND_ORANGE);
         holderPanel.add(field, c);
 
         field.addFocusListener(new FocusListener()
@@ -790,6 +794,8 @@ public class CacheSearcherTab extends JPanel
         c.gridx = 1;
         c.gridy = 2;
         JTextField field = new JTextField("");
+        field.setFont(FontManager.getRunescapeBoldFont());
+        field.setForeground(ColorScheme.BRAND_ORANGE);
         holderPanel.add(field, c);
 
         field.addFocusListener(new FocusListener()
@@ -882,6 +888,8 @@ public class CacheSearcherTab extends JPanel
         c.gridx = 1;
         c.gridy = 1;
         JTextField field = new JTextField("");
+        field.setFont(FontManager.getRunescapeBoldFont());
+        field.setForeground(ColorScheme.BRAND_ORANGE);
         holderPanel.add(field, c);
 
         field.addFocusListener(new FocusListener()
@@ -974,6 +982,8 @@ public class CacheSearcherTab extends JPanel
         c.gridx = 1;
         c.gridy = 1;
         JTextField field = new JTextField("");
+        field.setFont(FontManager.getRunescapeBoldFont());
+        field.setForeground(ColorScheme.BRAND_ORANGE);
         holderPanel.add(field, c);
 
         field.addFocusListener(new FocusListener()
