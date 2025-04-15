@@ -7,20 +7,20 @@ import lombok.Getter;
 @Getter
 public enum KeyFrameType
 {
-    NULL("Null"),
-    SUMMARY("Summary"),
-    MOVEMENT("Movement"),
-    ANIMATION("Animation"),
-    SPAWN("Spawn"),
-    MODEL("Model"),
-    ORIENTATION("Orientation"),
-    TEXT("Text"),
-    OVERHEAD("Overhead"),
-    HEALTH("Health"),
-    SPOTANIM("SpotAnim 1"),
-    SPOTANIM2("SpotAnim 2");
+    NULL("Null", "N"),
+    MOVEMENT("Movement","M"),
+    ANIMATION("Animation","A"),
+    SPAWN("Spawn","S"),
+    MODEL("Model","MD"),
+    ORIENTATION("Orientation","O"),
+    TEXT("Text","T"),
+    OVERHEAD("Overhead","OH"),
+    HEALTH("Health","H"),
+    SPOTANIM("SpotAnim 1","S1"),
+    SPOTANIM2("SpotAnim 2","S2");
 
-    private String name;
+    private final String name;
+    private final String shortHand;
 
     public String toString()
     {
@@ -86,5 +86,10 @@ public enum KeyFrameType
     public static int getTotalFrameTypes()
     {
         return 10;
+    }
+
+    public static KeyFrameType[] createDefaultSummary()
+    {
+        return new KeyFrameType[]{MOVEMENT, ANIMATION, ORIENTATION};
     }
 }

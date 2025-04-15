@@ -222,6 +222,7 @@ public class CreatorsPanel extends PluginPanel
                 -1,
                 60,
                 new KeyFrame[KeyFrameType.getTotalFrameTypes()][0],
+                KeyFrameType.createDefaultSummary(),
                 createEmptyProgram(-1, -1),
                 false, null, null, new int[0], -1, false, false);
     }
@@ -237,6 +238,7 @@ public class CreatorsPanel extends PluginPanel
                               int frame,
                               int radius,
                               KeyFrame[][] keyFrames,
+                              KeyFrameType[] summary,
                               Program program,
                               boolean active,
                               WorldPoint worldPoint,
@@ -442,6 +444,7 @@ public class CreatorsPanel extends PluginPanel
                 worldPoint != null || localPoint != null,
                 keyFrames,
                 new KeyFrame[KeyFrameType.getTotalFrameTypes()],
+                summary,
                 null,
                 null,
                 program,
@@ -847,6 +850,9 @@ public class CreatorsPanel extends PluginPanel
 
         Program newProgram = new Program(newComp, new JPanel(), new JLabel(), new JSpinner(), newColor);
 
+        KeyFrameType[] keyFrameTypes = character.getSummary();
+        KeyFrameType[] summary = new KeyFrameType[]{keyFrameTypes[0], keyFrameTypes[1], keyFrameTypes[2]};
+
         ParentPanel parentPanel = character.getParentPanel();
 
         String finalNewName = newName;
@@ -863,6 +869,7 @@ public class CreatorsPanel extends PluginPanel
                     (int) character.getAnimationFrameSpinner().getValue(),
                     (int) character.getRadiusSpinner().getValue(),
                     Arrays.copyOf(character.getFrames(), character.getFrames().length),
+                    summary,
                     newProgram,
                     character.isActive(),
                     character.getNonInstancedPoint(),
@@ -1406,7 +1413,8 @@ public class CreatorsPanel extends PluginPanel
                 character.getOverheadKeyFrames(),
                 character.getHealthKeyFrames(),
                 character.getSpotAnimKeyFrames(KeyFrameType.SPOTANIM),
-                character.getSpotAnimKeyFrames(KeyFrameType.SPOTANIM2));
+                character.getSpotAnimKeyFrames(KeyFrameType.SPOTANIM2),
+                character.getSummary());
     }
 
     public void openLoadSetupDialog()
@@ -1589,6 +1597,7 @@ public class CreatorsPanel extends PluginPanel
                                 animFrame,
                                 save.getRadius(),
                                 frames,
+                                save.getSummary(),
                                 program,
                                 save.isActive(),
                                 save.getNonInstancedPoint(),
@@ -1713,6 +1722,16 @@ public class CreatorsPanel extends PluginPanel
                 frames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM2)] = save.getSpotAnim2KeyFrames();
             }
 
+            KeyFrameType[] summary;
+            if (save.getSummary() == null)
+            {
+                summary = KeyFrameType.createDefaultSummary();
+            }
+            else
+            {
+                summary = save.getSummary();
+            }
+
             character = createCharacter(
                     parentPanel,
                     save.getName(),
@@ -1724,6 +1743,7 @@ public class CreatorsPanel extends PluginPanel
                     animFrame,
                     save.getRadius(),
                     frames,
+                    summary,
                     program,
                     save.isActive(),
                     save.getNonInstancedPoint(),

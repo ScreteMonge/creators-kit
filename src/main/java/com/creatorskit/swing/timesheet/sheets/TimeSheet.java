@@ -49,10 +49,13 @@ public class TimeSheet extends JPanel
     private Point mousePointOnPressed = new Point(0, 0);
     public final int DRAG_STICK_RANGE = 15;
 
-    public final int ROW_HEIGHT = 24;
-    public final int ROW_HEIGHT_OFFSET = 1;
+    public int rowHeight = 28;
+    public int rowHeightOffset = 0;
     public final int TEXT_HEIGHT_OFFSET = 5;
     private int indexBuffers = 1;
+
+    private final Color background1 = new Color(40, 40, 40);
+    private final Color background2 = new Color(42, 42, 42);
 
     public final int SHOW_5_ZOOM = 200;
     public final int SHOW_1_ZOOM = 50;
@@ -91,6 +94,7 @@ public class TimeSheet extends JPanel
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
         g2.setStroke(new BasicStroke(1));
+        drawBackground(g2);
         drawHighlight(g2);
         drawBackgroundLines(g2);
         drawRectangleSelect(g2);
@@ -181,6 +185,27 @@ public class TimeSheet extends JPanel
         g.setComposite(composite);
     }
 
+    private void drawBackground(Graphics g)
+    {
+        g.setColor(Color.DARK_GRAY);
+        int iterations = (this.getHeight() + getVScroll() / rowHeight) + 1;
+        boolean alternate = false;
+        for (int i = 0; i < iterations; i++)
+        {
+            if (alternate)
+            {
+                g.setColor(background2);
+            }
+            else
+            {
+                g.setColor(background1);
+            }
+
+            g.fillRect(0, i * rowHeight + rowHeightOffset - getVScroll(), this.getWidth(), rowHeight);
+            alternate = !alternate;
+        }
+    }
+
     public void drawHighlight(Graphics g)
     {
 
@@ -249,10 +274,10 @@ public class TimeSheet extends JPanel
         g.setColor(new Color(74, 121, 192));
         g.drawLine((int) x, 0, (int) x, this.getHeight());
 
-        g.fillRoundRect((int) (x - (width + textBuffer) / 2), 0, (int) width + textBuffer, ROW_HEIGHT, 10, 10);
+        g.fillRoundRect((int) (x - (width + textBuffer) / 2), 0, (int) width + textBuffer, rowHeight, 10, 10);
 
         g.setColor(Color.WHITE);
-        g.drawChars(c, 0, c.length, (int) (x - width / 2), ROW_HEIGHT - TEXT_HEIGHT_OFFSET);
+        g.drawChars(c, 0, c.length, (int) (x - width / 2), rowHeight - TEXT_HEIGHT_OFFSET);
 
     }
 
@@ -271,10 +296,10 @@ public class TimeSheet extends JPanel
         g.setColor(new Color(49, 84, 128));
         g.drawLine((int) x, 0, (int) x, this.getHeight());
 
-        g.fillRoundRect((int) (x - (width + textBuffer) / 2), 0, (int) width + textBuffer, ROW_HEIGHT, 10, 10);
+        g.fillRoundRect((int) (x - (width + textBuffer) / 2), 0, (int) width + textBuffer, rowHeight, 10, 10);
 
         g.setColor(Color.WHITE);
-        g.drawChars(c, 0, c.length, (int) (x - width / 2), ROW_HEIGHT - TEXT_HEIGHT_OFFSET);
+        g.drawChars(c, 0, c.length, (int) (x - width / 2), rowHeight - TEXT_HEIGHT_OFFSET);
 
     }
 
@@ -301,7 +326,7 @@ public class TimeSheet extends JPanel
 
                 char[] c = ("" + i).toCharArray();
                 int width = fontMetrics.charsWidth(c, 0, c.length) / 2;
-                g.drawChars(c, 0, c.length, (int) (i * spacing - width + startOffset * spacing), ROW_HEIGHT - TEXT_HEIGHT_OFFSET);
+                g.drawChars(c, 0, c.length, (int) (i * spacing - width + startOffset * spacing), rowHeight - TEXT_HEIGHT_OFFSET);
             }
         }
 
@@ -326,7 +351,7 @@ public class TimeSheet extends JPanel
 
                 char[] c = ("" + draw).toCharArray();
                 int width = fontMetrics.charsWidth(c, 0, c.length) / 2;
-                g.drawChars(c, 0, c.length, (int) (i * spacing - width + startOffset * spacing), ROW_HEIGHT - TEXT_HEIGHT_OFFSET);
+                g.drawChars(c, 0, c.length, (int) (i * spacing - width + startOffset * spacing), rowHeight - TEXT_HEIGHT_OFFSET);
             }
         }
 
@@ -343,7 +368,7 @@ public class TimeSheet extends JPanel
         {
             char[] c = ("" + i * 10).toCharArray();
             int width = fontMetrics.charsWidth(c, 0, c.length) / 2;
-            g.drawChars(c, 0, c.length, (int) (i * spacing - width + startOffset * spacing), ROW_HEIGHT - TEXT_HEIGHT_OFFSET);
+            g.drawChars(c, 0, c.length, (int) (i * spacing - width + startOffset * spacing), rowHeight - TEXT_HEIGHT_OFFSET);
         }
     }
 
@@ -420,7 +445,7 @@ public class TimeSheet extends JPanel
 
                 Point mousePosition = getMousePosition();
 
-                if (mousePosition.getY() < ROW_HEIGHT)
+                if (mousePosition.getY() < rowHeight)
                 {
                     timeIndicatorPressed = true;
 
@@ -449,12 +474,19 @@ public class TimeSheet extends JPanel
                 super.mouseClicked(e);
                 requestFocusInWindow();
 
+                Point mousePosition = e.getPoint();
+
+                if (e.getButton() == MouseEvent.BUTTON3)
+                {
+                    onMouseButton3Pressed(mousePosition);
+                    return;
+                }
+
                 if (e.getButton() != MouseEvent.BUTTON1)
                 {
                     return;
                 }
 
-                Point mousePosition = e.getPoint();
                 TimeSheetPanel timeSheetPanel = getTimeSheetPanel();
 
                 if (keyFrameClicked)
@@ -629,6 +661,8 @@ public class TimeSheet extends JPanel
             }
         });
     }
+
+    public void onMouseButton3Pressed(Point p) {};
 
     public KeyFrame[] getKeyFrameClicked(Point point)
     {

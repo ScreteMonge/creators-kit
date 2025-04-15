@@ -25,6 +25,7 @@ public class Character
     private boolean locationSet;
     private KeyFrame[][] frames;
     private KeyFrame[] currentFrames;
+    private KeyFrameType[] summary;
     private DefaultMutableTreeNode linkedManagerNode;
     private DefaultMutableTreeNode parentManagerNode;
     private Program program;
