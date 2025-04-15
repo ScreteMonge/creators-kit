@@ -33,13 +33,15 @@ public class AttributeSheet extends TimeSheet
 
         setIndexBuffers(0);
         setSelectedIndex(1);
+        this.rowHeightOffset = 1;
+        this.rowHeight = 24;
     }
 
     @Override
     public void drawHighlight(Graphics g)
     {
         g.setColor(Color.DARK_GRAY);
-        g.fillRect(0, (getSelectedIndex() + getIndexBuffers()) * ROW_HEIGHT + ROW_HEIGHT_OFFSET - getVScroll(), this.getWidth(), ROW_HEIGHT);
+        g.fillRect(0, (getSelectedIndex() + getIndexBuffers()) * rowHeight + rowHeightOffset - getVScroll(), this.getWidth(), rowHeight);
     }
 
     @Override
@@ -53,7 +55,7 @@ public class AttributeSheet extends TimeSheet
         g.setColor(new Color(219, 137, 0));
 
         BufferedImage image = getKeyframeImage();
-        int yImageOffset = (image.getHeight() - ROW_HEIGHT) / 2;
+        int yImageOffset = (image.getHeight() - rowHeight) / 2;
         int xImageOffset = image.getWidth() / 2;
         double zoomFactor = this.getWidth() / getZoom();
 
@@ -80,7 +82,7 @@ public class AttributeSheet extends TimeSheet
                 }
 
                 int x = (int) ((frame.getTick() + getHScroll()) * zoomFactor);
-                int y = ROW_HEIGHT_OFFSET + ROW_HEIGHT + ROW_HEIGHT * i - yImageOffset;
+                int y = rowHeightOffset + rowHeight + rowHeight * i - yImageOffset;
 
                 if (type == KeyFrameType.MOVEMENT)
                 {
@@ -155,7 +157,7 @@ public class AttributeSheet extends TimeSheet
         }
 
         BufferedImage image = getKeyframeImage();
-        int yImageOffset = (image.getHeight() - ROW_HEIGHT) / 2;
+        int yImageOffset = (image.getHeight() - rowHeight) / 2;
         int xImageOffset = image.getWidth() / 2;
         double zoomFactor = this.getWidth() / getZoom();
 
@@ -187,7 +189,7 @@ public class AttributeSheet extends TimeSheet
             KeyFrameType type = KeyFrameType.getKeyFrameType(i);
 
             int x = (int) ((frame.getTick() + getHScroll() + change) * zoomFactor);
-            int y = ROW_HEIGHT_OFFSET + ROW_HEIGHT + ROW_HEIGHT * i - yImageOffset;
+            int y = rowHeightOffset + rowHeight + rowHeight * i - yImageOffset;
 
             if (type == KeyFrameType.MOVEMENT)
             {
@@ -247,7 +249,7 @@ public class AttributeSheet extends TimeSheet
         }
 
         BufferedImage image = getKeyframeImage();
-        int yImageOffset = (image.getHeight() - ROW_HEIGHT) / 2;
+        int yImageOffset = (image.getHeight() - rowHeight) / 2;
         int xImageOffset = image.getWidth() / 2;
         double zoomFactor = this.getWidth() / getZoom();
 
@@ -265,7 +267,7 @@ public class AttributeSheet extends TimeSheet
                 KeyFrame keyFrame = keyFrames[e];
                 int x1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
                 int x2 = x1 + image.getWidth();
-                int y1 = ROW_HEIGHT_OFFSET + ROW_HEIGHT + ROW_HEIGHT * i - yImageOffset;
+                int y1 = rowHeightOffset + rowHeight + rowHeight * i - yImageOffset;
                 int y2 = y1 + image.getHeight();
 
                 if (point.getX() >= x1 && point.getX() <= x2)
@@ -290,7 +292,7 @@ public class AttributeSheet extends TimeSheet
         }
 
         BufferedImage image = getKeyframeImage();
-        int yImageOffset = (image.getHeight() - ROW_HEIGHT) / 2;
+        int yImageOffset = (image.getHeight() - rowHeight) / 2;
         int xImageOffset = image.getWidth() / 2;
         double zoomFactor = this.getWidth() / getZoom();
 
@@ -309,7 +311,7 @@ public class AttributeSheet extends TimeSheet
                 KeyFrame keyFrame = keyFrames[e];
                 int x1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
                 int x2 = x1 + image.getWidth();
-                int y1 = ROW_HEIGHT_OFFSET + ROW_HEIGHT + ROW_HEIGHT * i - yImageOffset;
+                int y1 = rowHeightOffset + rowHeight + rowHeight * i - yImageOffset;
                 int y2 = y1 + image.getHeight();
 
                 if (point.getX() >= x1 && point.getX() <= x2)
@@ -436,7 +438,7 @@ public class AttributeSheet extends TimeSheet
         Rectangle2D rectangle = new Rectangle(startX, startY, endX - startX, endY - startY);
 
         BufferedImage image = getKeyframeImage();
-        int yImageOffset = (image.getHeight() - ROW_HEIGHT) / 2;
+        int yImageOffset = (image.getHeight() - rowHeight) / 2;
         int xImageOffset = image.getWidth() / 2;
         double zoomFactor = this.getWidth() / getZoom();
 
@@ -475,7 +477,7 @@ public class AttributeSheet extends TimeSheet
                 }
 
                 int kx1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
-                int ky1 = ROW_HEIGHT_OFFSET + ROW_HEIGHT + ROW_HEIGHT * i - yImageOffset;
+                int ky1 = rowHeightOffset + rowHeight + rowHeight * i - yImageOffset;
 
                 Rectangle2D frameRect = new Rectangle(kx1, ky1, image.getWidth(), image.getHeight());
 

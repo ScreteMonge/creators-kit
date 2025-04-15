@@ -24,6 +24,7 @@ import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
+import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -94,7 +95,6 @@ public class TimeSheetPanel extends JPanel
     private double currentTime = 0;
     private boolean pauseScrollBarListener = false;
     private Character selectedCharacter;
-    private KeyFrameType summaryKeyFrameType = KeyFrameType.SUMMARY;
 
     private ArrayList<KeyFrameAction> keyFrameStack = new ArrayList<>();
     private KeyFrame[] selectedKeyFrames = new KeyFrame[0];
@@ -117,7 +117,6 @@ public class TimeSheetPanel extends JPanel
         setLayout(new GridBagLayout());
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
-        setupSummaryComboBox();
         setupTreeScrollPane();
         setupControlPanel();
         setupAttributePanel();
@@ -644,25 +643,6 @@ public class TimeSheetPanel extends JPanel
         summarySheet.setPreviewTime(tick);
     }
 
-    private void setupSummaryComboBox()
-    {
-        summaryComboBox.setBackground(ColorScheme.DARK_GRAY_COLOR);
-
-        summaryComboBox.addItem(KeyFrameType.SUMMARY);
-        summaryComboBox.addItem(KeyFrameType.MOVEMENT);
-        summaryComboBox.addItem(KeyFrameType.ANIMATION);
-        summaryComboBox.addItem(KeyFrameType.SPAWN);
-        summaryComboBox.addItem(KeyFrameType.MODEL);
-        summaryComboBox.addItem(KeyFrameType.ORIENTATION);
-        summaryComboBox.addItem(KeyFrameType.TEXT);
-        summaryComboBox.addItem(KeyFrameType.OVERHEAD);
-        summaryComboBox.addItem(KeyFrameType.HEALTH);
-        summaryComboBox.addItem(KeyFrameType.SPOTANIM);
-        summaryComboBox.addItem(KeyFrameType.SPOTANIM2);
-
-        summaryComboBox.addItemListener(e -> summaryKeyFrameType = (KeyFrameType) summaryComboBox.getSelectedItem());
-    }
-
     private void setupTreeScrollPane()
     {
         treeScrollPane = new TreeScrollPane(managerTree);
@@ -1184,7 +1164,10 @@ public class TimeSheetPanel extends JPanel
         c.weighty = 0;
         c.gridx = 2;
         c.gridy = 0;
-        add(summaryComboBox, c);
+        JLabel summaryLabel = new JLabel("Summary");
+        summaryLabel.setFont(FontManager.getRunescapeBoldFont());
+        summaryLabel.setBorder(new EmptyBorder(1, 2, 2, 2));
+        add(summaryLabel, c);
 
         c.gridheight = 1;
         c.gridwidth = 1;

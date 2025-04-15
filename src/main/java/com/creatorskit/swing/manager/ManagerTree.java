@@ -10,6 +10,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import java.awt.*;
 import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
@@ -35,11 +36,15 @@ public class ManagerTree extends JTree
     private final ManagerTreeModel treeModel;
     private final GridBagConstraints c = new GridBagConstraints();
     private Folder[] selectedFolders = new Folder[0];
-    private final int ROW_HEIGHT = 24;
+    private final int ROW_HEIGHT = 28;
 
     private final BufferedImage FOLDER_OPEN = ImageUtil.loadImageResource(getClass(), "/Folder_Open.png");
     private final BufferedImage FOLDER_CLOSED = ImageUtil.loadImageResource(getClass(), "/Folder_Closed.png");
     private final BufferedImage OBJECT = ImageUtil.loadImageResource(getClass(), "/Object.png");
+
+    private final Color backgroundSelectionColor = ColorScheme.MEDIUM_GRAY_COLOR;
+    private final Color backgroundNonSelectionColor1 = ColorScheme.DARKER_GRAY_COLOR;
+    private final Color backgroundNonSelectionColor2 = new Color(33, 33, 33);
 
     @Inject
     public ManagerTree(ToolBoxFrame toolBox, CreatorsPlugin plugin, JPanel objectHolder, DefaultMutableTreeNode rootNode, DefaultMutableTreeNode sidePanelNode, DefaultMutableTreeNode managerNode)
@@ -61,6 +66,7 @@ public class ManagerTree extends JTree
         expandRow(0);
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
         setEditable(true);
+        setOpaque(false);
         setRowHeight(ROW_HEIGHT);
         getSelectionModel().setSelectionMode(TreeSelectionModel.CONTIGUOUS_TREE_SELECTION);
         setShowsRootHandles(true);
@@ -92,14 +98,28 @@ public class ManagerTree extends JTree
         actionMap.getParent().put("copy", null);
         actionMap.getParent().put("paste", null);
 
-        DefaultTreeCellRenderer renderer = new DefaultTreeCellRenderer();
-        renderer.setOpenIcon(new ImageIcon(FOLDER_OPEN));
-        renderer.setClosedIcon(new ImageIcon(FOLDER_CLOSED));
-        renderer.setLeafIcon(new ImageIcon(OBJECT));
-        renderer.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        ManagerTreeCellRenderer renderer = new ManagerTreeCellRenderer();
         setCellRenderer(renderer);
 
         setMouseListeners();
+    }
+
+    @Override
+    public void paintComponent(Graphics g)
+    {
+        g.setColor(ColorScheme.DARKER_GRAY_COLOR);
+        g.fillRect(0, 0, getWidth(), getHeight());
+
+        boolean colour1 = true;
+        for (int i = 0; i < getRowCount(); i++)
+        {
+            Rectangle r = getRowBounds(i);
+            g.setColor(colour1 ? backgroundNonSelectionColor1 : backgroundNonSelectionColor2);
+            g.fillRect(0, r.y, getWidth(), r.height);
+            colour1 = !colour1;
+        }
+
+        super.paintComponent(g);
     }
 
     public DefaultMutableTreeNode getParentFolderNode(ParentPanel parentPanel, boolean switching)
@@ -699,6 +719,42 @@ public class ManagerTree extends JTree
                 }
             }
         });
+
+        addMouseListener(new MouseAdapter()
+        {
+            @Override
+            public void mouseReleased(MouseEvent e)
+            {
+                super.mouseReleased(e);
+                if (e.getButton() == MouseEvent.BUTTON3)
+                {
+                    onMouseButton3Pressed(e.getPoint());
+                }
+            }
+        });
+    }
+
+    private void onMouseButton3Pressed(Point p)
+    {
+        int x = (int) p.getX();
+        int y = (int) p.getY();
+        int row = getClosestRowForLocation(x, y);
+
+        TreePath path = getPathForRow(row);
+        if (path == null)
+        {
+            return;
+        }
+
+        DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+
+        if (!(node.getUserObject() instanceof Character))
+        {
+            return;
+        }
+
+        Character character = (Character) node.getUserObject();
+        toolBox.getTimeSheetPanel().getSummarySheet().showSummaryPopup(this, character, x, y);
     }
 }
 
