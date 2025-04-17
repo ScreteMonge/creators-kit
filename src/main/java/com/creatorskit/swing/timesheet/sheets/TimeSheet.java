@@ -487,6 +487,12 @@ public class TimeSheet extends JPanel
                     return;
                 }
 
+                if (e.getClickCount() == 2)
+                {
+                    onMouseButton1DoublePressed(mousePosition);
+                    return;
+                }
+
                 TimeSheetPanel timeSheetPanel = getTimeSheetPanel();
 
                 if (keyFrameClicked)
@@ -672,6 +678,8 @@ public class TimeSheet extends JPanel
     }
 
     public void onMouseButton3Pressed(Point p) {};
+
+    public void onMouseButton1DoublePressed(Point p) {};
 
     public KeyFrame[] getKeyFrameClicked(Point point)
     {

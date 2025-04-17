@@ -734,6 +734,22 @@ public class ManagerTree extends JTree
         });
     }
 
+    public void setRowSelection(Point p)
+    {
+        int x = (int) p.getX();
+        int y = (int) p.getY();
+        int row = getClosestRowForLocation(x, y);
+
+        TreePath path = getPathForRow(row);
+        if (path == null)
+        {
+            return;
+        }
+
+        setSelectionRow(row);
+
+    }
+
     private void onMouseButton3Pressed(Point p)
     {
         int x = (int) p.getX();
