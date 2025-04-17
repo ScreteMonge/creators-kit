@@ -1,5 +1,6 @@
 package com.creatorskit.swing.timesheet.sheets;
 
+import com.creatorskit.Character;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.AttributePanel;
@@ -7,6 +8,8 @@ import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import lombok.Getter;
 import lombok.Setter;
+import net.runelite.client.ui.ColorScheme;
+import net.runelite.client.ui.FontManager;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.awt.*;
@@ -33,6 +36,24 @@ public class AttributeSheet extends TimeSheet
         setSelectedIndex(1);
         this.rowHeightOffset = 1;
         this.rowHeight = 24;
+    }
+
+    @Override
+    public void drawBackgroundText(Graphics g)
+    {
+        Character character = getSelectedCharacter();
+        if (character == null)
+        {
+            return;
+        }
+
+        String name = character.getName();
+
+        g.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 64));
+        g.setColor(new Color(77, 77, 77, 50));
+        FontMetrics fm = g.getFontMetrics();
+
+        g.drawString(name, this.getWidth() / 2 - fm.stringWidth(name) / 2, this.getHeight() / 2 + fm.getHeight() / 2);
     }
 
     @Override

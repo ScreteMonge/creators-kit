@@ -95,6 +95,7 @@ public class TimeSheet extends JPanel
         Graphics2D g2 = (Graphics2D) g;
         g2.setStroke(new BasicStroke(1));
         drawBackground(g2);
+        drawBackgroundText(g2);
         drawHighlight(g2);
         drawBackgroundLines(g2);
         drawRectangleSelect(g2);
@@ -204,6 +205,11 @@ public class TimeSheet extends JPanel
             g.fillRect(0, i * rowHeight + rowHeightOffset - getVScroll(), this.getWidth(), rowHeight);
             alternate = !alternate;
         }
+    }
+
+    public void drawBackgroundText(Graphics g)
+    {
+
     }
 
     public void drawHighlight(Graphics g)

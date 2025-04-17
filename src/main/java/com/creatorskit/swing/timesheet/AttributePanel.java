@@ -78,7 +78,8 @@ public class AttributePanel extends JPanel
         setLayout(new GridBagLayout());
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
-        objectLabel.setFont(FontManager.getRunescapeBoldFont());
+        objectLabel.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32));
+        objectLabel.setForeground(ColorScheme.BRAND_ORANGE);
         objectLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
         cardPanel.setLayout(new CardLayout());
@@ -101,14 +102,13 @@ public class AttributePanel extends JPanel
         c.gridy = 0;
         c.weightx = 0;
         cardLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        cardLabel.setFont(FontManager.getRunescapeBoldFont());
         cardLabel.setText(MOVE_CARD);
         add(cardLabel, c);
 
         c.gridx = 2;
         c.gridy = 0;
         keyFramed.setIcon(keyframeEmptyImage);
-        keyFramed.setPreferredSize(new Dimension(18, 18));
+        keyFramed.setPreferredSize(new Dimension(32, 32));
         keyFramed.addActionListener(e -> timeSheetPanel.onKeyFrameIconPressedEvent());
         add(keyFramed, c);
 
@@ -1411,7 +1411,7 @@ public class AttributePanel extends JPanel
 
         if (character == null)
         {
-            objectLabel.setText("");
+            objectLabel.setText(" ");
             setKeyFramedIcon(false);
             setAttributesEmpty();
             return;
