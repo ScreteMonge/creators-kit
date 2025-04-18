@@ -6,6 +6,8 @@ import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.AttributePanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
+import com.creatorskit.swing.timesheet.keyframe.MovementKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.OrientationKeyFrame;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.client.ui.ColorScheme;
@@ -71,6 +73,8 @@ public class AttributeSheet extends TimeSheet
             return;
         }
 
+        g.setColor(new Color(219, 137, 0));
+
         BufferedImage image = getKeyframeImage();
         int yImageOffset = (image.getHeight() - rowHeight) / 2;
         int xImageOffset = image.getWidth() / 2;
@@ -79,6 +83,8 @@ public class AttributeSheet extends TimeSheet
         KeyFrame[][] frames = getSelectedCharacter().getFrames();
         for (int i = 0; i < frames.length; i++)
         {
+            KeyFrameType type = KeyFrameType.getKeyFrameType(i);
+
             KeyFrame[] keyFrames = frames[i];
             if (keyFrames == null)
             {
@@ -96,11 +102,58 @@ public class AttributeSheet extends TimeSheet
                     endImage = getKeyframeSelected();
                 }
 
-                g.drawImage(
-                        endImage,
-                        (int) ((frame.getTick() + getHScroll()) * zoomFactor - xImageOffset),
-                        rowHeightOffset + rowHeight + rowHeight * i - yImageOffset,
-                        null);
+                int x = (int) ((frame.getTick() + getHScroll()) * zoomFactor);
+                int y = rowHeightOffset + rowHeight + rowHeight * i - yImageOffset;
+
+                if (type == KeyFrameType.MOVEMENT)
+                {
+                    MovementKeyFrame movementKeyFrame = (MovementKeyFrame) frame;
+                    int steps = (movementKeyFrame.getPath().length - 1);
+                    if (steps > 0)
+                    {
+                        double ticks = steps / movementKeyFrame.getSpeed();
+                        boolean round = true;
+                        if (e + 1 < keyFrames.length)
+                        {
+                            KeyFrame next = keyFrames[e + 1];
+                            double difference = next.getTick() - frame.getTick();
+                            if (difference < ticks)
+                            {
+                                ticks = difference;
+                                round = false;
+                            }
+                        }
+
+                        if (round)
+                        {
+                            ticks = Math.ceil(ticks);
+                        }
+
+                        int pathLength = (int) (ticks * zoomFactor);
+                        g.drawLine(x, y + image.getHeight() / 2, x + pathLength - 1, y + image.getHeight() / 2);
+                    }
+                }
+
+                if (type == KeyFrameType.ORIENTATION)
+                {
+                    OrientationKeyFrame orientationKeyFrame = (OrientationKeyFrame) frame;
+                    double ticks = orientationKeyFrame.getDuration();
+                    if (e + 1 < keyFrames.length)
+                    {
+                        KeyFrame next = keyFrames[e + 1];
+                        double difference = next.getTick() - frame.getTick();
+                        if (difference < ticks)
+                        {
+                            ticks = difference;
+                        }
+                    }
+
+
+                    int pathLength = (int) (ticks * zoomFactor);
+                    g.drawLine(x, y + image.getHeight() / 2, x + pathLength - 1, y + image.getHeight() / 2);
+                }
+
+                g.drawImage(endImage, x - xImageOffset, y, null);
             }
         }
     }
@@ -133,8 +186,8 @@ public class AttributeSheet extends TimeSheet
         Composite composite = g.getComposite();
         g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2F));
 
-        double x = MouseInfo.getPointerInfo().getLocation().getX() - getLocationOnScreen().getX();
-        double mouseX = Math.max(0, Math.min(x, getWidth()));
+        double pointerX = MouseInfo.getPointerInfo().getLocation().getX() - getLocationOnScreen().getX();
+        double mouseX = Math.max(0, Math.min(pointerX, getWidth()));
 
         double xCurrentTime = currentTimeToMouseX();
 
@@ -154,12 +207,31 @@ public class AttributeSheet extends TimeSheet
         {
             KeyFrame frame = selectedKeyFrames[e];
             int i = KeyFrameType.getIndex(frame.getKeyFrameType());
+            KeyFrameType type = KeyFrameType.getKeyFrameType(i);
 
-            g.drawImage(
-                    bufferedImage,
-                    (int) ((frame.getTick() + getHScroll() + change) * zoomFactor - xImageOffset),
-                    rowHeightOffset + rowHeight + rowHeight * i - yImageOffset,
-                    null);
+            int x = (int) ((frame.getTick() + getHScroll() + change) * zoomFactor);
+            int y = rowHeightOffset + rowHeight + rowHeight * i - yImageOffset;
+
+            if (type == KeyFrameType.MOVEMENT)
+            {
+                MovementKeyFrame movementKeyFrame = (MovementKeyFrame) frame;
+                int steps = (movementKeyFrame.getPath().length - 1);
+                if (steps > 0)
+                {
+                    double ticks = Math.ceil(steps / movementKeyFrame.getSpeed());
+                    int pathLength = (int) (ticks * zoomFactor);
+                    g.drawLine(x, y + image.getHeight() / 2, x + pathLength - 1, y + image.getHeight() / 2);
+                }
+            }
+
+            if (type == KeyFrameType.ORIENTATION)
+            {
+                OrientationKeyFrame orientationKeyFrame = (OrientationKeyFrame) frame;
+                int pathLength = (int) (orientationKeyFrame.getDuration() * zoomFactor);
+                g.drawLine(x, y + image.getHeight() / 2, x + pathLength - 1, y + image.getHeight() / 2);
+            }
+
+            g.drawImage(bufferedImage, x - xImageOffset, y, null);
         }
 
         g.setComposite(composite);

@@ -12,7 +12,9 @@ import java.awt.*;
 @Getter
 public class AnimAttributes extends Attributes
 {
-    private final JSpinner action = new JSpinner();
+    private final JComboBox<Toggle> stall = new JComboBox<>();
+    private final JSpinner active = new JSpinner();
+    private final JSpinner startFrame = new JSpinner();
     private final JComboBox<Toggle> loop = new JComboBox<>();
 
     private final JSpinner idle = new JSpinner();
@@ -27,6 +29,7 @@ public class AnimAttributes extends Attributes
     public AnimAttributes()
     {
         addChangeListeners();
+        active.setOpaque(true);
         loop.setOpaque(true);
     }
 
@@ -34,22 +37,26 @@ public class AnimAttributes extends Attributes
     public void setAttributes(KeyFrame keyFrame)
     {
         AnimationKeyFrame kf = (AnimationKeyFrame) keyFrame;
-        action.setValue(kf.getActionAnim());
+        stall.setSelectedItem(kf.isStall() ? Toggle.ENABLE : Toggle.DISABLE);
+        active.setValue(kf.getActive());
+        startFrame.setValue(kf.getStartFrame());
         loop.setSelectedItem(kf.isLoop() ? Toggle.ENABLE : Toggle.DISABLE);
-        idle.setValue(kf.getIdleAnim());
-        walk.setValue(kf.getWalkAnim());
-        run.setValue(kf.getRunAnim());
-        walk180.setValue(kf.getWalk180Anim());
-        walkRight.setValue(kf.getWalkRAnim());
-        walkLeft.setValue(kf.getWalkLAnim());
-        idleRight.setValue(kf.getIdleRAnim());
-        idleLeft.setValue(kf.getIdleLAnim());
+        idle.setValue(kf.getIdle());
+        walk.setValue(kf.getWalk());
+        run.setValue(kf.getRun());
+        walk180.setValue(kf.getWalk180());
+        walkRight.setValue(kf.getWalkRight());
+        walkLeft.setValue(kf.getWalkLeft());
+        idleRight.setValue(kf.getIdleRight());
+        idleLeft.setValue(kf.getIdleLeft());
     }
 
     @Override
     public void setBackgroundColours(Color color)
     {
-        action.setBackground(color);
+        stall.setBackground(color);
+        active.setBackground(color);
+        startFrame.setBackground(color);
         loop.setBackground(color);
         idle.setBackground(color);
         walk.setBackground(color);
@@ -66,7 +73,9 @@ public class AnimAttributes extends Attributes
     {
         return new JComponent[]
                 {
-                        action,
+                        stall,
+                        active,
+                        startFrame,
                         loop,
                         idle,
                         walk,
@@ -82,9 +91,19 @@ public class AnimAttributes extends Attributes
     @Override
     public void addChangeListeners()
     {
-        action.addChangeListener(e ->
+        stall.addItemListener(e ->
         {
-            action.setBackground(getRed());
+            stall.setBackground(getRed());
+        });
+
+        active.addChangeListener(e ->
+        {
+            active.setBackground(getRed());
+        });
+
+        startFrame.addChangeListener(e ->
+        {
+            startFrame.setBackground(getRed());
         });
 
         loop.addItemListener(e ->
@@ -136,7 +155,9 @@ public class AnimAttributes extends Attributes
     @Override
     public void resetAttributes()
     {
-        action.setValue(-1);
+        stall.setSelectedItem(Toggle.DISABLE);
+        active.setValue(-1);
+        startFrame.setValue(0);
         loop.setSelectedItem(Toggle.DISABLE);
         idle.setValue(-1);
         walk.setValue(-1);

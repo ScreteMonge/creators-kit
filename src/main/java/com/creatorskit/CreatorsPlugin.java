@@ -3,6 +3,7 @@ package com.creatorskit;
 import com.creatorskit.models.*;
 import com.creatorskit.models.exporters.ModelExporter;
 import com.creatorskit.programming.*;
+import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.saves.TransmogLoadOption;
 import com.creatorskit.saves.TransmogSave;
 import com.creatorskit.swing.*;
@@ -1051,6 +1052,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			ckObject.setActive(false);
 		});
+	}
+
+	public double getCurrentTick()
+	{
+		return creatorsPanel.getToolBox().getTimeSheetPanel().getCurrentTime();
 	}
 
 	public void setModel(Character character, boolean modelMode, int modelId)

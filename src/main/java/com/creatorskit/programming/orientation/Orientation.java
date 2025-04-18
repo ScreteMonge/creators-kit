@@ -1,4 +1,4 @@
-package com.creatorskit.programming;
+package com.creatorskit.programming.orientation;
 
 public class Orientation
 {
@@ -9,14 +9,13 @@ public class Orientation
         {
             return 1;
         }
-        else if (direction == 256 || direction == 512 || direction == 768)
+
+        if (direction == 256 || direction == 512 || direction == 768)
         {
             return -1;
         }
-        else
-        {
-            return 0;
-        }
+
+        return 0;
     }
 
     public static int orientationY(double orientation)
@@ -26,14 +25,13 @@ public class Orientation
         {
             return 1;
         }
-        else if (direction == 256 || direction == 0 || direction == 2048 || direction == 1792)
+
+        if (direction == 256 || direction == 0 || direction == 2048 || direction == 1792)
         {
             return -1;
         }
-        else
-        {
-            return 0;
-        }
+
+        return 0;
     }
 
     public static double radiansToJAngle(double radians, double changeX, double changeY)
@@ -123,7 +121,12 @@ public class Orientation
         int product = boundOrientation(first - second);
         if (product > 1024)
         {
-            return (product - 1024) * -1;
+            return (2048 - product) * -1;
+        }
+
+        if (product < -1024)
+        {
+            return 2048 + product;
         }
 
         return product;

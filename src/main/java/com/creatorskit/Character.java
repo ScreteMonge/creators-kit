@@ -153,6 +153,17 @@ public class Character
         return frames[KeyFrameType.getIndex(type)];
     }
 
+    public KeyFrame[] getAllKeyFrames()
+    {
+        KeyFrame[] keyFrames = new KeyFrame[0];
+        for (KeyFrame[] kfs : frames)
+        {
+            keyFrames = ArrayUtils.addAll(keyFrames, kfs);
+        }
+
+        return keyFrames;
+    }
+
     public void setKeyFrames(KeyFrame[] keyFrames, KeyFrameType type)
     {
         frames[KeyFrameType.getIndex(type)] = keyFrames;

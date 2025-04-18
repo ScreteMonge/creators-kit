@@ -61,11 +61,6 @@ public class OverheadOverlay extends Overlay
                 continue;
             }
 
-            if (!plugin.isInScene(character))
-            {
-                continue;
-            }
-
             OverheadKeyFrame overheadKeyFrame = (OverheadKeyFrame) character.getCurrentKeyFrame(KeyFrameType.OVERHEAD);
             if (overheadKeyFrame == null)
             {
@@ -81,7 +76,7 @@ public class OverheadOverlay extends Overlay
 
             CKObject ckObject = character.getCkObject();
             LocalPoint lp = ckObject.getLocation();
-            if (lp == null)
+            if (lp == null || !lp.isInScene())
             {
                 continue;
             }
@@ -100,7 +95,10 @@ public class OverheadOverlay extends Overlay
             TextKeyFrame textKeyFrame = (TextKeyFrame) character.getCurrentKeyFrame(KeyFrameType.TEXT);
             if (textKeyFrame != null)
             {
-                if (textKeyFrame.isEnabled())
+                int duration = textKeyFrame.getDuration();
+                double startTick = textKeyFrame.getTick();
+                double currentTick = plugin.getCurrentTick();
+                if (currentTick <= duration + startTick)
                 {
                     textBuffer = TEXT_BUFFER;
                 }

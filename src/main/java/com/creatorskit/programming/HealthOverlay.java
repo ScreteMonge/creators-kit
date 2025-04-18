@@ -66,11 +66,6 @@ public class HealthOverlay extends Overlay
                 continue;
             }
 
-            if (!plugin.isInScene(character))
-            {
-                continue;
-            }
-
             HealthKeyFrame healthKeyFrame = (HealthKeyFrame) character.getCurrentKeyFrame(KeyFrameType.HEALTH);
             if (healthKeyFrame == null)
             {
@@ -84,7 +79,7 @@ public class HealthOverlay extends Overlay
 
             CKObject ckObject = character.getCkObject();
             LocalPoint lp = ckObject.getLocation();
-            if (lp == null)
+            if (lp == null || !lp.isInScene())
             {
                 continue;
             }
@@ -121,7 +116,10 @@ public class HealthOverlay extends Overlay
             TextKeyFrame textKeyFrame = (TextKeyFrame) character.getCurrentKeyFrame(KeyFrameType.TEXT);
             if (textKeyFrame != null)
             {
-                if (textKeyFrame.isEnabled())
+                int duration = textKeyFrame.getDuration();
+                double startTick = textKeyFrame.getTick();
+                double currentTick = plugin.getCurrentTick();
+                if (currentTick <= duration + startTick)
                 {
                     textBuffer = TEXT_BUFFER;
                 }

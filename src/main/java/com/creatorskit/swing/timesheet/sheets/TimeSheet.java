@@ -493,6 +493,12 @@ public class TimeSheet extends JPanel
                     return;
                 }
 
+                if (e.getClickCount() == 2)
+                {
+                    onMouseButton1DoublePressed(mousePosition);
+                    return;
+                }
+
                 TimeSheetPanel timeSheetPanel = getTimeSheetPanel();
 
                 if (keyFrameClicked)
@@ -522,13 +528,22 @@ public class TimeSheet extends JPanel
                         }
                         else
                         {
-                            KeyFrame keyFrame = getClickedKeyFrames()[0];
-                            change = round(getCurrentTime() - keyFrame.getTick());
+                            KeyFrame[] clickedFrames = getClickedKeyFrames();
+                            change = 0;
+
+                            if (clickedFrames.length > 0)
+                            {
+                                KeyFrame keyFrame = clickedFrames[0];
+                                change = round(getCurrentTime() - keyFrame.getTick());
+                            }
                         }
 
-                        for (KeyFrame keyFrame : keyFrames)
+                        KeyFrame[] copies = new KeyFrame[keyFrames.length];
+                        for (int i = 0; i < keyFrames.length; i++)
                         {
+                            KeyFrame keyFrame = keyFrames[i];
                             KeyFrame copy = KeyFrame.createCopy(keyFrame, round(keyFrame.getTick() + change));
+                            copies[i] = copy;
                             KeyFrame keyFrameToReplace = timeSheetPanel.addKeyFrame(selectedCharacter, copy);
                             if (keyFrameToReplace != null)
                             {
@@ -538,7 +553,7 @@ public class TimeSheet extends JPanel
                             kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(copy, selectedCharacter, KeyFrameCharacterActionType.ADD));
                         }
 
-                        setSelectedKeyFrames(keyFrames);
+                        setSelectedKeyFrames(copies);
                         timeSheetPanel.addKeyFrameActions(kfa);
                     }
 
@@ -669,6 +684,8 @@ public class TimeSheet extends JPanel
     }
 
     public void onMouseButton3Pressed(Point p) {};
+
+    public void onMouseButton1DoublePressed(Point p) {};
 
     public KeyFrame[] getKeyFrameClicked(Point point)
     {

@@ -53,25 +53,23 @@ public class TextOverlay extends Overlay
                 continue;
             }
 
-            if (!plugin.isInScene(character))
-            {
-                continue;
-            }
-
             TextKeyFrame textKeyFrame = (TextKeyFrame) character.getCurrentKeyFrame(KeyFrameType.TEXT);
             if (textKeyFrame == null)
             {
                 continue;
             }
 
-            if (!textKeyFrame.isEnabled())
+            int duration = textKeyFrame.getDuration();
+            double startTick = textKeyFrame.getTick();
+            double currentTick = plugin.getCurrentTick();
+            if (currentTick > duration + startTick)
             {
                 continue;
             }
 
             CKObject ckObject = character.getCkObject();
             LocalPoint lp = ckObject.getLocation();
-            if (lp == null)
+            if (lp == null || !lp.isInScene())
             {
                 continue;
             }

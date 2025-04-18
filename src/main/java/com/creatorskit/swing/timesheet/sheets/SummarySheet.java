@@ -7,6 +7,8 @@ import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.AttributePanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
+import com.creatorskit.swing.timesheet.keyframe.MovementKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.OrientationKeyFrame;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.client.ui.ColorScheme;
@@ -143,6 +145,7 @@ public class SummarySheet extends TimeSheet
     {
         KeyFrameType[] types = character.getSummary();
         FontMetrics fontMetrics = g.getFontMetrics();
+        int stringHeight = fontMetrics.getHeight();
 
         for (int i = 0; i < types.length; i++)
         {
@@ -161,26 +164,86 @@ public class SummarySheet extends TimeSheet
             drawFrameIcons(
                     g,
                     keyFrames,
+                    type,
                     name,
                     index,
+                    stringHeight,
                     xStringOffset,
                     yStringOffset
             );
         }
     }
 
-    private void drawFrameIcons(Graphics g, KeyFrame[] keyFrames, String name, int index, int xStringOffset, int yStringOffset)
+    private void drawFrameIcons(Graphics g, KeyFrame[] keyFrames, KeyFrameType type, String name, int index, int stringHeight, int xStringOffset, int yStringOffset)
     {
         for (int e = 0; e < keyFrames.length; e++)
         {
             KeyFrame keyFrame = keyFrames[e];
 
             double zoomFactor = this.getWidth() / getZoom();
+            int x = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor);
+            int y = (index * rowHeight) - rowHeightOffset - getVScroll() + yStringOffset;
+
+            if (type == KeyFrameType.MOVEMENT)
+            {
+                MovementKeyFrame movementKeyFrame = (MovementKeyFrame) keyFrame;
+                int steps = (movementKeyFrame.getPath().length - 1);
+                if (steps > 0)
+                {
+                    double ticks = steps / movementKeyFrame.getSpeed();
+                    boolean round = true;
+                    if (e + 1 < keyFrames.length)
+                    {
+                        KeyFrame next = keyFrames[e + 1];
+                        double difference = next.getTick() - keyFrame.getTick();
+                        if (difference < ticks)
+                        {
+                            ticks = difference;
+                            round = false;
+                        }
+                    }
+
+                    if (round)
+                    {
+                        ticks = Math.ceil(ticks);
+                    }
+
+                    int pathLength = (int) (ticks * zoomFactor);
+                    g.drawLine(x + xStringOffset, y - stringHeight / 2, x + pathLength - 1, y - stringHeight / 2);
+                }
+            }
+
+            if (type == KeyFrameType.ORIENTATION)
+            {
+                OrientationKeyFrame orientationKeyFrame = (OrientationKeyFrame) keyFrame;
+                double ticks = orientationKeyFrame.getDuration();
+                if (e + 1 < keyFrames.length)
+                {
+                    KeyFrame next = keyFrames[e + 1];
+                    double difference = next.getTick() - keyFrame.getTick();
+                    if (difference < ticks)
+                    {
+                        ticks = difference;
+                    }
+                }
+
+
+                int pathLength = (int) (ticks * zoomFactor);
+                g.drawLine(x  + xStringOffset, y - stringHeight / 2, x + pathLength - 1, y - stringHeight / 2);
+            }
+
+
             g.drawString(
                     name,
-                    (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xStringOffset),
-                    (index * rowHeight) - rowHeightOffset + yStringOffset - getVScroll());
+                    x - xStringOffset,
+                    y);
         }
+    }
+
+    @Override
+    public void onMouseButton1DoublePressed(Point p)
+    {
+        getTree().setRowSelection(p);
     }
 
     @Override

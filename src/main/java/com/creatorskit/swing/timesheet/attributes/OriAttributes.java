@@ -1,10 +1,8 @@
 package com.creatorskit.swing.timesheet.attributes;
 
-import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameState;
 import com.creatorskit.swing.timesheet.keyframe.OrientationKeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.settings.OrientationToggle;
 import lombok.Getter;
 
 import javax.swing.*;
@@ -13,8 +11,10 @@ import java.awt.*;
 @Getter
 public class OriAttributes extends Attributes
 {
-    private final JSpinner manual = new JSpinner();
-    private final JComboBox<OrientationToggle> manualOverride = new JComboBox<>();
+    private final JSpinner start = new JSpinner();
+    private final JSpinner end = new JSpinner();
+    private final JSpinner duration = new JSpinner();
+    private final JSpinner turnRate = new JSpinner();
 
     public OriAttributes()
     {
@@ -25,14 +25,18 @@ public class OriAttributes extends Attributes
     public void setAttributes(KeyFrame keyFrame)
     {
         OrientationKeyFrame kf = (OrientationKeyFrame) keyFrame;
-        manual.setValue(kf.getManualOrientation());
-        manualOverride.setSelectedItem(kf.isManualOverride() ? OrientationToggle.MANUAL_ORIENTATION : OrientationToggle.SMART_ORIENTATION);
+        start.setValue(kf.getStart());
+        end.setValue(kf.getEnd());
+        duration.setValue(kf.getDuration());
+        turnRate.setValue(kf.getTurnRate());
     }
 
     public void setBackgroundColours(Color color)
     {
-        manual.setBackground(color);
-        manualOverride.setBackground(color);
+        start.setBackground(color);
+        end.setBackground(color);
+        duration.setBackground(color);
+        turnRate.setBackground(color);
     }
 
     @Override
@@ -40,30 +44,44 @@ public class OriAttributes extends Attributes
     {
         return new JComponent[]
                 {
-                        manual,
-                        manualOverride
+                        start,
+                        end,
+                        duration,
+                        turnRate
                 };
     }
 
     @Override
     public void addChangeListeners()
     {
-        manual.addChangeListener(e ->
+        start.addChangeListener(e ->
         {
-            manual.setBackground(getRed());
+            start.setBackground(getRed());
         });
 
-        manualOverride.addItemListener(e ->
+        end.addChangeListener(e ->
         {
-            manualOverride.setBackground(getRed());
+            end.setBackground(getRed());
+        });
+
+        duration.addChangeListener(e ->
+        {
+            duration.setBackground(getRed());
+        });
+
+        turnRate.addChangeListener(e ->
+        {
+            turnRate.setBackground(getRed());
         });
     }
 
     @Override
     public void resetAttributes()
     {
-        manual.setValue(0);
-        manualOverride.setSelectedItem(OrientationToggle.SMART_ORIENTATION);
+        start.setValue(0);
+        end.setValue(0);
+        duration.setValue(2);
+        turnRate.setValue(-1);
         setBackgroundColours(KeyFrameState.EMPTY);
     }
 }

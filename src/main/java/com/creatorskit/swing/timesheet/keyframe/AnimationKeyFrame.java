@@ -7,29 +7,33 @@ import lombok.Setter;
 @Setter
 public class AnimationKeyFrame extends KeyFrame
 {
-    private int actionAnim;
+    private boolean stall;
+    private int active;
+    private int startFrame;
     private boolean loop;
-    private int idleAnim;
-    private int walkAnim;
-    private int runAnim;
-    private int walk180Anim;
-    private int walkRAnim;
-    private int walkLAnim;
-    private int idleRAnim;
-    private int idleLAnim;
+    private int idle;
+    private int walk;
+    private int run;
+    private int walk180;
+    private int walkRight;
+    private int walkLeft;
+    private int idleRight;
+    private int idleLeft;
 
-    public AnimationKeyFrame(double tick, int actionAnim, boolean loop, int idleAnim, int walkAnim, int runAnim, int walk180Anim, int walkRAnim, int walkLAnim, int idleRAnim, int idleLAnim)
+    public AnimationKeyFrame(double tick, boolean stall, int active, int startFrame, boolean loop, int idle, int walk, int run, int walk180, int walkRight, int walkLeft, int idleRight, int idleLeft)
     {
         super(KeyFrameType.ANIMATION, tick);
-        this.actionAnim = actionAnim;
+        this.stall = stall;
+        this.active = active;
+        this.startFrame = startFrame;
         this.loop = loop;
-        this.idleAnim = idleAnim;
-        this.walkAnim = walkAnim;
-        this.runAnim = runAnim;
-        this.walk180Anim = walk180Anim;
-        this.walkRAnim = walkRAnim;
-        this.walkLAnim = walkLAnim;
-        this.idleRAnim = idleRAnim;
-        this.idleLAnim = idleLAnim;
+        this.idle = idle;
+        this.walk = walk;
+        this.run = run;
+        this.walk180 = walk180;
+        this.walkRight = walkRight;
+        this.walkLeft = walkLeft;
+        this.idleRight = idleRight;
+        this.idleLeft = idleLeft;
     }
 }

@@ -62,67 +62,7 @@ public class Programmer
                 incrementSubTime();
             }
         }
-/*
-        if (clientTickAtLastGameTick == -1)
-        {
-            clientTickAtLastGameTick = client.getGameCycle();
-        }
-
-        if (delayTick)
-        {
-            return;
-        }
-
-
-        if (playing)
-        {
-            if (subTick == 0.9)
-            {
-                return;
-            }
-
-            int currentClientTick = client.getGameCycle();
-            int change = currentClientTick - clientTickAtLastGameTick;
-            if (change * Constants.CLIENT_TICK_LENGTH >= Constants.GAME_TICK_LENGTH)
-            {
-                return;
-            }
-
-            double nextSubTick = TimeSheetPanel.round(((double) change) / 30);
-            if (subTick < nextSubTick)
-            {
-                subTick = nextSubTick;
-                incrementSubTime();
-            }
-        }
-
-         */
     }
-
-    /*
-    @Subscribe
-    public void onGameTick(GameTick event)
-    {
-        if (client.getGameState() != GameState.LOGGED_IN)
-        {
-            return;
-        }
-
-        clientTickAtLastGameTick = client.getGameCycle();
-
-        if (playing)
-        {
-            if (delayTick)
-            {
-                delayTick = false;
-                return;
-            }
-
-            incrementTime();
-        }
-    }
-
-     */
 
     private void incrementSubTime()
     {

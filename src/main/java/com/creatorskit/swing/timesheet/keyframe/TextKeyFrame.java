@@ -7,13 +7,13 @@ import lombok.Setter;
 @Setter
 public class TextKeyFrame extends KeyFrame
 {
-    private boolean enabled;
+    private int duration;
     private String text;
 
-    public TextKeyFrame(double tick, boolean enabled, String text)
+    public TextKeyFrame(double tick, int duration, String text)
     {
         super(KeyFrameType.TEXT, tick);
-        this.enabled = enabled;
+        this.duration = duration;
         this.text = text;
     }
 }

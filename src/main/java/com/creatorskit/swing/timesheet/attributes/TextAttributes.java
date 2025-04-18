@@ -3,7 +3,6 @@ package com.creatorskit.swing.timesheet.attributes;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameState;
 import com.creatorskit.swing.timesheet.keyframe.TextKeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.settings.Toggle;
 import lombok.Getter;
 
 import javax.swing.*;
@@ -14,7 +13,7 @@ import java.awt.*;
 @Getter
 public class TextAttributes extends Attributes
 {
-    private final JComboBox<Toggle> enableBox = new JComboBox<>();
+    private final JSpinner duration = new JSpinner();
     private final JTextArea text = new JTextArea("");
 
     public TextAttributes()
@@ -26,14 +25,14 @@ public class TextAttributes extends Attributes
     public void setAttributes(KeyFrame keyFrame)
     {
         TextKeyFrame kf = (TextKeyFrame) keyFrame;
-        enableBox.setSelectedItem(kf.isEnabled() ? Toggle.ENABLE : Toggle.DISABLE);
+        duration.setValue(kf.getDuration());
         text.setText(kf.getText());
     }
 
     @Override
     public void setBackgroundColours(Color color)
     {
-        enableBox.setBackground(color);
+        duration.setBackground(color);
         text.setBackground(color);
     }
 
@@ -42,7 +41,7 @@ public class TextAttributes extends Attributes
     {
         return new JComponent[]
                 {
-                        enableBox,
+                        duration,
                         text
                 };
     }
@@ -50,9 +49,9 @@ public class TextAttributes extends Attributes
     @Override
     public void addChangeListeners()
     {
-        enableBox.addItemListener(e ->
+        duration.addChangeListener(e ->
         {
-            enableBox.setBackground(getRed());
+            duration.setBackground(getRed());
         });
 
         text.getDocument().addDocumentListener(new DocumentListener() {
@@ -78,7 +77,7 @@ public class TextAttributes extends Attributes
     @Override
     public void resetAttributes()
     {
-        enableBox.setSelectedItem(Toggle.DISABLE);
+        duration.setValue(5);
         text.setText("");
         setBackgroundColours(KeyFrameState.EMPTY);
     }
