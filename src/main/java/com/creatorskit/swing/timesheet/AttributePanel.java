@@ -53,16 +53,20 @@ public class AttributePanel extends JPanel
 
     private final JFilterableTable npcTable = new JFilterableTable("NPCs");
 
-    private final String MOVE_CARD = "Movement";
-    private final String ANIM_CARD = "Animation";
-    private final String ORI_CARD = "Orientation";
-    private final String SPAWN_CARD = "Spawn";
-    private final String MODEL_CARD = "Model";
-    private final String TEXT_CARD = "Text";
-    private final String OVER_CARD = "Overhead";
-    private final String HEALTH_CARD = "Health";
-    private final String SPOTANIM_CARD = "SpotAnim 1";
-    private final String SPOTANIM2_CARD = "SpotAnim 2";
+    public static final String MOVE_CARD = "Movement";
+    public static final String ANIM_CARD = "Animation";
+    public static final String ORI_CARD = "Orientation";
+    public static final String SPAWN_CARD = "Spawn";
+    public static final String MODEL_CARD = "Model";
+    public static final String TEXT_CARD = "Text";
+    public static final String OVER_CARD = "Overhead";
+    public static final String HEALTH_CARD = "Health";
+    public static final String SPOTANIM_CARD = "SpotAnim 1";
+    public static final String SPOTANIM2_CARD = "SpotAnim 2";
+    public static final String HITSPLAT_1_CARD = "Hitsplat 1";
+    public static final String HITSPLAT_2_CARD = "Hitsplat 2";
+    public static final String HITSPLAT_3_CARD = "Hitsplat 3";
+    public static final String HITSPLAT_4_CARD = "Hitsplat 4";
 
     private KeyFrameType hoveredKeyFrameType;
     private Component hoveredComponent;
@@ -78,6 +82,10 @@ public class AttributePanel extends JPanel
     private final HealthAttributes healthAttributes = new HealthAttributes();
     private final SpotAnimAttributes spotAnimAttributes = new SpotAnimAttributes();
     private final SpotAnimAttributes spotAnim2Attributes = new SpotAnimAttributes();
+    private final HitsplatAttributes hitsplat1Attributes = new HitsplatAttributes();
+    private final HitsplatAttributes hitsplat2Attributes = new HitsplatAttributes();
+    private final HitsplatAttributes hitsplat3Attributes = new HitsplatAttributes();
+    private final HitsplatAttributes hitsplat4Attributes = new HitsplatAttributes();
 
     private final Random random = new Random();
 
@@ -152,6 +160,10 @@ public class AttributePanel extends JPanel
         JPanel healthCard = new JPanel();
         JPanel spotanimCard = new JPanel();
         JPanel spotanim2Card = new JPanel();
+        JPanel hitsplat1Card = new JPanel();
+        JPanel hitsplat2Card = new JPanel();
+        JPanel hitsplat3Card = new JPanel();
+        JPanel hitsplat4Card = new JPanel();
         cardPanel.add(moveCard, MOVE_CARD);
         cardPanel.add(animCard, ANIM_CARD);
         cardPanel.add(oriCard, ORI_CARD);
@@ -162,6 +174,10 @@ public class AttributePanel extends JPanel
         cardPanel.add(healthCard, HEALTH_CARD);
         cardPanel.add(spotanimCard, SPOTANIM_CARD);
         cardPanel.add(spotanim2Card, SPOTANIM2_CARD);
+        cardPanel.add(hitsplat1Card, HITSPLAT_1_CARD);
+        cardPanel.add(hitsplat2Card, HITSPLAT_2_CARD);
+        cardPanel.add(hitsplat3Card, HITSPLAT_3_CARD);
+        cardPanel.add(hitsplat4Card, HITSPLAT_4_CARD);
 
         setupMoveCard(moveCard);
         setupAnimCard(animCard);
@@ -173,6 +189,10 @@ public class AttributePanel extends JPanel
         setupHealthCard(healthCard);
         setupSpotAnimCard(spotanimCard, KeyFrameType.SPOTANIM);
         setupSpotAnimCard(spotanim2Card, KeyFrameType.SPOTANIM2);
+        setupHitsplatCard(hitsplat1Card, KeyFrameType.HITSPLAT_1);
+        setupHitsplatCard(hitsplat2Card, KeyFrameType.HITSPLAT_2);
+        setupHitsplatCard(hitsplat3Card, KeyFrameType.HITSPLAT_3);
+        setupHitsplatCard(hitsplat4Card, KeyFrameType.HITSPLAT_4);
 
         setupKeyListeners();
     }
@@ -269,15 +289,7 @@ public class AttributePanel extends JPanel
                         healthAttributes.getEnableBox().getSelectedItem() == Toggle.ENABLE,
                         (HealthbarSprite) healthAttributes.getHealthbarSprite().getSelectedItem(),
                         (int) healthAttributes.getMaxHealth().getValue(),
-                        (int) healthAttributes.getCurrentHealth().getValue(),
-                        (HitsplatSprite) healthAttributes.getHitsplat1Sprite().getSelectedItem(),
-                        (HitsplatSprite) healthAttributes.getHitsplat2Sprite().getSelectedItem(),
-                        (HitsplatSprite) healthAttributes.getHitsplat3Sprite().getSelectedItem(),
-                        (HitsplatSprite) healthAttributes.getHitsplat4Sprite().getSelectedItem(),
-                        (int) healthAttributes.getHitsplat1().getValue(),
-                        (int) healthAttributes.getHitsplat2().getValue(),
-                        (int) healthAttributes.getHitsplat3().getValue(),
-                        (int) healthAttributes.getHitsplat4().getValue()
+                        (int) healthAttributes.getCurrentHealth().getValue()
                 );
             case SPOTANIM:
                 return new SpotAnimKeyFrame(
@@ -294,6 +306,34 @@ public class AttributePanel extends JPanel
                         (int) spotAnim2Attributes.getSpotAnimId().getValue(),
                         spotAnim2Attributes.getLoop().getSelectedItem() == Toggle.ENABLE,
                         (int) spotAnim2Attributes.getHeight().getValue()
+                );
+            case HITSPLAT_1:
+            case HITSPLAT_2:
+            case HITSPLAT_3:
+            case HITSPLAT_4:
+                HitsplatAttributes attributes;
+                switch (keyFrameType)
+                {
+                    default:
+                    case HITSPLAT_1:
+                        attributes = hitsplat1Attributes;
+                        break;
+                    case HITSPLAT_2:
+                        attributes = hitsplat2Attributes;
+                        break;
+                    case HITSPLAT_3:
+                        attributes = hitsplat3Attributes;
+                        break;
+                    case HITSPLAT_4:
+                        attributes = hitsplat4Attributes;
+                }
+
+                return new HitsplatKeyFrame(
+                        tick,
+                        keyFrameType,
+                        (int) attributes.getDuration().getValue(),
+                        (HitsplatSprite) attributes.getSprite().getSelectedItem(),
+                        (int) attributes.getDamage().getValue()
                 );
         }
     }
@@ -1317,154 +1357,6 @@ public class AttributePanel extends JPanel
         card.add(currentHealth, c);
 
         c.gridwidth = 1;
-        c.gridx = 0;
-        c.gridy = 5;
-        JLabel hitsplatTitle = new JLabel("Hitsplats");
-        hitsplatTitle.setHorizontalAlignment(SwingConstants.LEFT);
-        hitsplatTitle.setFont(FontManager.getRunescapeBoldFont());
-        card.add(hitsplatTitle, c);
-
-        c.gridwidth = 1;
-        c.gridx = 0;
-        c.gridy = 6;
-        JLabel hitsplat1TypeLabel = new JLabel("Hitsplat 1 Icon: ");
-        hitsplat1TypeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(hitsplat1TypeLabel, c);
-
-        c.gridwidth = 1;
-        c.gridx = 1;
-        c.gridy = 6;
-        JComboBox<HitsplatSprite> hitsplat1Type = healthAttributes.getHitsplat1Sprite();
-        hitsplat1Type.setFocusable(false);
-        hitsplat1Type.addItem(HitsplatSprite.NONE);
-        hitsplat1Type.addItem(HitsplatSprite.BLOCK);
-        hitsplat1Type.addItem(HitsplatSprite.DAMAGE);
-        hitsplat1Type.addItem(HitsplatSprite.POISON);
-        hitsplat1Type.addItem(HitsplatSprite.VENOM);
-        hitsplat1Type.addItem(HitsplatSprite.HEAL);
-        hitsplat1Type.addItem(HitsplatSprite.DISEASE);
-        card.add(hitsplat1Type, c);
-
-        c.gridwidth = 1;
-        c.gridx = 3;
-        c.gridy = 6;
-        JLabel hitsplat1Label = new JLabel(" Damage: ");
-        hitsplat1Label.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(hitsplat1Label, c);
-
-        c.gridwidth = 1;
-        c.gridx = 4;
-        c.gridy = 6;
-        JSpinner hitsplat1 = healthAttributes.getHitsplat1();
-        hitsplat1.setModel(new SpinnerNumberModel(1, 0, 999, 1));
-        card.add(hitsplat1, c);
-
-        c.gridwidth = 1;
-        c.gridx = 0;
-        c.gridy = 7;
-        JLabel hitsplat2TypeLabel = new JLabel("Hitsplat 2 Icon: ");
-        hitsplat2TypeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(hitsplat2TypeLabel, c);
-
-        c.gridwidth = 1;
-        c.gridx = 1;
-        c.gridy = 7;
-        JComboBox<HitsplatSprite> hitsplat2Type = healthAttributes.getHitsplat2Sprite();
-        hitsplat2Type.setFocusable(false);
-        hitsplat2Type.addItem(HitsplatSprite.NONE);
-        hitsplat2Type.addItem(HitsplatSprite.BLOCK);
-        hitsplat2Type.addItem(HitsplatSprite.DAMAGE);
-        hitsplat2Type.addItem(HitsplatSprite.POISON);
-        hitsplat2Type.addItem(HitsplatSprite.VENOM);
-        hitsplat2Type.addItem(HitsplatSprite.HEAL);
-        hitsplat2Type.addItem(HitsplatSprite.DISEASE);
-        card.add(hitsplat2Type, c);
-
-        c.gridwidth = 1;
-        c.gridx = 3;
-        c.gridy = 7;
-        JLabel hitsplat2Label = new JLabel(" Damage: ");
-        hitsplat2Label.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(hitsplat2Label, c);
-
-        c.gridwidth = 1;
-        c.gridx = 4;
-        c.gridy = 7;
-        JSpinner hitsplat2 = healthAttributes.getHitsplat2();
-        hitsplat2.setModel(new SpinnerNumberModel(1, 0, 999, 1));
-        card.add(hitsplat2, c);
-
-        c.gridwidth = 1;
-        c.gridx = 0;
-        c.gridy = 8;
-        JLabel hitsplat3TypeLabel = new JLabel("Hitsplat 3 Icon: ");
-        hitsplat3TypeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(hitsplat3TypeLabel, c);
-
-        c.gridwidth = 1;
-        c.gridx = 1;
-        c.gridy = 8;
-        JComboBox<HitsplatSprite> hitsplat3Type = healthAttributes.getHitsplat3Sprite();
-        hitsplat3Type.setFocusable(false);
-        hitsplat3Type.addItem(HitsplatSprite.NONE);
-        hitsplat3Type.addItem(HitsplatSprite.BLOCK);
-        hitsplat3Type.addItem(HitsplatSprite.DAMAGE);
-        hitsplat3Type.addItem(HitsplatSprite.POISON);
-        hitsplat3Type.addItem(HitsplatSprite.VENOM);
-        hitsplat3Type.addItem(HitsplatSprite.HEAL);
-        hitsplat3Type.addItem(HitsplatSprite.DISEASE);
-        card.add(hitsplat3Type, c);
-
-        c.gridwidth = 1;
-        c.gridx = 3;
-        c.gridy = 8;
-        JLabel hitsplat3Label = new JLabel(" Damage: ");
-        hitsplat3Label.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(hitsplat3Label, c);
-
-        c.gridwidth = 1;
-        c.gridx = 4;
-        c.gridy = 8;
-        JSpinner hitsplat3 = healthAttributes.getHitsplat3();
-        hitsplat3.setModel(new SpinnerNumberModel(1, 0, 999, 1));
-        card.add(hitsplat3, c);
-
-        c.gridwidth = 1;
-        c.gridx = 0;
-        c.gridy = 9;
-        JLabel hitsplat4TypeLabel = new JLabel("Hitsplat 4 Icon: ");
-        hitsplat4TypeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(hitsplat4TypeLabel, c);
-
-        c.gridwidth = 1;
-        c.gridx = 1;
-        c.gridy = 9;
-        JComboBox<HitsplatSprite> hitsplat4Type = healthAttributes.getHitsplat4Sprite();
-        hitsplat4Type.setFocusable(false);
-        hitsplat4Type.addItem(HitsplatSprite.NONE);
-        hitsplat4Type.addItem(HitsplatSprite.BLOCK);
-        hitsplat4Type.addItem(HitsplatSprite.DAMAGE);
-        hitsplat4Type.addItem(HitsplatSprite.POISON);
-        hitsplat4Type.addItem(HitsplatSprite.VENOM);
-        hitsplat4Type.addItem(HitsplatSprite.HEAL);
-        hitsplat4Type.addItem(HitsplatSprite.DISEASE);
-        card.add(hitsplat4Type, c);
-
-        c.gridwidth = 1;
-        c.gridx = 3;
-        c.gridy = 9;
-        JLabel hitsplat4Label = new JLabel(" Damage: ");
-        hitsplat4Label.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(hitsplat4Label, c);
-
-        c.gridwidth = 1;
-        c.gridx = 4;
-        c.gridy = 9;
-        JSpinner hitsplat4 = healthAttributes.getHitsplat4();
-        hitsplat4.setModel(new SpinnerNumberModel(1, 0, 999, 1));
-        card.add(hitsplat4, c);
-
-        c.gridwidth = 1;
         c.gridheight = 1;
         c.weightx = 1;
         c.weighty = 1;
@@ -1555,6 +1447,114 @@ public class AttributePanel extends JPanel
         card.add(empty1, c);
     }
 
+    private void setupHitsplatCard(JPanel card, KeyFrameType hitsplatType)
+    {
+        HitsplatAttributes attributes;
+        String name;
+
+        switch (hitsplatType)
+        {
+            default:
+            case HITSPLAT_1:
+                attributes = hitsplat1Attributes;
+                name = HITSPLAT_1_CARD;
+                break;
+            case HITSPLAT_2:
+                attributes = hitsplat2Attributes;
+                name = HITSPLAT_2_CARD;
+                break;
+            case HITSPLAT_3:
+                attributes = hitsplat3Attributes;
+                name = HITSPLAT_3_CARD;
+                break;
+            case HITSPLAT_4:
+                attributes = hitsplat4Attributes;
+                name = HITSPLAT_4_CARD;
+        }
+
+        card.setLayout(new GridBagLayout());
+        card.setBorder(new EmptyBorder(4, 4, 4, 4));
+        card.setFocusable(true);
+        addMouseFocusListener(card);
+
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(2, 2, 2, 2);
+
+        c.gridwidth = 4;
+        c.gridheight = 1;
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 0;
+        JPanel manualTitlePanel = new JPanel();
+        manualTitlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        card.add(manualTitlePanel, c);
+
+        JLabel manualTitle = new JLabel(name);
+        manualTitle.setHorizontalAlignment(SwingConstants.LEFT);
+        manualTitle.setFont(FontManager.getRunescapeBoldFont());
+        manualTitlePanel.add(manualTitle);
+
+        JLabel manualTitleHelp = new JLabel(new ImageIcon(HELP));
+        manualTitleHelp.setHorizontalAlignment(SwingConstants.LEFT);
+        manualTitleHelp.setBorder(new EmptyBorder(0, 4, 0, 4));
+        manualTitleHelp.setToolTipText("Set the hitsplat sprite and damage to overlay on the Object");
+        manualTitlePanel.add(manualTitleHelp);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 1;
+        JLabel durationLabel = new JLabel("Duration: ");
+        durationLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(durationLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 1;
+        JSpinner duration = attributes.getDuration();
+        duration.setModel(new SpinnerNumberModel(-1, -1, 1000000, 1));
+        duration.setToolTipText("Set the duration, in game ticks, for how long the hitsplats last. -1 sets it to default value, which is 5/3 ticks");
+        card.add(duration, c);
+
+        c.gridx = 0;
+        c.gridy = 2;
+        JLabel spriteLabel = new JLabel("Sprite: ");
+        spriteLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(spriteLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 2;
+        JComboBox<HitsplatSprite> sprite = attributes.getSprite();
+        sprite.setFocusable(false);
+        sprite.addItem(HitsplatSprite.BLOCK);
+        sprite.addItem(HitsplatSprite.DAMAGE);
+        sprite.addItem(HitsplatSprite.POISON);
+        sprite.addItem(HitsplatSprite.VENOM);
+        sprite.addItem(HitsplatSprite.HEAL);
+        sprite.addItem(HitsplatSprite.DISEASE);
+        card.add(sprite, c);
+
+        c.gridx = 0;
+        c.gridy = 3;
+        JLabel damageLabel = new JLabel("Damage: ");
+        damageLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(damageLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 3;
+        JSpinner damage = attributes.getDamage();
+        damage.setModel(new SpinnerNumberModel(0, 0, 999, 1));
+        card.add(damage, c);
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.weightx = 1;
+        c.weighty = 1;
+        c.gridx = 8;
+        c.gridy = 15;
+        JLabel empty1 = new JLabel("");
+        card.add(empty1, c);
+    }
+
     public void switchCards(String cardName)
     {
         KeyFrameType type;
@@ -1590,6 +1590,18 @@ public class AttributePanel extends JPanel
                 break;
             case SPOTANIM2_CARD:
                 type = KeyFrameType.SPOTANIM2;
+                break;
+            case HITSPLAT_1_CARD:
+                type = KeyFrameType.HITSPLAT_1;
+                break;
+            case HITSPLAT_2_CARD:
+                type = KeyFrameType.HITSPLAT_2;
+                break;
+            case HITSPLAT_3_CARD:
+                type = KeyFrameType.HITSPLAT_3;
+                break;
+            case HITSPLAT_4_CARD:
+                type = KeyFrameType.HITSPLAT_4;
         }
 
         switchCards(type);
@@ -1764,6 +1776,53 @@ public class AttributePanel extends JPanel
 
             addHoverListenersWithChildren(c, KeyFrameType.SPOTANIM2);
         }
+
+        for (JComponent c : hitsplat1Attributes.getAllComponents())
+        {
+            if (c instanceof JComboBox)
+            {
+                addHoverListeners(c, KeyFrameType.HITSPLAT_1);
+                continue;
+            }
+
+            addHoverListenersWithChildren(c, KeyFrameType.HITSPLAT_1);
+        }
+
+
+        for (JComponent c : hitsplat2Attributes.getAllComponents())
+        {
+            if (c instanceof JComboBox)
+            {
+                addHoverListeners(c, KeyFrameType.HITSPLAT_2);
+                continue;
+            }
+
+            addHoverListenersWithChildren(c, KeyFrameType.HITSPLAT_2);
+        }
+
+
+        for (JComponent c : hitsplat3Attributes.getAllComponents())
+        {
+            if (c instanceof JComboBox)
+            {
+                addHoverListeners(c, KeyFrameType.HITSPLAT_3);
+                continue;
+            }
+
+            addHoverListenersWithChildren(c, KeyFrameType.HITSPLAT_3);
+        }
+
+
+        for (JComponent c : hitsplat4Attributes.getAllComponents())
+        {
+            if (c instanceof JComboBox)
+            {
+                addHoverListeners(c, KeyFrameType.HITSPLAT_4);
+                continue;
+            }
+
+            addHoverListenersWithChildren(c, KeyFrameType.HITSPLAT_4);
+        }
     }
 
     private void addMouseFocusListener(JComponent component)
@@ -1869,6 +1928,17 @@ public class AttributePanel extends JPanel
                     case SPOTANIM2:
                         spotAnim2Attributes.setBackgroundColours(KeyFrameState.EMPTY);
                         break;
+                    case HITSPLAT_1:
+                        hitsplat1Attributes.setBackgroundColours(KeyFrameState.EMPTY);
+                        break;
+                    case HITSPLAT_2:
+                        hitsplat2Attributes.setBackgroundColours(KeyFrameState.EMPTY);
+                        break;
+                    case HITSPLAT_3:
+                        hitsplat3Attributes.setBackgroundColours(KeyFrameState.EMPTY);
+                        break;
+                    case HITSPLAT_4:
+                        hitsplat4Attributes.setBackgroundColours(KeyFrameState.EMPTY);
                 }
 
                 return;
@@ -1919,6 +1989,22 @@ public class AttributePanel extends JPanel
             case SPOTANIM2:
                 spotAnim2Attributes.setAttributes(keyFrame);
                 spotAnim2Attributes.setBackgroundColours(keyFrameState);
+                break;
+            case HITSPLAT_1:
+                hitsplat1Attributes.setAttributes(keyFrame);
+                hitsplat1Attributes.setBackgroundColours(keyFrameState);
+                break;
+            case HITSPLAT_2:
+                hitsplat2Attributes.setAttributes(keyFrame);
+                hitsplat2Attributes.setBackgroundColours(keyFrameState);
+                break;
+            case HITSPLAT_3:
+                hitsplat3Attributes.setAttributes(keyFrame);
+                hitsplat3Attributes.setBackgroundColours(keyFrameState);
+                break;
+            case HITSPLAT_4:
+                hitsplat4Attributes.setAttributes(keyFrame);
+                hitsplat4Attributes.setBackgroundColours(keyFrameState);
         }
     }
 
@@ -1956,6 +2042,18 @@ public class AttributePanel extends JPanel
                 break;
             case SPOTANIM2:
                 spotAnim2Attributes.resetAttributes();
+                break;
+            case HITSPLAT_1:
+                hitsplat1Attributes.resetAttributes();
+                break;
+            case HITSPLAT_2:
+                hitsplat2Attributes.resetAttributes();
+                break;
+            case HITSPLAT_3:
+                hitsplat3Attributes.resetAttributes();
+                break;
+            case HITSPLAT_4:
+                hitsplat4Attributes.resetAttributes();
         }
     }
 

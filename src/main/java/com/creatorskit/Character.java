@@ -94,35 +94,11 @@ public class Character
      */
     public void updateProgram(double tick)
     {
-        KeyFrame currentMovement = findPreviousKeyFrame(KeyFrameType.MOVEMENT, tick, true);
-        setCurrentKeyFrame(currentMovement, KeyFrameType.MOVEMENT);
-
-        KeyFrame currentAnimation = findPreviousKeyFrame(KeyFrameType.ANIMATION, tick, true);
-        setCurrentKeyFrame(currentAnimation, KeyFrameType.ANIMATION);
-
-        KeyFrame currentSpawn = findPreviousKeyFrame(KeyFrameType.SPAWN, tick, true);
-        setCurrentKeyFrame(currentSpawn, KeyFrameType.SPAWN);
-
-        KeyFrame currentModel = findPreviousKeyFrame(KeyFrameType.MODEL, tick, true);
-        setCurrentKeyFrame(currentModel, KeyFrameType.MODEL);
-
-        KeyFrame currentOrientation = findPreviousKeyFrame(KeyFrameType.ORIENTATION, tick, true);
-        setCurrentKeyFrame(currentOrientation, KeyFrameType.ORIENTATION);
-
-        KeyFrame currentText = findPreviousKeyFrame(KeyFrameType.TEXT, tick, true);
-        setCurrentKeyFrame(currentText, KeyFrameType.TEXT);
-
-        KeyFrame currentOverhead = findPreviousKeyFrame(KeyFrameType.OVERHEAD, tick, true);
-        setCurrentKeyFrame(currentOverhead, KeyFrameType.OVERHEAD);
-
-        KeyFrame currentHealth = findPreviousKeyFrame(KeyFrameType.HEALTH, tick, true);
-        setCurrentKeyFrame(currentHealth, KeyFrameType.HEALTH);
-
-        KeyFrame currentSpotAnim = findPreviousKeyFrame(KeyFrameType.SPOTANIM, tick, true);
-        setCurrentKeyFrame(currentSpotAnim, KeyFrameType.SPOTANIM);
-
-        KeyFrame currentSpotAnim2 = findPreviousKeyFrame(KeyFrameType.SPOTANIM2, tick, true);
-        setCurrentKeyFrame(currentSpotAnim2, KeyFrameType.SPOTANIM2);
+        for (KeyFrameType type : KeyFrameType.ALL_KEYFRAME_TYPES)
+        {
+            KeyFrame current = findPreviousKeyFrame(type, tick, true);
+            setCurrentKeyFrame(current, type);
+        }
     }
 
     public void setSpotAnim(CKObject spotAnim, KeyFrameType spotAnimType)

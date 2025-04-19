@@ -107,8 +107,12 @@ public class ToolBoxFrame extends JFrame
 
             public void componentMoved(ComponentEvent componentEvent)
             {
-                Point p = getLocationOnScreen();
-                configManager.setConfiguration("creatorssuite", "toolBoxPoint", (int) p.getX() + "," + (int) p.getY());
+                try
+                {
+                    Point p = getLocationOnScreen();
+                    configManager.setConfiguration("creatorssuite", "toolBoxPoint", (int) p.getX() + "," + (int) p.getY());
+                }
+                catch (Exception e) {}
             }
         });
 

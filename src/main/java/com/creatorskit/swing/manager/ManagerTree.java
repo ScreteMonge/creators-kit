@@ -702,80 +702,12 @@ public class ManagerTree extends JTree
 
     private void setMouseListeners()
     {
-        addMouseWheelListener(new MouseAdapter()
-        {
-            @Override
-            public void mouseWheelMoved(MouseWheelEvent e)
-            {
-                super.mouseWheelMoved(e);
-                if (e.isControlDown())
-                {
-                    if (e.isAltDown() || e.isShiftDown())
-                    {
-                        return;
-                    }
-
-                    int currentRow = getMinSelectionRow();
-                    if (currentRow == -1)
-                    {
-                        setSelectionRow(0);
-                        return;
-                    }
-
-                    TreePath path = null;
-                    int direction = e.getWheelRotation();
-                    if (direction > 0)
-                    {
-                        while (path == null)
-                        {
-                            currentRow++;
-                            if (currentRow >= getRowCount())
-                            {
-                                currentRow = 0;
-                            }
-
-                            path = getPathForRow(currentRow);
-                        }
-                    }
-
-                    if (direction < 0)
-                    {
-                        while (path == null)
-                        {
-                            currentRow--;
-                            if (currentRow < 0)
-                            {
-                                currentRow = getRowCount() - 1;
-                            }
-
-                            path = getPathForRow(currentRow);
-                        }
-                    }
-
-                    if (path != null)
-                    {
-                        setSelectionPath(path);
-                    }
-                }
-
-                if (e.isShiftDown())
-                {
-                    if (e.isControlDown() || e.isAltDown())
-                    {
-                        return;
-                    }
-
-                    toolBox.getTimeSheetPanel().scrollAttributePanel(e.getWheelRotation());
-                }
-            }
-        });
-
         addMouseListener(new MouseAdapter()
         {
             @Override
-            public void mouseReleased(MouseEvent e)
+            public void mousePressed(MouseEvent e)
             {
-                super.mouseReleased(e);
+                super.mousePressed(e);
                 if (e.getButton() == MouseEvent.BUTTON3)
                 {
                     onMouseButton3Pressed(e.getPoint());

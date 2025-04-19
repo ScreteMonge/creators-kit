@@ -93,6 +93,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private HealthOverlay healthOverlay;
 
 	@Inject
+	private HitsplatOverlay hitsplatOverlay;
+
+	@Inject
 	private KeyManager keyManager;
 
 	@Inject
@@ -161,9 +164,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		clientToolbar.addNavigation(navigationButton);
 		overlayManager.add(overlay);
-		overlayManager.add(textOverlay);
 		overlayManager.add(overheadOverlay);
 		overlayManager.add(healthOverlay);
+		overlayManager.add(hitsplatOverlay);
+		overlayManager.add(textOverlay);
 
 		keyManager.registerKeyListener(overlayKeyListener);
 		keyManager.registerKeyListener(oculusOrbListener);
@@ -258,6 +262,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		overlayManager.remove(textOverlay);
 		overlayManager.remove(overheadOverlay);
 		overlayManager.remove(healthOverlay);
+		overlayManager.remove(hitsplatOverlay);
 
 		keyManager.unregisterKeyListener(overlayKeyListener);
 		keyManager.unregisterKeyListener(oculusOrbListener);
