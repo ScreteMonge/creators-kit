@@ -4,10 +4,8 @@ import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.CKObject;
 import com.creatorskit.swing.timesheet.keyframe.HealthKeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import com.creatorskit.swing.timesheet.keyframe.TextKeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.Model;
@@ -126,6 +124,11 @@ public class HealthOverlay extends Overlay
             }
 
             Point base = Perspective.getCanvasImageLocation(client, lp, redBar, height + MODEL_HEIGHT_BUFFER);
+            if (base == null)
+            {
+                continue;
+            }
+
             Point p = new Point(base.getX() + X_BUFFER, base.getY() + Y_BUFFER + textBuffer);
 
             OverlayUtil.renderImageLocation(graphics, p, redBar);
@@ -135,40 +138,8 @@ public class HealthOverlay extends Overlay
                 BufferedImage subImage = greenBar.getSubimage(0, 0, barWidth, redBar.getHeight());
                 OverlayUtil.renderImageLocation(graphics, p, subImage);
             }
-
-            BufferedImage spriteBase = spriteManager.getSprite(HitsplatSprite.BLOCK.getSpriteID(), 0);
-            if (spriteBase == null)
-            {
-                continue;
-            }
-
-            Point hitsplatPoint = Perspective.getCanvasImageLocation(client, lp, spriteBase, height / 2);
-            renderHitsplat(graphics, healthKeyFrame.getHitsplat1Sprite(), height, 0, 0, hitsplatPoint, healthKeyFrame.getHitsplat1(), lp);
-            renderHitsplat(graphics, healthKeyFrame.getHitsplat2Sprite(), height, 0, -20, hitsplatPoint, healthKeyFrame.getHitsplat2(), lp);
-            renderHitsplat(graphics, healthKeyFrame.getHitsplat3Sprite(), height, -15, -10, hitsplatPoint, healthKeyFrame.getHitsplat3(), lp);
-            renderHitsplat(graphics, healthKeyFrame.getHitsplat4Sprite(), height, 15, -10, hitsplatPoint, healthKeyFrame.getHitsplat4(), lp);
         }
 
         return null;
-    }
-
-    private void renderHitsplat(Graphics2D graphics, HitsplatSprite sprite, int height, int xBuffer, int yBuffer, Point base, int damage, LocalPoint lp)
-    {
-        if (sprite == HitsplatSprite.NONE)
-        {
-            return;
-        }
-
-        BufferedImage spriteImage = spriteManager.getSprite(sprite.getSpriteID(), 0);
-        Point p = new Point(base.getX() + xBuffer, base.getY() + yBuffer + Y_BUFFER);
-        OverlayUtil.renderImageLocation(graphics, p, spriteImage);
-
-        String text = "" + damage;
-        FontMetrics metrics = graphics.getFontMetrics();
-        int textHeight = metrics.getHeight() / 2;
-
-        Point textPoint = Perspective.getCanvasTextLocation(client, graphics, lp, text, height / 2);
-        Point textP = new Point(textPoint.getX() + xBuffer + X_BUFFER, textPoint.getY() + textHeight + yBuffer + Y_BUFFER);
-        OverlayUtil.renderTextLocation(graphics, textP, text, Color.WHITE);
     }
 }

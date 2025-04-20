@@ -496,7 +496,6 @@ public class TimeSheet extends JPanel
                 if (e.getClickCount() == 2)
                 {
                     onMouseButton1DoublePressed(mousePosition);
-                    return;
                 }
 
                 TimeSheetPanel timeSheetPanel = getTimeSheetPanel();

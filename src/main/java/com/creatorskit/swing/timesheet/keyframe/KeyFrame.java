@@ -94,15 +94,7 @@ public class KeyFrame
                         healthKF.isEnabled(),
                         healthKF.getHealthbarSprite(),
                         healthKF.getMaxHealth(),
-                        healthKF.getCurrentHealth(),
-                        healthKF.getHitsplat1Sprite(),
-                        healthKF.getHitsplat2Sprite(),
-                        healthKF.getHitsplat3Sprite(),
-                        healthKF.getHitsplat4Sprite(),
-                        healthKF.getHitsplat1(),
-                        healthKF.getHitsplat2(),
-                        healthKF.getHitsplat3(),
-                        healthKF.getHitsplat4());
+                        healthKF.getCurrentHealth());
             case SPOTANIM:
             case SPOTANIM2:
                 SpotAnimKeyFrame spotKF = (SpotAnimKeyFrame) keyFrame;
@@ -112,6 +104,17 @@ public class KeyFrame
                         spotKF.getSpotAnimId(),
                         spotKF.isLoop(),
                         spotKF.getHeight());
+            case HITSPLAT_1:
+            case HITSPLAT_2:
+            case HITSPLAT_3:
+            case HITSPLAT_4:
+                HitsplatKeyFrame hitsplatKF = (HitsplatKeyFrame) keyFrame;
+                return new HitsplatKeyFrame(
+                        tick,
+                        type,
+                        hitsplatKF.getDuration(),
+                        hitsplatKF.getSprite(),
+                        hitsplatKF.getDamage());
         }
     }
 }

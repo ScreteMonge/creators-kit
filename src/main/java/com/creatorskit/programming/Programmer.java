@@ -1199,6 +1199,25 @@ public class Programmer
                     registerSpotAnimChanges(character, KeyFrameType.SPOTANIM, currentTime);
                 }
             }
+
+            for (KeyFrameType hitsplatType : KeyFrameType.HITSPLAT_TYPES)
+            {
+                KeyFrame currentHitsplat = currentFrames[KeyFrameType.getIndex(hitsplatType)];
+                double lastHitsplatTick = 0;
+                if (currentHitsplat != null)
+                {
+                    lastHitsplatTick = currentHitsplat.getTick();
+                }
+
+                KeyFrame nextHitsplat = character.findNextKeyFrame(hitsplatType, lastHitsplatTick);
+                if (nextHitsplat != null)
+                {
+                    if (nextHitsplat.getTick() <= currentTime)
+                    {
+                        character.setCurrentKeyFrame(nextHitsplat, hitsplatType);
+                    }
+                }
+            }
         }
     }
 

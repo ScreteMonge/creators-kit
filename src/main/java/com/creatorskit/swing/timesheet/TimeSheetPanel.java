@@ -58,7 +58,7 @@ public class TimeSheetPanel extends JPanel
     private final JComboBox<KeyFrameType> summaryComboBox = new JComboBox<>();
     private JScrollBar scrollBar;
     private AttributePanel attributePanel;
-    private final JPanel labelPanel = new JPanel();
+    private final JScrollPane labelScrollPane = new JScrollPane();
     private final JPanel controlPanel = new JPanel();
     private final JButton playButton = new JButton();
     private final ImageIcon PLAY = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/Play.png"));
@@ -73,16 +73,6 @@ public class TimeSheetPanel extends JPanel
     private static final int ZOOM_MAX = 500;
     private static final int ZOOM_MIN = 5;
 
-    private final String MOVE_CARD = "Movement";
-    private final String ANIM_CARD = "Animation";
-    private final String ORI_CARD = "Orientation";
-    private final String SPAWN_CARD = "Spawn";
-    private final String MODEL_CARD = "Model";
-    private final String TEXT_CARD = "Text";
-    private final String OVER_CARD = "Overhead";
-    private final String HEALTH_CARD = "Health";
-    private final String SPOTANIM_CARD = "SpotAnim 1";
-    private final String SPOTANIM2_CARD = "SpotAnim 2";
     private final String LABEL_OFFSET = "  ";
     private JLabel[] labels = new JLabel[0];
 
@@ -647,6 +637,44 @@ public class TimeSheetPanel extends JPanel
     {
         treeScrollPane = new TreeScrollPane(managerTree);
         treeScrollPane.setPreferredSize(new Dimension(614, 0));
+
+        MouseWheelListener[] mouseWheelListeners = treeScrollPane.getMouseWheelListeners();
+        for (int i = 0; i < mouseWheelListeners.length; i++)
+        {
+            treeScrollPane.removeMouseWheelListener(mouseWheelListeners[i]);
+        }
+
+        treeScrollPane.addMouseWheelListener(new MouseAdapter()
+        {
+            @Override
+            public void mouseWheelMoved(MouseWheelEvent e)
+            {
+                if (e.isControlDown())
+                {
+                    if (e.isAltDown() || e.isShiftDown())
+                    {
+                        return;
+                    }
+
+                    managerTree.scrollSelectedIndex(e.getWheelRotation());
+                    return;
+                }
+
+                if (e.isShiftDown())
+                {
+                    if (e.isControlDown() || e.isAltDown())
+                    {
+                        return;
+                    }
+
+                    scrollAttributePanel(e.getWheelRotation());
+                    return;
+                }
+
+                JScrollBar bar = treeScrollPane.getVerticalScrollBar();
+                bar.setValue(bar.getValue() + e.getWheelRotation() * 15);
+            }
+        });
     }
 
     private void setupControlPanel()
@@ -726,10 +754,59 @@ public class TimeSheetPanel extends JPanel
 
     private void setupAttributeSheet()
     {
+        JPanel labelPanel = new JPanel();
         labelPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        labelPanel.setBorder(new EmptyBorder(1, 0, 1, 0));
         labelPanel.setLayout(new GridLayout(0, 1, 0, 0));
         labelPanel.setFocusable(true);
+
+        labelScrollPane.setViewportView(labelPanel);
+        labelScrollPane.setBorder(new EmptyBorder(1, 0, 1, 0));
+        labelScrollPane.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        labelScrollPane.setPreferredSize(new Dimension(100, 150));
+        labelScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        labelScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
+
+        MouseWheelListener[] mouseWheelListeners = labelScrollPane.getMouseWheelListeners();
+        for (int i = 0; i < mouseWheelListeners.length; i++)
+        {
+            labelScrollPane.removeMouseWheelListener(mouseWheelListeners[i]);
+        }
+
+        InvisibleScrollBar labelScrollBar = new InvisibleScrollBar();
+        labelScrollBar.addAdjustmentListener(e -> attributeSheet.onVerticalScrollEvent(e.getValue()));
+        labelScrollPane.setVerticalScrollBar(labelScrollBar);
+
+        labelScrollPane.addMouseWheelListener(new MouseAdapter()
+        {
+            @Override
+            public void mouseWheelMoved(MouseWheelEvent e)
+            {
+                if (e.isControlDown())
+                {
+                    if (e.isAltDown() || e.isShiftDown())
+                    {
+                        return;
+                    }
+
+                    managerTree.scrollSelectedIndex(e.getWheelRotation());
+                    return;
+                }
+
+                if (e.isShiftDown())
+                {
+                    if (e.isControlDown() || e.isAltDown())
+                    {
+                        return;
+                    }
+
+                    scrollAttributePanel(e.getWheelRotation());
+                    return;
+                }
+
+                labelScrollBar.setValue(labelScrollBar.getValue() + e.getWheelRotation() * 15);
+            }
+        });
+
         labels = new JLabel[KeyFrameType.getTotalFrameTypes() + 1];
         for (int i = 0; i < KeyFrameType.getTotalFrameTypes() + 1; i++)
         {
@@ -781,16 +858,20 @@ public class TimeSheetPanel extends JPanel
             labelPanel.add(label);
         }
 
-        labels[1].setText(MOVE_CARD + LABEL_OFFSET);
-        labels[2].setText(ANIM_CARD + LABEL_OFFSET);
-        labels[3].setText(ORI_CARD + LABEL_OFFSET);
-        labels[4].setText(SPAWN_CARD + LABEL_OFFSET);
-        labels[5].setText(MODEL_CARD + LABEL_OFFSET);
-        labels[6].setText(TEXT_CARD + LABEL_OFFSET);
-        labels[7].setText(OVER_CARD + LABEL_OFFSET);
-        labels[8].setText(HEALTH_CARD + LABEL_OFFSET);
-        labels[9].setText(SPOTANIM_CARD + LABEL_OFFSET);
-        labels[10].setText(SPOTANIM2_CARD + LABEL_OFFSET);
+        labels[1].setText(AttributePanel.MOVE_CARD + LABEL_OFFSET);
+        labels[2].setText(AttributePanel.ANIM_CARD + LABEL_OFFSET);
+        labels[3].setText(AttributePanel.ORI_CARD + LABEL_OFFSET);
+        labels[4].setText(AttributePanel.SPAWN_CARD + LABEL_OFFSET);
+        labels[5].setText(AttributePanel.MODEL_CARD + LABEL_OFFSET);
+        labels[6].setText(AttributePanel.SPOTANIM_CARD + LABEL_OFFSET);
+        labels[7].setText(AttributePanel.SPOTANIM2_CARD + LABEL_OFFSET);
+        labels[8].setText(AttributePanel.TEXT_CARD + LABEL_OFFSET);
+        labels[9].setText(AttributePanel.OVER_CARD + LABEL_OFFSET);
+        labels[10].setText(AttributePanel.HEALTH_CARD + LABEL_OFFSET);
+        labels[11].setText(AttributePanel.HITSPLAT_1_CARD + LABEL_OFFSET);
+        labels[12].setText(AttributePanel.HITSPLAT_2_CARD + LABEL_OFFSET);
+        labels[13].setText(AttributePanel.HITSPLAT_3_CARD + LABEL_OFFSET);
+        labels[14].setText(AttributePanel.HITSPLAT_4_CARD + LABEL_OFFSET);
     }
 
     private void setupScrollBar()
@@ -1072,47 +1153,8 @@ public class TimeSheetPanel extends JPanel
                         return;
                     }
 
-                    int currentRow = managerTree.getMinSelectionRow();
-                    if (currentRow == -1)
-                    {
-                        managerTree.setSelectionRow(0);
-                        return;
-                    }
-
-                    TreePath path = null;
-                    int direction = e.getWheelRotation();
-                    if (direction > 0)
-                    {
-                        while (path == null)
-                        {
-                            currentRow++;
-                            if (currentRow >= managerTree.getRowCount())
-                            {
-                                currentRow = 0;
-                            }
-
-                            path = managerTree.getPathForRow(currentRow);
-                        }
-                    }
-
-                    if (direction < 0)
-                    {
-                        while (path == null)
-                        {
-                            currentRow--;
-                            if (currentRow < 0)
-                            {
-                                currentRow = managerTree.getRowCount() - 1;
-                            }
-
-                            path = managerTree.getPathForRow(currentRow);
-                        }
-                    }
-
-                    if (path != null)
-                    {
-                        managerTree.setSelectionPath(path);
-                    }
+                    managerTree.scrollSelectedIndex(e.getWheelRotation());
+                    return;
                 }
 
                 if (e.isShiftDown())
@@ -1202,7 +1244,7 @@ public class TimeSheetPanel extends JPanel
         c.weighty = 0;
         c.gridx = 1;
         c.gridy = 4;
-        add(labelPanel, c);
+        add(labelScrollPane, c);
 
         c.weightx = 8;
         c.weighty = 0;
@@ -1217,7 +1259,6 @@ public class TimeSheetPanel extends JPanel
         summarySheet.setVScroll(vScroll);
         summarySheet.setZoom(zoom);
         attributeSheet.setHScroll(hScroll);
-        attributeSheet.setVScroll(vScroll);
         attributeSheet.setZoom(zoom);
     }
 

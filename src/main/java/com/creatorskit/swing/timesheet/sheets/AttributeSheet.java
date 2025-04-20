@@ -103,7 +103,7 @@ public class AttributeSheet extends TimeSheet
                 }
 
                 int x = (int) ((frame.getTick() + getHScroll()) * zoomFactor);
-                int y = rowHeightOffset + rowHeight + rowHeight * i - yImageOffset;
+                int y = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
 
                 if (type == KeyFrameType.MOVEMENT)
                 {
@@ -210,7 +210,7 @@ public class AttributeSheet extends TimeSheet
             KeyFrameType type = KeyFrameType.getKeyFrameType(i);
 
             int x = (int) ((frame.getTick() + getHScroll() + change) * zoomFactor);
-            int y = rowHeightOffset + rowHeight + rowHeight * i - yImageOffset;
+            int y = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
 
             if (type == KeyFrameType.MOVEMENT)
             {
@@ -288,7 +288,7 @@ public class AttributeSheet extends TimeSheet
                 KeyFrame keyFrame = keyFrames[e];
                 int x1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
                 int x2 = x1 + image.getWidth();
-                int y1 = rowHeightOffset + rowHeight + rowHeight * i - yImageOffset;
+                int y1 = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
                 int y2 = y1 + image.getHeight();
 
                 if (point.getX() >= x1 && point.getX() <= x2)
@@ -332,7 +332,7 @@ public class AttributeSheet extends TimeSheet
                 KeyFrame keyFrame = keyFrames[e];
                 int x1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
                 int x2 = x1 + image.getWidth();
-                int y1 = rowHeightOffset + rowHeight + rowHeight * i - yImageOffset;
+                int y1 = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
                 int y2 = y1 + image.getHeight();
 
                 if (point.getX() >= x1 && point.getX() <= x2)
@@ -498,7 +498,7 @@ public class AttributeSheet extends TimeSheet
                 }
 
                 int kx1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
-                int ky1 = rowHeightOffset + rowHeight + rowHeight * i - yImageOffset;
+                int ky1 = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
 
                 Rectangle2D frameRect = new Rectangle(kx1, ky1, image.getWidth(), image.getHeight());
 

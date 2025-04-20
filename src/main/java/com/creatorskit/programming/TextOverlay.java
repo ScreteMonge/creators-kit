@@ -85,6 +85,11 @@ public class TextOverlay extends Overlay
             int height = model.getModelHeight();
 
             Point point = Perspective.getCanvasTextLocation(client, graphics, lp, text, height);
+            if (point == null)
+            {
+                continue;
+            }
+
             Point p = new Point(point.getX(), point.getY() + TEXT_BUFFER);
             OverlayUtil.renderTextLocation(graphics, p, text, Color.YELLOW);
         }

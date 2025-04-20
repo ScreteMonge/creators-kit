@@ -16,6 +16,9 @@ import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 import java.util.ArrayList;
 
 @Slf4j
@@ -47,6 +50,34 @@ public class ManagerPanel extends JPanel
 
         treeScrollPane = new TreeScrollPane(managerTree);
         treeScrollPane.setPreferredSize(new Dimension(350, 0));
+
+        MouseWheelListener[] mouseWheelListeners = treeScrollPane.getMouseWheelListeners();
+        for (int i = 0; i < mouseWheelListeners.length; i++)
+        {
+            treeScrollPane.removeMouseWheelListener(mouseWheelListeners[i]);
+        }
+
+        treeScrollPane.addMouseWheelListener(new MouseAdapter()
+        {
+            @Override
+            public void mouseWheelMoved(MouseWheelEvent e)
+            {
+                if (e.isControlDown())
+                {
+                    if (e.isAltDown() || e.isShiftDown())
+                    {
+                        return;
+                    }
+
+                    managerTree.scrollSelectedIndex(e.getWheelRotation());
+                    return;
+                }
+
+                JScrollBar bar = treeScrollPane.getVerticalScrollBar();
+                bar.setValue(bar.getValue() + e.getWheelRotation() * 15);
+            }
+        });
+
         add(treeScrollPane, BorderLayout.LINE_START);
 
         JScrollPane objectScrollPane = new JScrollPane();
