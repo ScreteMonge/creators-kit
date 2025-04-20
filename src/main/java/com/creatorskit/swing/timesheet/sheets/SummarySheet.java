@@ -69,6 +69,10 @@ public class SummarySheet extends TimeSheet
             animation.addActionListener(e -> onKeyFrameTypePressed(finalI, KeyFrameType.ANIMATION));
             menuItem.add(animation);
 
+            JMenuItem orientation = new JMenuItem(KeyFrameType.ORIENTATION.getName());
+            orientation.addActionListener(e -> onKeyFrameTypePressed(finalI, KeyFrameType.ORIENTATION));
+            menuItem.add(orientation);
+
             JMenuItem spawn = new JMenuItem(KeyFrameType.SPAWN.getName());
             spawn.addActionListener(e -> onKeyFrameTypePressed(finalI, KeyFrameType.SPAWN));
             menuItem.add(spawn);
@@ -77,9 +81,12 @@ public class SummarySheet extends TimeSheet
             model.addActionListener(e -> onKeyFrameTypePressed(finalI, KeyFrameType.MODEL));
             menuItem.add(model);
 
-            JMenuItem orientation = new JMenuItem(KeyFrameType.ORIENTATION.getName());
-            orientation.addActionListener(e -> onKeyFrameTypePressed(finalI, KeyFrameType.ORIENTATION));
-            menuItem.add(orientation);
+            for (KeyFrameType spotanimType : KeyFrameType.SPOTANIM_TYPES)
+            {
+                JMenuItem spotanim = new JMenuItem(spotanimType.getName());
+                spotanim.addActionListener(e -> onKeyFrameTypePressed(finalI, spotanimType));
+                menuItem.add(spotanim);
+            }
 
             JMenuItem text = new JMenuItem(KeyFrameType.TEXT.getName());
             text.addActionListener(e -> onKeyFrameTypePressed(finalI, KeyFrameType.TEXT));
@@ -93,13 +100,12 @@ public class SummarySheet extends TimeSheet
             health.addActionListener(e -> onKeyFrameTypePressed(finalI, KeyFrameType.HEALTH));
             menuItem.add(health);
 
-            JMenuItem spotanim1 = new JMenuItem(KeyFrameType.SPOTANIM.getName());
-            spotanim1.addActionListener(e -> onKeyFrameTypePressed(finalI, KeyFrameType.SPOTANIM));
-            menuItem.add(spotanim1);
-
-            JMenuItem spotanim2 = new JMenuItem(KeyFrameType.SPOTANIM2.getName());
-            spotanim2.addActionListener(e -> onKeyFrameTypePressed(finalI, KeyFrameType.SPOTANIM2));
-            menuItem.add(spotanim2);
+            for (KeyFrameType hitsplatType : KeyFrameType.HITSPLAT_TYPES)
+            {
+                JMenuItem hitsplat = new JMenuItem(hitsplatType.getName());
+                hitsplat.addActionListener(e -> onKeyFrameTypePressed(finalI, hitsplatType));
+                menuItem.add(hitsplat);
+            }
         }
     }
 

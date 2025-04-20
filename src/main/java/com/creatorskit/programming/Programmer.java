@@ -1165,40 +1165,26 @@ public class Programmer
             }
 
 
-            KeyFrame currentSpotAnim = currentFrames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM)];
-            double lastSpotAnimTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
-            if (currentSpotAnim != null)
+            for (KeyFrameType spotanimType : KeyFrameType.SPOTANIM_TYPES)
             {
-                lastSpotAnimTick = currentSpotAnim.getTick();
-            }
-
-            KeyFrame nextSpotAnim = character.findNextKeyFrame(KeyFrameType.SPOTANIM, lastSpotAnimTick);
-            if (nextSpotAnim != null)
-            {
-                if (nextSpotAnim.getTick() <= currentTime)
+                KeyFrame currentSpotAnim = currentFrames[KeyFrameType.getIndex(spotanimType)];
+                double lastSpotAnimTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
+                if (currentSpotAnim != null)
                 {
-                    character.setCurrentKeyFrame(nextSpotAnim, KeyFrameType.SPOTANIM);
-                    registerSpotAnimChanges(character, KeyFrameType.SPOTANIM, currentTime);
+                    lastSpotAnimTick = currentSpotAnim.getTick();
+                }
+
+                KeyFrame nextSpotAnim = character.findNextKeyFrame(spotanimType, lastSpotAnimTick);
+                if (nextSpotAnim != null)
+                {
+                    if (nextSpotAnim.getTick() <= currentTime)
+                    {
+                        character.setCurrentKeyFrame(nextSpotAnim, spotanimType);
+                        registerSpotAnimChanges(character, spotanimType, currentTime);
+                    }
                 }
             }
 
-
-            KeyFrame currentSpotAnim2 = currentFrames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM2)];
-            double lastSpotAnim2Tick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
-            if (currentSpotAnim2 != null)
-            {
-                lastSpotAnim2Tick = currentSpotAnim2.getTick();
-            }
-
-            KeyFrame nextSpotAnim2 = character.findNextKeyFrame(KeyFrameType.SPOTANIM2, lastSpotAnim2Tick);
-            if (nextSpotAnim2 != null)
-            {
-                if (nextSpotAnim2.getTick() <= currentTime)
-                {
-                    character.setCurrentKeyFrame(nextSpotAnim2, KeyFrameType.SPOTANIM2);
-                    registerSpotAnimChanges(character, KeyFrameType.SPOTANIM, currentTime);
-                }
-            }
 
             for (KeyFrameType hitsplatType : KeyFrameType.HITSPLAT_TYPES)
             {

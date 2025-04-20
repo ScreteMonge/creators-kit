@@ -1348,6 +1348,13 @@ public class CreatorsPanel extends PluginPanel
         int frame = (int) character.getAnimationFrameSpinner().getValue();
         int rgb = character.getColor().getRGB();
         ModelKeyFrameSave[] modelKeyFrameSaves = saveModelKeyFrames(character.getModelKeyFrames(), comps);
+
+        SpotAnimKeyFrame[][] spotAnimKeyFrames = new SpotAnimKeyFrame[][]
+                {
+                        character.getSpotAnimKeyFrames(KeyFrameType.SPOTANIM),
+                        character.getSpotAnimKeyFrames(KeyFrameType.SPOTANIM2)
+                };
+
         HitsplatKeyFrame[][] hitsplatKeyFrames = new HitsplatKeyFrame[][]
                 {
                         character.getHitsplatKeyFrames(KeyFrameType.HITSPLAT_1),
@@ -1380,8 +1387,7 @@ public class CreatorsPanel extends PluginPanel
                 character.getTextKeyFrames(),
                 character.getOverheadKeyFrames(),
                 character.getHealthKeyFrames(),
-                character.getSpotAnimKeyFrames(KeyFrameType.SPOTANIM),
-                character.getSpotAnimKeyFrames(KeyFrameType.SPOTANIM2),
+                spotAnimKeyFrames,
                 hitsplatKeyFrames,
                 character.getSummary());
     }
@@ -1676,14 +1682,11 @@ public class CreatorsPanel extends PluginPanel
                 frames[KeyFrameType.getIndex(KeyFrameType.HEALTH)] = save.getHealthKeyFrames();
             }
 
+            SpotAnimKeyFrame[][] spotAnimKeyFrames = save.getSpotAnimKeyFrames();
             if (save.getSpotAnimKeyFrames() != null)
             {
-                frames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM)] = save.getSpotAnimKeyFrames();
-            }
-
-            if (save.getSpotAnim2KeyFrames() != null)
-            {
-                frames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM2)] = save.getSpotAnim2KeyFrames();
+                frames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM)] = spotAnimKeyFrames[0];
+                frames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM2)] = spotAnimKeyFrames[1];
             }
 
             HitsplatKeyFrame[][] hitsplatKeyFrames = save.getHitsplatKeyFrames();
