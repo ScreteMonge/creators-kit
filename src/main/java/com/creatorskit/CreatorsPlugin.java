@@ -879,11 +879,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		return creatorsPanel.getToolBox().getTimeSheetPanel().getCurrentTime();
 	}
 
-	public double getCurrentTick()
-	{
-		return creatorsPanel.getToolBox().getTimeSheetPanel().getCurrentTime();
-	}
-
 	public void setModel(Character character, boolean modelMode, int modelId)
 	{
 		CKObject ckObject = character.getCkObject();
