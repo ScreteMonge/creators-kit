@@ -292,20 +292,23 @@ public class AttributePanel extends JPanel
                         (int) healthAttributes.getCurrentHealth().getValue()
                 );
             case SPOTANIM:
-                return new SpotAnimKeyFrame(
-                        tick,
-                        KeyFrameType.SPOTANIM,
-                        (int) spotAnimAttributes.getSpotAnimId().getValue(),
-                        spotAnimAttributes.getLoop().getSelectedItem() == Toggle.ENABLE,
-                        (int) spotAnimAttributes.getHeight().getValue()
-                );
             case SPOTANIM2:
+                SpotAnimAttributes spAttributes;
+                switch (keyFrameType)
+                {
+                    default:
+                    case SPOTANIM:
+                        spAttributes = spotAnimAttributes;
+                        break;
+                    case SPOTANIM2:
+                        spAttributes = spotAnim2Attributes;
+                }
                 return new SpotAnimKeyFrame(
                         tick,
-                        KeyFrameType.SPOTANIM2,
-                        (int) spotAnim2Attributes.getSpotAnimId().getValue(),
-                        spotAnim2Attributes.getLoop().getSelectedItem() == Toggle.ENABLE,
-                        (int) spotAnim2Attributes.getHeight().getValue()
+                        keyFrameType,
+                        (int) spAttributes.getSpotAnimId().getValue(),
+                        spAttributes.getLoop().getSelectedItem() == Toggle.ENABLE,
+                        (int) spAttributes.getHeight().getValue()
                 );
             case HITSPLAT_1:
             case HITSPLAT_2:

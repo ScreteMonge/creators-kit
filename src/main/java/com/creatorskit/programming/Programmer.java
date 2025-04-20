@@ -311,38 +311,25 @@ public class Programmer
             }
 
 
-            KeyFrame currentSpotAnim = currentFrames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM)];
-            double lastSpotAnimTick = 0;
-            if (currentSpotAnim != null)
+            for (KeyFrameType spotanimType : KeyFrameType.SPOTANIM_TYPES)
             {
-                lastSpotAnimTick = currentSpotAnim.getTick();
-            }
-
-            KeyFrame nextSpotAnim = character.findNextKeyFrame(KeyFrameType.SPOTANIM, lastSpotAnimTick);
-            if (nextSpotAnim != null)
-            {
-                if (nextSpotAnim.getTick() <= currentTime)
+                KeyFrame currentSpotAnim = currentFrames[KeyFrameType.getIndex(spotanimType)];
+                double lastSpotAnimTick = 0;
+                if (currentSpotAnim != null)
                 {
-                    character.setCurrentKeyFrame(nextSpotAnim, KeyFrameType.SPOTANIM);
+                    lastSpotAnimTick = currentSpotAnim.getTick();
+                }
+
+                KeyFrame nextSpotAnim = character.findNextKeyFrame(spotanimType, lastSpotAnimTick);
+                if (nextSpotAnim != null)
+                {
+                    if (nextSpotAnim.getTick() <= currentTime)
+                    {
+                        character.setCurrentKeyFrame(nextSpotAnim, spotanimType);
+                    }
                 }
             }
 
-
-            KeyFrame currentSpotAnim2 = currentFrames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM2)];
-            double lastSpotAnim2Tick = 0;
-            if (currentSpotAnim2 != null)
-            {
-                lastSpotAnim2Tick = currentSpotAnim2.getTick();
-            }
-
-            KeyFrame nextSpotAnim2 = character.findNextKeyFrame(KeyFrameType.SPOTANIM2, lastSpotAnim2Tick);
-            if (nextSpotAnim2 != null)
-            {
-                if (nextSpotAnim2.getTick() <= currentTime)
-                {
-                    character.setCurrentKeyFrame(nextSpotAnim2, KeyFrameType.SPOTANIM2);
-                }
-            }
 
             for (KeyFrameType hitsplatType : KeyFrameType.HITSPLAT_TYPES)
             {
