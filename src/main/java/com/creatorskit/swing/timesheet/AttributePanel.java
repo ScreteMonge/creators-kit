@@ -1414,31 +1414,43 @@ public class AttributePanel extends JPanel
         c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 1;
-        JLabel spotAnimLabel = new JLabel("SpotAnim: ");
-        spotAnimLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(spotAnimLabel, c);
+        JLabel idLabel = new JLabel("SpotAnim: ");
+        idLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(idLabel, c);
 
         c.gridwidth = 1;
         c.gridx = 1;
         c.gridy = 1;
-        JSpinner spotAnim1 = spAttributes.getSpotAnimId();
-        spotAnim1.setValue(-1);
-        card.add(spotAnim1, c);
+        JSpinner id = spAttributes.getSpotAnimId();
+        id.setValue(-1);
+        card.add(id, c);
 
         c.gridwidth = 1;
-        c.gridx = 2;
-        c.gridy = 1;
+        c.gridx = 0;
+        c.gridy = 2;
         JLabel loop1Label = new JLabel("Loop: ");
         loop1Label.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(loop1Label, c);
 
-        c.gridx = 3;
-        c.gridy = 1;
+        c.gridx = 1;
+        c.gridy = 2;
         JComboBox<Toggle> loop = spAttributes.getLoop();
         loop.setFocusable(false);
         loop.addItem(Toggle.DISABLE);
         loop.addItem(Toggle.ENABLE);
         card.add(loop, c);
+
+        c.gridx = 0;
+        c.gridy = 3;
+        JLabel heightLabel = new JLabel("Height");
+        heightLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(heightLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 3;
+        JSpinner height = spAttributes.getHeight();
+        height.setModel(new SpinnerNumberModel(92, 0, 9999, 1));
+        card.add(height, c);
 
         c.gridwidth = 1;
         c.gridheight = 1;

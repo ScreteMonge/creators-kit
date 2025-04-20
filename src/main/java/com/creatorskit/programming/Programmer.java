@@ -1,9 +1,7 @@
 package com.creatorskit.programming;
 
+import com.creatorskit.*;
 import com.creatorskit.Character;
-import com.creatorskit.CreatorsPlugin;
-import com.creatorskit.CKObject;
-import com.creatorskit.LocationOption;
 import com.creatorskit.models.*;
 import com.creatorskit.models.datatypes.SpotanimData;
 import com.creatorskit.programming.orientation.Orientation;
@@ -989,6 +987,7 @@ public class Programmer
     public void updateProgram(Character character, double tick)
     {
         character.updateProgram(tick);
+        character.setPlaying(playing);
         register3DChanges(character);
         registerModelChanges(character);
         registerSpotAnimChanges(character, KeyFrameType.SPOTANIM, tick);
@@ -1218,6 +1217,7 @@ public class Programmer
         SpawnKeyFrame spawnKeyFrame = (SpawnKeyFrame) character.getCurrentKeyFrame(KeyFrameType.SPAWN);
         if (spawnKeyFrame == null)
         {
+            clientThread.invokeLater(() -> ckObject.setActive(true));
             return;
         }
 
@@ -1239,7 +1239,7 @@ public class Programmer
             kf = character.findNextKeyFrame(KeyFrameType.MOVEMENT, timeSheetPanel.getCurrentTime());
             if (kf == null)
             {
-                plugin.setLocation(character, false, true, LocationOption.TO_SAVED_LOCATION);
+                plugin.setLocation(character, false, ActiveOption.UNCHANGED, LocationOption.TO_SAVED_LOCATION);
                 return;
             }
 
@@ -1252,7 +1252,7 @@ public class Programmer
             int[][] path = keyFrame.getPath();
             if (path.length == 0)
             {
-                plugin.setLocation(character, false, true, LocationOption.TO_SAVED_LOCATION);
+                plugin.setLocation(character, false, ActiveOption.UNCHANGED, LocationOption.TO_SAVED_LOCATION);
                 return;
             }
 
@@ -1400,15 +1400,6 @@ public class Programmer
             ckObject.setActiveAnimation(client.loadAnimation(keyFrame.getActive()));
             ckObject.setFinished(false);
             setAnimationFrames(ckObject, timeSheetPanel.getCurrentTime(), keyFrame.getTick(), keyFrame.getStartFrame(), keyFrame.isLoop(), false);
-
-            if (playing)
-            {
-                character.play();
-            }
-            else
-            {
-                character.pause();
-            }
         });
     }
 
@@ -1424,6 +1415,7 @@ public class Programmer
 
         if (modelKeyFrame == null)
         {
+            plugin.setModel(character, character.isCustomMode(), (int) character.getModelSpinner().getValue());
             return;
         }
 
@@ -1549,6 +1541,7 @@ public class Programmer
                 ckObject.setLocation(lp, plane);
                 ckObject.setOrientation(orientation);
                 ckObject.setActive(true);
+                ckObject.setPlaying(playing);
                 setActiveAnimationFrame(ckObject, currentTime, startTick, 0, loop, true);
             });
         }

@@ -283,15 +283,45 @@ public class PathFinder
 
     public void transplantSteps(Character character, WorldView worldView, int newX, int newY)
     {
+        boolean poh = MovementManager.useLocalLocations(worldView);
+
         KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
         if (kf == null)
         {
+            if (poh)
+            {
+                LocalPoint lp = character.getInstancedPoint();
+                if (lp == null)
+                {
+                    return;
+                }
+
+                int changeX = newX - lp.getSceneX();
+                int changeY = newY - lp.getSceneY();
+                transplantKeyFrames(character, worldView, changeX, changeY);
+                return;
+            }
+
+            WorldPoint startPoint = character.getNonInstancedPoint();
+            if (startPoint == null)
+            {
+                return;
+            }
+
+            if (worldView.isInstance())
+            {
+                Collection<WorldPoint> wps = WorldPoint.toLocalInstance(worldView, startPoint);
+                startPoint = wps.iterator().next();
+            }
+
+            int changeX = newX - startPoint.getX();
+            int changeY = newY - startPoint.getY();
+            transplantKeyFrames(character, worldView, changeX, changeY);
             return;
         }
 
         MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
 
-        boolean poh = MovementManager.useLocalLocations(worldView);
         keyFrame.setPoh(poh);
         keyFrame.setPlane(worldView.getPlane());
 
@@ -305,10 +335,35 @@ public class PathFinder
         int changeX = newX - start[0];
         int changeY = newY - start[1];
 
-        for (int[] coordinates : path)
+        transplantKeyFrames(character, worldView, changeX, changeY);
+    }
+
+    private void transplantKeyFrames(Character character, WorldView worldView, int changeX, int changeY)
+    {
+        MovementKeyFrame[] kfs = character.getMovementKeyFrames();
+        if (kfs == null)
         {
-            coordinates[0] = coordinates[0] + changeX;
-            coordinates[1] = coordinates[1] + changeY;
+            return;
+        }
+
+        for (MovementKeyFrame keyFrame : kfs)
+        {
+            if (keyFrame == null)
+            {
+                continue;
+            }
+
+            boolean poh = MovementManager.useLocalLocations(worldView);
+            keyFrame.setPoh(poh);
+            keyFrame.setPlane(worldView.getPlane());
+
+            int[][] path = keyFrame.getPath();
+
+            for (int[] coordinates : path)
+            {
+                coordinates[0] = coordinates[0] + changeX;
+                coordinates[1] = coordinates[1] + changeY;
+            }
         }
     }
 }

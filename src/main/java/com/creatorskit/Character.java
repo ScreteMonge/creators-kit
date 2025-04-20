@@ -60,6 +60,17 @@ public class Character
         return name;
     }
 
+    public void setPlaying(boolean playing)
+    {
+        if (playing)
+        {
+            play();
+            return;
+        }
+
+        pause();
+    }
+
     public void play()
     {
         ckObject.setPlaying(true);
