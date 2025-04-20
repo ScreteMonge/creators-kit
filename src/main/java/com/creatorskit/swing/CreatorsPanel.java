@@ -1386,6 +1386,13 @@ public class CreatorsPanel extends PluginPanel
         int frame = (int) character.getAnimationFrameSpinner().getValue();
         ProgramComp programComp = character.getProgram().getComp();
         ModelKeyFrameSave[] modelKeyFrameSaves = saveModelKeyFrames(character.getModelKeyFrames(), comps);
+        HitsplatKeyFrame[][] hitsplatKeyFrames = new HitsplatKeyFrame[][]
+                {
+                        character.getHitsplatKeyFrames(KeyFrameType.HITSPLAT_1),
+                        character.getHitsplatKeyFrames(KeyFrameType.HITSPLAT_2),
+                        character.getHitsplatKeyFrames(KeyFrameType.HITSPLAT_3),
+                        character.getHitsplatKeyFrames(KeyFrameType.HITSPLAT_4)
+                };
 
         return new CharacterSave(
                 name,
@@ -1414,6 +1421,7 @@ public class CreatorsPanel extends PluginPanel
                 character.getHealthKeyFrames(),
                 character.getSpotAnimKeyFrames(KeyFrameType.SPOTANIM),
                 character.getSpotAnimKeyFrames(KeyFrameType.SPOTANIM2),
+                hitsplatKeyFrames,
                 character.getSummary());
     }
 
@@ -1720,6 +1728,15 @@ public class CreatorsPanel extends PluginPanel
             if (save.getSpotAnim2KeyFrames() != null)
             {
                 frames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM2)] = save.getSpotAnim2KeyFrames();
+            }
+
+            HitsplatKeyFrame[][] hitsplatKeyFrames = save.getHitsplatKeyFrames();
+            if (hitsplatKeyFrames != null)
+            {
+                frames[KeyFrameType.getIndex(KeyFrameType.HITSPLAT_1)] = hitsplatKeyFrames[0];
+                frames[KeyFrameType.getIndex(KeyFrameType.HITSPLAT_2)] = hitsplatKeyFrames[1];
+                frames[KeyFrameType.getIndex(KeyFrameType.HITSPLAT_3)] = hitsplatKeyFrames[2];
+                frames[KeyFrameType.getIndex(KeyFrameType.HITSPLAT_4)] = hitsplatKeyFrames[3];
             }
 
             KeyFrameType[] summary;

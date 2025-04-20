@@ -666,4 +666,20 @@ public class Character
         }
         return keyFrame;
     }
+
+    public HitsplatKeyFrame[] getHitsplatKeyFrames(KeyFrameType hitsplatType)
+    {
+        KeyFrame[] keyFrames = getKeyFrames(hitsplatType);
+        if (keyFrames == null)
+        {
+            return null;
+        }
+
+        HitsplatKeyFrame[] keyFrame = new HitsplatKeyFrame[keyFrames.length];
+        for (int i = 0; i < keyFrames.length; i++)
+        {
+            keyFrame[i] = (HitsplatKeyFrame) keyFrames[i];
+        }
+        return keyFrame;
+    }
 }
