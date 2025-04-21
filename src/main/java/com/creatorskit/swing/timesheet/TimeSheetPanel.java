@@ -118,16 +118,6 @@ public class TimeSheetPanel extends JPanel
         setMouseListeners();
     }
 
-    public void onSummarySkipForward()
-    {
-        
-    }
-
-    public void onSummarySkipPrevious()
-    {
-
-    }
-
     public void onAttributeSkipForward()
     {
         if (selectedCharacter == null)
@@ -711,27 +701,15 @@ public class TimeSheetPanel extends JPanel
         playButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
         playButton.addActionListener(e -> toolBox.getProgrammer().togglePlay());
 
-        JPanel backPanel = new JPanel();
-        backPanel.setLayout(new BoxLayout(backPanel, BoxLayout.PAGE_AXIS));
-        JButton backSummarySheet = new JButton(new ImageIcon(SKIP_LEFT));
         JButton backAttributeSheet = new JButton(new ImageIcon(SKIP_LEFT));
-        backSummarySheet.setBackground(ColorScheme.DARK_GRAY_COLOR);
         backAttributeSheet.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        backSummarySheet.addActionListener(e -> onSummarySkipPrevious());
+        backAttributeSheet.setPreferredSize(new Dimension(50, 35));
         backAttributeSheet.addActionListener(e -> onAttributeSkipPrevious());
-        backPanel.add(backSummarySheet);
-        backPanel.add(backAttributeSheet);
 
-        JPanel forwardPanel = new JPanel();
-        forwardPanel.setLayout(new BoxLayout(forwardPanel, BoxLayout.PAGE_AXIS));
-        JButton forwardSummarySheet = new JButton(new ImageIcon(SKIP_RIGHT));
         JButton forwardAttributeSheet = new JButton(new ImageIcon(SKIP_RIGHT));
-        forwardSummarySheet.setBackground(ColorScheme.DARK_GRAY_COLOR);
         forwardAttributeSheet.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        forwardSummarySheet.addActionListener(e -> onSummarySkipForward());
+        forwardAttributeSheet.setPreferredSize(new Dimension(50, 35));
         forwardAttributeSheet.addActionListener(e -> onAttributeSkipForward());
-        forwardPanel.add(forwardSummarySheet);
-        forwardPanel.add(forwardAttributeSheet);
 
         c.weightx = 1;
         c.weighty = 1;
@@ -739,9 +717,9 @@ public class TimeSheetPanel extends JPanel
         c.gridy = 0;
         JPanel controls = new JPanel();
         controls.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        controls.add(backPanel);
+        controls.add(backAttributeSheet);
         controls.add(playButton);
-        controls.add(forwardPanel);
+        controls.add(forwardAttributeSheet);
         controlPanel.add(controls, c);
     }
 
