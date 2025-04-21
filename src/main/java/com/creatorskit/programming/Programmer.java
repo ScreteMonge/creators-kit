@@ -582,6 +582,13 @@ public class Programmer
         KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.ANIMATION);
         if (kf == null)
         {
+            int animId = (int) character.getAnimationSpinner().getValue();
+            plugin.setAnimation(character, animId);
+            Animation animation = ckObject.getActiveAnimation();
+            if (animation == null || animation.getId() != animId)
+            {
+                clientThread.invokeLater(() -> ckObject.setAnimation(AnimationType.ACTIVE, animId));
+            }
             return;
         }
 
@@ -619,6 +626,11 @@ public class Programmer
                         }
                     }
                 }
+
+                if (!playing)
+                {
+                    setActiveAnimationFrame(ckObject, timeSheetPanel.getCurrentTime(), keyFrame.getTick(), keyFrame.getStartFrame(), keyFrame.isLoop(), false);
+                }
             }
 
             if (pose == -1)
@@ -635,7 +647,11 @@ public class Programmer
                 {
                     ckObject.setAnimation(AnimationType.POSE, pose);
                     ckObject.setAnimationFrame(AnimationType.POSE, keyFrame.getStartFrame(), false);
+                }
 
+                if (!playing)
+                {
+                    setPoseAnimationFrame(ckObject, timeSheetPanel.getCurrentTime(), keyFrame.getTick(), keyFrame.getStartFrame(), keyFrame.isLoop());
                 }
             }
         });
@@ -645,29 +661,7 @@ public class Programmer
     {
         if (speed == 0 || !isMoving)
         {
-            int animId = keyFrame.getIdle();
-            /*
-            if (orientationDifference > 0)
-            {
-                int idleRight = keyFrame.getIdleRight();
-                if (idleRight != -1)
-                {
-                    animId = idleRight;
-                }
-            }
-
-            if (orientationDifference < 0)
-            {
-                int idleLeft = keyFrame.getIdleLeft();
-                if (idleLeft != -1)
-                {
-                    animId = idleLeft;
-                }
-            }
-
-             */
-
-            return animId;
+            return keyFrame.getIdle();
         }
 
         int idle = keyFrame.getIdle();
@@ -1233,6 +1227,8 @@ public class Programmer
             return;
         }
 
+        double currentTime = timeSheetPanel.getCurrentTime();
+
         KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
         if (kf == null)
         {
@@ -1240,6 +1236,7 @@ public class Programmer
             if (kf == null)
             {
                 plugin.setLocation(character, false, ActiveOption.UNCHANGED, LocationOption.TO_SAVED_LOCATION);
+                transform3D(character, currentTime);
                 return;
             }
 
@@ -1253,6 +1250,7 @@ public class Programmer
             if (path.length == 0)
             {
                 plugin.setLocation(character, false, ActiveOption.UNCHANGED, LocationOption.TO_SAVED_LOCATION);
+                transform3D(character, currentTime);
                 return;
             }
 
