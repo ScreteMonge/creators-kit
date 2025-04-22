@@ -747,11 +747,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				character.setInPOH(false);
 			}
 
-			CKObject ckObject = character.getCkObject();
-
-			ckObject.setLocation(localPoint, worldView.getPlane());
+			character.setLocation(localPoint, worldView.getPlane());
 			int orientation = (int) character.getOrientationSpinner().getValue();
-			ckObject.setOrientation(orientation);
+			character.setOrientation(orientation);
 
 			if (locationOption == LocationOption.TO_HOVERED_TILE)
 			{
@@ -765,28 +763,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					break;
 				case INACTIVE:
 					character.setActive(false, false, clientThread);
-			}
-
-			LocalPoint endPoint = ckObject.getLocation();
-			int endOrientation = ckObject.getOrientation();
-
-			CKObject spotanim1 = character.getSpotAnim1();
-			CKObject spotanim2 = character.getSpotAnim2();
-
-			if (spotanim1 != null)
-			{
-				spotanim1.setActive(false);
-				spotanim1.setLocation(endPoint, worldView.getPlane());
-				spotanim1.setActive(true);
-				spotanim1.setOrientation(endOrientation);
-			}
-
-			if (spotanim2 != null)
-			{
-				spotanim2.setActive(false);
-				spotanim2.setLocation(endPoint, worldView.getPlane());
-				spotanim2.setActive(true);
-				spotanim2.setOrientation(endOrientation);
 			}
 		});
 	}
@@ -836,12 +812,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				character.setInPOH(true);
 			}
 
-
-			CKObject ckObject = character.getCkObject();
-
-			ckObject.setLocation(localPoint, worldView.getPlane());
+			character.setLocation(localPoint, worldView.getPlane());
 			int orientation = (int) character.getOrientationSpinner().getValue();
-			ckObject.setOrientation(orientation);
+			character.setOrientation(orientation);
 
 			if (locationOption == LocationOption.TO_HOVERED_TILE)
 			{
@@ -855,29 +828,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					break;
 				case INACTIVE:
 					character.setActive(false, false, clientThread);
-			}
-
-
-			LocalPoint endPoint = ckObject.getLocation();
-			int endOrientation = ckObject.getOrientation();
-
-			CKObject spotanim1 = character.getSpotAnim1();
-			CKObject spotanim2 = character.getSpotAnim2();
-
-			if (spotanim1 != null)
-			{
-				spotanim1.setActive(false);
-				spotanim1.setLocation(endPoint, worldView.getPlane());
-				spotanim1.setActive(true);
-				spotanim1.setOrientation(endOrientation);
-			}
-
-			if (spotanim2 != null)
-			{
-				spotanim2.setActive(false);
-				spotanim2.setLocation(endPoint, worldView.getPlane());
-				spotanim2.setActive(true);
-				spotanim2.setOrientation(endOrientation);
 			}
 		});
 	}
@@ -921,7 +871,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.ANIMATION);
 			if (kf == null)
 			{
-				character.play();
+				ckObject.setPlaying(true);
 				ckObject.setLoop(true);
 			}
 			else

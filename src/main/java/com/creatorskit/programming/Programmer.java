@@ -336,7 +336,7 @@ public class Programmer
         }
 
         character.setVisible(true, clientThread);
-        character.getCkObject().setLocation(lp, keyFrame.getPlane());
+        character.setLocation(lp, keyFrame.getPlane());
     }
 
     /**
@@ -362,7 +362,7 @@ public class Programmer
         }
 
         int orientation = getOrientation(keyFrame, ticksPassed, duration);
-        character.getCkObject().setOrientation(orientation);
+        character.setOrientation(orientation);
     }
 
     /**
@@ -424,7 +424,7 @@ public class Programmer
 
         OrientationKeyFrame keyFrame = (OrientationKeyFrame) kf;
         int orientation = getOrientationStatic(keyFrame);
-        character.getCkObject().setOrientation(orientation);
+        character.setOrientation(orientation);
     }
 
     /**
@@ -513,7 +513,7 @@ public class Programmer
                 newOrientation = Orientation.boundOrientation(orientation - turnSpeed);
             }
 
-            ckObject.setOrientation(newOrientation);
+            character.setOrientation(newOrientation);
         }
     }
 
@@ -536,7 +536,7 @@ public class Programmer
         {
             if (ckObject.getOrientation() != orientationGoal)
             {
-                ckObject.setOrientation(orientationGoal);
+                character.setOrientation(orientationGoal);
             }
 
             return;
@@ -571,7 +571,7 @@ public class Programmer
                 newOrientation = Orientation.boundOrientation(orientation - turnSpeed);
             }
 
-            ckObject.setOrientation(newOrientation);
+            character.setOrientation(newOrientation);
         }
     }
 
@@ -1255,7 +1255,7 @@ public class Programmer
             }
 
             LocalPoint lp = getLocation(worldView, keyFrame, 0);
-            ckObject.setLocation(lp, keyFrame.getPlane());
+            character.setLocation(lp, keyFrame.getPlane());
             return;
         }
 
@@ -1308,8 +1308,6 @@ public class Programmer
 
     private void registerOrientationChanges(Character character)
     {
-        CKObject ckObject = character.getCkObject();
-
         KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.ORIENTATION);
         if (kf == null)
         {
@@ -1325,7 +1323,7 @@ public class Programmer
         }
 
         int orientation = getOrientationStatic(keyFrame);
-        ckObject.setOrientation(orientation);
+        character.setOrientation(orientation);
     }
 
     private KeyFrameType findLastOrientation(Character character)

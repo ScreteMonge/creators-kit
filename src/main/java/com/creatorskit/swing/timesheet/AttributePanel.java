@@ -452,9 +452,9 @@ public class AttributePanel extends JPanel
         JLabel help = new JLabel(new ImageIcon(HELP));
         help.setHorizontalAlignment(SwingConstants.LEFT);
         help.setBorder(new EmptyBorder(0, 4, 0, 4));
-        help.setToolTipText("<html>Movement Animations dynamically update your Object based on its current movement trajectory" +
+        help.setToolTipText("<html>Pose Animations dynamically update your Object based on its current movement trajectory" +
                 "<br>For example: an Object that isn't moving will use the given Idle animation; an Object taking a 90 degree right turn will use Walk Right animation." +
-                "<br>Active Animations will instead override the current Movement Animation, playing regardless of the Object's movement trajectory</html>");
+                "<br>Active Animations will instead override the current Pose Animation, playing regardless of the Object's movement trajectory</html>");
         generalTitlePanel.add(help);
 
         c.gridwidth = 1;
@@ -532,7 +532,7 @@ public class AttributePanel extends JPanel
         c.gridwidth = 4;
         c.gridx = 0;
         c.gridy = 5;
-        JLabel smartTitle = new JLabel("Movement Animations");
+        JLabel smartTitle = new JLabel("Pose Animations");
         smartTitle.setFont(FontManager.getRunescapeBoldFont());
         card.add(smartTitle, c);
 

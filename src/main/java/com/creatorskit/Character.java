@@ -112,6 +112,42 @@ public class Character
         }
     }
 
+    public void setOrientation(int orientation)
+    {
+        if (ckObject != null)
+        {
+            ckObject.setOrientation(orientation);
+        }
+
+        if (spotAnim1 != null)
+        {
+            spotAnim1.setOrientation(orientation);
+        }
+
+        if (spotAnim2 != null)
+        {
+            spotAnim2.setOrientation(orientation);
+        }
+    }
+
+    public void setLocation(LocalPoint lp, int plane)
+    {
+        if (ckObject != null)
+        {
+            ckObject.setLocation(lp, plane);
+        }
+
+        if (spotAnim1 != null)
+        {
+            spotAnim1.setLocation(lp, plane);
+        }
+
+        if (spotAnim2 != null)
+        {
+            spotAnim2.setLocation(lp, plane);
+        }
+    }
+
     public void setSpotAnim(CKObject spotAnim, KeyFrameType spotAnimType)
     {
         if (spotAnimType == KeyFrameType.SPOTANIM)
