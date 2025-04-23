@@ -1395,6 +1395,7 @@ public class Programmer
             ckObject.setLoop(keyFrame.isLoop());
             ckObject.setActiveAnimation(client.loadAnimation(keyFrame.getActive()));
             ckObject.setFinished(false);
+            character.play();
             setAnimationFrames(ckObject, timeSheetPanel.getCurrentTime(), keyFrame.getTick(), keyFrame.getStartFrame(), keyFrame.isLoop(), false);
         });
     }
