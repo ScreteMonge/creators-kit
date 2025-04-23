@@ -738,28 +738,6 @@ public class AttributePanel extends JPanel
             });
         }
 
-        c.gridwidth = 1;
-        c.gridx = 6;
-        c.gridy = 11;
-        JButton searchApply = new JButton("Apply");
-        searchApply.addActionListener(e ->
-        {
-            Object o = npcTable.getSelectedObject();
-            if (o instanceof NPCData)
-            {
-                NPCData data = (NPCData) o;
-                idle.setValue(data.getStandingAnimation());
-                walk.setValue(data.getWalkingAnimation());
-                run.setValue(data.getRunAnimation());
-                walk180.setValue(data.getRotate180Animation());
-                walkRight.setValue(data.getRotateRightAnimation());
-                walkLeft.setValue(data.getRotateLeftAnimation());
-                idleRight.setValue(data.getIdleRotateRightAnimation());
-                idleLeft.setValue(data.getIdleRotateLeftAnimation());
-            }
-        });
-        card.add(searchApply, c);
-
         NPCData player = new NPCData(
                 -1,
                 "Player",
@@ -778,10 +756,10 @@ public class AttributePanel extends JPanel
                 new int[0],
                 new int[0]);
 
-        c.gridwidth = 1;
-        c.gridx = 6;
+        c.gridwidth = 2;
+        c.gridx = 4;
         c.gridy = 12;
-        JButton addPlayer = new JButton("Player");
+        JButton addPlayer = new JButton("Player Preset");
         addPlayer.addActionListener(e ->
         {
             idle.setValue(player.getStandingAnimation());

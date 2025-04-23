@@ -515,6 +515,7 @@ public class TimeSheetPanel extends JPanel
             return;
         }
 
+        selectedKeyFrames = new KeyFrame[0];
         KeyFrameAction[] lastActions = keyFrameActions[undoStack];
         for (int i = 0; i < lastActions.length; i++)
         {
@@ -532,7 +533,9 @@ public class TimeSheetPanel extends JPanel
 
                 if (actionType == KeyFrameCharacterActionType.REMOVE)
                 {
+                    KeyFrame keyFrame = keyFrameAction.getKeyFrame();
                     addKeyFrame(kfca.getCharacter(), keyFrameAction.getKeyFrame());
+                    selectedKeyFrames = ArrayUtils.add(selectedKeyFrames, keyFrame);
                 }
             }
         }
@@ -549,6 +552,7 @@ public class TimeSheetPanel extends JPanel
 
         undoStack++;
 
+        selectedKeyFrames = new KeyFrame[0];
         KeyFrameAction[] lastUndoneActions = keyFrameActions[undoStack];
         for (KeyFrameAction keyFrameAction : lastUndoneActions)
         {
@@ -558,7 +562,9 @@ public class TimeSheetPanel extends JPanel
                 KeyFrameCharacterActionType actionType = keyFrameCharacterAction.getCharacterActionType();
                 if (actionType == KeyFrameCharacterActionType.ADD)
                 {
-                    addKeyFrame(keyFrameCharacterAction.getCharacter(), keyFrameAction.getKeyFrame());
+                    KeyFrame keyFrame = keyFrameAction.getKeyFrame();
+                    addKeyFrame(keyFrameCharacterAction.getCharacter(), keyFrame);
+                    selectedKeyFrames = ArrayUtils.add(selectedKeyFrames, keyFrame);
                 }
 
                 if (actionType == KeyFrameCharacterActionType.REMOVE)
@@ -930,15 +936,13 @@ public class TimeSheetPanel extends JPanel
             }
         }
 
+        selectedKeyFrames = new KeyFrame[0];
         KeyFrameAction[] kfa = new KeyFrameAction[0];
         for (KeyFrame keyFrame : copiedKeyFrames)
         {
             double newTime = round(keyFrame.getTick() - firstTick + currentTime);
             KeyFrame copy = KeyFrame.createCopy(keyFrame, newTime);
-            if (copy == null)
-            {
-                continue;
-            }
+            selectedKeyFrames = ArrayUtils.add(selectedKeyFrames, copy);
 
             KeyFrame keyFrameToReplace = addKeyFrame(selectedCharacter, copy);
             kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(copy, selectedCharacter, KeyFrameCharacterActionType.ADD));
