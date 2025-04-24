@@ -100,6 +100,11 @@ public class ManagerPanel extends JPanel
         addObjectButton.setPreferredSize(new Dimension(150, 30));
         addObjectButton.addActionListener(e ->
         {
+            if (client == null)
+            {
+                return;
+            }
+
             CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
             TreePath path = managerTree.getSelectionPath();
 

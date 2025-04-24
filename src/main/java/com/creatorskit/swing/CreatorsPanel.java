@@ -135,6 +135,11 @@ public class CreatorsPanel extends PluginPanel
         addObjectButton.setToolTipText("Add an new Object to the palette");
         addObjectButton.addActionListener(e ->
         {
+            if (client == null)
+            {
+                return;
+            }
+
             Character character = createCharacter(ParentPanel.SIDE_PANEL);
             SwingUtilities.invokeLater(() -> addPanel(ParentPanel.SIDE_PANEL, character, true, false));
         });
