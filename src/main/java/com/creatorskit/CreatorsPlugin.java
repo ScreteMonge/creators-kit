@@ -2047,7 +2047,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		public void hotkeyPressed()
 		{
 			ToolBoxFrame toolBox = creatorsPanel.getToolBox();
-			toolBox.getProgrammer().pause();
 			toolBox.getTimeSheetPanel().setCurrentTime(0, false);
 		}
 	};

@@ -93,7 +93,7 @@ public class Programmer
             KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
             if (kf == null)
             {
-                transform3D(character, currentClientTick);
+                transform3D(worldView, character, currentClientTick);
                 continue;
             }
 
@@ -108,7 +108,7 @@ public class Programmer
             int pathLength = path.length;
             if (currentStep >= pathLength || currentStep == -1)
             {
-                transform3D(character, currentClientTick);
+                transform3D(worldView, character, currentClientTick);
                 continue;
             }
 
@@ -147,11 +147,27 @@ public class Programmer
     }
 
     /**
-     * Animates the Character. For intended use when no MovementKeyFrame exists
+     * Transforms the Character by Animation, Orientation, and based on its next MovementKeyFrame. For intended use when no current MovementKeyFrame exists
      * @param character the Character to animate
      */
-    public void transform3D(Character character, double currentClientTick)
+    public void transform3D(WorldView worldView, Character character, double currentClientTick)
     {
+        if (!playing)
+        {
+            KeyFrame kf = character.findNextKeyFrame(KeyFrameType.MOVEMENT, timeSheetPanel.getCurrentTime());
+            if (kf == null)
+            {
+                setAnimation(character, false, 0, 0);
+                setOrientation(character, currentClientTick);
+                plugin.setLocation(character, false, ActiveOption.UNCHANGED, LocationOption.TO_SAVED_LOCATION);
+                return;
+            }
+
+            MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+            transform3D(worldView, character, keyFrame, OrientationAction.SET, 0, 0, 0, 0, 0);
+            return;
+        }
+
         setAnimation(character, false, 0, 0);
         setOrientation(character, currentClientTick);
     }
@@ -326,6 +342,12 @@ public class Programmer
         setAnimation(character, false, 0, 0);
     }
 
+    /**
+     * Sets the location if a Movement keyframe is present
+     * @param character the character to set the location for
+     * @param keyFrame the Movement keyframe of interest
+     * @param mc the MovementComposition regarding the current character's intended location
+     */
     private void setLocation(Character character, MovementKeyFrame keyFrame, MovementComposition mc)
     {
         LocalPoint lp = mc.getLocalPoint();
@@ -337,6 +359,15 @@ public class Programmer
 
         character.setVisible(true, clientThread);
         character.setLocation(lp, keyFrame.getPlane());
+    }
+
+    /**
+     * Set the location of the character if a Movement keyframe does not exist. This will attempt to find the next Movement keyframe and use it as the starting point
+     * @param character
+     */
+    private void setLocation(Character character)
+    {
+
     }
 
     /**
@@ -1232,30 +1263,7 @@ public class Programmer
         KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
         if (kf == null)
         {
-            kf = character.findNextKeyFrame(KeyFrameType.MOVEMENT, timeSheetPanel.getCurrentTime());
-            if (kf == null)
-            {
-                plugin.setLocation(character, false, ActiveOption.UNCHANGED, LocationOption.TO_SAVED_LOCATION);
-                transform3D(character, currentTime);
-                return;
-            }
-
-            MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
-            if (keyFrame.getPlane() != worldView.getPlane())
-            {
-                return;
-            }
-
-            int[][] path = keyFrame.getPath();
-            if (path.length == 0)
-            {
-                plugin.setLocation(character, false, ActiveOption.UNCHANGED, LocationOption.TO_SAVED_LOCATION);
-                transform3D(character, currentTime);
-                return;
-            }
-
-            LocalPoint lp = getLocation(worldView, keyFrame, 0);
-            character.setLocation(lp, keyFrame.getPlane());
+            transform3D(worldView, character, currentTime);
             return;
         }
 

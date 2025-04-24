@@ -399,6 +399,7 @@ public class TimeSheet extends JPanel
             @Override
             public void actionPerformed(ActionEvent e)
             {
+
                 getTimeSheetPanel().setCurrentTime(TimeSheetPanel.round(currentTime - 0.1), false);
             }
         });

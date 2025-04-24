@@ -47,7 +47,7 @@ public class AttributePanel extends JPanel
 
     private final GridBagConstraints c = new GridBagConstraints();
     private final JPanel cardPanel = new JPanel();
-    private final JLabel objectLabel = new JLabel("Pick an Object");
+    private final JLabel objectLabel = new JLabel("[No Object Selected]");
     private final JLabel cardLabel = new JLabel("");
     private final JButton keyFramed = new JButton();
 
@@ -67,6 +67,8 @@ public class AttributePanel extends JPanel
     public static final String HITSPLAT_2_CARD = "Hitsplat 2";
     public static final String HITSPLAT_3_CARD = "Hitsplat 3";
     public static final String HITSPLAT_4_CARD = "Hitsplat 4";
+
+    private final String NO_OBJECT_SELECTED = "[No Object Selected]";
 
     private KeyFrameType hoveredKeyFrameType;
     private Component hoveredComponent;
@@ -101,7 +103,7 @@ public class AttributePanel extends JPanel
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
         objectLabel.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32));
-        objectLabel.setForeground(ColorScheme.BRAND_ORANGE);
+        objectLabel.setForeground(Color.WHITE);
         objectLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
         cardPanel.setLayout(new CardLayout());
@@ -1646,12 +1648,14 @@ public class AttributePanel extends JPanel
 
         if (character == null)
         {
-            objectLabel.setText(" ");
+            objectLabel.setForeground(Color.WHITE);
+            objectLabel.setText(NO_OBJECT_SELECTED);
             setKeyFramedIcon(false);
             setAttributesEmpty();
             return;
         }
 
+        objectLabel.setForeground(ColorScheme.BRAND_ORANGE);
         objectLabel.setText(character.getName());
         KeyFrame keyFrame = character.findKeyFrame(selectedKeyFramePage, tick);
         setKeyFramedIcon(keyFrame != null);

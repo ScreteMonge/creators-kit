@@ -585,6 +585,11 @@ public class TimeSheetPanel extends JPanel
 
     public void setCurrentTime(double tick, boolean playing)
     {
+        if (!playing)
+        {
+            toolBox.getProgrammer().pause();
+        }
+
         if (tick < -ABSOLUTE_MAX_SEQUENCE_LENGTH)
         {
             tick = -ABSOLUTE_MAX_SEQUENCE_LENGTH;

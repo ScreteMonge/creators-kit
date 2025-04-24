@@ -640,13 +640,10 @@ public class ManagerTree extends JTree
 
     private void updateTreeSelectionIndex()
     {
-        int[] rows = getSelectionRows();
+        int current = getLeadSelectionRow();
+        if (current != -1)
         {
-            if (rows == null || rows.length == 0)
-            {
-                return;
-            }
-            toolBox.getTimeSheetPanel().getSummarySheet().setSelectedIndex(rows[0]);
+            toolBox.getTimeSheetPanel().getSummarySheet().setSelectedIndex(current);
         }
     }
 
