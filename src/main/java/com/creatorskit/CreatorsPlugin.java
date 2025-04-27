@@ -902,6 +902,25 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		clientThread.invoke(() -> ckObject.setAnimationFrame(AnimationType.ACTIVE, animFrame, allowPause));
 	}
 
+	public void setAnimationWithFrame(Character character, int animationId, int animFrame)
+	{
+		CKObject ckObject = character.getCkObject();
+		ckObject.setAnimation(AnimationType.ACTIVE, animationId);
+		ckObject.setAnimationFrame(AnimationType.ACTIVE, animFrame, true);
+		KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.ANIMATION);
+		if (kf == null)
+		{
+			ckObject.setPlaying(true);
+			ckObject.setLoop(true);
+			ckObject.setHasAnimKeyFrame(false);
+		}
+		else
+		{
+			character.pause();
+			ckObject.setHasAnimKeyFrame(true);
+		}
+	}
+
 	public void setRadius(Character character, int radius)
 	{
 		CKObject ckObject = character.getCkObject();
@@ -942,8 +961,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			boolean active = character.isActive();
 
 			setModel(character, character.isCustomMode(), (int) character.getModelSpinner().getValue());
-			setAnimation(character, (int) character.getAnimationSpinner().getValue());
-			setAnimationFrame(character, (int) character.getAnimationFrameSpinner().getValue(), true);
+			setAnimationWithFrame(character, (int) character.getAnimationSpinner().getValue(), (int) character.getAnimationFrameSpinner().getValue());
 
 			LocationOption locationOption = setHoveredTile ? LocationOption.TO_HOVERED_TILE : LocationOption.TO_SAVED_LOCATION;
 			setLocation(character, true, active ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, locationOption);
