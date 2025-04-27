@@ -644,7 +644,7 @@ public class Programmer
 
             if (active != -1)
             {
-                if (currentActive != ckObject.getActiveAnimation() || currentActive.getId() != active)
+                if (currentActive != ckObject.getActiveAnimation() || (currentActive != null && currentActive.getId() != active))
                 {
                     if (!ckObject.isFinished())
                     {

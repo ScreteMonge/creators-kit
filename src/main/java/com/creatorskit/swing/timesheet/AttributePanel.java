@@ -477,6 +477,7 @@ public class AttributePanel extends JPanel
         c.gridx = 2;
         c.gridy = 1;
         JButton randomize = new JButton("Random");
+        randomize.setToolTipText("Sets a random starting frame between 0 to the maximum number of frames for the animation that is currently playing");
         card.add(randomize, c);
 
         /*
@@ -777,24 +778,36 @@ public class AttributePanel extends JPanel
 
         randomize.addActionListener(e ->
         {
-            int animId = (int) manual.getValue();
-            if (animId == -1)
+            Character character = timeSheetPanel.getSelectedCharacter();
+            if (character == null)
             {
-                animId = (int) idle.getValue();
-                if (animId == -1)
+                return;
+            }
+
+            CKObject ckObject = character.getCkObject();
+
+            clientThread.invokeLater(() ->
+            {
+                Animation[] animations = ckObject.getAnimations();
+                int animId;
+                Animation activeAnim = animations[0];
+                Animation poseAnim = animations[1];
+
+                if (activeAnim == null || activeAnim.getId() == -1)
                 {
-                    animId = (int) walk.getValue();
-                    if (animId == -1)
+                    if (poseAnim == null || poseAnim.getId() == -1)
                     {
                         return;
                     }
-                }
-            }
 
-            int finalAnimId = animId;
-            clientThread.invokeLater(() ->
-            {
-                Animation animation = client.loadAnimation(finalAnimId);
+                    animId = poseAnim.getId();
+                }
+                else
+                {
+                    animId = activeAnim.getId();
+                }
+
+                Animation animation = client.loadAnimation(animId);
                 if (animation == null)
                 {
                     return;
