@@ -35,7 +35,7 @@ public class CharacterSave
     private TextKeyFrame[] textKeyFrames;
     private OverheadKeyFrame[] overheadKeyFrames;
     private HealthKeyFrame[] healthKeyFrames;
-    private SpotAnimKeyFrame[][] spotAnimKeyFrames;
+    private SpotAnimKeyFrame[][] spotanimKeyFrames;
     private HitsplatKeyFrame[][] hitsplatKeyFrames;
     private KeyFrameType[] summary;
 }

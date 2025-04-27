@@ -1687,8 +1687,8 @@ public class CreatorsPanel extends PluginPanel
                 frames[KeyFrameType.getIndex(KeyFrameType.HEALTH)] = save.getHealthKeyFrames();
             }
 
-            SpotAnimKeyFrame[][] spotAnimKeyFrames = save.getSpotAnimKeyFrames();
-            if (save.getSpotAnimKeyFrames() != null)
+            SpotAnimKeyFrame[][] spotAnimKeyFrames = save.getSpotanimKeyFrames();
+            if (save.getSpotanimKeyFrames() != null)
             {
                 frames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM)] = spotAnimKeyFrames[0];
                 frames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM2)] = spotAnimKeyFrames[1];
