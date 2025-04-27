@@ -556,7 +556,7 @@ public class Programmer
      * @param orientationGoal the orientation end-goal, determined by the trajectory of movement
      * @param difference the difference between the current orientation and end goal orientation
      * @param stepsComplete the number of steps complete
-     * @param speed the speed at which the Character moves
+     * @param speed the speed, in gameticks, at which the Character moves
      * @param turnRate the rate at which the Character should turn
      */
     private void setOrientation(Character character, MovementComposition mc, int orientationGoal, int difference, double stepsComplete, double speed, double turnRate)
@@ -614,11 +614,10 @@ public class Programmer
         if (kf == null)
         {
             int animId = (int) character.getAnimationSpinner().getValue();
-            plugin.setAnimation(character, animId);
-            Animation animation = ckObject.getActiveAnimation();
+            Animation animation = ckObject.getAnimations()[0];
             if (animation == null || animation.getId() != animId)
             {
-                clientThread.invokeLater(() -> ckObject.setAnimation(AnimationType.ACTIVE, animId));
+                plugin.setAnimation(character, animId);
             }
             return;
         }
@@ -626,7 +625,13 @@ public class Programmer
         AnimationKeyFrame keyFrame = (AnimationKeyFrame) kf;
         int active = keyFrame.getActive();
         int pose = getPoseAnimation(keyFrame, isMoving, orientationDifference, speed);
+        int poseStartFrame = 0;
+        if (pose == keyFrame.getIdle() || pose == keyFrame.getWalk() || pose == keyFrame.getRun())
+        {
+            poseStartFrame = keyFrame.getStartFrame();
+        }
 
+        int finalPoseStartFrame = poseStartFrame;
         clientThread.invokeLater(() ->
         {
             Animation[] animations = ckObject.getAnimations();
@@ -640,6 +645,7 @@ public class Programmer
                     ckObject.unsetAnimation(AnimationType.ACTIVE);
                     ckObject.setFinished(true);
                     ckObject.setLoop(false);
+                    ckObject.setHasAnimKeyFrame(true);
                 }
             }
 
@@ -654,6 +660,7 @@ public class Programmer
                             ckObject.setAnimation(AnimationType.ACTIVE, active);
                             ckObject.setAnimationFrame(AnimationType.ACTIVE, keyFrame.getStartFrame(), false);
                             ckObject.setLoop(keyFrame.isLoop());
+                            ckObject.setHasAnimKeyFrame(true);
                         }
                     }
                 }
@@ -677,12 +684,12 @@ public class Programmer
                 if (currentPose == null || currentPose.getId() != pose)
                 {
                     ckObject.setAnimation(AnimationType.POSE, pose);
-                    ckObject.setAnimationFrame(AnimationType.POSE, keyFrame.getStartFrame(), false);
+                    ckObject.setAnimationFrame(AnimationType.POSE, finalPoseStartFrame, false);
                 }
 
                 if (!playing)
                 {
-                    setPoseAnimationFrame(ckObject, timeSheetPanel.getCurrentTime(), keyFrame.getTick(), keyFrame.getStartFrame(), keyFrame.isLoop());
+                    setPoseAnimationFrame(ckObject, timeSheetPanel.getCurrentTime(), keyFrame.getTick(), finalPoseStartFrame, keyFrame.isLoop());
                 }
             }
         });
@@ -827,6 +834,7 @@ public class Programmer
                 return new MovementComposition(true, lp, OrientationAction.ADJUST, (int) angle);
             }
 
+            //Only relevant when OrientationAction.SET, in other words, when setting the time manually and not playing
             int orientationFromTick = getOrientationFromTick(previous, start, angle, clientTicksPassed, currentStep, keyFrame.getSpeed(), turnRate);
             return new MovementComposition(true, lp, OrientationAction.SET, orientationFromTick);
         }

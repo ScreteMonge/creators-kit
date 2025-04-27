@@ -780,12 +780,21 @@ public class AttributePanel extends JPanel
             int animId = (int) manual.getValue();
             if (animId == -1)
             {
-                return;
+                animId = (int) idle.getValue();
+                if (animId == -1)
+                {
+                    animId = (int) walk.getValue();
+                    if (animId == -1)
+                    {
+                        return;
+                    }
+                }
             }
 
+            int finalAnimId = animId;
             clientThread.invokeLater(() ->
             {
-                Animation animation = client.loadAnimation(animId);
+                Animation animation = client.loadAnimation(finalAnimId);
                 if (animation == null)
                 {
                     return;

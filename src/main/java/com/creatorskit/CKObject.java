@@ -15,6 +15,7 @@ public class CKObject extends RuneLiteObjectController
     private Model baseModel;
     private boolean freeze;
     private boolean playing;
+    private boolean hasAnimKeyFrame;
     private boolean despawnOnFinish;
     private Animation activeAnimation;
     private CKAnimationController animationController;
@@ -148,7 +149,7 @@ public class CKObject extends RuneLiteObjectController
             return;
         }
 
-        if (!playing)
+        if (!playing && hasAnimKeyFrame)
         {
             return;
         }

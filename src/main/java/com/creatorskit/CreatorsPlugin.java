@@ -873,10 +873,12 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			{
 				ckObject.setPlaying(true);
 				ckObject.setLoop(true);
+				ckObject.setHasAnimKeyFrame(false);
 			}
 			else
 			{
 				character.pause();
+				ckObject.setHasAnimKeyFrame(true);
 			}
 		});
 	}
