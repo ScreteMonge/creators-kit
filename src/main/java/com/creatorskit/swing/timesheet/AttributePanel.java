@@ -644,15 +644,15 @@ public class AttributePanel extends JPanel
         idleLeft.setPreferredSize(spinnerSize);
         card.add(idleLeft, c);
 
-        c.gridwidth = 2;
+        c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 11;
-        JLabel searcherLabel = new JLabel("NPC Animation Presets: ");
+        JLabel searcherLabel = new JLabel("NPC Presets: ");
         searcherLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(searcherLabel, c);
 
-        c.gridwidth = 4;
-        c.gridx = 2;
+        c.gridwidth = 3;
+        c.gridx = 1;
         c.gridy = 11;
         JTextField field = new JTextField("");
         card.add(field, c);
@@ -761,7 +761,7 @@ public class AttributePanel extends JPanel
 
         c.gridwidth = 2;
         c.gridx = 4;
-        c.gridy = 12;
+        c.gridy = 11;
         JButton addPlayer = new JButton("Player Preset");
         addPlayer.addActionListener(e ->
         {

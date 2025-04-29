@@ -1118,6 +1118,33 @@ public class TimeSheetPanel extends JPanel
                 skipListener(-1);
             }
         });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "VK_DELETE");
+        actionMap.put("VK_DELETE", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                onDeleteKeyPressed();
+            }
+        });
+    }
+
+    private void onDeleteKeyPressed()
+    {
+        if (selectedCharacter == null)
+        {
+            return;
+        }
+
+        KeyFrameAction[] kfa = new KeyFrameAction[0];
+        for (KeyFrame keyFrame : selectedKeyFrames)
+        {
+            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
+            removeKeyFrame(selectedCharacter, keyFrame);
+        }
+
+        addKeyFrameActions(kfa);
     }
 
     public void skipListener(double modifier)
