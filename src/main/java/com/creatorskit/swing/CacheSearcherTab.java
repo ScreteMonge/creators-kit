@@ -408,7 +408,7 @@ public class CacheSearcherTab extends JPanel
         JPanel anims = new JPanel();
         anims.setLayout(new GridLayout(0, 3, 2, 2));
         anims.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        anims.setBorder(new EmptyBorder(4, 4, 4, 4));
+        anims.setBorder(new EmptyBorder(8, 8, 8, 8));
         card.add(anims, c);
 
         JLabel idle = new JLabel("Idle: -1");
