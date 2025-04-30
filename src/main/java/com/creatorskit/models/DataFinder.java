@@ -37,7 +37,8 @@ public class DataFinder
         ITEM,
         KIT,
         SEQ,
-        ANIM
+        ANIM,
+        WEAPON_ANIM
     }
 
     @Data
@@ -68,6 +69,7 @@ public class DataFinder
     private final List<KitData> kitData = new ArrayList<>();
     private final List<SeqData> seqData = new ArrayList<>();
     private final List<AnimData> animData = new ArrayList<>();
+    private final List<WeaponAnimData> weaponAnimData = new ArrayList<>();
 
     private static final BodyPart[] bodyParts = new BodyPart[]{
             BodyPart.HEAD,
@@ -99,6 +101,7 @@ public class DataFinder
         lookupKitData();
         lookupSeqData();
         lookupAnimData();
+        lookupWeaponAnimationData();
     }
 
     /**
@@ -1399,5 +1402,37 @@ public class DataFinder
         }
 
         return new ModelStats[]{modelStats.get(0)};
+    }
+
+    private void lookupWeaponAnimationData()
+    {
+        Request request = new Request.Builder().url("https://raw.githubusercontent.com/ScreteMonge/cache-converter/refs/heads/master/.venv/weapon_animations.json").build();
+        Call call = httpClient.newCall(request);
+        call.enqueue(new Callback()
+        {
+            @Override
+            public void onFailure(Call call, IOException e)
+            {
+                log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/refs/heads/master/.venv/weapon_animations.json");
+                executeCallbacks(DataType.WEAPON_ANIM);
+            }
+
+            @Override
+            public void onResponse(Call call, Response response)
+            {
+                if (response.isSuccessful() && response.body() != null)
+                {
+                    //create a reader to read the URL
+                    InputStreamReader reader = new InputStreamReader(response.body().byteStream());
+
+                    Type listType = new TypeToken<List<WeaponAnimData>>() {}.getType();
+                    List<WeaponAnimData> list = gson.fromJson(reader, listType);
+
+                    weaponAnimData.addAll(list);
+                    response.body().close();
+                }
+                executeCallbacks(DataType.WEAPON_ANIM);
+            }
+        });
     }
 }

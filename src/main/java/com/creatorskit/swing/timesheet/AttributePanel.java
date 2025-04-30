@@ -4,7 +4,10 @@ import com.creatorskit.CKObject;
 import com.creatorskit.Character;
 import com.creatorskit.models.CustomModel;
 import com.creatorskit.models.DataFinder;
+import com.creatorskit.models.datatypes.ItemData;
 import com.creatorskit.models.datatypes.NPCData;
+import com.creatorskit.models.datatypes.PlayerAnimationType;
+import com.creatorskit.models.datatypes.WeaponAnimData;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.orientation.OrientationGoal;
 import com.creatorskit.swing.searchabletable.JFilterableTable;
@@ -52,6 +55,7 @@ public class AttributePanel extends JPanel
     private final JButton keyFramed = new JButton();
 
     private final JFilterableTable npcTable = new JFilterableTable("NPCs");
+    private final JFilterableTable itemTable = new JFilterableTable("Items");
 
     public static final String MOVE_CARD = "Movement";
     public static final String ANIM_CARD = "Animation";
@@ -647,21 +651,21 @@ public class AttributePanel extends JPanel
         c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 11;
-        JLabel searcherLabel = new JLabel("NPC Presets: ");
-        searcherLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(searcherLabel, c);
+        JLabel npcSearcherLabel = new JLabel("NPC Presets: ");
+        npcSearcherLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(npcSearcherLabel, c);
 
         c.gridwidth = 3;
         c.gridx = 1;
         c.gridy = 11;
-        JTextField field = new JTextField("");
-        card.add(field, c);
+        JTextField npcField = new JTextField("");
+        card.add(npcField, c);
 
-        JPopupMenu popup = new JPopupMenu("NPCs");
-        JScrollPane scrollPane = new JScrollPane(npcTable);
-        popup.add(scrollPane);
+        JPopupMenu npcPopup = new JPopupMenu("NPCs");
+        JScrollPane npcScrollPane = new JScrollPane(npcTable);
+        npcPopup.add(npcScrollPane);
 
-        KeyListener keyListener = new KeyListener() {
+        KeyListener npcListener = new KeyListener() {
             @Override
             public void keyTyped(KeyEvent e) {
 
@@ -675,15 +679,15 @@ public class AttributePanel extends JPanel
             @Override
             public void keyReleased(KeyEvent e)
             {
-                String text = field.getText();
+                String text = npcField.getText();
                 npcTable.searchAndListEntries(text);
-                popup.setVisible(true);
-                popup.setLocation(MouseInfo.getPointerInfo().getLocation());
+                npcPopup.setVisible(true);
+                npcPopup.setLocation(MouseInfo.getPointerInfo().getLocation());
             }
         };
-        field.addKeyListener(keyListener);
+        npcField.addKeyListener(npcListener);
 
-        field.addFocusListener(new FocusListener()
+        npcField.addFocusListener(new FocusListener()
         {
             @Override
             public void focusGained(FocusEvent e)
@@ -694,7 +698,7 @@ public class AttributePanel extends JPanel
             @Override
             public void focusLost(FocusEvent e)
             {
-                popup.setVisible(false);
+                npcPopup.setVisible(false);
             }
         });
 
@@ -720,7 +724,7 @@ public class AttributePanel extends JPanel
                         idleLeft.setValue(data.getIdleRotateLeftAnimation());
                     }
 
-                    popup.setVisible(false);
+                    npcPopup.setVisible(false);
                 }
             }
         });
@@ -738,6 +742,142 @@ public class AttributePanel extends JPanel
                 List<NPCData> dataList = dataFinder.getNpcData();
                 List<Object> list = new ArrayList<>(dataList);
                 npcTable.initialize(list);
+            });
+        }
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 12;
+        JLabel itemSearcherLabel = new JLabel("Weapon Presets: ");
+        itemSearcherLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(itemSearcherLabel, c);
+
+        c.gridwidth = 3;
+        c.gridx = 1;
+        c.gridy = 12;
+        JTextField itemField = new JTextField("");
+        card.add(itemField, c);
+
+        JPopupMenu itemPopup = new JPopupMenu("Items");
+        JScrollPane itemScrollPane = new JScrollPane(itemTable);
+        itemPopup.add(itemScrollPane);
+
+        KeyListener itemListener = new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e)
+            {
+                String text = itemField.getText();
+                itemTable.searchAndListEntries(text);
+                itemPopup.setVisible(true);
+                itemPopup.setLocation(MouseInfo.getPointerInfo().getLocation());
+            }
+        };
+        itemField.addKeyListener(itemListener);
+
+        itemField.addFocusListener(new FocusListener()
+        {
+            @Override
+            public void focusGained(FocusEvent e)
+            {
+
+            }
+
+            @Override
+            public void focusLost(FocusEvent e)
+            {
+                itemPopup.setVisible(false);
+            }
+        });
+
+        itemTable.addMouseListener(new MouseAdapter()
+        {
+            @Override
+            public void mouseClicked(MouseEvent e)
+            {
+                super.mouseClicked(e);
+                if (e.getClickCount() == 2 && e.getButton() == MouseEvent.BUTTON1)
+                {
+                    Object o = itemTable.getSelectedObject();
+                    if (o instanceof ItemData)
+                    {
+                        ItemData data = (ItemData) o;
+                        int itemId = data.getId();
+
+                        boolean foundMatch = false;
+
+                        List<WeaponAnimData> weaponAnimSets = dataFinder.getWeaponAnimData();
+                        for (WeaponAnimData weaponAnim : weaponAnimSets)
+                        {
+                            int[] ids = weaponAnim.getId();
+                            if (ids == null || ids.length == 0)
+                            {
+                                continue;
+                            }
+
+                            for (int i : ids)
+                            {
+                                if (i == itemId)
+                                {
+                                    idle.setValue(WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE));
+                                    walk.setValue(WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.WALK));
+                                    run.setValue(WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.RUN));
+                                    walk180.setValue(WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_180));
+                                    walkRight.setValue(WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_RIGHT));
+                                    walkLeft.setValue(WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_LEFT));
+                                    idleRight.setValue(WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_RIGHT));
+                                    idleLeft.setValue(WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_LEFT));
+                                    foundMatch = true;
+                                    break;
+                                }
+                            }
+
+                            if (foundMatch)
+                            {
+                                break;
+                            }
+                        }
+
+                        if (!foundMatch)
+                        {
+                            idle.setValue(-1);
+                            walk.setValue(-1);
+                            run.setValue(-1);
+                            walk180.setValue(-1);
+                            walkRight.setValue(-1);
+                            walkLeft.setValue(-1);
+                            idleRight.setValue(-1);
+                            idleLeft.setValue(-1);
+                        }
+                    }
+
+                    itemPopup.setVisible(false);
+                }
+            }
+        });
+
+        if (dataFinder.isDataLoaded(DataFinder.DataType.ITEM))
+        {
+            List<ItemData> dataList = dataFinder.getItemData();
+            List<Object> list = new ArrayList<>(dataList);
+            itemTable.initialize(list);
+        }
+        else
+        {
+            dataFinder.addLoadCallback(DataFinder.DataType.ITEM, () ->
+            {
+                List<ItemData> dataList = dataFinder.getItemData();
+                List<Object> list = new ArrayList<>(dataList);
+                itemTable.initialize(list);
             });
         }
 
@@ -761,8 +901,8 @@ public class AttributePanel extends JPanel
 
         c.gridwidth = 2;
         c.gridx = 4;
-        c.gridy = 11;
-        JButton addPlayer = new JButton("Player Preset");
+        c.gridy = 12;
+        JButton addPlayer = new JButton("Unarmed");
         addPlayer.addActionListener(e ->
         {
             idle.setValue(player.getStandingAnimation());
