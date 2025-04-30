@@ -401,6 +401,119 @@ public class CacheSearcherTab extends JPanel
                 addToAnvil(type, data.getId());
             }
         });
+
+
+        c.gridx = 0;
+        c.gridy = 4;
+        JPanel anims = new JPanel();
+        anims.setLayout(new GridLayout(0, 3, 2, 2));
+        anims.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        anims.setBorder(new EmptyBorder(4, 4, 4, 4));
+        card.add(anims, c);
+
+        JLabel idle = new JLabel("Idle: -1");
+        JLabel walk180 = new JLabel("Walk 180: -1");
+        JLabel walk = new JLabel("Walk: -1");
+        JLabel walkRight = new JLabel("Walk Right: -1");
+        JLabel walkLeft = new JLabel("Walk Left: -1");
+        JLabel idleRight = new JLabel("Idle Right: -1");
+        JLabel idleLeft = new JLabel("Idle Left: -1");
+        JLabel run = new JLabel("Run: -1");
+        JLabel special = new JLabel("Special: -1");
+        JLabel stab = new JLabel("Stab: -1");
+        JLabel slash = new JLabel("Slash: -1");
+        JLabel crush = new JLabel("Crush: -1");
+        JLabel slash2 = new JLabel("Slash2: -1");
+        JLabel crush2 = new JLabel("Crush2: -1");
+        JLabel defend = new JLabel("Defend: -1");
+        anims.add(idle);
+        anims.add(walk180);
+        anims.add(new JLabel(""));
+        anims.add(walk);
+        anims.add(walkRight);
+        anims.add(idleRight);
+        anims.add(run);
+        anims.add(walkLeft);
+        anims.add(idleLeft);
+        anims.add(special);
+        anims.add(defend);
+        anims.add(new JLabel(""));
+        anims.add(stab);
+        anims.add(slash);
+        anims.add(crush);
+        anims.add(new JLabel(""));
+        anims.add(slash2);
+        anims.add(crush2);
+
+        itemTable.getSelectionModel().addListSelectionListener(e ->
+        {
+            Object o = itemTable.getSelectedObject();
+            if (o instanceof ItemData)
+            {
+                ItemData data = (ItemData) o;
+                int itemId = data.getId();
+
+                boolean foundMatch = false;
+
+                List<WeaponAnimData> weaponAnimSets = dataFinder.getWeaponAnimData();
+                for (WeaponAnimData weaponAnim : weaponAnimSets)
+                {
+                    int[] ids = weaponAnim.getId();
+                    if (ids == null || ids.length == 0)
+                    {
+                        continue;
+                    }
+
+                    for (int i : ids)
+                    {
+                        if (i == itemId)
+                        {
+                            idle.setText("Idle: " + WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE));
+                            walk.setText("Walk: " + WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.WALK));
+                            run.setText("Run: " + WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.RUN));
+                            walk180.setText("Walk 180: " + WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_180));
+                            walkRight.setText("Walk Right: " + WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_RIGHT));
+                            walkLeft.setText("Walk Left: " + WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_LEFT));
+                            idleRight.setText("Idle Right: " + WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_RIGHT));
+                            idleLeft.setText("Idle Left: " + WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_LEFT));
+                            special.setText("Special: " + WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.SPECIAL));
+                            stab.setText("Stab: " + WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.STAB));
+                            slash.setText("Slash: " + WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.SLASH));
+                            crush.setText("Crush: " + WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.CRUSH));
+                            slash2.setText("Slash2: " + WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.SLASH_2));
+                            crush2.setText("Crush2: " + WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.CRUSH_2));
+                            defend.setText("Defend: " + WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.DEFEND));
+                            foundMatch = true;
+                            break;
+                        }
+                    }
+
+                    if (foundMatch)
+                    {
+                        break;
+                    }
+                }
+
+                if (!foundMatch)
+                {
+                    idle.setText("Idle: " + -1);
+                    walk.setText("Walk: " + -1);
+                    run.setText("Run: " + -1);
+                    walk180.setText("Walk 180: " + -1);
+                    walkRight.setText("Walk Right: " + -1);
+                    walkLeft.setText("Walk Left: " + -1);
+                    idleRight.setText("Idle Right: " + -1);
+                    idleLeft.setText("Idle Left: " + -1);
+                    special.setText("Special: " + -1);
+                    stab.setText("Stab: " + -1);
+                    slash.setText("Slash: " + -1);
+                    crush.setText("Crush: " + -1);
+                    slash2.setText("Slash2: " + -1);
+                    crush2.setText("Crush2: " + -1);
+                    defend.setText("Defend: " + -1);
+                }
+            }
+        });
     }
 
     private void setupSpotAnimCard(JPanel card)

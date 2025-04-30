@@ -4,7 +4,10 @@ import com.creatorskit.CKObject;
 import com.creatorskit.Character;
 import com.creatorskit.models.CustomModel;
 import com.creatorskit.models.DataFinder;
+import com.creatorskit.models.datatypes.ItemData;
 import com.creatorskit.models.datatypes.NPCData;
+import com.creatorskit.models.datatypes.PlayerAnimationType;
+import com.creatorskit.models.datatypes.WeaponAnimData;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.orientation.OrientationGoal;
 import com.creatorskit.swing.searchabletable.JFilterableTable;
@@ -47,11 +50,12 @@ public class AttributePanel extends JPanel
 
     private final GridBagConstraints c = new GridBagConstraints();
     private final JPanel cardPanel = new JPanel();
-    private final JLabel objectLabel = new JLabel("Pick an Object");
+    private final JLabel objectLabel = new JLabel("[No Object Selected]");
     private final JLabel cardLabel = new JLabel("");
     private final JButton keyFramed = new JButton();
 
     private final JFilterableTable npcTable = new JFilterableTable("NPCs");
+    private final JFilterableTable itemTable = new JFilterableTable("Items");
 
     public static final String MOVE_CARD = "Movement";
     public static final String ANIM_CARD = "Animation";
@@ -67,6 +71,8 @@ public class AttributePanel extends JPanel
     public static final String HITSPLAT_2_CARD = "Hitsplat 2";
     public static final String HITSPLAT_3_CARD = "Hitsplat 3";
     public static final String HITSPLAT_4_CARD = "Hitsplat 4";
+
+    private final String NO_OBJECT_SELECTED = "[No Object Selected]";
 
     private KeyFrameType hoveredKeyFrameType;
     private Component hoveredComponent;
@@ -101,7 +107,7 @@ public class AttributePanel extends JPanel
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
         objectLabel.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32));
-        objectLabel.setForeground(ColorScheme.BRAND_ORANGE);
+        objectLabel.setForeground(Color.WHITE);
         objectLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
         cardPanel.setLayout(new CardLayout());
@@ -452,9 +458,9 @@ public class AttributePanel extends JPanel
         JLabel help = new JLabel(new ImageIcon(HELP));
         help.setHorizontalAlignment(SwingConstants.LEFT);
         help.setBorder(new EmptyBorder(0, 4, 0, 4));
-        help.setToolTipText("<html>Movement Animations dynamically update your Object based on its current movement trajectory" +
+        help.setToolTipText("<html>Pose Animations dynamically update your Object based on its current movement trajectory" +
                 "<br>For example: an Object that isn't moving will use the given Idle animation; an Object taking a 90 degree right turn will use Walk Right animation." +
-                "<br>Active Animations will instead override the current Movement Animation, playing regardless of the Object's movement trajectory</html>");
+                "<br>Active Animations will instead override the current Pose Animation, playing regardless of the Object's movement trajectory</html>");
         generalTitlePanel.add(help);
 
         c.gridwidth = 1;
@@ -475,6 +481,7 @@ public class AttributePanel extends JPanel
         c.gridx = 2;
         c.gridy = 1;
         JButton randomize = new JButton("Random");
+        randomize.setToolTipText("Sets a random starting frame between 0 to the maximum number of frames for the animation that is currently playing");
         card.add(randomize, c);
 
         /*
@@ -532,7 +539,7 @@ public class AttributePanel extends JPanel
         c.gridwidth = 4;
         c.gridx = 0;
         c.gridy = 5;
-        JLabel smartTitle = new JLabel("Movement Animations");
+        JLabel smartTitle = new JLabel("Pose Animations");
         smartTitle.setFont(FontManager.getRunescapeBoldFont());
         card.add(smartTitle, c);
 
@@ -641,24 +648,24 @@ public class AttributePanel extends JPanel
         idleLeft.setPreferredSize(spinnerSize);
         card.add(idleLeft, c);
 
-        c.gridwidth = 2;
+        c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 11;
-        JLabel searcherLabel = new JLabel("NPC Animation Presets: ");
-        searcherLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(searcherLabel, c);
+        JLabel npcSearcherLabel = new JLabel("NPC Presets: ");
+        npcSearcherLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(npcSearcherLabel, c);
 
-        c.gridwidth = 4;
-        c.gridx = 2;
+        c.gridwidth = 3;
+        c.gridx = 1;
         c.gridy = 11;
-        JTextField field = new JTextField("");
-        card.add(field, c);
+        JTextField npcField = new JTextField("");
+        card.add(npcField, c);
 
-        JPopupMenu popup = new JPopupMenu("NPCs");
-        JScrollPane scrollPane = new JScrollPane(npcTable);
-        popup.add(scrollPane);
+        JPopupMenu npcPopup = new JPopupMenu("NPCs");
+        JScrollPane npcScrollPane = new JScrollPane(npcTable);
+        npcPopup.add(npcScrollPane);
 
-        KeyListener keyListener = new KeyListener() {
+        KeyListener npcListener = new KeyListener() {
             @Override
             public void keyTyped(KeyEvent e) {
 
@@ -672,15 +679,15 @@ public class AttributePanel extends JPanel
             @Override
             public void keyReleased(KeyEvent e)
             {
-                String text = field.getText();
+                String text = npcField.getText();
                 npcTable.searchAndListEntries(text);
-                popup.setVisible(true);
-                popup.setLocation(MouseInfo.getPointerInfo().getLocation());
+                npcPopup.setVisible(true);
+                npcPopup.setLocation(MouseInfo.getPointerInfo().getLocation());
             }
         };
-        field.addKeyListener(keyListener);
+        npcField.addKeyListener(npcListener);
 
-        field.addFocusListener(new FocusListener()
+        npcField.addFocusListener(new FocusListener()
         {
             @Override
             public void focusGained(FocusEvent e)
@@ -691,7 +698,7 @@ public class AttributePanel extends JPanel
             @Override
             public void focusLost(FocusEvent e)
             {
-                popup.setVisible(false);
+                npcPopup.setVisible(false);
             }
         });
 
@@ -717,7 +724,7 @@ public class AttributePanel extends JPanel
                         idleLeft.setValue(data.getIdleRotateLeftAnimation());
                     }
 
-                    popup.setVisible(false);
+                    npcPopup.setVisible(false);
                 }
             }
         });
@@ -739,26 +746,140 @@ public class AttributePanel extends JPanel
         }
 
         c.gridwidth = 1;
-        c.gridx = 6;
-        c.gridy = 11;
-        JButton searchApply = new JButton("Apply");
-        searchApply.addActionListener(e ->
-        {
-            Object o = npcTable.getSelectedObject();
-            if (o instanceof NPCData)
+        c.gridx = 0;
+        c.gridy = 12;
+        JLabel itemSearcherLabel = new JLabel("Weapon Presets: ");
+        itemSearcherLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(itemSearcherLabel, c);
+
+        c.gridwidth = 3;
+        c.gridx = 1;
+        c.gridy = 12;
+        JTextField itemField = new JTextField("");
+        card.add(itemField, c);
+
+        JPopupMenu itemPopup = new JPopupMenu("Items");
+        JScrollPane itemScrollPane = new JScrollPane(itemTable);
+        itemPopup.add(itemScrollPane);
+
+        KeyListener itemListener = new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e)
             {
-                NPCData data = (NPCData) o;
-                idle.setValue(data.getStandingAnimation());
-                walk.setValue(data.getWalkingAnimation());
-                run.setValue(data.getRunAnimation());
-                walk180.setValue(data.getRotate180Animation());
-                walkRight.setValue(data.getRotateRightAnimation());
-                walkLeft.setValue(data.getRotateLeftAnimation());
-                idleRight.setValue(data.getIdleRotateRightAnimation());
-                idleLeft.setValue(data.getIdleRotateLeftAnimation());
+                String text = itemField.getText();
+                itemTable.searchAndListEntries(text);
+                itemPopup.setVisible(true);
+                itemPopup.setLocation(MouseInfo.getPointerInfo().getLocation());
+            }
+        };
+        itemField.addKeyListener(itemListener);
+
+        itemField.addFocusListener(new FocusListener()
+        {
+            @Override
+            public void focusGained(FocusEvent e)
+            {
+
+            }
+
+            @Override
+            public void focusLost(FocusEvent e)
+            {
+                itemPopup.setVisible(false);
             }
         });
-        card.add(searchApply, c);
+
+        itemTable.addMouseListener(new MouseAdapter()
+        {
+            @Override
+            public void mouseClicked(MouseEvent e)
+            {
+                super.mouseClicked(e);
+                if (e.getClickCount() == 2 && e.getButton() == MouseEvent.BUTTON1)
+                {
+                    Object o = itemTable.getSelectedObject();
+                    if (o instanceof ItemData)
+                    {
+                        ItemData data = (ItemData) o;
+                        int itemId = data.getId();
+
+                        boolean foundMatch = false;
+
+                        List<WeaponAnimData> weaponAnimSets = dataFinder.getWeaponAnimData();
+                        for (WeaponAnimData weaponAnim : weaponAnimSets)
+                        {
+                            int[] ids = weaponAnim.getId();
+                            if (ids == null || ids.length == 0)
+                            {
+                                continue;
+                            }
+
+                            for (int i : ids)
+                            {
+                                if (i == itemId)
+                                {
+                                    idle.setValue(WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE));
+                                    walk.setValue(WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.WALK));
+                                    run.setValue(WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.RUN));
+                                    walk180.setValue(WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_180));
+                                    walkRight.setValue(WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_RIGHT));
+                                    walkLeft.setValue(WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_LEFT));
+                                    idleRight.setValue(WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_RIGHT));
+                                    idleLeft.setValue(WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_LEFT));
+                                    foundMatch = true;
+                                    break;
+                                }
+                            }
+
+                            if (foundMatch)
+                            {
+                                break;
+                            }
+                        }
+
+                        if (!foundMatch)
+                        {
+                            idle.setValue(-1);
+                            walk.setValue(-1);
+                            run.setValue(-1);
+                            walk180.setValue(-1);
+                            walkRight.setValue(-1);
+                            walkLeft.setValue(-1);
+                            idleRight.setValue(-1);
+                            idleLeft.setValue(-1);
+                        }
+                    }
+
+                    itemPopup.setVisible(false);
+                }
+            }
+        });
+
+        if (dataFinder.isDataLoaded(DataFinder.DataType.ITEM))
+        {
+            List<ItemData> dataList = dataFinder.getItemData();
+            List<Object> list = new ArrayList<>(dataList);
+            itemTable.initialize(list);
+        }
+        else
+        {
+            dataFinder.addLoadCallback(DataFinder.DataType.ITEM, () ->
+            {
+                List<ItemData> dataList = dataFinder.getItemData();
+                List<Object> list = new ArrayList<>(dataList);
+                itemTable.initialize(list);
+            });
+        }
 
         NPCData player = new NPCData(
                 -1,
@@ -778,10 +899,10 @@ public class AttributePanel extends JPanel
                 new int[0],
                 new int[0]);
 
-        c.gridwidth = 1;
-        c.gridx = 6;
+        c.gridwidth = 2;
+        c.gridx = 4;
         c.gridy = 12;
-        JButton addPlayer = new JButton("Player");
+        JButton addPlayer = new JButton("Unarmed");
         addPlayer.addActionListener(e ->
         {
             idle.setValue(player.getStandingAnimation());
@@ -797,14 +918,35 @@ public class AttributePanel extends JPanel
 
         randomize.addActionListener(e ->
         {
-            int animId = (int) manual.getValue();
-            if (animId == -1)
+            Character character = timeSheetPanel.getSelectedCharacter();
+            if (character == null)
             {
                 return;
             }
 
+            CKObject ckObject = character.getCkObject();
+
             clientThread.invokeLater(() ->
             {
+                //Animation[] animations = ckObject.getAnimations();
+                int animId;
+                Animation activeAnim = ckObject.getAnimation();
+                Animation poseAnim = ckObject.getAnimation();
+
+                if (activeAnim == null || activeAnim.getId() == -1)
+                {
+                    if (poseAnim == null || poseAnim.getId() == -1)
+                    {
+                        return;
+                    }
+
+                    animId = poseAnim.getId();
+                }
+                else
+                {
+                    animId = activeAnim.getId();
+                }
+
                 Animation animation = client.loadAnimation(animId);
                 if (animation == null)
                 {
@@ -1414,31 +1556,43 @@ public class AttributePanel extends JPanel
         c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 1;
-        JLabel spotAnimLabel = new JLabel("SpotAnim: ");
-        spotAnimLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(spotAnimLabel, c);
+        JLabel idLabel = new JLabel("SpotAnim: ");
+        idLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(idLabel, c);
 
         c.gridwidth = 1;
         c.gridx = 1;
         c.gridy = 1;
-        JSpinner spotAnim1 = spAttributes.getSpotAnimId();
-        spotAnim1.setValue(-1);
-        card.add(spotAnim1, c);
+        JSpinner id = spAttributes.getSpotAnimId();
+        id.setValue(-1);
+        card.add(id, c);
 
         c.gridwidth = 1;
-        c.gridx = 2;
-        c.gridy = 1;
+        c.gridx = 0;
+        c.gridy = 2;
         JLabel loop1Label = new JLabel("Loop: ");
         loop1Label.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(loop1Label, c);
 
-        c.gridx = 3;
-        c.gridy = 1;
+        c.gridx = 1;
+        c.gridy = 2;
         JComboBox<Toggle> loop = spAttributes.getLoop();
         loop.setFocusable(false);
         loop.addItem(Toggle.DISABLE);
         loop.addItem(Toggle.ENABLE);
         card.add(loop, c);
+
+        c.gridx = 0;
+        c.gridy = 3;
+        JLabel heightLabel = new JLabel("Height");
+        heightLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(heightLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 3;
+        JSpinner height = spAttributes.getHeight();
+        height.setModel(new SpinnerNumberModel(92, 0, 9999, 1));
+        card.add(height, c);
 
         c.gridwidth = 1;
         c.gridheight = 1;
@@ -1656,12 +1810,14 @@ public class AttributePanel extends JPanel
 
         if (character == null)
         {
-            objectLabel.setText(" ");
+            objectLabel.setForeground(Color.WHITE);
+            objectLabel.setText(NO_OBJECT_SELECTED);
             setKeyFramedIcon(false);
             setAttributesEmpty();
             return;
         }
 
+        objectLabel.setForeground(ColorScheme.BRAND_ORANGE);
         objectLabel.setText(character.getName());
         KeyFrame keyFrame = character.findKeyFrame(selectedKeyFramePage, tick);
         setKeyFramedIcon(keyFrame != null);
