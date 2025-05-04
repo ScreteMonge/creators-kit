@@ -1023,6 +1023,26 @@ public class TimeSheetPanel extends JPanel
             }
         });
 
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK), "VK_S");
+        actionMap.put("VK_S", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                plugin.getCreatorsPanel().quickSaveToFile();
+            }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_DOWN_MASK), "VK_O");
+        actionMap.put("VK_O", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                plugin.getCreatorsPanel().openLoadSetupDialog();
+            }
+        });
+
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_C, InputEvent.CTRL_DOWN_MASK), "VK_C");
         actionMap.put("VK_C", new AbstractAction()
         {

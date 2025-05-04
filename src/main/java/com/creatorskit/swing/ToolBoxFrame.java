@@ -6,6 +6,11 @@ import com.creatorskit.programming.Programmer;
 import com.creatorskit.swing.manager.ManagerPanel;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
+import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameAction;
+import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameCharacterAction;
+import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameCharacterActionType;
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
@@ -15,14 +20,14 @@ import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.LinkBrowser;
+import org.apache.commons.lang3.ArrayUtils;
 
 import javax.inject.Inject;
 import javax.swing.*;
 import javax.swing.border.MatteBorder;
 import javax.swing.tree.DefaultMutableTreeNode;
 import java.awt.*;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
+import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.net.URI;
 
@@ -215,7 +220,11 @@ public class ToolBoxFrame extends JFrame
         JMenu file = new JMenu("File");
         jMenuBar.add(file);
 
-        JMenuItem saveAs = new JMenuItem("Save Setup");
+        JMenuItem save = new JMenuItem("Save Setup");
+        save.addActionListener(e -> plugin.getCreatorsPanel().quickSaveToFile());
+        file.add(save);
+
+        JMenuItem saveAs = new JMenuItem("Save Setup As...");
         saveAs.addActionListener(e -> plugin.getCreatorsPanel().openSaveDialog());
         file.add(saveAs);
 

@@ -16,9 +16,7 @@ import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseWheelEvent;
-import java.awt.event.MouseWheelListener;
+import java.awt.event.*;
 import java.util.ArrayList;
 
 @Slf4j
@@ -143,12 +141,35 @@ public class ManagerPanel extends JPanel
         this.objectHolder.setLayout(new GridLayout(0, 5, 4, 4));
         objectScrollPane.setViewportView(viewport);
 
+        setKeyBindings();
+
         repaint();
         revalidate();
     }
 
-    public Character[] getShownCharacters()
+    private void setKeyBindings()
     {
-        return managerTree.getShownCharacters();
+        ActionMap actionMap = getActionMap();
+        InputMap inputMap = getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK), "VK_S");
+        actionMap.put("VK_S", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                plugin.getCreatorsPanel().quickSaveToFile();
+            }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_DOWN_MASK), "VK_O");
+        actionMap.put("VK_O", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                plugin.getCreatorsPanel().openLoadSetupDialog();
+            }
+        });
     }
 }

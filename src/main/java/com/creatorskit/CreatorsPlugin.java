@@ -204,6 +204,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.registerKeyListener(skipSubForwardListener);
 		keyManager.registerKeyListener(skipBackwardListener);
 		keyManager.registerKeyListener(skipSubBackwardListener);
+		keyManager.registerKeyListener(saveListener);
+		keyManager.registerKeyListener(openListener);
 		mouseManager.registerMouseWheelListener(this::mouseWheelMoved);
 		mouseManager.registerMouseListener(this);
 
@@ -311,6 +313,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.unregisterKeyListener(skipSubForwardListener);
 		keyManager.unregisterKeyListener(skipBackwardListener);
 		keyManager.unregisterKeyListener(skipSubBackwardListener);
+		keyManager.unregisterKeyListener(saveListener);
+		keyManager.unregisterKeyListener(openListener);
 		mouseManager.unregisterMouseWheelListener(this::mouseWheelMoved);
 		mouseManager.unregisterMouseListener(this);
 	}
@@ -2104,6 +2108,24 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		public void hotkeyPressed()
 		{
 			creatorsPanel.getToolBox().getTimeSheetPanel().skipListener(-0.1);
+		}
+	};
+
+	private final HotkeyListener saveListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK))
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			creatorsPanel.quickSaveToFile();
+		}
+	};
+
+	private final HotkeyListener openListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_O, InputEvent.CTRL_DOWN_MASK))
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			creatorsPanel.openLoadSetupDialog();
 		}
 	};
 

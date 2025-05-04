@@ -64,8 +64,11 @@ public class CreatorsPanel extends PluginPanel
     private final JButton addObjectButton = new JButton();
     private final JPanel sidePanel = new JPanel();
     private final Random random = new Random();
+
     public static final File SETUP_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/setups");
     public static final File CREATORS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
+    public File lastFileLoaded;
+
     private final Pattern pattern = Pattern.compile("\\(\\d+\\)\\Z");
     private int npcPanels = 0;
     private ArrayList<Character> sidePanelCharacters = new ArrayList<>();
@@ -1156,6 +1159,24 @@ public class CreatorsPanel extends PluginPanel
         return new Color(r, g, b);
     }
 
+    private void updateLoadedFile(File file)
+    {
+        lastFileLoaded = file;
+        toolBox.setTitle("Creator's Kit Toolbox - " + getFileName(lastFileLoaded));
+    }
+
+    private String getFileName(File file)
+    {
+        String fileName = file.getName();
+        int lastDotIndex = fileName.lastIndexOf('.');
+        if (lastDotIndex != -1)
+        {
+            return fileName.substring(0, lastDotIndex);
+        }
+
+        return fileName;
+    }
+
     public void openSaveDialog()
     {
         File outputDir = SETUP_DIR;
@@ -1210,6 +1231,17 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
+    public void quickSaveToFile()
+    {
+        if (lastFileLoaded == null)
+        {
+            openSaveDialog();
+            return;
+        }
+
+        saveToFile(lastFileLoaded);
+    }
+
     public void saveToFile(File file)
     {
         ArrayList<CustomModel> customModels = plugin.getStoredModels();
@@ -1231,6 +1263,8 @@ public class CreatorsPanel extends PluginPanel
             String string = plugin.getGson().toJson(saveFile);
             writer.write(string);
             writer.close();
+            updateLoadedFile(file);
+            plugin.sendChatMessage("Saved successfully to: " + getFileName(file));
         }
         catch (IOException e)
         {
@@ -1473,6 +1507,7 @@ public class CreatorsPanel extends PluginPanel
 
     private void loadSetup(File file, SetupSave saveFile)
     {
+        updateLoadedFile(file);
         CustomModelComp[] comps = saveFile.getComps();
         FolderNodeSave folderNodeSave = saveFile.getMasterFolderNode();
         CustomModel[] customModels = new CustomModel[comps.length];
