@@ -35,10 +35,7 @@ import javax.swing.filechooser.FileFilter;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreeNode;
 import java.awt.*;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -201,6 +198,8 @@ public class CreatorsPanel extends PluginPanel
         sidePanel.setLayout(new GridLayout(0, 1, 4, 4));
         sidePanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         add(sidePanel, c);
+
+        setKeyBindings();
 
         c.gridwidth = 3;
         c.gridx = 0;
@@ -1874,5 +1873,31 @@ public class CreatorsPanel extends PluginPanel
         }
 
         return false;
+    }
+
+    private void setKeyBindings()
+    {
+        ActionMap actionMap = getActionMap();
+        InputMap inputMap = getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK), "VK_S");
+        actionMap.put("VK_S", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                plugin.getCreatorsPanel().quickSaveToFile();
+            }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_DOWN_MASK), "VK_O");
+        actionMap.put("VK_O", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                plugin.getCreatorsPanel().openLoadSetupDialog();
+            }
+        });
     }
 }
