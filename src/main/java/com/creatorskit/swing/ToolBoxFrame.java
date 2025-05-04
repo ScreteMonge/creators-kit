@@ -248,7 +248,7 @@ public class ToolBoxFrame extends JFrame
             programmer.pause();
             timeSheetPanel.setCurrentTime(0, false);
         });
-        reset.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, 0));
+        reset.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.CTRL_DOWN_MASK));
         timeSheet.add(reset);
 
         JMenuItem selectAll = new JMenuItem("Select All");

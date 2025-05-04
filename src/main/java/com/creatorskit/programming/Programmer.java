@@ -811,7 +811,7 @@ public class Programmer
             double percentComplete = stepsComplete - currentStep;
             double subSteps = percentComplete * TILE_LENGTH;
 
-            double angle = getOrientationDifference(start, destination);
+            double angle = Orientation.getAngleBetween(start, destination);
             int startX = start.getX();
             int startY = start.getY();
 
@@ -851,7 +851,7 @@ public class Programmer
             return new MovementComposition(false, start, OrientationAction.FREEZE, 0, 0);
         }
 
-        double angle = getOrientationDifference(previous, start);
+        double angle = Orientation.getAngleBetween(previous, start);
         return new MovementComposition(false, start, OrientationAction.SET, (int) angle, 0);
     }
 
@@ -862,7 +862,7 @@ public class Programmer
             return (int) angle;
         }
 
-        double originalAngle = getOrientationDifference(previous, start);
+        double originalAngle = Orientation.getAngleBetween(previous, start);
 
 
         int angleDifference = Orientation.subtract((int) angle, (int) originalAngle);
@@ -887,16 +887,7 @@ public class Programmer
         return Orientation.boundOrientation((int) (originalAngle - change));
     }
 
-    private double getOrientationDifference(LocalPoint firstPoint, LocalPoint secondPoint)
-    {
-        int secondX = secondPoint.getX();
-        int secondY = secondPoint.getY();
-        int firstX = firstPoint.getX();
-        int firstY = firstPoint.getY();
-        double differenceX = secondX - firstX;
-        double differenceY = secondY - firstY;
-        return Orientation.radiansToJAngle(Math.atan(differenceY / differenceX), differenceX, differenceY);
-    }
+
 
     /**
      * Gets the LocalPoint of a specific integer step. Used primarily to assess the start and end tiles of a path in order to calculate the movement between

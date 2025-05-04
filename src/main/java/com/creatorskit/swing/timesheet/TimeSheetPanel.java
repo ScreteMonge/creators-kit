@@ -1,10 +1,13 @@
 package com.creatorskit.swing.timesheet;
 
+import com.creatorskit.CKObject;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.DataFinder;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.Programmer;
+import com.creatorskit.programming.orientation.Orientation;
+import com.creatorskit.programming.orientation.OrientationGoal;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.manager.TreeScrollPane;
@@ -393,6 +396,40 @@ public class TimeSheetPanel extends JPanel
 
         KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(kf, selectedCharacter, KeyFrameCharacterActionType.ADD), new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.REMOVE)};
         addKeyFrame(selectedCharacter, kf);
+        addKeyFrameActions(kfa);
+    }
+
+    public void initializeOrientationKeyFrame(Character character, LocalPoint localPoint)
+    {
+        CKObject ckObject = character.getCkObject();
+        if (ckObject == null)
+        {
+            return;
+        }
+
+        LocalPoint lp = ckObject.getLocation();
+        if (lp == null || !lp.isInScene())
+        {
+            return;
+        }
+
+        int angle = (int) Orientation.getAngleBetween(lp, localPoint);
+
+        KeyFrame okf = new OrientationKeyFrame(
+                currentTime,
+                OrientationGoal.POINT,
+                ckObject.getOrientation(),
+                angle,
+                2,
+                -1);
+
+        KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(okf, character, KeyFrameCharacterActionType.ADD)};
+
+        KeyFrame keyFrameToReplace = addKeyFrame(character, okf);
+        if (keyFrameToReplace != null)
+        {
+            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, character, KeyFrameCharacterActionType.REMOVE));
+        }
         addKeyFrameActions(kfa);
     }
 

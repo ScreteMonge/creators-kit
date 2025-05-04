@@ -8,10 +8,7 @@ import com.creatorskit.saves.TransmogLoadOption;
 import com.creatorskit.saves.TransmogSave;
 import com.creatorskit.swing.*;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
-import com.creatorskit.swing.timesheet.keyframe.MovementKeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.SubMenuCreator;
+import com.creatorskit.swing.timesheet.keyframe.*;
 import com.google.gson.Gson;
 import com.google.inject.Provides;
 import javax.inject.Inject;
@@ -198,6 +195,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.registerKeyListener(addProgramStepListener);
 		keyManager.registerKeyListener(removeProgramStepListener);
 		keyManager.registerKeyListener(clearProgramStepListener);
+		keyManager.registerKeyListener(addOrientationListener);
 		keyManager.registerKeyListener(playPauseListener);
 		keyManager.registerKeyListener(resetTimelineListener);
 		keyManager.registerKeyListener(skipForwardListener);
@@ -307,6 +305,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.unregisterKeyListener(addProgramStepListener);
 		keyManager.unregisterKeyListener(removeProgramStepListener);
 		keyManager.unregisterKeyListener(clearProgramStepListener);
+		keyManager.unregisterKeyListener(addOrientationListener);
 		keyManager.unregisterKeyListener(playPauseListener);
 		keyManager.unregisterKeyListener(resetTimelineListener);
 		keyManager.unregisterKeyListener(skipForwardListener);
@@ -2054,6 +2053,47 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
 		keyFrame.setPath(new int[0][2]);
 		keyFrame.setCurrentStep(0);
+	}
+
+	private final HotkeyListener addOrientationListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_F, InputEvent.CTRL_DOWN_MASK)) {
+		@Override
+		public void hotkeyPressed()
+		{
+			addOrientationKeyframe();
+		}
+	};
+
+	private void addOrientationKeyframe()
+	{
+		if (selectedCharacter == null)
+		{
+			return;
+		}
+
+		WorldView worldView = client.getTopLevelWorldView();
+		if (worldView == null)
+		{
+			return;
+		}
+
+		Tile tile = worldView.getSelectedSceneTile();
+		if (tile == null)
+		{
+			return;
+		}
+
+		LocalPoint localPoint = tile.getLocalLocation();
+		if (localPoint == null || !localPoint.isInScene())
+		{
+			return;
+		}
+
+		Programmer programmer = creatorsPanel.getToolBox().getProgrammer();
+
+		TimeSheetPanel timeSheetPanel = creatorsPanel.getToolBox().getTimeSheetPanel();
+		timeSheetPanel.initializeOrientationKeyFrame(selectedCharacter, localPoint);
+		programmer.register3DChanges(selectedCharacter);
+		selectedCharacter.setVisible(true, clientThread);
 	}
 
 	private final HotkeyListener playPauseListener = new HotkeyListener(() -> config.playPauseHotkey())
