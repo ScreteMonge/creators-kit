@@ -141,35 +141,7 @@ public class ManagerPanel extends JPanel
         this.objectHolder.setLayout(new GridLayout(0, 5, 4, 4));
         objectScrollPane.setViewportView(viewport);
 
-        setKeyBindings();
-
         repaint();
         revalidate();
-    }
-
-    private void setKeyBindings()
-    {
-        ActionMap actionMap = getActionMap();
-        InputMap inputMap = getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK), "VK_S");
-        actionMap.put("VK_S", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                plugin.getCreatorsPanel().quickSaveToFile();
-            }
-        });
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_DOWN_MASK), "VK_O");
-        actionMap.put("VK_O", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                plugin.getCreatorsPanel().openLoadSetupDialog();
-            }
-        });
     }
 }

@@ -1022,135 +1022,19 @@ public class TimeSheetPanel extends JPanel
                 addKeyFrameActions(kfa);
             }
         });
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK), "VK_S");
-        actionMap.put("VK_S", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                plugin.getCreatorsPanel().quickSaveToFile();
-            }
-        });
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_DOWN_MASK), "VK_O");
-        actionMap.put("VK_O", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                plugin.getCreatorsPanel().openLoadSetupDialog();
-            }
-        });
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_C, InputEvent.CTRL_DOWN_MASK), "VK_C");
-        actionMap.put("VK_C", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                copyKeyFrames();
-            }
-        });
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_V, InputEvent.CTRL_DOWN_MASK), "VK_V");
-        actionMap.put("VK_V", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                pasteKeyFrames();
-            }
-        });
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_Z, InputEvent.CTRL_DOWN_MASK), "VK_Z");
-        actionMap.put("VK_Z", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                undo();
-            }
-        });
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_Y, InputEvent.CTRL_DOWN_MASK), "VK_Y");
-        actionMap.put("VK_Y", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                redo();
-            }
-        });
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, InputEvent.CTRL_DOWN_MASK), "VK_SPACE");
-        actionMap.put("VK_SPACE", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                toolBox.getProgrammer().togglePlay();
-            }
-        });
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.CTRL_DOWN_MASK), "VK_R");
-        actionMap.put("VK_R", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                toolBox.getProgrammer().pause();
-                toolBox.getTimeSheetPanel().setCurrentTime(0, false);
-            }
-        });
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_A, InputEvent.CTRL_DOWN_MASK), "VK_A");
-        actionMap.put("VK_A", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                if (selectedCharacter == null)
-                {
-                    return;
-                }
-
-                setSelectedKeyFrames(selectedCharacter.getAllKeyFrames());
-            }
-        });
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, InputEvent.CTRL_DOWN_MASK), "VK_RIGHT");
-        actionMap.put("VK_RIGHT", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                skipListener(1);
-            }
-        });
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, InputEvent.CTRL_DOWN_MASK), "VK_LEFT");
-        actionMap.put("VK_LEFT", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                skipListener(-1);
-            }
-        });
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "VK_DELETE");
-        actionMap.put("VK_DELETE", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                onDeleteKeyPressed();
-            }
-        });
     }
 
-    private void onDeleteKeyPressed()
+    public void onSelectAllPressed()
+    {
+        if (selectedCharacter == null)
+        {
+            return;
+        }
+
+        setSelectedKeyFrames(selectedCharacter.getAllKeyFrames());
+    }
+
+    public void onDeleteKeyPressed()
     {
         if (selectedCharacter == null)
         {
