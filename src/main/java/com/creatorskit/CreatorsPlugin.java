@@ -745,6 +745,19 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			{
 				WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
 				pathFinder.transplantSteps(character, worldView, worldPoint.getX(), worldPoint.getY());
+
+				KeyFrame kf = character.findNextKeyFrame(KeyFrameType.MOVEMENT, -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH);
+				if (kf != null)
+				{
+					MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+					int[][] step = keyFrame.getPath();
+					if (step.length != 0)
+					{
+						int[] first = step[0];
+						worldPoint = new WorldPoint(first[0], first[1], worldView.getPlane());
+					}
+				}
+
 				character.setLocationSet(true);
 				character.setNonInstancedPoint(worldPoint);
 				character.setInPOH(false);
@@ -809,8 +822,22 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			if (newLocation)
 			{
 				pathFinder.transplantSteps(character, worldView, localPoint.getSceneX(), localPoint.getSceneY());
+				LocalPoint savedPoint = localPoint;
+
+				KeyFrame kf = character.findNextKeyFrame(KeyFrameType.MOVEMENT, -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH);
+				if (kf != null)
+				{
+					MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+					int[][] step = keyFrame.getPath();
+					if (step.length != 0)
+					{
+						int[] first = step[0];
+						savedPoint = new LocalPoint(first[0], first[1], worldView);
+					}
+				}
+
 				character.setLocationSet(true);
-				character.setInstancedPoint(localPoint);
+				character.setInstancedPoint(savedPoint);
 				character.setInstancedPlane(worldView.getPlane());
 				character.setInPOH(true);
 			}

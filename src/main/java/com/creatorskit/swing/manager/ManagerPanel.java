@@ -13,6 +13,7 @@ import net.runelite.client.ui.FontManager;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 import java.awt.*;
@@ -40,8 +41,9 @@ public class ManagerPanel extends JPanel
         this.objectHolder = objectHolder;
         this.managerTree = managerTree;
 
-        setBackground(ColorScheme.DARK_GRAY_COLOR);
+        setBackground(ColorScheme.DARKER_GRAY_COLOR);
         setLayout(new BorderLayout(2, 2));
+        setBorder(new EmptyBorder(2, 2, 2, 2));
 
         c.fill = GridBagConstraints.BOTH;
         c.insets = new Insets(2, 2, 2, 2);
