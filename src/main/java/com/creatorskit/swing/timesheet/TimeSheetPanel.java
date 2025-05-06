@@ -4,9 +4,11 @@ import com.creatorskit.CKObject;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.DataFinder;
+import com.creatorskit.programming.MovementComposition;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.Programmer;
 import com.creatorskit.programming.orientation.Orientation;
+import com.creatorskit.programming.orientation.OrientationAction;
 import com.creatorskit.programming.orientation.OrientationGoal;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
@@ -22,6 +24,8 @@ import com.creatorskit.swing.timesheet.sheets.TimeSheet;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.Client;
+import net.runelite.api.Constants;
+import net.runelite.api.Tile;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
@@ -399,7 +403,63 @@ public class TimeSheetPanel extends JPanel
         addKeyFrameActions(kfa);
     }
 
-    public void initializeOrientationKeyFrame(Character character, LocalPoint localPoint)
+    public void onOrientationKeyPressed()
+    {
+        if (selectedCharacter == null)
+        {
+            return;
+        }
+
+        WorldView worldView = client.getTopLevelWorldView();
+        if (worldView == null)
+        {
+            return;
+        }
+
+        Tile tile = worldView.getSelectedSceneTile();
+        if (tile == null)
+        {
+            return;
+        }
+
+        LocalPoint localPoint = tile.getLocalLocation();
+        if (localPoint == null || !localPoint.isInScene())
+        {
+            return;
+        }
+
+        Programmer programmer = toolBox.getProgrammer();
+
+        CKObject ckObject = selectedCharacter.getCkObject();
+        if (ckObject == null)
+        {
+            return;
+        }
+
+        int startOrientation = ckObject.getOrientation();
+        KeyFrame okf = selectedCharacter.getCurrentKeyFrame(KeyFrameType.ORIENTATION);
+        if (okf == null)
+        {
+            initializeOrientationKeyFrame(selectedCharacter, localPoint, currentTime, startOrientation, OrientationGoal.POINT, 2, -1);
+        }
+        else
+        {
+            OrientationKeyFrame keyFrame = (OrientationKeyFrame) okf;
+            initializeOrientationKeyFrame(
+                    selectedCharacter,
+                    localPoint,
+                    keyFrame.getTick(),
+                    keyFrame.getStart(),
+                    keyFrame.getGoal(),
+                    keyFrame.getDuration(),
+                    keyFrame.getTurnRate());
+        }
+
+        programmer.register3DChanges(selectedCharacter);
+        selectedCharacter.setVisible(true, clientThread);
+    }
+
+    public void initializeOrientationKeyFrame(Character character, LocalPoint localPoint, double tick, int startOrientation, OrientationGoal og, double duration, int turnRate)
     {
         CKObject ckObject = character.getCkObject();
         if (ckObject == null)
@@ -416,12 +476,12 @@ public class TimeSheetPanel extends JPanel
         int angle = (int) Orientation.getAngleBetween(lp, localPoint);
 
         KeyFrame okf = new OrientationKeyFrame(
-                currentTime,
-                OrientationGoal.POINT,
-                ckObject.getOrientation(),
+                tick,
+                og,
+                startOrientation,
                 angle,
-                2,
-                -1);
+                duration,
+                turnRate);
 
         KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(okf, character, KeyFrameCharacterActionType.ADD)};
 

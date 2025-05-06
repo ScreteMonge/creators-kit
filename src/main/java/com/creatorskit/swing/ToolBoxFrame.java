@@ -317,13 +317,13 @@ public class ToolBoxFrame extends JFrame
         redo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Y, InputEvent.CTRL_DOWN_MASK));
         timeSheet.add(redo);
 
-        JMenuItem skipRight = new JMenuItem("Skip Forward");
-        skipRight.addActionListener(e -> timeSheetPanel.skipListener(1));
+        JMenuItem skipRight = new JMenuItem("Next KeyFrame");
+        skipRight.addActionListener(e -> timeSheetPanel.onAttributeSkipForward());
         skipRight.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, InputEvent.CTRL_DOWN_MASK));
         timeSheet.add(skipRight);
 
-        JMenuItem skipLeft = new JMenuItem("Skip Backward");
-        skipLeft.addActionListener(e -> timeSheetPanel.skipListener(-1));
+        JMenuItem skipLeft = new JMenuItem("Last KeyFrame");
+        skipLeft.addActionListener(e -> timeSheetPanel.onAttributeSkipPrevious());
         skipLeft.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, InputEvent.CTRL_DOWN_MASK));
         timeSheet.add(skipLeft);
 

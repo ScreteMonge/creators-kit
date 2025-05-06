@@ -3,7 +3,7 @@ package com.creatorskit;
 import com.creatorskit.models.*;
 import com.creatorskit.models.exporters.ModelExporter;
 import com.creatorskit.programming.*;
-import com.creatorskit.programming.orientation.Orientation;
+import com.creatorskit.programming.orientation.OrientationGoal;
 import com.creatorskit.saves.TransmogLoadOption;
 import com.creatorskit.saves.TransmogSave;
 import com.creatorskit.swing.*;
@@ -2086,42 +2086,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			addOrientationKeyframe();
+			creatorsPanel.getToolBox().getTimeSheetPanel().onOrientationKeyPressed();
 		}
 	};
-
-	private void addOrientationKeyframe()
-	{
-		if (selectedCharacter == null)
-		{
-			return;
-		}
-
-		WorldView worldView = client.getTopLevelWorldView();
-		if (worldView == null)
-		{
-			return;
-		}
-
-		Tile tile = worldView.getSelectedSceneTile();
-		if (tile == null)
-		{
-			return;
-		}
-
-		LocalPoint localPoint = tile.getLocalLocation();
-		if (localPoint == null || !localPoint.isInScene())
-		{
-			return;
-		}
-
-		Programmer programmer = creatorsPanel.getToolBox().getProgrammer();
-
-		TimeSheetPanel timeSheetPanel = creatorsPanel.getToolBox().getTimeSheetPanel();
-		timeSheetPanel.initializeOrientationKeyFrame(selectedCharacter, localPoint);
-		programmer.register3DChanges(selectedCharacter);
-		selectedCharacter.setVisible(true, clientThread);
-	}
 
 	private final HotkeyListener playPauseListener = new HotkeyListener(() -> config.playPauseHotkey())
 	{
@@ -2147,7 +2114,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			creatorsPanel.getToolBox().getTimeSheetPanel().skipListener(1);
+			creatorsPanel.getToolBox().getTimeSheetPanel().onAttributeSkipForward();
 		}
 	};
 
@@ -2156,7 +2123,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			creatorsPanel.getToolBox().getTimeSheetPanel().skipListener(-1);
+			creatorsPanel.getToolBox().getTimeSheetPanel().onAttributeSkipPrevious();
 		}
 	};
 

@@ -33,7 +33,7 @@ public class Programmer
     private final int GOLDEN_CHIN = 29757;
     private final int TILE_LENGTH = 128;
     private final int TILE_DIAGONAL = 181; //Math.sqrt(Math.pow(128, 2) + Math.pow(128, 2))
-    private final double TURN_RATE = 256 / 7.5; //In JUnits/clientTick; Derived by examining turn rates in game
+    public static final double TURN_RATE = 256 / 7.5; //In JUnits/clientTick; Derived by examining turn rates in game
 
     @Getter
     @Setter
@@ -456,7 +456,7 @@ public class Programmer
      * @param keyFrame the keyframe to examine
      * @return the appropriate orientation for the given keyframe
      */
-    private int getOrientationStatic(OrientationKeyFrame keyFrame)
+    public int getOrientationStatic(OrientationKeyFrame keyFrame)
     {
         double ticksPassed = timeSheetPanel.getCurrentTime() - keyFrame.getTick();
         double duration = keyFrame.getDuration();
@@ -1326,7 +1326,7 @@ public class Programmer
         character.setOrientation(orientation);
     }
 
-    private KeyFrameType findLastOrientation(Character character)
+    public KeyFrameType findLastOrientation(Character character)
     {
         KeyFrame movement = character.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
         KeyFrame orientation = character.getCurrentKeyFrame(KeyFrameType.ORIENTATION);
