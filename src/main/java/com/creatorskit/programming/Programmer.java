@@ -159,7 +159,7 @@ public class Programmer
             {
                 setAnimation(character, false, 0, 0);
                 setOrientation(character, currentClientTick);
-                plugin.setLocation(character, false, ActiveOption.UNCHANGED, LocationOption.TO_SAVED_LOCATION);
+                plugin.setLocation(character, false, false, ActiveOption.UNCHANGED, LocationOption.TO_SAVED_LOCATION);
                 return;
             }
 

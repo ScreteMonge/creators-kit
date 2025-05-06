@@ -358,7 +358,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			for (int i = 0; i < characters.size(); i++)
 			{
 				Character character = characters.get(i);
-				setLocation(character, false, character.isActive() ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, LocationOption.TO_CURRENT_TICK);
+				setLocation(character, false, false, character.isActive() ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, LocationOption.TO_CURRENT_TICK);
 			}
 		}
 	}
@@ -570,7 +570,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			for (int i = 0; i < characters.size(); i++)
 			{
 				Character character = characters.get(i);
-				setLocation(character, false, character.isActive() ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, LocationOption.TO_CURRENT_TICK);
+				setLocation(character, false, false, character.isActive() ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, LocationOption.TO_CURRENT_TICK);
 			}
 
 			if (config.enableTransmog() && transmog != null)
@@ -618,7 +618,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 						.setOption(ColorUtil.prependColorTag("Relocate", Color.ORANGE))
 						.setTarget(ColorUtil.colorTag(Color.GREEN) + selectedCharacter.getName())
 						.setType(MenuAction.RUNELITE)
-						.onClick(e -> setLocation(selectedCharacter, true, ActiveOption.ACTIVE, LocationOption.TO_HOVERED_TILE));
+						.onClick(e -> setLocation(selectedCharacter, false, true, ActiveOption.ACTIVE, LocationOption.TO_HOVERED_TILE));
 
 				MenuEntry me = client.getMenu().createMenuEntry(-2)
 						.setOption(ColorUtil.prependColorTag("Keyframe", Color.ORANGE))
@@ -688,7 +688,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 	}
 
-	public void setLocation(Character character, boolean newLocation, ActiveOption activeOption, LocationOption locationOption)
+	public void setLocation(Character character, boolean initialize, boolean newLocation, ActiveOption activeOption, LocationOption locationOption)
 	{
 		if (client.getGameState() != GameState.LOGGED_IN)
 		{
@@ -699,14 +699,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		if (poh)
 		{
-			setLocationPOH(character, newLocation, activeOption, locationOption);
+			setLocationPOH(character, initialize, newLocation, activeOption, locationOption);
 			return;
 		}
 
-		setLocationWorld(character, newLocation, activeOption, locationOption);
+		setLocationWorld(character, initialize, newLocation, activeOption, locationOption);
 	}
 
-	public void setLocationWorld(Character character, boolean newLocation, ActiveOption activeOption, LocationOption locationOption)
+	public void setLocationWorld(Character character, boolean initialize, boolean newLocation, ActiveOption activeOption, LocationOption locationOption)
 	{
 		clientThread.invokeLater(() ->
 		{
@@ -742,7 +742,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				return;
 			}
 
-			if (newLocation)
+			if (initialize)
+			{
+				WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
+				character.setLocationSet(true);
+				character.setNonInstancedPoint(worldPoint);
+				character.setInPOH(false);
+			}
+			else if (newLocation)
 			{
 				WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
 				pathFinder.transplantSteps(character, worldView, worldPoint.getX(), worldPoint.getY());
@@ -784,7 +791,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		});
 	}
 
-	public void setLocationPOH(Character character, boolean newLocation, ActiveOption activeOption, LocationOption locationOption)
+	public void setLocationPOH(Character character, boolean initialize, boolean newLocation, ActiveOption activeOption, LocationOption locationOption)
 	{
 		clientThread.invokeLater(() ->
 		{
@@ -820,7 +827,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				return;
 			}
 
-			if (newLocation)
+			if (initialize)
+			{
+				character.setLocationSet(true);
+				character.setInstancedPoint(localPoint);
+				character.setInstancedPlane(worldView.getPlane());
+				character.setInPOH(true);
+			}
+			else if (newLocation)
 			{
 				pathFinder.transplantSteps(character, worldView, localPoint.getSceneX(), localPoint.getSceneY());
 				LocalPoint savedPoint = localPoint;
@@ -995,7 +1009,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			setAnimationWithFrame(character, (int) character.getAnimationSpinner().getValue(), (int) character.getAnimationFrameSpinner().getValue());
 
 			LocationOption locationOption = setHoveredTile ? LocationOption.TO_HOVERED_TILE : LocationOption.TO_SAVED_LOCATION;
-			setLocation(character, true, active ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, locationOption);
+			setLocation(character, true, true, active ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, locationOption);
 
 			creatorsPanel.getToolBox().getProgrammer().updateProgram(character);
 		});
@@ -1879,7 +1893,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 				if (!selectedCharacter.isLocationSet())
 				{
-					setLocation(selectedCharacter, true, ActiveOption.ACTIVE, LocationOption.TO_PLAYER);
+					setLocation(selectedCharacter, false, true, ActiveOption.ACTIVE, LocationOption.TO_PLAYER);
 				}
 			}
 		}
@@ -1892,7 +1906,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		{
 			if (selectedCharacter != null)
 			{
-				setLocation(selectedCharacter, true, ActiveOption.ACTIVE, LocationOption.TO_HOVERED_TILE);
+				setLocation(selectedCharacter, false, true, ActiveOption.ACTIVE, LocationOption.TO_HOVERED_TILE);
 			}
 		}
 	};
