@@ -201,6 +201,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.registerKeyListener(skipSubBackwardListener);
 		keyManager.registerKeyListener(saveListener);
 		keyManager.registerKeyListener(openListener);
+		keyManager.registerKeyListener(undoListener);
+		keyManager.registerKeyListener(redoListener);
 		mouseManager.registerMouseWheelListener(this::mouseWheelMoved);
 		mouseManager.registerMouseListener(this);
 
@@ -311,6 +313,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.unregisterKeyListener(skipSubBackwardListener);
 		keyManager.unregisterKeyListener(saveListener);
 		keyManager.unregisterKeyListener(openListener);
+		keyManager.unregisterKeyListener(undoListener);
+		keyManager.unregisterKeyListener(redoListener);
 		mouseManager.unregisterMouseWheelListener(this::mouseWheelMoved);
 		mouseManager.unregisterMouseListener(this);
 	}
@@ -2119,6 +2123,24 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		public void hotkeyPressed()
 		{
 			creatorsPanel.openLoadSetupDialog();
+		}
+	};
+
+	private final HotkeyListener undoListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_Z, InputEvent.CTRL_DOWN_MASK))
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			creatorsPanel.getToolBox().getTimeSheetPanel().undo();
+		}
+	};
+
+	private final HotkeyListener redoListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_Y, InputEvent.CTRL_DOWN_MASK))
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			creatorsPanel.getToolBox().getTimeSheetPanel().redo();
 		}
 	};
 
