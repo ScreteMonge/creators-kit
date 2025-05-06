@@ -646,15 +646,14 @@ public class Programmer
             {
                 if (currentActive != ckObject.getActiveAnimation() || currentActive == null || currentActive.getId() != active)
                 {
-                    if (!ckObject.isFinished())
+                    if (!ckObject.isFinished() || !playing)
                     {
-                        if (currentActive == null || currentActive.getId() != active)
-                        {
-                            ckObject.setAnimation(AnimationType.ACTIVE, active);
-                            ckObject.setAnimationFrame(AnimationType.ACTIVE, keyFrame.getStartFrame(), false);
-                            ckObject.setLoop(keyFrame.isLoop());
-                            ckObject.setHasAnimKeyFrame(true);
-                        }
+                        Animation animation = client.loadAnimation(active);
+                        ckObject.setActiveAnimation(animation);
+                        ckObject.setAnimation(AnimationType.ACTIVE, animation);
+                        ckObject.setAnimationFrame(AnimationType.ACTIVE, keyFrame.getStartFrame(), false);
+                        ckObject.setLoop(keyFrame.isLoop());
+                        ckObject.setHasAnimKeyFrame(true);
                     }
                 }
 

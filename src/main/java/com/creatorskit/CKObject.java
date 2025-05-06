@@ -261,7 +261,7 @@ public class CKObject extends RuneLiteObjectController
         CKAnimationController ac = getController(type);
         if (ac == null)
         {
-            return;
+            setupAnimController(type, -1);
         }
 
         Animation animation = ac.getAnimation();
