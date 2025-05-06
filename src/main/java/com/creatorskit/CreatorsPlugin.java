@@ -1011,7 +1011,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			LocationOption locationOption = setHoveredTile ? LocationOption.TO_HOVERED_TILE : LocationOption.TO_SAVED_LOCATION;
 			setLocation(character, true, true, active ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, locationOption);
 
-			creatorsPanel.getToolBox().getProgrammer().updateProgram(character);
+			if (client.getGameState() == GameState.LOGGED_IN)
+			{
+				creatorsPanel.getToolBox().getProgrammer().updateProgram(character);
+			}
 		});
 	}
 
