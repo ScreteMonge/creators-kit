@@ -117,9 +117,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private PathFinder pathFinder;
 
 	@Inject
-	private MovementManager movementManager;
-
-	@Inject
 	private DataFinder dataFinder;
 
 	@Inject
@@ -1979,45 +1976,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 	private void addProgramStep()
 	{
-		if (selectedCharacter == null)
-		{
-			return;
-		}
-
-		WorldView worldView = client.getTopLevelWorldView();
-		if (worldView == null)
-		{
-			return;
-		}
-
-		Tile tile = worldView.getSelectedSceneTile();
-		if (tile == null)
-		{
-			return;
-		}
-
-		LocalPoint localPoint = tile.getLocalLocation();
-		if (localPoint == null || !localPoint.isInScene())
-		{
-			return;
-		}
-
-		Programmer programmer = creatorsPanel.getToolBox().getProgrammer();
-
-		KeyFrame kf = selectedCharacter.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
-		if (kf == null)
-		{
-			TimeSheetPanel timeSheetPanel = creatorsPanel.getToolBox().getTimeSheetPanel();
-			timeSheetPanel.initializeMovementKeyFrame(selectedCharacter, worldView, localPoint);
-			programmer.register3DChanges(selectedCharacter);
-			selectedCharacter.setVisible(true, clientThread);
-			return;
-		}
-
-		MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
-		movementManager.addProgramStep(keyFrame, worldView, localPoint);
-		programmer.register3DChanges(selectedCharacter);
-		selectedCharacter.setVisible(true, clientThread);
+		creatorsPanel.getToolBox().getTimeSheetPanel().onAddMovementKeyPressed();
 	}
 
 	private final HotkeyListener removeProgramStepListener = new HotkeyListener(() -> config.removeProgramStepHotkey())

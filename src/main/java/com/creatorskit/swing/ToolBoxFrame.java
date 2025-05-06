@@ -1,7 +1,10 @@
 package com.creatorskit.swing;
 
+import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.DataFinder;
+import com.creatorskit.programming.MovementManager;
+import com.creatorskit.programming.PathFinder;
 import com.creatorskit.programming.Programmer;
 import com.creatorskit.swing.manager.ManagerPanel;
 import com.creatorskit.swing.manager.ManagerTree;
@@ -38,6 +41,7 @@ public class ToolBoxFrame extends JFrame
     private final Client client;
     private final EventBus eventBus;
     private final CreatorsPlugin plugin;
+    private final CreatorsConfig config;
     private final ConfigManager configManager;
     private final JMenuBar jMenuBar;
     private final DataFinder dataFinder;
@@ -48,15 +52,17 @@ public class ToolBoxFrame extends JFrame
     private final TransmogPanel transmogPanel;
     private final TimeSheetPanel timeSheetPanel;
     private final Programmer programmer;
+    private final PathFinder pathFinder;
     private final JTabbedPane tabbedPane = new JTabbedPane();
     private final BufferedImage ICON = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
 
     @Inject
-    public ToolBoxFrame(Client client, EventBus eventBus, ClientThread clientThread, CreatorsPlugin plugin, ConfigManager configManager, DataFinder dataFinder, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, TransmogPanel transmogPanel)
+    public ToolBoxFrame(Client client, EventBus eventBus, ClientThread clientThread, CreatorsPlugin plugin, CreatorsConfig config, ConfigManager configManager, DataFinder dataFinder, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, TransmogPanel transmogPanel, PathFinder pathFinder)
     {
         this.client = client;
         this.clientThread = clientThread;
         this.plugin = plugin;
+        this.config = config;
         this.eventBus = eventBus;
         this.configManager = configManager;
         this.jMenuBar = new JMenuBar();
@@ -64,6 +70,7 @@ public class ToolBoxFrame extends JFrame
         this.modelOrganizer = modelOrganizer;
         this.modelAnvil = modelAnvil;
         this.transmogPanel = transmogPanel;
+        this.pathFinder = pathFinder;
 
         Folder rootFolder = new Folder("Master Folder", FolderType.MASTER, null, null);
         DefaultMutableTreeNode managerRootNode = new DefaultMutableTreeNode(rootFolder);
@@ -78,9 +85,10 @@ public class ToolBoxFrame extends JFrame
 
         JPanel objectHolder = new JPanel();
         ManagerTree managerTree = new ManagerTree(this, plugin, objectHolder, managerRootNode, managerSideNode, managerManagerNode);
+        MovementManager movementManager = new MovementManager(client, config, pathFinder);
 
         setupMenuBar();
-        this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, clientThread, dataFinder, managerTree);
+        this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, clientThread, dataFinder, managerTree, movementManager);
         this.managerPanel = new ManagerPanel(client, plugin, objectHolder, managerTree);
         this.cacheSearcher = new CacheSearcherTab(plugin, clientThread, dataFinder);
         this.programmer = new Programmer(client, clientThread, plugin, timeSheetPanel, dataFinder);

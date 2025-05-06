@@ -62,6 +62,7 @@ public class TimeSheetPanel extends JPanel
     private AttributeSheet attributeSheet;
     private TreeScrollPane treeScrollPane;
     private final ManagerTree managerTree;
+    private MovementManager movementManager;
     private final JComboBox<KeyFrameType> summaryComboBox = new JComboBox<>();
     private JScrollBar scrollBar;
     private AttributePanel attributePanel;
@@ -102,7 +103,7 @@ public class TimeSheetPanel extends JPanel
     private int undoStack = 0;
 
     @Inject
-    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree)
+    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, MovementManager movementManager)
     {
         this.client = client;
         this.toolBox = toolBox;
@@ -110,6 +111,7 @@ public class TimeSheetPanel extends JPanel
         this.clientThread = clientThread;
         this.dataFinder = dataFinder;
         this.managerTree = managerTree;
+        this.movementManager = movementManager;
 
         setLayout(new GridBagLayout());
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
@@ -493,12 +495,37 @@ public class TimeSheetPanel extends JPanel
         addKeyFrameActions(kfa);
     }
 
-    public void initializeMovementKeyFrame(Character character, WorldView worldView, LocalPoint localPoint)
+    public void onAddMovementKeyPressed()
     {
+        if (selectedCharacter == null)
+        {
+            return;
+        }
+
+        WorldView worldView = client.getTopLevelWorldView();
+        if (worldView == null)
+        {
+            return;
+        }
+
+        Tile tile = worldView.getSelectedSceneTile();
+        if (tile == null)
+        {
+            return;
+        }
+
+        LocalPoint localPoint = tile.getLocalLocation();
+        if (localPoint == null || !localPoint.isInScene())
+        {
+            return;
+        }
+
+        Programmer programmer = toolBox.getProgrammer();
+
         boolean poh = MovementManager.useLocalLocations(worldView);
 
-        KeyFrame keyFrame = character.findKeyFrame(KeyFrameType.MOVEMENT, currentTime);
-        if (keyFrame == null)
+        KeyFrame kf = selectedCharacter.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
+        if (kf == null)
         {
             int x = localPoint.getSceneX();
             int y = localPoint.getSceneY();
@@ -509,30 +536,40 @@ public class TimeSheetPanel extends JPanel
                 y = wp.getY();
             }
 
-            KeyFrame kf = new MovementKeyFrame(
-                    currentTime,
-                    worldView.getPlane(),
-                    poh,
-                    new int[][]{new int[]{x, y}},
-                    0,
-                    0,
-                    false,
-                    1,
-                    -1);
-
-            KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(kf, character, KeyFrameCharacterActionType.ADD)};
-            KeyFrame keyFrameToReplace = addKeyFrame(character, kf);
-
-            if (keyFrameToReplace != null)
-            {
-                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, character, KeyFrameCharacterActionType.REMOVE));
-            }
-            addKeyFrameActions(kfa);
-            return;
+            int[][] path = new int[][]{new int[]{x, y}};
+            initializeMovementKeyFrame(selectedCharacter, currentTime, worldView.getPlane(), poh, path, false, 1, -1);
+        }
+        else
+        {
+            MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+            int[][] path = movementManager.addProgramStep(keyFrame, worldView, localPoint);
+            initializeMovementKeyFrame(selectedCharacter, keyFrame.getTick(), worldView.getPlane(), poh, path, keyFrame.isLoop(), keyFrame.getSpeed(), keyFrame.getTurnRate());
         }
 
-        removeKeyFrame(character, keyFrame);
-        KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(keyFrame, character, KeyFrameCharacterActionType.REMOVE)};
+        programmer.register3DChanges(selectedCharacter);
+        selectedCharacter.setVisible(true, clientThread);
+    }
+
+    public void initializeMovementKeyFrame(Character character, double tick, int plane, boolean poh, int[][] path, boolean loop, double speed, int turnRate)
+    {
+        KeyFrame kf = new MovementKeyFrame(
+                tick,
+                plane,
+                poh,
+                path,
+                0,
+                0,
+                loop,
+                speed,
+                turnRate);
+
+        KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(kf, character, KeyFrameCharacterActionType.ADD)};
+        KeyFrame keyFrameToReplace = addKeyFrame(character, kf);
+
+        if (keyFrameToReplace != null)
+        {
+            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, character, KeyFrameCharacterActionType.REMOVE));
+        }
         addKeyFrameActions(kfa);
     }
 
