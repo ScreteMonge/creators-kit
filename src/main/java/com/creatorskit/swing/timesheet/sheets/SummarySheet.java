@@ -220,6 +220,10 @@ public class SummarySheet extends TimeSheet
                     OrientationKeyFrame okf = (OrientationKeyFrame) keyFrame;
                     drawTail(g, e, keyFrames, okf.getDuration(), zoomFactor, okf.getTick(), x, y, xStringOffset, stringHeight);
                     break;
+                case TEXT:
+                    TextKeyFrame tkf = (TextKeyFrame) keyFrame;
+                    drawTail(g, e, keyFrames, tkf.getDuration(), zoomFactor, tkf.getTick(), x, y, xStringOffset, stringHeight);
+                    break;
                 case HEALTH:
                     HealthKeyFrame hkf = (HealthKeyFrame) keyFrame;
                     drawTail(g, e, keyFrames, hkf.getDuration(), zoomFactor, hkf.getTick(), x, y, xStringOffset, stringHeight);

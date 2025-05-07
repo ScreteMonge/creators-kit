@@ -136,6 +136,10 @@ public class AttributeSheet extends TimeSheet
                         OrientationKeyFrame okf = (OrientationKeyFrame) keyFrame;
                         drawTail(g, e, keyFrames, okf.getDuration(), zoomFactor, okf.getTick(), x, y, imageHeight);
                         break;
+                    case TEXT:
+                        TextKeyFrame tkf = (TextKeyFrame) keyFrame;
+                        drawTail(g, e, keyFrames, tkf.getDuration(), zoomFactor, tkf.getTick(), x, y, imageHeight);
+                        break;
                     case HEALTH:
                         HealthKeyFrame hkf = (HealthKeyFrame) keyFrame;
                         drawTail(g, e, keyFrames, hkf.getDuration(), zoomFactor, hkf.getTick(), x, y, imageHeight);
@@ -223,39 +227,68 @@ public class AttributeSheet extends TimeSheet
             change = round(getCurrentTime() - keyFrame.getTick());
         }
 
+        int imageHeight = image.getHeight();
 
         for (int e = 0; e < selectedKeyFrames.length; e++)
         {
-            KeyFrame frame = selectedKeyFrames[e];
-            int i = KeyFrameType.getIndex(frame.getKeyFrameType());
+            KeyFrame keyFrame = selectedKeyFrames[e];
+            int i = KeyFrameType.getIndex(keyFrame.getKeyFrameType());
             KeyFrameType type = KeyFrameType.getKeyFrameType(i);
 
-            int x = (int) ((frame.getTick() + getHScroll() + change) * zoomFactor);
+            int x = (int) ((keyFrame.getTick() + getHScroll() + change) * zoomFactor);
             int y = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
 
-            if (type == KeyFrameType.MOVEMENT)
+            switch (type)
             {
-                MovementKeyFrame movementKeyFrame = (MovementKeyFrame) frame;
-                int steps = (movementKeyFrame.getPath().length - 1);
-                if (steps > 0)
-                {
-                    double ticks = Math.ceil(steps / movementKeyFrame.getSpeed());
-                    int pathLength = (int) (ticks * zoomFactor);
-                    g.drawLine(x, y + image.getHeight() / 2, x + pathLength - 1, y + image.getHeight() / 2);
-                }
-            }
+                case MOVEMENT:
+                    MovementKeyFrame mkf = (MovementKeyFrame) keyFrame;
+                    int steps = (mkf.getPath().length - 1);
+                    if (steps > 0)
+                    {
+                        double ticks = Math.ceil(steps / mkf.getSpeed());
+                        int pathLength = (int) (ticks * zoomFactor);
+                        g.drawLine(x, y + imageHeight / 2, x + pathLength - 1, y + imageHeight / 2);
+                    }
+                    break;
+                case ORIENTATION:
+                    OrientationKeyFrame okf = (OrientationKeyFrame) keyFrame;
+                    drawPreviewTail(g, x, y, imageHeight, okf.getDuration(), zoomFactor);
+                    break;
+                case TEXT:
+                    TextKeyFrame tkf = (TextKeyFrame) keyFrame;
+                    drawPreviewTail(g, x, y, imageHeight, tkf.getDuration(), zoomFactor);
+                    break;
+                case HEALTH:
+                    HealthKeyFrame hkf = (HealthKeyFrame) keyFrame;
+                    drawPreviewTail(g, x, y, imageHeight, hkf.getDuration(), zoomFactor);
+                    break;
+                case HITSPLAT_1:
+                case HITSPLAT_2:
+                case HITSPLAT_3:
+                case HITSPLAT_4:
+                    HitsplatKeyFrame hskf = (HitsplatKeyFrame) keyFrame;
+                    double duration = hskf.getDuration();
+                    if (duration == -1)
+                    {
+                        duration = HitsplatKeyFrame.DEFAULT_DURATION;
+                    }
 
-            if (type == KeyFrameType.ORIENTATION)
-            {
-                OrientationKeyFrame orientationKeyFrame = (OrientationKeyFrame) frame;
-                int pathLength = (int) (orientationKeyFrame.getDuration() * zoomFactor);
-                g.drawLine(x, y + image.getHeight() / 2, x + pathLength - 1, y + image.getHeight() / 2);
+                    drawPreviewTail(g, x, y, imageHeight, duration, zoomFactor);
+                    break;
+                default:
+                    break;
             }
 
             g.drawImage(bufferedImage, x - xImageOffset, y, null);
         }
 
         g.setComposite(composite);
+    }
+
+    private void drawPreviewTail(Graphics g, int x, int y, int imageHeight, double duration, double zoomFactor)
+    {
+        int pathLength = (int) (duration * zoomFactor);
+        g.drawLine(x, y + imageHeight / 2, x + pathLength - 1, y + imageHeight / 2);
     }
 
     @Override
