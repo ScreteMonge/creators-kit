@@ -5,10 +5,7 @@ import com.creatorskit.swing.Folder;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.AttributePanel;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
-import com.creatorskit.swing.timesheet.keyframe.MovementKeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.OrientationKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.*;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.client.ui.ColorScheme;
@@ -221,21 +218,29 @@ public class SummarySheet extends TimeSheet
 
             if (type == KeyFrameType.ORIENTATION)
             {
-                OrientationKeyFrame orientationKeyFrame = (OrientationKeyFrame) keyFrame;
-                double ticks = orientationKeyFrame.getDuration();
-                if (e + 1 < keyFrames.length)
+                OrientationKeyFrame okf = (OrientationKeyFrame) keyFrame;
+                drawTail(g, e, keyFrames, okf.getDuration(), zoomFactor, okf.getTick(), x, y, xStringOffset, stringHeight);
+            }
+
+            if (type == KeyFrameType.HEALTH)
+            {
+                HealthKeyFrame hkf = (HealthKeyFrame) keyFrame;
+                drawTail(g, e, keyFrames, hkf.getDuration(), zoomFactor, hkf.getTick(), x, y, xStringOffset, stringHeight);
+            }
+
+            for (KeyFrameType keyFrameType : KeyFrameType.HITSPLAT_TYPES)
+            {
+                if (type == keyFrameType)
                 {
-                    KeyFrame next = keyFrames[e + 1];
-                    double difference = next.getTick() - keyFrame.getTick();
-                    if (difference < ticks)
+                    HitsplatKeyFrame hkf = (HitsplatKeyFrame) keyFrame;
+                    double duration = hkf.getDuration();
+                    if (duration == -1)
                     {
-                        ticks = difference;
+                        duration = HitsplatKeyFrame.DEFAULT_DURATION;
                     }
+
+                    drawTail(g, e, keyFrames, duration, zoomFactor, hkf.getTick(), x, y, xStringOffset, stringHeight);
                 }
-
-
-                int pathLength = (int) (ticks * zoomFactor);
-                g.drawLine(x  + xStringOffset, y - stringHeight / 2, x + pathLength - 1, y - stringHeight / 2);
             }
 
 
@@ -244,6 +249,22 @@ public class SummarySheet extends TimeSheet
                     x - xStringOffset,
                     y);
         }
+    }
+
+    private void drawTail(Graphics g, int e, KeyFrame[] keyFrames, double duration, double zoomFactor, double tick, int x, int y, int xStringOffset, int stringHeight)
+    {
+        if (e + 1 < keyFrames.length)
+        {
+            KeyFrame next = keyFrames[e + 1];
+            double difference = next.getTick() - tick;
+            if (difference < duration)
+            {
+                duration = difference;
+            }
+        }
+
+        int pathLength = (int) (duration * zoomFactor);
+        g.drawLine(x  + xStringOffset, y - stringHeight / 2, x + pathLength - 1, y - stringHeight / 2);
     }
 
     @Override

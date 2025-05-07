@@ -290,7 +290,7 @@ public class AttributePanel extends JPanel
             case HEALTH:
                 return new HealthKeyFrame(
                         tick,
-                        healthAttributes.getEnableBox().getSelectedItem() == Toggle.ENABLE,
+                        (double) healthAttributes.getDuration().getValue(),
                         (HealthbarSprite) healthAttributes.getHealthbarSprite().getSelectedItem(),
                         (int) healthAttributes.getMaxHealth().getValue(),
                         (int) healthAttributes.getCurrentHealth().getValue()
@@ -1545,11 +1545,16 @@ public class AttributePanel extends JPanel
         c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 1;
-        JComboBox<Toggle> toggleComboBox = healthAttributes.getEnableBox();
-        toggleComboBox.setFocusable(false);
-        toggleComboBox.addItem(Toggle.ENABLE);
-        toggleComboBox.addItem(Toggle.DISABLE);
-        card.add(toggleComboBox, c);
+        JLabel durationLabel = new JLabel("Duration: ");
+        durationLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(durationLabel, c);
+
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.gridy = 1;
+        JSpinner duration = healthAttributes.getDuration();
+        duration.setModel(new SpinnerNumberModel(5.0, 0, 1000000, 1));
+        card.add(duration, c);
 
         c.gridwidth = 1;
         c.gridx = 0;

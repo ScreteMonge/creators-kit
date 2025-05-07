@@ -8,6 +8,8 @@ import lombok.Setter;
 @Setter
 public class HitsplatKeyFrame extends KeyFrame
 {
+    public static final double DEFAULT_DURATION = (double) 5 / 3;
+
     private int duration;
     private HitsplatSprite sprite;
     private int damage;

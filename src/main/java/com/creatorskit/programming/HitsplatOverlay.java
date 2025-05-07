@@ -31,7 +31,6 @@ public class HitsplatOverlay extends Overlay
     private final int Y_BUFFER = -1;
     private final int X_BUFFER = -1;
     private final int[][] buffers = { {0, 0}, {0, -20}, {-15, -10}, {15, -10} };
-    private final double DEFAULT_DURATION = (double) 5 / 3;
 
     @Inject
     private HitsplatOverlay(Client client, CreatorsPlugin plugin, SpriteManager spriteManager)
@@ -73,7 +72,7 @@ public class HitsplatOverlay extends Overlay
                 double duration = keyFrame.getDuration();
                 if (duration == -1)
                 {
-                    duration = DEFAULT_DURATION;
+                    duration = HitsplatKeyFrame.DEFAULT_DURATION;
                 }
 
                 double startTick = keyFrame.getTick();

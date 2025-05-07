@@ -70,11 +70,6 @@ public class HealthOverlay extends Overlay
                 continue;
             }
 
-            if (!healthKeyFrame.isEnabled())
-            {
-                continue;
-            }
-
             CKObject ckObject = character.getCkObject();
             LocalPoint lp = ckObject.getLocation();
             if (lp == null || !lp.isInScene())
@@ -90,6 +85,14 @@ public class HealthOverlay extends Overlay
 
             BufferedImage greenBar = spriteManager.getSprite(healthKeyFrame.getHealthbarSprite().getForegroundSpriteID(), 0);
             if (greenBar == null)
+            {
+                continue;
+            }
+
+            double duration = healthKeyFrame.getDuration();
+            double startTick = healthKeyFrame.getTick();
+            double currentTick = plugin.getCurrentTick();
+            if (currentTick > duration + startTick)
             {
                 continue;
             }
@@ -114,10 +117,9 @@ public class HealthOverlay extends Overlay
             TextKeyFrame textKeyFrame = (TextKeyFrame) character.getCurrentKeyFrame(KeyFrameType.TEXT);
             if (textKeyFrame != null)
             {
-                int duration = textKeyFrame.getDuration();
-                double startTick = textKeyFrame.getTick();
-                double currentTick = plugin.getCurrentTick();
-                if (currentTick <= duration + startTick)
+                int textDuration = textKeyFrame.getDuration();
+                double textStartTick = textKeyFrame.getTick();
+                if (currentTick <= textDuration + textStartTick)
                 {
                     textBuffer = TEXT_BUFFER;
                 }

@@ -23,10 +23,7 @@ import com.creatorskit.swing.timesheet.sheets.SummarySheet;
 import com.creatorskit.swing.timesheet.sheets.TimeSheet;
 import lombok.Getter;
 import lombok.Setter;
-import net.runelite.api.Client;
-import net.runelite.api.Constants;
-import net.runelite.api.Tile;
-import net.runelite.api.WorldView;
+import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.callback.ClientThread;
@@ -589,7 +586,10 @@ public class TimeSheetPanel extends JPanel
         KeyFrame keyFrameToReplace = character.addKeyFrame(keyFrame, currentTime);
         attributePanel.setKeyFramedIcon(true);
         attributePanel.resetAttributes(character, currentTime);
-        toolBox.getProgrammer().updateProgram(character, currentTime);
+        if (client.getGameState() == GameState.LOGGED_IN)
+        {
+            toolBox.getProgrammer().updateProgram(character, currentTime);
+        }
 
         return keyFrameToReplace;
     }
@@ -603,7 +603,10 @@ public class TimeSheetPanel extends JPanel
     {
         character.removeKeyFrame(keyFrame);
         attributePanel.resetAttributes(character, currentTime);
-        toolBox.getProgrammer().updateProgram(character, currentTime);
+        if (client.getGameState() == GameState.LOGGED_IN)
+        {
+            toolBox.getProgrammer().updateProgram(character, currentTime);
+        }
     }
 
     /**
