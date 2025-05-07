@@ -630,18 +630,40 @@ public class TimeSheetPanel extends JPanel
         int length = keyFrameActions.length;
         if (length == UNDO_LIMIT)
         {
-            keyFrameActions = ArrayUtils.remove(keyFrameActions, length - 1);
+            keyFrameActions = ArrayUtils.remove(keyFrameActions, 0);
         }
 
-        if (undoStack != length - 1)
+        if (length > 0)
         {
-            for (int i = undoStack + 1; i == length - 1; i++)
+            while (undoStack != keyFrameActions.length - 1)
             {
-                keyFrameActions = ArrayUtils.remove(keyFrameActions, undoStack + 1);
+                keyFrameActions = ArrayUtils.remove(keyFrameActions, keyFrameActions.length - 1);
             }
         }
 
         keyFrameActions = ArrayUtils.add(keyFrameActions, actions);
+        undoStack = keyFrameActions.length - 1;
+    }
+
+    public void removeKeyFrameActions(Character character)
+    {
+        for (int i = 0; i < keyFrameActions.length; i++)
+        {
+            KeyFrameAction[] actions = keyFrameActions[i];
+            for (int e = 0; e < actions.length; e++)
+            {
+                KeyFrameAction kfa = actions[e];
+                if (kfa.getActionType() == KeyFrameActionType.CHARACTER)
+                {
+                    KeyFrameCharacterAction kfca = (KeyFrameCharacterAction) kfa;
+                    if (kfca.getCharacter() == character)
+                    {
+                        keyFrameActions = ArrayUtils.removeElement(keyFrameActions, actions);
+                        break;
+                    }
+                }
+            }
+        }
         undoStack = keyFrameActions.length - 1;
     }
 

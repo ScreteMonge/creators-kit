@@ -890,6 +890,8 @@ public class CreatorsPanel extends PluginPanel
             {
                 timeSheetPanel.setSelectedCharacter(null);
             }
+
+            toolBox.getTimeSheetPanel().removeKeyFrameActions(c);
         }
     }
 
