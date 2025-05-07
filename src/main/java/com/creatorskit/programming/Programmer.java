@@ -300,7 +300,7 @@ public class Programmer
         MovementComposition mc = getMovementComposition(worldView, character, mkf, currentStep, stepsComplete, OrientationAction.SET, clientTicksPassed, turnRate);
 
         int orientation = ckObject.getOrientation();
-        int orientationGoal;
+        int orientationGoal = 0;
         int difference = 0;
         int differenceToGoal = 0;
         boolean isMoving = false;
@@ -335,7 +335,6 @@ public class Programmer
                 return;
             }
 
-            orientationGoal = mc.getOrientationGoal();
             setOrientation(character, mc, orientationGoal, difference, stepsComplete, mkf.getSpeed(), turnRate);
             setAnimation(character, mc.isMoving(), differenceToGoal, finalSpeed);
             return;
@@ -870,8 +869,8 @@ public class Programmer
             return (int) angle;
         }
 
-        double ticksSinceLastStep = clientTicksPassed - (((double) currentStep) * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH);
-        double change = speed * turnRate * ticksSinceLastStep;
+        double ticksSinceLastStep = (clientTicksPassed * speed) - (((double) currentStep) * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH);
+        double change = turnRate * ticksSinceLastStep;
 
         if (angleDifference > (change * -1) && angleDifference < change)
         {
