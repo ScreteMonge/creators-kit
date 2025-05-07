@@ -627,15 +627,14 @@ public class TimeSheetPanel extends JPanel
 
     public void addKeyFrameActions(KeyFrameAction[] actions)
     {
-        int length = keyFrameActions.length;
-        if (length == UNDO_LIMIT)
+        if (keyFrameActions.length == UNDO_LIMIT)
         {
             keyFrameActions = ArrayUtils.remove(keyFrameActions, 0);
         }
 
-        if (length > 0)
+        if (keyFrameActions.length > 0)
         {
-            while (undoStack != keyFrameActions.length - 1)
+            while (keyFrameActions.length - 1 > undoStack)
             {
                 keyFrameActions = ArrayUtils.remove(keyFrameActions, keyFrameActions.length - 1);
             }
