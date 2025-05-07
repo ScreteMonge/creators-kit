@@ -225,7 +225,7 @@ public class CreatorsPanel extends PluginPanel
                 new KeyFrame[KeyFrameType.getTotalFrameTypes()][0],
                 KeyFrameType.createDefaultSummary(),
                 getRandomColor(),
-                false, null, null, -1, false, false);
+                false, null, null, -1, false, false, false);
     }
 
     public Character createCharacter(
@@ -246,6 +246,7 @@ public class CreatorsPanel extends PluginPanel
                               LocalPoint localPoint,
                               int plane,
                               boolean inPOH,
+                              boolean transplant,
                               boolean setHoveredLocation)
     {
         ObjectPanel objectPanel = new ObjectPanel(name, null);
@@ -617,7 +618,7 @@ public class CreatorsPanel extends PluginPanel
                 animationSpinner
         );
 
-        plugin.setupRLObject(character, setHoveredLocation);
+        plugin.setupRLObject(character, transplant, setHoveredLocation);
         plugin.getCharacters().add(character);
 
         comboBoxes.add(modelComboBox);
@@ -828,6 +829,7 @@ public class CreatorsPanel extends PluginPanel
                     character.getInstancedPoint(),
                     character.getInstancedPlane(),
                     character.isInPOH(),
+                    true,
                     setLocation);
 
             SwingUtilities.invokeLater(() -> addPanel(parentPanel, c, true, false));
@@ -1618,6 +1620,7 @@ public class CreatorsPanel extends PluginPanel
                                 save.getInstancedPoint(),
                                 save.getInstancedPlane(),
                                 save.isInInstance(),
+                                false,
                                 false);
 
                         SwingUtilities.invokeLater(() -> addPanel(ParentPanel.SIDE_PANEL, character, true, false));
@@ -1767,6 +1770,7 @@ public class CreatorsPanel extends PluginPanel
                     save.getInstancedPoint(),
                     save.getInstancedPlane(),
                     save.isInInstance(),
+                    false,
                     false);
 
             addPanel(parentPanel, character, node, false, false);

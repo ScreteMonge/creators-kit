@@ -688,7 +688,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 	}
 
-	public void setLocation(Character character, boolean initialize, boolean newLocation, ActiveOption activeOption, LocationOption locationOption)
+	public void setLocation(Character character, boolean initialize, boolean transplant, ActiveOption activeOption, LocationOption locationOption)
 	{
 		if (client.getGameState() != GameState.LOGGED_IN)
 		{
@@ -699,14 +699,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		if (poh)
 		{
-			setLocationPOH(character, initialize, newLocation, activeOption, locationOption);
+			setLocationPOH(character, initialize, transplant, activeOption, locationOption);
 			return;
 		}
 
-		setLocationWorld(character, initialize, newLocation, activeOption, locationOption);
+		setLocationWorld(character, initialize, transplant, activeOption, locationOption);
 	}
 
-	public void setLocationWorld(Character character, boolean initialize, boolean newLocation, ActiveOption activeOption, LocationOption locationOption)
+	public void setLocationWorld(Character character, boolean initialize, boolean transplant, ActiveOption activeOption, LocationOption locationOption)
 	{
 		clientThread.invokeLater(() ->
 		{
@@ -749,7 +749,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				character.setNonInstancedPoint(worldPoint);
 				character.setInPOH(false);
 			}
-			else if (newLocation)
+
+			if (transplant)
 			{
 				WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
 				pathFinder.transplantSteps(character, worldView, worldPoint.getX(), worldPoint.getY());
@@ -791,7 +792,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		});
 	}
 
-	public void setLocationPOH(Character character, boolean initialize, boolean newLocation, ActiveOption activeOption, LocationOption locationOption)
+	public void setLocationPOH(Character character, boolean initialize, boolean transplant, ActiveOption activeOption, LocationOption locationOption)
 	{
 		clientThread.invokeLater(() ->
 		{
@@ -834,7 +835,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				character.setInstancedPlane(worldView.getPlane());
 				character.setInPOH(true);
 			}
-			else if (newLocation)
+
+			if (transplant)
 			{
 				pathFinder.transplantSteps(character, worldView, localPoint.getSceneX(), localPoint.getSceneY());
 				LocalPoint savedPoint = localPoint;
@@ -993,7 +995,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		clientThread.invokeLater(() -> ckObject.setOrientation(orientation));
 	}
 
-	public void setupRLObject(Character character, boolean setHoveredTile)
+	public void setupRLObject(Character character, boolean setHoveredTile, boolean transplant)
 	{
 		clientThread.invoke(() ->
 		{
@@ -1009,7 +1011,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			setAnimationWithFrame(character, (int) character.getAnimationSpinner().getValue(), (int) character.getAnimationFrameSpinner().getValue());
 
 			LocationOption locationOption = setHoveredTile ? LocationOption.TO_HOVERED_TILE : LocationOption.TO_SAVED_LOCATION;
-			setLocation(character, true, true, active ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, locationOption);
+			setLocation(character, true, transplant, active ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, locationOption);
 
 			if (client.getGameState() == GameState.LOGGED_IN)
 			{

@@ -516,6 +516,7 @@ public class ModelGetter
                         null,
                         -1,
                         false,
+                        false,
                         false);
 
                 SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true, false));
@@ -1477,6 +1478,7 @@ public class ModelGetter
                     null,
                     null,
                     -1,
+                    false,
                     false,
                     false);
 

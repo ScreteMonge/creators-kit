@@ -1233,6 +1233,7 @@ public class CacheSearcherTab extends JPanel
                     null,
                     -1,
                     false,
+                    false,
                     false);
 
             SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true, false));
@@ -1289,6 +1290,7 @@ public class CacheSearcherTab extends JPanel
                     null,
                     null,
                     -1,
+                    false,
                     false,
                     false);
 
@@ -1347,6 +1349,7 @@ public class CacheSearcherTab extends JPanel
                     null,
                     -1,
                     false,
+                    false,
                     false);
 
             SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true, false));
@@ -1404,6 +1407,7 @@ public class CacheSearcherTab extends JPanel
                     null,
                     null,
                     -1,
+                    false,
                     false,
                     false);
 
