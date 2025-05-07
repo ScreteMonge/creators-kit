@@ -1516,6 +1516,7 @@ public class Programmer
                     client.registerRuneLiteObject(ckObject);
                     ckObject.setDrawFrontTilesFirst(true);
                     ckObject.setDespawnOnFinish(true);
+                    ckObject.setHasAnimKeyFrame(true);
                     character.setSpotAnim(ckObject, keyFrameType);
                 }
                 else
