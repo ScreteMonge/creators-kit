@@ -91,73 +91,72 @@ public class AttributeSheet extends TimeSheet
 
             for (int e = 0; e < keyFrames.length; e++)
             {
-                KeyFrame frame = keyFrames[e];
+                KeyFrame keyFrame = keyFrames[e];
 
                 BufferedImage endImage = image;
                 KeyFrame[] selectedKeyframes = getTimeSheetPanel().getSelectedKeyFrames();
-                if (Arrays.stream(selectedKeyframes).anyMatch(s -> s == frame))
+                if (Arrays.stream(selectedKeyframes).anyMatch(s -> s == keyFrame))
                 {
                     endImage = getKeyframeSelected();
                 }
 
-                int x = (int) ((frame.getTick() + getHScroll()) * zoomFactor);
+                int x = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor);
                 int y = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
 
-                if (type == KeyFrameType.MOVEMENT)
+                switch (type)
                 {
-                    MovementKeyFrame movementKeyFrame = (MovementKeyFrame) frame;
-                    int steps = (movementKeyFrame.getPath().length - 1);
-                    if (steps > 0)
-                    {
-                        double ticks = steps / movementKeyFrame.getSpeed();
-                        boolean round = true;
-                        if (e + 1 < keyFrames.length)
+                    case MOVEMENT:
+                        MovementKeyFrame movementKeyFrame = (MovementKeyFrame) keyFrame;
+                        int steps = (movementKeyFrame.getPath().length - 1);
+                        if (steps > 0)
                         {
-                            KeyFrame next = keyFrames[e + 1];
-                            double difference = next.getTick() - frame.getTick();
-                            if (difference < ticks)
+                            double ticks = steps / movementKeyFrame.getSpeed();
+                            boolean round = true;
+                            if (e + 1 < keyFrames.length)
                             {
-                                ticks = difference;
-                                round = false;
+                                KeyFrame next = keyFrames[e + 1];
+                                double difference = next.getTick() - keyFrame.getTick();
+                                if (difference < ticks)
+                                {
+                                    ticks = difference;
+                                    round = false;
+                                }
                             }
+
+                            if (round)
+                            {
+                                ticks = Math.ceil(ticks);
+                            }
+
+                            int pathLength = (int) (ticks * zoomFactor);
+                            g.drawLine(x, y + image.getHeight() / 2, x + pathLength - 1, y + image.getHeight() / 2);
                         }
-
-                        if (round)
-                        {
-                            ticks = Math.ceil(ticks);
-                        }
-
-                        int pathLength = (int) (ticks * zoomFactor);
-                        g.drawLine(x, y + image.getHeight() / 2, x + pathLength - 1, y + image.getHeight() / 2);
-                    }
-                }
-
-                if (type == KeyFrameType.ORIENTATION)
-                {
-                    OrientationKeyFrame okf = (OrientationKeyFrame) frame;
-                    drawTail(g, e, keyFrames, okf.getDuration(), zoomFactor, okf.getTick(), x, y, imageHeight);
-                }
-
-                if (type == KeyFrameType.HEALTH)
-                {
-                    HealthKeyFrame hkf = (HealthKeyFrame) frame;
-                    drawTail(g, e, keyFrames, hkf.getDuration(), zoomFactor, hkf.getTick(), x, y, imageHeight);
-                }
-
-                for (KeyFrameType keyFrameType : KeyFrameType.HITSPLAT_TYPES)
-                {
-                    if (type == keyFrameType)
-                    {
-                        HitsplatKeyFrame hkf = (HitsplatKeyFrame) frame;
-                        double duration = hkf.getDuration();
+                        break;
+                    case ORIENTATION:
+                        OrientationKeyFrame okf = (OrientationKeyFrame) keyFrame;
+                        drawTail(g, e, keyFrames, okf.getDuration(), zoomFactor, okf.getTick(), x, y, imageHeight);
+                        break;
+                    case HEALTH:
+                        HealthKeyFrame hkf = (HealthKeyFrame) keyFrame;
+                        drawTail(g, e, keyFrames, hkf.getDuration(), zoomFactor, hkf.getTick(), x, y, imageHeight);
+                        break;
+                    case HITSPLAT_1:
+                    case HITSPLAT_2:
+                    case HITSPLAT_3:
+                    case HITSPLAT_4:
+                        HitsplatKeyFrame hskf = (HitsplatKeyFrame) keyFrame;
+                        double duration = hskf.getDuration();
                         if (duration == -1)
                         {
                             duration = HitsplatKeyFrame.DEFAULT_DURATION;
                         }
 
-                        drawTail(g, e, keyFrames, duration, zoomFactor, hkf.getTick(), x, y, imageHeight);
-                    }
+                        drawTail(g, e, keyFrames, duration, zoomFactor, hskf.getTick(), x, y, imageHeight);
+                        break;
+                    default:
+                        break;
                 }
+
 
                 g.drawImage(endImage, x - xImageOffset, y, null);
             }

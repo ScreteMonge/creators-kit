@@ -187,60 +187,58 @@ public class SummarySheet extends TimeSheet
             int x = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor);
             int y = (index * rowHeight) - rowHeightOffset - getVScroll() + yStringOffset;
 
-            if (type == KeyFrameType.MOVEMENT)
+            switch (type)
             {
-                MovementKeyFrame movementKeyFrame = (MovementKeyFrame) keyFrame;
-                int steps = (movementKeyFrame.getPath().length - 1);
-                if (steps > 0)
-                {
-                    double ticks = steps / movementKeyFrame.getSpeed();
-                    boolean round = true;
-                    if (e + 1 < keyFrames.length)
+                case MOVEMENT:
+                    MovementKeyFrame movementKeyFrame = (MovementKeyFrame) keyFrame;
+                    int steps = (movementKeyFrame.getPath().length - 1);
+                    if (steps > 0)
                     {
-                        KeyFrame next = keyFrames[e + 1];
-                        double difference = next.getTick() - keyFrame.getTick();
-                        if (difference < ticks)
+                        double ticks = steps / movementKeyFrame.getSpeed();
+                        boolean round = true;
+                        if (e + 1 < keyFrames.length)
                         {
-                            ticks = difference;
-                            round = false;
+                            KeyFrame next = keyFrames[e + 1];
+                            double difference = next.getTick() - keyFrame.getTick();
+                            if (difference < ticks)
+                            {
+                                ticks = difference;
+                                round = false;
+                            }
                         }
+
+                        if (round)
+                        {
+                            ticks = Math.ceil(ticks);
+                        }
+
+                        int pathLength = (int) (ticks * zoomFactor);
+                        g.drawLine(x + xStringOffset, y - stringHeight / 2, x + pathLength - 1, y - stringHeight / 2);
                     }
-
-                    if (round)
-                    {
-                        ticks = Math.ceil(ticks);
-                    }
-
-                    int pathLength = (int) (ticks * zoomFactor);
-                    g.drawLine(x + xStringOffset, y - stringHeight / 2, x + pathLength - 1, y - stringHeight / 2);
-                }
-            }
-
-            if (type == KeyFrameType.ORIENTATION)
-            {
-                OrientationKeyFrame okf = (OrientationKeyFrame) keyFrame;
-                drawTail(g, e, keyFrames, okf.getDuration(), zoomFactor, okf.getTick(), x, y, xStringOffset, stringHeight);
-            }
-
-            if (type == KeyFrameType.HEALTH)
-            {
-                HealthKeyFrame hkf = (HealthKeyFrame) keyFrame;
-                drawTail(g, e, keyFrames, hkf.getDuration(), zoomFactor, hkf.getTick(), x, y, xStringOffset, stringHeight);
-            }
-
-            for (KeyFrameType keyFrameType : KeyFrameType.HITSPLAT_TYPES)
-            {
-                if (type == keyFrameType)
-                {
-                    HitsplatKeyFrame hkf = (HitsplatKeyFrame) keyFrame;
-                    double duration = hkf.getDuration();
+                    break;
+                case ORIENTATION:
+                    OrientationKeyFrame okf = (OrientationKeyFrame) keyFrame;
+                    drawTail(g, e, keyFrames, okf.getDuration(), zoomFactor, okf.getTick(), x, y, xStringOffset, stringHeight);
+                    break;
+                case HEALTH:
+                    HealthKeyFrame hkf = (HealthKeyFrame) keyFrame;
+                    drawTail(g, e, keyFrames, hkf.getDuration(), zoomFactor, hkf.getTick(), x, y, xStringOffset, stringHeight);
+                    break;
+                case HITSPLAT_1:
+                case HITSPLAT_2:
+                case HITSPLAT_3:
+                case HITSPLAT_4:
+                    HitsplatKeyFrame hskf = (HitsplatKeyFrame) keyFrame;
+                    double duration = hskf.getDuration();
                     if (duration == -1)
                     {
                         duration = HitsplatKeyFrame.DEFAULT_DURATION;
                     }
 
-                    drawTail(g, e, keyFrames, duration, zoomFactor, hkf.getTick(), x, y, xStringOffset, stringHeight);
-                }
+                    drawTail(g, e, keyFrames, duration, zoomFactor, hskf.getTick(), x, y, xStringOffset, stringHeight);
+                    break;
+                default:
+                    break;
             }
 
 
