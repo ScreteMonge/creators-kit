@@ -1604,7 +1604,6 @@ public class Programmer
         {
             clientThread.invokeLater(() ->
             {
-                ckObject.setActive(true);
                 ckObject.setAnimation(AnimationType.ACTIVE, animation);
                 ckObject.setAnimationFrame(AnimationType.ACTIVE, animFrame[0], false);
                 ckObject.tick(animFrame[1]);
@@ -1626,7 +1625,6 @@ public class Programmer
             {
                 clientThread.invokeLater(() ->
                 {
-                    ckObject.setActive(true);
                     ckObject.setAnimationFrame(AnimationType.POSE, animFrame[0], false);
                     ckObject.tick(animFrame[1]);
                 });
