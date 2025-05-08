@@ -354,11 +354,9 @@ public class Programmer
         LocalPoint lp = mc.getLocalPoint();
         if (lp == null)
         {
-            character.setVisible(false, clientThread);
             return;
         }
 
-        character.setVisible(true, clientThread);
         character.setLocation(lp, keyFrame.getPlane());
     }
 
