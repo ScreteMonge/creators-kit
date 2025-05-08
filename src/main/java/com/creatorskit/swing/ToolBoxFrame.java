@@ -1,7 +1,10 @@
 package com.creatorskit.swing;
 
+import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.DataFinder;
+import com.creatorskit.programming.MovementManager;
+import com.creatorskit.programming.PathFinder;
 import com.creatorskit.programming.Programmer;
 import com.creatorskit.swing.manager.ManagerPanel;
 import com.creatorskit.swing.manager.ManagerTree;
@@ -23,6 +26,8 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.net.URI;
 
@@ -33,6 +38,7 @@ public class ToolBoxFrame extends JFrame
     private final Client client;
     private final EventBus eventBus;
     private final CreatorsPlugin plugin;
+    private final CreatorsConfig config;
     private final ConfigManager configManager;
     private final JMenuBar jMenuBar;
     private final DataFinder dataFinder;
@@ -44,14 +50,17 @@ public class ToolBoxFrame extends JFrame
     private final TransmogPanel transmogPanel;
     private final TimeSheetPanel timeSheetPanel;
     private final Programmer programmer;
+    private final PathFinder pathFinder;
+    private final JTabbedPane tabbedPane = new JTabbedPane();
     private final BufferedImage ICON = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
 
     @Inject
-    public ToolBoxFrame(Client client, EventBus eventBus, ClientThread clientThread, CreatorsPlugin plugin, ConfigManager configManager, DataFinder dataFinder, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, TransmogPanel transmogPanel)
+    public ToolBoxFrame(Client client, EventBus eventBus, ClientThread clientThread, CreatorsPlugin plugin, CreatorsConfig config, ConfigManager configManager, DataFinder dataFinder, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, TransmogPanel transmogPanel, PathFinder pathFinder)
     {
         this.client = client;
         this.clientThread = clientThread;
         this.plugin = plugin;
+        this.config = config;
         this.eventBus = eventBus;
         this.configManager = configManager;
         this.jMenuBar = new JMenuBar();
@@ -59,6 +68,7 @@ public class ToolBoxFrame extends JFrame
         this.modelOrganizer = modelOrganizer;
         this.modelAnvil = modelAnvil;
         this.transmogPanel = transmogPanel;
+        this.pathFinder = pathFinder;
 
         Folder rootFolder = new Folder("Master Folder", FolderType.MASTER, null, null);
         DefaultMutableTreeNode managerRootNode = new DefaultMutableTreeNode(rootFolder);
@@ -73,9 +83,10 @@ public class ToolBoxFrame extends JFrame
 
         JPanel objectHolder = new JPanel();
         ManagerTree managerTree = new ManagerTree(this, plugin, objectHolder, managerRootNode, managerSideNode, managerManagerNode);
+        MovementManager movementManager = new MovementManager(client, config, pathFinder);
 
         setupMenuBar();
-        this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, clientThread, dataFinder, managerTree);
+        this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, clientThread, dataFinder, managerTree, movementManager);
         this.managerPanel = new ManagerPanel(client, plugin, objectHolder, managerTree);
         this.cacheSearcher = new CacheSearcherTab(plugin, clientThread, dataFinder);
         this.programPanel = new ProgrammerPanel(client, clientThread, plugin, managerTree);
@@ -116,7 +127,6 @@ public class ToolBoxFrame extends JFrame
             }
         });
 
-        JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setFont(FontManager.getRunescapeBoldFont());
 
         if (CreatorsPlugin.test2_0)
@@ -231,35 +241,112 @@ public class ToolBoxFrame extends JFrame
         JMenu file = new JMenu("File");
         jMenuBar.add(file);
 
-        JMenuItem saveAs = new JMenuItem("Save Setup");
+        JMenuItem save = new JMenuItem("Save Setup");
+        save.addActionListener(e -> plugin.getCreatorsPanel().quickSaveToFile());
+        save.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK));
+        file.add(save);
+
+        JMenuItem saveAs = new JMenuItem("Save Setup As...");
         saveAs.addActionListener(e -> plugin.getCreatorsPanel().openSaveDialog());
         file.add(saveAs);
 
         JMenuItem load = new JMenuItem("Load Setup");
         load.addActionListener(e -> plugin.getCreatorsPanel().openLoadSetupDialog());
+        load.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_DOWN_MASK));
         file.add(load);
 
-        if (CreatorsPlugin.test2_0)
+        JMenu timeSheet = new JMenu("Timeline");
+        //jMenuBar.add(timeSheet);
+
+        JMenuItem togglePlay = new JMenuItem("Play/Pause");
+        togglePlay.addActionListener(e -> programmer.togglePlay());
+        togglePlay.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, InputEvent.CTRL_DOWN_MASK));
+        timeSheet.add(togglePlay);
+
+        JMenuItem reset = new JMenuItem("Reset Timeline");
+        reset.addActionListener(e ->
         {
-            JMenu timeSheet = new JMenu("Timesheet");
-            jMenuBar.add(timeSheet);
+            //programmer.pause();
+            timeSheetPanel.setCurrentTime(0, false);
+        });
+        reset.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.CTRL_DOWN_MASK));
+        timeSheet.add(reset);
 
-            JMenuItem copyKeyFrames = new JMenuItem("Copy KeyFrames");
-            copyKeyFrames.addActionListener(e -> timeSheetPanel.copyKeyFrames());
-            timeSheet.add(copyKeyFrames);
+        JMenuItem selectAll = new JMenuItem("Select All");
+        selectAll.addActionListener(e ->
+        {
+            if (tabbedPane.getSelectedComponent() == timeSheetPanel)
+            {
+                timeSheetPanel.onSelectAllPressed();
+            }
+        });
+        selectAll.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_A, InputEvent.CTRL_DOWN_MASK));
+        timeSheet.add(selectAll);
 
-            JMenuItem pasteKeyFrames = new JMenuItem("Paste KeyFrames");
-            pasteKeyFrames.addActionListener(e -> timeSheetPanel.pasteKeyFrames());
-            timeSheet.add(pasteKeyFrames);
+        JMenuItem delete = new JMenuItem("Delete");
+        delete.addActionListener(e ->
+        {
+            if (tabbedPane.getSelectedComponent() == timeSheetPanel)
+            {
+                timeSheetPanel.onDeleteKeyPressed();
+            }
+        });
+        delete.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0));
+        timeSheet.add(delete);
 
-            JMenuItem undo = new JMenuItem("Undo KeyFrames");
-            undo.addActionListener(e -> timeSheetPanel.undo());
-            timeSheet.add(undo);
+        JMenuItem copyKeyFrames = new JMenuItem("Copy");
+        copyKeyFrames.addActionListener(e ->
+        {
+            if (tabbedPane.getSelectedComponent() == timeSheetPanel)
+            {
+                timeSheetPanel.copyKeyFrames();
+            }
+        });
+        copyKeyFrames.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C, InputEvent.CTRL_DOWN_MASK));
+        timeSheet.add(copyKeyFrames);
 
-            JMenuItem redo = new JMenuItem("Redo KeyFrames");
-            redo.addActionListener(e -> timeSheetPanel.redo());
-            timeSheet.add(redo);
-        }
+        JMenuItem pasteKeyFrames = new JMenuItem("Paste");
+        pasteKeyFrames.addActionListener(e ->
+        {
+            if (tabbedPane.getSelectedComponent() == timeSheetPanel)
+            {
+                timeSheetPanel.pasteKeyFrames();
+            }
+        });
+        pasteKeyFrames.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_V, InputEvent.CTRL_DOWN_MASK));
+        timeSheet.add(pasteKeyFrames);
+
+        JMenuItem undo = new JMenuItem("Undo");
+        undo.addActionListener(e ->
+        {
+            if (tabbedPane.getSelectedComponent() == timeSheetPanel)
+            {
+                timeSheetPanel.undo();
+            }
+        });
+        undo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Z, InputEvent.CTRL_DOWN_MASK));
+        timeSheet.add(undo);
+
+        JMenuItem redo = new JMenuItem("Redo");
+        redo.addActionListener(e ->
+        {
+            if (tabbedPane.getSelectedComponent() == timeSheetPanel)
+            {
+                timeSheetPanel.redo();
+            }
+        });
+        redo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Y, InputEvent.CTRL_DOWN_MASK));
+        timeSheet.add(redo);
+
+        JMenuItem skipRight = new JMenuItem("Next KeyFrame");
+        skipRight.addActionListener(e -> timeSheetPanel.onAttributeSkipForward());
+        skipRight.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, InputEvent.CTRL_DOWN_MASK));
+        timeSheet.add(skipRight);
+
+        JMenuItem skipLeft = new JMenuItem("Last KeyFrame");
+        skipLeft.addActionListener(e -> timeSheetPanel.onAttributeSkipPrevious());
+        skipLeft.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, InputEvent.CTRL_DOWN_MASK));
+        timeSheet.add(skipLeft);
 
         JMenu resources = new JMenu("Resources");
         jMenuBar.add(resources);

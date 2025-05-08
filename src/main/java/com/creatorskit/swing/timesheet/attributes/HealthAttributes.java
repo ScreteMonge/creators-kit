@@ -4,8 +4,6 @@ import com.creatorskit.swing.timesheet.keyframe.HealthKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameState;
 import com.creatorskit.swing.timesheet.keyframe.settings.HealthbarSprite;
-import com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite;
-import com.creatorskit.swing.timesheet.keyframe.settings.Toggle;
 import lombok.Getter;
 
 import javax.swing.*;
@@ -14,11 +12,10 @@ import java.awt.*;
 @Getter
 public class HealthAttributes extends Attributes
 {
-    private final JComboBox<Toggle> enableBox = new JComboBox<>();
+    private final JSpinner duration = new JSpinner();
     private final JComboBox<HealthbarSprite> healthbarSprite = new JComboBox<>();
     private final JSpinner maxHealth = new JSpinner();
     private final JSpinner currentHealth = new JSpinner();
-
 
     public HealthAttributes()
     {
@@ -29,7 +26,7 @@ public class HealthAttributes extends Attributes
     public void setAttributes(KeyFrame keyFrame)
     {
         HealthKeyFrame kf = (HealthKeyFrame) keyFrame;
-        enableBox.setSelectedItem(kf.isEnabled() ? Toggle.ENABLE : Toggle.DISABLE);
+        duration.setValue(kf.getDuration());
         healthbarSprite.setSelectedItem(kf.getHealthbarSprite());
         maxHealth.setValue(kf.getMaxHealth());
         currentHealth.setValue(kf.getCurrentHealth());
@@ -38,7 +35,7 @@ public class HealthAttributes extends Attributes
     @Override
     public void setBackgroundColours(Color color)
     {
-        enableBox.setBackground(color);
+        duration.setBackground(color);
         healthbarSprite.setBackground(color);
         maxHealth.setBackground(color);
         currentHealth.setBackground(color);
@@ -49,7 +46,7 @@ public class HealthAttributes extends Attributes
     {
         return new JComponent[]
                 {
-                        enableBox,
+                        duration,
                         healthbarSprite,
                         maxHealth,
                         currentHealth
@@ -59,9 +56,9 @@ public class HealthAttributes extends Attributes
     @Override
     public void addChangeListeners()
     {
-        enableBox.addItemListener(e ->
+        duration.addChangeListener(e ->
         {
-            enableBox.setBackground(getRed());
+            duration.setBackground(getRed());
         });
 
         healthbarSprite.addItemListener(e ->
@@ -83,7 +80,7 @@ public class HealthAttributes extends Attributes
     @Override
     public void resetAttributes()
     {
-        enableBox.setSelectedItem(Toggle.ENABLE);
+        duration.setValue(5.0);
         healthbarSprite.setSelectedItem(HealthbarSprite.DEFAULT);
         maxHealth.setValue(99);
         currentHealth.setValue(99);

@@ -1,10 +1,13 @@
 package com.creatorskit.swing.timesheet;
 
+import com.creatorskit.CKObject;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.DataFinder;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.Programmer;
+import com.creatorskit.programming.orientation.Orientation;
+import com.creatorskit.programming.orientation.OrientationGoal;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.manager.TreeScrollPane;
@@ -19,6 +22,8 @@ import com.creatorskit.swing.timesheet.sheets.TimeSheet;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.Client;
+import net.runelite.api.GameState;
+import net.runelite.api.Tile;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
@@ -55,6 +60,7 @@ public class TimeSheetPanel extends JPanel
     private AttributeSheet attributeSheet;
     private TreeScrollPane treeScrollPane;
     private final ManagerTree managerTree;
+    private MovementManager movementManager;
     private final JComboBox<KeyFrameType> summaryComboBox = new JComboBox<>();
     private JScrollBar scrollBar;
     private AttributePanel attributePanel;
@@ -95,7 +101,7 @@ public class TimeSheetPanel extends JPanel
     private int undoStack = 0;
 
     @Inject
-    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree)
+    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, MovementManager movementManager)
     {
         this.client = client;
         this.toolBox = toolBox;
@@ -103,6 +109,7 @@ public class TimeSheetPanel extends JPanel
         this.clientThread = clientThread;
         this.dataFinder = dataFinder;
         this.managerTree = managerTree;
+        this.movementManager = movementManager;
 
         setLayout(new GridBagLayout());
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
@@ -406,12 +413,127 @@ public class TimeSheetPanel extends JPanel
         addKeyFrameActions(kfa);
     }
 
-    public void initializeMovementKeyFrame(Character character, WorldView worldView, LocalPoint localPoint)
+    public void onOrientationKeyPressed()
     {
+        if (selectedCharacter == null)
+        {
+            return;
+        }
+
+        WorldView worldView = client.getTopLevelWorldView();
+        if (worldView == null)
+        {
+            return;
+        }
+
+        Tile tile = worldView.getSelectedSceneTile();
+        if (tile == null)
+        {
+            return;
+        }
+
+        LocalPoint localPoint = tile.getLocalLocation();
+        if (localPoint == null || !localPoint.isInScene())
+        {
+            return;
+        }
+
+        Programmer programmer = toolBox.getProgrammer();
+
+        CKObject ckObject = selectedCharacter.getCkObject();
+        if (ckObject == null)
+        {
+            return;
+        }
+
+        int startOrientation = ckObject.getOrientation();
+        KeyFrame okf = selectedCharacter.getCurrentKeyFrame(KeyFrameType.ORIENTATION);
+        if (okf == null)
+        {
+            initializeOrientationKeyFrame(selectedCharacter, localPoint, currentTime, startOrientation, OrientationGoal.POINT, 2, -1);
+        }
+        else
+        {
+            OrientationKeyFrame keyFrame = (OrientationKeyFrame) okf;
+            initializeOrientationKeyFrame(
+                    selectedCharacter,
+                    localPoint,
+                    keyFrame.getTick(),
+                    keyFrame.getStart(),
+                    keyFrame.getGoal(),
+                    keyFrame.getDuration(),
+                    keyFrame.getTurnRate());
+        }
+
+        //programmer.register3DChanges(selectedCharacter);
+        selectedCharacter.setVisible(true, clientThread);
+    }
+
+    public void initializeOrientationKeyFrame(Character character, LocalPoint localPoint, double tick, int startOrientation, OrientationGoal og, double duration, int turnRate)
+    {
+        CKObject ckObject = character.getCkObject();
+        if (ckObject == null)
+        {
+            return;
+        }
+
+        LocalPoint lp = ckObject.getLocation();
+        if (lp == null || !lp.isInScene())
+        {
+            return;
+        }
+
+        int angle = (int) Orientation.getAngleBetween(lp, localPoint);
+
+        KeyFrame okf = new OrientationKeyFrame(
+                tick,
+                og,
+                startOrientation,
+                angle,
+                duration,
+                turnRate);
+
+        KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(okf, character, KeyFrameCharacterActionType.ADD)};
+
+        KeyFrame keyFrameToReplace = addKeyFrame(character, okf);
+        if (keyFrameToReplace != null)
+        {
+            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, character, KeyFrameCharacterActionType.REMOVE));
+        }
+        addKeyFrameActions(kfa);
+    }
+
+    public void onAddMovementKeyPressed()
+    {
+        if (selectedCharacter == null)
+        {
+            return;
+        }
+
+        WorldView worldView = client.getTopLevelWorldView();
+        if (worldView == null)
+        {
+            return;
+        }
+
+        Tile tile = worldView.getSelectedSceneTile();
+        if (tile == null)
+        {
+            return;
+        }
+
+        LocalPoint localPoint = tile.getLocalLocation();
+        if (localPoint == null || !localPoint.isInScene())
+        {
+            return;
+        }
+
+        Programmer programmer = toolBox.getProgrammer();
+
         boolean poh = MovementManager.useLocalLocations(worldView);
 
-        KeyFrame keyFrame = character.findKeyFrame(KeyFrameType.MOVEMENT, currentTime);
-        if (keyFrame == null)
+        KeyFrame kf = selectedCharacter.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
+        if (kf == null)
         {
             int x = localPoint.getSceneX();
             int y = localPoint.getSceneY();
@@ -422,30 +544,40 @@ public class TimeSheetPanel extends JPanel
                 y = wp.getY();
             }
 
-            KeyFrame kf = new MovementKeyFrame(
-                    currentTime,
-                    worldView.getPlane(),
-                    poh,
-                    new int[][]{new int[]{x, y}},
-                    0,
-                    0,
-                    false,
-                    1,
-                    -1);
-
-            KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(kf, character, KeyFrameCharacterActionType.ADD)};
-            KeyFrame keyFrameToReplace = addKeyFrame(character, kf);
-
-            if (keyFrameToReplace != null)
-            {
-                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, character, KeyFrameCharacterActionType.REMOVE));
-            }
-            addKeyFrameActions(kfa);
-            return;
+            int[][] path = new int[][]{new int[]{x, y}};
+            initializeMovementKeyFrame(selectedCharacter, currentTime, worldView.getPlane(), poh, path, false, 1, -1);
+        }
+        else
+        {
+            MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+            int[][] path = movementManager.addProgramStep(keyFrame, worldView, localPoint);
+            initializeMovementKeyFrame(selectedCharacter, keyFrame.getTick(), worldView.getPlane(), poh, path, keyFrame.isLoop(), keyFrame.getSpeed(), keyFrame.getTurnRate());
         }
 
-        removeKeyFrame(character, keyFrame);
-        KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(keyFrame, character, KeyFrameCharacterActionType.REMOVE)};
+        //programmer.register3DChanges(selectedCharacter);
+        selectedCharacter.setVisible(true, clientThread);
+    }
+
+    public void initializeMovementKeyFrame(Character character, double tick, int plane, boolean poh, int[][] path, boolean loop, double speed, int turnRate)
+    {
+        KeyFrame kf = new MovementKeyFrame(
+                tick,
+                plane,
+                poh,
+                path,
+                0,
+                0,
+                loop,
+                speed,
+                turnRate);
+
+        KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(kf, character, KeyFrameCharacterActionType.ADD)};
+        KeyFrame keyFrameToReplace = addKeyFrame(character, kf);
+
+        if (keyFrameToReplace != null)
+        {
+            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, character, KeyFrameCharacterActionType.REMOVE));
+        }
         addKeyFrameActions(kfa);
     }
 
@@ -465,7 +597,10 @@ public class TimeSheetPanel extends JPanel
         KeyFrame keyFrameToReplace = character.addKeyFrame(keyFrame, currentTime);
         attributePanel.setKeyFramedIcon(true);
         attributePanel.resetAttributes(character, currentTime);
-        toolBox.getProgrammer().updateProgram(character, currentTime);
+        if (client.getGameState() == GameState.LOGGED_IN)
+        {
+            toolBox.getProgrammer().updateProgram(character, currentTime);
+        }
 
         return keyFrameToReplace;
     }
@@ -479,7 +614,10 @@ public class TimeSheetPanel extends JPanel
     {
         character.removeKeyFrame(keyFrame);
         attributePanel.resetAttributes(character, currentTime);
-        toolBox.getProgrammer().updateProgram(character, currentTime);
+        if (client.getGameState() == GameState.LOGGED_IN)
+        {
+            toolBox.getProgrammer().updateProgram(character, currentTime);
+        }
     }
 
     /**
@@ -500,21 +638,42 @@ public class TimeSheetPanel extends JPanel
 
     public void addKeyFrameActions(KeyFrameAction[] actions)
     {
-        int length = keyFrameActions.length;
-        if (length == UNDO_LIMIT)
+        if (keyFrameActions.length == UNDO_LIMIT)
         {
-            keyFrameActions = ArrayUtils.remove(keyFrameActions, length - 1);
+            keyFrameActions = ArrayUtils.remove(keyFrameActions, 0);
         }
 
-        if (undoStack != length - 1)
+        if (keyFrameActions.length > 0)
         {
-            for (int i = undoStack + 1; i == length - 1; i++)
+            while (keyFrameActions.length - 1 > undoStack)
             {
-                keyFrameActions = ArrayUtils.remove(keyFrameActions, undoStack + 1);
+                keyFrameActions = ArrayUtils.remove(keyFrameActions, keyFrameActions.length - 1);
             }
         }
 
         keyFrameActions = ArrayUtils.add(keyFrameActions, actions);
+        undoStack = keyFrameActions.length - 1;
+    }
+
+    public void removeKeyFrameActions(Character character)
+    {
+        for (int i = 0; i < keyFrameActions.length; i++)
+        {
+            KeyFrameAction[] actions = keyFrameActions[i];
+            for (int e = 0; e < actions.length; e++)
+            {
+                KeyFrameAction kfa = actions[e];
+                if (kfa.getActionType() == KeyFrameActionType.CHARACTER)
+                {
+                    KeyFrameCharacterAction kfca = (KeyFrameCharacterAction) kfa;
+                    if (kfca.getCharacter() == character)
+                    {
+                        keyFrameActions = ArrayUtils.removeElement(keyFrameActions, actions);
+                        break;
+                    }
+                }
+            }
+        }
         undoStack = keyFrameActions.length - 1;
     }
 
@@ -952,15 +1111,13 @@ public class TimeSheetPanel extends JPanel
             }
         }
 
+        selectedKeyFrames = new KeyFrame[0];
         KeyFrameAction[] kfa = new KeyFrameAction[0];
         for (KeyFrame keyFrame : copiedKeyFrames)
         {
             double newTime = round(keyFrame.getTick() - firstTick + currentTime);
             KeyFrame copy = KeyFrame.createCopy(keyFrame, newTime);
-            if (copy == null)
-            {
-                continue;
-            }
+            selectedKeyFrames = ArrayUtils.add(selectedKeyFrames, copy);
 
             KeyFrame keyFrameToReplace = addKeyFrame(selectedCharacter, copy);
             kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(copy, selectedCharacter, KeyFrameCharacterActionType.ADD));
@@ -1035,102 +1192,33 @@ public class TimeSheetPanel extends JPanel
                 addKeyFrameActions(kfa);
             }
         });
+    }
 
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_C, InputEvent.CTRL_DOWN_MASK), "VK_C");
-        actionMap.put("VK_C", new AbstractAction()
+    public void onSelectAllPressed()
+    {
+        if (selectedCharacter == null)
         {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                copyKeyFrames();
-            }
-        });
+            return;
+        }
 
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_V, InputEvent.CTRL_DOWN_MASK), "VK_V");
-        actionMap.put("VK_V", new AbstractAction()
+        setSelectedKeyFrames(selectedCharacter.getAllKeyFrames());
+    }
+
+    public void onDeleteKeyPressed()
+    {
+        if (selectedCharacter == null)
         {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                pasteKeyFrames();
-            }
-        });
+            return;
+        }
 
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_Z, InputEvent.CTRL_DOWN_MASK), "VK_Z");
-        actionMap.put("VK_Z", new AbstractAction()
+        KeyFrameAction[] kfa = new KeyFrameAction[0];
+        for (KeyFrame keyFrame : selectedKeyFrames)
         {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                undo();
-            }
-        });
+            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
+            removeKeyFrame(selectedCharacter, keyFrame);
+        }
 
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_Y, InputEvent.CTRL_DOWN_MASK), "VK_Y");
-        actionMap.put("VK_Y", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                redo();
-            }
-        });
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, InputEvent.CTRL_DOWN_MASK), "VK_SPACE");
-        actionMap.put("VK_SPACE", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                toolBox.getProgrammer().togglePlay();
-            }
-        });
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.CTRL_DOWN_MASK), "VK_R");
-        actionMap.put("VK_R", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                //toolBox.getProgrammer().pause();
-                toolBox.getTimeSheetPanel().setCurrentTime(0, false);
-            }
-        });
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_A, InputEvent.CTRL_DOWN_MASK), "VK_A");
-        actionMap.put("VK_A", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                if (selectedCharacter == null)
-                {
-                    return;
-                }
-
-                setSelectedKeyFrames(selectedCharacter.getAllKeyFrames());
-            }
-        });
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, InputEvent.CTRL_DOWN_MASK), "VK_RIGHT");
-        actionMap.put("VK_RIGHT", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                skipListener(1);
-            }
-        });
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, InputEvent.CTRL_DOWN_MASK), "VK_LEFT");
-        actionMap.put("VK_LEFT", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                skipListener(-1);
-            }
-        });
+        addKeyFrameActions(kfa);
     }
 
     public void skipListener(double modifier)

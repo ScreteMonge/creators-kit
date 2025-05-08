@@ -91,7 +91,7 @@ public class KeyFrame
                 HealthKeyFrame healthKF = (HealthKeyFrame) keyFrame;
                 return new HealthKeyFrame(
                         tick,
-                        healthKF.isEnabled(),
+                        healthKF.getDuration(),
                         healthKF.getHealthbarSprite(),
                         healthKF.getMaxHealth(),
                         healthKF.getCurrentHealth());

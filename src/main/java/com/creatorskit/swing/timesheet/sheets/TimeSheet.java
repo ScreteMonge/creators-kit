@@ -399,6 +399,7 @@ public class TimeSheet extends JPanel
             @Override
             public void actionPerformed(ActionEvent e)
             {
+
                 getTimeSheetPanel().setCurrentTime(TimeSheetPanel.round(currentTime - 0.1), false);
             }
         });
@@ -410,21 +411,6 @@ public class TimeSheet extends JPanel
             public void actionPerformed(ActionEvent e)
             {
                 getTimeSheetPanel().setCurrentTime(TimeSheetPanel.round(currentTime + 0.1), false);
-            }
-        });
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "VK_DELETE");
-        actionMap.put("VK_DELETE", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                if (selectedCharacter == null)
-                {
-                    return;
-                }
-
-                getTimeSheetPanel().removeKeyFrame(selectedCharacter, getTimeSheetPanel().getSelectedKeyFrames());
             }
         });
     }

@@ -9,17 +9,17 @@ import lombok.Setter;
 @Setter
 public class HealthKeyFrame extends KeyFrame
 {
-    private boolean enabled;
+    private double duration;
     private HealthbarSprite healthbarSprite;
     private int maxHealth;
     private int currentHealth;
 
-    public HealthKeyFrame(double tick, boolean enabled,
+    public HealthKeyFrame(double tick, double duration,
                           HealthbarSprite healthbarSprite,
                           int maxHealth, int currentHealth)
     {
         super(KeyFrameType.HEALTH, tick);
-        this.enabled = enabled;
+        this.duration = duration;
         this.healthbarSprite = healthbarSprite;
         this.maxHealth = maxHealth;
         this.currentHealth = currentHealth;

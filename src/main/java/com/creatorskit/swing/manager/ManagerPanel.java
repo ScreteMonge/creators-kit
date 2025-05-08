@@ -13,12 +13,11 @@ import net.runelite.client.ui.FontManager;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseWheelEvent;
-import java.awt.event.MouseWheelListener;
+import java.awt.event.*;
 import java.util.ArrayList;
 
 @Slf4j
@@ -42,8 +41,9 @@ public class ManagerPanel extends JPanel
         this.objectHolder = objectHolder;
         this.managerTree = managerTree;
 
-        setBackground(ColorScheme.DARK_GRAY_COLOR);
+        setBackground(ColorScheme.DARKER_GRAY_COLOR);
         setLayout(new BorderLayout(2, 2));
+        setBorder(new EmptyBorder(2, 2, 2, 2));
 
         c.fill = GridBagConstraints.BOTH;
         c.insets = new Insets(2, 2, 2, 2);
@@ -100,6 +100,11 @@ public class ManagerPanel extends JPanel
         addObjectButton.setPreferredSize(new Dimension(150, 30));
         addObjectButton.addActionListener(e ->
         {
+            if (client == null)
+            {
+                return;
+            }
+
             CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
             TreePath path = managerTree.getSelectionPath();
 

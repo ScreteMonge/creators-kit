@@ -1,5 +1,6 @@
 package com.creatorskit.swing;
 
+import com.creatorskit.CKObject;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.Character;
 import com.creatorskit.programming.MovementType;
@@ -8,6 +9,7 @@ import com.creatorskit.programming.ProgramComp;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.manager.TreeScrollPane;
 import lombok.Getter;
+import net.runelite.api.Animation;
 import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
@@ -112,6 +114,13 @@ public class ProgrammerPanel extends JPanel
         {
             for (Character character : plugin.getCharacters())
             {
+                CKObject ckObject = character.getCkObject();
+                Animation animation = ckObject.getAnimation();
+                if (animation == null || animation.getId() == -1)
+                {
+                    continue;
+                }
+
                 int maxAnimFrames = character.getCkObject().getMaxAnimFrames();
                 int animFrame = random.nextInt(maxAnimFrames);
                 plugin.setAnimationFrame(character, animFrame, false);

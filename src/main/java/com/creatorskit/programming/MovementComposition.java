@@ -15,4 +15,5 @@ public class MovementComposition
     private LocalPoint localPoint;
     private OrientationAction orientationAction;
     private int orientationGoal;
+    private int orientationToSet;
 }

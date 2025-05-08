@@ -12,10 +12,10 @@ public enum Direction
     SOUTH("South", 0),
     EAST("East", 1536),
     WEST("West", 512),
-    NORTHEAST("Northeast", 1280),
-    NORTHWEST("Northwest", 768),
-    SOUTHEAST("Southeast", 1792),
-    SOUTHWEST("Southwest", 256)
+    NORTHEAST("North-East", 1280),
+    NORTHWEST("North-West", 768),
+    SOUTHEAST("South-East", 1792),
+    SOUTHWEST("South_West", 256)
     ;
 
     private String name;

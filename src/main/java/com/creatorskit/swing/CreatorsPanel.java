@@ -39,10 +39,7 @@ import javax.swing.filechooser.FileFilter;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreeNode;
 import java.awt.*;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -69,8 +66,11 @@ public class CreatorsPanel extends PluginPanel
     private final JButton addObjectButton = new JButton();
     private final JPanel sidePanel = new JPanel();
     private final Random random = new Random();
+
     public static final File SETUP_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/setups");
     public static final File CREATORS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
+    public File lastFileLoaded;
+
     private final Pattern pattern = Pattern.compile("\\(\\d+\\)\\Z");
     private int npcPanels = 0;
     private ArrayList<Character> sidePanelCharacters = new ArrayList<>();
@@ -141,6 +141,11 @@ public class CreatorsPanel extends PluginPanel
         addObjectButton.setToolTipText("Add an new Object to the palette");
         addObjectButton.addActionListener(e ->
         {
+            if (client == null)
+            {
+                return;
+            }
+
             Character character = createCharacter(ParentPanel.SIDE_PANEL);
             SwingUtilities.invokeLater(() -> addPanel(ParentPanel.SIDE_PANEL, character, true, false));
         });
@@ -200,6 +205,8 @@ public class CreatorsPanel extends PluginPanel
         sidePanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         add(sidePanel, c);
 
+        setKeyBindings();
+
         c.gridwidth = 3;
         c.gridx = 0;
         c.gridy = 4;
@@ -248,6 +255,8 @@ public class CreatorsPanel extends PluginPanel
                               boolean inInstance,
                               boolean setHoveredLocation)
     {
+        Color color = program.getColor();
+
         JPanel programPanel = program.getProgramPanel();
         ObjectPanel objectPanel = new ObjectPanel(name, null, programPanel);
         objectPanel.setLayout(new GridBagLayout());
@@ -270,11 +279,11 @@ public class CreatorsPanel extends PluginPanel
         switchButton.setFocusable(false);
 
         JButton duplicateButton = new JButton(new ImageIcon(DUPLICATE));
-        duplicateButton.setToolTipText("Duplicate object");
+        duplicateButton.setToolTipText("Duplicate Object");
         duplicateButton.setFocusable(false);
 
         JButton deleteButton = new JButton(new ImageIcon(CLOSE));
-        deleteButton.setToolTipText("Delete object");
+        deleteButton.setToolTipText("Delete Object");
         deleteButton.setFocusable(false);
 
         //Buttons
@@ -288,15 +297,16 @@ public class CreatorsPanel extends PluginPanel
         JButton spawnButton = new JButton();
         spawnButton.setFont(FontManager.getRunescapeFont());
         spawnButton.setText(active ? "Spawn" : "Despawn");
-        spawnButton.setToolTipText("Toggle the NPC on or off");
+        spawnButton.setToolTipText("Toggle the Object on or off");
         spawnButton.setFocusable(false);
 
-        JButton animationButton = new JButton();
-        animationButton.setFont(FontManager.getRunescapeFont());
-        animationButton.setText("Anim Off");
-        animationButton.setToolTipText("Toggle the playing animation");
-        animationButton.setPreferredSize(new Dimension(90, 25));
-        animationButton.setFocusable(false);
+        JButton colourButton = new JButton();
+        colourButton.setFont(FontManager.getRunescapeFont());
+        colourButton.setText("Recolour");
+        colourButton.setToolTipText("Rerolls the Object's colour overlays");
+        colourButton.setPreferredSize(new Dimension(90, 25));
+        colourButton.setFocusable(false);
+        colourButton.setForeground(color);
 
         JPanel framePanel = new JPanel();
         framePanel.setLayout(new BorderLayout());
@@ -389,7 +399,7 @@ public class CreatorsPanel extends PluginPanel
             objectPanel.add(spawnButton, c);
 
             c.gridy++;
-            objectPanel.add(animationButton, c);
+            objectPanel.add(colourButton, c);
 
             c.gridy++;
             objectPanel.add(framePanel, c);
@@ -447,6 +457,7 @@ public class CreatorsPanel extends PluginPanel
                 summary,
                 null,
                 null,
+                program.getColor(),
                 program,
                 worldPoint,
                 localPoint,
@@ -538,19 +549,12 @@ public class CreatorsPanel extends PluginPanel
 
         spawnButton.addActionListener(e -> plugin.toggleSpawn(spawnButton, character));
 
-        animationButton.addActionListener(e ->
+        colourButton.addActionListener(e ->
         {
-            int animId = character.getCkObject().getAnimationId();
-            if (animId == -1)
-            {
-                animationButton.setText("Anim Off");
-                programmerIdleSpinner.setValue((int) animationSpinner.getValue());
-                plugin.setAnimation(character, (int) animationSpinner.getValue());
-                return;
-            }
-
-            animationButton.setText("Anim On");
-            plugin.unsetAnimation(character);
+            Color colour = getRandomColor();
+            character.setColor(colour);
+            program.setColor(colour);
+            colourButton.setForeground(colour);
         });
 
         modelButton.addActionListener(e ->
@@ -595,7 +599,6 @@ public class CreatorsPanel extends PluginPanel
 
         animationSpinner.addChangeListener(e ->
         {
-            animationButton.setText("Anim Off");
             int animationNumber = (int) animationSpinner.getValue();
             plugin.setAnimation(character, animationNumber);
             plugin.setAnimationFrame(character, (int) animationFrameSpinner.getValue(), true);
@@ -624,7 +627,7 @@ public class CreatorsPanel extends PluginPanel
                 deleteButton,
                 modelButton,
                 spawnButton,
-                animationButton,
+                colourButton,
                 animationFrameSpinner,
                 frameLabel,
                 modelLabel,
@@ -655,7 +658,7 @@ public class CreatorsPanel extends PluginPanel
             JButton deleteButton,
             JButton modelButton,
             JButton spawnButton,
-            JButton animationButton,
+            JButton colourButton,
             JSpinner animationFrameSpinner,
             JLabel frameLabel,
             JLabel modelLabel,
@@ -676,7 +679,7 @@ public class CreatorsPanel extends PluginPanel
         addSelectListeners(deleteButton, character, objectPanel, false);
         addSelectListeners(modelButton, character, objectPanel, true);
         addSelectListeners(spawnButton, character, objectPanel, true);
-        addSelectListeners(animationButton, character, objectPanel, true);
+        addSelectListeners(colourButton, character, objectPanel, true);
         addSelectListeners(animationFrameSpinner, character, objectPanel, true);
         addSelectListeners(frameLabel, character, objectPanel, true);
         addSelectListeners(modelLabel, character, objectPanel, true);
@@ -868,7 +871,7 @@ public class CreatorsPanel extends PluginPanel
                     (int) character.getAnimationSpinner().getValue(),
                     (int) character.getAnimationFrameSpinner().getValue(),
                     (int) character.getRadiusSpinner().getValue(),
-                    Arrays.copyOf(character.getFrames(), character.getFrames().length),
+                    duplicateKeyFrames(character),
                     summary,
                     newProgram,
                     character.isActive(),
@@ -882,6 +885,34 @@ public class CreatorsPanel extends PluginPanel
             SwingUtilities.invokeLater(() -> addPanel(parentPanel, c, true, false));
         });
         thread.start();
+    }
+
+    private KeyFrame[][] duplicateKeyFrames(Character character)
+    {
+        KeyFrame[][] duplicatesArrays = new KeyFrame[KeyFrameType.getTotalFrameTypes()][];
+
+        KeyFrame[][] originalArrays = character.getFrames();
+        for (int i = 0; i < originalArrays.length; i++)
+        {
+            KeyFrame[] originalArray = originalArrays[i];
+            if (originalArray == null || originalArray.length == 0)
+            {
+                duplicatesArrays[i] = new KeyFrame[0];
+                continue;
+            }
+
+            KeyFrame[] duplicateArray = new KeyFrame[originalArray.length];
+            for (int e = 0; e < originalArray.length; e++)
+            {
+                KeyFrame original = originalArray[e];
+                KeyFrame duplicate = KeyFrame.createCopy(original, original.getTick());
+                duplicateArray[e] = duplicate;
+            }
+
+            duplicatesArrays[i] = duplicateArray;
+        }
+
+        return duplicatesArrays;
     }
 
     public void onDeleteButtonPressed(Character character)
@@ -911,6 +942,8 @@ public class CreatorsPanel extends PluginPanel
             {
                 timeSheetPanel.setSelectedCharacter(null);
             }
+
+            toolBox.getTimeSheetPanel().removeKeyFrameActions(c);
         }
     }
 
@@ -944,6 +977,7 @@ public class CreatorsPanel extends PluginPanel
         sidePanel.revalidate();
         objectHolder.repaint();
         objectHolder.revalidate();
+        managerTree.updateTreeSelectionIndex();
         managerTree.resetObjectHolder();
     }
 
@@ -975,6 +1009,7 @@ public class CreatorsPanel extends PluginPanel
         sidePanel.revalidate();
         objectHolder.repaint();
         objectHolder.revalidate();
+        managerTree.updateTreeSelectionIndex();
     }
 
     public void clearSidePanels(boolean warning)
@@ -1066,9 +1101,11 @@ public class CreatorsPanel extends PluginPanel
 
         plugin.setSelectedCharacter(selected);
 
+        ManagerTree tree = toolBox.getManagerPanel().getManagerTree();
         if (updateManagerTree)
         {
             toolBox.getManagerPanel().getManagerTree().setTreeSelection(selected);
+            tree.setTreeSelection(selected);
         }
 
         if (selected != null)
@@ -1173,11 +1210,13 @@ public class CreatorsPanel extends PluginPanel
         modelOrganizer.removeModelPanel(model);
     }
 
-    private Color getRandomColor()
+    public Color getRandomColor()
     {
-        float r = random.nextFloat();
-        float g = random.nextFloat();
-        float b = random.nextFloat();
+        int max = 90;
+        int min = 35;
+        float r = (float) (random.nextInt(max - min + 1) + min) / 100;
+        float g = (float) (random.nextInt(max - min + 1) + min) / 100;
+        float b = (float) (random.nextInt(max - min + 1) + min) / 100;
         return new Color(r, g, b);
     }
 
@@ -1186,6 +1225,24 @@ public class CreatorsPanel extends PluginPanel
         Color color = getRandomColor();
         ProgramComp comp = new ProgramComp(new WorldPoint[0], new WorldPoint[0], new LocalPoint[0], new LocalPoint[0], new Coordinate[0], false, 0, 1, DEFAULT_TURN_SPEED, poseAnim, walkAnim, MovementType.NORMAL, color.getRGB(), false, false);
         return new Program(comp, new JPanel(), new JLabel(), new JSpinner(), color);
+    }
+
+    private void updateLoadedFile(File file)
+    {
+        lastFileLoaded = file;
+        toolBox.setTitle("Creator's Kit Toolbox - " + getFileName(lastFileLoaded));
+    }
+
+    private String getFileName(File file)
+    {
+        String fileName = file.getName();
+        int lastDotIndex = fileName.lastIndexOf('.');
+        if (lastDotIndex != -1)
+        {
+            return fileName.substring(0, lastDotIndex);
+        }
+
+        return fileName;
     }
 
     public void openSaveDialog()
@@ -1242,6 +1299,17 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
+    public void quickSaveToFile()
+    {
+        if (lastFileLoaded == null)
+        {
+            openSaveDialog();
+            return;
+        }
+
+        saveToFile(lastFileLoaded);
+    }
+
     public void saveToFile(File file)
     {
         ArrayList<CustomModel> customModels = plugin.getStoredModels();
@@ -1263,6 +1331,8 @@ public class CreatorsPanel extends PluginPanel
             String string = plugin.getGson().toJson(saveFile);
             writer.write(string);
             writer.close();
+            updateLoadedFile(file);
+            plugin.sendChatMessage("Saved successfully to: " + getFileName(file));
         }
         catch (IOException e)
         {
@@ -1507,6 +1577,7 @@ public class CreatorsPanel extends PluginPanel
 
     private void loadSetup(File file, SetupSave saveFile)
     {
+        updateLoadedFile(file);
         CustomModelComp[] comps = saveFile.getComps();
         FolderNodeSave folderNodeSave = saveFile.getMasterFolderNode();
         CustomModel[] customModels = new CustomModel[comps.length];
@@ -1879,5 +1950,32 @@ public class CreatorsPanel extends PluginPanel
         }
 
         return false;
+    }
+
+
+    private void setKeyBindings()
+    {
+        ActionMap actionMap = getActionMap();
+        InputMap inputMap = getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK), "VK_S");
+        actionMap.put("VK_S", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                plugin.getCreatorsPanel().quickSaveToFile();
+            }
+        });
+
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_DOWN_MASK), "VK_O");
+        actionMap.put("VK_O", new AbstractAction()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                plugin.getCreatorsPanel().openLoadSetupDialog();
+            }
+        });
     }
 }

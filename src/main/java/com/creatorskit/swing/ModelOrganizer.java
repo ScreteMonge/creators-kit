@@ -146,6 +146,7 @@ public class ModelOrganizer extends JPanel
         {
             ArrayList<CustomModel> unusedModels = new ArrayList<>();
             CustomModel transmogModel = plugin.getTransmogModel();
+            ArrayList<Character> characters = plugin.getCharacters();
 
             for (int i = 0; i < plugin.getStoredModels().size(); i++)
             {
@@ -155,16 +156,24 @@ public class ModelOrganizer extends JPanel
                     continue;
 
                 boolean isBeingUsed = false;
-                for (Character character : plugin.getCharacters())
+                for (int x = 0; x < characters.size(); x++)
                 {
+                    Character character = characters.get(x);
                     if (character.getStoredModel() == customModel)
                     {
                         isBeingUsed = true;
                         break;
                     }
 
-                    for (ModelKeyFrame keyFrame : character.getModelKeyFrames())
+                    ModelKeyFrame[] modelKeyFrames = character.getModelKeyFrames();
+                    if (modelKeyFrames == null || modelKeyFrames.length == 0)
                     {
+                        continue;
+                    }
+
+                    for (int f = 0; f < modelKeyFrames.length; f++)
+                    {
+                        ModelKeyFrame keyFrame = modelKeyFrames[f];
                         if (keyFrame.isUseCustomModel() && keyFrame.getCustomModel() == customModel)
                         {
                             isBeingUsed = true;

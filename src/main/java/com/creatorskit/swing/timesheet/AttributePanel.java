@@ -4,10 +4,7 @@ import com.creatorskit.CKObject;
 import com.creatorskit.Character;
 import com.creatorskit.models.CustomModel;
 import com.creatorskit.models.DataFinder;
-import com.creatorskit.models.datatypes.ItemData;
-import com.creatorskit.models.datatypes.NPCData;
-import com.creatorskit.models.datatypes.PlayerAnimationType;
-import com.creatorskit.models.datatypes.WeaponAnimData;
+import com.creatorskit.models.datatypes.*;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.orientation.OrientationGoal;
 import com.creatorskit.swing.searchabletable.JFilterableTable;
@@ -56,6 +53,7 @@ public class AttributePanel extends JPanel
 
     private final JFilterableTable npcTable = new JFilterableTable("NPCs");
     private final JFilterableTable itemTable = new JFilterableTable("Items");
+    private final JFilterableTable animTable = new JFilterableTable("Animations");
 
     public static final String MOVE_CARD = "Movement";
     public static final String ANIM_CARD = "Animation";
@@ -292,7 +290,7 @@ public class AttributePanel extends JPanel
             case HEALTH:
                 return new HealthKeyFrame(
                         tick,
-                        healthAttributes.getEnableBox().getSelectedItem() == Toggle.ENABLE,
+                        (double) healthAttributes.getDuration().getValue(),
                         (HealthbarSprite) healthAttributes.getHealthbarSprite().getSelectedItem(),
                         (int) healthAttributes.getMaxHealth().getValue(),
                         (int) healthAttributes.getCurrentHealth().getValue()
@@ -659,6 +657,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 11;
         JTextField npcField = new JTextField("");
+        npcField.setBackground(ColorScheme.DARK_GRAY_COLOR);
         card.add(npcField, c);
 
         JPopupMenu npcPopup = new JPopupMenu("NPCs");
@@ -682,7 +681,8 @@ public class AttributePanel extends JPanel
                 String text = npcField.getText();
                 npcTable.searchAndListEntries(text);
                 npcPopup.setVisible(true);
-                npcPopup.setLocation(MouseInfo.getPointerInfo().getLocation());
+                Point p = npcField.getLocationOnScreen();
+                npcPopup.setLocation(new Point((int) p.getX() + npcField.getWidth(), (int) p.getY()));
             }
         };
         npcField.addKeyListener(npcListener);
@@ -756,6 +756,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 12;
         JTextField itemField = new JTextField("");
+        itemField.setBackground(ColorScheme.DARK_GRAY_COLOR);
         card.add(itemField, c);
 
         JPopupMenu itemPopup = new JPopupMenu("Items");
@@ -779,7 +780,8 @@ public class AttributePanel extends JPanel
                 String text = itemField.getText();
                 itemTable.searchAndListEntries(text);
                 itemPopup.setVisible(true);
-                itemPopup.setLocation(MouseInfo.getPointerInfo().getLocation());
+                Point p = itemField.getLocationOnScreen();
+                itemPopup.setLocation(new Point((int) p.getX() + itemField.getWidth(), (int) p.getY()));
             }
         };
         itemField.addKeyListener(itemListener);
@@ -958,6 +960,99 @@ public class AttributePanel extends JPanel
                 startFrame.setValue(randomFrame);
             });
         });
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 13;
+        JLabel animSearcherLabel = new JLabel("Animations: ");
+        animSearcherLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(animSearcherLabel, c);
+
+        c.gridwidth = 3;
+        c.gridx = 1;
+        c.gridy = 13;
+        JTextField animField = new JTextField("");
+        animField.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        card.add(animField, c);
+
+        JPopupMenu animPopup = new JPopupMenu("Animations");
+        JScrollPane animScrollPane = new JScrollPane(animTable);
+        animPopup.add(animScrollPane);
+
+        KeyListener animListener = new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e)
+            {
+                String text = animField.getText();
+                animTable.searchAndListEntries(text);
+                animPopup.setVisible(true);
+                Point p = animField.getLocationOnScreen();
+                animPopup.setLocation(new Point((int) p.getX() + animField.getWidth(), (int) p.getY()));
+            }
+        };
+        animField.addKeyListener(animListener);
+
+        animField.addFocusListener(new FocusListener()
+        {
+            @Override
+            public void focusGained(FocusEvent e)
+            {
+
+            }
+
+            @Override
+            public void focusLost(FocusEvent e)
+            {
+                animPopup.setVisible(false);
+            }
+        });
+
+        animTable.addMouseListener(new MouseAdapter()
+        {
+            @Override
+            public void mouseClicked(MouseEvent e)
+            {
+                super.mouseClicked(e);
+                if (e.getClickCount() == 2 && e.getButton() == MouseEvent.BUTTON1)
+                {
+                    Object o = animTable.getSelectedObject();
+                    if (o instanceof AnimData)
+                    {
+                        AnimData data = (AnimData) o;
+                        manual.setValue(data.getId());
+
+                    }
+
+                    animPopup.setVisible(false);
+                }
+            }
+        });
+
+        if (dataFinder.isDataLoaded(DataFinder.DataType.ANIM))
+        {
+            List<AnimData> dataList = dataFinder.getAnimData();
+            List<Object> list = new ArrayList<>(dataList);
+            animTable.initialize(list);
+        }
+        else
+        {
+            dataFinder.addLoadCallback(DataFinder.DataType.ANIM, () ->
+            {
+                List<AnimData> dataList = dataFinder.getAnimData();
+                List<Object> list = new ArrayList<>(dataList);
+                animTable.initialize(list);
+            });
+        }
 
         c.gridwidth = 1;
         c.gridheight = 1;
@@ -1450,11 +1545,16 @@ public class AttributePanel extends JPanel
         c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 1;
-        JComboBox<Toggle> toggleComboBox = healthAttributes.getEnableBox();
-        toggleComboBox.setFocusable(false);
-        toggleComboBox.addItem(Toggle.ENABLE);
-        toggleComboBox.addItem(Toggle.DISABLE);
-        card.add(toggleComboBox, c);
+        JLabel durationLabel = new JLabel("Duration: ");
+        durationLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(durationLabel, c);
+
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.gridy = 1;
+        JSpinner duration = healthAttributes.getDuration();
+        duration.setModel(new SpinnerNumberModel(5.0, 0, 1000000, 1));
+        card.add(duration, c);
 
         c.gridwidth = 1;
         c.gridx = 0;

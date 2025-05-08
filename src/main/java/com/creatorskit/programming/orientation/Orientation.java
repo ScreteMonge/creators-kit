@@ -1,5 +1,7 @@
 package com.creatorskit.programming.orientation;
 
+import net.runelite.api.coords.LocalPoint;
+
 public class Orientation
 {
     public static int orientationX(double orientation)
@@ -145,5 +147,16 @@ public class Orientation
         }
 
         return orientation;
+    }
+
+    public static double getAngleBetween(LocalPoint firstPoint, LocalPoint secondPoint)
+    {
+        int secondX = secondPoint.getX();
+        int secondY = secondPoint.getY();
+        int firstX = firstPoint.getX();
+        int firstY = firstPoint.getY();
+        double differenceX = secondX - firstX;
+        double differenceY = secondY - firstY;
+        return Orientation.radiansToJAngle(Math.atan(differenceY / differenceX), differenceX, differenceY);
     }
 }

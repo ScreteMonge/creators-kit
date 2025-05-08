@@ -1,6 +1,7 @@
 package com.creatorskit.programming;
 
 import com.creatorskit.CreatorsConfig;
+import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.swing.timesheet.keyframe.MovementKeyFrame;
 import net.runelite.api.Client;
 import net.runelite.api.WorldView;
@@ -27,54 +28,47 @@ public class MovementManager
         this.pathFinder = pathFinder;
     }
 
-    public void addProgramStep(MovementKeyFrame keyFrame, WorldView worldView, LocalPoint localPoint)
+    public int[][] addProgramStep(MovementKeyFrame keyFrame, WorldView worldView, LocalPoint localPoint)
     {
         if (localPoint == null)
         {
-            return;
+            return new int[0][2];
         }
 
         if (useLocalLocations(worldView))
         {
-            addPOHStep(keyFrame, worldView, localPoint);
-            return;
+            return addPOHStep(keyFrame, worldView, localPoint);
         }
 
-        addWorldStep(keyFrame, worldView, WorldPoint.fromLocalInstance(client, localPoint));
+        return addWorldStep(keyFrame, worldView, WorldPoint.fromLocalInstance(client, localPoint));
     }
 
-    public void addWorldStep(MovementKeyFrame keyFrame, WorldView worldView, WorldPoint worldPoint)
+    public int[][] addWorldStep(MovementKeyFrame keyFrame, WorldView worldView, WorldPoint worldPoint)
     {
         int[][] path = keyFrame.getPath();
         if (path.length == 0)
         {
-            path = new int[][]{new int[]{worldPoint.getX(), worldPoint.getY()}};
-            keyFrame.setPath(path);
-            return;
+            return new int[][]{new int[]{worldPoint.getX(), worldPoint.getY()}};
         }
 
         int[] lastStep = path[path.length - 1];
         int[][] stepsToAdd = new int[0][]; //pathFinder.findPath(worldView, new WorldPoint(lastStep[0], lastStep[1], worldView.getPlane()), worldPoint, config.movementAlgorithm());
 
-        path = ArrayUtils.addAll(path, stepsToAdd);
-        keyFrame.setPath(path);
+        return ArrayUtils.addAll(path, stepsToAdd);
     }
 
-    public void addPOHStep(MovementKeyFrame keyFrame, WorldView worldView, LocalPoint localPoint)
+    public int[][] addPOHStep(MovementKeyFrame keyFrame, WorldView worldView, LocalPoint localPoint)
     {
         int[][] path = keyFrame.getPath();
         if (path.length == 0)
         {
-            path = new int[][]{new int[]{localPoint.getSceneX(), localPoint.getSceneY()}};
-            keyFrame.setPath(path);
-            return;
+            return new int[][]{new int[]{localPoint.getSceneX(), localPoint.getSceneY()}};
         }
 
         int[] lastStep = path[path.length - 1];
         int[][] stepsToAdd = new int[0][]; //pathFinder.findPath(LocalPoint.fromScene(lastStep[0], lastStep[1], worldView), localPoint, config.movementAlgorithm());
 
-        path = ArrayUtils.addAll(path, stepsToAdd);
-        keyFrame.setPath(path);
+        return ArrayUtils.addAll(path, stepsToAdd);
     }
 
     public static boolean useLocalLocations(WorldView worldView)

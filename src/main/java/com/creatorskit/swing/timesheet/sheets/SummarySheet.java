@@ -5,10 +5,7 @@ import com.creatorskit.swing.Folder;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.AttributePanel;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
-import com.creatorskit.swing.timesheet.keyframe.MovementKeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.OrientationKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.*;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.client.ui.ColorScheme;
@@ -113,7 +110,13 @@ public class SummarySheet extends TimeSheet
     public void drawHighlight(Graphics g)
     {
         g.setColor(Color.DARK_GRAY);
-        g.fillRect(0, getSelectedIndex() * rowHeight - rowHeightOffset - getVScroll(), this.getWidth(), rowHeight);
+        int selectedIndex = getSelectedIndex();
+        if (selectedIndex == -1)
+        {
+            return;
+        }
+
+        g.fillRect(0, selectedIndex * rowHeight - rowHeightOffset - getVScroll(), this.getWidth(), rowHeight);
     }
 
     @Override
@@ -190,52 +193,62 @@ public class SummarySheet extends TimeSheet
             int x = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor);
             int y = (index * rowHeight) - rowHeightOffset - getVScroll() + yStringOffset;
 
-            if (type == KeyFrameType.MOVEMENT)
+            switch (type)
             {
-                MovementKeyFrame movementKeyFrame = (MovementKeyFrame) keyFrame;
-                int steps = (movementKeyFrame.getPath().length - 1);
-                if (steps > 0)
-                {
-                    double ticks = steps / movementKeyFrame.getSpeed();
-                    boolean round = true;
-                    if (e + 1 < keyFrames.length)
+                case MOVEMENT:
+                    MovementKeyFrame movementKeyFrame = (MovementKeyFrame) keyFrame;
+                    int steps = (movementKeyFrame.getPath().length - 1);
+                    if (steps > 0)
                     {
-                        KeyFrame next = keyFrames[e + 1];
-                        double difference = next.getTick() - keyFrame.getTick();
-                        if (difference < ticks)
+                        double ticks = steps / movementKeyFrame.getSpeed();
+                        boolean round = true;
+                        if (e + 1 < keyFrames.length)
                         {
-                            ticks = difference;
-                            round = false;
+                            KeyFrame next = keyFrames[e + 1];
+                            double difference = next.getTick() - keyFrame.getTick();
+                            if (difference < ticks)
+                            {
+                                ticks = difference;
+                                round = false;
+                            }
                         }
-                    }
 
-                    if (round)
+                        if (round)
+                        {
+                            ticks = Math.ceil(ticks);
+                        }
+
+                        int pathLength = (int) (ticks * zoomFactor);
+                        g.drawLine(x + xStringOffset, y - stringHeight / 2, x + pathLength - 1, y - stringHeight / 2);
+                    }
+                    break;
+                case ORIENTATION:
+                    OrientationKeyFrame okf = (OrientationKeyFrame) keyFrame;
+                    drawTail(g, e, keyFrames, okf.getDuration(), zoomFactor, okf.getTick(), x, y, xStringOffset, stringHeight);
+                    break;
+                case TEXT:
+                    TextKeyFrame tkf = (TextKeyFrame) keyFrame;
+                    drawTail(g, e, keyFrames, tkf.getDuration(), zoomFactor, tkf.getTick(), x, y, xStringOffset, stringHeight);
+                    break;
+                case HEALTH:
+                    HealthKeyFrame hkf = (HealthKeyFrame) keyFrame;
+                    drawTail(g, e, keyFrames, hkf.getDuration(), zoomFactor, hkf.getTick(), x, y, xStringOffset, stringHeight);
+                    break;
+                case HITSPLAT_1:
+                case HITSPLAT_2:
+                case HITSPLAT_3:
+                case HITSPLAT_4:
+                    HitsplatKeyFrame hskf = (HitsplatKeyFrame) keyFrame;
+                    double duration = hskf.getDuration();
+                    if (duration == -1)
                     {
-                        ticks = Math.ceil(ticks);
+                        duration = HitsplatKeyFrame.DEFAULT_DURATION;
                     }
 
-                    int pathLength = (int) (ticks * zoomFactor);
-                    g.drawLine(x + xStringOffset, y - stringHeight / 2, x + pathLength - 1, y - stringHeight / 2);
-                }
-            }
-
-            if (type == KeyFrameType.ORIENTATION)
-            {
-                OrientationKeyFrame orientationKeyFrame = (OrientationKeyFrame) keyFrame;
-                double ticks = orientationKeyFrame.getDuration();
-                if (e + 1 < keyFrames.length)
-                {
-                    KeyFrame next = keyFrames[e + 1];
-                    double difference = next.getTick() - keyFrame.getTick();
-                    if (difference < ticks)
-                    {
-                        ticks = difference;
-                    }
-                }
-
-
-                int pathLength = (int) (ticks * zoomFactor);
-                g.drawLine(x  + xStringOffset, y - stringHeight / 2, x + pathLength - 1, y - stringHeight / 2);
+                    drawTail(g, e, keyFrames, duration, zoomFactor, hskf.getTick(), x, y, xStringOffset, stringHeight);
+                    break;
+                default:
+                    break;
             }
 
 
@@ -244,6 +257,22 @@ public class SummarySheet extends TimeSheet
                     x - xStringOffset,
                     y);
         }
+    }
+
+    private void drawTail(Graphics g, int e, KeyFrame[] keyFrames, double duration, double zoomFactor, double tick, int x, int y, int xStringOffset, int stringHeight)
+    {
+        if (e + 1 < keyFrames.length)
+        {
+            KeyFrame next = keyFrames[e + 1];
+            double difference = next.getTick() - tick;
+            if (difference < duration)
+            {
+                duration = difference;
+            }
+        }
+
+        int pathLength = (int) (duration * zoomFactor);
+        g.drawLine(x  + xStringOffset, y - stringHeight / 2, x + pathLength - 1, y - stringHeight / 2);
     }
 
     @Override

@@ -4,16 +4,20 @@ import com.creatorskit.models.CustomModel;
 import com.creatorskit.programming.Program;
 import com.creatorskit.swing.ObjectPanel;
 import com.creatorskit.swing.ParentPanel;
+import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
+import net.runelite.api.Constants;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.client.callback.ClientThread;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
+import java.awt.*;
 
 @Getter
 @Setter
@@ -28,6 +32,7 @@ public class Character
     private KeyFrameType[] summary;
     private DefaultMutableTreeNode linkedManagerNode;
     private DefaultMutableTreeNode parentManagerNode;
+    private Color color;
     private Program program;
     private WorldPoint nonInstancedPoint;
     private LocalPoint instancedPoint;
@@ -122,6 +127,21 @@ public class Character
     public void setCurrentKeyFrame(KeyFrame keyFrame, KeyFrameType type)
     {
         currentFrames[KeyFrameType.getIndex(type)] = keyFrame;
+    }
+
+    public void resetMovementKeyFrame(int clientTick, double currentTime)
+    {
+        KeyFrame kf = getCurrentKeyFrame(KeyFrameType.MOVEMENT);
+        if (kf == null)
+        {
+            return;
+        }
+
+        MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+        double diff = TimeSheetPanel.round(currentTime - keyFrame.getTick());
+        int cTickDiff = (int) (diff * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH);
+        int stepCTick = clientTick - cTickDiff;
+        keyFrame.setStepClientTick(stepCTick);
     }
 
     public KeyFrame[] getKeyFrames(KeyFrameType type)
@@ -665,6 +685,39 @@ public class Character
             keyFrame[i] = (SpotAnimKeyFrame) keyFrames[i];
         }
         return keyFrame;
+    }
+
+
+    public void toggleActive(ClientThread clientThread)
+    {
+        setActive(!active, true, clientThread);
+    }
+
+    public void setVisible(boolean visible, ClientThread clientThread)
+    {
+        clientThread.invokeLater(() -> ckObject.setActive(visible));
+    }
+
+    public void setActive(boolean setActive, boolean reset, ClientThread clientThread)
+    {
+        clientThread.invokeLater(() ->
+        {
+            if (setActive)
+            {
+                active = true;
+                if (reset)
+                {
+                    ckObject.setActive(false);
+                }
+                ckObject.setActive(true);
+                spawnButton.setText("Spawn");
+                return;
+            }
+
+            active = false;
+            ckObject.setActive(false);
+            spawnButton.setText("Despawn");
+        });
     }
 
     public HitsplatKeyFrame[] getHitsplatKeyFrames(KeyFrameType hitsplatType)
