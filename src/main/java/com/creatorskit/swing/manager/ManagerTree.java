@@ -413,6 +413,7 @@ public class ManagerTree extends JTree
             TreePath[] treePaths = getSelectionPaths();
             if (treePaths == null)
             {
+                plugin.getCreatorsPanel().setSelectedCharacter(null, false);
                 return;
             }
 
@@ -598,12 +599,14 @@ public class ManagerTree extends JTree
     {
         if (character == null)
         {
+            updateTreeSelectionIndex();
             return;
         }
 
         TreePath treePath = new TreePath(character.getLinkedManagerNode().getPath());
         setSelectionPath(treePath);
         scrollPathToVisible(treePath);
+        updateTreeSelectionIndex();
     }
 
     public void scrollSelectedIndex(int direction)
@@ -636,20 +639,26 @@ public class ManagerTree extends JTree
         }
 
         setSelectionRow(index);
+        updateTreeSelectionIndex();
     }
 
-    private void updateTreeSelectionIndex()
+    public void updateTreeSelectionIndex()
     {
         int[] rows = getSelectionRows();
         int current = getLeadSelectionRow();
-        if (current != -1)
+        if (current == -1)
         {
-            if (rows == null || rows.length == 0)
-            {
-                return;
-            }
-            toolBox.getTimeSheetPanel().getSummarySheet().setSelectedIndex(rows[0]);
+            toolBox.getTimeSheetPanel().getSummarySheet().setSelectedIndex(-1);
+            return;
         }
+
+        int row = 0;
+        if (rows != null && rows.length > 0)
+        {
+            row = rows[0];
+        }
+
+        toolBox.getTimeSheetPanel().getSummarySheet().setSelectedIndex(row);
     }
 
     private void setMouseListeners()
@@ -681,7 +690,6 @@ public class ManagerTree extends JTree
         }
 
         setSelectionRow(row);
-
     }
 
     private void onMouseButton3Pressed(Point p)

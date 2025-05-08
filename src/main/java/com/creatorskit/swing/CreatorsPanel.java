@@ -927,6 +927,7 @@ public class CreatorsPanel extends PluginPanel
         sidePanel.revalidate();
         objectHolder.repaint();
         objectHolder.revalidate();
+        managerTree.updateTreeSelectionIndex();
         managerTree.resetObjectHolder();
     }
 
@@ -958,6 +959,7 @@ public class CreatorsPanel extends PluginPanel
         sidePanel.revalidate();
         objectHolder.repaint();
         objectHolder.revalidate();
+        managerTree.updateTreeSelectionIndex();
     }
 
     public void clearSidePanels(boolean warning)
@@ -1045,9 +1047,10 @@ public class CreatorsPanel extends PluginPanel
 
         plugin.setSelectedCharacter(selected);
 
+        ManagerTree tree = toolBox.getManagerPanel().getManagerTree();
         if (updateManagerTree)
         {
-            toolBox.getManagerPanel().getManagerTree().setTreeSelection(selected);
+            tree.setTreeSelection(selected);
         }
 
         if (selected != null)

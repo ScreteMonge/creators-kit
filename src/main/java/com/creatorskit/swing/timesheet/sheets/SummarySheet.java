@@ -110,7 +110,13 @@ public class SummarySheet extends TimeSheet
     public void drawHighlight(Graphics g)
     {
         g.setColor(Color.DARK_GRAY);
-        g.fillRect(0, getSelectedIndex() * rowHeight - rowHeightOffset - getVScroll(), this.getWidth(), rowHeight);
+        int selectedIndex = getSelectedIndex();
+        if (selectedIndex == -1)
+        {
+            return;
+        }
+
+        g.fillRect(0, selectedIndex * rowHeight - rowHeightOffset - getVScroll(), this.getWidth(), rowHeight);
     }
 
     @Override

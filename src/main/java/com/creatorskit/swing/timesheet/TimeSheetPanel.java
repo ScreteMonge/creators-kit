@@ -764,13 +764,16 @@ public class TimeSheetPanel extends JPanel
 
         Programmer programmer = toolBox.getProgrammer();
 
-        if (playing)
+        if (client.getGameState() == GameState.LOGGED_IN)
         {
-            programmer.updateProgramsOnTick();
-        }
-        else
-        {
-            programmer.updatePrograms(tick);
+            if (playing)
+            {
+                programmer.updateProgramsOnTick();
+            }
+            else
+            {
+                programmer.updatePrograms(tick);
+            }
         }
 
         onCurrentTimeChanged(tick);
