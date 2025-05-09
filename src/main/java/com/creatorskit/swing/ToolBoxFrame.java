@@ -369,6 +369,14 @@ public class ToolBoxFrame extends JFrame
         JMenuItem github = new JMenuItem("Github");
         github.addActionListener(e -> openLink("https://github.com/ScreteMonge/creators-kit"));
         help.add(github);
+
+
+        JMenu donate = new JMenu("Donate");
+        jMenuBar.add(donate);
+
+        JMenuItem patreon = new JMenuItem("Patreon");
+        patreon.addActionListener(e -> openLink("https://www.patreon.com/ScreteMonge"));
+        donate.add(patreon);
     }
 
     public void openLink(String url)
