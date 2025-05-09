@@ -55,8 +55,11 @@ public class Attributes
 
     }
 
-    public void resetAttributes()
+    public void resetAttributes(boolean resetBackground)
     {
-
+        if (resetBackground)
+        {
+            setBackgroundColours(KeyFrameState.EMPTY);
+        }
     }
 }

@@ -70,11 +70,11 @@ public class SpotAnimAttributes extends Attributes
     }
 
     @Override
-    public void resetAttributes()
+    public void resetAttributes(boolean resetBackground)
     {
         spotAnimId.setValue(-1);
         loop.setSelectedItem(Toggle.DISABLE);
         height.setValue(92);
-        setBackgroundColours(KeyFrameState.EMPTY);
+        super.resetAttributes(resetBackground);
     }
 }

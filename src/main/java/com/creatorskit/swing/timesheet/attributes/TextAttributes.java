@@ -75,10 +75,10 @@ public class TextAttributes extends Attributes
     }
 
     @Override
-    public void resetAttributes()
+    public void resetAttributes(boolean resetBackground)
     {
         duration.setValue(5);
         text.setText("");
-        setBackgroundColours(KeyFrameState.EMPTY);
+        super.resetAttributes(resetBackground);
     }
 }

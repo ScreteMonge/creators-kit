@@ -42,6 +42,7 @@ public class AttributePanel extends JPanel
 
     private final BufferedImage HELP = ImageUtil.loadImageResource(getClass(), "/Help.png");
     private final BufferedImage COMPASS = ImageUtil.loadImageResource(getClass(), "/Orientation_compass.png");
+    private final BufferedImage RESET = ImageUtil.loadImageResource(getClass(), "/Reset.png");
     private final Icon keyframeImage = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/Keyframe.png"));
     private final Icon keyframeEmptyImage = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/Keyframe_Empty.png"));
 
@@ -141,13 +142,21 @@ public class AttributePanel extends JPanel
 
         c.gridx = 3;
         c.gridy = 0;
+        JButton reset = new JButton(new ImageIcon(RESET));
+        reset.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        reset.setToolTipText("Reset all the parameters of the currently visible KeyFrame");
+        reset.addActionListener(e -> setAttributesEmpty(false));
+        add(reset, c);
+
+        c.gridx = 4;
+        c.gridy = 0;
         keyFramed.setIcon(keyframeEmptyImage);
         keyFramed.setPreferredSize(new Dimension(32, 32));
         keyFramed.setBackground(ColorScheme.DARK_GRAY_COLOR);
         keyFramed.addActionListener(e -> timeSheetPanel.onKeyFrameIconPressedEvent());
         add(keyFramed, c);
 
-        c.gridwidth = 4;
+        c.gridwidth = 5;
         c.weightx = 1;
         c.weighty = 1;
         c.gridx = 0;
@@ -2141,7 +2150,7 @@ public class AttributePanel extends JPanel
     {
         if (character == null)
         {
-            setAttributesEmpty();
+            setAttributesEmpty(true);
             return;
         }
 
@@ -2162,7 +2171,6 @@ public class AttributePanel extends JPanel
                         break;
                     case ANIMATION:
                         animAttributes.setBackgroundColours(KeyFrameState.EMPTY);
-                        animAttributes.resetAttributes();
                         break;
                     case ORIENTATION:
                         oriAttributes.setBackgroundColours(KeyFrameState.EMPTY);
@@ -2268,52 +2276,52 @@ public class AttributePanel extends JPanel
         }
     }
 
-    public void setAttributesEmpty()
+    public void setAttributesEmpty(boolean resetBackground)
     {
         switch (selectedKeyFramePage)
         {
             default:
             case MOVEMENT:
-                movementAttributes.resetAttributes();
+                movementAttributes.resetAttributes(resetBackground);
                 break;
             case ANIMATION:
-                animAttributes.resetAttributes();
+                animAttributes.resetAttributes(resetBackground);
                 break;
             case ORIENTATION:
-                oriAttributes.resetAttributes();
+                oriAttributes.resetAttributes(resetBackground);
                 break;
             case SPAWN:
-                spawnAttributes.resetAttributes();
+                spawnAttributes.resetAttributes(resetBackground);
                 break;
             case MODEL:
-                modelAttributes.resetAttributes();
+                modelAttributes.resetAttributes(resetBackground);
                 break;
             case TEXT:
-                textAttributes.resetAttributes();
+                textAttributes.resetAttributes(resetBackground);
                 break;
             case OVERHEAD:
-                overheadAttributes.resetAttributes();
+                overheadAttributes.resetAttributes(resetBackground);
                 break;
             case HEALTH:
-                healthAttributes.resetAttributes();
+                healthAttributes.resetAttributes(resetBackground);
                 break;
             case SPOTANIM:
-                spotAnimAttributes.resetAttributes();
+                spotAnimAttributes.resetAttributes(resetBackground);
                 break;
             case SPOTANIM2:
-                spotAnim2Attributes.resetAttributes();
+                spotAnim2Attributes.resetAttributes(resetBackground);
                 break;
             case HITSPLAT_1:
-                hitsplat1Attributes.resetAttributes();
+                hitsplat1Attributes.resetAttributes(resetBackground);
                 break;
             case HITSPLAT_2:
-                hitsplat2Attributes.resetAttributes();
+                hitsplat2Attributes.resetAttributes(resetBackground);
                 break;
             case HITSPLAT_3:
-                hitsplat3Attributes.resetAttributes();
+                hitsplat3Attributes.resetAttributes(resetBackground);
                 break;
             case HITSPLAT_4:
-                hitsplat4Attributes.resetAttributes();
+                hitsplat4Attributes.resetAttributes(resetBackground);
         }
     }
 

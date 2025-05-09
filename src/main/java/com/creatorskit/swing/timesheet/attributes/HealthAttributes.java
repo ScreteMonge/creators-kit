@@ -79,12 +79,12 @@ public class HealthAttributes extends Attributes
     }
 
     @Override
-    public void resetAttributes()
+    public void resetAttributes(boolean resetBackground)
     {
         duration.setValue(5.0);
         healthbarSprite.setSelectedItem(HealthbarSprite.DEFAULT);
         maxHealth.setValue(99);
         currentHealth.setValue(99);
-        setBackgroundColours(KeyFrameState.EMPTY);
+        super.resetAttributes(resetBackground);
     }
 }

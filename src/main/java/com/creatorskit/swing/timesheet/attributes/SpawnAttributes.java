@@ -53,9 +53,9 @@ public class SpawnAttributes extends Attributes
     }
 
     @Override
-    public void resetAttributes()
+    public void resetAttributes(boolean resetBackground)
     {
         spawn.setSelectedItem(Toggle.ENABLE);
-        setBackgroundColours(KeyFrameState.EMPTY);
+        super.resetAttributes(resetBackground);
     }
 }

@@ -76,12 +76,12 @@ public class OriAttributes extends Attributes
     }
 
     @Override
-    public void resetAttributes()
+    public void resetAttributes(boolean resetBackground)
     {
         start.setValue(0);
         end.setValue(0);
         duration.setValue(2.0);
         turnRate.setValue(-1);
-        setBackgroundColours(KeyFrameState.EMPTY);
+        super.resetAttributes(resetBackground);
     }
 }

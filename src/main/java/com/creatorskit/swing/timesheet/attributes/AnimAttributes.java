@@ -38,7 +38,7 @@ public class AnimAttributes extends Attributes
     {
         if (keyFrame == null)
         {
-            resetAttributes();
+            resetAttributes(true);
             return;
         }
         
@@ -159,7 +159,7 @@ public class AnimAttributes extends Attributes
     }
 
     @Override
-    public void resetAttributes()
+    public void resetAttributes(boolean resetBackground)
     {
         stall.setSelectedItem(Toggle.DISABLE);
         active.setValue(-1);
@@ -173,6 +173,6 @@ public class AnimAttributes extends Attributes
         walkLeft.setValue(-1);
         idleRight.setValue(-1);
         idleLeft.setValue(-1);
-        setBackgroundColours(KeyFrameState.EMPTY);
+        super.resetAttributes(resetBackground);
     }
 }
