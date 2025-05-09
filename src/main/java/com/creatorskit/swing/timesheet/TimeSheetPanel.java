@@ -739,6 +739,7 @@ public class TimeSheetPanel extends JPanel
         summarySheet.setSelectedCharacter(character);
         attributeSheet.setSelectedCharacter(character);
         attributePanel.setSelectedCharacter(character);
+        attributePanel.resetAttributes(character, currentTime);
     }
 
     public void setCurrentTime(double tick, boolean playing)

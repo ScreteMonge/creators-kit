@@ -36,6 +36,12 @@ public class AnimAttributes extends Attributes
     @Override
     public void setAttributes(KeyFrame keyFrame)
     {
+        if (keyFrame == null)
+        {
+            resetAttributes();
+            return;
+        }
+        
         AnimationKeyFrame kf = (AnimationKeyFrame) keyFrame;
         stall.setSelectedItem(kf.isStall() ? Toggle.ENABLE : Toggle.DISABLE);
         active.setValue(kf.getActive());

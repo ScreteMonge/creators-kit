@@ -1913,7 +1913,7 @@ public class AttributePanel extends JPanel
             objectLabel.setForeground(Color.WHITE);
             objectLabel.setText(NO_OBJECT_SELECTED);
             setKeyFramedIcon(false);
-            setAttributesEmpty();
+            resetAttributes(null, tick);
             return;
         }
 
@@ -2162,6 +2162,7 @@ public class AttributePanel extends JPanel
                         break;
                     case ANIMATION:
                         animAttributes.setBackgroundColours(KeyFrameState.EMPTY);
+                        animAttributes.resetAttributes();
                         break;
                     case ORIENTATION:
                         oriAttributes.setBackgroundColours(KeyFrameState.EMPTY);
