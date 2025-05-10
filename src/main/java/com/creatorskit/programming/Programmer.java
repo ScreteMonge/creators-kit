@@ -1468,7 +1468,6 @@ public class Programmer
                 }
 
                 spotAnim.setActive(false);
-                character.setSpotAnim(null, keyFrameType);
             });
             return;
         }
