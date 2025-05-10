@@ -2163,52 +2163,7 @@ public class AttributePanel extends JPanel
 
             if (keyFrame == null)
             {
-                switch (selectedKeyFramePage)
-                {
-                    default:
-                    case MOVEMENT:
-                        movementAttributes.setBackgroundColours(KeyFrameState.EMPTY);
-                        break;
-                    case ANIMATION:
-                        animAttributes.setBackgroundColours(KeyFrameState.EMPTY);
-                        break;
-                    case ORIENTATION:
-                        oriAttributes.setBackgroundColours(KeyFrameState.EMPTY);
-                        break;
-                    case SPAWN:
-                        spawnAttributes.setBackgroundColours(KeyFrameState.EMPTY);
-                        break;
-                    case MODEL:
-                        modelAttributes.setBackgroundColours(KeyFrameState.EMPTY);
-                        break;
-                    case TEXT:
-                        textAttributes.setBackgroundColours(KeyFrameState.EMPTY);
-                        break;
-                    case OVERHEAD:
-                        overheadAttributes.setBackgroundColours(KeyFrameState.EMPTY);
-                        break;
-                    case HEALTH:
-                        healthAttributes.setBackgroundColours(KeyFrameState.EMPTY);
-                        break;
-                    case SPOTANIM:
-                        spotAnimAttributes.setBackgroundColours(KeyFrameState.EMPTY);
-                        break;
-                    case SPOTANIM2:
-                        spotAnim2Attributes.setBackgroundColours(KeyFrameState.EMPTY);
-                        break;
-                    case HITSPLAT_1:
-                        hitsplat1Attributes.setBackgroundColours(KeyFrameState.EMPTY);
-                        break;
-                    case HITSPLAT_2:
-                        hitsplat2Attributes.setBackgroundColours(KeyFrameState.EMPTY);
-                        break;
-                    case HITSPLAT_3:
-                        hitsplat3Attributes.setBackgroundColours(KeyFrameState.EMPTY);
-                        break;
-                    case HITSPLAT_4:
-                        hitsplat4Attributes.setBackgroundColours(KeyFrameState.EMPTY);
-                }
-
+                setAttributesEmpty(true);
                 return;
             }
         }
