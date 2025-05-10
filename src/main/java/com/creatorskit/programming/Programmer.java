@@ -1650,6 +1650,10 @@ public class Programmer
             {
                 int loops = (totalTicksPassed) / duration;
                 totalTicksPassed = totalTicksPassed - loops * duration;
+                if (totalTicksPassed < 0)
+                {
+                    totalTicksPassed = 0;
+                }
 
                 return new int[]{totalTicksPassed, 0};
             }
@@ -1657,6 +1661,11 @@ public class Programmer
             if (totalTicksPassed >= duration)
             {
                 return new int[]{-1, 0};
+            }
+
+            if (totalTicksPassed < 0)
+            {
+                totalTicksPassed = 0;
             }
 
             return new int[]{totalTicksPassed, 0};
@@ -1690,6 +1699,11 @@ public class Programmer
                 if (framesPassed + frameLength > totalTicksPassed)
                 {
                     int ticksPassed = totalTicksPassed - framesPassed;
+                    if (ticksPassed < 0)
+                    {
+                        ticksPassed = 0;
+                    }
+
                     return new int[]{i, ticksPassed};
                 }
 
@@ -1711,6 +1725,11 @@ public class Programmer
             if (framesPassed + frameLength > totalTicksPassed)
             {
                 int ticksPassed = totalTicksPassed - framesPassed;
+                if (ticksPassed < 0)
+                {
+                    ticksPassed = 0;
+                }
+
                 return new int[]{i, ticksPassed};
             }
 
