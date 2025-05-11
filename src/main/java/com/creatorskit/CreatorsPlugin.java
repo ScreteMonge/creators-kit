@@ -773,8 +773,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			}
 
 			character.setLocation(localPoint, worldView.getPlane());
-			int orientation = (int) character.getOrientationSpinner().getValue();
-			character.setOrientation(orientation);
 
 			if (locationOption == LocationOption.TO_HOVERED_TILE)
 			{
@@ -860,8 +858,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			}
 
 			character.setLocation(localPoint, worldView.getPlane());
-			int orientation = (int) character.getOrientationSpinner().getValue();
-			character.setOrientation(orientation);
 
 			if (locationOption == LocationOption.TO_HOVERED_TILE)
 			{

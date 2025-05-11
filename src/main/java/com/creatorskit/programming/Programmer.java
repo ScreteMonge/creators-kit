@@ -158,7 +158,7 @@ public class Programmer
             if (kf == null)
             {
                 setAnimation(character, false, 0, 0);
-                setOrientation(character, currentClientTick);
+                setOrientationStatic(character);
                 plugin.setLocation(character, false, false, ActiveOption.UNCHANGED, LocationOption.TO_SAVED_LOCATION);
                 return;
             }
@@ -440,6 +440,8 @@ public class Programmer
         KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.ORIENTATION);
         if (kf == null)
         {
+            int orientation = (int) character.getOrientationSpinner().getValue();
+            character.setOrientation(orientation);
             return;
         }
 
