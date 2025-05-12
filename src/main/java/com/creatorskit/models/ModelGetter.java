@@ -768,8 +768,11 @@ public class ModelGetter
 
         if (dynamicObject)
         {
-            addDynamicObjectExporter(menu, name, objectId, modelType, animationId, model, false);
-            addDynamicObjectExporter(menu, name, objectId, modelType, animationId, model, true);
+            if (model != null)
+            {
+                addDynamicObjectExporter(menu, name, objectId, modelType, animationId, model, false);
+                addDynamicObjectExporter(menu, name, objectId, modelType, animationId, model, true);
+            }
         }
         else
         {
