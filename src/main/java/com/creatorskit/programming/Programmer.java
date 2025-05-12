@@ -154,17 +154,46 @@ public class Programmer
     {
         if (!playing)
         {
-            KeyFrame kf = character.findNextKeyFrame(KeyFrameType.MOVEMENT, timeSheetPanel.getCurrentTime());
-            if (kf == null)
+            KeyFrame mkf = character.findNextKeyFrame(KeyFrameType.MOVEMENT, timeSheetPanel.getCurrentTime());
+            KeyFrame okf = character.findPreviousKeyFrame(KeyFrameType.ORIENTATION, timeSheetPanel.getCurrentTime(), true);
+
+            if (okf == null)
             {
-                setAnimation(character, false, 0, 0);
-                setOrientationStatic(character);
-                plugin.setLocation(character, false, false, ActiveOption.UNCHANGED, LocationOption.TO_SAVED_LOCATION);
+                okf = character.findNextKeyFrame(KeyFrameType.ORIENTATION, timeSheetPanel.getCurrentTime());
+            }
+
+            if (mkf == null && okf == null)
+            {
                 return;
             }
 
-            MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
-            transform3D(worldView, character, keyFrame, OrientationAction.SET, 0, 0, 0, 0, 0);
+            boolean useMovement = false;
+
+            if (mkf == null)
+            {
+                useMovement = false;
+            }
+
+            if (okf == null)
+            {
+                useMovement = true;
+            }
+
+            if (mkf != null && okf != null)
+            {
+                useMovement = !(okf.getTick() <= mkf.getTick());
+            }
+
+            if (useMovement)
+            {
+                MovementKeyFrame keyFrame = (MovementKeyFrame) mkf;
+                transform3D(worldView, character, keyFrame, OrientationAction.SET, 0, 0, 0, 0, 0);
+                return;
+            }
+
+            setAnimation(character, false, 0, 0);
+            setOrientationStatic(character);
+            plugin.setLocation(character, false, false, ActiveOption.UNCHANGED, LocationOption.TO_SAVED_LOCATION);
             return;
         }
 
