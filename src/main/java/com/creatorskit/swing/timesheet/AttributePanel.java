@@ -6,6 +6,8 @@ import com.creatorskit.models.CustomModel;
 import com.creatorskit.models.DataFinder;
 import com.creatorskit.models.datatypes.*;
 import com.creatorskit.programming.MovementManager;
+import com.creatorskit.programming.Programmer;
+import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.programming.orientation.OrientationGoal;
 import com.creatorskit.swing.searchabletable.JFilterableTable;
 import com.creatorskit.swing.timesheet.attributes.*;
@@ -15,6 +17,7 @@ import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.Animation;
 import net.runelite.api.Client;
+import net.runelite.api.Constants;
 import net.runelite.api.WorldView;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
@@ -915,6 +918,7 @@ public class AttributePanel extends JPanel
         c.gridx = 4;
         c.gridy = 12;
         JButton addPlayer = new JButton("Unarmed");
+        addPlayer.setBackground(ColorScheme.DARK_GRAY_COLOR);
         addPlayer.addActionListener(e ->
         {
             idle.setValue(player.getStandingAnimation());
@@ -1190,10 +1194,19 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 3;
         JSpinner duration = oriAttributes.getDuration();
-        duration.setModel(new SpinnerNumberModel(2.0, 0, TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.1));
+        duration.setModel(new SpinnerNumberModel(1.0, 0, TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.1));
         duration.setPreferredSize(spinnerSize);
         card.add(duration, c);
 
+        c.gridwidth = 2;
+        c.gridx = 2;
+        c.gridy = 3;
+        JButton calculate = new JButton("Calculate");
+        calculate.setToolTipText("Calculates the appropriate duration based on the start and end orientation and the current turn rate");
+        calculate.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        card.add(calculate, c);
+
+        c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 4;
         JLabel turnRateLabel = new JLabel("Turn Rate: ");
@@ -1203,9 +1216,24 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 4;
         JSpinner turnRate = oriAttributes.getTurnRate();
-        turnRate.setToolTipText("Determines the rate at which the Object rotates. -1 sets it to default value of 256 / 7.5");
+        turnRate.setToolTipText("Determines the rate at which the Object rotates. -1 sets it to default value of 34.13 (256/7.5) JUnits/clientTick");
         turnRate.setModel(new SpinnerNumberModel(-1, -1, 2048, 1));
         card.add(turnRate, c);
+
+        calculate.addActionListener(e ->
+        {
+            int difference = Orientation.subtract((int) end.getValue(), (int) start.getValue());
+            double turnRates = (int) turnRate.getValue();
+            if (turnRates == -1)
+            {
+                turnRates = Programmer.TURN_RATE;
+            }
+
+            double ticks = (double) difference / turnRates * Constants.CLIENT_TICK_LENGTH / Constants.GAME_TICK_LENGTH;
+            int scale = (int) Math.pow(10, 1);
+            double calculated = Math.abs(Math.ceil(ticks * scale) / scale);
+            duration.setValue(calculated);
+        });
 
         c.gridx = 5;
         c.gridy = 5;
@@ -1379,7 +1407,7 @@ public class AttributePanel extends JPanel
         manualTitlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
         card.add(manualTitlePanel, c);
 
-        JLabel manualTitle = new JLabel("Overhead Text");
+        JLabel manualTitle = new JLabel("Text");
         manualTitle.setHorizontalAlignment(SwingConstants.LEFT);
         manualTitle.setFont(FontManager.getRunescapeBoldFont());
         manualTitlePanel.add(manualTitle);
