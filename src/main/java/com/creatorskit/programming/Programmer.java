@@ -365,7 +365,9 @@ public class Programmer
             }
 
             setOrientation(character, mc, orientationGoal, difference, stepsComplete, mkf.getSpeed(), turnRate);
-            setAnimation(character, mc.isMoving(), differenceToGoal, finalSpeed);
+            orientation = ckObject.getOrientation();
+            difference = Orientation.subtract(orientationGoal, orientation);
+            setAnimation(character, mc.isMoving(), difference, finalSpeed);
             return;
         }
 
@@ -672,9 +674,9 @@ public class Programmer
 
             if (active != -1)
             {
-                if (currentActive != ckObject.getActiveAnimation() || currentActive == null || currentActive.getId() != active)
+                if (!playing || (currentActive != ckObject.getActiveAnimation() || currentActive == null || currentActive.getId() != active))
                 {
-                    if (!ckObject.isFinished() || !playing)
+                    if (!playing || !ckObject.isFinished())
                     {
                         Animation animation = client.loadAnimation(active);
                         ckObject.setActiveAnimation(animation);
@@ -683,11 +685,6 @@ public class Programmer
                         ckObject.setLoop(keyFrame.isLoop());
                         ckObject.setHasAnimKeyFrame(true);
                     }
-                }
-
-                if (!playing)
-                {
-                    setActiveAnimationFrame(ckObject, timeSheetPanel.getCurrentTime(), keyFrame.getTick(), keyFrame.getStartFrame(), keyFrame.isLoop(), false);
                 }
             }
 
