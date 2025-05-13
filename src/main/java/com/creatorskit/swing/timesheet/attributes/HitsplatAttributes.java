@@ -69,11 +69,11 @@ public class HitsplatAttributes extends Attributes
     }
 
     @Override
-    public void resetAttributes()
+    public void resetAttributes(boolean resetBackground)
     {
         duration.setValue(-1);
         sprite.setSelectedItem(HitsplatSprite.NONE);
         damage.setValue(0);
-        setBackgroundColours(KeyFrameState.EMPTY);
+        super.resetAttributes(resetBackground);
     }
 }

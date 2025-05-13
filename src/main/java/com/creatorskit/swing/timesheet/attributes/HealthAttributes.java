@@ -4,6 +4,7 @@ import com.creatorskit.swing.timesheet.keyframe.HealthKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameState;
 import com.creatorskit.swing.timesheet.keyframe.settings.HealthbarSprite;
+import com.creatorskit.swing.timesheet.keyframe.settings.Toggle;
 import lombok.Getter;
 
 import javax.swing.*;
@@ -78,12 +79,12 @@ public class HealthAttributes extends Attributes
     }
 
     @Override
-    public void resetAttributes()
+    public void resetAttributes(boolean resetBackground)
     {
         duration.setValue(5.0);
         healthbarSprite.setSelectedItem(HealthbarSprite.DEFAULT);
         maxHealth.setValue(99);
         currentHealth.setValue(99);
-        setBackgroundColours(KeyFrameState.EMPTY);
+        super.resetAttributes(resetBackground);
     }
 }

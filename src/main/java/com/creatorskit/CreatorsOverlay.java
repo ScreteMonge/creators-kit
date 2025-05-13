@@ -367,6 +367,11 @@ public class CreatorsOverlay extends Overlay
             String name = character.getName();
             Point point = Perspective.getCanvasTextLocation(client, graphics, lp, name, 0);
 
+            if (point == null)
+            {
+                continue;
+            }
+
             if (plugin.getSelectedCharacter() == character)
             {
                 if (keyHeld)
@@ -385,18 +390,8 @@ public class CreatorsOverlay extends Overlay
 
             if (plugin.getHoveredCharacter() == character)
             {
-                if (point == null)
-                {
-                    continue;
-                }
-
                 OverlayUtil.renderTextLocation(graphics, point, name, HOVERED_COLOUR);
                 continue;
-            }
-
-            if (point == null)
-            {
-                return;
             }
 
             OverlayUtil.renderTextLocation(graphics, point, name, MY_OBJECT_COLOUR);

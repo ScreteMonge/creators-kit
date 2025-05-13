@@ -71,11 +71,11 @@ public class MovementAttributes extends Attributes
     }
 
     @Override
-    public void resetAttributes()
+    public void resetAttributes(boolean resetBackground)
     {
         loop.setSelectedItem(Toggle.DISABLE);
         speed.setValue(1.0);
         turnRate.setValue(-1);
-        setBackgroundColours(KeyFrameState.EMPTY);
+        super.resetAttributes(resetBackground);
     }
 }

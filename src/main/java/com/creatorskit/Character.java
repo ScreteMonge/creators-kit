@@ -65,6 +65,17 @@ public class Character
         return name;
     }
 
+    public void setPlaying(boolean playing)
+    {
+        if (playing)
+        {
+            play();
+            return;
+        }
+
+        pause();
+    }
+
     public void play()
     {
         //ckObject.play();
@@ -103,6 +114,42 @@ public class Character
         {
             KeyFrame current = findPreviousKeyFrame(type, tick, true);
             setCurrentKeyFrame(current, type);
+        }
+    }
+
+    public void setOrientation(int orientation)
+    {
+        if (ckObject != null)
+        {
+            ckObject.setOrientation(orientation);
+        }
+
+        if (spotAnim1 != null)
+        {
+            spotAnim1.setOrientation(orientation);
+        }
+
+        if (spotAnim2 != null)
+        {
+            spotAnim2.setOrientation(orientation);
+        }
+    }
+
+    public void setLocation(LocalPoint lp, int plane)
+    {
+        if (ckObject != null)
+        {
+            ckObject.setLocation(lp, plane);
+        }
+
+        if (spotAnim1 != null)
+        {
+            spotAnim1.setLocation(lp, plane);
+        }
+
+        if (spotAnim2 != null)
+        {
+            spotAnim2.setLocation(lp, plane);
         }
     }
 

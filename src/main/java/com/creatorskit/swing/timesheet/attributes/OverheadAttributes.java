@@ -62,10 +62,10 @@ public class OverheadAttributes extends Attributes
     }
 
     @Override
-    public void resetAttributes()
+    public void resetAttributes(boolean resetBackground)
     {
         skullSprite.setSelectedItem(OverheadSprite.NONE);
         prayerSprite.setSelectedItem(OverheadSprite.NONE);
-        setBackgroundColours(KeyFrameState.EMPTY);
+        super.resetAttributes(resetBackground);
     }
 }

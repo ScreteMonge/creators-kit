@@ -1503,61 +1503,64 @@ public class CreatorsPanel extends PluginPanel
 
     public void openLoadSetupDialog()
     {
-        File outputDir = SETUP_DIR;
-        outputDir.mkdirs();
-
-        JFileChooser fileChooser = new JFileChooser(outputDir);
-        fileChooser.setDialogTitle("Choose a setup to load");
-        fileChooser.setFileFilter(new FileFilter()
+        SwingUtilities.invokeLater(() ->
         {
-            @Override
-            public String getDescription()
-            {
-                return "Json File (*.json)";
-            }
+            File outputDir = SETUP_DIR;
+            outputDir.mkdirs();
 
-            @Override
-            public boolean accept(File f)
+            JFileChooser fileChooser = new JFileChooser(outputDir);
+            fileChooser.setDialogTitle("Choose a setup to load");
+            fileChooser.setFileFilter(new FileFilter()
             {
-                if (f.isDirectory())
+                @Override
+                public String getDescription()
                 {
-                    return true;
+                    return "Json File (*.json)";
                 }
-                else
+
+                @Override
+                public boolean accept(File f)
                 {
-                    String filename = f.getName().toLowerCase();
-                    return filename.endsWith(".json");
+                    if (f.isDirectory())
+                    {
+                        return true;
+                    }
+                    else
+                    {
+                        String filename = f.getName().toLowerCase();
+                        return filename.endsWith(".json");
+                    }
+                }
+            });
+
+            int option = fileChooser.showOpenDialog(this);
+            if (option == JFileChooser.APPROVE_OPTION)
+            {
+                File selectedFile = fileChooser.getSelectedFile();
+                if (!selectedFile.exists())
+                {
+                    selectedFile = new File(selectedFile.getPath() + ".json");
+                    if (!selectedFile.exists())
+                    {
+                        plugin.sendChatMessage("Could not find the requested Setup file.");
+                        return;
+                    }
+                }
+
+                try
+                {
+                    Reader reader = Files.newBufferedReader(selectedFile.toPath());
+                    SetupSave saveFile = plugin.getGson().fromJson(reader, SetupSave.class);
+                    File finalSelectedFile = selectedFile;
+                    clientThread.invokeLater(() -> loadSetup(finalSelectedFile, saveFile));
+                    reader.close();
+                }
+                catch (Exception e)
+                {
+                    plugin.sendChatMessage("An error occurred while attempting to read this file.");
                 }
             }
         });
-
-        int option = fileChooser.showOpenDialog(this);
-        if (option == JFileChooser.APPROVE_OPTION)
-        {
-            File selectedFile = fileChooser.getSelectedFile();
-            if (!selectedFile.exists())
-            {
-                selectedFile = new File(selectedFile.getPath() + ".json");
-                if (!selectedFile.exists())
-                {
-                    plugin.sendChatMessage("Could not find the requested Setup file.");
-                    return;
-                }
-            }
-
-            try
-            {
-                Reader reader = Files.newBufferedReader(selectedFile.toPath());
-                SetupSave saveFile = plugin.getGson().fromJson(reader, SetupSave.class);
-                File finalSelectedFile = selectedFile;
-                clientThread.invokeLater(() -> loadSetup(finalSelectedFile, saveFile));
-                reader.close();
-            }
-            catch (Exception e)
-            {
-                plugin.sendChatMessage("An error occurred while attempting to read this file.");
-            }
-        }
     }
 
     public void loadSetup(File file)
@@ -1964,7 +1967,7 @@ public class CreatorsPanel extends PluginPanel
             @Override
             public void actionPerformed(ActionEvent e)
             {
-                plugin.getCreatorsPanel().quickSaveToFile();
+                quickSaveToFile();
             }
         });
 
@@ -1974,7 +1977,7 @@ public class CreatorsPanel extends PluginPanel
             @Override
             public void actionPerformed(ActionEvent e)
             {
-                plugin.getCreatorsPanel().openLoadSetupDialog();
+                openLoadSetupDialog();
             }
         });
     }

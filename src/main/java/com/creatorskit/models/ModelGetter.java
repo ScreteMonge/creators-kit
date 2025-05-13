@@ -5,6 +5,7 @@ import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.CKObject;
 import com.creatorskit.models.exporters.ModelExporter;
+import com.creatorskit.programming.AnimationType;
 import com.creatorskit.swing.CreatorsPanel;
 import com.creatorskit.swing.ParentPanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
@@ -767,8 +768,11 @@ public class ModelGetter
 
         if (dynamicObject)
         {
-            addDynamicObjectExporter(menu, name, objectId, modelType, animationId, model, false);
-            addDynamicObjectExporter(menu, name, objectId, modelType, animationId, model, true);
+            if (model != null)
+            {
+                addDynamicObjectExporter(menu, name, objectId, modelType, animationId, model, false);
+                addDynamicObjectExporter(menu, name, objectId, modelType, animationId, model, true);
+            }
         }
         else
         {
