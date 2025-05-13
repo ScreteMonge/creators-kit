@@ -247,7 +247,7 @@ public class ToolBoxFrame extends JFrame
 
         JMenuItem togglePlay = new JMenuItem("Play/Pause");
         togglePlay.addActionListener(e -> programmer.togglePlay());
-        //togglePlay.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, InputEvent.CTRL_DOWN_MASK));
+        togglePlay.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, InputEvent.CTRL_DOWN_MASK));
         timeSheet.add(togglePlay);
 
         JMenuItem reset = new JMenuItem("Reset Timeline");

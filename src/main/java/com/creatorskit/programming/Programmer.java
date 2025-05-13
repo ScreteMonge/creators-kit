@@ -674,17 +674,25 @@ public class Programmer
 
             if (active != -1)
             {
-                if (!playing || (currentActive != ckObject.getActiveAnimation() || currentActive == null || currentActive.getId() != active))
+                if (playing
+                        && (currentActive != ckObject.getActiveAnimation() || currentActive == null || currentActive.getId() != active)
+                        && !ckObject.isFinished())
                 {
-                    if (!playing || !ckObject.isFinished())
+                    Animation animation = client.loadAnimation(active);
+                    ckObject.setActiveAnimation(animation);
+                    ckObject.setAnimation(AnimationType.ACTIVE, animation);
+                    ckObject.setAnimationFrame(AnimationType.ACTIVE, keyFrame.getStartFrame(), false);
+                    ckObject.setLoop(keyFrame.isLoop());
+                    ckObject.setHasAnimKeyFrame(true);
+                }
+
+                if (!playing)
+                {
+                    clientThread.invokeLater(() ->
                     {
                         Animation animation = client.loadAnimation(active);
-                        ckObject.setActiveAnimation(animation);
-                        ckObject.setAnimation(AnimationType.ACTIVE, animation);
-                        ckObject.setAnimationFrame(AnimationType.ACTIVE, keyFrame.getStartFrame(), false);
-                        ckObject.setLoop(keyFrame.isLoop());
-                        ckObject.setHasAnimKeyFrame(true);
-                    }
+                        setActiveAnimationFrame(ckObject, animation, timeSheetPanel.getCurrentTime(), keyFrame.getTick(), keyFrame.getStartFrame(), keyFrame.isLoop(), false);
+                    });
                 }
             }
 
@@ -698,7 +706,7 @@ public class Programmer
 
             if (pose != -1)
             {
-                if (currentPose == null || currentPose.getId() != pose)
+                if (playing && (currentPose == null || currentPose.getId() != pose))
                 {
                     ckObject.setAnimation(AnimationType.POSE, pose);
                     ckObject.setAnimationFrame(AnimationType.POSE, finalPoseStartFrame, false);
@@ -1636,12 +1644,14 @@ public class Programmer
                 ckObject.tick(animFrame[1]);
                 ckObject.setLoop(loop);
                 ckObject.setFinished(false);
+                ckObject.setHasAnimKeyFrame(true);
             });
         }
     }
 
     public void setPoseAnimationFrame(CKObject ckObject, double currentTime, double startTime, int startFrame)
     {
+        System.out.println("Posing...");
         Animation[] animations = ckObject.getAnimations();
 
         Animation pose = animations[1];
