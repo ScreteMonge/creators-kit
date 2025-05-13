@@ -31,7 +31,7 @@ public class SpawnAttributes extends Attributes
     @Override
     public void setBackgroundColours(Color color)
     {
-       spawn.setBackground(color);
+        spawn.setBackground(color);
     }
 
     @Override

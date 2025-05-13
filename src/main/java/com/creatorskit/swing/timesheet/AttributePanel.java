@@ -2291,4 +2291,3 @@ public class AttributePanel extends JPanel
         keyFramed.setIcon(keyframeEmptyImage);
     }
 }
-
