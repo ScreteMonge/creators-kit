@@ -17,6 +17,7 @@ public class ModelAttributes extends Attributes
     private final JSpinner modelId = new JSpinner();
     private final JComboBox<ModelToggle> modelOverride = new JComboBox<>();
     private final JComboBox<CustomModel> customModel = new JComboBox<>();
+    private final JSpinner radius = new JSpinner();
 
     public ModelAttributes()
     {
@@ -31,6 +32,7 @@ public class ModelAttributes extends Attributes
         modelId.setValue(kf.getModelId());
         modelOverride.setSelectedItem(kf.isUseCustomModel() ? ModelToggle.CUSTOM_MODEL : ModelToggle.MODEL_ID);
         customModel.setSelectedItem(kf.getCustomModel());
+        radius.setValue(kf.getRadius());
     }
 
     @Override
@@ -39,6 +41,7 @@ public class ModelAttributes extends Attributes
         modelId.setBackground(color);
         modelOverride.setBackground(color);
         customModel.setBackground(color);
+        radius.setBackground(color);
     }
 
     @Override
@@ -48,7 +51,8 @@ public class ModelAttributes extends Attributes
                 {
                         modelId,
                         modelOverride,
-                        customModel
+                        customModel,
+                        radius
                 };
     }
 
@@ -69,6 +73,11 @@ public class ModelAttributes extends Attributes
         {
             customModel.setBackground(getRed());
         });
+
+        radius.addChangeListener(e ->
+        {
+            radius.setBackground(getRed());
+        });
     }
 
     @Override
@@ -77,6 +86,7 @@ public class ModelAttributes extends Attributes
         modelId.setValue(-1);
         modelOverride.setSelectedItem(ModelToggle.CUSTOM_MODEL);
         customModel.setSelectedItem(null);
+        radius.setValue(60);
         super.resetAttributes(resetBackground);
     }
 }

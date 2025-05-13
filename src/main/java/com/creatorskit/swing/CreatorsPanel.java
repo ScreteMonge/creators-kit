@@ -1336,7 +1336,7 @@ public class CreatorsPanel extends PluginPanel
                 }
             }
 
-            saves[i] = new ModelKeyFrameSave(keyFrame.getTick(), keyFrame.isUseCustomModel(), keyFrame.getModelId(), compId);
+            saves[i] = new ModelKeyFrameSave(keyFrame.getTick(), keyFrame.isUseCustomModel(), keyFrame.getModelId(), compId, keyFrame.getRadius());
         }
 
         return saves;
@@ -1355,7 +1355,7 @@ public class CreatorsPanel extends PluginPanel
                 customModel = customModels[save.getCustomModel()];
             }
 
-            keyFrames[i] = new ModelKeyFrame(save.getTick(), save.isUseCustomModel(), save.getModelId(), customModel);
+            keyFrames[i] = new ModelKeyFrame(save.getTick(), save.isUseCustomModel(), save.getModelId(), customModel, save.getRadius());
         }
 
         return keyFrames;

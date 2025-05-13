@@ -282,7 +282,8 @@ public class AttributePanel extends JPanel
                         tick,
                         modelAttributes.getModelOverride().getSelectedItem() == ModelToggle.CUSTOM_MODEL,
                         (int) modelAttributes.getModelId().getValue(),
-                        (CustomModel) modelAttributes.getCustomModel().getSelectedItem()
+                        (CustomModel) modelAttributes.getCustomModel().getSelectedItem(),
+                        (int) modelAttributes.getRadius().getValue()
                 );
             case TEXT:
                 return new TextKeyFrame(
@@ -1334,6 +1335,19 @@ public class AttributePanel extends JPanel
         id.setValue(-1);
         id.setPreferredSize(spinnerSize);
         card.add(id, c);
+
+        c.gridx = 0;
+        c.gridy = 4;
+        JLabel radiusLabel = new JLabel("Radius: ");
+        radiusLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(radiusLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 4;
+        JSpinner radius = modelAttributes.getRadius();
+        radius.setValue(60);
+        radius.setPreferredSize(spinnerSize);
+        card.add(radius, c);
 
         c.gridwidth = 1;
         c.gridheight = 1;

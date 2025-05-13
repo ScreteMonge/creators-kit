@@ -74,7 +74,8 @@ public class KeyFrame
                         tick,
                         modelKF.isUseCustomModel(),
                         modelKF.getModelId(),
-                        modelKF.getCustomModel());
+                        modelKF.getCustomModel(),
+                        modelKF.getRadius());
             case TEXT:
                 TextKeyFrame textKF = (TextKeyFrame) keyFrame;
                 return new TextKeyFrame(

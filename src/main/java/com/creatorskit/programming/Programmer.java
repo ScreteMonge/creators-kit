@@ -1437,8 +1437,11 @@ public class Programmer
         if (modelKeyFrame == null)
         {
             plugin.setModel(character, character.isCustomMode(), (int) character.getModelSpinner().getValue());
+            ckObject.setRadius((int) character.getRadiusSpinner().getValue());
             return;
         }
+
+        ckObject.setRadius(modelKeyFrame.getRadius());
 
         if (modelKeyFrame.isUseCustomModel())
         {
