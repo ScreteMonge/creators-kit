@@ -164,6 +164,9 @@ public class Programmer
 
             if (mkf == null && okf == null)
             {
+                setAnimation(character, false, 0, 0);
+                setOrientation(character, currentClientTick);
+                plugin.setLocation(character, false, false, ActiveOption.UNCHANGED, LocationOption.TO_SAVED_LOCATION);
                 return;
             }
 
@@ -674,25 +677,22 @@ public class Programmer
 
             if (active != -1)
             {
-                if (playing
-                        && (currentActive != ckObject.getActiveAnimation() || currentActive == null || currentActive.getId() != active)
-                        && !ckObject.isFinished())
+                if (currentActive != ckObject.getActiveAnimation() || currentActive == null || currentActive.getId() != active)
                 {
-                    Animation animation = client.loadAnimation(active);
-                    ckObject.setActiveAnimation(animation);
-                    ckObject.setAnimation(AnimationType.ACTIVE, animation);
-                    ckObject.setAnimationFrame(AnimationType.ACTIVE, keyFrame.getStartFrame(), false);
-                    ckObject.setLoop(keyFrame.isLoop());
-                    ckObject.setHasAnimKeyFrame(true);
+                    if (!ckObject.isFinished() || !playing)
+                    {
+                        Animation animation = client.loadAnimation(active);
+                        ckObject.setActiveAnimation(animation);
+                        ckObject.setAnimation(AnimationType.ACTIVE, animation);
+                        ckObject.setAnimationFrame(AnimationType.ACTIVE, keyFrame.getStartFrame(), false);
+                        ckObject.setLoop(keyFrame.isLoop());
+                        ckObject.setHasAnimKeyFrame(true);
+                    }
                 }
 
                 if (!playing)
                 {
-                    clientThread.invokeLater(() ->
-                    {
-                        Animation animation = client.loadAnimation(active);
-                        setActiveAnimationFrame(ckObject, animation, timeSheetPanel.getCurrentTime(), keyFrame.getTick(), keyFrame.getStartFrame(), keyFrame.isLoop(), false);
-                    });
+                    setActiveAnimationFrame(ckObject, timeSheetPanel.getCurrentTime(), keyFrame.getTick(), keyFrame.getStartFrame(), keyFrame.isLoop(), false);
                 }
             }
 
@@ -706,7 +706,7 @@ public class Programmer
 
             if (pose != -1)
             {
-                if (playing && (currentPose == null || currentPose.getId() != pose))
+                if (currentPose == null || currentPose.getId() != pose)
                 {
                     ckObject.setAnimation(AnimationType.POSE, pose);
                     ckObject.setAnimationFrame(AnimationType.POSE, finalPoseStartFrame, false);
@@ -1651,7 +1651,6 @@ public class Programmer
 
     public void setPoseAnimationFrame(CKObject ckObject, double currentTime, double startTime, int startFrame)
     {
-        System.out.println("Posing...");
         Animation[] animations = ckObject.getAnimations();
 
         Animation pose = animations[1];
