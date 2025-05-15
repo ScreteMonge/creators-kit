@@ -567,11 +567,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	{
 		if (event.getGameState() == GameState.LOGGED_IN)
 		{
-			for (int i = 0; i < characters.size(); i++)
-			{
-				Character character = characters.get(i);
-				setLocation(character, false, false, character.isActive() ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, LocationOption.TO_CURRENT_TICK);
-			}
+			creatorsPanel.getToolBox().getProgrammer().updatePrograms(getCurrentTick());
 
 			if (config.enableTransmog() && transmog != null)
 			{
@@ -708,171 +704,170 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 	public void setLocationWorld(Character character, boolean initialize, boolean transplant, ActiveOption activeOption, LocationOption locationOption)
 	{
-		clientThread.invokeLater(() ->
+		WorldView worldView = client.getTopLevelWorldView();
+		LocalPoint localPoint = null;
+		WorldPoint wp = character.getNonInstancedPoint();
+		if (wp != null)
 		{
-			WorldView worldView = client.getTopLevelWorldView();
-			LocalPoint localPoint = null;
-			if (character.getNonInstancedPoint() != null)
-			{
-				localPoint = LocalPoint.fromWorld(worldView, character.getNonInstancedPoint());
-			}
+			Collection<WorldPoint> wps = WorldPoint.toLocalInstance(worldView, wp);
+			wp = wps.iterator().next();
+			localPoint = LocalPoint.fromWorld(worldView, wp);
+		}
 
-			switch (locationOption)
-			{
-				case TO_PLAYER:
-					localPoint = client.getLocalPlayer().getLocalLocation();
-					break;
-				case TO_HOVERED_TILE:
-					Tile tile = worldView.getSelectedSceneTile();
-					if (tile == null)
-					{
-						return;
-					}
-
-					localPoint = tile.getLocalLocation();
-					break;
-				case TO_SAVED_LOCATION:
-				case TO_CURRENT_TICK:
-				default:
-					break;
-			}
-
-			if (localPoint == null || !localPoint.isInScene())
-			{
-				return;
-			}
-
-			if (initialize)
-			{
-				WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
-				character.setLocationSet(true);
-				character.setNonInstancedPoint(worldPoint);
-				character.setInPOH(false);
-			}
-
-			if (transplant)
-			{
-				WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
-				pathFinder.transplantSteps(character, worldView, worldPoint.getX(), worldPoint.getY());
-
-				KeyFrame kf = character.findNextKeyFrame(KeyFrameType.MOVEMENT, -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH);
-				if (kf != null)
+		switch (locationOption)
+		{
+			case TO_PLAYER:
+				localPoint = client.getLocalPlayer().getLocalLocation();
+				break;
+			case TO_HOVERED_TILE:
+				Tile tile = worldView.getSelectedSceneTile();
+				if (tile == null)
 				{
-					MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
-					int[][] step = keyFrame.getPath();
-					if (step.length != 0)
-					{
-						int[] first = step[0];
-						worldPoint = new WorldPoint(first[0], first[1], worldView.getPlane());
-					}
+					return;
 				}
 
-				character.setLocationSet(true);
-				character.setNonInstancedPoint(worldPoint);
-				character.setInPOH(false);
-			}
+				localPoint = tile.getLocalLocation();
+				break;
+			case TO_SAVED_LOCATION:
+			case TO_CURRENT_TICK:
+			default:
+				break;
+		}
 
-			character.setLocation(localPoint, worldView.getPlane());
+		if (localPoint == null || !localPoint.isInScene())
+		{
+			return;
+		}
 
-			if (locationOption == LocationOption.TO_HOVERED_TILE)
+		if (initialize)
+		{
+			WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
+			character.setLocationSet(true);
+			character.setNonInstancedPoint(worldPoint);
+			character.setInPOH(false);
+		}
+
+		if (transplant)
+		{
+			WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
+			pathFinder.transplantSteps(character, worldView, worldPoint.getX(), worldPoint.getY());
+
+			KeyFrame kf = character.findNextKeyFrame(KeyFrameType.MOVEMENT, -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH);
+			if (kf != null)
 			{
-				creatorsPanel.getToolBox().getProgrammer().register3DChanges(character);
+				MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+				int[][] step = keyFrame.getPath();
+				if (step.length != 0)
+				{
+					int[] first = step[0];
+					worldPoint = new WorldPoint(first[0], first[1], worldView.getPlane());
+				}
 			}
 
-			switch (activeOption)
-			{
-				case ACTIVE:
-					character.setActive(true, true, clientThread);
-					break;
-				case INACTIVE:
-					character.setActive(false, false, clientThread);
-			}
-		});
+			character.setLocationSet(true);
+			character.setNonInstancedPoint(worldPoint);
+			character.setInPOH(false);
+		}
+
+		LocalPoint finalLocalPoint = localPoint;
+		clientThread.invokeLater(() -> character.setLocation(finalLocalPoint, worldView.getPlane()));
+
+		if (locationOption == LocationOption.TO_HOVERED_TILE)
+		{
+			creatorsPanel.getToolBox().getProgrammer().register3DChanges(character);
+		}
+
+		switch (activeOption)
+		{
+			case ACTIVE:
+				character.setActive(true, true, clientThread);
+				break;
+			case INACTIVE:
+				character.setActive(false, false, clientThread);
+		}
 	}
 
 	public void setLocationPOH(Character character, boolean initialize, boolean transplant, ActiveOption activeOption, LocationOption locationOption)
 	{
-		clientThread.invokeLater(() ->
+		WorldView worldView = client.getTopLevelWorldView();
+		LocalPoint localPoint = null;
+		if (character.getInstancedPoint() != null)
 		{
-			WorldView worldView = client.getTopLevelWorldView();
-			LocalPoint localPoint = null;
-			if (character.getInstancedPoint() != null)
-			{
-				localPoint = character.getInstancedPoint();
-			}
+			localPoint = character.getInstancedPoint();
+		}
 
-			switch (locationOption)
-			{
-				case TO_PLAYER:
-					localPoint = client.getLocalPlayer().getLocalLocation();
-					break;
-				case TO_HOVERED_TILE:
-					Tile tile = worldView.getSelectedSceneTile();
-					if (tile == null)
-					{
-						return;
-					}
-
-					localPoint = tile.getLocalLocation();
-					break;
-				case TO_CURRENT_TICK:
-				case TO_SAVED_LOCATION:
-				default:
-					break;
-			}
-
-			if (localPoint == null || !localPoint.isInScene())
-			{
-				return;
-			}
-
-			if (initialize)
-			{
-				character.setLocationSet(true);
-				character.setInstancedPoint(localPoint);
-				character.setInstancedPlane(worldView.getPlane());
-				character.setInPOH(true);
-			}
-
-			if (transplant)
-			{
-				pathFinder.transplantSteps(character, worldView, localPoint.getSceneX(), localPoint.getSceneY());
-				LocalPoint savedPoint = localPoint;
-
-				KeyFrame kf = character.findNextKeyFrame(KeyFrameType.MOVEMENT, -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH);
-				if (kf != null)
+		switch (locationOption)
+		{
+			case TO_PLAYER:
+				localPoint = client.getLocalPlayer().getLocalLocation();
+				break;
+			case TO_HOVERED_TILE:
+				Tile tile = worldView.getSelectedSceneTile();
+				if (tile == null)
 				{
-					MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
-					int[][] step = keyFrame.getPath();
-					if (step.length != 0)
-					{
-						int[] first = step[0];
-						savedPoint = new LocalPoint(first[0], first[1], worldView);
-					}
+					return;
 				}
 
-				character.setLocationSet(true);
-				character.setInstancedPoint(savedPoint);
-				character.setInstancedPlane(worldView.getPlane());
-				character.setInPOH(true);
-			}
+				localPoint = tile.getLocalLocation();
+				break;
+			case TO_CURRENT_TICK:
+			case TO_SAVED_LOCATION:
+			default:
+				break;
+		}
 
-			character.setLocation(localPoint, worldView.getPlane());
+		if (localPoint == null || !localPoint.isInScene())
+		{
+			return;
+		}
 
-			if (locationOption == LocationOption.TO_HOVERED_TILE)
+		if (initialize)
+		{
+			character.setLocationSet(true);
+			character.setInstancedPoint(localPoint);
+			character.setInstancedPlane(worldView.getPlane());
+			character.setInPOH(true);
+		}
+
+		if (transplant)
+		{
+			pathFinder.transplantSteps(character, worldView, localPoint.getSceneX(), localPoint.getSceneY());
+			LocalPoint savedPoint = localPoint;
+
+			KeyFrame kf = character.findNextKeyFrame(KeyFrameType.MOVEMENT, -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH);
+			if (kf != null)
 			{
-				creatorsPanel.getToolBox().getProgrammer().register3DChanges(character);
+				MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+				int[][] step = keyFrame.getPath();
+				if (step.length != 0)
+				{
+					int[] first = step[0];
+					savedPoint = new LocalPoint(first[0], first[1], worldView);
+				}
 			}
 
-			switch (activeOption)
-			{
-				case ACTIVE:
-					character.setActive(true, true, clientThread);
-					break;
-				case INACTIVE:
-					character.setActive(false, false, clientThread);
-			}
-		});
+			character.setLocationSet(true);
+			character.setInstancedPoint(savedPoint);
+			character.setInstancedPlane(worldView.getPlane());
+			character.setInPOH(true);
+		}
+
+		LocalPoint finalLocalPoint = localPoint;
+		clientThread.invokeLater(() -> character.setLocation(finalLocalPoint, worldView.getPlane()));
+
+		if (locationOption == LocationOption.TO_HOVERED_TILE)
+		{
+			creatorsPanel.getToolBox().getProgrammer().register3DChanges(character);
+		}
+
+		switch (activeOption)
+		{
+			case ACTIVE:
+				character.setActive(true, true, clientThread);
+				break;
+			case INACTIVE:
+				character.setActive(false, false, clientThread);
+		}
 	}
 
 	public double getCurrentTick()

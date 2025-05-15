@@ -81,6 +81,11 @@ public class TextOverlay extends Overlay
             }
 
             Model model = ckObject.getModel();
+            if (model == null)
+            {
+                continue;
+            }
+
             model.calculateBoundsCylinder();
             int height = model.getModelHeight();
 

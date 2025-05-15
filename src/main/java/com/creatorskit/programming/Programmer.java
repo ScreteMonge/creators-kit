@@ -1266,11 +1266,32 @@ public class Programmer
         SpawnKeyFrame spawnKeyFrame = (SpawnKeyFrame) character.getCurrentKeyFrame(KeyFrameType.SPAWN);
         if (spawnKeyFrame == null)
         {
-            clientThread.invokeLater(() -> ckObject.setActive(true));
+            clientThread.invokeLater(() ->
+            {
+                if (!playing)
+                {
+                    ckObject.setActive(false);
+                }
+                ckObject.setActive(true);
+            });
             return;
         }
 
-        clientThread.invokeLater(() -> ckObject.setActive(spawnKeyFrame.isSpawnActive()));
+        boolean active = spawnKeyFrame.isSpawnActive();
+        if (active)
+        {
+            clientThread.invokeLater(() ->
+            {
+                if (!playing)
+                {
+                    ckObject.setActive(false);
+                }
+                ckObject.setActive(true);
+            });
+            return;
+        }
+
+        clientThread.invokeLater(() -> ckObject.setActive(false));
     }
 
     public void register3DChanges(Character character)

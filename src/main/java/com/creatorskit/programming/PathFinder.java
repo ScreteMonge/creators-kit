@@ -311,6 +311,10 @@ public class PathFinder
             if (worldView.isInstance())
             {
                 Collection<WorldPoint> wps = WorldPoint.toLocalInstance(worldView, startPoint);
+                if (wps.isEmpty())
+                {
+                    return;
+                }
                 startPoint = wps.iterator().next();
             }
 
