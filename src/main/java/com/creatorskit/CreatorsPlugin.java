@@ -710,8 +710,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		if (wp != null)
 		{
 			Collection<WorldPoint> wps = WorldPoint.toLocalInstance(worldView, wp);
-			wp = wps.iterator().next();
-			localPoint = LocalPoint.fromWorld(worldView, wp);
+			if (!wps.isEmpty())
+			{
+				wp = wps.iterator().next();
+				localPoint = LocalPoint.fromWorld(worldView, wp);
+			}
 		}
 
 		switch (locationOption)

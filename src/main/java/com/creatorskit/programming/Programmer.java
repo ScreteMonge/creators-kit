@@ -1037,10 +1037,10 @@ public class Programmer
     {
         character.updateProgram(tick);
         character.setPlaying(playing);
-        register3DChanges(character);
-        registerModelChanges(character);
         registerSpotAnimChanges(character, KeyFrameType.SPOTANIM, tick);
         registerSpotAnimChanges(character, KeyFrameType.SPOTANIM2, tick);
+        register3DChanges(character);
+        registerModelChanges(character);
         registerSpawnChanges(character);
     }
 
@@ -1580,6 +1580,11 @@ public class Programmer
                     ckObject = spotAnim;
                 }
 
+                ckObject.setOrientation(orientation);
+                ckObject.setPlaying(playing);
+                ckObject.setActive(false);
+                ckObject.setActive(true);
+
                 LightingStyle ls = LightingStyle.SPOTANIM;
                 CustomLighting cl = new CustomLighting(ls.getAmbient() + data.getAmbient(), ls.getContrast() + data.getContrast(), ls.getX(), ls.getY(), ls.getZ());
                 for (ModelStats ms : stats)
@@ -1591,10 +1596,6 @@ public class Programmer
 
                 ckObject.setModel(model);
                 ckObject.setAnimation(AnimationType.ACTIVE, data.getAnimationId());
-                ckObject.setLocation(lp, plane);
-                ckObject.setOrientation(orientation);
-                ckObject.setActive(true);
-                ckObject.setPlaying(playing);
                 setActiveAnimationFrame(ckObject, currentTime, startTick, 0, loop, true);
             });
         }
