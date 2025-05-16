@@ -668,7 +668,7 @@ public class TimeSheetPanel extends JPanel
 
     public void undo()
     {
-        if (undoStack == -1)
+        if (undoStack == -1 || keyFrameActions.length == 0)
         {
             return;
         }
