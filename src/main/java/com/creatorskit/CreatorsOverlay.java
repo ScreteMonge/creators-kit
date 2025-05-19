@@ -133,7 +133,10 @@ public class CreatorsOverlay extends Overlay
                 if (worldView.isInstance())
                 {
                     Collection<WorldPoint> wps = WorldPoint.toLocalInstance(worldView, startPoint);
-                    startPoint = wps.iterator().next();
+                    if (!wps.isEmpty())
+                    {
+                        startPoint = wps.iterator().next();
+                    }
                 }
 
                 LocalPoint localPoint = LocalPoint.fromWorld(worldView, startPoint);
@@ -156,9 +159,16 @@ public class CreatorsOverlay extends Overlay
                 if (worldView.isInstance())
                 {
                     Collection<WorldPoint> wpsStart = WorldPoint.toLocalInstance(worldView, wpStart);
-                    wpStart = wpsStart.iterator().next();
+                    if (!wpsStart.isEmpty())
+                    {
+                        wpStart = wpsStart.iterator().next();
+                    }
+
                     Collection<WorldPoint> wpsEnd = WorldPoint.toLocalInstance(worldView, wpEnd);
-                    wpEnd = wpsEnd.iterator().next();
+                    if (!wpsEnd.isEmpty())
+                    {
+                        wpEnd = wpsEnd.iterator().next();
+                    }
                 }
 
                 LocalPoint lpStart = LocalPoint.fromWorld(worldView, wpStart.getX(), wpStart.getY());

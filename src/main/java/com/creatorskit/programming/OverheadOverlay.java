@@ -105,6 +105,10 @@ public class OverheadOverlay extends Overlay
             }
 
             Point base = Perspective.getCanvasImageLocation(client, lp, icon, height + HEIGHT_BUFFER);
+            if (base == null)
+            {
+                continue;
+            }
 
             int skullBuffer = 0;
             if (skullSprite != OverheadSprite.NONE)

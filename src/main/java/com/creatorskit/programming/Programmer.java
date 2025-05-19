@@ -924,7 +924,10 @@ public class Programmer
         if (worldView.isInstance())
         {
             Collection<WorldPoint> wps = WorldPoint.toLocalInstance(worldView, wp);
-            wp = wps.iterator().next();
+            if (!wps.isEmpty())
+            {
+                wp = wps.iterator().next();
+            }
         }
 
         LocalPoint lp = LocalPoint.fromWorld(worldView, wp);
