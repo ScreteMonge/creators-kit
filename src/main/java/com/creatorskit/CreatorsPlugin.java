@@ -893,10 +893,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			}
 
 			CKObject ckObject = character.getCkObject();
-			ckObject.setActive(false);
 			ckObject.setLocation(localPoint, worldView.getPlane());
-			ckObject.setActive(true);
-			character.setActive(true);
+			character.setActive(true, true, clientThread);
 
 			int orientation = (int) character.getOrientationSpinner().getValue();
 			ckObject.setOrientation(orientation);
@@ -964,10 +962,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			updateProgramPath(character.getProgram(), false, true);
 
 			CKObject ckObject = character.getCkObject();
-			ckObject.setActive(false);
 			ckObject.setLocation(localPoint, worldView.getPlane());
-			ckObject.setActive(true);
-			character.setActive(true);
+			character.setActive(true, true, clientThread);
 
 			int orientation = (int) character.getOrientationSpinner().getValue();
 			ckObject.setOrientation(orientation);
