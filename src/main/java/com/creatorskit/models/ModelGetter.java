@@ -4,10 +4,15 @@ import com.creatorskit.Character;
 import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.CKObject;
+import com.creatorskit.models.datatypes.NPCData;
+import com.creatorskit.models.datatypes.PlayerAnimationType;
+import com.creatorskit.models.datatypes.WeaponAnimData;
 import com.creatorskit.models.exporters.ModelExporter;
 import com.creatorskit.programming.AnimationType;
 import com.creatorskit.swing.CreatorsPanel;
 import com.creatorskit.swing.ParentPanel;
+import com.creatorskit.swing.timesheet.TimeSheetPanel;
+import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import net.runelite.api.*;
@@ -243,6 +248,11 @@ public class ModelGetter
         Menu menu = menuEntry.createSubMenu();
 
         menu.createMenuEntry(0)
+                .setOption(ColorUtil.prependColorTag("Store-Add-Animate", Color.WHITE))
+                .setType(MenuAction.RUNELITE)
+                .onClick(e -> storeNPC(npc, ModelMenuOption.STORE_ADD_ANIMATE));
+
+        menu.createMenuEntry(0)
                 .setOption(ColorUtil.prependColorTag("Store-Only", Color.WHITE))
                 .setType(MenuAction.RUNELITE)
                 .onClick(e -> storeNPC(npc, ModelMenuOption.STORE));
@@ -307,7 +317,30 @@ public class ModelGetter
             return;
         }
 
-        handleStoreOptions(modelStats, menuOption, CustomModelType.CACHE_NPC, name, new int[0], false, LightingStyle.ACTOR, npc.getOrientation(), npc.getPoseAnimation(), npc.getWalkAnimation());
+        AnimationKeyFrame keyFrame = null;
+        if (menuOption == ModelMenuOption.STORE_ADD_ANIMATE)
+        {
+            NPCData npcData = dataFinder.findNPCData(npc);
+            if (npcData != null)
+            {
+                keyFrame = new AnimationKeyFrame(
+                        plugin.getCurrentTick(),
+                        false,
+                        npc.getAnimation(),
+                        0,
+                        false,
+                        npcData.getStandingAnimation(),
+                        npcData.getWalkingAnimation(),
+                        npcData.getRunAnimation(),
+                        npcData.getRotate180Animation(),
+                        npcData.getRotateRightAnimation(),
+                        npcData.getRotateLeftAnimation(),
+                        npcData.getIdleRotateRightAnimation(),
+                        npc.getIdleRotateLeft());
+            }
+        }
+
+        handleStoreOptions(modelStats, menuOption, CustomModelType.CACHE_NPC, name, new int[0], false, LightingStyle.ACTOR, npc.getOrientation(), npc.getPoseAnimation(), keyFrame);
     }
 
     public void exportNPC(NPC npc, boolean exportAnimation)
@@ -535,6 +568,11 @@ public class ModelGetter
         Menu menu = menuEntry.createSubMenu();
 
         menu.createMenuEntry(0)
+                .setOption(ColorUtil.prependColorTag("Store-Add-Animate", Color.WHITE))
+                .setType(MenuAction.RUNELITE)
+                .onClick(e -> storePlayer(player, ModelMenuOption.STORE_ADD_ANIMATE));
+
+        menu.createMenuEntry(0)
                 .setOption(ColorUtil.prependColorTag("Store-Only", Color.WHITE))
                 .setType(MenuAction.RUNELITE)
                 .onClick(e -> storePlayer(player, ModelMenuOption.STORE));
@@ -599,7 +637,30 @@ public class ModelGetter
             return;
         }
 
-        handleStoreOptions(modelStats, menuOption, CustomModelType.CACHE_PLAYER, name, colours, true, LightingStyle.ACTOR, player.getOrientation(), animId, player.getWalkAnimation());
+        AnimationKeyFrame keyFrame = null;
+        if (menuOption == ModelMenuOption.STORE_ADD_ANIMATE)
+        {
+            WeaponAnimData weaponAnim = dataFinder.findWeaponAnimData(player);
+            if (weaponAnim != null)
+            {
+                keyFrame = new AnimationKeyFrame(
+                        plugin.getCurrentTick(),
+                        false,
+                        player.getAnimation(),
+                        0,
+                        false,
+                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE),
+                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.WALK),
+                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.RUN),
+                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_180),
+                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_RIGHT),
+                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_LEFT),
+                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_RIGHT),
+                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_LEFT));
+            }
+        }
+
+        handleStoreOptions(modelStats, menuOption, CustomModelType.CACHE_PLAYER, name, colours, true, LightingStyle.ACTOR, player.getOrientation(), animId, keyFrame);
     }
 
     public void exportPlayer(Player player, boolean exportAnimation)
@@ -801,11 +862,11 @@ public class ModelGetter
 
         if (dynamicObject)
         {
-            handleStoreOptions(modelStats, menuOption, type, name, new int[0], false, ls, orientation, animationId, -1);
+            handleStoreOptions(modelStats, menuOption, type, name, new int[0], false, ls, orientation, animationId, null);
             return;
         }
 
-        handleStoreOptions(model, modelStats, menuOption, type, name, new int[0], false, ls, orientation, animationId, -1);
+        handleStoreOptions(model, modelStats, menuOption, type, name, new int[0], false, ls, orientation, animationId, null);
     }
 
     public void exportObject(String name, int objectId, int modelType, Model model)
@@ -1333,7 +1394,7 @@ public class ModelGetter
             return;
         }
 
-        handleStoreOptions(model, modelStats, menuOption, CustomModelType.CACHE_GROUND_ITEM, name, new int[0], false, LightingStyle.DEFAULT, 0, -1, -1);
+        handleStoreOptions(model, modelStats, menuOption, CustomModelType.CACHE_GROUND_ITEM, name, new int[0], false, LightingStyle.DEFAULT, 0, -1, null);
     }
 
     public void exportGroundItem(String name, int itemId, Model model)
@@ -1430,25 +1491,25 @@ public class ModelGetter
         });
     }
 
-    private void handleStoreOptions(ModelStats[] modelStats, ModelMenuOption menuOption, CustomModelType customModelType, String name, int[] kitRecolours, boolean player, LightingStyle ls, int orientation, int poseAnimation, int walkAnimation)
+    private void handleStoreOptions(ModelStats[] modelStats, ModelMenuOption menuOption, CustomModelType customModelType, String name, int[] kitRecolours, boolean player, LightingStyle ls, int orientation, int poseAnimation, AnimationKeyFrame keyFrame)
     {
         clientThread.invokeLater(() ->
         {
             Model model = plugin.constructModelFromCache(modelStats, kitRecolours, player, ls, null);
-            store(model, modelStats, menuOption, customModelType, name, kitRecolours, ls, orientation, poseAnimation, walkAnimation);
+            store(model, modelStats, menuOption, customModelType, name, kitRecolours, ls, orientation, poseAnimation, keyFrame);
         });
     }
 
-    private void handleStoreOptions(Model model, ModelStats[] modelStats, ModelMenuOption menuOption, CustomModelType customModelType, String name, int[] kitRecolours, boolean player, LightingStyle ls, int orientation, int poseAnimation, int walkAnimation)
+    private void handleStoreOptions(Model model, ModelStats[] modelStats, ModelMenuOption menuOption, CustomModelType customModelType, String name, int[] kitRecolours, boolean player, LightingStyle ls, int orientation, int poseAnimation, AnimationKeyFrame keyFrame)
     {
         Thread thread = new Thread(() ->
         {
-            store(model, modelStats, menuOption, customModelType, name, kitRecolours, ls, orientation, poseAnimation, walkAnimation);
+            store(model, modelStats, menuOption, customModelType, name, kitRecolours, ls, orientation, poseAnimation, keyFrame);
         });
         thread.start();
     }
 
-    private void store(Model model, ModelStats[] modelStats, ModelMenuOption menuOption, CustomModelType customModelType, String name, int[] kitRecolours, LightingStyle ls, int orientation, int poseAnimation, int walkAnimation)
+    private void store(Model model, ModelStats[] modelStats, ModelMenuOption menuOption, CustomModelType customModelType, String name, int[] kitRecolours, LightingStyle ls, int orientation, int poseAnimation, AnimationKeyFrame keyFrame)
     {
         CustomLighting lighting = new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getY(), ls.getZ());
         CustomModelComp comp = new CustomModelComp(0, customModelType, 7699, modelStats, kitRecolours, null, null, ls, lighting, false, name);
@@ -1462,7 +1523,7 @@ public class ModelGetter
             creatorsPanel.getModelOrganizer().setTransmog(customModel);
         }
 
-        if (menuOption == ModelMenuOption.STORE_AND_ADD)
+        if (menuOption == ModelMenuOption.STORE_AND_ADD || menuOption == ModelMenuOption.STORE_ADD_ANIMATE)
         {
             Character character = creatorsPanel.createCharacter(
                     ParentPanel.SIDE_PANEL,
@@ -1486,6 +1547,12 @@ public class ModelGetter
                     false);
 
             SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true, false));
+
+            if (menuOption == ModelMenuOption.STORE_ADD_ANIMATE)
+            {
+                character.setKeyFrames(new KeyFrame[]{keyFrame}, KeyFrameType.ANIMATION);
+                creatorsPanel.getToolBox().getProgrammer().updateProgram(character);
+            }
         }
     }
 
