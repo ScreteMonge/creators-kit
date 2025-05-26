@@ -77,7 +77,7 @@ public class TextAttributes extends Attributes
     @Override
     public void resetAttributes(boolean resetBackground)
     {
-        duration.setValue(5);
+        duration.setValue(5.0);
         text.setText("");
         super.resetAttributes(resetBackground);
     }

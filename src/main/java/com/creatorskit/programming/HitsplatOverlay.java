@@ -50,11 +50,44 @@ public class HitsplatOverlay extends Overlay
             return null;
         }
 
-        ArrayList<com.creatorskit.Character> characters = plugin.getCharacters();
+        BufferedImage spriteBase = spriteManager.getSprite(HitsplatSprite.BLOCK.getSpriteID(), 0);
+        if (spriteBase == null)
+        {
+            return null;
+        }
+
+        ArrayList<Character> characters = plugin.getCharacters();
         for (int i = 0; i < characters.size(); i++)
         {
             Character character = characters.get(i);
             if (!character.isActive())
+            {
+                continue;
+            }
+
+            CKObject ckObject = character.getCkObject();
+            if (!ckObject.isActive())
+            {
+                continue;
+            }
+
+            LocalPoint lp = ckObject.getLocation();
+            if (lp == null || !lp.isInScene())
+            {
+                continue;
+            }
+
+            Model model = ckObject.getModel();
+            if (model == null)
+            {
+                continue;
+            }
+
+            model.calculateBoundsCylinder();
+            int height = model.getModelHeight();
+
+            Point point = Perspective.getCanvasImageLocation(client, lp, spriteBase, height / 2);
+            if (point == null)
             {
                 continue;
             }
@@ -84,29 +117,6 @@ public class HitsplatOverlay extends Overlay
 
                 HitsplatSprite sprite = keyFrame.getSprite();
                 int damage = keyFrame.getDamage();
-
-                CKObject ckObject = character.getCkObject();
-                LocalPoint lp = ckObject.getLocation();
-                if (lp == null || !lp.isInScene())
-                {
-                    continue;
-                }
-
-                Model model = ckObject.getModel();
-                model.calculateBoundsCylinder();
-                int height = model.getModelHeight();
-
-                BufferedImage spriteBase = spriteManager.getSprite(HitsplatSprite.BLOCK.getSpriteID(), 0);
-                if (spriteBase == null)
-                {
-                    continue;
-                }
-
-                Point point = Perspective.getCanvasImageLocation(client, lp, spriteBase, height / 2);
-                if (point == null)
-                {
-                    continue;
-                }
 
                 renderHitsplat(graphics, sprite, height, buffers[e][0], buffers[e][1], point, damage, lp);
             }

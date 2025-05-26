@@ -75,6 +75,11 @@ public class OverheadOverlay extends Overlay
             }
 
             CKObject ckObject = character.getCkObject();
+            if (!ckObject.isActive())
+            {
+                continue;
+            }
+
             LocalPoint lp = ckObject.getLocation();
             if (lp == null || !lp.isInScene())
             {
@@ -95,7 +100,7 @@ public class OverheadOverlay extends Overlay
             TextKeyFrame textKeyFrame = (TextKeyFrame) character.getCurrentKeyFrame(KeyFrameType.TEXT);
             if (textKeyFrame != null)
             {
-                int duration = textKeyFrame.getDuration();
+                double duration = textKeyFrame.getDuration();
                 double startTick = textKeyFrame.getTick();
                 double currentTick = plugin.getCurrentTick();
                 if (currentTick <= duration + startTick)

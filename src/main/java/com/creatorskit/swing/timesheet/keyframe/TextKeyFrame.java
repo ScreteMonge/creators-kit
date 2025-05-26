@@ -7,10 +7,10 @@ import lombok.Setter;
 @Setter
 public class TextKeyFrame extends KeyFrame
 {
-    private int duration;
+    private double duration;
     private String text;
 
-    public TextKeyFrame(double tick, int duration, String text)
+    public TextKeyFrame(double tick, double duration, String text)
     {
         super(KeyFrameType.TEXT, tick);
         this.duration = duration;

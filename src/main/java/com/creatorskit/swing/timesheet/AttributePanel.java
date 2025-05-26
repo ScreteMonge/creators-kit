@@ -291,7 +291,7 @@ public class AttributePanel extends JPanel
             case TEXT:
                 return new TextKeyFrame(
                         tick,
-                        (int) textAttributes.getDuration().getValue(),
+                        (double) textAttributes.getDuration().getValue(),
                         textAttributes.getText().getText()
                 );
             case OVERHEAD:
@@ -1429,7 +1429,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 1;
         JSpinner duration = textAttributes.getDuration();
-        duration.setModel(new SpinnerNumberModel(5, 0, 1000000, 1));
+        duration.setModel(new SpinnerNumberModel(5.0, 0, 1000000, 0.1));
         card.add(duration, c);
 
         c.gridwidth = 1;
