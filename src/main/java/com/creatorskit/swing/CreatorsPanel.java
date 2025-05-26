@@ -472,12 +472,7 @@ public class CreatorsPanel extends PluginPanel
 
         textField.addActionListener(e ->
         {
-            String text = StringHandler.cleanString(textField.getText());
-            textField.setText(text);
-            character.setName(text);
-            objectPanel.setName(text);
-            managerPanel.revalidate();
-            managerPanel.repaint();
+            onNameTextFieldChanged(character);
         });
 
         textField.addFocusListener(new FocusListener() {
@@ -487,12 +482,7 @@ public class CreatorsPanel extends PluginPanel
             @Override
             public void focusLost(FocusEvent e)
             {
-                String text = StringHandler.cleanString(textField.getText());
-                textField.setText(text);
-                objectPanel.setName(text);
-                character.setName(text);
-                managerPanel.revalidate();
-                managerPanel.repaint();
+                onNameTextFieldChanged(character);
             }
         });
 
@@ -863,6 +853,27 @@ public class CreatorsPanel extends PluginPanel
         }
 
         return duplicatesArrays;
+    }
+
+    public void onNameTextFieldChanged(Character character)
+    {
+        JTextField textField = character.getNameField();
+        String text = StringHandler.cleanString(textField.getText());
+        textField.setText(text);
+        character.getObjectPanel().setName(text);
+        character.setName(text);
+
+        DefaultMutableTreeNode node = character.getLinkedManagerNode();
+        if (node == null)
+        {
+            return;
+        }
+
+        toolBox.getManagerPanel().getManagerTree().getTreeModel().nodeChanged(node);
+        toolBox.getTimeSheetPanel().getAttributePanel().updateObjectLabel(character);
+
+        toolBox.revalidate();
+        toolBox.repaint();
     }
 
     public void onDeleteButtonPressed(Character character)

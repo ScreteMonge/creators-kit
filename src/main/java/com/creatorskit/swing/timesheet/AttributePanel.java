@@ -75,6 +75,7 @@ public class AttributePanel extends JPanel
     public static final String HITSPLAT_4_CARD = "Hitsplat 4";
 
     private final String NO_OBJECT_SELECTED = "[No Object Selected]";
+    private Font attributeFont = new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32);
 
     private KeyFrameType hoveredKeyFrameType;
     private Component hoveredComponent;
@@ -108,7 +109,7 @@ public class AttributePanel extends JPanel
         setLayout(new GridBagLayout());
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
-        objectLabel.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32));
+        objectLabel.setFont(attributeFont);
         objectLabel.setForeground(Color.WHITE);
         objectLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
@@ -1958,21 +1959,40 @@ public class AttributePanel extends JPanel
     public void setSelectedCharacter(Character character)
     {
         double tick = timeSheetPanel.getCurrentTime();
+        updateObjectLabel(character);
 
         if (character == null)
         {
-            objectLabel.setForeground(Color.WHITE);
-            objectLabel.setText(NO_OBJECT_SELECTED);
             setKeyFramedIcon(false);
             resetAttributes(null, tick);
             return;
         }
 
-        objectLabel.setForeground(ColorScheme.BRAND_ORANGE);
-        objectLabel.setText(character.getName());
         KeyFrame keyFrame = character.findKeyFrame(selectedKeyFramePage, tick);
         setKeyFramedIcon(keyFrame != null);
         resetAttributes(character, tick);
+    }
+
+    public void updateObjectLabel(Character character)
+    {
+        if (character == null)
+        {
+            objectLabel.setForeground(Color.WHITE);
+            objectLabel.setText(NO_OBJECT_SELECTED);
+            return;
+        }
+
+        objectLabel.setForeground(ColorScheme.BRAND_ORANGE);
+        StringBuilder name = new StringBuilder(character.getName());
+
+        FontMetrics metrics = objectLabel.getFontMetrics(attributeFont);
+        int maxWidth = 275;
+        while (metrics.stringWidth(name.toString()) > maxWidth)
+        {
+            name = name.deleteCharAt(name.length() - 1);
+        }
+
+        objectLabel.setText(name.toString());
     }
 
     private void setupKeyListeners()
