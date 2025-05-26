@@ -28,7 +28,7 @@ public class OverheadOverlay extends Overlay
     private final CreatorsPlugin plugin;
     private final SpriteManager spriteManager;
 
-    private final int HEIGHT_BUFFER = 16;
+    private final int HEIGHT_BUFFER = 18;
     private final int OVERHEAD_Y_BUFFER = -18;
     private final int SKULL_Y_BUFFER = -25;
     private final int TEXT_BUFFER = -12;
