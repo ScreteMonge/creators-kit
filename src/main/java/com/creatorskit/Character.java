@@ -732,7 +732,7 @@ public class Character
 
     public void toggleActive(ClientThread clientThread)
     {
-        setActive(!active, true, clientThread);
+        setActive(!active, !active, true, clientThread);
     }
 
     public void setVisible(boolean visible, ClientThread clientThread)
@@ -740,13 +740,19 @@ public class Character
         clientThread.invokeLater(() -> ckObject.setActive(visible));
     }
 
-    public void setActive(boolean setActive, boolean reset, ClientThread clientThread)
+    public void resetActive(ClientThread clientThread)
     {
+        setActive(active, active, active, clientThread);
+    }
+
+    public void setActive(boolean setActive, boolean shouldBeActive, boolean reset, ClientThread clientThread)
+    {
+        active = shouldBeActive;
+
         clientThread.invokeLater(() ->
         {
             if (setActive)
             {
-                active = true;
                 if (reset)
                 {
                     ckObject.setActive(false);
@@ -756,7 +762,6 @@ public class Character
                 return;
             }
 
-            active = false;
             ckObject.setActive(false);
             spawnButton.setText("Despawn");
         });

@@ -1233,35 +1233,56 @@ public class Programmer
             return;
         }
 
+        WorldView worldView = client.getTopLevelWorldView();
+        boolean poh = MovementManager.useLocalLocations(worldView);
+
         SpawnKeyFrame spawnKeyFrame = (SpawnKeyFrame) character.getCurrentKeyFrame(KeyFrameType.SPAWN);
         if (spawnKeyFrame == null)
         {
-            clientThread.invokeLater(() ->
+            if (poh && character.isInPOH())
             {
-                if (!playing)
+                character.resetActive(clientThread);
+                return;
+            }
+
+            if (!poh && !character.isInPOH())
+            {
+                WorldPoint worldPoint = character.getNonInstancedPoint();
+                if (worldPoint == null)
                 {
-                    ckObject.setActive(false);
+                    character.setActive(false, character.isActive(), false, clientThread);
+                    return;
                 }
-                ckObject.setActive(true);
-            });
+
+                LocalPoint lp = LocalPoint.fromWorld(worldView, worldPoint);
+                if (lp == null || !lp.isInScene())
+                {
+                    character.setActive(false, character.isActive(), false, clientThread);
+                    return;
+                }
+
+                character.resetActive(clientThread);
+                return;
+            }
+
+            character.setActive(false, character.isActive(), false, clientThread);
             return;
         }
 
         boolean active = spawnKeyFrame.isSpawnActive();
         if (active)
         {
-            clientThread.invokeLater(() ->
+            if ((poh && character.isInPOH()) || (!poh && !character.isInPOH()))
             {
-                if (!playing)
-                {
-                    ckObject.setActive(false);
-                }
-                ckObject.setActive(true);
-            });
+                character.resetActive(clientThread);
+                return;
+            }
+
+            character.setActive(false, true, false, clientThread);
             return;
         }
 
-        clientThread.invokeLater(() -> ckObject.setActive(false));
+        character.setActive(false, false, false, clientThread);
     }
 
     public void register3DChanges(Character character)

@@ -59,7 +59,7 @@ public class CreatorsOverlay extends Overlay
         boolean keyHeld = config.enableCtrlHotkeys() && client.isKeyPressed(KeyCode.KC_CONTROL);
         if (keyHeld)
         {
-            renderSelectedRLObject(graphics);
+            renderSelectedRLObject(graphics, worldView);
         }
 
         if (!plugin.isOverlaysActive())
@@ -69,7 +69,7 @@ public class CreatorsOverlay extends Overlay
 
         if (config.myObjectOverlay())
         {
-            renderRLObjects(graphics, keyHeld);
+            renderRLObjects(graphics, keyHeld, worldView);
         }
 
         renderObjectsOverlay(graphics, worldView);
@@ -105,6 +105,17 @@ public class CreatorsOverlay extends Overlay
         for (int e = 0; e < plugin.getCharacters().size(); e++)
         {
             Character character = plugin.getCharacters().get(e);
+            if (!character.isActive())
+            {
+                continue;
+            }
+
+            boolean poh = MovementManager.useLocalLocations(worldView);
+            if ((!poh && character.isInPOH()) || (poh && !character.isInPOH()))
+            {
+                continue;
+            }
+
             KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
             if (kf == null)
             {
@@ -236,6 +247,17 @@ public class CreatorsOverlay extends Overlay
         for (int e = 0; e < plugin.getCharacters().size(); e++)
         {
             Character character = plugin.getCharacters().get(e);
+            if (!character.isActive())
+            {
+                continue;
+            }
+
+            boolean poh = MovementManager.useLocalLocations(worldView);
+            if ((!poh && character.isInPOH()) || (poh && !character.isInPOH()))
+            {
+                continue;
+            }
+
             KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
             if (kf == null)
             {
@@ -436,7 +458,7 @@ public class CreatorsOverlay extends Overlay
         }
     }
 
-    public void renderSelectedRLObject(Graphics2D graphics)
+    public void renderSelectedRLObject(Graphics2D graphics, WorldView worldView)
     {
         Character character = plugin.getSelectedCharacter();
         if (character == null)
@@ -444,8 +466,19 @@ public class CreatorsOverlay extends Overlay
             return;
         }
 
+        if (!character.isActive())
+        {
+            return;
+        }
+
+        boolean poh = MovementManager.useLocalLocations(worldView);
+        if ((!poh && character.isInPOH()) || (poh && !character.isInPOH()))
+        {
+            return;
+        }
+
         CKObject ckObject = character.getCkObject();
-        if (ckObject == null)
+        if (ckObject == null || !ckObject.isActive())
         {
             return;
         }
@@ -463,7 +496,7 @@ public class CreatorsOverlay extends Overlay
         }
     }
 
-    public void renderRLObjects(Graphics2D graphics, boolean keyHeld)
+    public void renderRLObjects(Graphics2D graphics, boolean keyHeld, WorldView worldView)
     {
         for (int i = 0; i < plugin.getCharacters().size(); i++)
         {
@@ -473,8 +506,14 @@ public class CreatorsOverlay extends Overlay
                 continue;
             }
 
+            boolean poh = MovementManager.useLocalLocations(worldView);
+            if ((!poh && character.isInPOH()) || (poh && !character.isInPOH()))
+            {
+                continue;
+            }
+
             CKObject ckObject = character.getCkObject();
-            if (ckObject == null)
+            if (ckObject == null || !ckObject.isActive())
             {
                 continue;
             }

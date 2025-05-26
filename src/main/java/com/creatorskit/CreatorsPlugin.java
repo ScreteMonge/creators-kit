@@ -783,10 +783,13 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		switch (activeOption)
 		{
 			case ACTIVE:
-				character.setActive(true, true, clientThread);
+				character.setActive(true, true, true, clientThread);
 				break;
 			case INACTIVE:
-				character.setActive(false, false, clientThread);
+				character.setActive(false, false, false, clientThread);
+				break;
+			case UNCHANGED:
+				character.resetActive(clientThread);
 		}
 	}
 
@@ -866,10 +869,13 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		switch (activeOption)
 		{
 			case ACTIVE:
-				character.setActive(true, true, clientThread);
+				character.setActive(true, true, true, clientThread);
 				break;
 			case INACTIVE:
-				character.setActive(false, false, clientThread);
+				character.setActive(true, false, false, clientThread);
+				break;
+			case UNCHANGED:
+				character.resetActive(clientThread);
 		}
 	}
 
