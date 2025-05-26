@@ -5,6 +5,7 @@ import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.DataFinder;
 import com.creatorskit.models.datatypes.PlayerAnimationType;
+import com.creatorskit.models.datatypes.SpotanimData;
 import com.creatorskit.models.datatypes.WeaponAnimData;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.Programmer;
@@ -580,10 +581,10 @@ public class TimeSheetPanel extends JPanel
         addKeyFrameActions(kfa);
     }
 
-    public void addWeaponAnimationKeyFrame(WeaponAnimData weaponAnim)
+    public void addAnimationKeyFrameFromCache(WeaponAnimData weaponAnim)
     {
         AnimationKeyFrame keyFrame = new AnimationKeyFrame(
-                plugin.getCurrentTick(),
+                currentTime,
                 false,
                 -1,
                 0,
@@ -596,6 +597,29 @@ public class TimeSheetPanel extends JPanel
                 WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_LEFT),
                 WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_RIGHT),
                 WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_LEFT));
+
+        addKeyFrameAction(keyFrame);
+    }
+
+    public void addSpotAnimKeyFrameFromCache(SpotanimData spotanimData)
+    {
+        KeyFrameType type = KeyFrameType.SPOTANIM;
+        KeyFrame sp1 = selectedCharacter.findKeyFrame(KeyFrameType.SPOTANIM, currentTime);
+        if (sp1 != null)
+        {
+            KeyFrame sp2 = selectedCharacter.findKeyFrame(KeyFrameType.SPOTANIM2, currentTime);
+            if (sp2 == null)
+            {
+                type = KeyFrameType.SPOTANIM2;
+            }
+        }
+
+        SpotAnimKeyFrame keyFrame = new SpotAnimKeyFrame(
+                plugin.getCurrentTick(),
+                type,
+                spotanimData.getId(),
+                false,
+                92);
 
         addKeyFrameAction(keyFrame);
     }

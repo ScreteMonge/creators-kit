@@ -5,11 +5,9 @@ import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.*;
 import com.creatorskit.models.datatypes.*;
 import com.creatorskit.swing.searchabletable.JFilterableTable;
-import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
-import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameCharacterAction;
 import net.runelite.api.Model;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
@@ -415,7 +413,7 @@ public class CacheSearcherTab extends JPanel
                     return;
                 }
 
-                plugin.getCreatorsPanel().getToolBox().getTimeSheetPanel().addWeaponAnimationKeyFrame(weaponAnimData);
+                plugin.getCreatorsPanel().getToolBox().getTimeSheetPanel().addAnimationKeyFrameFromCache(weaponAnimData);
             }
         });
 
@@ -592,12 +590,16 @@ public class CacheSearcherTab extends JPanel
         c.gridx = 0;
         c.gridy = 3;
         JPanel grid = new JPanel();
-        grid.setLayout(new GridLayout(0, 3, 2, 0));
+        grid.setLayout(new GridLayout(0, 4, 2, 0));
         card.add(grid, c);
 
         JButton addObject = new JButton("Store & Add");
         addObject.setToolTipText("Stores the selected SpotAnim as a Custom Model, then creates a new Object and attaches the model");
         grid.add(addObject);
+
+        JButton addKeyFrame = new JButton("KeyFrame SpotAnim");
+        addKeyFrame.setToolTipText("Adds the currently selected SpotAnim as a KeyFrame to the currently selected Object");
+        grid.add(addKeyFrame);
 
         JButton addModel = new JButton("Store Only");
         addModel.setToolTipText("Stores the selected SpotAnim as a new Custom Model");
@@ -614,6 +616,16 @@ public class CacheSearcherTab extends JPanel
             {
                 SpotanimData data = (SpotanimData) o;
                 addSpotAnimObject(data);
+            }
+        });
+
+        addKeyFrame.addActionListener(e ->
+        {
+            Object o = spotAnimTable.getSelectedObject();
+            if (o instanceof SpotanimData)
+            {
+                SpotanimData data = (SpotanimData) o;
+                plugin.getCreatorsPanel().getToolBox().getTimeSheetPanel().addSpotAnimKeyFrameFromCache(data);
             }
         });
 
