@@ -4,11 +4,11 @@ import com.creatorskit.CKObject;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.DataFinder;
-import com.creatorskit.programming.MovementComposition;
+import com.creatorskit.models.datatypes.PlayerAnimationType;
+import com.creatorskit.models.datatypes.WeaponAnimData;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.Programmer;
 import com.creatorskit.programming.orientation.Orientation;
-import com.creatorskit.programming.orientation.OrientationAction;
 import com.creatorskit.programming.orientation.OrientationGoal;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
@@ -349,20 +349,30 @@ public class TimeSheetPanel extends JPanel
                 return;
             }
 
-            KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(kf, selectedCharacter, KeyFrameCharacterActionType.ADD)};
-            KeyFrame keyFrameToReplace = addKeyFrame(selectedCharacter, kf);
-
-            if (keyFrameToReplace != null)
-            {
-                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
-            }
-            addKeyFrameActions(kfa);
+            addKeyFrameAction(kf);
             return;
         }
 
-       removeKeyFrame(selectedCharacter, keyFrame);
-       KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.REMOVE)};
-       addKeyFrameActions(kfa);
+       removeKeyFrameAction(keyFrame);
+    }
+
+    public void addKeyFrameAction(KeyFrame keyFrame)
+    {
+        KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.ADD)};
+        KeyFrame keyFrameToReplace = addKeyFrame(selectedCharacter, keyFrame);
+
+        if (keyFrameToReplace != null)
+        {
+            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
+        }
+        addKeyFrameActions(kfa);
+    }
+
+    public void removeKeyFrameAction(KeyFrame keyFrame)
+    {
+        removeKeyFrame(selectedCharacter, keyFrame);
+        KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.REMOVE)};
+        addKeyFrameActions(kfa);
     }
 
     public void onUpdateButtonPressed()
@@ -568,6 +578,26 @@ public class TimeSheetPanel extends JPanel
             kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, character, KeyFrameCharacterActionType.REMOVE));
         }
         addKeyFrameActions(kfa);
+    }
+
+    public void addWeaponAnimationKeyFrame(WeaponAnimData weaponAnim)
+    {
+        AnimationKeyFrame keyFrame = new AnimationKeyFrame(
+                plugin.getCurrentTick(),
+                false,
+                -1,
+                0,
+                false,
+                WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE),
+                WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.WALK),
+                WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.RUN),
+                WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_180),
+                WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_RIGHT),
+                WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_LEFT),
+                WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_RIGHT),
+                WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_LEFT));
+
+        addKeyFrameAction(keyFrame);
     }
 
     /**

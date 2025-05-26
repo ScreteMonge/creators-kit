@@ -1447,9 +1447,8 @@ public class DataFinder
         });
     }
 
-    public WeaponAnimData findWeaponAnimData(Player player)
+    public WeaponAnimData findWeaponAnimData(int itemId)
     {
-        int id = player.getPlayerComposition().getEquipmentId(KitType.WEAPON);
         for (WeaponAnimData weaponAnim : weaponAnimData)
         {
             int[] ids = weaponAnim.getId();
@@ -1460,7 +1459,7 @@ public class DataFinder
 
             for (int i : ids)
             {
-                if (i == id)
+                if (i == itemId)
                 {
                     return weaponAnim;
                 }

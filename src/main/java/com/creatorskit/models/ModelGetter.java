@@ -18,6 +18,7 @@ import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import net.runelite.api.*;
 import net.runelite.api.Menu;
 import net.runelite.api.coords.LocalPoint;
+import net.runelite.api.kit.KitType;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.util.ColorUtil;
 import org.apache.commons.lang3.ArrayUtils;
@@ -336,7 +337,7 @@ public class ModelGetter
                         npcData.getRotateRightAnimation(),
                         npcData.getRotateLeftAnimation(),
                         npcData.getIdleRotateRightAnimation(),
-                        npc.getIdleRotateLeft());
+                        npcData.getIdleRotateLeftAnimation());
             }
         }
 
@@ -640,7 +641,8 @@ public class ModelGetter
         AnimationKeyFrame keyFrame = null;
         if (menuOption == ModelMenuOption.STORE_ADD_ANIMATE)
         {
-            WeaponAnimData weaponAnim = dataFinder.findWeaponAnimData(player);
+            int itemId = player.getPlayerComposition().getEquipmentId(KitType.WEAPON);
+            WeaponAnimData weaponAnim = dataFinder.findWeaponAnimData(itemId);
             if (weaponAnim != null)
             {
                 keyFrame = new AnimationKeyFrame(
