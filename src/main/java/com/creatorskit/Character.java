@@ -747,10 +747,10 @@ public class Character
 
     public void setActive(boolean setActive, boolean shouldBeActive, boolean reset, ClientThread clientThread)
     {
-        active = shouldBeActive;
-
         clientThread.invokeLater(() ->
         {
+            active = shouldBeActive;
+
             if (setActive)
             {
                 if (reset)

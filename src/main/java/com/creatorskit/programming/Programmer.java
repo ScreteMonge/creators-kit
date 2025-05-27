@@ -1274,7 +1274,7 @@ public class Programmer
         {
             if ((poh && character.isInPOH()) || (!poh && !character.isInPOH()))
             {
-                character.resetActive(clientThread);
+                character.setActive(true, true, true, clientThread);
                 return;
             }
 
