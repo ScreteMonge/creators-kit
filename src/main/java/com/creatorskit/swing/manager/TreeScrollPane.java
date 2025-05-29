@@ -19,7 +19,7 @@ public class TreeScrollPane extends JScrollPane
 
     private final BufferedImage CLOSE = ImageUtil.loadImageResource(getClass(), "/Close.png");
     private final BufferedImage ADD = ImageUtil.loadImageResource(getClass(), "/Add.png");
-    private final BufferedImage CLEAR = ImageUtil.loadImageResource(getClass(), "/Clear.png");
+    private final BufferedImage NEW = ImageUtil.loadImageResource(getClass(), "/New.png");
 
     public TreeScrollPane(ManagerTree tree)
     {
@@ -95,23 +95,23 @@ public class TreeScrollPane extends JScrollPane
             if (treePaths == null)
                 return;
 
-            tree.removeNodes(treePaths);
+            tree.removeNodes(treePaths, true);
         });
         folderHeader.add(removeFolderButton, c);
 
         c.gridx = 3;
         c.gridy = 0;
-        JButton clearFolderButton = new JButton(new ImageIcon(CLEAR));
-        clearFolderButton.setPreferredSize(buttonDimension);
-        clearFolderButton.setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR));
-        clearFolderButton.setToolTipText("Remove all Folders and all Objects in them");
-        clearFolderButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        clearFolderButton.addActionListener(e ->
+        JButton newSetupButton = new JButton(new ImageIcon(NEW));
+        newSetupButton.setPreferredSize(buttonDimension);
+        newSetupButton.setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR));
+        newSetupButton.setToolTipText("Create a new Setup file");
+        newSetupButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        newSetupButton.addActionListener(e ->
         {
             Thread thread = new Thread(tree::removeAllNodes);
             thread.start();
         });
-        folderHeader.add(clearFolderButton, c);
+        folderHeader.add(newSetupButton, c);
 
         return folderHeader;
     }
