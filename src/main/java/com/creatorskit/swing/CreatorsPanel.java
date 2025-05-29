@@ -1195,7 +1195,7 @@ public class CreatorsPanel extends PluginPanel
         return new Color(r, g, b);
     }
 
-    private void updateLoadedFile(File file)
+    public void updateLoadedFile(File file)
     {
         lastFileLoaded = file;
         String fileName = "";
