@@ -248,11 +248,24 @@ public class ManagerTree extends JTree
 
     public void removeAllNodes()
     {
+        int result = JOptionPane.showConfirmDialog(null, "Are you sure you want to create a new Setup file? All unsaved changes will be lost");
+        if (result != JOptionPane.YES_OPTION)
+        {
+            return;
+        }
+
         TreePath[] treePaths = new TreePath[]{new TreePath(rootNode.getPath())};
-        removeNodes(treePaths);
+        removeNodes(treePaths, false);
+
+        plugin.getCreatorsPanel().updateLoadedFile(null);
+        SwingUtilities.invokeLater(() ->
+        {
+            toolBox.repaint();
+            toolBox.revalidate();
+        });
     }
 
-    public void removeNodes(TreePath[] paths)
+    public void removeNodes(TreePath[] paths, boolean showWarning)
     {
         ArrayList<DefaultMutableTreeNode> charactersToRemove = new ArrayList<>();
         ArrayList<DefaultMutableTreeNode> foldersToRemove = new ArrayList<>();
@@ -283,7 +296,7 @@ public class ManagerTree extends JTree
             return;
         }
 
-        if (foldersToRemove.size() + charactersToRemove.size() > 1)
+        if (showWarning && foldersToRemove.size() + charactersToRemove.size() > 1)
         {
             int result = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete all the selected Folders and their Objects?");
             if (result != JOptionPane.YES_OPTION)

@@ -17,6 +17,7 @@ import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.Model;
@@ -82,7 +83,7 @@ public class CreatorsPanel extends PluginPanel
     private final BufferedImage DUPLICATE = ImageUtil.loadImageResource(getClass(), "/Duplicate.png");
     private final BufferedImage CLOSE = ImageUtil.loadImageResource(getClass(), "/Close.png");
     private final BufferedImage HELP = ImageUtil.loadImageResource(getClass(), "/Help.png");
-    private final BufferedImage CLEAR = ImageUtil.loadImageResource(getClass(), "/Clear.png");
+    private final BufferedImage NEW = ImageUtil.loadImageResource(getClass(), "/New.png");
     private final BufferedImage LOAD = ImageUtil.loadImageResource(getClass(), "/Load.png");
     private final BufferedImage SAVE = ImageUtil.loadImageResource(getClass(), "/Save.png");
     private final BufferedImage FIND = ImageUtil.loadImageResource(getClass(), "/Find.png");
@@ -190,11 +191,15 @@ public class CreatorsPanel extends PluginPanel
 
         c.gridx = 2;
         c.gridy = 2;
-        JButton clearButton = new JButton(new ImageIcon(CLEAR));
-        clearButton.setFocusable(false);
-        clearButton.setToolTipText("Clears all Objects");
-        add(clearButton, c);
-        clearButton.addActionListener(e -> clearSidePanels(true));
+        JButton newSetupButton = new JButton(new ImageIcon(NEW));
+        newSetupButton.setFocusable(false);
+        newSetupButton.setToolTipText("Create a new Setup file");
+        add(newSetupButton, c);
+        newSetupButton.addActionListener(e ->
+        {
+            Thread thread = new Thread(() -> toolBox.getManagerPanel().getManagerTree().removeAllNodes());
+            thread.start();
+        });
 
         c.gridwidth = 3;
         c.gridx = 0;
@@ -1227,10 +1232,16 @@ public class CreatorsPanel extends PluginPanel
         return new Program(comp, new JPanel(), new JLabel(), new JSpinner(), color);
     }
 
-    private void updateLoadedFile(File file)
+    public void updateLoadedFile(File file)
     {
         lastFileLoaded = file;
-        toolBox.setTitle("Creator's Kit Toolbox - " + getFileName(lastFileLoaded));
+        String fileName = "";
+        if (file != null)
+        {
+            fileName = " - " + getFileName(lastFileLoaded);
+        }
+
+        toolBox.setTitle("Creator's Kit Toolbox" + fileName);
     }
 
     private String getFileName(File file)
