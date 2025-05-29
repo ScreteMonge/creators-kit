@@ -107,7 +107,9 @@ public class CacheSearcherTab extends JPanel
         c.weighty = 1;
         c.gridx = 0;
         c.gridy = 0;
-        add(new JLabel(""), c);
+        JLabel empty = new JLabel("");
+        empty.setFocusable(true);
+        add(empty, c);
 
         c.gridwidth = 1;
         c.weightx = 2;

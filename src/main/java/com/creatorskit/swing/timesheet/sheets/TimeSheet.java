@@ -436,6 +436,10 @@ public class TimeSheet extends JPanel
                 }
 
                 Point mousePosition = getMousePosition();
+                if (mousePosition == null)
+                {
+                    return;
+                }
 
                 if (mousePosition.getY() < rowHeight)
                 {
