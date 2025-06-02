@@ -739,13 +739,15 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		if (localPoint == null || !localPoint.isInScene())
 		{
+			character.setInScene(false);
 			return;
 		}
+
+		character.setInScene(true);
 
 		if (initialize)
 		{
 			WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
-			character.setLocationSet(true);
 			character.setNonInstancedPoint(worldPoint);
 			character.setInPOH(false);
 		}
@@ -767,7 +769,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				}
 			}
 
-			character.setLocationSet(true);
 			character.setNonInstancedPoint(worldPoint);
 			character.setInPOH(false);
 		}
@@ -824,12 +825,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		if (localPoint == null || !localPoint.isInScene())
 		{
+			character.setInScene(false);
 			return;
 		}
 
+		character.setInScene(true);
+
 		if (initialize)
 		{
-			character.setLocationSet(true);
 			character.setInstancedPoint(localPoint);
 			character.setInstancedPlane(worldView.getPlane());
 			character.setInPOH(true);
@@ -852,7 +855,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				}
 			}
 
-			character.setLocationSet(true);
 			character.setInstancedPoint(savedPoint);
 			character.setInstancedPlane(worldView.getPlane());
 			character.setInPOH(true);
@@ -1895,11 +1897,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			if (selectedCharacter != null)
 			{
 				selectedCharacter.toggleActive(clientThread);
-
-				if (!selectedCharacter.isLocationSet())
-				{
-					setLocation(selectedCharacter, false, true, ActiveOption.ACTIVE, LocationOption.TO_PLAYER);
-				}
 			}
 		}
 	};

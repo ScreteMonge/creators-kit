@@ -1400,7 +1400,6 @@ public class CreatorsPanel extends PluginPanel
     private CharacterSave createCharacterSave(Character character, CustomModelComp[] comps)
     {
         String name = character.getName();
-        boolean locationSet = character.isLocationSet();
         WorldPoint savedWorldPoint = character.getNonInstancedPoint();
         LocalPoint savedLocalPoint = character.getInstancedPoint();
         int localPointPlane = character.getInstancedPlane();
@@ -1446,7 +1445,6 @@ public class CreatorsPanel extends PluginPanel
 
         return new CharacterSave(
                 name,
-                locationSet,
                 savedWorldPoint,
                 savedLocalPoint,
                 localPointPlane,

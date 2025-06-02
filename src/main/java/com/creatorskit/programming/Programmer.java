@@ -87,6 +87,7 @@ public class Programmer
             CKObject ckObject = character.getCkObject();
             if (ckObject == null)
             {
+                character.setInScene(false);
                 continue;
             }
 
@@ -100,6 +101,7 @@ public class Programmer
             MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
             if (keyFrame.getPlane() != worldView.getPlane())
             {
+                character.setInScene(false);
                 continue;
             }
 
@@ -222,11 +224,13 @@ public class Programmer
         CKObject ckObject = character.getCkObject();
         if (ckObject == null)
         {
+            character.setInScene(false);
             return;
         }
 
         if (mkf.getPlane() != worldView.getPlane())
         {
+            character.setInScene(false);
             return;
         }
 
@@ -239,11 +243,13 @@ public class Programmer
         MovementComposition mc = getMovementComposition(worldView, character, mkf, currentStep, stepsComplete, orientationAction, clientTicksPassed, turnRate);
         if (mc == null)
         {
+            character.setInScene(false);
             setAnimation(character, false, 0, 0);
             setOrientation(character, currentClientTick);
             return;
         }
 
+        character.setInScene(true);
         setLocation(character, mkf, mc);
 
         int orientation = ckObject.getOrientation();
@@ -315,11 +321,13 @@ public class Programmer
         CKObject ckObject = character.getCkObject();
         if (ckObject == null)
         {
+            character.setInScene(false);
             return;
         }
 
         if (mkf.getPlane() != worldView.getPlane())
         {
+            character.setInScene(false);
             return;
         }
 
@@ -339,10 +347,12 @@ public class Programmer
 
         if (mc == null)
         {
+            character.setInScene(false);
             setAnimation(character, false, 0, 0);
         }
         else
         {
+            character.setInScene(true);
             setLocation(character, mkf, mc);
             orientationGoal = mc.getOrientationGoal();
             difference = Orientation.subtract(orientationGoal, orientation);
@@ -1230,6 +1240,12 @@ public class Programmer
         CKObject ckObject = character.getCkObject();
         if (ckObject == null)
         {
+            return;
+        }
+
+        if (!character.isInScene())
+        {
+            character.setActive(false, character.isActive(), false, clientThread);
             return;
         }
 

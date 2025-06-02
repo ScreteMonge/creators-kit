@@ -25,7 +25,7 @@ public class Character
 {
     private String name;
     private boolean active;
-    private boolean locationSet;
+    private boolean inScene;
     private KeyFrame[][] frames;
     private KeyFrame[] currentFrames;
     private KeyFrameType[] summary;
