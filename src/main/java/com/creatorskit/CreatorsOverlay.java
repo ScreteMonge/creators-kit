@@ -105,7 +105,7 @@ public class CreatorsOverlay extends Overlay
         for (int e = 0; e < plugin.getCharacters().size(); e++)
         {
             Character character = plugin.getCharacters().get(e);
-            if (!character.isActive())
+            if (!character.isInScene())
             {
                 continue;
             }
@@ -247,7 +247,7 @@ public class CreatorsOverlay extends Overlay
         for (int e = 0; e < plugin.getCharacters().size(); e++)
         {
             Character character = plugin.getCharacters().get(e);
-            if (!character.isActive())
+            if (!character.isInScene())
             {
                 continue;
             }
@@ -466,7 +466,7 @@ public class CreatorsOverlay extends Overlay
             return;
         }
 
-        if (!character.isActive())
+        if (!character.isInScene())
         {
             return;
         }
@@ -501,13 +501,7 @@ public class CreatorsOverlay extends Overlay
         for (int i = 0; i < plugin.getCharacters().size(); i++)
         {
             Character character = plugin.getCharacters().get(i);
-            if (!character.isActive())
-            {
-                continue;
-            }
-
-            boolean poh = MovementManager.useLocalLocations(worldView);
-            if ((!poh && character.isInPOH()) || (poh && !character.isInPOH()))
+            if (!character.isInScene())
             {
                 continue;
             }
