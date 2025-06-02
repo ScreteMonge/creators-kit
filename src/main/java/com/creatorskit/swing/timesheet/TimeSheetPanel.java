@@ -553,6 +553,7 @@ public class TimeSheetPanel extends JPanel
         }
 
         selectedCharacter.setInScene(true);
+        selectedCharacter.setActive(true, true, true, clientThread);
 
         Programmer programmer = toolBox.getProgrammer();
 
@@ -581,7 +582,6 @@ public class TimeSheetPanel extends JPanel
         }
 
         programmer.register3DChanges(selectedCharacter);
-        selectedCharacter.setVisible(true, clientThread);
     }
 
     public void initializeMovementKeyFrame(Character character, double tick, int plane, boolean poh, int[][] path, boolean loop, double speed, int turnRate)

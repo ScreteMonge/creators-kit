@@ -1245,9 +1245,12 @@ public class Programmer
 
         if (!character.isInScene())
         {
+            System.out.println("Not in scene");
             character.setActive(false, character.isActive(), false, clientThread);
             return;
         }
+
+        System.out.println("In scene");
 
         WorldView worldView = client.getTopLevelWorldView();
         boolean poh = MovementManager.useLocalLocations(worldView);
@@ -1255,33 +1258,10 @@ public class Programmer
         SpawnKeyFrame spawnKeyFrame = (SpawnKeyFrame) character.getCurrentKeyFrame(KeyFrameType.SPAWN);
         if (spawnKeyFrame == null)
         {
-            if (poh && character.isInPOH())
-            {
-                character.resetActive(clientThread);
-                return;
-            }
-
-            if (!poh && !character.isInPOH())
-            {
-                WorldPoint worldPoint = character.getNonInstancedPoint();
-                if (worldPoint == null)
-                {
-                    character.setActive(false, character.isActive(), false, clientThread);
-                    return;
-                }
-
-                LocalPoint lp = LocalPoint.fromWorld(worldView, worldPoint);
-                if (lp == null || !lp.isInScene())
-                {
-                    character.setActive(false, character.isActive(), false, clientThread);
-                    return;
-                }
-
-                character.resetActive(clientThread);
-                return;
-            }
-
-            character.setActive(false, character.isActive(), false, clientThread);
+            System.out.println("SKF null");
+            boolean active = character.isActive();
+            System.out.println("Active? " + active);
+            character.setActive(active, active, active, clientThread);
             return;
         }
 
@@ -1322,6 +1302,7 @@ public class Programmer
         MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
         if (keyFrame.getPlane() != worldView.getPlane())
         {
+            character.setInScene(false);
             return;
         }
 

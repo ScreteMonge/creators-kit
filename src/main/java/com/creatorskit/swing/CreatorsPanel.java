@@ -442,7 +442,7 @@ public class CreatorsPanel extends PluginPanel
         Character character = new Character(
                 textField.getText(),
                 active,
-                worldPoint != null || localPoint != null,
+                false,
                 keyFrames,
                 new KeyFrame[KeyFrameType.getTotalFrameTypes()],
                 summary,
@@ -472,7 +472,6 @@ public class CreatorsPanel extends PluginPanel
                 0);
 
         objectPanel.setCharacter(character);
-        ManagerPanel managerPanel = toolBox.getManagerPanel();
 
         textField.addActionListener(e ->
         {
