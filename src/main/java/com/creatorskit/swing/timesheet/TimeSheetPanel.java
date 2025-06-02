@@ -11,6 +11,7 @@ import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.Programmer;
 import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.programming.orientation.OrientationGoal;
+import com.creatorskit.programming.orientation.OrientationHotkeyMode;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.manager.TreeScrollPane;
@@ -413,7 +414,7 @@ public class TimeSheetPanel extends JPanel
         addKeyFrameActions(kfa);
     }
 
-    public void onOrientationKeyPressed()
+    public void onOrientationKeyPressed(OrientationHotkeyMode hotkeyMode)
     {
         if (selectedCharacter == null)
         {
@@ -446,20 +447,32 @@ public class TimeSheetPanel extends JPanel
             return;
         }
 
-        int startOrientation = ckObject.getOrientation();
         KeyFrame okf = selectedCharacter.getCurrentKeyFrame(KeyFrameType.ORIENTATION);
         if (okf == null)
         {
-            initializeOrientationKeyFrame(selectedCharacter, localPoint, currentTime, startOrientation, OrientationGoal.POINT, 2, -1);
+            int orientation = ckObject.getOrientation();
+
+            initializeOrientationKeyFrame(
+                    selectedCharacter,
+                    hotkeyMode,
+                    localPoint,
+                    currentTime,
+                    orientation,
+                    orientation,
+                    OrientationGoal.POINT,
+                    2,
+                    -1);
         }
         else
         {
             OrientationKeyFrame keyFrame = (OrientationKeyFrame) okf;
             initializeOrientationKeyFrame(
                     selectedCharacter,
+                    hotkeyMode,
                     localPoint,
                     keyFrame.getTick(),
                     keyFrame.getStart(),
+                    keyFrame.getEnd(),
                     keyFrame.getGoal(),
                     keyFrame.getDuration(),
                     keyFrame.getTurnRate());
@@ -469,7 +482,7 @@ public class TimeSheetPanel extends JPanel
         selectedCharacter.setVisible(true, clientThread);
     }
 
-    public void initializeOrientationKeyFrame(Character character, LocalPoint localPoint, double tick, int startOrientation, OrientationGoal og, double duration, int turnRate)
+    public void initializeOrientationKeyFrame(Character character, OrientationHotkeyMode hotkeyMode, LocalPoint localPoint, double tick, int start, int end, OrientationGoal og, double duration, int turnRate)
     {
         CKObject ckObject = character.getCkObject();
         if (ckObject == null)
@@ -483,13 +496,24 @@ public class TimeSheetPanel extends JPanel
             return;
         }
 
+        int startOrientation = start;
+        int endOrientation = end;
         int angle = (int) Orientation.getAngleBetween(lp, localPoint);
+
+        if (hotkeyMode == OrientationHotkeyMode.SET_START)
+        {
+            startOrientation = angle;
+        }
+        else
+        {
+            endOrientation = angle;
+        }
 
         KeyFrame okf = new OrientationKeyFrame(
                 tick,
                 og,
                 startOrientation,
-                angle,
+                endOrientation,
                 duration,
                 turnRate);
 

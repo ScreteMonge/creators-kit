@@ -3,7 +3,7 @@ package com.creatorskit;
 import com.creatorskit.models.*;
 import com.creatorskit.models.exporters.ModelExporter;
 import com.creatorskit.programming.*;
-import com.creatorskit.programming.orientation.OrientationGoal;
+import com.creatorskit.programming.orientation.OrientationHotkeyMode;
 import com.creatorskit.saves.TransmogLoadOption;
 import com.creatorskit.saves.TransmogSave;
 import com.creatorskit.swing.*;
@@ -192,7 +192,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.registerKeyListener(addProgramStepListener);
 		keyManager.registerKeyListener(removeProgramStepListener);
 		keyManager.registerKeyListener(clearProgramStepListener);
-		keyManager.registerKeyListener(addOrientationListener);
+		keyManager.registerKeyListener(addOrientationStartListener);
+		keyManager.registerKeyListener(addOrientationGoalListener);
 		keyManager.registerKeyListener(playPauseListener);
 		keyManager.registerKeyListener(resetTimelineListener);
 		keyManager.registerKeyListener(skipForwardListener);
@@ -304,7 +305,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.unregisterKeyListener(addProgramStepListener);
 		keyManager.unregisterKeyListener(removeProgramStepListener);
 		keyManager.unregisterKeyListener(clearProgramStepListener);
-		keyManager.unregisterKeyListener(addOrientationListener);
+		keyManager.unregisterKeyListener(addOrientationStartListener);
+		keyManager.unregisterKeyListener(addOrientationGoalListener);
 		keyManager.unregisterKeyListener(playPauseListener);
 		keyManager.unregisterKeyListener(resetTimelineListener);
 		keyManager.unregisterKeyListener(skipForwardListener);
@@ -2061,11 +2063,19 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyFrame.setCurrentStep(0);
 	}
 
-	private final HotkeyListener addOrientationListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_F, InputEvent.CTRL_DOWN_MASK)) {
+	private final HotkeyListener addOrientationStartListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_OPEN_BRACKET, InputEvent.CTRL_DOWN_MASK)) {
 		@Override
 		public void hotkeyPressed()
 		{
-			creatorsPanel.getToolBox().getTimeSheetPanel().onOrientationKeyPressed();
+			creatorsPanel.getToolBox().getTimeSheetPanel().onOrientationKeyPressed(OrientationHotkeyMode.SET_START);
+		}
+	};
+
+	private final HotkeyListener addOrientationGoalListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_CLOSE_BRACKET, InputEvent.CTRL_DOWN_MASK)) {
+		@Override
+		public void hotkeyPressed()
+		{
+			creatorsPanel.getToolBox().getTimeSheetPanel().onOrientationKeyPressed(OrientationHotkeyMode.SET_GOAL);
 		}
 	};
 
