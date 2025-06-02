@@ -20,6 +20,8 @@ import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameCharacte
 import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameAction;
 import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameCharacterActionType;
 import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameActionType;
+import com.creatorskit.swing.timesheet.keyframe.settings.HealthbarSprite;
+import com.creatorskit.swing.timesheet.keyframe.settings.HitsplatType;
 import com.creatorskit.swing.timesheet.sheets.AttributeSheet;
 import com.creatorskit.swing.timesheet.sheets.SummarySheet;
 import com.creatorskit.swing.timesheet.sheets.TimeSheet;
@@ -605,6 +607,61 @@ public class TimeSheetPanel extends JPanel
             kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, character, KeyFrameCharacterActionType.REMOVE));
         }
         addKeyFrameActions(kfa);
+    }
+
+    /**
+     * Adds a new HealthKeyFrame based on the last HealthKeyFrame as if the HitsplatKeyFrame argument were applied
+     */
+    public void initializeHealthKeyFrame(KeyFrameType type)
+    {
+        if (selectedCharacter == null)
+        {
+            return;
+        }
+
+        KeyFrame hitsplatKeyFrame = attributePanel.createKeyFrame(type, currentTime);
+        addKeyFrameAction(hitsplatKeyFrame);
+
+        HitsplatKeyFrame hitsKF = (HitsplatKeyFrame) hitsplatKeyFrame;
+
+        double duration;
+        HealthbarSprite sprite;
+        int maxHealth;
+        int currentHealth;
+
+        KeyFrame healthKeyFrame = selectedCharacter.findPreviousKeyFrame(KeyFrameType.HEALTH, currentTime, true);
+        if (healthKeyFrame == null)
+        {
+            duration = 3.0;
+            sprite = HealthbarSprite.DEFAULT;
+            maxHealth = 99;
+            currentHealth = 99;
+        }
+        else
+        {
+            HealthKeyFrame healthKF = (HealthKeyFrame) healthKeyFrame;
+            duration = healthKF.getDuration();
+            sprite = healthKF.getHealthbarSprite();
+            maxHealth = healthKF.getMaxHealth();
+            currentHealth = healthKF.getCurrentHealth();
+        }
+
+        int damage = hitsKF.getDamage();
+
+        int remaining = currentHealth - damage;
+        if (remaining < 0)
+        {
+            remaining = 0;
+        }
+
+        HealthKeyFrame nextKF = new HealthKeyFrame(
+                currentTime,
+                duration,
+                sprite,
+                maxHealth,
+                remaining);
+
+        addKeyFrameAction(nextKF);
     }
 
     public void addAnimationKeyFrameFromCache(WeaponAnimData weaponAnim)

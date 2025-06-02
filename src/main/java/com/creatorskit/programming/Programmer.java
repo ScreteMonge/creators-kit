@@ -1245,12 +1245,9 @@ public class Programmer
 
         if (!character.isInScene())
         {
-            System.out.println("Not in scene");
             character.setActive(false, character.isActive(), false, clientThread);
             return;
         }
-
-        System.out.println("In scene");
 
         WorldView worldView = client.getTopLevelWorldView();
         boolean poh = MovementManager.useLocalLocations(worldView);
@@ -1258,9 +1255,7 @@ public class Programmer
         SpawnKeyFrame spawnKeyFrame = (SpawnKeyFrame) character.getCurrentKeyFrame(KeyFrameType.SPAWN);
         if (spawnKeyFrame == null)
         {
-            System.out.println("SKF null");
             boolean active = character.isActive();
-            System.out.println("Active? " + active);
             character.setActive(active, active, active, clientThread);
             return;
         }

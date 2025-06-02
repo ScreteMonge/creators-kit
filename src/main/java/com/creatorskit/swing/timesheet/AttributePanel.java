@@ -1854,6 +1854,13 @@ public class AttributePanel extends JPanel
         damage.setModel(new SpinnerNumberModel(0, 0, 999, 1));
         card.add(damage, c);
 
+        c.gridx = 2;
+        c.gridy = 3;
+        JButton keyFrameHealth = new JButton("Quick KeyFrame Hitsplat/Health");
+        keyFrameHealth.setToolTipText("Creates the Hitsplat KeyFrame and an appropriate Health KeyFrame as if this damage were applied");
+        keyFrameHealth.addActionListener(e -> timeSheetPanel.initializeHealthKeyFrame(hitsplatType));
+        card.add(keyFrameHealth, c);
+
         c.gridwidth = 1;
         c.gridheight = 1;
         c.weightx = 1;
