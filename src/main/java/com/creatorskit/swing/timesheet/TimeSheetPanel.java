@@ -528,6 +528,8 @@ public class TimeSheetPanel extends JPanel
             return;
         }
 
+        selectedCharacter.setInScene(true);
+
         Programmer programmer = toolBox.getProgrammer();
 
         boolean poh = MovementManager.useLocalLocations(worldView);
