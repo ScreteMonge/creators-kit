@@ -707,6 +707,46 @@ public class TimeSheetPanel extends JPanel
         addKeyFrameAction(keyFrame);
     }
 
+    public void duplicateHitsplatKeyFrame(KeyFrameType previousType, KeyFrameType targetType)
+    {
+        KeyFrame kf = selectedCharacter.findPreviousKeyFrame(previousType, currentTime, true);
+        if (kf == null)
+        {
+            return;
+        }
+
+        HitsplatKeyFrame keyFrame = (HitsplatKeyFrame) kf;
+
+        HitsplatKeyFrame hkf = new HitsplatKeyFrame(
+                keyFrame.getTick(),
+                targetType,
+                keyFrame.getDuration(),
+                keyFrame.getSprite(),
+                keyFrame.getDamage());
+
+        addKeyFrameAction(hkf);
+    }
+
+    public void duplicateSpotanimKeyFrame(KeyFrameType previousType, KeyFrameType targetType)
+    {
+        KeyFrame kf = selectedCharacter.findPreviousKeyFrame(previousType, currentTime, true);
+        if (kf == null)
+        {
+            return;
+        }
+
+        SpotAnimKeyFrame keyFrame = (SpotAnimKeyFrame) kf;
+
+        SpotAnimKeyFrame spkf = new SpotAnimKeyFrame(
+                keyFrame.getTick(),
+                targetType,
+                keyFrame.getSpotAnimId(),
+                keyFrame.isLoop(),
+                keyFrame.getHeight());
+
+        addKeyFrameAction(spkf);
+    }
+
     /**
      * Adds the keyframe to a specific character, or replaces a keyframe if the tick matches exactly
      * @param character the character to add the keyframe to

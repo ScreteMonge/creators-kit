@@ -1750,10 +1750,31 @@ public class AttributePanel extends JPanel
         c.gridheight = 1;
         c.weightx = 1;
         c.weighty = 1;
-        c.gridx = 8;
-        c.gridy = 15;
+        c.gridx = 2;
+        c.gridy = 4;
         JLabel empty1 = new JLabel("");
         card.add(empty1, c);
+
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 3;
+        c.gridy = 5;
+        JPanel duplicatePanel = new JPanel();
+        duplicatePanel.setLayout(new GridLayout(0, 1, 2, 2));
+        card.add(duplicatePanel, c);
+        duplicatePanel.add(new JLabel("Duplicate To:"));
+
+        JButton type1 = new JButton("SpotAnim 1");
+        JButton type2 = new JButton("SpotAnim 2");
+
+        type1.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        type2.setBackground(ColorScheme.DARK_GRAY_COLOR);
+
+        duplicatePanel.add(type1);
+        duplicatePanel.add(type2);
+
+        type1.addActionListener(e -> timeSheetPanel.duplicateSpotanimKeyFrame(spotAnimType, KeyFrameType.SPOTANIM));
+        type2.addActionListener(e -> timeSheetPanel.duplicateSpotanimKeyFrame(spotAnimType, KeyFrameType.SPOTANIM2));
     }
 
     private void setupHitsplatCard(JPanel card, KeyFrameType hitsplatType)
@@ -1858,6 +1879,7 @@ public class AttributePanel extends JPanel
         c.gridy = 3;
         JButton keyFrameHealth = new JButton("Quick KeyFrame Hitsplat/Health");
         keyFrameHealth.setToolTipText("Creates the Hitsplat KeyFrame and an appropriate Health KeyFrame as if this damage were applied");
+        keyFrameHealth.setBackground(ColorScheme.DARK_GRAY_COLOR);
         keyFrameHealth.addActionListener(e -> timeSheetPanel.initializeHealthKeyFrame(hitsplatType));
         card.add(keyFrameHealth, c);
 
@@ -1865,10 +1887,39 @@ public class AttributePanel extends JPanel
         c.gridheight = 1;
         c.weightx = 1;
         c.weighty = 1;
-        c.gridx = 8;
-        c.gridy = 15;
+        c.gridx = 3;
+        c.gridy = 4;
         JLabel empty1 = new JLabel("");
         card.add(empty1, c);
+
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 5;
+        c.gridy = 6;
+        JPanel duplicatePanel = new JPanel();
+        duplicatePanel.setLayout(new GridLayout(0, 1, 2, 2));
+        card.add(duplicatePanel, c);
+        duplicatePanel.add(new JLabel("Duplicate To:"));
+
+        JButton type1 = new JButton("Hitsplat 1");
+        JButton type2 = new JButton("Hitsplat 2");
+        JButton type3 = new JButton("Hitsplat 3");
+        JButton type4 = new JButton("Hitsplat 4");
+
+        type1.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        type2.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        type3.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        type4.setBackground(ColorScheme.DARK_GRAY_COLOR);
+
+        duplicatePanel.add(type1);
+        duplicatePanel.add(type2);
+        duplicatePanel.add(type3);
+        duplicatePanel.add(type4);
+
+        type1.addActionListener(e -> timeSheetPanel.duplicateHitsplatKeyFrame(hitsplatType, KeyFrameType.HITSPLAT_1));
+        type2.addActionListener(e -> timeSheetPanel.duplicateHitsplatKeyFrame(hitsplatType, KeyFrameType.HITSPLAT_2));
+        type3.addActionListener(e -> timeSheetPanel.duplicateHitsplatKeyFrame(hitsplatType, KeyFrameType.HITSPLAT_3));
+        type4.addActionListener(e -> timeSheetPanel.duplicateHitsplatKeyFrame(hitsplatType, KeyFrameType.HITSPLAT_4));
     }
 
     public void switchCards(String cardName)
