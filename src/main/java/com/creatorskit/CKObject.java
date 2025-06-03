@@ -144,11 +144,6 @@ public class CKObject extends RuneLiteObjectController
     @Override
     public void tick(int ticksSinceLastFrame)
     {
-        if (freeze)
-        {
-            return;
-        }
-
         if (!playing && hasAnimKeyFrame)
         {
             return;
@@ -164,8 +159,11 @@ public class CKObject extends RuneLiteObjectController
             setupAnimController(AnimationType.POSE, -1);
         }
 
-        animationController.tick(ticksSinceLastFrame);
-        poseAnimationController.tick(ticksSinceLastFrame);
+        if (!freeze)
+        {
+            animationController.tick(ticksSinceLastFrame);
+            poseAnimationController.tick(ticksSinceLastFrame);
+        }
     }
 
     @Override
@@ -277,13 +275,16 @@ public class CKObject extends RuneLiteObjectController
 
         if (allowFreeze)
         {
+            System.out.println("Allowing freeze");
             if (animFrame == -1)
             {
+                System.out.println("No freeze");
                 freeze = false;
                 ac.setFrame(0);
                 return;
             }
 
+            System.out.println("Freeze");
             freeze = true;
             ac.setFrame(animFrame);
             return;

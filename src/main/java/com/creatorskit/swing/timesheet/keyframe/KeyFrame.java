@@ -46,6 +46,7 @@ public class KeyFrame
                         animKF.getActive(),
                         animKF.getStartFrame(),
                         animKF.isLoop(),
+                        animKF.isFreeze(),
                         animKF.getIdle(),
                         animKF.getWalk(),
                         animKF.getRun(),

@@ -258,6 +258,7 @@ public class AttributePanel extends JPanel
                         (int) animAttributes.getActive().getValue(),
                         (int) animAttributes.getStartFrame().getValue(),
                         animAttributes.getLoop().getSelectedItem() == Toggle.ENABLE,
+                        animAttributes.getFreeze().getSelectedItem() == Toggle.ENABLE,
                         (int) animAttributes.getIdle().getValue(),
                         (int) animAttributes.getWalk().getValue(),
                         (int) animAttributes.getRun().getValue(),
@@ -547,6 +548,20 @@ public class AttributePanel extends JPanel
         loop.addItem(Toggle.DISABLE);
         loop.addItem(Toggle.ENABLE);
         card.add(loop, c);
+
+        c.gridx = 4;
+        c.gridy = 4;
+        JLabel freezeLabel = new JLabel("Freeze: ");
+        freezeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(freezeLabel, c);
+
+        c.gridx = 5;
+        c.gridy = 4;
+        JComboBox<Toggle> freeze = animAttributes.getFreeze();
+        freeze.setFocusable(false);
+        freeze.addItem(Toggle.DISABLE);
+        freeze.addItem(Toggle.ENABLE);
+        card.add(freeze, c);
 
         c.gridwidth = 4;
         c.gridx = 0;

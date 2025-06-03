@@ -922,9 +922,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.ANIMATION);
 			if (kf == null)
 			{
-				ckObject.setPlaying(true);
+				int frame = (int) character.getAnimationFrameSpinner().getValue();
 				ckObject.setLoop(true);
 				ckObject.setHasAnimKeyFrame(false);
+				ckObject.setAnimationFrame(AnimationType.ACTIVE, frame, true);
 			}
 			else
 			{

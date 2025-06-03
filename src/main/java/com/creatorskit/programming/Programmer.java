@@ -1427,7 +1427,7 @@ public class Programmer
         }
 
         AnimationKeyFrame keyFrame = (AnimationKeyFrame) kf;
-        setActiveAnimationFrame(ckObject, keyFrame.getActive(), timeSheetPanel.getCurrentTime(), keyFrame.getTick(), keyFrame.getStartFrame(), keyFrame.isLoop(), false);
+        setActiveAnimationFrame(ckObject, keyFrame.getActive(), timeSheetPanel.getCurrentTime(), keyFrame.getTick(), keyFrame.getStartFrame(), keyFrame.isLoop(), keyFrame.isFreeze(), false);
     }
 
     private void registerModelChanges(Character character)
@@ -1572,12 +1572,12 @@ public class Programmer
                 Model model = plugin.constructModelFromCache(stats, new int[0], false, LightingStyle.CUSTOM, cl);
 
                 ckObject.setModel(model);
-                setActiveAnimationFrame(ckObject, data.getAnimationId(), currentTime, startTick, 0, loop, true);
+                setActiveAnimationFrame(ckObject, data.getAnimationId(), currentTime, startTick, 0, loop, false, true);
             });
         }
     }
 
-    public void setActiveAnimationFrame(CKObject ckObject, int animId, double currentTime, double startTime, int startFrame, boolean loop, boolean despawnOnFinished)
+    public void setActiveAnimationFrame(CKObject ckObject, int animId, double currentTime, double startTime, int startFrame, boolean loop, boolean freeze, boolean despawnOnFinished)
     {
         if (animId == -1)
         {
@@ -1585,6 +1585,7 @@ public class Programmer
             {
                 ckObject.unsetAnimation(AnimationType.ACTIVE);
                 ckObject.setLoop(false);
+                ckObject.setFreeze(false);
                 ckObject.setHasAnimKeyFrame(true);
                 ckObject.setFinished(true);
             });
@@ -1598,25 +1599,35 @@ public class Programmer
             clientThread.invokeLater(() ->
             {
                 Animation animation = client.loadAnimation(animId);
-                setActiveAnimationFrame(ckObject, animation, currentTime, startTime, startFrame, loop, despawnOnFinished);
+                setActiveAnimationFrame(ckObject, animation, currentTime, startTime, startFrame, loop, freeze, despawnOnFinished);
             });
             return;
         }
 
         clientThread.invokeLater(() ->
         {
-            setActiveAnimationFrame(ckObject, active, currentTime, startTime, startFrame, loop, despawnOnFinished);
+            setActiveAnimationFrame(ckObject, active, currentTime, startTime, startFrame, loop, freeze, despawnOnFinished);
         });
     }
 
-    public void setActiveAnimationFrame(CKObject ckObject, Animation animation, double currentTime, double startTime, int startFrame, boolean loop, boolean despawnOnFinished)
+    public void setActiveAnimationFrame(CKObject ckObject, Animation animation, double currentTime, double startTime, int startFrame, boolean loop, boolean freeze, boolean despawnOnFinished)
     {
         int[] animFrame = getAnimFrame(animation, currentTime, startTime, startFrame, loop);
-        if (animFrame[0] == -1)
+        int frame = animFrame[0];
+        int tick = animFrame[1];
+
+        if (freeze)
+        {
+            frame = startFrame;
+            tick = 0;
+        }
+
+        if (!freeze && animFrame[0] == -1)
         {
             ckObject.setFinished(true);
             ckObject.unsetAnimation(AnimationType.ACTIVE);
             ckObject.setLoop(false);
+            ckObject.setFreeze(false);
             if (despawnOnFinished)
             {
                 ckObject.setActive(false);
@@ -1625,8 +1636,8 @@ public class Programmer
         else
         {
             ckObject.setAnimation(AnimationType.ACTIVE, animation);
-            ckObject.setAnimationFrame(AnimationType.ACTIVE, animFrame[0], false);
-            ckObject.tick(animFrame[1]);
+            ckObject.setAnimationFrame(AnimationType.ACTIVE, frame, freeze);
+            ckObject.tick(tick);
             ckObject.setLoop(loop);
             ckObject.setFinished(false);
             ckObject.setHasAnimKeyFrame(true);

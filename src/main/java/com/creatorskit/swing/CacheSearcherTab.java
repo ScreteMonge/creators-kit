@@ -1415,6 +1415,7 @@ public class CacheSearcherTab extends JPanel
                         -1,
                         0,
                         false,
+                        false,
                         data.getStandingAnimation(),
                         data.getWalkingAnimation(),
                         data.getRunAnimation(),

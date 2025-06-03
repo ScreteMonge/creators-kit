@@ -298,7 +298,7 @@ public class ManagerTree extends JTree
 
         if (showWarning && foldersToRemove.size() + charactersToRemove.size() > 1)
         {
-            int result = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete all the selected Folders and their Objects?");
+            int result = JOptionPane.showConfirmDialog(null, "Are you sure you want to delete all the selected Folders and their Objects?");
             if (result != JOptionPane.YES_OPTION)
             {
                 return;

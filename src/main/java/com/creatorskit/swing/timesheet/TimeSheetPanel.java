@@ -672,6 +672,7 @@ public class TimeSheetPanel extends JPanel
                 -1,
                 0,
                 false,
+                false,
                 WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE),
                 WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.WALK),
                 WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.RUN),
