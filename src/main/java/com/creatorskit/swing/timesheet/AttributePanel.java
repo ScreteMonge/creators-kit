@@ -58,6 +58,9 @@ public class AttributePanel extends JPanel
     private final JFilterableTable npcTable = new JFilterableTable("NPCs");
     private final JFilterableTable itemTable = new JFilterableTable("Items");
     private final JFilterableTable animTable = new JFilterableTable("Animations");
+    private final JFilterableTable spotanimTable = new JFilterableTable("SpotAnims");
+
+    private final JPopupMenu spotanimPopup = new JPopupMenu("SpotAnims");
 
     public static final String MOVE_CARD = "Movement";
     public static final String ANIM_CARD = "Animation";
@@ -204,6 +207,7 @@ public class AttributePanel extends JPanel
         setupTextCard(textCard);
         setupOverheadCard(overCard);
         setupHealthCard(healthCard);
+        setupSpotAnimFinder();
         setupSpotAnimCard(spotanimCard, KeyFrameType.SPOTANIM);
         setupSpotAnimCard(spotanim2Card, KeyFrameType.SPOTANIM2);
         setupHitsplatCard(hitsplat1Card, KeyFrameType.HITSPLAT_1);
@@ -1761,19 +1765,70 @@ public class AttributePanel extends JPanel
         height.setModel(new SpinnerNumberModel(92, 0, 9999, 1));
         card.add(height, c);
 
+        c.gridx = 0;
+        c.gridy = 4;
+        JLabel searcherLabel = new JLabel("SpotAnims: ");
+        searcherLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(searcherLabel, c);
+
+        c.gridwidth = 3;
+        c.gridx = 1;
+        c.gridy = 4;
+        JTextField spotanimField = new JTextField("");
+        spotanimField.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        card.add(spotanimField, c);
+
+        KeyListener listener = new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e)
+            {
+                String text = spotanimField.getText();
+                spotanimTable.searchAndListEntries(text);
+                spotanimPopup.setVisible(true);
+                Point p = spotanimField.getLocationOnScreen();
+                spotanimPopup.setLocation(new Point((int) p.getX() + spotanimField.getWidth(), (int) p.getY()));
+            }
+        };
+        spotanimField.addKeyListener(listener);
+
+        spotanimField.addFocusListener(new FocusListener()
+        {
+            @Override
+            public void focusGained(FocusEvent e)
+            {
+
+            }
+
+            @Override
+            public void focusLost(FocusEvent e)
+            {
+                spotanimPopup.setVisible(false);
+            }
+        });
+
         c.gridwidth = 1;
         c.gridheight = 1;
         c.weightx = 1;
         c.weighty = 1;
         c.gridx = 2;
-        c.gridy = 4;
+        c.gridy = 5;
         JLabel empty1 = new JLabel("");
         card.add(empty1, c);
 
         c.weightx = 0;
         c.weighty = 0;
         c.gridx = 3;
-        c.gridy = 5;
+        c.gridy = 6;
         JPanel duplicatePanel = new JPanel();
         duplicatePanel.setLayout(new GridLayout(0, 1, 2, 2));
         card.add(duplicatePanel, c);
@@ -1790,6 +1845,65 @@ public class AttributePanel extends JPanel
 
         type1.addActionListener(e -> timeSheetPanel.duplicateSpotanimKeyFrame(spotAnimType, KeyFrameType.SPOTANIM));
         type2.addActionListener(e -> timeSheetPanel.duplicateSpotanimKeyFrame(spotAnimType, KeyFrameType.SPOTANIM2));
+    }
+
+    private void setupSpotAnimFinder()
+    {
+        spotanimTable.addMouseListener(new MouseAdapter()
+        {
+            @Override
+            public void mouseClicked(MouseEvent e)
+            {
+                super.mouseClicked(e);
+
+                KeyFrameType spotAnimType = selectedKeyFramePage;
+                if (selectedKeyFramePage != KeyFrameType.SPOTANIM && selectedKeyFramePage != KeyFrameType.SPOTANIM2)
+                {
+                    return;
+                }
+
+                if (e.getClickCount() == 2 && e.getButton() == MouseEvent.BUTTON1)
+                {
+                    Object o = spotanimTable.getSelectedObject();
+                    if (o instanceof SpotanimData)
+                    {
+                        SpotanimData data = (SpotanimData) o;
+                        JSpinner id;
+                        if (spotAnimType == KeyFrameType.SPOTANIM)
+                        {
+                            id = spotAnimAttributes.getSpotAnimId();
+                        }
+                        else
+                        {
+                            id = spotAnim2Attributes.getSpotAnimId();
+                        }
+
+                        id.setValue(data.getId());
+                    }
+
+                    spotanimPopup.setVisible(false);
+                }
+            }
+        });
+
+        if (dataFinder.isDataLoaded(DataFinder.DataType.SPOTANIM))
+        {
+            List<SpotanimData> dataList = dataFinder.getSpotanimData();
+            List<Object> list = new ArrayList<>(dataList);
+            spotanimTable.initialize(list);
+        }
+        else
+        {
+            dataFinder.addLoadCallback(DataFinder.DataType.SPOTANIM, () ->
+            {
+                List<SpotanimData> dataList = dataFinder.getSpotanimData();
+                List<Object> list = new ArrayList<>(dataList);
+                spotanimTable.initialize(list);
+            });
+        }
+
+        JScrollPane scrollPane = new JScrollPane(spotanimTable);
+        spotanimPopup.add(scrollPane);
     }
 
     private void setupHitsplatCard(JPanel card, KeyFrameType hitsplatType)

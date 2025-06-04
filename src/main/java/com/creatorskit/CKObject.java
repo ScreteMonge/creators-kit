@@ -275,16 +275,13 @@ public class CKObject extends RuneLiteObjectController
 
         if (allowFreeze)
         {
-            System.out.println("Allowing freeze");
             if (animFrame == -1)
             {
-                System.out.println("No freeze");
                 freeze = false;
                 ac.setFrame(0);
                 return;
             }
 
-            System.out.println("Freeze");
             freeze = true;
             ac.setFrame(animFrame);
             return;
