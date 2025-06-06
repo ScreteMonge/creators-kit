@@ -1370,6 +1370,22 @@ public class AttributePanel extends JPanel
         customComboBox.setFocusable(false);
         card.add(customComboBox, c);
 
+        c.gridx = 2;
+        c.gridy = 2;
+        JButton grab = new JButton("Grab");
+        grab.setToolTipText("Grabs the original CustomModel set to the Object");
+        grab.addActionListener(e ->
+        {
+            Character selectedCharacter = timeSheetPanel.getSelectedCharacter();
+            if (selectedCharacter == null)
+            {
+                return;
+            }
+
+            customComboBox.setSelectedItem(selectedCharacter.getStoredModel());
+        });
+        card.add(grab, c);
+
         c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 3;
