@@ -553,6 +553,45 @@ public class TimeSheetPanel extends JPanel
             return;
         }
 
+        onAddMovement(false, localPoint);
+    }
+
+    public void onAddMovementMenuOptionPressed()
+    {
+        if (selectedCharacter == null)
+        {
+            return;
+        }
+
+        WorldView worldView = client.getTopLevelWorldView();
+        if (worldView == null)
+        {
+            return;
+        }
+
+        CKObject ckObject = selectedCharacter.getCkObject();
+        if (ckObject == null)
+        {
+            return;
+        }
+
+        LocalPoint localPoint = ckObject.getLocation();
+        if (localPoint == null || !localPoint.isInScene())
+        {
+            return;
+        }
+
+        onAddMovement(true, localPoint);
+    }
+
+    public void onAddMovement(boolean newKeyFrame, LocalPoint localPoint)
+    {
+        WorldView worldView = client.getTopLevelWorldView();
+        if (worldView == null)
+        {
+            return;
+        }
+
         selectedCharacter.setInScene(true);
         selectedCharacter.setActive(true, true, true, clientThread);
 
@@ -561,7 +600,7 @@ public class TimeSheetPanel extends JPanel
         boolean poh = MovementManager.useLocalLocations(worldView);
 
         KeyFrame kf = selectedCharacter.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
-        if (kf == null)
+        if (newKeyFrame || kf == null)
         {
             int x = localPoint.getSceneX();
             int y = localPoint.getSceneY();
