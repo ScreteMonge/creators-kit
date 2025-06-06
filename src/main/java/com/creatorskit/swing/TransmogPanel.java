@@ -1,15 +1,23 @@
 package com.creatorskit.swing;
 
+import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.CKObject;
+import com.creatorskit.programming.AnimationType;
+import com.creatorskit.programming.CKAnimationController;
 import com.creatorskit.saves.TransmogLoadOption;
 import com.creatorskit.saves.TransmogSave;
 import com.creatorskit.models.*;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.Client;
+import net.runelite.api.*;
+import net.runelite.api.coords.LocalPoint;
+import net.runelite.api.events.AnimationChanged;
+import net.runelite.api.events.ClientTick;
+import net.runelite.api.events.GameStateChanged;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import org.apache.commons.lang3.ArrayUtils;
@@ -29,8 +37,11 @@ import java.nio.file.Paths;
 @Getter
 public class TransmogPanel extends JPanel
 {
+    private Client client;
     private ClientThread clientThread;
     private final CreatorsPlugin plugin;
+    private final CreatorsConfig config;
+
     private final File TRANSMOGS_DIR = new File(Paths.get(RuneLite.RUNELITE_DIR.getPath(), "creatorskit").toString(), "transmogs");
     private final GridBagConstraints c = new GridBagConstraints();
     private final JLabel transmogLabel = new JLabel("None");
@@ -45,23 +56,25 @@ public class TransmogPanel extends JPanel
     private final JSpinner leftSpinner = new JSpinner(new SpinnerNumberModel(-1, -1, 99999, 1));
     private final JSpinner rotateSpinner = new JSpinner(new SpinnerNumberModel(-1, -1, 99999, 1));
     private final JPanel animationSwapsPanel = new JPanel();
-    private TransmogAnimationMode transmogAnimationMode = TransmogAnimationMode.PLAYER;
+    private TransmogAnimationMode animationMode = TransmogAnimationMode.PLAYER;
     private int[][] animationSwaps = new int[0][2];
-    private int poseAnimation = -1;
-    private int walkAnimation = -1;
-    private int runAnimation = -1;
-    private int actionAnimation = -1;
-    private int backwardsAnimation = -1;
-    private int rightAnimation = -1;
-    private int leftAnimation = -1;
-    private int rotateAnimation = -1;
+    private int pose = -1;
+    private int walk = -1;
+    private int run = -1;
+    private int active = -1;
+    private int backwards = -1;
+    private int shuffleRight = -1;
+    private int shuffleLeft = -1;
+    private int rotate = -1;
     private int radius = 60;
 
     @Inject
-    public TransmogPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin)
+    public TransmogPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin, CreatorsConfig config)
     {
+        this.client = client;
         this.clientThread = clientThread;
         this.plugin = plugin;
+        this.config = config;
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new BorderLayout());
@@ -143,7 +156,7 @@ public class TransmogPanel extends JPanel
                 "3) Custom: Only use the animations indicated here," + "<br>" +
                 "4) None: Don't animate at all" + "<html>");
 
-        animationComboBox.addItemListener(e -> transmogAnimationMode = (TransmogAnimationMode) animationComboBox.getSelectedItem());
+        animationComboBox.addItemListener(e -> animationMode = (TransmogAnimationMode) animationComboBox.getSelectedItem());
         rowHeaderPanel.add(animationComboBox, c);
 
         c.gridx = 0;
@@ -155,7 +168,7 @@ public class TransmogPanel extends JPanel
         c.gridx = 1;
         c.gridy = 7;
         poseSpinner.setToolTipText("Custom only: Set your Transmog's idle/pose animation");
-        poseSpinner.addChangeListener(e -> poseAnimation = (int) poseSpinner.getValue());
+        poseSpinner.addChangeListener(e -> pose = (int) poseSpinner.getValue());
         rowHeaderPanel.add(poseSpinner, c);
 
         c.gridx = 0;
@@ -167,7 +180,7 @@ public class TransmogPanel extends JPanel
         c.gridx = 1;
         c.gridy = 8;
         walkSpinner.setToolTipText("Custom only: Set your Transmog's walk animation");
-        walkSpinner.addChangeListener(e -> walkAnimation = (int) walkSpinner.getValue());
+        walkSpinner.addChangeListener(e -> walk = (int) walkSpinner.getValue());
         rowHeaderPanel.add(walkSpinner, c);
 
         c.gridx = 0;
@@ -179,7 +192,7 @@ public class TransmogPanel extends JPanel
         c.gridx = 1;
         c.gridy = 9;
         runSpinner.setToolTipText("Custom only: Set your Transmog's run animation");
-        runSpinner.addChangeListener(e -> runAnimation = (int) runSpinner.getValue());
+        runSpinner.addChangeListener(e -> run = (int) runSpinner.getValue());
         rowHeaderPanel.add(runSpinner, c);
 
         c.gridx = 0;
@@ -191,7 +204,7 @@ public class TransmogPanel extends JPanel
         c.gridx = 1;
         c.gridy = 10;
         actionSpinner.setToolTipText("Custom only: Set your Transmog's default interact animation");
-        actionSpinner.addChangeListener(e -> actionAnimation = (int) actionSpinner.getValue());
+        actionSpinner.addChangeListener(e -> active = (int) actionSpinner.getValue());
         rowHeaderPanel.add(actionSpinner, c);
 
         c.gridx = 0;
@@ -203,7 +216,7 @@ public class TransmogPanel extends JPanel
         c.gridx = 1;
         c.gridy = 11;
         backwardsSpinner.setToolTipText("Custom only: Set your Transmog's backwards walk animation");
-        backwardsSpinner.addChangeListener(e -> backwardsAnimation = (int) backwardsSpinner.getValue());
+        backwardsSpinner.addChangeListener(e -> backwards = (int) backwardsSpinner.getValue());
         rowHeaderPanel.add(backwardsSpinner, c);
 
         c.gridx = 0;
@@ -215,7 +228,7 @@ public class TransmogPanel extends JPanel
         c.gridx = 1;
         c.gridy = 12;
         rightSpinner.setToolTipText("Custom only: Set your Transmog's shuffle right animation");
-        rightSpinner.addChangeListener(e -> rightAnimation = (int) rightSpinner.getValue());
+        rightSpinner.addChangeListener(e -> shuffleRight = (int) rightSpinner.getValue());
         rowHeaderPanel.add(rightSpinner, c);
 
         c.gridx = 0;
@@ -227,7 +240,7 @@ public class TransmogPanel extends JPanel
         c.gridx = 1;
         c.gridy = 13;
         leftSpinner.setToolTipText("Custom only: Set your Transmog's shuffle left animation");
-        leftSpinner.addChangeListener(e -> leftAnimation = (int) leftSpinner.getValue());
+        leftSpinner.addChangeListener(e -> shuffleLeft = (int) leftSpinner.getValue());
         rowHeaderPanel.add(leftSpinner, c);
 
         c.gridx = 0;
@@ -239,7 +252,7 @@ public class TransmogPanel extends JPanel
         c.gridx = 1;
         c.gridy = 14;
         rotateSpinner.setToolTipText("Custom only: Set your Transmog's rotate animation");
-        rotateSpinner.addChangeListener(e -> rotateAnimation = (int) rotateSpinner.getValue());
+        rotateSpinner.addChangeListener(e -> rotate = (int) rotateSpinner.getValue());
         rowHeaderPanel.add(rotateSpinner, c);
 
         c.gridx = 0;
@@ -316,6 +329,175 @@ public class TransmogPanel extends JPanel
         animationSwapsPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         animationSwapsPanel.setLayout(new GridLayout(0, 8, 8, 8));
         revalidate();
+    }
+
+    @Subscribe
+    public void onAnimationChanged(AnimationChanged event)
+    {
+        CKObject transmog = plugin.getTransmog();
+        if (!config.enableTransmog() || transmog == null)
+        {
+            return;
+        }
+
+        if (animationMode == TransmogAnimationMode.NONE)
+            return;
+
+        if (event.getActor() instanceof Player)
+        {
+            Player player = (Player) event.getActor();
+            if (player != client.getLocalPlayer())
+                return;
+
+            int playerAnimation = player.getAnimation();
+            int animId = transmog.getAnimationId();
+            int transmogAnimation = -1;
+            if (animId != -1)
+                transmogAnimation = animId;
+
+            if (animationMode == TransmogAnimationMode.PLAYER && transmogAnimation != playerAnimation)
+            {
+                transmog.setAnimation(AnimationType.ACTIVE, playerAnimation);
+                return;
+            }
+
+            for (int[] swap : animationSwaps)
+            {
+                if (swap[0] == player.getAnimation() && transmogAnimation != swap[1])
+                {
+                    transmog.setAnimation(AnimationType.ACTIVE, swap[1]);
+                    return;
+                }
+            }
+
+            if (animationMode == TransmogAnimationMode.MODIFIED && transmogAnimation != playerAnimation && active == -1)
+                transmog.setAnimation(AnimationType.ACTIVE, playerAnimation);
+
+            if (animationMode == TransmogAnimationMode.MODIFIED && transmogAnimation != active && active != -1)
+                transmog.setAnimation(AnimationType.ACTIVE, active);
+
+            if (animationMode == TransmogAnimationMode.CUSTOM && transmogAnimation != active)
+                transmog.setAnimation(AnimationType.ACTIVE, active);
+        }
+    }
+
+    @Subscribe
+    public void onClientTick(ClientTick event)
+    {
+        Player player = client.getLocalPlayer();
+        WorldView worldView = client.getTopLevelWorldView();
+        CKObject transmog = plugin.getTransmog();
+
+        if (config.enableTransmog() && transmog != null)
+        {
+            if (player == null)
+                return;
+
+            LocalPoint localPoint = player.getLocalLocation();
+            transmog.setLocation(localPoint, worldView.getPlane());
+            transmog.setOrientation(player.getCurrentOrientation());
+
+            int playerActive = player.getAnimation();
+            int playerPose = player.getPoseAnimation();
+            Animation[] animations = transmog.getAnimations();
+            Animation activeAnim = animations[0];
+            Animation poseAnim = animations[1];
+
+            if (activeAnim != null)
+            {
+                int activeId = activeAnim.getId();
+                if (animationMode == TransmogAnimationMode.PLAYER)
+                {
+                    if (activeId != playerActive && activeId != -1)
+                    {
+                        transmog.setAnimation(AnimationType.ACTIVE, playerActive);
+                    }
+                }
+                return;
+            }
+
+            if (poseAnim == null)
+            {
+                return;
+            }
+
+            int poseId = poseAnim.getId();
+
+            if (animationMode == TransmogAnimationMode.PLAYER)
+            {
+                if (poseId != playerPose)
+                {
+                    transmog.setAnimation(AnimationType.POSE, playerPose);
+                }
+            }
+
+            if (animationMode == TransmogAnimationMode.CUSTOM || animationMode == TransmogAnimationMode.MODIFIED)
+            {
+                if (animationMode == TransmogAnimationMode.MODIFIED)
+                {
+                    if (pose == -1)
+                        pose = playerPose;
+                    if (walk == -1)
+                        walk = playerPose;
+                    if (run == -1)
+                        run = playerPose;
+                    if (backwards == -1)
+                        backwards = playerPose;
+                    if (shuffleLeft == -1)
+                        shuffleLeft = playerPose;
+                    if (shuffleRight == -1)
+                        shuffleRight = playerPose;
+                    if (rotate == -1)
+                        rotate = playerPose;
+                }
+
+                PoseAnimation poseAnimation = AnimationData.getPoseAnimation(playerPose);
+                int poseAnimId = -1;
+
+                switch (poseAnimation)
+                {
+                    case POSE:
+                        poseAnimId = pose;
+                        break;
+                    case WALK:
+                        poseAnimId = walk;
+                        break;
+                    case RUN:
+                        poseAnimId = run;
+                        break;
+                    case BACKWARDS:
+                        poseAnimId = backwards;
+                        break;
+                    case SHUFFLE_RIGHT:
+                        poseAnimId = shuffleRight;
+                        break;
+                    case SHUFFLE_LEFT:
+                        poseAnimId = shuffleLeft;
+                        break;
+                    case ROTATE:
+                        poseAnimId = rotate;
+                }
+
+                if (poseId != poseAnimId)
+                {
+                    transmog.setAnimation(AnimationType.POSE, poseAnimId);
+                }
+            }
+        }
+    }
+
+    @Subscribe
+    public void onGameStateChanged(GameStateChanged event)
+    {
+        if (event.getGameState() == GameState.LOGGED_IN)
+        {
+            CKObject transmog = plugin.getTransmog();
+            if (config.enableTransmog() && transmog != null)
+            {
+                transmog.setActive(false);
+                transmog.setActive(true);
+            }
+        }
     }
 
     private void addSwapPanel()
@@ -537,16 +719,16 @@ public class TransmogPanel extends JPanel
 
             TransmogSave transmogSave = new TransmogSave(
                     comp,
-                    transmogAnimationMode,
+                    animationMode,
                     animationSwaps,
-                    poseAnimation,
-                    walkAnimation,
-                    runAnimation,
-                    actionAnimation,
-                    backwardsAnimation,
-                    rightAnimation,
-                    leftAnimation,
-                    rotateAnimation,
+                    pose,
+                    walk,
+                    run,
+                    active,
+                    backwards,
+                    shuffleRight,
+                    shuffleLeft,
+                    rotate,
                     radius);
             String string = plugin.getGson().toJson(transmogSave);
             writer.write(string);
@@ -584,26 +766,26 @@ public class TransmogPanel extends JPanel
 
     public void loadTransmog(TransmogSave transmogSave)
     {
-        transmogAnimationMode = transmogSave.getTransmogAnimationMode();
-        poseAnimation = transmogSave.getPoseAnimation();
-        walkAnimation = transmogSave.getWalkAnimation();
-        runAnimation = transmogSave.getRunAnimation();
-        actionAnimation = transmogSave.getActionAnimation();
-        backwardsAnimation = transmogSave.getBackwardsAnimation();
-        rightAnimation = transmogSave.getRightAnimation();
-        leftAnimation = transmogSave.getLeftAnimation();
-        rotateAnimation = transmogSave.getRotateAnimation();
+        animationMode = transmogSave.getTransmogAnimationMode();
+        pose = transmogSave.getPoseAnimation();
+        walk = transmogSave.getWalkAnimation();
+        run = transmogSave.getRunAnimation();
+        active = transmogSave.getActionAnimation();
+        backwards = transmogSave.getBackwardsAnimation();
+        shuffleRight = transmogSave.getRightAnimation();
+        shuffleLeft = transmogSave.getLeftAnimation();
+        rotate = transmogSave.getRotateAnimation();
         radius = transmogSave.getRadius();
 
-        animationComboBox.setSelectedItem(transmogAnimationMode);
-        poseSpinner.setValue(poseAnimation);
-        walkSpinner.setValue(walkAnimation);
-        runSpinner.setValue(runAnimation);
-        actionSpinner.setValue(actionAnimation);
-        backwardsSpinner.setValue(backwardsAnimation);
-        rightSpinner.setValue(rightAnimation);
-        leftSpinner.setValue(leftAnimation);
-        rotateSpinner.setValue(rotateAnimation);
+        animationComboBox.setSelectedItem(animationMode);
+        poseSpinner.setValue(pose);
+        walkSpinner.setValue(walk);
+        runSpinner.setValue(run);
+        actionSpinner.setValue(active);
+        backwardsSpinner.setValue(backwards);
+        rightSpinner.setValue(shuffleRight);
+        leftSpinner.setValue(shuffleLeft);
+        rotateSpinner.setValue(rotate);
         radiusSpinner.setValue(radius);
 
         clearSwapPanels();

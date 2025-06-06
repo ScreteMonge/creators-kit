@@ -62,7 +62,7 @@ public class CKObject extends RuneLiteObjectController
          */
     }
 
-    private void setupAnimController(AnimationType type, int animId)
+    public void setupAnimController(AnimationType type, int animId)
     {
         if (type == AnimationType.ACTIVE)
         {
@@ -76,7 +76,7 @@ public class CKObject extends RuneLiteObjectController
         }
     }
 
-    private void setupAnimController(AnimationType type, Animation animation)
+    public void setupAnimController(AnimationType type, Animation animation)
     {
         if (type == AnimationType.ACTIVE)
         {
