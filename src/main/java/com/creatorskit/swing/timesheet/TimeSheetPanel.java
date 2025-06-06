@@ -87,7 +87,6 @@ public class TimeSheetPanel extends JPanel
 
     private double zoom = 50;
     private double hScroll = 0;
-    private int vScroll = 0;
     private double maxHScroll = 200;
     private double minHScroll = -10;
 
@@ -1514,7 +1513,6 @@ public class TimeSheetPanel extends JPanel
     private void updateSheets()
     {
         summarySheet.setHScroll(hScroll);
-        summarySheet.setVScroll(vScroll);
         summarySheet.setZoom(zoom);
         attributeSheet.setHScroll(hScroll);
         attributeSheet.setZoom(zoom);

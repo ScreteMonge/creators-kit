@@ -40,6 +40,7 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -1305,7 +1306,8 @@ public class CreatorsPanel extends PluginPanel
             writer.write(string);
             writer.close();
             updateLoadedFile(file);
-            plugin.sendChatMessage("Saved successfully to: " + getFileName(file));
+            LocalTime time = LocalTime.now();
+            plugin.sendChatMessage("[" + time.getHour() + ":" + time.getMinute() + "] Saved successfully to: " + getFileName(file));
         }
         catch (IOException e)
         {
@@ -1523,6 +1525,8 @@ public class CreatorsPanel extends PluginPanel
                     File finalSelectedFile = selectedFile;
                     clientThread.invokeLater(() -> loadSetup(finalSelectedFile, saveFile));
                     reader.close();
+                    LocalTime time = LocalTime.now();
+                    plugin.sendChatMessage("[" + time.getHour() + ":" + time.getMinute() + "] Loaded file: " + getFileName(finalSelectedFile));
                 }
                 catch (Exception e)
                 {
@@ -1540,6 +1544,8 @@ public class CreatorsPanel extends PluginPanel
             SetupSave saveFile = plugin.getGson().fromJson(reader, SetupSave.class);
             clientThread.invokeLater(() -> loadSetup(file, saveFile));
             reader.close();
+            LocalTime time = LocalTime.now();
+            plugin.sendChatMessage("[" + time.getHour() + ":" + time.getMinute() + "] Loaded file: " + getFileName(file));
         }
         catch (Exception e)
         {
