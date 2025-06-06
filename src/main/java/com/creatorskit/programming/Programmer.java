@@ -668,7 +668,7 @@ public class Programmer
         }
 
         int finalPoseStartFrame = poseStartFrame;
-        clientThread.invokeLater(() ->
+        clientThread.invoke(() ->
         {
             Animation currentPose = ckObject.getAnimations()[1];
 
@@ -1581,7 +1581,7 @@ public class Programmer
     {
         if (animId == -1)
         {
-            clientThread.invokeLater(() ->
+            clientThread.invoke(() ->
             {
                 ckObject.unsetAnimation(AnimationType.ACTIVE);
                 ckObject.setLoop(false);
@@ -1596,7 +1596,7 @@ public class Programmer
         Animation active = animations[0];
         if (active == null || active.getId() != animId)
         {
-            clientThread.invokeLater(() ->
+            clientThread.invoke(() ->
             {
                 Animation animation = client.loadAnimation(animId);
                 setActiveAnimationFrame(ckObject, animation, currentTime, startTime, startFrame, loop, freeze, despawnOnFinished);
@@ -1604,7 +1604,7 @@ public class Programmer
             return;
         }
 
-        clientThread.invokeLater(() ->
+        clientThread.invoke(() ->
         {
             setActiveAnimationFrame(ckObject, active, currentTime, startTime, startFrame, loop, freeze, despawnOnFinished);
         });
@@ -1654,7 +1654,7 @@ public class Programmer
             int[] animFrame = getAnimFrame(pose, currentTime, startTime, startFrame, true);
             if (animFrame[0] != -1)
             {
-                clientThread.invokeLater(() ->
+                clientThread.invoke(() ->
                 {
                     ckObject.setAnimationFrame(AnimationType.POSE, animFrame[0], false);
                     ckObject.tick(animFrame[1]);
