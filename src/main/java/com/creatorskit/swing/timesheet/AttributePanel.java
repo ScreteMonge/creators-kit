@@ -1373,17 +1373,7 @@ public class AttributePanel extends JPanel
         c.gridx = 2;
         c.gridy = 2;
         JButton grab = new JButton("Grab");
-        grab.setToolTipText("Grabs the original CustomModel set to the Object");
-        grab.addActionListener(e ->
-        {
-            Character selectedCharacter = timeSheetPanel.getSelectedCharacter();
-            if (selectedCharacter == null)
-            {
-                return;
-            }
-
-            customComboBox.setSelectedItem(selectedCharacter.getStoredModel());
-        });
+        grab.setToolTipText("Grabs the original CustomModel and Radius set to the Object");
         card.add(grab, c);
 
         c.gridwidth = 1;
@@ -1412,6 +1402,19 @@ public class AttributePanel extends JPanel
         radius.setValue(60);
         radius.setPreferredSize(spinnerSize);
         card.add(radius, c);
+
+        grab.addActionListener(e ->
+        {
+            Character selectedCharacter = timeSheetPanel.getSelectedCharacter();
+            if (selectedCharacter == null)
+            {
+                return;
+            }
+
+            customComboBox.setSelectedItem(selectedCharacter.getStoredModel());
+            radius.setValue((int) selectedCharacter.getRadiusSpinner().getValue());
+
+        });
 
         c.gridwidth = 1;
         c.gridheight = 1;
