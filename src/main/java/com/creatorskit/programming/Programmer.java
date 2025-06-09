@@ -268,7 +268,7 @@ public class Programmer
         OrientationInstruction instruction = findLastOrientation(mkf, okf, currentClientTick);
         if (instruction.getType() == KeyFrameType.ORIENTATION)
         {
-            setOrientation(character, okf, mkf.getSpeed());
+            setOrientation(character, currentClientTick);
             setAnimation(character, mc.isMoving(), difference, finalSpeed);
             return;
         }
@@ -535,53 +535,6 @@ public class Programmer
         }
 
         return newOrientation;
-    }
-
-    /**
-     * Sets the orientation of the character based on its orientation keyframe
-     * Intended for use while playing the programmer
-     * @param character the character to set orientation
-     * @param speed the movement speed (in gameTicks) determined by the movement keyframe
-     */
-    private void setOrientation(Character character, OrientationKeyFrame keyFrame, double speed)
-    {
-        CKObject ckObject = character.getCkObject();
-        int orientationGoal = keyFrame.getEnd();
-        int current = ckObject.getOrientation();
-        int difference = Orientation.subtract(orientationGoal, current);
-        double turnRate = keyFrame.getTurnRate();
-
-        if (speed == 0)
-        {
-            speed = 1;
-        }
-
-        if (turnRate == -1)
-        {
-            turnRate = TURN_RATE;
-        }
-
-        if (difference != 0)
-        {
-            int orientation = ckObject.getOrientation();
-            int turnSpeed = (int) (speed * turnRate);
-
-            int newOrientation;
-            if (difference > (turnSpeed * -1) && difference < turnSpeed)
-            {
-                newOrientation = orientationGoal;
-            }
-            else if (difference > 0)
-            {
-                newOrientation = Orientation.boundOrientation(orientation + turnSpeed);
-            }
-            else
-            {
-                newOrientation = Orientation.boundOrientation(orientation - turnSpeed);
-            }
-
-            character.setOrientation(newOrientation);
-        }
     }
 
     /**

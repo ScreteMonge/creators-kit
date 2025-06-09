@@ -461,7 +461,6 @@ public class TimeSheetPanel extends JPanel
                     orientation,
                     orientation,
                     OrientationGoal.POINT,
-                    2,
                     -1);
         }
         else
@@ -475,7 +474,6 @@ public class TimeSheetPanel extends JPanel
                     keyFrame.getStart(),
                     keyFrame.getEnd(),
                     keyFrame.getGoal(),
-                    keyFrame.getDuration(),
                     keyFrame.getTurnRate());
         }
 
@@ -483,7 +481,7 @@ public class TimeSheetPanel extends JPanel
         selectedCharacter.setVisible(true, clientThread);
     }
 
-    public void initializeOrientationKeyFrame(Character character, OrientationHotkeyMode hotkeyMode, LocalPoint localPoint, double tick, int start, int end, OrientationGoal og, double duration, int turnRate)
+    public void initializeOrientationKeyFrame(Character character, OrientationHotkeyMode hotkeyMode, LocalPoint localPoint, double tick, int start, int end, OrientationGoal og, int turnRate)
     {
         CKObject ckObject = character.getCkObject();
         if (ckObject == null)
@@ -510,12 +508,14 @@ public class TimeSheetPanel extends JPanel
             endOrientation = angle;
         }
 
+        double turnDuration = AttributePanel.calculateOrientationDuration(character, currentTime, startOrientation, endOrientation, turnRate);
+
         KeyFrame okf = new OrientationKeyFrame(
                 tick,
                 og,
                 startOrientation,
                 endOrientation,
-                duration,
+                turnDuration,
                 turnRate);
 
         KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(okf, character, KeyFrameCharacterActionType.ADD)};

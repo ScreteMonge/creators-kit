@@ -1242,17 +1242,9 @@ public class AttributePanel extends JPanel
 
         calculate.addActionListener(e ->
         {
-            int difference = Orientation.subtract((int) end.getValue(), (int) start.getValue());
-            double turnRates = (int) turnRate.getValue();
-            if (turnRates == -1)
-            {
-                turnRates = Programmer.TURN_RATE;
-            }
+            double turnDuration = calculateOrientationDuration(timeSheetPanel.getSelectedCharacter(), timeSheetPanel.getCurrentTime(), (int) start.getValue(), (int) end.getValue(), (int) turnRate.getValue());
+            duration.setValue(turnDuration);
 
-            double ticks = (double) difference / turnRates * Constants.CLIENT_TICK_LENGTH / Constants.GAME_TICK_LENGTH;
-            int scale = (int) Math.pow(10, 1);
-            double calculated = Math.abs(Math.ceil(ticks * scale) / scale);
-            duration.setValue(calculated);
         });
 
         c.gridx = 5;
@@ -1263,6 +1255,53 @@ public class AttributePanel extends JPanel
         JLabel compass = new JLabel(new ImageIcon(COMPASS));
         compass.setHorizontalAlignment(SwingConstants.CENTER);
         card.add(compass, c);
+    }
+
+    public static double calculateOrientationDuration(Character character, double currentTick, int start, int end, double turnRate)
+    {
+        double speed;
+        double tick;
+
+        KeyFrame okf = character.getCurrentKeyFrame(KeyFrameType.ORIENTATION);
+        if (okf == null)
+        {
+            tick = currentTick;
+        }
+        else
+        {
+            tick = okf.getTick();
+        }
+
+        KeyFrame mkf = character.findPreviousKeyFrame(KeyFrameType.MOVEMENT, tick, true);
+        if (mkf == null)
+        {
+            speed = 1;
+        }
+        else
+        {
+            MovementKeyFrame keyFrame = (MovementKeyFrame) mkf;
+            int steps = (keyFrame.getPath().length - 1);
+            double movementDuration = Math.floor(steps / keyFrame.getSpeed());
+
+            if (tick < movementDuration)
+            {
+                speed = keyFrame.getSpeed();
+            }
+            else
+            {
+                speed = 1;
+            }
+        }
+
+        int difference = Orientation.subtract(end, start);
+        if (turnRate == -1)
+        {
+            turnRate = Programmer.TURN_RATE;
+        }
+
+        double ticks = (double) difference / speed / turnRate * Constants.CLIENT_TICK_LENGTH / Constants.GAME_TICK_LENGTH;
+        int scale = (int) Math.pow(10, 1);
+        return Math.abs(Math.ceil(ticks * scale) / scale);
     }
 
     private void setupSpawnCard(JPanel card)
