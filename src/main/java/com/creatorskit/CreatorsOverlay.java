@@ -496,7 +496,7 @@ public class CreatorsOverlay extends Overlay
 
     private void renderProjectiles(Graphics2D graphics, WorldView worldView)
     {
-        for (Projectile projectile : worldView.getProjectiles())
+        for (Projectile projectile : client.getProjectiles())
         {
             int projectileId = projectile.getId();
             String text = "ID: " + projectileId;
