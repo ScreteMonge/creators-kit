@@ -33,7 +33,7 @@ public class Programmer
     private final int GOLDEN_CHIN = 29757;
     private final int TILE_LENGTH = 128;
     private final int TILE_DIAGONAL = 181; //Math.sqrt(Math.pow(128, 2) + Math.pow(128, 2))
-    public static final double TURN_RATE = 256 / 7.5; //In JUnits/clientTick; Derived by examining turn rates in game
+    public static final double TURN_RATE = 32; //In JUnits/clientTick; Derived by examining turn rates in game
 
     @Getter
     @Setter
@@ -259,7 +259,7 @@ public class Programmer
         KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.ORIENTATION);
         if (kf == null)
         {
-            setOrientation(character, mc, orientationGoal, difference, stepsComplete, mkf.getSpeed(), turnRate);
+            setOrientation(character, mc, orientationGoal, difference, stepsComplete, turnRate);
             setAnimation(character, mc.isMoving(), difference, finalSpeed);
             return;
         }
@@ -278,7 +278,7 @@ public class Programmer
             mc.setOrientationAction(OrientationAction.SET);
         }
 
-        setOrientation(character, mc, orientationGoal, difference, stepsComplete, mkf.getSpeed(), turnRate);
+        setOrientation(character, mc, orientationGoal, difference, stepsComplete, turnRate);
         setAnimation(character, mc.isMoving(), difference, finalSpeed);
     }
 
@@ -377,7 +377,7 @@ public class Programmer
                 return;
             }
 
-            setOrientation(character, mc, orientationGoal, difference, stepsComplete, mkf.getSpeed(), turnRate);
+            setOrientation(character, mc, orientationGoal, difference, stepsComplete, turnRate);
             orientation = ckObject.getOrientation();
             difference = Orientation.subtract(orientationGoal, orientation);
             setAnimation(character, mc.isMoving(), difference, finalSpeed);
@@ -545,10 +545,9 @@ public class Programmer
      * @param orientationGoal the orientation end-goal, determined by the trajectory of movement
      * @param difference the difference between the current orientation and end goal orientation
      * @param stepsComplete the number of steps complete
-     * @param speed the speed, in gameticks, at which the Character moves
      * @param turnRate the rate at which the Character should turn
      */
-    private void setOrientation(Character character, MovementComposition mc, int orientationGoal, int difference, double stepsComplete, double speed, double turnRate)
+    private void setOrientation(Character character, MovementComposition mc, int orientationGoal, int difference, double stepsComplete, double turnRate)
     {
         OrientationAction orientationAction = mc.getOrientationAction();
         CKObject ckObject = character.getCkObject();
@@ -575,7 +574,7 @@ public class Programmer
             }
 
             int orientation = ckObject.getOrientation();
-            int turnSpeed = (int) (speed * turnRate);
+            int turnSpeed = (int) (turnRate);
 
             int newOrientation;
             if (difference > (turnSpeed * -1) && difference < turnSpeed)

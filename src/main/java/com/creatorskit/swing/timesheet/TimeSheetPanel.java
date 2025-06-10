@@ -508,7 +508,7 @@ public class TimeSheetPanel extends JPanel
             endOrientation = angle;
         }
 
-        double turnDuration = AttributePanel.calculateOrientationDuration(character, currentTime, startOrientation, endOrientation, turnRate);
+        double turnDuration = AttributePanel.calculateOrientationDuration(startOrientation, endOrientation, turnRate);
 
         KeyFrame okf = new OrientationKeyFrame(
                 tick,

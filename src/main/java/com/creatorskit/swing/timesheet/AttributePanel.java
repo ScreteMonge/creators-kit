@@ -432,7 +432,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 3;
         JSpinner turnRate = movementAttributes.getTurnRate();
-        turnRate.setToolTipText("Determines the rate at which the Object rotates during movement. -1 sets it to default value of 256 / 7.5");
+        turnRate.setToolTipText("Determines the rate at which the Object rotates during movement. -1 sets it to default value of 32");
         turnRate.setModel(new SpinnerNumberModel(-1, -1, 2048, 1));
         card.add(turnRate, c);
 
@@ -1236,13 +1236,13 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 4;
         JSpinner turnRate = oriAttributes.getTurnRate();
-        turnRate.setToolTipText("Determines the rate at which the Object rotates. -1 sets it to default value of 34.13 (256/7.5) JUnits/clientTick");
+        turnRate.setToolTipText("Determines the rate at which the Object rotates. -1 sets it to default value of 32 JUnits/clientTick");
         turnRate.setModel(new SpinnerNumberModel(-1, -1, 2048, 1));
         card.add(turnRate, c);
 
         calculate.addActionListener(e ->
         {
-            double turnDuration = calculateOrientationDuration(timeSheetPanel.getSelectedCharacter(), timeSheetPanel.getCurrentTime(), (int) start.getValue(), (int) end.getValue(), (int) turnRate.getValue());
+            double turnDuration = calculateOrientationDuration((int) start.getValue(), (int) end.getValue(), (int) turnRate.getValue());
             duration.setValue(turnDuration);
 
         });
@@ -1257,49 +1257,15 @@ public class AttributePanel extends JPanel
         card.add(compass, c);
     }
 
-    public static double calculateOrientationDuration(Character character, double currentTick, int start, int end, double turnRate)
+    public static double calculateOrientationDuration(int start, int end, double turnRate)
     {
-        double speed;
-        double tick;
-
-        KeyFrame okf = character.getCurrentKeyFrame(KeyFrameType.ORIENTATION);
-        if (okf == null)
-        {
-            tick = currentTick;
-        }
-        else
-        {
-            tick = okf.getTick();
-        }
-
-        KeyFrame mkf = character.findPreviousKeyFrame(KeyFrameType.MOVEMENT, tick, true);
-        if (mkf == null)
-        {
-            speed = 1;
-        }
-        else
-        {
-            MovementKeyFrame keyFrame = (MovementKeyFrame) mkf;
-            int steps = (keyFrame.getPath().length - 1);
-            double movementDuration = Math.floor(steps / keyFrame.getSpeed());
-
-            if (tick < movementDuration)
-            {
-                speed = keyFrame.getSpeed();
-            }
-            else
-            {
-                speed = 1;
-            }
-        }
-
         int difference = Orientation.subtract(end, start);
         if (turnRate == -1)
         {
             turnRate = Programmer.TURN_RATE;
         }
 
-        double ticks = (double) difference / speed / turnRate * Constants.CLIENT_TICK_LENGTH / Constants.GAME_TICK_LENGTH;
+        double ticks = (double) difference / turnRate * Constants.CLIENT_TICK_LENGTH / Constants.GAME_TICK_LENGTH;
         int scale = (int) Math.pow(10, 1);
         return Math.abs(Math.ceil(ticks * scale) / scale);
     }
