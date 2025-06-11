@@ -29,8 +29,8 @@ public class ManagerTreeModel extends DefaultTreeModel
     {
         DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
         if (node == root
-        || node == sidePanelNode
-        || node == managerNode)
+                || node == sidePanelNode
+                || node == managerNode)
         {
             return;
         }
