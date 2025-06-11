@@ -6,6 +6,8 @@ import com.creatorskit.models.CustomModel;
 import com.creatorskit.models.DataFinder;
 import com.creatorskit.models.datatypes.*;
 import com.creatorskit.programming.MovementManager;
+import com.creatorskit.programming.Programmer;
+import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.programming.orientation.OrientationGoal;
 import com.creatorskit.swing.searchabletable.JFilterableTable;
 import com.creatorskit.swing.timesheet.attributes.*;
@@ -15,6 +17,7 @@ import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.Animation;
 import net.runelite.api.Client;
+import net.runelite.api.Constants;
 import net.runelite.api.WorldView;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
@@ -55,6 +58,9 @@ public class AttributePanel extends JPanel
     private final JFilterableTable npcTable = new JFilterableTable("NPCs");
     private final JFilterableTable itemTable = new JFilterableTable("Items");
     private final JFilterableTable animTable = new JFilterableTable("Animations");
+    private final JFilterableTable spotanimTable = new JFilterableTable("SpotAnims");
+
+    private final JPopupMenu spotanimPopup = new JPopupMenu("SpotAnims");
 
     public static final String MOVE_CARD = "Movement";
     public static final String ANIM_CARD = "Animation";
@@ -72,6 +78,7 @@ public class AttributePanel extends JPanel
     public static final String HITSPLAT_4_CARD = "Hitsplat 4";
 
     private final String NO_OBJECT_SELECTED = "[No Object Selected]";
+    private Font attributeFont = new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32);
 
     private KeyFrameType hoveredKeyFrameType;
     private Component hoveredComponent;
@@ -105,7 +112,7 @@ public class AttributePanel extends JPanel
         setLayout(new GridBagLayout());
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
-        objectLabel.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32));
+        objectLabel.setFont(attributeFont);
         objectLabel.setForeground(Color.WHITE);
         objectLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
@@ -200,6 +207,7 @@ public class AttributePanel extends JPanel
         setupTextCard(textCard);
         setupOverheadCard(overCard);
         setupHealthCard(healthCard);
+        setupSpotAnimFinder();
         setupSpotAnimCard(spotanimCard, KeyFrameType.SPOTANIM);
         setupSpotAnimCard(spotanim2Card, KeyFrameType.SPOTANIM2);
         setupHitsplatCard(hitsplat1Card, KeyFrameType.HITSPLAT_1);
@@ -254,6 +262,7 @@ public class AttributePanel extends JPanel
                         (int) animAttributes.getActive().getValue(),
                         (int) animAttributes.getStartFrame().getValue(),
                         animAttributes.getLoop().getSelectedItem() == Toggle.ENABLE,
+                        animAttributes.getFreeze().getSelectedItem() == Toggle.ENABLE,
                         (int) animAttributes.getIdle().getValue(),
                         (int) animAttributes.getWalk().getValue(),
                         (int) animAttributes.getRun().getValue(),
@@ -282,12 +291,13 @@ public class AttributePanel extends JPanel
                         tick,
                         modelAttributes.getModelOverride().getSelectedItem() == ModelToggle.CUSTOM_MODEL,
                         (int) modelAttributes.getModelId().getValue(),
-                        (CustomModel) modelAttributes.getCustomModel().getSelectedItem()
+                        (CustomModel) modelAttributes.getCustomModel().getSelectedItem(),
+                        (int) modelAttributes.getRadius().getValue()
                 );
             case TEXT:
                 return new TextKeyFrame(
                         tick,
-                        (int) textAttributes.getDuration().getValue(),
+                        (double) textAttributes.getDuration().getValue(),
                         textAttributes.getText().getText()
                 );
             case OVERHEAD:
@@ -422,7 +432,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 3;
         JSpinner turnRate = movementAttributes.getTurnRate();
-        turnRate.setToolTipText("Determines the rate at which the Object rotates during movement. -1 sets it to default value of 256 / 7.5");
+        turnRate.setToolTipText("Determines the rate at which the Object rotates during movement. -1 sets it to default value of 32");
         turnRate.setModel(new SpinnerNumberModel(-1, -1, 2048, 1));
         card.add(turnRate, c);
 
@@ -542,6 +552,20 @@ public class AttributePanel extends JPanel
         loop.addItem(Toggle.DISABLE);
         loop.addItem(Toggle.ENABLE);
         card.add(loop, c);
+
+        c.gridx = 4;
+        c.gridy = 4;
+        JLabel freezeLabel = new JLabel("Freeze: ");
+        freezeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(freezeLabel, c);
+
+        c.gridx = 5;
+        c.gridy = 4;
+        JComboBox<Toggle> freeze = animAttributes.getFreeze();
+        freeze.setFocusable(false);
+        freeze.addItem(Toggle.DISABLE);
+        freeze.addItem(Toggle.ENABLE);
+        card.add(freeze, c);
 
         c.gridwidth = 4;
         c.gridx = 0;
@@ -914,6 +938,7 @@ public class AttributePanel extends JPanel
         c.gridx = 4;
         c.gridy = 12;
         JButton addPlayer = new JButton("Unarmed");
+        addPlayer.setBackground(ColorScheme.DARK_GRAY_COLOR);
         addPlayer.addActionListener(e ->
         {
             idle.setValue(player.getStandingAnimation());
@@ -939,10 +964,10 @@ public class AttributePanel extends JPanel
 
             clientThread.invokeLater(() ->
             {
-                //Animation[] animations = ckObject.getAnimations();
+                Animation[] animations = ckObject.getAnimations();
                 int animId;
-                Animation activeAnim = ckObject.getAnimation();
-                Animation poseAnim = ckObject.getAnimation();
+                Animation activeAnim = animations[0];
+                Animation poseAnim = animations[1];
 
                 if (activeAnim == null || activeAnim.getId() == -1)
                 {
@@ -1189,10 +1214,19 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 3;
         JSpinner duration = oriAttributes.getDuration();
-        duration.setModel(new SpinnerNumberModel(2.0, 0, TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.1));
+        duration.setModel(new SpinnerNumberModel(1.0, 0, TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.1));
         duration.setPreferredSize(spinnerSize);
         card.add(duration, c);
 
+        c.gridwidth = 2;
+        c.gridx = 2;
+        c.gridy = 3;
+        JButton calculate = new JButton("Calculate");
+        calculate.setToolTipText("Calculates the appropriate duration based on the start and end orientation and the current turn rate");
+        calculate.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        card.add(calculate, c);
+
+        c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 4;
         JLabel turnRateLabel = new JLabel("Turn Rate: ");
@@ -1202,9 +1236,16 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 4;
         JSpinner turnRate = oriAttributes.getTurnRate();
-        turnRate.setToolTipText("Determines the rate at which the Object rotates. -1 sets it to default value of 256 / 7.5");
+        turnRate.setToolTipText("Determines the rate at which the Object rotates. -1 sets it to default value of 32 JUnits/clientTick");
         turnRate.setModel(new SpinnerNumberModel(-1, -1, 2048, 1));
         card.add(turnRate, c);
+
+        calculate.addActionListener(e ->
+        {
+            double turnDuration = calculateOrientationDuration((int) start.getValue(), (int) end.getValue(), (int) turnRate.getValue());
+            duration.setValue(turnDuration);
+
+        });
 
         c.gridx = 5;
         c.gridy = 5;
@@ -1214,6 +1255,19 @@ public class AttributePanel extends JPanel
         JLabel compass = new JLabel(new ImageIcon(COMPASS));
         compass.setHorizontalAlignment(SwingConstants.CENTER);
         card.add(compass, c);
+    }
+
+    public static double calculateOrientationDuration(int start, int end, double turnRate)
+    {
+        int difference = Orientation.subtract(end, start);
+        if (turnRate == -1)
+        {
+            turnRate = Programmer.TURN_RATE;
+        }
+
+        double ticks = (double) difference / turnRate * Constants.CLIENT_TICK_LENGTH / Constants.GAME_TICK_LENGTH;
+        int scale = (int) Math.pow(10, 1);
+        return Math.abs(Math.ceil(ticks * scale) / scale);
     }
 
     private void setupSpawnCard(JPanel card)
@@ -1321,6 +1375,12 @@ public class AttributePanel extends JPanel
         customComboBox.setFocusable(false);
         card.add(customComboBox, c);
 
+        c.gridx = 2;
+        c.gridy = 2;
+        JButton grab = new JButton("Grab");
+        grab.setToolTipText("Grabs the original CustomModel and Radius set to the Object");
+        card.add(grab, c);
+
         c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 3;
@@ -1334,6 +1394,32 @@ public class AttributePanel extends JPanel
         id.setValue(-1);
         id.setPreferredSize(spinnerSize);
         card.add(id, c);
+
+        c.gridx = 0;
+        c.gridy = 4;
+        JLabel radiusLabel = new JLabel("Radius: ");
+        radiusLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(radiusLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 4;
+        JSpinner radius = modelAttributes.getRadius();
+        radius.setValue(60);
+        radius.setPreferredSize(spinnerSize);
+        card.add(radius, c);
+
+        grab.addActionListener(e ->
+        {
+            Character selectedCharacter = timeSheetPanel.getSelectedCharacter();
+            if (selectedCharacter == null)
+            {
+                return;
+            }
+
+            customComboBox.setSelectedItem(selectedCharacter.getStoredModel());
+            radius.setValue((int) selectedCharacter.getRadiusSpinner().getValue());
+
+        });
 
         c.gridwidth = 1;
         c.gridheight = 1;
@@ -1365,7 +1451,7 @@ public class AttributePanel extends JPanel
         manualTitlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
         card.add(manualTitlePanel, c);
 
-        JLabel manualTitle = new JLabel("Overhead Text");
+        JLabel manualTitle = new JLabel("Text");
         manualTitle.setHorizontalAlignment(SwingConstants.LEFT);
         manualTitle.setFont(FontManager.getRunescapeBoldFont());
         manualTitlePanel.add(manualTitle);
@@ -1387,7 +1473,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 1;
         JSpinner duration = textAttributes.getDuration();
-        duration.setModel(new SpinnerNumberModel(5, 0, 1000000, 1));
+        duration.setModel(new SpinnerNumberModel(5.0, 0, 1000000, 0.1));
         card.add(duration, c);
 
         c.gridwidth = 1;
@@ -1703,14 +1789,145 @@ public class AttributePanel extends JPanel
         height.setModel(new SpinnerNumberModel(92, 0, 9999, 1));
         card.add(height, c);
 
+        c.gridx = 0;
+        c.gridy = 4;
+        JLabel searcherLabel = new JLabel("SpotAnims: ");
+        searcherLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(searcherLabel, c);
+
+        c.gridwidth = 3;
+        c.gridx = 1;
+        c.gridy = 4;
+        JTextField spotanimField = new JTextField("");
+        spotanimField.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        card.add(spotanimField, c);
+
+        KeyListener listener = new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e)
+            {
+                String text = spotanimField.getText();
+                spotanimTable.searchAndListEntries(text);
+                spotanimPopup.setVisible(true);
+                Point p = spotanimField.getLocationOnScreen();
+                spotanimPopup.setLocation(new Point((int) p.getX() + spotanimField.getWidth(), (int) p.getY()));
+            }
+        };
+        spotanimField.addKeyListener(listener);
+
+        spotanimField.addFocusListener(new FocusListener()
+        {
+            @Override
+            public void focusGained(FocusEvent e)
+            {
+
+            }
+
+            @Override
+            public void focusLost(FocusEvent e)
+            {
+                spotanimPopup.setVisible(false);
+            }
+        });
+
         c.gridwidth = 1;
         c.gridheight = 1;
         c.weightx = 1;
         c.weighty = 1;
-        c.gridx = 8;
-        c.gridy = 15;
+        c.gridx = 2;
+        c.gridy = 5;
         JLabel empty1 = new JLabel("");
         card.add(empty1, c);
+
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 3;
+        c.gridy = 6;
+        JPanel duplicatePanel = new JPanel();
+        duplicatePanel.setLayout(new GridLayout(0, 1, 2, 2));
+        card.add(duplicatePanel, c);
+        duplicatePanel.add(new JLabel("Duplicate To:"));
+
+        JButton type1 = new JButton("SpotAnim 1");
+        JButton type2 = new JButton("SpotAnim 2");
+
+        type1.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        type2.setBackground(ColorScheme.DARK_GRAY_COLOR);
+
+        duplicatePanel.add(type1);
+        duplicatePanel.add(type2);
+
+        type1.addActionListener(e -> timeSheetPanel.duplicateSpotanimKeyFrame(spotAnimType, KeyFrameType.SPOTANIM));
+        type2.addActionListener(e -> timeSheetPanel.duplicateSpotanimKeyFrame(spotAnimType, KeyFrameType.SPOTANIM2));
+    }
+
+    private void setupSpotAnimFinder()
+    {
+        spotanimTable.addMouseListener(new MouseAdapter()
+        {
+            @Override
+            public void mouseClicked(MouseEvent e)
+            {
+                super.mouseClicked(e);
+
+                KeyFrameType spotAnimType = selectedKeyFramePage;
+                if (selectedKeyFramePage != KeyFrameType.SPOTANIM && selectedKeyFramePage != KeyFrameType.SPOTANIM2)
+                {
+                    return;
+                }
+
+                if (e.getClickCount() == 2 && e.getButton() == MouseEvent.BUTTON1)
+                {
+                    Object o = spotanimTable.getSelectedObject();
+                    if (o instanceof SpotanimData)
+                    {
+                        SpotanimData data = (SpotanimData) o;
+                        JSpinner id;
+                        if (spotAnimType == KeyFrameType.SPOTANIM)
+                        {
+                            id = spotAnimAttributes.getSpotAnimId();
+                        }
+                        else
+                        {
+                            id = spotAnim2Attributes.getSpotAnimId();
+                        }
+
+                        id.setValue(data.getId());
+                    }
+
+                    spotanimPopup.setVisible(false);
+                }
+            }
+        });
+
+        if (dataFinder.isDataLoaded(DataFinder.DataType.SPOTANIM))
+        {
+            List<SpotanimData> dataList = dataFinder.getSpotanimData();
+            List<Object> list = new ArrayList<>(dataList);
+            spotanimTable.initialize(list);
+        }
+        else
+        {
+            dataFinder.addLoadCallback(DataFinder.DataType.SPOTANIM, () ->
+            {
+                List<SpotanimData> dataList = dataFinder.getSpotanimData();
+                List<Object> list = new ArrayList<>(dataList);
+                spotanimTable.initialize(list);
+            });
+        }
+
+        JScrollPane scrollPane = new JScrollPane(spotanimTable);
+        spotanimPopup.add(scrollPane);
     }
 
     private void setupHitsplatCard(JPanel card, KeyFrameType hitsplatType)
@@ -1811,14 +2028,51 @@ public class AttributePanel extends JPanel
         damage.setModel(new SpinnerNumberModel(0, 0, 999, 1));
         card.add(damage, c);
 
+        c.gridx = 2;
+        c.gridy = 3;
+        JButton keyFrameHealth = new JButton("Quick KeyFrame Hitsplat/Health");
+        keyFrameHealth.setToolTipText("Creates the Hitsplat KeyFrame and an appropriate Health KeyFrame as if this damage were applied");
+        keyFrameHealth.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        keyFrameHealth.addActionListener(e -> timeSheetPanel.initializeHealthKeyFrame(hitsplatType));
+        card.add(keyFrameHealth, c);
+
         c.gridwidth = 1;
         c.gridheight = 1;
         c.weightx = 1;
         c.weighty = 1;
-        c.gridx = 8;
-        c.gridy = 15;
+        c.gridx = 3;
+        c.gridy = 4;
         JLabel empty1 = new JLabel("");
         card.add(empty1, c);
+
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 5;
+        c.gridy = 6;
+        JPanel duplicatePanel = new JPanel();
+        duplicatePanel.setLayout(new GridLayout(0, 1, 2, 2));
+        card.add(duplicatePanel, c);
+        duplicatePanel.add(new JLabel("Duplicate To:"));
+
+        JButton type1 = new JButton("Hitsplat 1");
+        JButton type2 = new JButton("Hitsplat 2");
+        JButton type3 = new JButton("Hitsplat 3");
+        JButton type4 = new JButton("Hitsplat 4");
+
+        type1.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        type2.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        type3.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        type4.setBackground(ColorScheme.DARK_GRAY_COLOR);
+
+        duplicatePanel.add(type1);
+        duplicatePanel.add(type2);
+        duplicatePanel.add(type3);
+        duplicatePanel.add(type4);
+
+        type1.addActionListener(e -> timeSheetPanel.duplicateHitsplatKeyFrame(hitsplatType, KeyFrameType.HITSPLAT_1));
+        type2.addActionListener(e -> timeSheetPanel.duplicateHitsplatKeyFrame(hitsplatType, KeyFrameType.HITSPLAT_2));
+        type3.addActionListener(e -> timeSheetPanel.duplicateHitsplatKeyFrame(hitsplatType, KeyFrameType.HITSPLAT_3));
+        type4.addActionListener(e -> timeSheetPanel.duplicateHitsplatKeyFrame(hitsplatType, KeyFrameType.HITSPLAT_4));
     }
 
     public void switchCards(String cardName)
@@ -1916,21 +2170,40 @@ public class AttributePanel extends JPanel
     public void setSelectedCharacter(Character character)
     {
         double tick = timeSheetPanel.getCurrentTime();
+        updateObjectLabel(character);
 
         if (character == null)
         {
-            objectLabel.setForeground(Color.WHITE);
-            objectLabel.setText(NO_OBJECT_SELECTED);
             setKeyFramedIcon(false);
             resetAttributes(null, tick);
             return;
         }
 
-        objectLabel.setForeground(ColorScheme.BRAND_ORANGE);
-        objectLabel.setText(character.getName());
         KeyFrame keyFrame = character.findKeyFrame(selectedKeyFramePage, tick);
         setKeyFramedIcon(keyFrame != null);
         resetAttributes(character, tick);
+    }
+
+    public void updateObjectLabel(Character character)
+    {
+        if (character == null)
+        {
+            objectLabel.setForeground(Color.WHITE);
+            objectLabel.setText(NO_OBJECT_SELECTED);
+            return;
+        }
+
+        objectLabel.setForeground(ColorScheme.BRAND_ORANGE);
+        StringBuilder name = new StringBuilder(character.getName());
+
+        FontMetrics metrics = objectLabel.getFontMetrics(attributeFont);
+        int maxWidth = 275;
+        while (metrics.stringWidth(name.toString()) > maxWidth)
+        {
+            name = name.deleteCharAt(name.length() - 1);
+        }
+
+        objectLabel.setText(name.toString());
     }
 
     private void setupKeyListeners()

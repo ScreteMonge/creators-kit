@@ -33,7 +33,7 @@ public class Programmer
     private final int GOLDEN_CHIN = 29757;
     private final int TILE_LENGTH = 128;
     private final int TILE_DIAGONAL = 181; //Math.sqrt(Math.pow(128, 2) + Math.pow(128, 2))
-    public static final double TURN_RATE = 256 / 7.5; //In JUnits/clientTick; Derived by examining turn rates in game
+    public static final double TURN_RATE = 32; //In JUnits/clientTick; Derived by examining turn rates in game
 
     @Getter
     @Setter
@@ -169,6 +169,9 @@ public class Programmer
 
             if (mkf == null && okf == null)
             {
+                setAnimation(character, false, 0, 0);
+                setOrientation(character, currentClientTick);
+                //plugin.setLocation(character, false, false, ActiveOption.UNCHANGED, LocationOption.TO_SAVED_LOCATION);
                 return;
             }
 
@@ -255,7 +258,7 @@ public class Programmer
         KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.ORIENTATION);
         if (kf == null)
         {
-            setOrientation(character, mc, orientationGoal, difference, stepsComplete, mkf.getSpeed(), turnRate);
+            setOrientation(character, mc, orientationGoal, difference, stepsComplete, turnRate);
             setAnimation(character, mc.isMoving(), difference, finalSpeed);
             return;
         }
@@ -264,7 +267,7 @@ public class Programmer
         OrientationInstruction instruction = findLastOrientation(mkf, okf, currentClientTick);
         if (instruction.getType() == KeyFrameType.ORIENTATION)
         {
-            setOrientation(character, okf, mkf.getSpeed());
+            setOrientation(character, currentClientTick);
             setAnimation(character, mc.isMoving(), difference, finalSpeed);
             return;
         }
@@ -274,7 +277,7 @@ public class Programmer
             mc.setOrientationAction(OrientationAction.SET);
         }
 
-        setOrientation(character, mc, orientationGoal, difference, stepsComplete, mkf.getSpeed(), turnRate);
+        setOrientation(character, mc, orientationGoal, difference, stepsComplete, turnRate);
         setAnimation(character, mc.isMoving(), difference, finalSpeed);
     }
 
@@ -369,7 +372,7 @@ public class Programmer
                 return;
             }
 
-            setOrientation(character, mc, orientationGoal, difference, stepsComplete, mkf.getSpeed(), turnRate);
+            setOrientation(character, mc, orientationGoal, difference, stepsComplete, turnRate);
             orientation = ckObject.getOrientation();
             difference = Orientation.subtract(orientationGoal, orientation);
             setAnimation(character, mc.isMoving(), difference, finalSpeed);
@@ -530,53 +533,6 @@ public class Programmer
     }
 
     /**
-     * Sets the orientation of the character based on its orientation keyframe
-     * Intended for use while playing the programmer
-     * @param character the character to set orientation
-     * @param speed the movement speed (in gameTicks) determined by the movement keyframe
-     */
-    private void setOrientation(Character character, OrientationKeyFrame keyFrame, double speed)
-    {
-        CKObject ckObject = character.getCkObject();
-        int orientationGoal = keyFrame.getEnd();
-        int current = ckObject.getOrientation();
-        int difference = Orientation.subtract(orientationGoal, current);
-        double turnRate = keyFrame.getTurnRate();
-
-        if (speed == 0)
-        {
-            speed = 1;
-        }
-
-        if (turnRate == -1)
-        {
-            turnRate = TURN_RATE;
-        }
-
-        if (difference != 0)
-        {
-            int orientation = ckObject.getOrientation();
-            int turnSpeed = (int) (speed * turnRate);
-
-            int newOrientation;
-            if (difference > (turnSpeed * -1) && difference < turnSpeed)
-            {
-                newOrientation = orientationGoal;
-            }
-            else if (difference > 0)
-            {
-                newOrientation = Orientation.boundOrientation(orientation + turnSpeed);
-            }
-            else
-            {
-                newOrientation = Orientation.boundOrientation(orientation - turnSpeed);
-            }
-
-            character.setOrientation(newOrientation);
-        }
-    }
-
-    /**
      * Sets the orientation of the character based on its movement keyframe
      * Intended for use while playing the programmer
      * @param character the character to modify
@@ -584,10 +540,9 @@ public class Programmer
      * @param orientationGoal the orientation end-goal, determined by the trajectory of movement
      * @param difference the difference between the current orientation and end goal orientation
      * @param stepsComplete the number of steps complete
-     * @param speed the speed, in gameticks, at which the Character moves
      * @param turnRate the rate at which the Character should turn
      */
-    private void setOrientation(Character character, MovementComposition mc, int orientationGoal, int difference, double stepsComplete, double speed, double turnRate)
+    private void setOrientation(Character character, MovementComposition mc, int orientationGoal, int difference, double stepsComplete, double turnRate)
     {
         OrientationAction orientationAction = mc.getOrientationAction();
         CKObject ckObject = character.getCkObject();
@@ -614,7 +569,7 @@ public class Programmer
             }
 
             int orientation = ckObject.getOrientation();
-            int turnSpeed = (int) (speed * turnRate);
+            int turnSpeed = (int) (turnRate);
 
             int newOrientation;
             if (difference > (turnSpeed * -1) && difference < turnSpeed)
@@ -642,14 +597,11 @@ public class Programmer
         if (kf == null)
         {
             int animId = (int) character.getAnimationSpinner().getValue();
-            /*
             Animation animation = ckObject.getAnimations()[0];
             if (animation == null || animation.getId() != animId)
             {
                 plugin.setAnimation(character, animId);
             }
-
-             */
             return;
         }
 
@@ -663,39 +615,9 @@ public class Programmer
         }
 
         int finalPoseStartFrame = poseStartFrame;
-        /*
-        clientThread.invokeLater(() ->
+        clientThread.invoke(() ->
         {
-            Animation[] animations = ckObject.getAnimations();
-            Animation currentActive = animations[0];
-            Animation currentPose = animations[1];
-
-            if (active == -1)
-            {
-                if (currentActive != null && currentActive.getId() != -1)
-                {
-                    ckObject.unsetAnimation(AnimationType.ACTIVE);
-                    ckObject.setFinished(true);
-                    ckObject.setLoop(false);
-                    ckObject.setHasAnimKeyFrame(true);
-                }
-            }
-
-            if (active != -1)
-            {
-                if (!playing || (currentActive != ckObject.getActiveAnimation() || currentActive == null || currentActive.getId() != active))
-                {
-                    if (!playing || !ckObject.isFinished())
-                    {
-                        Animation animation = client.loadAnimation(active);
-                        ckObject.setActiveAnimation(animation);
-                        ckObject.setAnimation(AnimationType.ACTIVE, animation);
-                        ckObject.setAnimationFrame(AnimationType.ACTIVE, keyFrame.getStartFrame(), false);
-                        ckObject.setLoop(keyFrame.isLoop());
-                        ckObject.setHasAnimKeyFrame(true);
-                    }
-                }
-            }
+            Animation currentPose = ckObject.getAnimations()[1];
 
             if (pose == -1)
             {
@@ -719,8 +641,6 @@ public class Programmer
                 }
             }
         });
-
-         */
     }
 
     private int getPoseAnimation(AnimationKeyFrame keyFrame, boolean isMoving, int orientationDifference, double speed)
@@ -922,8 +842,6 @@ public class Programmer
         return Orientation.boundOrientation((int) (originalAngle - change));
     }
 
-
-
     /**
      * Gets the LocalPoint of a specific integer step. Used primarily to assess the start and end tiles of a path in order to calculate the movement between
      * @param keyFrame the keyframe for which to grab the path
@@ -961,7 +879,10 @@ public class Programmer
         if (worldView.isInstance())
         {
             Collection<WorldPoint> wps = WorldPoint.toLocalInstance(worldView, wp);
-            wp = wps.iterator().next();
+            if (!wps.isEmpty())
+            {
+                wp = wps.iterator().next();
+            }
         }
 
         LocalPoint lp = LocalPoint.fromWorld(worldView, wp);
@@ -1040,10 +961,11 @@ public class Programmer
     {
         character.updateProgram(tick);
         character.setPlaying(playing);
-        register3DChanges(character);
-        registerModelChanges(character);
         registerSpotAnimChanges(character, KeyFrameType.SPOTANIM, tick);
         registerSpotAnimChanges(character, KeyFrameType.SPOTANIM2, tick);
+        register3DChanges(character);
+        registerActiveAnimationChanges(character);
+        registerModelChanges(character);
         registerSpawnChanges(character);
     }
 
@@ -1106,7 +1028,7 @@ public class Programmer
                 if (nextAnimation.getTick() <= currentTime)
                 {
                     character.setCurrentKeyFrame(nextAnimation, KeyFrameType.ANIMATION);
-                    registerAnimationChanges(character);
+                    registerActiveAnimationChanges(character);
                 }
             }
 
@@ -1401,15 +1323,15 @@ public class Programmer
         return KeyFrameType.MOVEMENT;
     }
 
-    private void registerAnimationChanges(Character character)
+    private void registerActiveAnimationChanges(Character character)
     {
         CKObject ckObject = character.getCkObject();
 
         KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.ANIMATION);
         if (kf == null)
         {
+            ckObject.setHasAnimKeyFrame(false);
             int animId = (int) character.getAnimationSpinner().getValue();
-            /*
             Animation current = ckObject.getAnimations()[0];
             if (current == null)
             {
@@ -1422,20 +1344,11 @@ public class Programmer
                 plugin.setAnimation(character, animId);
             }
 
-             */
-
             return;
         }
 
         AnimationKeyFrame keyFrame = (AnimationKeyFrame) kf;
-        clientThread.invokeLater(() ->
-        {
-            ckObject.setLoop(keyFrame.isLoop());
-            //ckObject.setActiveAnimation(client.loadAnimation(keyFrame.getActive()));
-            //ckObject.setFinished(false);
-            character.play();
-            setAnimationFrames(ckObject, timeSheetPanel.getCurrentTime(), keyFrame.getTick(), keyFrame.getStartFrame(), keyFrame.isLoop(), false);
-        });
+        setActiveAnimationFrame(ckObject, keyFrame.getActive(), timeSheetPanel.getCurrentTime(), keyFrame.getTick(), keyFrame.getStartFrame(), keyFrame.isLoop(), keyFrame.isFreeze(), false);
     }
 
     private void registerModelChanges(Character character)
@@ -1451,8 +1364,11 @@ public class Programmer
         if (modelKeyFrame == null)
         {
             plugin.setModel(character, character.isCustomMode(), (int) character.getModelSpinner().getValue());
+            ckObject.setRadius((int) character.getRadiusSpinner().getValue());
             return;
         }
+
+        ckObject.setRadius(modelKeyFrame.getRadius());
 
         if (modelKeyFrame.isUseCustomModel())
         {
@@ -1553,14 +1469,19 @@ public class Programmer
                     ckObject = new CKObject(client);
                     client.registerRuneLiteObject(ckObject);
                     ckObject.setDrawFrontTilesFirst(true);
-                    //ckObject.setDespawnOnFinish(true);
-                    //ckObject.setHasAnimKeyFrame(true);
+                    ckObject.setDespawnOnFinish(true);
+                    ckObject.setHasAnimKeyFrame(true);
                     character.setSpotAnim(ckObject, keyFrameType);
                 }
                 else
                 {
                     ckObject = spotAnim;
                 }
+
+                ckObject.setOrientation(orientation);
+                ckObject.setPlaying(playing);
+                ckObject.setActive(false);
+                ckObject.setActive(true);
 
                 LightingStyle ls = LightingStyle.SPOTANIM;
                 CustomLighting cl = new CustomLighting(ls.getAmbient() + data.getAmbient(), ls.getContrast() + data.getContrast(), ls.getX(), ls.getY(), ls.getZ());
@@ -1572,94 +1493,80 @@ public class Programmer
                 Model model = plugin.constructModelFromCache(stats, new int[0], false, LightingStyle.CUSTOM, cl);
 
                 ckObject.setModel(model);
-                //ckObject.setAnimation(AnimationType.ACTIVE, data.getAnimationId());
-                ckObject.setLocation(lp, plane);
-                ckObject.setOrientation(orientation);
-                ckObject.setActive(true);
-                ckObject.setPlaying(playing);
-                setActiveAnimationFrame(ckObject, currentTime, startTick, 0, loop, true);
+                setActiveAnimationFrame(ckObject, data.getAnimationId(), currentTime, startTick, 0, loop, false, true);
             });
         }
     }
 
-    public void setAnimationFrames(CKObject ckObject, double currentTime, double startTime, int startFrame, boolean loop, boolean despawnOnFinished)
+    public void setActiveAnimationFrame(CKObject ckObject, int animId, double currentTime, double startTime, int startFrame, boolean loop, boolean freeze, boolean despawnOnFinished)
     {
-        setActiveAnimationFrame(ckObject, currentTime, startTime, startFrame, loop, despawnOnFinished);
-        setPoseAnimationFrame(ckObject, currentTime, startTime, startFrame);
-    }
-
-    public void setActiveAnimationFrame(CKObject ckObject, double currentTime, double startTime, int startFrame, boolean loop, boolean despawnOnFinished)
-    {
-        /*
-        Animation[] animations = ckObject.getAnimations();
-
-        Animation active = animations[0];
-
-        Animation savedAnimation = ckObject.getActiveAnimation();
-        if (active == null)
+        if (animId == -1)
         {
-            if (savedAnimation == null || savedAnimation.getId() == -1)
+            clientThread.invoke(() ->
             {
+                ckObject.unsetAnimation(AnimationType.ACTIVE);
+                ckObject.setLoop(false);
+                ckObject.setFreeze(false);
+                ckObject.setHasAnimKeyFrame(true);
                 ckObject.setFinished(true);
-            }
-            else
-            {
-                setActiveAnimationFrame(ckObject, savedAnimation, currentTime, startTime, startFrame, loop, despawnOnFinished);
-            }
+            });
+            return;
         }
 
-        if (active != null)
+        Animation[] animations = ckObject.getAnimations();
+        Animation active = animations[0];
+        if (active == null || active.getId() != animId)
         {
-            Animation nextAnimation = active;
-            if (active.getId() == -1)
+            clientThread.invoke(() ->
             {
-                if (savedAnimation == null)
-                {
-                    ckObject.setFinished(true);
-                }
-                else
-                {
-                    nextAnimation = savedAnimation;
-                }
-            }
-
-            setActiveAnimationFrame(ckObject, nextAnimation, currentTime, startTime, startFrame, loop, despawnOnFinished);
+                Animation animation = client.loadAnimation(animId);
+                setActiveAnimationFrame(ckObject, animation, currentTime, startTime, startFrame, loop, freeze, despawnOnFinished);
+            });
+            return;
         }
 
-         */
+        clientThread.invoke(() ->
+        {
+            setActiveAnimationFrame(ckObject, active, currentTime, startTime, startFrame, loop, freeze, despawnOnFinished);
+        });
     }
 
-    public void setActiveAnimationFrame(CKObject ckObject, Animation animation, double currentTime, double startTime, int startFrame, boolean loop, boolean despawnOnFinished)
+    public void setActiveAnimationFrame(CKObject ckObject, Animation animation, double currentTime, double startTime, int startFrame, boolean loop, boolean freeze, boolean despawnOnFinished)
     {
-        /*
         int[] animFrame = getAnimFrame(animation, currentTime, startTime, startFrame, loop);
-        if (animFrame[0] == -1)
+        int frame = animFrame[0];
+        int tick = animFrame[1];
+
+        if (freeze)
+        {
+            frame = startFrame;
+            tick = 0;
+        }
+
+        if (!freeze && animFrame[0] == -1)
         {
             ckObject.setFinished(true);
             ckObject.unsetAnimation(AnimationType.ACTIVE);
+            ckObject.setLoop(false);
+            ckObject.setFreeze(false);
             if (despawnOnFinished)
             {
-                clientThread.invokeLater(() -> ckObject.setActive(false));
+                ckObject.setActive(false);
             }
         }
         else
         {
-            clientThread.invokeLater(() ->
-            {
-                ckObject.setAnimation(AnimationType.ACTIVE, animation);
-                ckObject.setAnimationFrame(AnimationType.ACTIVE, animFrame[0], false);
-                ckObject.tick(animFrame[1]);
-                ckObject.setLoop(loop);
-                ckObject.setFinished(false);
-            });
+            ckObject.setAnimation(AnimationType.ACTIVE, animation);
+            ckObject.setAnimationFrame(AnimationType.ACTIVE, frame, freeze);
+            ckObject.tick(tick);
+            ckObject.setLoop(loop);
+            ckObject.setFinished(false);
+            ckObject.setHasAnimKeyFrame(true);
         }
-
-         */
     }
 
     public void setPoseAnimationFrame(CKObject ckObject, double currentTime, double startTime, int startFrame)
     {
-        /*
         Animation[] animations = ckObject.getAnimations();
 
         Animation pose = animations[1];
@@ -1668,15 +1575,13 @@ public class Programmer
             int[] animFrame = getAnimFrame(pose, currentTime, startTime, startFrame, true);
             if (animFrame[0] != -1)
             {
-                clientThread.invokeLater(() ->
+                clientThread.invoke(() ->
                 {
                     ckObject.setAnimationFrame(AnimationType.POSE, animFrame[0], false);
                     ckObject.tick(animFrame[1]);
                 });
             }
         }
-
-         */
     }
 
     /**

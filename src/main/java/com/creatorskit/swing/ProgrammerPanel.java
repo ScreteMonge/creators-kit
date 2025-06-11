@@ -3,6 +3,7 @@ package com.creatorskit.swing;
 import com.creatorskit.CKObject;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.Character;
+import com.creatorskit.programming.AnimationType;
 import com.creatorskit.programming.MovementType;
 import com.creatorskit.programming.Program;
 import com.creatorskit.programming.ProgramComp;
@@ -115,13 +116,13 @@ public class ProgrammerPanel extends JPanel
             for (Character character : plugin.getCharacters())
             {
                 CKObject ckObject = character.getCkObject();
-                Animation animation = ckObject.getAnimation();
+                Animation animation = ckObject.getAnimations()[0];
                 if (animation == null || animation.getId() == -1)
                 {
                     continue;
                 }
 
-                int maxAnimFrames = character.getCkObject().getMaxAnimFrames();
+                int maxAnimFrames = character.getCkObject().getMaxAnimFrames(AnimationType.ACTIVE);
                 int animFrame = random.nextInt(maxAnimFrames);
                 plugin.setAnimationFrame(character, animFrame, false);
             }
@@ -140,7 +141,7 @@ public class ProgrammerPanel extends JPanel
             Character[] shownCharacters = plugin.getCreatorsPanel().getToolBox().getManagerPanel().getShownCharacters();
             for (Character character : shownCharacters)
             {
-                int maxAnimFrames = character.getCkObject().getMaxAnimFrames();
+                int maxAnimFrames = character.getCkObject().getMaxAnimFrames(AnimationType.ACTIVE);
                 int animFrame = random.nextInt(maxAnimFrames);
                 plugin.setAnimationFrame(character, animFrame, false);
             }

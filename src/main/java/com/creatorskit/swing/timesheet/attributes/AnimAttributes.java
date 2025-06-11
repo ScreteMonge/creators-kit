@@ -16,6 +16,7 @@ public class AnimAttributes extends Attributes
     private final JSpinner active = new JSpinner();
     private final JSpinner startFrame = new JSpinner();
     private final JComboBox<Toggle> loop = new JComboBox<>();
+    private final JComboBox<Toggle> freeze = new JComboBox<>();
 
     private final JSpinner idle = new JSpinner();
     private final JSpinner walk = new JSpinner();
@@ -31,6 +32,7 @@ public class AnimAttributes extends Attributes
         addChangeListeners();
         active.setOpaque(true);
         loop.setOpaque(true);
+        freeze.setOpaque(true);
     }
 
     @Override
@@ -47,6 +49,7 @@ public class AnimAttributes extends Attributes
         active.setValue(kf.getActive());
         startFrame.setValue(kf.getStartFrame());
         loop.setSelectedItem(kf.isLoop() ? Toggle.ENABLE : Toggle.DISABLE);
+        freeze.setSelectedItem(kf.isFreeze() ? Toggle.ENABLE : Toggle.DISABLE);
         idle.setValue(kf.getIdle());
         walk.setValue(kf.getWalk());
         run.setValue(kf.getRun());
@@ -64,6 +67,7 @@ public class AnimAttributes extends Attributes
         active.setBackground(color);
         startFrame.setBackground(color);
         loop.setBackground(color);
+        freeze.setBackground(color);
         idle.setBackground(color);
         walk.setBackground(color);
         run.setBackground(color);
@@ -83,6 +87,7 @@ public class AnimAttributes extends Attributes
                         active,
                         startFrame,
                         loop,
+                        freeze,
                         idle,
                         walk,
                         run,
@@ -115,6 +120,11 @@ public class AnimAttributes extends Attributes
         loop.addItemListener(e ->
         {
             loop.setBackground(getRed());
+        });
+
+        freeze.addItemListener(e ->
+        {
+            freeze.setBackground(getRed());
         });
 
         idle.addChangeListener(e ->
@@ -165,6 +175,7 @@ public class AnimAttributes extends Attributes
         active.setValue(-1);
         startFrame.setValue(0);
         loop.setSelectedItem(Toggle.DISABLE);
+        freeze.setSelectedItem(Toggle.DISABLE);
         idle.setValue(-1);
         walk.setValue(-1);
         run.setValue(-1);

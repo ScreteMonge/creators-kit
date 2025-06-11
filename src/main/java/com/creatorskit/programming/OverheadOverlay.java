@@ -28,7 +28,7 @@ public class OverheadOverlay extends Overlay
     private final CreatorsPlugin plugin;
     private final SpriteManager spriteManager;
 
-    private final int HEIGHT_BUFFER = 16;
+    private final int HEIGHT_BUFFER = 18;
     private final int OVERHEAD_Y_BUFFER = -18;
     private final int SKULL_Y_BUFFER = -25;
     private final int TEXT_BUFFER = -12;
@@ -75,6 +75,11 @@ public class OverheadOverlay extends Overlay
             }
 
             CKObject ckObject = character.getCkObject();
+            if (!ckObject.isActive())
+            {
+                continue;
+            }
+
             LocalPoint lp = ckObject.getLocation();
             if (lp == null || !lp.isInScene())
             {
@@ -88,6 +93,11 @@ public class OverheadOverlay extends Overlay
             }
 
             Model model = ckObject.getModel();
+            if (model == null)
+            {
+                continue;
+            }
+
             model.calculateBoundsCylinder();
             int height = model.getModelHeight();
 
@@ -95,7 +105,7 @@ public class OverheadOverlay extends Overlay
             TextKeyFrame textKeyFrame = (TextKeyFrame) character.getCurrentKeyFrame(KeyFrameType.TEXT);
             if (textKeyFrame != null)
             {
-                int duration = textKeyFrame.getDuration();
+                double duration = textKeyFrame.getDuration();
                 double startTick = textKeyFrame.getTick();
                 double currentTick = plugin.getCurrentTick();
                 if (currentTick <= duration + startTick)
@@ -105,6 +115,10 @@ public class OverheadOverlay extends Overlay
             }
 
             Point base = Perspective.getCanvasImageLocation(client, lp, icon, height + HEIGHT_BUFFER);
+            if (base == null)
+            {
+                continue;
+            }
 
             int skullBuffer = 0;
             if (skullSprite != OverheadSprite.NONE)

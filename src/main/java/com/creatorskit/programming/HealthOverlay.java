@@ -71,6 +71,11 @@ public class HealthOverlay extends Overlay
             }
 
             CKObject ckObject = character.getCkObject();
+            if (!ckObject.isActive())
+            {
+                continue;
+            }
+
             LocalPoint lp = ckObject.getLocation();
             if (lp == null || !lp.isInScene())
             {
@@ -110,6 +115,11 @@ public class HealthOverlay extends Overlay
             }
 
             Model model = ckObject.getModel();
+            if (model == null)
+            {
+                continue;
+            }
+
             model.calculateBoundsCylinder();
             int height = model.getModelHeight();
 
@@ -117,7 +127,7 @@ public class HealthOverlay extends Overlay
             TextKeyFrame textKeyFrame = (TextKeyFrame) character.getCurrentKeyFrame(KeyFrameType.TEXT);
             if (textKeyFrame != null)
             {
-                int textDuration = textKeyFrame.getDuration();
+                double textDuration = textKeyFrame.getDuration();
                 double textStartTick = textKeyFrame.getTick();
                 if (currentTick <= textDuration + textStartTick)
                 {

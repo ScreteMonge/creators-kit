@@ -15,7 +15,6 @@ public class SubMenuCreator
 
         KeyFrameType[] types = new KeyFrameType[]
                 {
-                        KeyFrameType.MOVEMENT,
                         KeyFrameType.ANIMATION,
                         KeyFrameType.ORIENTATION,
                         KeyFrameType.SPAWN,
@@ -26,6 +25,12 @@ public class SubMenuCreator
                         KeyFrameType.SPOTANIM,
                         KeyFrameType.SPOTANIM2
                 };
+
+        menu.createMenuEntry(0)
+                .setOption(ColorUtil.prependColorTag("Add", Color.ORANGE))
+                .setTarget(ColorUtil.colorTag(Color.WHITE) + KeyFrameType.MOVEMENT)
+                .setType(MenuAction.RUNELITE)
+                .onClick(e -> timeSheetPanel.onAddMovementMenuOptionPressed());
 
         for (KeyFrameType type : types)
         {

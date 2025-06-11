@@ -5,6 +5,7 @@ import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.*;
 import com.creatorskit.models.datatypes.*;
 import com.creatorskit.swing.searchabletable.JFilterableTable;
+import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import net.runelite.api.Model;
@@ -106,7 +107,9 @@ public class CacheSearcherTab extends JPanel
         c.weighty = 1;
         c.gridx = 0;
         c.gridy = 0;
-        add(new JLabel(""), c);
+        JLabel empty = new JLabel("");
+        empty.setFocusable(true);
+        add(empty, c);
 
         c.gridwidth = 1;
         c.weightx = 2;
@@ -188,14 +191,19 @@ public class CacheSearcherTab extends JPanel
         c.gridx = 0;
         c.gridy = 3;
         JPanel grid = new JPanel();
-        grid.setLayout(new GridLayout(0, 3, 2, 0));
+        grid.setLayout(new GridLayout(0, 4, 2, 0));
         card.add(grid, c);
 
         JButton addObject = new JButton("Store & Add");
         addObject.setToolTipText("Stores the selected NPC as a Custom Model, then creates a new Object and attaches the model");
         grid.add(addObject);
 
-        JButton addModel = new JButton("Store");
+        JButton addObjectAnim = new JButton("Store/Add/Animate");
+        addObjectAnim.setToolTipText("Stores the selected NPC as a Custom Model, then creates a new Object and attaches the model," +
+                "<br>and creates an Animation KeyFrame with the appropriate NPC animations");
+        //grid.add(addObjectAnim);
+
+        JButton addModel = new JButton("Store Only");
         addModel.setToolTipText("Stores the selected NPC as a new Custom Model");
         grid.add(addModel);
 
@@ -209,7 +217,17 @@ public class CacheSearcherTab extends JPanel
             if (o instanceof NPCData)
             {
                 NPCData data = (NPCData) o;
-                addNPCObject(data);
+                addNPCObject(data, false);
+            }
+        });
+
+        addObjectAnim.addActionListener(e ->
+        {
+            Object o = npcTable.getSelectedObject();
+            if (o instanceof NPCData)
+            {
+                NPCData data = (NPCData) o;
+                addNPCObject(data, true);
             }
         });
 
@@ -278,7 +296,7 @@ public class CacheSearcherTab extends JPanel
         addObject.setToolTipText("Stores the selected Object as a Custom Model, then creates a new Object and attaches the model");
         grid.add(addObject);
 
-        JButton addModel = new JButton("Store");
+        JButton addModel = new JButton("Store Only");
         addModel.setToolTipText("Stores the selected Object as a new Custom Model");
         grid.add(addModel);
 
@@ -354,14 +372,18 @@ public class CacheSearcherTab extends JPanel
         c.gridx = 0;
         c.gridy = 3;
         JPanel grid = new JPanel();
-        grid.setLayout(new GridLayout(0, 3, 2, 0));
+        grid.setLayout(new GridLayout(0, 4, 2, 0));
         card.add(grid, c);
 
         JButton addObject = new JButton("Store & Add");
         addObject.setToolTipText("Stores the selected Item as a Custom Model, then creates a new Object and attaches the model");
         grid.add(addObject);
 
-        JButton addModel = new JButton("Store");
+        JButton addKeyFrame = new JButton("KeyFrame Animation");
+        addKeyFrame.setToolTipText("Finds the animations for the given item (if a weapon) and applies it to the currently selected Object as an Animation KeyFrame");
+        //grid.add(addKeyFrame);
+
+        JButton addModel = new JButton("Store Only");
         addModel.setToolTipText("Stores the selected Item as a new Custom Model");
         grid.add(addModel);
 
@@ -377,6 +399,23 @@ public class CacheSearcherTab extends JPanel
                 CustomModelType type = (CustomModelType) itemType.getSelectedItem();
                 ItemData data = (ItemData) o;
                 addItemObject(data, type);
+            }
+        });
+
+        addKeyFrame.addActionListener(e ->
+        {
+            Object o = itemTable.getSelectedObject();
+            if (o instanceof ItemData)
+            {
+                ItemData data = (ItemData) o;
+                int itemId = data.getId();
+                WeaponAnimData weaponAnimData = dataFinder.findWeaponAnimData(itemId);
+                if (weaponAnimData == null)
+                {
+                    return;
+                }
+
+                plugin.getCreatorsPanel().getToolBox().getTimeSheetPanel().addAnimationKeyFrameFromCache(weaponAnimData);
             }
         });
 
@@ -553,14 +592,18 @@ public class CacheSearcherTab extends JPanel
         c.gridx = 0;
         c.gridy = 3;
         JPanel grid = new JPanel();
-        grid.setLayout(new GridLayout(0, 3, 2, 0));
+        grid.setLayout(new GridLayout(0, 4, 2, 0));
         card.add(grid, c);
 
         JButton addObject = new JButton("Store & Add");
         addObject.setToolTipText("Stores the selected SpotAnim as a Custom Model, then creates a new Object and attaches the model");
         grid.add(addObject);
 
-        JButton addModel = new JButton("Store");
+        JButton addKeyFrame = new JButton("KeyFrame SpotAnim");
+        addKeyFrame.setToolTipText("Adds the currently selected SpotAnim as a KeyFrame to the currently selected Object");
+        //grid.add(addKeyFrame);
+
+        JButton addModel = new JButton("Store Only");
         addModel.setToolTipText("Stores the selected SpotAnim as a new Custom Model");
         grid.add(addModel);
 
@@ -575,6 +618,16 @@ public class CacheSearcherTab extends JPanel
             {
                 SpotanimData data = (SpotanimData) o;
                 addSpotAnimObject(data);
+            }
+        });
+
+        addKeyFrame.addActionListener(e ->
+        {
+            Object o = spotAnimTable.getSelectedObject();
+            if (o instanceof SpotanimData)
+            {
+                SpotanimData data = (SpotanimData) o;
+                plugin.getCreatorsPanel().getToolBox().getTimeSheetPanel().addSpotAnimKeyFrameFromCache(data);
             }
         });
 
@@ -1305,7 +1358,7 @@ public class CacheSearcherTab extends JPanel
         {
             if (n.getId() == id)
             {
-                addNPCObject(n);
+                addNPCObject(n, false);
                 return;
             }
         }
@@ -1313,7 +1366,7 @@ public class CacheSearcherTab extends JPanel
         plugin.sendChatMessage("Could not find the NPC you were looking for in the cache.");
     }
 
-    private void addNPCObject(NPCData data)
+    private void addNPCObject(NPCData data, boolean addAnimKeyFrame)
     {
         ModelStats[] modelStats = dataFinder.findModelsForNPC(data.getId());
         if (modelStats == null || modelStats.length == 0)
@@ -1353,6 +1406,28 @@ public class CacheSearcherTab extends JPanel
                     false);
 
             SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true, false));
+
+            if (addAnimKeyFrame)
+            {
+                AnimationKeyFrame keyFrame = new AnimationKeyFrame(
+                        plugin.getCurrentTick(),
+                        false,
+                        -1,
+                        0,
+                        false,
+                        false,
+                        data.getStandingAnimation(),
+                        data.getWalkingAnimation(),
+                        data.getRunAnimation(),
+                        data.getRotate180Animation(),
+                        data.getRotateRightAnimation(),
+                        data.getRotateLeftAnimation(),
+                        data.getIdleRotateRightAnimation(),
+                        data.getIdleRotateRightAnimation());
+
+                character.setKeyFrames(new KeyFrame[]{keyFrame}, KeyFrameType.ANIMATION);
+                creatorsPanel.getToolBox().getProgrammer().updateProgram(character);
+            }
         });
     }
 

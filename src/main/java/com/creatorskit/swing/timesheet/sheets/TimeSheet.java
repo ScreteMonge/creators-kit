@@ -436,6 +436,10 @@ public class TimeSheet extends JPanel
                 }
 
                 Point mousePosition = getMousePosition();
+                if (mousePosition == null)
+                {
+                    return;
+                }
 
                 if (mousePosition.getY() < rowHeight)
                 {
@@ -444,6 +448,7 @@ public class TimeSheet extends JPanel
                     TimeSheetPanel timeSheetPanel = getTimeSheetPanel();
                     double previewTime = getTimeIndicatorPosition();
                     timeSheetPanel.setPreviewTime(previewTime);
+                    return;
                 }
                 else
                 {
@@ -479,12 +484,20 @@ public class TimeSheet extends JPanel
                     return;
                 }
 
+                TimeSheetPanel timeSheetPanel = getTimeSheetPanel();
+
+                if (timeIndicatorPressed)
+                {
+                    double time = getTimeIndicatorPosition();
+                    timeSheetPanel.setCurrentTime(time, false);
+                    timeIndicatorPressed = false;
+                    return;
+                }
+
                 if (e.getClickCount() == 2)
                 {
                     onMouseButton1DoublePressed(mousePosition);
                 }
-
-                TimeSheetPanel timeSheetPanel = getTimeSheetPanel();
 
                 if (keyFrameClicked)
                 {
@@ -555,14 +568,6 @@ public class TimeSheet extends JPanel
                     checkRectangleForKeyFrames(mousePosition, e.isShiftDown());
                     allowRectangleSelect = false;
                 }
-
-                if (timeIndicatorPressed)
-                {
-                    double time = getTimeIndicatorPosition();
-                    timeSheetPanel.setCurrentTime(time, false);
-                    timeIndicatorPressed = false;
-                }
-
             }
         });
 

@@ -6,10 +6,8 @@ import com.google.gson.reflect.TypeToken;
 import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.AnimationID;
-import net.runelite.api.NPCComposition;
-import net.runelite.api.NpcOverrides;
-import net.runelite.api.PlayerComposition;
+import net.runelite.api.*;
+import net.runelite.api.kit.KitType;
 import okhttp3.*;
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -910,6 +908,19 @@ public class DataFinder
         });
     }
 
+    public NPCData findNPCData(NPC npc)
+    {
+        for (NPCData npcData : npcData)
+        {
+            if (npcData.getId() == npc.getId())
+            {
+                return npcData;
+            }
+        }
+
+        return null;
+    }
+
     public ModelStats[] findModelsForNPC(int npcId)
     {
         ArrayList<ModelStats> modelStats = new ArrayList<>();
@@ -1434,5 +1445,27 @@ public class DataFinder
                 executeCallbacks(DataType.WEAPON_ANIM);
             }
         });
+    }
+
+    public WeaponAnimData findWeaponAnimData(int itemId)
+    {
+        for (WeaponAnimData weaponAnim : weaponAnimData)
+        {
+            int[] ids = weaponAnim.getId();
+            if (ids == null || ids.length == 0)
+            {
+                continue;
+            }
+
+            for (int i : ids)
+            {
+                if (i == itemId)
+                {
+                    return weaponAnim;
+                }
+            }
+        }
+
+        return null;
     }
 }

@@ -227,6 +227,25 @@ public class CreatorsOverlay extends Overlay
         }
     }
 
+    private static String getAbbreviation(Character character)
+    {
+        String name = character.getName();
+        String abbreviation;
+        int abbreviationLength = 3;
+        int nameLength = name.length();
+
+        if (abbreviationLength > nameLength)
+        {
+            abbreviation = character.getName().substring(0, nameLength);
+        }
+        else
+        {
+            abbreviation = character.getName().substring(0, 3);
+        }
+
+        return abbreviation;
+    }
+
     public void renderPlayerOverlay(Graphics2D graphics, WorldView worldView)
     {
         for (Player player : worldView.players())

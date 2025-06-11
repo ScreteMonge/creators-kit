@@ -7,9 +7,11 @@ import com.creatorskit.CKObject;
 import com.creatorskit.models.ModelImporter;
 import com.creatorskit.models.*;
 import com.creatorskit.models.exporters.ModelExporter;
+import com.creatorskit.programming.AnimationType;
 import com.creatorskit.swing.timesheet.keyframe.ModelKeyFrame;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
+import net.runelite.api.coords.LocalPoint;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
@@ -37,6 +39,7 @@ public class ModelOrganizer extends JPanel
 {
     private final Client client;
     private final CreatorsPlugin plugin;
+    private final CreatorsConfig config;
     private final ClientThread clientThread;
     private final ModelImporter modelImporter;
     private final ModelExporter modelExporter;
@@ -52,10 +55,11 @@ public class ModelOrganizer extends JPanel
     public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
 
     @Inject
-    public ModelOrganizer(Client client, CreatorsPlugin plugin, ClientThread clientThread, ModelImporter modelImporter, ModelExporter modelExporter)
+    public ModelOrganizer(Client client, CreatorsPlugin plugin, CreatorsConfig config, ClientThread clientThread, ModelImporter modelImporter, ModelExporter modelExporter)
     {
         this.client = client;
         this.plugin = plugin;
+        this.config = config;
         this.clientThread = clientThread;
         this.modelImporter = modelImporter;
         this.modelExporter = modelExporter;
@@ -500,20 +504,51 @@ public class ModelOrganizer extends JPanel
     public void setTransmog(CustomModel customModel)
     {
         CKObject transmog = plugin.getTransmog();
+        TransmogPanel transmogPanel = plugin.getCreatorsPanel().getTransmogPanel();
+
         if (transmog == null)
         {
             clientThread.invokeLater(() ->
             {
                 CKObject newTransmog = new CKObject(client);
                 client.registerRuneLiteObject(newTransmog);
+
+                newTransmog.setLoop(false);
+                newTransmog.setFreeze(false);
+                newTransmog.setHasAnimKeyFrame(false);
+                newTransmog.setActive(true);
+                newTransmog.setModel(customModel.getModel());
+                newTransmog.setRadius(transmogPanel.getRadius());
+                newTransmog.setupAnimController(AnimationType.ACTIVE, 0);
+                newTransmog.setupAnimController(AnimationType.POSE, 0);
+                newTransmog.setPlaying(true);
+
+                LocalPoint localPoint = client.getLocalPlayer().getLocalLocation();
+                if (localPoint != null)
+                {
+                    newTransmog.setLocation(localPoint, client.getTopLevelWorldView().getPlane());
+                }
+
                 plugin.setTransmog(newTransmog);
+                plugin.setTransmogModel(customModel);
+                transmogPanel.getTransmogLabel().setText(customModel.getComp().getName());
             });
             return;
         }
 
+        clientThread.invokeLater(() ->
+        {
+            transmog.setActive(false);
+            transmog.setActive(true);
+            LocalPoint localPoint = client.getLocalPlayer().getLocalLocation();
+            if (localPoint != null)
+            {
+                transmog.setLocation(localPoint, client.getTopLevelWorldView().getPlane());
+            }
+        });
         plugin.setTransmogModel(customModel);
-        plugin.getCreatorsPanel().getTransmogPanel().getTransmogLabel().setText(customModel.getComp().getName());
+        transmogPanel.getTransmogLabel().setText(customModel.getComp().getName());
         transmog.setModel(customModel.getModel());
-        transmog.setRadius(plugin.getCreatorsPanel().getTransmogPanel().getRadius());
+        transmog.setRadius(transmogPanel.getRadius());
     }
 }

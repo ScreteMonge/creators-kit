@@ -80,7 +80,7 @@ public class OriAttributes extends Attributes
     {
         start.setValue(0);
         end.setValue(0);
-        duration.setValue(2.0);
+        duration.setValue(1.0);
         turnRate.setValue(-1);
         super.resetAttributes(resetBackground);
     }

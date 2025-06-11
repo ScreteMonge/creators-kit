@@ -4,15 +4,21 @@ import com.creatorskit.Character;
 import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.CKObject;
+import com.creatorskit.models.datatypes.NPCData;
+import com.creatorskit.models.datatypes.PlayerAnimationType;
+import com.creatorskit.models.datatypes.WeaponAnimData;
 import com.creatorskit.models.exporters.ModelExporter;
 import com.creatorskit.programming.AnimationType;
 import com.creatorskit.swing.CreatorsPanel;
 import com.creatorskit.swing.ParentPanel;
+import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
+import com.creatorskit.swing.timesheet.keyframe.SpotAnimKeyFrame;
 import net.runelite.api.*;
 import net.runelite.api.Menu;
 import net.runelite.api.coords.LocalPoint;
+import net.runelite.api.kit.KitType;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.util.ColorUtil;
 import org.apache.commons.lang3.ArrayUtils;
@@ -242,6 +248,14 @@ public class ModelGetter
 
         Menu menu = menuEntry.createSubMenu();
 
+        /*
+        menu.createMenuEntry(0)
+                .setOption(ColorUtil.prependColorTag("Store-Add-Animate", Color.WHITE))
+                .setType(MenuAction.RUNELITE)
+                .onClick(e -> storeNPC(npc, ModelMenuOption.STORE_ADD_ANIMATE));
+
+         */
+
         menu.createMenuEntry(0)
                 .setOption(ColorUtil.prependColorTag("Store-Only", Color.WHITE))
                 .setType(MenuAction.RUNELITE)
@@ -307,7 +321,54 @@ public class ModelGetter
             return;
         }
 
-        handleStoreOptions(modelStats, menuOption, CustomModelType.CACHE_NPC, name, new int[0], false, LightingStyle.ACTOR, npc.getOrientation(), npc.getPoseAnimation(), npc.getWalkAnimation());
+        AnimationKeyFrame akf = null;
+        SpotAnimKeyFrame[] spkfs = new SpotAnimKeyFrame[0];
+        if (menuOption == ModelMenuOption.STORE_ADD_ANIMATE)
+        {
+            NPCData npcData = dataFinder.findNPCData(npc);
+            if (npcData != null)
+            {
+                akf = new AnimationKeyFrame(
+                        plugin.getCurrentTick(),
+                        false,
+                        npc.getAnimation(),
+                        0,
+                        false,
+                        false,
+                        npcData.getStandingAnimation(),
+                        npcData.getWalkingAnimation(),
+                        npcData.getRunAnimation(),
+                        npcData.getRotate180Animation(),
+                        npcData.getRotateRightAnimation(),
+                        npcData.getRotateLeftAnimation(),
+                        npcData.getIdleRotateRightAnimation(),
+                        npcData.getIdleRotateLeftAnimation());
+            }
+
+            int i = 0;
+            for (ActorSpotAnim actorSpotAnim : npc.getSpotAnims())
+            {
+                if (i == 2)
+                {
+                    break;
+                }
+
+                KeyFrameType type = i == 0 ? KeyFrameType.SPOTANIM : KeyFrameType.SPOTANIM2;
+
+                SpotAnimKeyFrame spkf = new SpotAnimKeyFrame(
+                        plugin.getCurrentTick(),
+                        type,
+                        actorSpotAnim.getId(),
+                        false,
+                        actorSpotAnim.getHeight());
+
+                spkfs = ArrayUtils.add(spkfs, spkf);
+
+                i++;
+            }
+        }
+
+        handleStoreOptions(modelStats, menuOption, CustomModelType.CACHE_NPC, name, new int[0], false, LightingStyle.ACTOR, npc.getOrientation(), npc.getPoseAnimation(), npc.getWalkAnimation(), akf, spkfs);
     }
 
     public void exportNPC(NPC npc, boolean exportAnimation)
@@ -530,24 +591,32 @@ public class ModelGetter
                 .setOption(ColorUtil.prependColorTag("Store-Add", Color.ORANGE))
                 .setTarget(target)
                 .setType(MenuAction.RUNELITE)
-                .onClick(e -> storePlayer(player, ModelMenuOption.STORE_AND_ADD));
+                .onClick(e -> storePlayer(player, ModelMenuOption.STORE_AND_ADD, false));
 
         Menu menu = menuEntry.createSubMenu();
+
+        /*
+        menu.createMenuEntry(0)
+                .setOption(ColorUtil.prependColorTag("Store-Add-Animate", Color.WHITE))
+                .setType(MenuAction.RUNELITE)
+                .onClick(e -> storePlayer(player, ModelMenuOption.STORE_ADD_ANIMATE, false));
+
+         */
 
         menu.createMenuEntry(0)
                 .setOption(ColorUtil.prependColorTag("Store-Only", Color.WHITE))
                 .setType(MenuAction.RUNELITE)
-                .onClick(e -> storePlayer(player, ModelMenuOption.STORE));
+                .onClick(e -> storePlayer(player, ModelMenuOption.STORE, false));
 
         menu.createMenuEntry(0)
                 .setOption(ColorUtil.prependColorTag("Anvil", Color.WHITE))
                 .setType(MenuAction.RUNELITE)
-                .onClick(e -> storePlayer(player, ModelMenuOption.ANVIL));
+                .onClick(e -> storePlayer(player, ModelMenuOption.ANVIL, true));
 
         menu.createMenuEntry(0)
                 .setOption(ColorUtil.prependColorTag("Transmog", Color.WHITE))
                 .setType(MenuAction.RUNELITE)
-                .onClick(e -> storePlayer(player, ModelMenuOption.TRANSMOG));
+                .onClick(e -> storePlayer(player, ModelMenuOption.TRANSMOG, false));
 
         menu.createMenuEntry(0)
                 .setOption(ColorUtil.prependColorTag("Export 3D", Color.WHITE))
@@ -565,7 +634,7 @@ public class ModelGetter
                 .onClick(e -> storeSpotAnims(player.getSpotAnims()));
     }
 
-    public void storePlayer(Player player, ModelMenuOption menuOption)
+    public void storePlayer(Player player, ModelMenuOption menuOption, boolean allowSpotAnim)
     {
         PlayerComposition comp = player.getPlayerComposition();
         final int[] items = comp.getEquipmentIds();
@@ -577,7 +646,12 @@ public class ModelGetter
         {
             spotAnims = ArrayUtils.add(spotAnims, actorSpotAnim.getId());
         }
-        final int[] fSpotAnims = Arrays.copyOf(spotAnims, spotAnims.length);
+
+        int[] fSpotAnims = new int[0];
+        if (allowSpotAnim)
+        {
+            fSpotAnims = Arrays.copyOf(spotAnims, spotAnims.length);
+        }
 
         int animId = player.getAnimation();
         if (animId == -1)
@@ -599,7 +673,55 @@ public class ModelGetter
             return;
         }
 
-        handleStoreOptions(modelStats, menuOption, CustomModelType.CACHE_PLAYER, name, colours, true, LightingStyle.ACTOR, player.getOrientation(), animId, player.getWalkAnimation());
+        AnimationKeyFrame akf = null;
+        SpotAnimKeyFrame[] spkfs = new SpotAnimKeyFrame[0];
+        if (menuOption == ModelMenuOption.STORE_ADD_ANIMATE)
+        {
+            int itemId = player.getPlayerComposition().getEquipmentId(KitType.WEAPON);
+            WeaponAnimData weaponAnim = dataFinder.findWeaponAnimData(itemId);
+            if (weaponAnim != null)
+            {
+                akf = new AnimationKeyFrame(
+                        plugin.getCurrentTick(),
+                        false,
+                        player.getAnimation(),
+                        0,
+                        false,
+                        false,
+                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE),
+                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.WALK),
+                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.RUN),
+                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_180),
+                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_RIGHT),
+                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_LEFT),
+                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_RIGHT),
+                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_LEFT));
+            }
+
+            int i = 0;
+            for (ActorSpotAnim actorSpotAnim : actorSpotAnims)
+            {
+                if (i == 2)
+                {
+                    break;
+                }
+
+                KeyFrameType type = i == 0 ? KeyFrameType.SPOTANIM : KeyFrameType.SPOTANIM2;
+
+                SpotAnimKeyFrame spkf = new SpotAnimKeyFrame(
+                        plugin.getCurrentTick(),
+                        type,
+                        actorSpotAnim.getId(),
+                        false,
+                        actorSpotAnim.getHeight());
+
+                spkfs = ArrayUtils.add(spkfs, spkf);
+
+                i++;
+            }
+        }
+
+        handleStoreOptions(modelStats, menuOption, CustomModelType.CACHE_PLAYER, name, colours, true, LightingStyle.ACTOR, player.getOrientation(), animId, player.getWalkAnimation(), akf, spkfs);
     }
 
     public void exportPlayer(Player player, boolean exportAnimation)
@@ -801,11 +923,11 @@ public class ModelGetter
 
         if (dynamicObject)
         {
-            handleStoreOptions(modelStats, menuOption, type, name, new int[0], false, ls, orientation, animationId, -1);
+            handleStoreOptions(modelStats, menuOption, type, name, new int[0], false, ls, orientation, animationId, -1, null, new SpotAnimKeyFrame[0]);
             return;
         }
 
-        handleStoreOptions(model, modelStats, menuOption, type, name, new int[0], false, ls, orientation, animationId, -1);
+        handleStoreOptions(model, modelStats, menuOption, type, name, new int[0], false, ls, orientation, animationId, -1, null, new SpotAnimKeyFrame[0]);
     }
 
     public void exportObject(String name, int objectId, int modelType, Model model)
@@ -931,9 +1053,9 @@ public class ModelGetter
         }
 
         menu.createMenuEntry(0)
-            .setOption(ColorUtil.prependColorTag(option, Color.WHITE))
-            .setType(MenuAction.RUNELITE)
-            .onClick(e ->
+                .setOption(ColorUtil.prependColorTag(option, Color.WHITE))
+                .setType(MenuAction.RUNELITE)
+                .onClick(e ->
                 {
                     if (exportAnimation && animId == -1)
                     {
@@ -1333,7 +1455,7 @@ public class ModelGetter
             return;
         }
 
-        handleStoreOptions(model, modelStats, menuOption, CustomModelType.CACHE_GROUND_ITEM, name, new int[0], false, LightingStyle.DEFAULT, 0, -1, -1);
+        handleStoreOptions(model, modelStats, menuOption, CustomModelType.CACHE_GROUND_ITEM, name, new int[0], false, LightingStyle.DEFAULT, 0, -1, -1, null, new SpotAnimKeyFrame[0]);
     }
 
     public void exportGroundItem(String name, int itemId, Model model)
@@ -1430,25 +1552,25 @@ public class ModelGetter
         });
     }
 
-    private void handleStoreOptions(ModelStats[] modelStats, ModelMenuOption menuOption, CustomModelType customModelType, String name, int[] kitRecolours, boolean player, LightingStyle ls, int orientation, int poseAnimation, int walkAnimation)
+    private void handleStoreOptions(ModelStats[] modelStats, ModelMenuOption menuOption, CustomModelType customModelType, String name, int[] kitRecolours, boolean player, LightingStyle ls, int orientation, int poseAnimation, int walkAnimation, AnimationKeyFrame keyFrame, SpotAnimKeyFrame[] spkfs)
     {
         clientThread.invokeLater(() ->
         {
             Model model = plugin.constructModelFromCache(modelStats, kitRecolours, player, ls, null);
-            store(model, modelStats, menuOption, customModelType, name, kitRecolours, ls, orientation, poseAnimation, walkAnimation);
+            store(model, modelStats, menuOption, customModelType, name, kitRecolours, ls, orientation, poseAnimation, walkAnimation, keyFrame, spkfs);
         });
     }
 
-    private void handleStoreOptions(Model model, ModelStats[] modelStats, ModelMenuOption menuOption, CustomModelType customModelType, String name, int[] kitRecolours, boolean player, LightingStyle ls, int orientation, int poseAnimation, int walkAnimation)
+    private void handleStoreOptions(Model model, ModelStats[] modelStats, ModelMenuOption menuOption, CustomModelType customModelType, String name, int[] kitRecolours, boolean player, LightingStyle ls, int orientation, int poseAnimation, int walkAnimation, AnimationKeyFrame keyFrame, SpotAnimKeyFrame[] spkfs)
     {
         Thread thread = new Thread(() ->
         {
-            store(model, modelStats, menuOption, customModelType, name, kitRecolours, ls, orientation, poseAnimation, walkAnimation);
+            store(model, modelStats, menuOption, customModelType, name, kitRecolours, ls, orientation, poseAnimation, walkAnimation, keyFrame, spkfs);
         });
         thread.start();
     }
 
-    private void store(Model model, ModelStats[] modelStats, ModelMenuOption menuOption, CustomModelType customModelType, String name, int[] kitRecolours, LightingStyle ls, int orientation, int poseAnimation, int walkAnimation)
+    private void store(Model model, ModelStats[] modelStats, ModelMenuOption menuOption, CustomModelType customModelType, String name, int[] kitRecolours, LightingStyle ls, int orientation, int poseAnimation, int walkAnimation, AnimationKeyFrame keyFrame, SpotAnimKeyFrame[] spkfs)
     {
         CustomLighting lighting = new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getY(), ls.getZ());
         CustomModelComp comp = new CustomModelComp(0, customModelType, 7699, modelStats, kitRecolours, null, null, ls, lighting, false, name);
@@ -1462,7 +1584,7 @@ public class ModelGetter
             creatorsPanel.getModelOrganizer().setTransmog(customModel);
         }
 
-        if (menuOption == ModelMenuOption.STORE_AND_ADD)
+        if (menuOption == ModelMenuOption.STORE_AND_ADD || menuOption == ModelMenuOption.STORE_ADD_ANIMATE)
         {
             Character character = creatorsPanel.createCharacter(
                     ParentPanel.SIDE_PANEL,
@@ -1486,6 +1608,18 @@ public class ModelGetter
                     false);
 
             SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true, false));
+
+            if (menuOption == ModelMenuOption.STORE_ADD_ANIMATE)
+            {
+                character.setKeyFrames(new KeyFrame[]{keyFrame}, KeyFrameType.ANIMATION);
+
+                for (SpotAnimKeyFrame spkf : spkfs)
+                {
+                    character.setKeyFrames(new KeyFrame[]{spkf}, spkf.getKeyFrameType());
+                }
+
+                creatorsPanel.getToolBox().getProgrammer().updateProgram(character);
+            }
         }
     }
 
@@ -1500,7 +1634,7 @@ public class ModelGetter
         exportObject = new CKObject(client);
         client.registerRuneLiteObject(exportObject);
 
-        exportObject.setAnimation(animId);
+        exportObject.setAnimation(AnimationType.ACTIVE, animId);
         exportObject.setModel(model);
         exportObject.setActive(true);
         exportObject.setLocation(client.getLocalPlayer().getLocalLocation(), client.getTopLevelWorldView().getPlane());
@@ -1548,12 +1682,12 @@ public class ModelGetter
             }
         }
 
-        int maxAnimFrames = exportObject.getMaxAnimFrames();
+        int maxAnimFrames = exportObject.getMaxAnimFrames(AnimationType.ACTIVE);
         int[][][] animVerts = new int[maxAnimFrames][model.getVerticesCount()][3];
 
         for (int e = 0; e < maxAnimFrames; e++)
         {
-            exportObject.setAnimationFrame(e, true);
+            exportObject.setAnimationFrame(AnimationType.ACTIVE, e, true);
             Model m = exportObject.getModel();
 
             int[][] verts = animVerts[e];

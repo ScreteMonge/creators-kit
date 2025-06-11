@@ -164,6 +164,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				.build();
 
 		eventBus.register(creatorsPanel.getToolBox().getProgrammer());
+		eventBus.register(creatorsPanel.getToolBox().getTransmogPanel());
 
 		clientToolbar.addNavigation(navigationButton);
 		overlayManager.add(overlay);
@@ -252,6 +253,16 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 
 		oculusOrbSpeed = config.orbSpeed();
+
+		String string = configManager.getConfiguration("creatorssuite", "overlaysActive");
+		try
+		{
+			overlaysActive = Boolean.parseBoolean(string);
+		}
+		catch (Exception e)
+		{
+			overlaysActive = false;
+		}
 	}
 
 	@Override
@@ -261,6 +272,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		creatorsPanel.clearManagerPanels();
 
 		eventBus.unregister(creatorsPanel.getToolBox().getProgrammer());
+		eventBus.unregister(creatorsPanel.getToolBox().getTransmogPanel());
 
 		clientToolbar.removeNavigation(navigationButton);
 		overlayManager.remove(overlay);
@@ -395,7 +407,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					continue;
 
 				if (animId != comp.getIdleAnim())
-					ckObject.setAnimation(comp.getIdleAnim());
+					ckObject.setAnimation(AnimationType.ACTIVE, comp.getIdleAnim());
 
 				continue;
 			}
@@ -417,7 +429,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					continue;
 
 				if (animId != comp.getIdleAnim())
-					ckObject.setAnimation(comp.getIdleAnim());
+					ckObject.setAnimation(AnimationType.ACTIVE, comp.getIdleAnim());
 
 				continue;
 			}
@@ -430,7 +442,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					walkAnimId = comp.getIdleAnim();
 
 				if (currentAnim != walkAnimId)
-					ckObject.setAnimation(comp.getWalkAnim());
+					ckObject.setAnimation(AnimationType.ACTIVE, comp.getWalkAnim());
 			}
 
 			LocalPoint start = ckObject.getLocation();
@@ -530,169 +542,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			LocalPoint finalPoint = new LocalPoint(endX, endY, worldView);
 			ckObject.setLocation(finalPoint, worldView.getPlane());
 		}
-
-		TransmogPanel transmogPanel = creatorsPanel.getTransmogPanel();
-
-		if (config.enableTransmog() && transmog != null)
-		{
-			if (player == null)
-				return;
-
-			LocalPoint localPoint = player.getLocalLocation();
-			transmog.setLocation(localPoint, worldView.getPlane());
-			transmog.setOrientation(player.getCurrentOrientation());
-			transmog.setActive(true);
-
-			int playerAnimation = player.getAnimation();
-			int playerPose = player.getPoseAnimation();
-			int animId = transmog.getAnimationId();
-
-			int transmogAnimation = -1;
-			if (animId != -1)
-				transmogAnimation = animId;
-
-			TransmogAnimationMode animationMode = transmogPanel.getTransmogAnimationMode();
-			if (animationMode == TransmogAnimationMode.PLAYER)
-			{
-				if (playerAnimation == -1)
-				{
-					if (transmogAnimation != playerPose)
-						transmog.setAnimation(playerPose);
-				}
-			}
-
-			if (animationMode == TransmogAnimationMode.CUSTOM || animationMode == TransmogAnimationMode.MODIFIED)
-			{
-				if (playerAnimation == -1)
-				{
-					int pose = transmogPanel.getPoseAnimation();
-					int walk = transmogPanel.getWalkAnimation();
-					int run = transmogPanel.getRunAnimation();
-					int backwards = transmogPanel.getBackwardsAnimation();
-					int left = transmogPanel.getLeftAnimation();
-					int right = transmogPanel.getRightAnimation();
-					int rotate = transmogPanel.getRotateAnimation();
-
-					if (animationMode == TransmogAnimationMode.MODIFIED)
-					{
-						if (pose == -1)
-							pose = playerPose;
-						if (walk == -1)
-							walk = playerPose;
-						if (run == -1)
-							run = playerPose;
-						if (backwards == -1)
-							backwards = playerPose;
-						if (left == -1)
-							left = playerPose;
-						if (right == -1)
-							right = playerPose;
-						if (rotate == -1)
-							rotate = playerPose;
-					}
-
-					PoseAnimation poseAnimation = AnimationData.getPoseAnimation(playerPose);
-
-					if (pose != -1 && poseAnimation == PoseAnimation.POSE)
-					{
-						if (transmogAnimation != pose)
-							transmog.setAnimation(pose);
-					}
-					else if (walk != -1 && poseAnimation == PoseAnimation.WALK)
-					{
-						if (transmogAnimation != walk)
-							transmog.setAnimation(walk);
-					}
-					else if (run != -1 && poseAnimation == PoseAnimation.RUN)
-					{
-						if (transmogAnimation != run)
-							transmog.setAnimation(run);
-					}
-					else if (backwards != -1 && poseAnimation == PoseAnimation.BACKWARDS)
-					{
-						if (transmogAnimation != backwards)
-							transmog.setAnimation(backwards);
-					}
-					else if (right != -1 && poseAnimation == PoseAnimation.SHUFFLE_RIGHT)
-					{
-						if (transmogAnimation != right)
-							transmog.setAnimation(right);
-					}
-					else if (left != -1 && poseAnimation == PoseAnimation.SHUFFLE_LEFT)
-					{
-						if (transmogAnimation != left)
-							transmog.setAnimation(left);
-					}
-					else if (rotate != -1 && poseAnimation == PoseAnimation.ROTATE)
-					{
-						if (transmogAnimation != rotate)
-							transmog.setAnimation(rotate);
-					}
-					else if (animationMode == TransmogAnimationMode.MODIFIED)
-					{
-						transmog.setAnimation(playerPose);
-					}
-					else
-					{
-						if (transmogAnimation != walk)
-							transmog.setAnimation(walk);
-					}
-				}
-			}
-		}
-	}
-
-	@Subscribe
-	public void onAnimationChanged(AnimationChanged event)
-	{
-		if (!config.enableTransmog() || transmog == null)
-			return;
-
-		TransmogPanel transmogPanel = creatorsPanel.getTransmogPanel();
-		TransmogAnimationMode animationMode = transmogPanel.getTransmogAnimationMode();
-
-		if (animationMode == TransmogAnimationMode.NONE)
-			return;
-
-		if (event.getActor() instanceof Player)
-		{
-			Player player = (Player) event.getActor();
-			if (player != client.getLocalPlayer())
-				return;
-
-			int playerAnimation = player.getAnimation();
-			int animId = transmog.getAnimationId();
-			int transmogAnimation = -1;
-			if (animId != -1)
-				transmogAnimation = animId;
-
-			int action = transmogPanel.getActionAnimation();
-
-			if (animationMode == TransmogAnimationMode.PLAYER && transmogAnimation != playerAnimation)
-			{
-				transmog.setAnimation(playerAnimation);
-				return;
-			}
-
-			int[][] animationSwaps = transmogPanel.getAnimationSwaps();
-			for (int[] swap : animationSwaps)
-			{
-				if (swap[0] == player.getAnimation() && transmogAnimation != swap[1])
-				{
-					transmog.setAnimation(swap[1]);
-					return;
-				}
-			}
-
-			if (animationMode == TransmogAnimationMode.MODIFIED && transmogAnimation != playerAnimation && action == -1)
-				transmog.setAnimation(playerAnimation);
-
-			if (animationMode == TransmogAnimationMode.MODIFIED && transmogAnimation != action && action != -1)
-				transmog.setAnimation(action);
-
-			if (animationMode == TransmogAnimationMode.CUSTOM && transmogAnimation != action)
-				transmog.setAnimation(action);
-		}
 	}
 
 	@Subscribe
@@ -714,12 +563,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				if (!active)
 					despawnCharacter(character);
 			}
-
-			if (config.enableTransmog() && transmog != null)
-			{
-				transmog.setActive(false);
-				transmog.setActive(true);
-			}
 		}
 	}
 
@@ -739,12 +582,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			clientThread.invokeLater(() ->
 			{
-				boolean enableTransmog = config.enableTransmog();
-				transmog.setActive(enableTransmog);
-				if (!enableTransmog)
-				{
-					transmog.setAnimation(-1);
-				}
+				transmog.setActive(config.enableTransmog());
 			});
 		}
 	}
@@ -1095,13 +933,13 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 
 		CKObject ckObject = character.getCkObject();
-		clientThread.invoke(() -> ckObject.setAnimation(animationId));
+		clientThread.invoke(() -> ckObject.setAnimation(AnimationType.ACTIVE, animationId));
 	}
 
 	public void unsetAnimation(Character character)
 	{
 		CKObject ckObject = character.getCkObject();
-		clientThread.invoke(() -> ckObject.setAnimation(-1));
+		clientThread.invoke(() -> ckObject.setAnimation(AnimationType.ACTIVE, -1));
 	}
 
 	public void setAnimationFrame(Character character, int animFrame, boolean allowPause)
@@ -1110,7 +948,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 
 		CKObject ckObject = character.getCkObject();
-		clientThread.invoke(() -> ckObject.setAnimationFrame(animFrame, allowPause));
+		clientThread.invoke(() -> ckObject.setAnimationFrame(AnimationType.ACTIVE, animFrame, allowPause));
 	}
 
 	public void setRadius(Character character, int radius)
@@ -2119,8 +1957,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		previewObject.setModel(model);
 		previewObject.setOrientation(orientation);
-		previewObject.setAnimation(animId);
-		previewObject.setAnimationFrame(ckObject.getAnimationFrame(), true);
+		previewObject.setAnimation(AnimationType.ACTIVE, animId);
+		previewObject.setAnimationFrame(AnimationType.ACTIVE, ckObject.getAnimationFrame(AnimationType.ACTIVE), true);
 		previewObject.setLocation(lp, client.getTopLevelWorldView().getPlane());
 		previewObject.setRadius(ckObject.getRadius());
 		previewObject.setActive(true);

@@ -4,10 +4,14 @@ import com.creatorskit.CKObject;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.DataFinder;
+import com.creatorskit.models.datatypes.PlayerAnimationType;
+import com.creatorskit.models.datatypes.SpotanimData;
+import com.creatorskit.models.datatypes.WeaponAnimData;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.Programmer;
 import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.programming.orientation.OrientationGoal;
+import com.creatorskit.programming.orientation.OrientationHotkeyMode;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.manager.TreeScrollPane;
@@ -16,15 +20,14 @@ import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameCharacte
 import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameAction;
 import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameCharacterActionType;
 import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameActionType;
+import com.creatorskit.swing.timesheet.keyframe.settings.HealthbarSprite;
+import com.creatorskit.swing.timesheet.keyframe.settings.HitsplatType;
 import com.creatorskit.swing.timesheet.sheets.AttributeSheet;
 import com.creatorskit.swing.timesheet.sheets.SummarySheet;
 import com.creatorskit.swing.timesheet.sheets.TimeSheet;
 import lombok.Getter;
 import lombok.Setter;
-import net.runelite.api.Client;
-import net.runelite.api.GameState;
-import net.runelite.api.Tile;
-import net.runelite.api.WorldView;
+import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.callback.ClientThread;
@@ -84,7 +87,6 @@ public class TimeSheetPanel extends JPanel
 
     private double zoom = 50;
     private double hScroll = 0;
-    private int vScroll = 0;
     private double maxHScroll = 200;
     private double minHScroll = -10;
 
@@ -123,16 +125,6 @@ public class TimeSheetPanel extends JPanel
         setupManager();
         setKeyBindings();
         setMouseListeners();
-    }
-
-    public void onSummarySkipForward()
-    {
-
-    }
-
-    public void onSummarySkipPrevious()
-    {
-
     }
 
     public void onAttributeSkipForward()
@@ -360,17 +352,27 @@ public class TimeSheetPanel extends JPanel
                 return;
             }
 
-            KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(kf, selectedCharacter, KeyFrameCharacterActionType.ADD)};
-            KeyFrame keyFrameToReplace = addKeyFrame(selectedCharacter, kf);
-
-            if (keyFrameToReplace != null)
-            {
-                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
-            }
-            addKeyFrameActions(kfa);
+            addKeyFrameAction(kf);
             return;
         }
 
+        removeKeyFrameAction(keyFrame);
+    }
+
+    public void addKeyFrameAction(KeyFrame keyFrame)
+    {
+        KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.ADD)};
+        KeyFrame keyFrameToReplace = addKeyFrame(selectedCharacter, keyFrame);
+
+        if (keyFrameToReplace != null)
+        {
+            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
+        }
+        addKeyFrameActions(kfa);
+    }
+
+    public void removeKeyFrameAction(KeyFrame keyFrame)
+    {
         removeKeyFrame(selectedCharacter, keyFrame);
         KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.REMOVE)};
         addKeyFrameActions(kfa);
@@ -413,7 +415,7 @@ public class TimeSheetPanel extends JPanel
         addKeyFrameActions(kfa);
     }
 
-    public void onOrientationKeyPressed()
+    public void onOrientationKeyPressed(OrientationHotkeyMode hotkeyMode)
     {
         if (selectedCharacter == null)
         {
@@ -446,30 +448,40 @@ public class TimeSheetPanel extends JPanel
             return;
         }
 
-        int startOrientation = ckObject.getOrientation();
         KeyFrame okf = selectedCharacter.getCurrentKeyFrame(KeyFrameType.ORIENTATION);
         if (okf == null)
         {
-            initializeOrientationKeyFrame(selectedCharacter, localPoint, currentTime, startOrientation, OrientationGoal.POINT, 2, -1);
+            int orientation = ckObject.getOrientation();
+
+            initializeOrientationKeyFrame(
+                    selectedCharacter,
+                    hotkeyMode,
+                    localPoint,
+                    currentTime,
+                    orientation,
+                    orientation,
+                    OrientationGoal.POINT,
+                    -1);
         }
         else
         {
             OrientationKeyFrame keyFrame = (OrientationKeyFrame) okf;
             initializeOrientationKeyFrame(
                     selectedCharacter,
+                    hotkeyMode,
                     localPoint,
                     keyFrame.getTick(),
                     keyFrame.getStart(),
+                    keyFrame.getEnd(),
                     keyFrame.getGoal(),
-                    keyFrame.getDuration(),
                     keyFrame.getTurnRate());
         }
 
-        //programmer.register3DChanges(selectedCharacter);
+        programmer.register3DChanges(selectedCharacter);
         selectedCharacter.setVisible(true, clientThread);
     }
 
-    public void initializeOrientationKeyFrame(Character character, LocalPoint localPoint, double tick, int startOrientation, OrientationGoal og, double duration, int turnRate)
+    public void initializeOrientationKeyFrame(Character character, OrientationHotkeyMode hotkeyMode, LocalPoint localPoint, double tick, int start, int end, OrientationGoal og, int turnRate)
     {
         CKObject ckObject = character.getCkObject();
         if (ckObject == null)
@@ -483,14 +495,27 @@ public class TimeSheetPanel extends JPanel
             return;
         }
 
+        int startOrientation = start;
+        int endOrientation = end;
         int angle = (int) Orientation.getAngleBetween(lp, localPoint);
+
+        if (hotkeyMode == OrientationHotkeyMode.SET_START)
+        {
+            startOrientation = angle;
+        }
+        else
+        {
+            endOrientation = angle;
+        }
+
+        double turnDuration = AttributePanel.calculateOrientationDuration(startOrientation, endOrientation, turnRate);
 
         KeyFrame okf = new OrientationKeyFrame(
                 tick,
                 og,
                 startOrientation,
-                angle,
-                duration,
+                endOrientation,
+                turnDuration,
                 turnRate);
 
         KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(okf, character, KeyFrameCharacterActionType.ADD)};
@@ -528,12 +553,54 @@ public class TimeSheetPanel extends JPanel
             return;
         }
 
+        onAddMovement(false, localPoint);
+    }
+
+    public void onAddMovementMenuOptionPressed()
+    {
+        if (selectedCharacter == null)
+        {
+            return;
+        }
+
+        WorldView worldView = client.getTopLevelWorldView();
+        if (worldView == null)
+        {
+            return;
+        }
+
+        CKObject ckObject = selectedCharacter.getCkObject();
+        if (ckObject == null)
+        {
+            return;
+        }
+
+        LocalPoint localPoint = ckObject.getLocation();
+        if (localPoint == null || !localPoint.isInScene())
+        {
+            return;
+        }
+
+        onAddMovement(true, localPoint);
+    }
+
+    public void onAddMovement(boolean newKeyFrame, LocalPoint localPoint)
+    {
+        WorldView worldView = client.getTopLevelWorldView();
+        if (worldView == null)
+        {
+            return;
+        }
+
+        //selectedCharacter.setInScene(true);
+        //selectedCharacter.setActive(true, true, true, clientThread);
+
         Programmer programmer = toolBox.getProgrammer();
 
         boolean poh = MovementManager.useLocalLocations(worldView);
 
         KeyFrame kf = selectedCharacter.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
-        if (kf == null)
+        if (newKeyFrame || kf == null)
         {
             int x = localPoint.getSceneX();
             int y = localPoint.getSceneY();
@@ -554,8 +621,7 @@ public class TimeSheetPanel extends JPanel
             initializeMovementKeyFrame(selectedCharacter, keyFrame.getTick(), worldView.getPlane(), poh, path, keyFrame.isLoop(), keyFrame.getSpeed(), keyFrame.getTurnRate());
         }
 
-        //programmer.register3DChanges(selectedCharacter);
-        selectedCharacter.setVisible(true, clientThread);
+        programmer.register3DChanges(selectedCharacter);
     }
 
     public void initializeMovementKeyFrame(Character character, double tick, int plane, boolean poh, int[][] path, boolean loop, double speed, int turnRate)
@@ -579,6 +645,145 @@ public class TimeSheetPanel extends JPanel
             kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, character, KeyFrameCharacterActionType.REMOVE));
         }
         addKeyFrameActions(kfa);
+    }
+
+    /**
+     * Adds a new HealthKeyFrame based on the last HealthKeyFrame as if the HitsplatKeyFrame argument were applied
+     */
+    public void initializeHealthKeyFrame(KeyFrameType type)
+    {
+        if (selectedCharacter == null)
+        {
+            return;
+        }
+
+        KeyFrame hitsplatKeyFrame = attributePanel.createKeyFrame(type, currentTime);
+        addKeyFrameAction(hitsplatKeyFrame);
+
+        HitsplatKeyFrame hitsKF = (HitsplatKeyFrame) hitsplatKeyFrame;
+
+        double duration;
+        HealthbarSprite sprite;
+        int maxHealth;
+        int currentHealth;
+
+        KeyFrame healthKeyFrame = selectedCharacter.findPreviousKeyFrame(KeyFrameType.HEALTH, currentTime, true);
+        if (healthKeyFrame == null)
+        {
+            duration = 3.0;
+            sprite = HealthbarSprite.DEFAULT;
+            maxHealth = 99;
+            currentHealth = 99;
+        }
+        else
+        {
+            HealthKeyFrame healthKF = (HealthKeyFrame) healthKeyFrame;
+            duration = healthKF.getDuration();
+            sprite = healthKF.getHealthbarSprite();
+            maxHealth = healthKF.getMaxHealth();
+            currentHealth = healthKF.getCurrentHealth();
+        }
+
+        int damage = hitsKF.getDamage();
+
+        int remaining = currentHealth - damage;
+        if (remaining < 0)
+        {
+            remaining = 0;
+        }
+
+        HealthKeyFrame nextKF = new HealthKeyFrame(
+                currentTime,
+                duration,
+                sprite,
+                maxHealth,
+                remaining);
+
+        addKeyFrameAction(nextKF);
+    }
+
+    public void addAnimationKeyFrameFromCache(WeaponAnimData weaponAnim)
+    {
+        AnimationKeyFrame keyFrame = new AnimationKeyFrame(
+                currentTime,
+                false,
+                -1,
+                0,
+                false,
+                false,
+                WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE),
+                WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.WALK),
+                WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.RUN),
+                WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_180),
+                WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_RIGHT),
+                WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_LEFT),
+                WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_RIGHT),
+                WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_LEFT));
+
+        addKeyFrameAction(keyFrame);
+    }
+
+    public void addSpotAnimKeyFrameFromCache(SpotanimData spotanimData)
+    {
+        KeyFrameType type = KeyFrameType.SPOTANIM;
+        KeyFrame sp1 = selectedCharacter.findKeyFrame(KeyFrameType.SPOTANIM, currentTime);
+        if (sp1 != null)
+        {
+            KeyFrame sp2 = selectedCharacter.findKeyFrame(KeyFrameType.SPOTANIM2, currentTime);
+            if (sp2 == null)
+            {
+                type = KeyFrameType.SPOTANIM2;
+            }
+        }
+
+        SpotAnimKeyFrame keyFrame = new SpotAnimKeyFrame(
+                plugin.getCurrentTick(),
+                type,
+                spotanimData.getId(),
+                false,
+                92);
+
+        addKeyFrameAction(keyFrame);
+    }
+
+    public void duplicateHitsplatKeyFrame(KeyFrameType previousType, KeyFrameType targetType)
+    {
+        KeyFrame kf = selectedCharacter.findPreviousKeyFrame(previousType, currentTime, true);
+        if (kf == null)
+        {
+            return;
+        }
+
+        HitsplatKeyFrame keyFrame = (HitsplatKeyFrame) kf;
+
+        HitsplatKeyFrame hkf = new HitsplatKeyFrame(
+                keyFrame.getTick(),
+                targetType,
+                keyFrame.getDuration(),
+                keyFrame.getSprite(),
+                keyFrame.getDamage());
+
+        addKeyFrameAction(hkf);
+    }
+
+    public void duplicateSpotanimKeyFrame(KeyFrameType previousType, KeyFrameType targetType)
+    {
+        KeyFrame kf = selectedCharacter.findPreviousKeyFrame(previousType, currentTime, true);
+        if (kf == null)
+        {
+            return;
+        }
+
+        SpotAnimKeyFrame keyFrame = (SpotAnimKeyFrame) kf;
+
+        SpotAnimKeyFrame spkf = new SpotAnimKeyFrame(
+                keyFrame.getTick(),
+                targetType,
+                keyFrame.getSpotAnimId(),
+                keyFrame.isLoop(),
+                keyFrame.getHeight());
+
+        addKeyFrameAction(spkf);
     }
 
     /**
@@ -679,11 +884,12 @@ public class TimeSheetPanel extends JPanel
 
     public void undo()
     {
-        if (undoStack == -1)
+        if (undoStack == -1 || keyFrameActions.length == 0)
         {
             return;
         }
 
+        selectedKeyFrames = new KeyFrame[0];
         KeyFrameAction[] lastActions = keyFrameActions[undoStack];
         for (int i = 0; i < lastActions.length; i++)
         {
@@ -701,7 +907,9 @@ public class TimeSheetPanel extends JPanel
 
                 if (actionType == KeyFrameCharacterActionType.REMOVE)
                 {
+                    KeyFrame keyFrame = keyFrameAction.getKeyFrame();
                     addKeyFrame(kfca.getCharacter(), keyFrameAction.getKeyFrame());
+                    selectedKeyFrames = ArrayUtils.add(selectedKeyFrames, keyFrame);
                 }
             }
         }
@@ -718,6 +926,7 @@ public class TimeSheetPanel extends JPanel
 
         undoStack++;
 
+        selectedKeyFrames = new KeyFrame[0];
         KeyFrameAction[] lastUndoneActions = keyFrameActions[undoStack];
         for (KeyFrameAction keyFrameAction : lastUndoneActions)
         {
@@ -727,7 +936,9 @@ public class TimeSheetPanel extends JPanel
                 KeyFrameCharacterActionType actionType = keyFrameCharacterAction.getCharacterActionType();
                 if (actionType == KeyFrameCharacterActionType.ADD)
                 {
-                    addKeyFrame(keyFrameCharacterAction.getCharacter(), keyFrameAction.getKeyFrame());
+                    KeyFrame keyFrame = keyFrameAction.getKeyFrame();
+                    addKeyFrame(keyFrameCharacterAction.getCharacter(), keyFrame);
+                    selectedKeyFrames = ArrayUtils.add(selectedKeyFrames, keyFrame);
                 }
 
                 if (actionType == KeyFrameCharacterActionType.REMOVE)
@@ -744,10 +955,16 @@ public class TimeSheetPanel extends JPanel
         summarySheet.setSelectedCharacter(character);
         attributeSheet.setSelectedCharacter(character);
         attributePanel.setSelectedCharacter(character);
+        attributePanel.resetAttributes(character, currentTime);
     }
 
     public void setCurrentTime(double tick, boolean playing)
     {
+        if (!playing)
+        {
+            toolBox.getProgrammer().pause();
+        }
+
         if (tick < -ABSOLUTE_MAX_SEQUENCE_LENGTH)
         {
             tick = -ABSOLUTE_MAX_SEQUENCE_LENGTH;
@@ -764,13 +981,16 @@ public class TimeSheetPanel extends JPanel
 
         Programmer programmer = toolBox.getProgrammer();
 
-        if (playing)
+        if (client.getGameState() == GameState.LOGGED_IN)
         {
-            programmer.updateProgramsOnTick();
-        }
-        else
-        {
-            programmer.updatePrograms(tick);
+            if (playing)
+            {
+                programmer.updateProgramsOnTick();
+            }
+            else
+            {
+                programmer.updatePrograms(tick);
+            }
         }
 
         onCurrentTimeChanged(tick);
@@ -870,27 +1090,15 @@ public class TimeSheetPanel extends JPanel
         playButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
         playButton.addActionListener(e -> toolBox.getProgrammer().togglePlay());
 
-        JPanel backPanel = new JPanel();
-        backPanel.setLayout(new BoxLayout(backPanel, BoxLayout.PAGE_AXIS));
-        JButton backSummarySheet = new JButton(new ImageIcon(SKIP_LEFT));
         JButton backAttributeSheet = new JButton(new ImageIcon(SKIP_LEFT));
-        backSummarySheet.setBackground(ColorScheme.DARK_GRAY_COLOR);
         backAttributeSheet.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        backSummarySheet.addActionListener(e -> onSummarySkipPrevious());
+        backAttributeSheet.setPreferredSize(new Dimension(50, 35));
         backAttributeSheet.addActionListener(e -> onAttributeSkipPrevious());
-        backPanel.add(backSummarySheet);
-        backPanel.add(backAttributeSheet);
 
-        JPanel forwardPanel = new JPanel();
-        forwardPanel.setLayout(new BoxLayout(forwardPanel, BoxLayout.PAGE_AXIS));
-        JButton forwardSummarySheet = new JButton(new ImageIcon(SKIP_RIGHT));
         JButton forwardAttributeSheet = new JButton(new ImageIcon(SKIP_RIGHT));
-        forwardSummarySheet.setBackground(ColorScheme.DARK_GRAY_COLOR);
         forwardAttributeSheet.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        forwardSummarySheet.addActionListener(e -> onSummarySkipForward());
+        forwardAttributeSheet.setPreferredSize(new Dimension(50, 35));
         forwardAttributeSheet.addActionListener(e -> onAttributeSkipForward());
-        forwardPanel.add(forwardSummarySheet);
-        forwardPanel.add(forwardAttributeSheet);
 
         c.weightx = 1;
         c.weighty = 1;
@@ -898,9 +1106,9 @@ public class TimeSheetPanel extends JPanel
         c.gridy = 0;
         JPanel controls = new JPanel();
         controls.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        controls.add(backPanel);
+        controls.add(backAttributeSheet);
         controls.add(playButton);
-        controls.add(forwardPanel);
+        controls.add(forwardAttributeSheet);
         controlPanel.add(controls, c);
     }
 
@@ -1344,7 +1552,6 @@ public class TimeSheetPanel extends JPanel
     private void updateSheets()
     {
         summarySheet.setHScroll(hScroll);
-        summarySheet.setVScroll(vScroll);
         summarySheet.setZoom(zoom);
         attributeSheet.setHScroll(hScroll);
         attributeSheet.setZoom(zoom);

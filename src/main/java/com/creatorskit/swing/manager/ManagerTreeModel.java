@@ -4,6 +4,7 @@ import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.swing.Folder;
 import com.creatorskit.swing.StringHandler;
+import com.creatorskit.swing.ToolBoxFrame;
 
 import javax.inject.Inject;
 import javax.swing.tree.*;
@@ -28,11 +29,13 @@ public class ManagerTreeModel extends DefaultTreeModel
     {
         DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
         if (node == root
-        || node == sidePanelNode
-        || node == managerNode)
+                || node == sidePanelNode
+                || node == managerNode)
         {
             return;
         }
+
+        ToolBoxFrame toolBox = plugin.getCreatorsPanel().getToolBox();
 
         //Check if node being modified is a Folder
         if (node.getUserObject() instanceof Folder)
@@ -41,7 +44,8 @@ public class ManagerTreeModel extends DefaultTreeModel
             String name = StringHandler.cleanString((String) newValue);
             folder.setName(name);
             node.setUserObject(folder);
-            plugin.getCreatorsPanel().getToolBox().getManagerPanel().getObjectLabel().setText("Current Folder: " + name);
+            nodeChanged(node);
+            toolBox.getManagerPanel().getObjectLabel().setText("Current Folder: " + name);
         }
 
         //Check if node being modified is an ObjectPanel
@@ -51,8 +55,9 @@ public class ManagerTreeModel extends DefaultTreeModel
             String name = StringHandler.cleanString((String) newValue);
             character.setName(name);
             character.getNameField().setText(name);
-            character.getProgram().getNameLabel().setText(name);
             node.setUserObject(character);
+            nodeChanged(node);
+            toolBox.getTimeSheetPanel().getAttributePanel().updateObjectLabel(character);
         }
     }
 }

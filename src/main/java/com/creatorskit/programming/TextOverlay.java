@@ -59,17 +59,22 @@ public class TextOverlay extends Overlay
                 continue;
             }
 
-            int duration = textKeyFrame.getDuration();
-            double startTick = textKeyFrame.getTick();
-            double currentTick = plugin.getCurrentTick();
-            if (currentTick > duration + startTick)
+            CKObject ckObject = character.getCkObject();
+            if (!ckObject.isActive())
             {
                 continue;
             }
 
-            CKObject ckObject = character.getCkObject();
             LocalPoint lp = ckObject.getLocation();
             if (lp == null || !lp.isInScene())
+            {
+                continue;
+            }
+
+            double duration = textKeyFrame.getDuration();
+            double startTick = textKeyFrame.getTick();
+            double currentTick = plugin.getCurrentTick();
+            if (currentTick > duration + startTick)
             {
                 continue;
             }
@@ -81,6 +86,11 @@ public class TextOverlay extends Overlay
             }
 
             Model model = ckObject.getModel();
+            if (model == null)
+            {
+                continue;
+            }
+
             model.calculateBoundsCylinder();
             int height = model.getModelHeight();
 

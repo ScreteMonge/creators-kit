@@ -45,6 +45,7 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -496,13 +497,7 @@ public class CreatorsPanel extends PluginPanel
 
         textField.addActionListener(e ->
         {
-            String text = StringHandler.cleanString(textField.getText());
-            textField.setText(text);
-            character.setName(text);
-            objectPanel.setName(text);
-            character.getProgram().getNameLabel().setText(text);
-            managerPanel.revalidate();
-            managerPanel.repaint();
+            onNameTextFieldChanged(character);
         });
 
         textField.addFocusListener(new FocusListener() {
@@ -512,13 +507,7 @@ public class CreatorsPanel extends PluginPanel
             @Override
             public void focusLost(FocusEvent e)
             {
-                String text = StringHandler.cleanString(textField.getText());
-                textField.setText(text);
-                objectPanel.setName(text);
-                character.setName(text);
-                programmerNameLabel.setText(text);
-                managerPanel.revalidate();
-                managerPanel.repaint();
+                onNameTextFieldChanged(character);
             }
         });
 
@@ -920,6 +909,28 @@ public class CreatorsPanel extends PluginPanel
         return duplicatesArrays;
     }
 
+    public void onNameTextFieldChanged(Character character)
+    {
+        JTextField textField = character.getNameField();
+        String text = StringHandler.cleanString(textField.getText());
+        textField.setText(text);
+        character.getObjectPanel().setName(text);
+        character.getProgram().getNameLabel().setText(text);
+        character.setName(text);
+
+        DefaultMutableTreeNode node = character.getLinkedManagerNode();
+        if (node == null)
+        {
+            return;
+        }
+
+        toolBox.getManagerPanel().getManagerTree().getTreeModel().nodeChanged(node);
+        toolBox.getTimeSheetPanel().getAttributePanel().updateObjectLabel(character);
+
+        toolBox.revalidate();
+        toolBox.repaint();
+    }
+
     public void onDeleteButtonPressed(Character character)
     {
         deleteCharacters(new Character[]{character});
@@ -936,7 +947,22 @@ public class CreatorsPanel extends PluginPanel
 
         for (Character c : charactersToRemove)
         {
-            clientThread.invokeLater(() -> c.getCkObject().setActive(false));
+            clientThread.invokeLater(() ->
+            {
+                c.getCkObject().setActive(false);
+
+                CKObject sp1 = c.getSpotAnim1();
+                if (sp1 != null)
+                {
+                    sp1.setActive(false);
+                }
+
+                CKObject sp2 = c.getSpotAnim2();
+                if (sp2 != null)
+                {
+                    sp2.setActive(false);
+                }
+            });
             characters.remove(c);
             if (c == selectedCharacter)
             {
@@ -1343,7 +1369,8 @@ public class CreatorsPanel extends PluginPanel
             writer.write(string);
             writer.close();
             updateLoadedFile(file);
-            plugin.sendChatMessage("Saved successfully to: " + getFileName(file));
+            LocalTime time = LocalTime.now();
+            plugin.sendChatMessage("[" + time.getHour() + ":" + time.getMinute() + "] Saved successfully to: " + getFileName(file));
         }
         catch (IOException e)
         {
@@ -1409,7 +1436,7 @@ public class CreatorsPanel extends PluginPanel
                 }
             }
 
-            saves[i] = new ModelKeyFrameSave(keyFrame.getTick(), keyFrame.isUseCustomModel(), keyFrame.getModelId(), compId);
+            saves[i] = new ModelKeyFrameSave(keyFrame.getTick(), keyFrame.isUseCustomModel(), keyFrame.getModelId(), compId, keyFrame.getRadius());
         }
 
         return saves;
@@ -1428,7 +1455,7 @@ public class CreatorsPanel extends PluginPanel
                 customModel = customModels[save.getCustomModel()];
             }
 
-            keyFrames[i] = new ModelKeyFrame(save.getTick(), save.isUseCustomModel(), save.getModelId(), customModel);
+            keyFrames[i] = new ModelKeyFrame(save.getTick(), save.isUseCustomModel(), save.getModelId(), customModel, save.getRadius());
         }
 
         return keyFrames;
@@ -1544,7 +1571,7 @@ public class CreatorsPanel extends PluginPanel
                 }
             });
 
-            int option = fileChooser.showOpenDialog(this);
+            int option = fileChooser.showOpenDialog(null);
             if (option == JFileChooser.APPROVE_OPTION)
             {
                 File selectedFile = fileChooser.getSelectedFile();
@@ -1565,6 +1592,8 @@ public class CreatorsPanel extends PluginPanel
                     File finalSelectedFile = selectedFile;
                     clientThread.invokeLater(() -> loadSetup(finalSelectedFile, saveFile));
                     reader.close();
+                    LocalTime time = LocalTime.now();
+                    plugin.sendChatMessage("[" + time.getHour() + ":" + time.getMinute() + "] Loaded file: " + getFileName(finalSelectedFile));
                 }
                 catch (Exception e)
                 {
@@ -1582,6 +1611,8 @@ public class CreatorsPanel extends PluginPanel
             SetupSave saveFile = plugin.getGson().fromJson(reader, SetupSave.class);
             clientThread.invokeLater(() -> loadSetup(file, saveFile));
             reader.close();
+            LocalTime time = LocalTime.now();
+            plugin.sendChatMessage("[" + time.getHour() + ":" + time.getMinute() + "] Loaded file: " + getFileName(file));
         }
         catch (Exception e)
         {

@@ -46,6 +46,7 @@ public class KeyFrame
                         animKF.getActive(),
                         animKF.getStartFrame(),
                         animKF.isLoop(),
+                        animKF.isFreeze(),
                         animKF.getIdle(),
                         animKF.getWalk(),
                         animKF.getRun(),
@@ -74,7 +75,8 @@ public class KeyFrame
                         tick,
                         modelKF.isUseCustomModel(),
                         modelKF.getModelId(),
-                        modelKF.getCustomModel());
+                        modelKF.getCustomModel(),
+                        modelKF.getRadius());
             case TEXT:
                 TextKeyFrame textKF = (TextKeyFrame) keyFrame;
                 return new TextKeyFrame(
