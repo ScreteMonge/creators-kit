@@ -510,7 +510,7 @@ public class TimeSheetPanel extends JPanel
 
         double turnDuration = AttributePanel.calculateOrientationDuration(startOrientation, endOrientation, turnRate);
 
-        KeyFrame okf = new OrientationKeyFrame(
+        OrientationKeyFrame okf = new OrientationKeyFrame(
                 tick,
                 og,
                 startOrientation,
@@ -518,14 +518,39 @@ public class TimeSheetPanel extends JPanel
                 turnDuration,
                 turnRate);
 
-        KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(okf, character, KeyFrameCharacterActionType.ADD)};
+        addKeyFrameAction(okf);
+    }
 
-        KeyFrame keyFrameToReplace = addKeyFrame(character, okf);
-        if (keyFrameToReplace != null)
+    public void onAddOrientationMenuOptionPressed()
+    {
+        if (selectedCharacter == null)
         {
-            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, character, KeyFrameCharacterActionType.REMOVE));
+            return;
         }
-        addKeyFrameActions(kfa);
+
+        WorldView worldView = client.getTopLevelWorldView();
+        if (worldView == null)
+        {
+            return;
+        }
+
+        CKObject ckObject = selectedCharacter.getCkObject();
+        if (ckObject == null)
+        {
+            return;
+        }
+
+        int orientation = ckObject.getOrientation();
+
+        OrientationKeyFrame okf = new OrientationKeyFrame(
+                currentTime,
+                OrientationGoal.POINT,
+                orientation,
+                orientation,
+                1,
+                -1);
+
+        addKeyFrameAction(okf);
     }
 
     public void onAddMovementKeyPressed()
