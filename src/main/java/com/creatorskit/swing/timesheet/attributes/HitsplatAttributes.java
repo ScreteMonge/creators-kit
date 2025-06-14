@@ -2,8 +2,8 @@ package com.creatorskit.swing.timesheet.attributes;
 
 import com.creatorskit.swing.timesheet.keyframe.HitsplatKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrameState;
 import com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite;
+import com.creatorskit.swing.timesheet.keyframe.settings.HitsplatVariant;
 import lombok.Getter;
 
 import javax.swing.*;
@@ -14,6 +14,7 @@ public class HitsplatAttributes extends Attributes
 {
     private final JSpinner duration = new JSpinner();
     private final JComboBox<HitsplatSprite> sprite = new JComboBox<>();
+    private final JComboBox<HitsplatVariant> variant = new JComboBox<>();
     private final JSpinner damage = new JSpinner();
 
     public HitsplatAttributes()
@@ -27,6 +28,7 @@ public class HitsplatAttributes extends Attributes
         HitsplatKeyFrame kf = (HitsplatKeyFrame) keyFrame;
         duration.setValue(kf.getDuration());
         sprite.setSelectedItem(kf.getSprite());
+        variant.setSelectedItem(kf.getVariant());
         damage.setValue(kf.getDamage());
     }
 
@@ -35,6 +37,7 @@ public class HitsplatAttributes extends Attributes
     {
         duration.setBackground(color);
         sprite.setBackground(color);
+        variant.setBackground(color);
         damage.setBackground(color);
     }
 
@@ -45,6 +48,7 @@ public class HitsplatAttributes extends Attributes
                 {
                         duration,
                         sprite,
+                        variant,
                         damage
                 };
     }
@@ -62,6 +66,11 @@ public class HitsplatAttributes extends Attributes
             sprite.setBackground(getRed());
         });
 
+        variant.addItemListener(e ->
+        {
+            variant.setBackground(getRed());
+        });
+
         damage.addChangeListener(e ->
         {
             damage.setBackground(getRed());
@@ -73,6 +82,7 @@ public class HitsplatAttributes extends Attributes
     {
         duration.setValue(-1);
         sprite.setSelectedItem(HitsplatSprite.NONE);
+        variant.setSelectedItem(HitsplatVariant.NORMAL);
         damage.setValue(0);
         super.resetAttributes(resetBackground);
     }

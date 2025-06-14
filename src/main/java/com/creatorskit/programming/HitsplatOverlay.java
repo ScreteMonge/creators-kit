@@ -5,6 +5,7 @@ import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.CKObject;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite;
+import com.creatorskit.swing.timesheet.keyframe.settings.HitsplatVariant;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.Model;
@@ -50,12 +51,6 @@ public class HitsplatOverlay extends Overlay
             return null;
         }
 
-        BufferedImage spriteBase = spriteManager.getSprite(HitsplatSprite.BLOCK.getSpriteID(), 0);
-        if (spriteBase == null)
-        {
-            return null;
-        }
-
         ArrayList<Character> characters = plugin.getCharacters();
         for (int i = 0; i < characters.size(); i++)
         {
@@ -86,12 +81,6 @@ public class HitsplatOverlay extends Overlay
             model.calculateBoundsCylinder();
             int height = model.getModelHeight();
 
-            Point point = Perspective.getCanvasImageLocation(client, lp, spriteBase, height / 2);
-            if (point == null)
-            {
-                continue;
-            }
-
             for (int e = 0; e < KeyFrameType.HITSPLAT_TYPES.length; e++)
             {
                 KeyFrameType hitsplat = KeyFrameType.HITSPLAT_TYPES[e];
@@ -116,16 +105,19 @@ public class HitsplatOverlay extends Overlay
                 }
 
                 HitsplatSprite sprite = keyFrame.getSprite();
+                HitsplatVariant variant = keyFrame.getVariant();
+                sprite = getVariant(sprite, variant);
+
                 int damage = keyFrame.getDamage();
 
-                renderHitsplat(graphics, sprite, height, buffers[e][0], buffers[e][1], point, damage, lp);
+                renderHitsplat(graphics, sprite, height, buffers[e][0], buffers[e][1], damage, lp);
             }
         }
 
         return null;
     }
 
-    private void renderHitsplat(Graphics2D graphics, HitsplatSprite sprite, int height, int xBuffer, int yBuffer, Point base, int damage, LocalPoint lp)
+    private void renderHitsplat(Graphics2D graphics, HitsplatSprite sprite, int height, int xBuffer, int yBuffer, int damage, LocalPoint lp)
     {
         if (sprite == HitsplatSprite.NONE)
         {
@@ -133,15 +125,142 @@ public class HitsplatOverlay extends Overlay
         }
 
         BufferedImage spriteImage = spriteManager.getSprite(sprite.getSpriteID(), 0);
+        if (spriteImage == null)
+        {
+            return;
+        }
+
+        int width = spriteImage.getWidth();
+
+        Point base = Perspective.getCanvasImageLocation(client, lp, spriteImage, height / 2);
+        if (base == null)
+        {
+            return;
+        }
+
         Point p = new Point(base.getX() + xBuffer, base.getY() + yBuffer + Y_BUFFER);
         OverlayUtil.renderImageLocation(graphics, p, spriteImage);
+
+        if (damage == -1)
+        {
+            return;
+        }
 
         String text = "" + damage;
         FontMetrics metrics = graphics.getFontMetrics();
         int textHeight = metrics.getHeight() / 2;
 
         Point textPoint = Perspective.getCanvasTextLocation(client, graphics, lp, text, height / 2);
-        Point textP = new Point(textPoint.getX() + xBuffer + X_BUFFER, textPoint.getY() + textHeight + yBuffer + Y_BUFFER);
+
+        int textXBuffer = 0;
+        if (width % 2 == 0)
+        {
+            textXBuffer = X_BUFFER;
+        }
+
+        Point textP = new Point(textPoint.getX() + xBuffer + textXBuffer, textPoint.getY() + textHeight + yBuffer + Y_BUFFER);
         OverlayUtil.renderTextLocation(graphics, textP, text, Color.WHITE);
+    }
+
+    private HitsplatSprite getVariant(HitsplatSprite sprite, HitsplatVariant variant)
+    {
+        if (variant == null || variant == HitsplatVariant.NORMAL)
+        {
+            return sprite;
+        }
+
+        switch (sprite)
+        {
+            case BLOCK:
+                switch (variant)
+                {
+                    case MAX:
+                        return HitsplatSprite.BLOCK;
+                    case OTHER:
+                        return HitsplatSprite.BLOCK_OTHER;
+                }
+            case DAMAGE:
+                switch (variant)
+                {
+                    case MAX:
+                        return HitsplatSprite.DAMAGE_MAX;
+                    case OTHER:
+                        return HitsplatSprite.DAMAGE_OTHER;
+                }
+            case POISON:
+                switch (variant)
+                {
+                    case MAX:
+                        return HitsplatSprite.POISON_MAX;
+                    case OTHER:
+                        return HitsplatSprite.POISON_OTHER;
+                }
+            case VENOM:
+                switch (variant)
+                {
+                    case MAX:
+                        return HitsplatSprite.VENOM;
+                    case OTHER:
+                        return HitsplatSprite.VENOM_OTHER;
+                }
+            case SHIELD:
+                switch (variant)
+                {
+                    case MAX:
+                        return HitsplatSprite.SHIELD_MAX;
+                    case OTHER:
+                        return HitsplatSprite.SHIELD_OTHER;
+                }
+            case FREEZE:
+                switch (variant)
+                {
+                    case MAX:
+                        return HitsplatSprite.FREEZE;
+                    case OTHER:
+                        return HitsplatSprite.FREEZE_OTHER;
+                }
+            case ARMOUR:
+                switch (variant)
+                {
+                    case MAX:
+                        return HitsplatSprite.ARMOUR_MAX;
+                    case OTHER:
+                        return HitsplatSprite.ARMOUR;
+                }
+            case POISE:
+                switch (variant)
+                {
+                    case MAX:
+                        return HitsplatSprite.POISE_MAX;
+                    case OTHER:
+                        return HitsplatSprite.POISE_OTHER;
+                }
+            case PRAYER_DRAIN:
+                switch (variant)
+                {
+                    case MAX:
+                        return HitsplatSprite.PRAYER_DRAIN_MAX;
+                    case OTHER:
+                        return HitsplatSprite.PRAYER_DRAIN_OTHER;
+                }
+            case CHARGE_UP:
+                switch (variant)
+                {
+                    case MAX:
+                        return HitsplatSprite.CHARGE_UP;
+                    case OTHER:
+                        return HitsplatSprite.CHARGE_UP_OTHER;
+                }
+            case CHARGE_DOWN:
+                switch (variant)
+                {
+                    case MAX:
+                        return HitsplatSprite.CHARGE_DOWN;
+                    case OTHER:
+                        return HitsplatSprite.CHARGE_DOWN_OTHER;
+                }
+        }
+
+        return sprite;
     }
 }

@@ -361,6 +361,7 @@ public class AttributePanel extends JPanel
                         keyFrameType,
                         (int) attributes.getDuration().getValue(),
                         (HitsplatSprite) attributes.getSprite().getSelectedItem(),
+                        (HitsplatVariant) attributes.getVariant().getSelectedItem(),
                         (int) attributes.getDamage().getValue()
                 );
         }
@@ -2069,24 +2070,54 @@ public class AttributePanel extends JPanel
         sprite.addItem(HitsplatSprite.POISON);
         sprite.addItem(HitsplatSprite.VENOM);
         sprite.addItem(HitsplatSprite.HEAL);
+        sprite.addItem(HitsplatSprite.SHIELD);
         sprite.addItem(HitsplatSprite.DISEASE);
+        sprite.addItem(HitsplatSprite.FREEZE);
+        sprite.addItem(HitsplatSprite.NO_KILL_CREDIT);
+        sprite.addItem(HitsplatSprite.ARMOUR);
+        sprite.addItem(HitsplatSprite.BURN);
+        sprite.addItem(HitsplatSprite.BLEED);
+        sprite.addItem(HitsplatSprite.CORRUPTION);
+        sprite.addItem(HitsplatSprite.DOOM);
+        sprite.addItem(HitsplatSprite.POISE);
+        sprite.addItem(HitsplatSprite.PRAYER_DRAIN);
+        sprite.addItem(HitsplatSprite.SANITY_DRAIN);
+        sprite.addItem(HitsplatSprite.SANITY_RESTORE);
+        sprite.addItem(HitsplatSprite.CHARGE_UP);
+        sprite.addItem(HitsplatSprite.CHARGE_DOWN);
         card.add(sprite, c);
 
         c.gridx = 0;
         c.gridy = 3;
+        JLabel variantLabel = new JLabel("Variant: ");
+        variantLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(variantLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 3;
+        JComboBox<HitsplatVariant> variant = attributes.getVariant();
+        variant.setToolTipText("Set the Hitsplat variant to display");
+        variant.setFocusable(false);
+        variant.addItem(HitsplatVariant.NORMAL);
+        variant.addItem(HitsplatVariant.MAX);
+        variant.addItem(HitsplatVariant.OTHER);
+        card.add(variant, c);
+
+        c.gridx = 0;
+        c.gridy = 4;
         JLabel damageLabel = new JLabel("Damage: ");
         damageLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(damageLabel, c);
 
         c.gridx = 1;
-        c.gridy = 3;
+        c.gridy = 4;
         JSpinner damage = attributes.getDamage();
-        damage.setToolTipText("Set the damage value to show");
-        damage.setModel(new SpinnerNumberModel(0, 0, 999, 1));
+        damage.setToolTipText("Set the damage value to show on the hisplat. -1 will not render any damage number");
+        damage.setModel(new SpinnerNumberModel(0, -1, 999, 1));
         card.add(damage, c);
 
         c.gridx = 2;
-        c.gridy = 3;
+        c.gridy = 4;
         JButton keyFrameHealth = new JButton("Quick KeyFrame Hitsplat/Health");
         keyFrameHealth.setToolTipText("Creates the Hitsplat KeyFrame and an appropriate Health KeyFrame as if this damage were applied");
         keyFrameHealth.setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -2098,14 +2129,14 @@ public class AttributePanel extends JPanel
         c.weightx = 1;
         c.weighty = 1;
         c.gridx = 3;
-        c.gridy = 4;
+        c.gridy = 5;
         JLabel empty1 = new JLabel("");
         card.add(empty1, c);
 
         c.weightx = 0;
         c.weighty = 0;
         c.gridx = 5;
-        c.gridy = 6;
+        c.gridy = 7;
         JPanel duplicatePanel = new JPanel();
         duplicatePanel.setLayout(new GridLayout(0, 1, 2, 2));
         card.add(duplicatePanel, c);

@@ -116,6 +116,7 @@ public class KeyFrame
                         type,
                         hitsplatKF.getDuration(),
                         hitsplatKF.getSprite(),
+                        hitsplatKF.getVariant(),
                         hitsplatKF.getDamage());
         }
     }

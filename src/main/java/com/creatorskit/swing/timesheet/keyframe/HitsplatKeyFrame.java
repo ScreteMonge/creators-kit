@@ -1,6 +1,7 @@
 package com.creatorskit.swing.timesheet.keyframe;
 
 import com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite;
+import com.creatorskit.swing.timesheet.keyframe.settings.HitsplatVariant;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,13 +13,15 @@ public class HitsplatKeyFrame extends KeyFrame
 
     private int duration;
     private HitsplatSprite sprite;
+    private HitsplatVariant variant;
     private int damage;
 
-    public HitsplatKeyFrame(double tick, KeyFrameType hitsplatType, int duration, HitsplatSprite sprite, int damage)
+    public HitsplatKeyFrame(double tick, KeyFrameType hitsplatType, int duration, HitsplatSprite sprite, HitsplatVariant variant, int damage)
     {
         super(hitsplatType, tick);
         this.duration = duration;
         this.sprite = sprite;
+        this.variant = variant;
         this.damage = damage;
     }
 }

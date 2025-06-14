@@ -22,7 +22,6 @@ import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameAction;
 import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameCharacterActionType;
 import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameActionType;
 import com.creatorskit.swing.timesheet.keyframe.settings.HealthbarSprite;
-import com.creatorskit.swing.timesheet.keyframe.settings.HitsplatType;
 import com.creatorskit.swing.timesheet.sheets.AttributeSheet;
 import com.creatorskit.swing.timesheet.sheets.SummarySheet;
 import com.creatorskit.swing.timesheet.sheets.TimeSheet;
@@ -790,6 +789,7 @@ public class TimeSheetPanel extends JPanel
                 targetType,
                 keyFrame.getDuration(),
                 keyFrame.getSprite(),
+                keyFrame.getVariant(),
                 keyFrame.getDamage());
 
         addKeyFrameAction(hkf);
