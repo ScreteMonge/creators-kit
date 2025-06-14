@@ -8,6 +8,8 @@ import lombok.Setter;
 @Setter
 public class OrientationKeyFrame extends KeyFrame
 {
+    public static final int TURN_RATE = 32; //In JUnits/clientTick
+
     private OrientationGoal goal;
     private int start;
     private int end;

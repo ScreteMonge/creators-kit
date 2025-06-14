@@ -2,6 +2,7 @@ package com.creatorskit.swing.timesheet;
 
 import com.creatorskit.CKObject;
 import com.creatorskit.Character;
+import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.DataFinder;
 import com.creatorskit.models.datatypes.PlayerAnimationType;
@@ -56,6 +57,8 @@ public class TimeSheetPanel extends JPanel
     private Client client;
     private ClientThread clientThread;
     private final CreatorsPlugin plugin;
+    private final CreatorsConfig config;
+
     private final GridBagConstraints c = new GridBagConstraints();
     private final ToolBoxFrame toolBox;
     private final DataFinder dataFinder;
@@ -103,11 +106,12 @@ public class TimeSheetPanel extends JPanel
     private int undoStack = 0;
 
     @Inject
-    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, MovementManager movementManager)
+    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, CreatorsConfig config, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, MovementManager movementManager)
     {
         this.client = client;
         this.toolBox = toolBox;
         this.plugin = plugin;
+        this.config = config;
         this.clientThread = clientThread;
         this.dataFinder = dataFinder;
         this.managerTree = managerTree;
@@ -1139,7 +1143,7 @@ public class TimeSheetPanel extends JPanel
 
     private void setupAttributePanel()
     {
-        attributePanel = new AttributePanel(client, clientThread, this, dataFinder);
+        attributePanel = new AttributePanel(client, clientThread, config, this, dataFinder);
         summarySheet = new SummarySheet(toolBox, managerTree, attributePanel);
         attributeSheet = new AttributeSheet(toolBox, managerTree, attributePanel);
     }

@@ -33,7 +33,6 @@ public class Programmer
     private final int GOLDEN_CHIN = 29757;
     private final int TILE_LENGTH = 128;
     private final int TILE_DIAGONAL = 181; //Math.sqrt(Math.pow(128, 2) + Math.pow(128, 2))
-    public static final double TURN_RATE = 32; //In JUnits/clientTick; Derived by examining turn rates in game
 
     @Getter
     @Setter
@@ -235,10 +234,6 @@ public class Programmer
         }
 
         double turnRate = mkf.getTurnRate();
-        if (turnRate == -1)
-        {
-            turnRate = TURN_RATE;
-        }
 
         MovementComposition mc = getMovementComposition(worldView, character, mkf, currentStep, stepsComplete, orientationAction, clientTicksPassed, turnRate);
         if (mc == null)
@@ -332,10 +327,6 @@ public class Programmer
         }
 
         double turnRate = mkf.getTurnRate();
-        if (turnRate == -1)
-        {
-            turnRate = TURN_RATE;
-        }
 
         MovementComposition mc = getMovementComposition(worldView, character, mkf, currentStep, stepsComplete, OrientationAction.SET, clientTicksPassed, turnRate);
 
@@ -450,10 +441,6 @@ public class Programmer
 
         int difference = Orientation.subtract(end, start);
         double turnRate = keyFrame.getTurnRate();
-        if (turnRate == -1)
-        {
-            turnRate = TURN_RATE;
-        }
 
         double rotation = turnRate * ticksPassed;
 
@@ -513,10 +500,6 @@ public class Programmer
 
         int difference = Orientation.subtract(end, start);
         double turnRate = keyFrame.getTurnRate();
-        if (turnRate == -1)
-        {
-            turnRate = TURN_RATE;
-        }
 
         double rotation = turnRate * ticksPassed * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH;
 

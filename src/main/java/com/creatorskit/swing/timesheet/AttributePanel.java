@@ -2,11 +2,11 @@ package com.creatorskit.swing.timesheet;
 
 import com.creatorskit.CKObject;
 import com.creatorskit.Character;
+import com.creatorskit.CreatorsConfig;
 import com.creatorskit.models.CustomModel;
 import com.creatorskit.models.DataFinder;
 import com.creatorskit.models.datatypes.*;
 import com.creatorskit.programming.MovementManager;
-import com.creatorskit.programming.Programmer;
 import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.programming.orientation.OrientationGoal;
 import com.creatorskit.swing.searchabletable.JFilterableTable;
@@ -40,6 +40,7 @@ public class AttributePanel extends JPanel
 {
     private Client client;
     private ClientThread clientThread;
+    private CreatorsConfig config;
     private TimeSheetPanel timeSheetPanel;
     private DataFinder dataFinder;
 
@@ -102,10 +103,11 @@ public class AttributePanel extends JPanel
     private final Random random = new Random();
 
     @Inject
-    public AttributePanel(Client client, ClientThread clientThread, TimeSheetPanel timeSheetPanel, DataFinder dataFinder)
+    public AttributePanel(Client client, ClientThread clientThread, CreatorsConfig config, TimeSheetPanel timeSheetPanel, DataFinder dataFinder)
     {
         this.client = client;
         this.clientThread = clientThread;
+        this.config = config;
         this.timeSheetPanel = timeSheetPanel;
         this.dataFinder = dataFinder;
 
@@ -392,7 +394,10 @@ public class AttributePanel extends JPanel
         JLabel manualTitleHelp = new JLabel(new ImageIcon(HELP));
         manualTitleHelp.setHorizontalAlignment(SwingConstants.LEFT);
         manualTitleHelp.setBorder(new EmptyBorder(0, 4, 0, 4));
-        manualTitleHelp.setToolTipText("Set how the Object moves");
+        manualTitleHelp.setToolTipText("<html>Set how the Object moves. Hotkeys for adding and removing steps in the scene are as follows: " +
+                "<br>" + config.addProgramStepHotkey().toString() + ": adds program steps to the hovered tile" +
+                "<br>" + config.removeProgramStepHotkey().toString() + ": removes the last program step" +
+                "<br>" + config.clearProgramStepHotkey().toString() + ": clears all steps for the current Movement KeyFrame</html>");
         manualTitlePanel.add(manualTitleHelp);
 
         c.gridwidth = 1;
@@ -400,16 +405,17 @@ public class AttributePanel extends JPanel
         c.gridy = 1;
         JLabel loopLabel = new JLabel("Loop: ");
         loopLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(loopLabel, c);
+        //card.add(loopLabel, c);
 
         c.gridx = 1;
         c.gridy = 1;
         JComboBox<Toggle> loop = movementAttributes.getLoop();
+        loop.setToolTipText("Choose whether the program should loop its designated path");
         loop.setFocusable(false);
         loop.addItem(Toggle.DISABLE);
         loop.addItem(Toggle.ENABLE);
         loop.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        card.add(loop, c);
+        //card.add(loop, c);
 
         c.gridx = 0;
         c.gridy = 2;
@@ -420,6 +426,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 2;
         JSpinner speed = movementAttributes.getSpeed();
+        speed.setToolTipText("Set the speed at which the Object moves, in tiles/tick");
         speed.setModel(new SpinnerNumberModel(1.0, 0.5, 10, 0.5));
         card.add(speed, c);
 
@@ -432,8 +439,8 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 3;
         JSpinner turnRate = movementAttributes.getTurnRate();
-        turnRate.setToolTipText("Determines the rate at which the Object rotates during movement. -1 sets it to default value of 32");
-        turnRate.setModel(new SpinnerNumberModel(-1, -1, 2048, 1));
+        turnRate.setToolTipText("Determines the rate at which the Object rotates during movement in JUnits/clientTick");
+        turnRate.setModel(new SpinnerNumberModel(OrientationKeyFrame.TURN_RATE, 0, 2048, 1));
         card.add(turnRate, c);
 
         c.gridwidth = 1;
@@ -491,6 +498,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 1;
         JSpinner startFrame = animAttributes.getStartFrame();
+        startFrame.setToolTipText("Set the frame at which the animation starts at");
         startFrame.setModel(new SpinnerNumberModel(0, 0, 99999, 1));
         startFrame.setPreferredSize(spinnerSize);
         card.add(startFrame, c);
@@ -535,6 +543,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 4;
         JSpinner manual = animAttributes.getActive();
+        manual.setToolTipText("Set the Active animation. This animation overrides the Pose animation, and should be used when performing an action like an attack or emote");
         manual.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
         manual.setPreferredSize(spinnerSize);
         card.add(manual, c);
@@ -548,6 +557,7 @@ public class AttributePanel extends JPanel
         c.gridx = 3;
         c.gridy = 4;
         JComboBox<Toggle> loop = animAttributes.getLoop();
+        loop.setToolTipText("Sets whether the Active animation should loop until the next Animation KeyFrame");
         loop.setFocusable(false);
         loop.addItem(Toggle.DISABLE);
         loop.addItem(Toggle.ENABLE);
@@ -562,6 +572,7 @@ public class AttributePanel extends JPanel
         c.gridx = 5;
         c.gridy = 4;
         JComboBox<Toggle> freeze = animAttributes.getFreeze();
+        freeze.setToolTipText("Set whether the animation should freeze on the frame indicated by 1st Frame");
         freeze.setFocusable(false);
         freeze.addItem(Toggle.DISABLE);
         freeze.addItem(Toggle.ENABLE);
@@ -584,6 +595,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 6;
         JSpinner idle = animAttributes.getIdle();
+        idle.setToolTipText("The animation to play while standing idly without moving");
         idle.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
         idle.setPreferredSize(spinnerSize);
         card.add(idle, c);
@@ -597,6 +609,7 @@ public class AttributePanel extends JPanel
         c.gridx = 3;
         c.gridy = 6;
         JSpinner walk180 = animAttributes.getWalk180();
+        walk180.setToolTipText("The animation to play while moving and turning in a 180");
         walk180.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
         walk180.setPreferredSize(spinnerSize);
         card.add(walk180, c);
@@ -610,6 +623,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 7;
         JSpinner walk = animAttributes.getWalk();
+        walk.setToolTipText("The animation to play while walking");
         walk.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
         walk.setPreferredSize(spinnerSize);
         card.add(walk, c);
@@ -623,6 +637,7 @@ public class AttributePanel extends JPanel
         c.gridx = 3;
         c.gridy = 7;
         JSpinner walkRight = animAttributes.getWalkRight();
+        walkRight.setToolTipText("The animation to play while walking and rotating to the right");
         walkRight.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
         walkRight.setPreferredSize(spinnerSize);
         card.add(walkRight, c);
@@ -636,6 +651,7 @@ public class AttributePanel extends JPanel
         c.gridx = 5;
         c.gridy = 7;
         JSpinner idleRight = animAttributes.getIdleRight();
+        idleRight.setToolTipText("The animation to play while standing and rotating to the right");
         idleRight.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
         idleRight.setPreferredSize(spinnerSize);
         card.add(idleRight, c);
@@ -649,6 +665,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 8;
         JSpinner run = animAttributes.getRun();
+        run.setToolTipText("The animation to play while running");
         run.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
         run.setPreferredSize(spinnerSize);
         card.add(run, c);
@@ -662,6 +679,7 @@ public class AttributePanel extends JPanel
         c.gridx = 3;
         c.gridy = 8;
         JSpinner walkLeft = animAttributes.getWalkLeft();
+        walkLeft.setToolTipText("The animation to play while walking and rotating to the left");
         walkLeft.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
         walkLeft.setPreferredSize(spinnerSize);
         card.add(walkLeft, c);
@@ -675,6 +693,7 @@ public class AttributePanel extends JPanel
         c.gridx = 5;
         c.gridy = 8;
         JSpinner idleLeft = animAttributes.getIdleLeft();
+        idleLeft.setToolTipText("The animation to play while standing and rotating to the left");
         idleLeft.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
         idleLeft.setPreferredSize(spinnerSize);
         card.add(idleLeft, c);
@@ -690,6 +709,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 11;
         JTextField npcField = new JTextField("");
+        npcField.setToolTipText("Search up different NPCs, and double click the name to apply all of its Pose animations");
         npcField.setBackground(ColorScheme.DARK_GRAY_COLOR);
         card.add(npcField, c);
 
@@ -789,6 +809,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 12;
         JTextField itemField = new JTextField("");
+        itemField.setToolTipText("Search up all items, and double click the name to apply all of its Pose animations");
         itemField.setBackground(ColorScheme.DARK_GRAY_COLOR);
         card.add(itemField, c);
 
@@ -938,6 +959,7 @@ public class AttributePanel extends JPanel
         c.gridx = 4;
         c.gridy = 12;
         JButton addPlayer = new JButton("Unarmed");
+        addPlayer.setToolTipText("Apply all the default Pose animations for an unarmed player");
         addPlayer.setBackground(ColorScheme.DARK_GRAY_COLOR);
         addPlayer.addActionListener(e ->
         {
@@ -1006,6 +1028,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 13;
         JTextField animField = new JTextField("");
+        animField.setToolTipText("Search up all animations, and double click the name to apply it as the Active animation");
         animField.setBackground(ColorScheme.DARK_GRAY_COLOR);
         card.add(animField, c);
 
@@ -1128,8 +1151,10 @@ public class AttributePanel extends JPanel
         manualTitleHelp.setHorizontalAlignment(SwingConstants.LEFT);
         manualTitleHelp.setBorder(new EmptyBorder(0, 4, 0, 4));
         manualTitleHelp.setToolTipText("<html>Setting an Orientation keyframe allows you to take direct control of an Object's orientation" +
-                "<br>Otherwise, the Object's orientation is instead based off of the direction of its movement." +
-                "<br>Start is the orientaiton to set at the start of the keyframe, while End determines where the Object will eventually point</html>");
+                "<br>Otherwise, the Object's orientation is instead based off of the direction of its movement" +
+                "<br>Start is the orientation to set at the start of the keyframe, while End determines where the Object will eventually point" +
+                "<br>Use Ctrl+[ on a tile to set that orientation, relative to the Object's current tile, as the Start" +
+                "<br>Use Ctrl+] on a tile to set that orientation, relative to the Object's current tile, as the End</html>");
         manualTitlePanel.add(manualTitleHelp);
 
         c.gridwidth = 1;
@@ -1142,6 +1167,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 1;
         JSpinner start = oriAttributes.getStart();
+        start.setToolTipText("Set the starting orientation that will apply at the beginning of the KeyFrame");
         start.setModel(new SpinnerNumberModel(0, 0, 2048, 1));
         start.setPreferredSize(spinnerSize);
         card.add(start, c);
@@ -1156,6 +1182,7 @@ public class AttributePanel extends JPanel
         c.gridx = 3;
         c.gridy = 1;
         JSpinner end = oriAttributes.getEnd();
+        end.setToolTipText("Set the ending orientation that the KeyFrame will try to reach");
         end.setModel(new SpinnerNumberModel(0, 0, 2048, 1));
         end.setPreferredSize(spinnerSize);
         card.add(end, c);
@@ -1164,6 +1191,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 2;
         JButton getStart = new JButton("Grab");
+        getStart.setToolTipText("Grab the current orientation of the Object, and apply it as the Start");
         getStart.addActionListener(e ->
         {
             Character selectedCharacter = timeSheetPanel.getSelectedCharacter();
@@ -1186,6 +1214,7 @@ public class AttributePanel extends JPanel
         c.gridx = 3;
         c.gridy = 2;
         JButton getEnd = new JButton("Grab");
+        getEnd.setToolTipText("Grab the current Orientation of the Object, and apply it as the End");
         getEnd.addActionListener(e ->
         {
             Character selectedCharacter = timeSheetPanel.getSelectedCharacter();
@@ -1214,6 +1243,8 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 3;
         JSpinner duration = oriAttributes.getDuration();
+        duration.setToolTipText("<html>Set the duration for how long the Object will attempt to point towards its End orientation" +
+                "<br>If the Object reaches the End orientation, it will remain in that state until the Duration is over, regardless of its movement trajectory</html>");
         duration.setModel(new SpinnerNumberModel(1.0, 0, TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.1));
         duration.setPreferredSize(spinnerSize);
         card.add(duration, c);
@@ -1222,7 +1253,7 @@ public class AttributePanel extends JPanel
         c.gridx = 2;
         c.gridy = 3;
         JButton calculate = new JButton("Calculate");
-        calculate.setToolTipText("Calculates the appropriate duration based on the start and end orientation and the current turn rate");
+        calculate.setToolTipText("Calculates the exact duration based on the start and end orientation and the current turn rate");
         calculate.setBackground(ColorScheme.DARK_GRAY_COLOR);
         card.add(calculate, c);
 
@@ -1236,8 +1267,8 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 4;
         JSpinner turnRate = oriAttributes.getTurnRate();
-        turnRate.setToolTipText("Determines the rate at which the Object rotates. -1 sets it to default value of 32 JUnits/clientTick");
-        turnRate.setModel(new SpinnerNumberModel(-1, -1, 2048, 1));
+        turnRate.setToolTipText("Determines the rate at which the Object rotates in JUnits/clientTick");
+        turnRate.setModel(new SpinnerNumberModel(OrientationKeyFrame.TURN_RATE, 0, 2048, 1));
         card.add(turnRate, c);
 
         calculate.addActionListener(e ->
@@ -1260,11 +1291,6 @@ public class AttributePanel extends JPanel
     public static double calculateOrientationDuration(int start, int end, double turnRate)
     {
         int difference = Orientation.subtract(end, start);
-        if (turnRate == -1)
-        {
-            turnRate = Programmer.TURN_RATE;
-        }
-
         double ticks = (double) difference / turnRate * Constants.CLIENT_TICK_LENGTH / Constants.GAME_TICK_LENGTH;
         int scale = (int) Math.pow(10, 1);
         return Math.abs(Math.ceil(ticks * scale) / scale);
@@ -1290,7 +1316,7 @@ public class AttributePanel extends JPanel
         manualTitlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
         card.add(manualTitlePanel, c);
 
-        JLabel manualTitle = new JLabel("Set Spawn");
+        JLabel manualTitle = new JLabel("Spawn");
         manualTitle.setHorizontalAlignment(SwingConstants.LEFT);
         manualTitle.setFont(FontManager.getRunescapeBoldFont());
         manualTitlePanel.add(manualTitle);
@@ -1301,9 +1327,17 @@ public class AttributePanel extends JPanel
         manualTitleHelp.setToolTipText("Set whether the object appears or not");
         manualTitlePanel.add(manualTitleHelp);
 
+        c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 1;
+        JLabel spawnLabel = new JLabel("Spawn status: ");
+        spawnLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(spawnLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 1;
         JComboBox<Toggle> manualCheckbox = spawnAttributes.getSpawn();
+        manualCheckbox.setToolTipText("Sets whether the Object is spawned or not");
         manualCheckbox.setFocusable(false);
         manualCheckbox.addItem(Toggle.ENABLE);
         manualCheckbox.addItem(Toggle.DISABLE);
@@ -1349,13 +1383,21 @@ public class AttributePanel extends JPanel
         manualTitleHelp.setHorizontalAlignment(SwingConstants.LEFT);
         manualTitleHelp.setBorder(new EmptyBorder(0, 4, 0, 4));
         manualTitleHelp.setToolTipText("<html>Switch between using a 3D model based on the Model Id from the cache," +
-                "<br>or a Custom Model that you've grabbed from the environment or created in the Model Anvil</html>");
+                "<br>or a Custom Model that you've grabbed from the environment, found via the Cache Searcher, or created in the Model Anvil</html>");
         manualTitlePanel.add(manualTitleHelp);
 
-        c.gridwidth = 2;
+        c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 1;
+        JLabel modelLabel = new JLabel("Model Type");
+        modelLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(modelLabel, c);
+
+        c.gridwidth = 2;
+        c.gridx = 1;
+        c.gridy = 1;
         JComboBox<ModelToggle> modelOverride = modelAttributes.getModelOverride();
+        modelOverride.setToolTipText("Set whether to use a 3D model based on Model Id, or a Custom Model found via this plugin");
         modelOverride.setFocusable(false);
         modelOverride.addItem(ModelToggle.CUSTOM_MODEL);
         modelOverride.addItem(ModelToggle.MODEL_ID);
@@ -1372,13 +1414,14 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 2;
         JComboBox<CustomModel> customComboBox = modelAttributes.getCustomModel();
+        customComboBox.setToolTipText("The Custom Model to apply, if Model Type is set to Custom");
         customComboBox.setFocusable(false);
         card.add(customComboBox, c);
 
         c.gridx = 2;
         c.gridy = 2;
         JButton grab = new JButton("Grab");
-        grab.setToolTipText("Grabs the original CustomModel and Radius set to the Object");
+        grab.setToolTipText("Grabs the original Custom Model and Radius set to the Object");
         card.add(grab, c);
 
         c.gridwidth = 1;
@@ -1391,6 +1434,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 3;
         JSpinner id = modelAttributes.getModelId();
+        id.setToolTipText("The Model Id from the cache to apply, if Model Type is set to Model Id");
         id.setValue(-1);
         id.setPreferredSize(spinnerSize);
         card.add(id, c);
@@ -1404,6 +1448,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 4;
         JSpinner radius = modelAttributes.getRadius();
+        radius.setToolTipText("How far the Model should render vs clip with other tiles around it, measured in 1/128th tiles");
         radius.setValue(60);
         radius.setPreferredSize(spinnerSize);
         card.add(radius, c);
@@ -1418,7 +1463,6 @@ public class AttributePanel extends JPanel
 
             customComboBox.setSelectedItem(selectedCharacter.getStoredModel());
             radius.setValue((int) selectedCharacter.getRadiusSpinner().getValue());
-
         });
 
         c.gridwidth = 1;
@@ -1473,6 +1517,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 1;
         JSpinner duration = textAttributes.getDuration();
+        duration.setToolTipText("How long the text should render for");
         duration.setModel(new SpinnerNumberModel(5.0, 0, 1000000, 0.1));
         card.add(duration, c);
 
@@ -1488,6 +1533,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 2;
         JTextArea text = textAttributes.getText();
+        text.setToolTipText("The text to show overhead");
         text.setText("");
         text.setLineWrap(true);
         card.add(text, c);
@@ -1522,7 +1568,7 @@ public class AttributePanel extends JPanel
         manualTitlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
         card.add(manualTitlePanel, c);
 
-        JLabel manualTitle = new JLabel("Overhead Prayer");
+        JLabel manualTitle = new JLabel("Overhead");
         manualTitle.setHorizontalAlignment(SwingConstants.LEFT);
         manualTitle.setFont(FontManager.getRunescapeBoldFont());
         manualTitlePanel.add(manualTitle);
@@ -1530,7 +1576,7 @@ public class AttributePanel extends JPanel
         JLabel manualTitleHelp = new JLabel(new ImageIcon(HELP));
         manualTitleHelp.setHorizontalAlignment(SwingConstants.LEFT);
         manualTitleHelp.setBorder(new EmptyBorder(0, 4, 0, 4));
-        manualTitleHelp.setToolTipText("Set the prayer icon to display over this Object's head");
+        manualTitleHelp.setToolTipText("Set the prayer and/or skull icon to display over this Object's head");
         manualTitlePanel.add(manualTitleHelp);
 
         c.gridwidth = 1;
@@ -1544,6 +1590,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 1;
         JComboBox<OverheadSprite> toggleSkull = overheadAttributes.getSkullSprite();
+        toggleSkull.setToolTipText("Set the skull icon to display overhead");
         toggleSkull.setFocusable(false);
         toggleSkull.addItem(OverheadSprite.NONE);
         toggleSkull.addItem(OverheadSprite.SKULL);
@@ -1577,6 +1624,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 2;
         JComboBox<OverheadSprite> spriteBox = overheadAttributes.getPrayerSprite();
+        spriteBox.setToolTipText("Set the prayer icon to display overhead");
         spriteBox.setFocusable(false);
         spriteBox.addItem(OverheadSprite.NONE);
         spriteBox.addItem(OverheadSprite.PROTECT_MAGIC);
@@ -1634,7 +1682,7 @@ public class AttributePanel extends JPanel
         JLabel manualTitleHelp = new JLabel(new ImageIcon(HELP));
         manualTitleHelp.setHorizontalAlignment(SwingConstants.LEFT);
         manualTitleHelp.setBorder(new EmptyBorder(0, 4, 0, 4));
-        manualTitleHelp.setToolTipText("Set the healthbar and hitsplats for this Object");
+        manualTitleHelp.setToolTipText("Set the healthbar state for this Object. The amount of damage that will be shown is the Current health relative to the Maximum health");
         manualTitlePanel.add(manualTitleHelp);
 
         c.gridwidth = 1;
@@ -1648,6 +1696,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 1;
         JSpinner duration = healthAttributes.getDuration();
+        duration.setToolTipText("Set how long the healthbar should appear for");
         duration.setModel(new SpinnerNumberModel(5.0, 0, 1000000, 1));
         card.add(duration, c);
 
@@ -1662,6 +1711,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 2;
         JComboBox<HealthbarSprite> healthbarSprite = healthAttributes.getHealthbarSprite();
+        healthbarSprite.setToolTipText("Set the sprite for the healthbar to show");
         healthbarSprite.setFocusable(false);
         healthbarSprite.addItem(HealthbarSprite.DEFAULT);
         card.add(healthbarSprite, c);
@@ -1677,6 +1727,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 3;
         JSpinner maxHealth = healthAttributes.getMaxHealth();
+        maxHealth.setToolTipText("Set the Object's maximum health");
         maxHealth.setModel(new SpinnerNumberModel(99, 0, 99999, 1));
         maxHealth.setValue(99);
         card.add(maxHealth, c);
@@ -1692,6 +1743,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 4;
         JSpinner currentHealth = healthAttributes.getCurrentHealth();
+        currentHealth.setToolTipText("Set the Object's current health remaining");
         currentHealth.setModel(new SpinnerNumberModel(99, 0, 99999, 1));
         currentHealth.setValue(99);
         card.add(currentHealth, c);
@@ -1772,6 +1824,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 2;
         JComboBox<Toggle> loop = spAttributes.getLoop();
+        loop.setToolTipText("Set whether the SpotAnim animation should loop");
         loop.setFocusable(false);
         loop.addItem(Toggle.DISABLE);
         loop.addItem(Toggle.ENABLE);
@@ -1786,6 +1839,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 3;
         JSpinner height = spAttributes.getHeight();
+        height.setToolTipText("Sets the height at which the SpotAnim spawns");
         height.setModel(new SpinnerNumberModel(92, 0, 9999, 1));
         card.add(height, c);
 
@@ -1799,6 +1853,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 4;
         JTextField spotanimField = new JTextField("");
+        spotanimField.setToolTipText("Find all SpotAnims from the cache, and double click the name to apply its Id");
         spotanimField.setBackground(ColorScheme.DARK_GRAY_COLOR);
         card.add(spotanimField, c);
 
@@ -1994,8 +2049,8 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 1;
         JSpinner duration = attributes.getDuration();
+        duration.setToolTipText("Set the duration, in game ticks, for how long the Hitsplat lasts. -1 sets it to default value, which is 5/3 ticks");
         duration.setModel(new SpinnerNumberModel(-1, -1, 1000000, 1));
-        duration.setToolTipText("Set the duration, in game ticks, for how long the hitsplats last. -1 sets it to default value, which is 5/3 ticks");
         card.add(duration, c);
 
         c.gridx = 0;
@@ -2007,6 +2062,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 2;
         JComboBox<HitsplatSprite> sprite = attributes.getSprite();
+        sprite.setToolTipText("Set the Hitsplat sprite to display");
         sprite.setFocusable(false);
         sprite.addItem(HitsplatSprite.BLOCK);
         sprite.addItem(HitsplatSprite.DAMAGE);
@@ -2025,6 +2081,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 3;
         JSpinner damage = attributes.getDamage();
+        damage.setToolTipText("Set the damage value to show");
         damage.setModel(new SpinnerNumberModel(0, 0, 999, 1));
         card.add(damage, c);
 

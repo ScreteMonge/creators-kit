@@ -5,8 +5,8 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public enum ModelToggle
 {
-    MODEL_ID("Use Model Id"),
-    CUSTOM_MODEL("Use Custom Model")
+    MODEL_ID("Model Id"),
+    CUSTOM_MODEL("Custom Model")
     ;
 
     private final String name;

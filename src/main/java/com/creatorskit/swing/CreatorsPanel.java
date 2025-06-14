@@ -1629,6 +1629,8 @@ public class CreatorsPanel extends PluginPanel
             {
                 Thread thread = new Thread(() ->
                 {
+                    boolean resetAnimFrames = isVersionLessThan(version, "1.5.12");
+
                     for (CharacterSave save : characterSaves)
                     {
                         Character character;
@@ -1640,7 +1642,7 @@ public class CreatorsPanel extends PluginPanel
                         }
 
                         int animFrame = save.getFrame();
-                        if (isVersionLessThan(version, "1.5.12"))
+                        if (resetAnimFrames)
                         {
                             animFrame = -1;
                         }
@@ -1713,6 +1715,9 @@ public class CreatorsPanel extends PluginPanel
             parentPanel = ParentPanel.MANAGER;
         }
 
+        boolean resetAnimFrame = isVersionLessThan(fileVersion, "1.5.12");
+        boolean resetTurnRate = isVersionLessThan(fileVersion, "2.0.1");
+
         for (CharacterSave save : folderNodeSave.getCharacterSaves())
         {
             Character character;
@@ -1723,7 +1728,7 @@ public class CreatorsPanel extends PluginPanel
             }
 
             int animFrame = save.getFrame();
-            if (isVersionLessThan(fileVersion, "1.5.12"))
+            if (resetAnimFrame)
             {
                 animFrame = -1;
             }
@@ -1732,6 +1737,18 @@ public class CreatorsPanel extends PluginPanel
             if (save.getMovementKeyFrames() != null)
             {
                 frames[KeyFrameType.getIndex(KeyFrameType.MOVEMENT)] = save.getMovementKeyFrames();
+
+                if (resetTurnRate)
+                {
+                    for (KeyFrame kf : frames[KeyFrameType.getIndex(KeyFrameType.MOVEMENT)])
+                    {
+                        MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+                        if (keyFrame.getTurnRate() == -1)
+                        {
+                            keyFrame.setTurnRate(OrientationKeyFrame.TURN_RATE);
+                        }
+                    }
+                }
             }
 
             if (save.getAnimationKeyFrames() != null)
@@ -1754,6 +1771,18 @@ public class CreatorsPanel extends PluginPanel
             if (save.getOrientationKeyFrames() != null)
             {
                 frames[KeyFrameType.getIndex(KeyFrameType.ORIENTATION)] = save.getOrientationKeyFrames();
+
+                if (resetTurnRate)
+                {
+                    for (KeyFrame kf : frames[KeyFrameType.getIndex(KeyFrameType.ORIENTATION)])
+                    {
+                        OrientationKeyFrame keyFrame = (OrientationKeyFrame) kf;
+                        if (keyFrame.getTurnRate() == -1)
+                        {
+                            keyFrame.setTurnRate(OrientationKeyFrame.TURN_RATE);
+                        }
+                    }
+                }
             }
 
             if (save.getTextKeyFrames() != null)

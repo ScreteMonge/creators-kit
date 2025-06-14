@@ -81,7 +81,7 @@ public class OriAttributes extends Attributes
         start.setValue(0);
         end.setValue(0);
         duration.setValue(1.0);
-        turnRate.setValue(-1);
+        turnRate.setValue(OrientationKeyFrame.TURN_RATE);
         super.resetAttributes(resetBackground);
     }
 }

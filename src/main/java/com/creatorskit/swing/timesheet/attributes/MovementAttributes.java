@@ -4,6 +4,7 @@ import com.creatorskit.programming.MovementType;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameState;
 import com.creatorskit.swing.timesheet.keyframe.MovementKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.OrientationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.settings.Toggle;
 import lombok.Getter;
 
@@ -75,7 +76,7 @@ public class MovementAttributes extends Attributes
     {
         loop.setSelectedItem(Toggle.DISABLE);
         speed.setValue(1.0);
-        turnRate.setValue(-1);
+        turnRate.setValue(OrientationKeyFrame.TURN_RATE);
         super.resetAttributes(resetBackground);
     }
 }
