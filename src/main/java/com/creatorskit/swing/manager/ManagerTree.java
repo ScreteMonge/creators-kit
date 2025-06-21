@@ -529,22 +529,6 @@ public class ManagerTree extends JTree
         return treeContainsSidePanel(parent);
     }
 
-    public Character[] getShownCharacters()
-    {
-        Character[] characters = new Character[0];
-        JPanel objectHolder = toolBox.getManagerPanel().getObjectHolder();
-        for (Component component : objectHolder.getComponents())
-        {
-            if (component instanceof ObjectPanel)
-            {
-                ObjectPanel objectPanel = (ObjectPanel) component;
-                characters = ArrayUtils.add(characters, objectPanel.getCharacter());
-            }
-        }
-
-        return characters;
-    }
-
     public void resetObjectHolder()
     {
         ArrayList<Character> list = new ArrayList<>();

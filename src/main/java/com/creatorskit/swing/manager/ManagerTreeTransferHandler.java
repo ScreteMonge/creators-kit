@@ -142,16 +142,6 @@ class ManagerTreeTransferHandler extends TransferHandler
     private DefaultMutableTreeNode copy(DefaultMutableTreeNode node, HashSet<TreeNode> doneItems, JTree tree)
     {
         DefaultMutableTreeNode copy = new DefaultMutableTreeNode(node.getUserObject());
-        if (node.getUserObject() instanceof Folder)
-        {
-            ((Folder) node.getUserObject()).setLinkedManagerNode(copy);
-        }
-
-        if (node.getUserObject() instanceof Character)
-        {
-            ((Character) node.getUserObject()).setLinkedManagerNode(copy);
-        }
-
         doneItems.add(node);
         for (int i = 0; i < node.getChildCount(); i++)
         {
@@ -261,13 +251,17 @@ class ManagerTreeTransferHandler extends TransferHandler
             if (node.getUserObject() instanceof Folder)
             {
                 Folder folder = (Folder) node.getUserObject();
+                folder.setLinkedManagerNode(node);
                 folder.setParentManagerNode(parentNode);
                 getCharacterNodeChildren(node, characters);
             }
 
             if (node.getUserObject() instanceof Character)
             {
-                characters.add((Character) node.getUserObject());
+                Character character = (Character) node.getUserObject();
+                character.setLinkedManagerNode(node);
+                character.setParentManagerNode((DefaultMutableTreeNode) node.getParent());
+                characters.add(character);
             }
         }
 
@@ -275,7 +269,6 @@ class ManagerTreeTransferHandler extends TransferHandler
         {
             ParentPanel oldParent = character.getParentPanel();
             character.setParentPanel(newParent);
-            character.setParentManagerNode(parentNode);
 
             ArrayList<Character> arrayFrom;
             if (oldParent == ParentPanel.SIDE_PANEL)
