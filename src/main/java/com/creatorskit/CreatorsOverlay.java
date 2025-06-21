@@ -489,7 +489,15 @@ public class CreatorsOverlay extends Overlay
             return;
         }
 
-        Point p = Perspective.getCanvasTextLocation(client, graphics, lp, character.getName(), 0);
+        Model model = ckObject.getModel();
+        if (model == null)
+        {
+            return;
+        }
+
+        model.calculateBoundsCylinder();
+
+        Point p = Perspective.getCanvasTextLocation(client, graphics, lp, character.getName(), model.getModelHeight());
         if (p != null)
         {
             OverlayUtil.renderTextLocation(graphics, p, character.getName(), SELECTED_COLOUR);
@@ -519,7 +527,15 @@ public class CreatorsOverlay extends Overlay
             }
 
             String name = character.getName();
-            Point point = Perspective.getCanvasTextLocation(client, graphics, lp, name, 0);
+            Model model = ckObject.getModel();
+            if (model == null)
+            {
+                continue;
+            }
+
+            model.calculateBoundsCylinder();
+
+            Point point = Perspective.getCanvasTextLocation(client, graphics, lp, name, model.getModelHeight());
 
             if (point == null)
             {

@@ -640,7 +640,7 @@ public class TimeSheetPanel extends JPanel
             }
 
             int[][] path = new int[][]{new int[]{x, y}};
-            initializeMovementKeyFrame(selectedCharacter, currentTime, worldView.getPlane(), poh, path, false, 1, -1);
+            initializeMovementKeyFrame(selectedCharacter, currentTime, worldView.getPlane(), poh, path, false, 1, OrientationKeyFrame.TURN_RATE);
         }
         else
         {
