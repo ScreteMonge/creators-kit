@@ -319,6 +319,8 @@ public class ManagerTree extends JTree
             {
                 removeFolderNode(node);
             }
+
+            getCellEditor().cancelCellEditing();
         });
         thread.start();
     }
