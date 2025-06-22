@@ -250,6 +250,50 @@ public class CacheSearcherTab extends JPanel
                 addToAnvil(CustomModelType.CACHE_NPC, data.getId());
             }
         });
+
+        c.gridx = 0;
+        c.gridy = 4;
+        JPanel anims = new JPanel();
+        anims.setLayout(new GridLayout(0, 3, 2, 2));
+        anims.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        anims.setBorder(new EmptyBorder(8, 8, 8, 8));
+        card.add(anims, c);
+
+        JLabel idle = new JLabel("Idle: -1");
+        JLabel walk180 = new JLabel("Walk 180: -1");
+        JLabel walk = new JLabel("Walk: -1");
+        JLabel walkRight = new JLabel("Walk Right: -1");
+        JLabel walkLeft = new JLabel("Walk Left: -1");
+        JLabel idleRight = new JLabel("Idle Right: -1");
+        JLabel idleLeft = new JLabel("Idle Left: -1");
+        JLabel run = new JLabel("Run: -1");
+        anims.add(idle);
+        anims.add(walk180);
+        anims.add(new JLabel(""));
+        anims.add(walk);
+        anims.add(walkRight);
+        anims.add(idleRight);
+        anims.add(run);
+        anims.add(walkLeft);
+        anims.add(idleLeft);
+
+        npcTable.getSelectionModel().addListSelectionListener(e ->
+        {
+            Object o = npcTable.getSelectedObject();
+            if (o instanceof NPCData)
+            {
+                NPCData data = (NPCData) o;
+
+                idle.setText("Idle: " + data.getStandingAnimation());
+                walk.setText("Walk: " + data.getWalkingAnimation());
+                run.setText("Run: " + data.getRunAnimation());
+                walk180.setText("Walk 180: " + data.getRotate180Animation());
+                walkRight.setText("Walk Right: " + data.getRotateRightAnimation());
+                walkLeft.setText("Walk Left: " + data.getRotateLeftAnimation());
+                idleRight.setText("Idle Right: " + data.getIdleRotateRightAnimation());
+                idleLeft.setText("Idle Left: " + data.getIdleRotateLeftAnimation());
+            }
+        });
     }
 
     private void setupObjectCard(JPanel card)
