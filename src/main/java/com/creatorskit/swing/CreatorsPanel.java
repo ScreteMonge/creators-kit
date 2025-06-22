@@ -173,7 +173,7 @@ public class CreatorsPanel extends PluginPanel
         helpButton.setToolTipText("Open at YouTube tutorial for help with using this plugin");
         helpButton.setFocusable(false);
         add(helpButton, c);
-        helpButton.addActionListener(e -> toolBox.openLink("https://www.youtube.com/watch?v=E_9c-LwDRRY"));
+        helpButton.addActionListener(e -> toolBox.openLink("https://youtu.be/NLFB98XMvYc"));
 
         c.gridx = 1;
         c.gridy = 2;

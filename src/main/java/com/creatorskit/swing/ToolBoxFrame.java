@@ -346,16 +346,12 @@ public class ToolBoxFrame extends JFrame
         runeMonk.addActionListener(e -> openLink("https://runemonk.com/tools/entityviewer-beta/"));
         resources.add(runeMonk);
 
-        JMenuItem animations = new JMenuItem("Community Animation List");
-        animations.addActionListener(e -> openLink("https://docs.google.com/spreadsheets/d/16umDNbfiBCF-fI5DNe0dGQo2D5a2l2RgJuNVkQgTm_k/edit?gid=0#gid=0"));
-        resources.add(animations);
-
 
         JMenu help = new JMenu("Help");
         jMenuBar.add(help);
 
         JMenuItem youtube = new JMenuItem("Youtube Tutorial");
-        youtube.addActionListener(e -> openLink("https://www.youtube.com/watch?v=E_9c-LwDRRY"));
+        youtube.addActionListener(e -> openLink("https://youtu.be/NLFB98XMvYc"));
         help.add(youtube);
 
         JMenuItem discord = new JMenuItem("Discord");
