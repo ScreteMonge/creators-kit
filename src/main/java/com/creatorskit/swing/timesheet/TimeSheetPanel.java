@@ -464,7 +464,7 @@ public class TimeSheetPanel extends JPanel
                     orientation,
                     orientation,
                     OrientationGoal.POINT,
-                    -1);
+                    OrientationKeyFrame.TURN_RATE);
         }
         else
         {

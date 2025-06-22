@@ -3,7 +3,7 @@ Creator's Kit provides tools for creators of all sorts to make in-game scenes by
 
 ![Title](https://imgur.com/ngUlJdQ.gif)
 
-A video guide on how to use the plugin can be found through [this link](https://www.youtube.com/watch?v=E_9c-LwDRRY&ab_channel=ScreteMonge).
+A video guide on how to use the plugin can be found through [this link](https://www.youtube.com/playlist?list=PL5-mTiHdZKNgcEbhEdadHzX-F4VNE0G9O).
 
 ## Creator's Panel
 

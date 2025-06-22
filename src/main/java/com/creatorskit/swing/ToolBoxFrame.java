@@ -351,7 +351,7 @@ public class ToolBoxFrame extends JFrame
         jMenuBar.add(help);
 
         JMenuItem youtube = new JMenuItem("Youtube Tutorial");
-        youtube.addActionListener(e -> openLink("https://youtu.be/NLFB98XMvYc"));
+        youtube.addActionListener(e -> openLink("https://www.youtube.com/playlist?list=PL5-mTiHdZKNgcEbhEdadHzX-F4VNE0G9O"));
         help.add(youtube);
 
         JMenuItem discord = new JMenuItem("Discord");
