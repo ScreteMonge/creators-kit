@@ -1383,13 +1383,28 @@ public class DataFinder
                         ls.getY(),
                         ls.getZ());
 
-                for (int id : modelIds)
+                for (int i = 0; i < modelIds.length; i++)
                 {
+                    int id = modelIds[i];
+                    int wearPos;
+                    switch (i)
+                    {
+                        default:
+                        case 0:
+                            wearPos = item.getWearPos0();
+                            break;
+                        case 1:
+                            wearPos = item.getWearPos1();
+                            break;
+                        case 2:
+                            wearPos = item.getWearPos2();
+                    }
+
                     if (id != -1)
                     {
                         modelStats.add(new ModelStats(
                                 id,
-                                BodyPart.NA,
+                                BodyPart.wearPosToBodyPart(wearPos),
                                 rf,
                                 rt,
                                 rtFrom,
@@ -1412,7 +1427,13 @@ public class DataFinder
             return null;
         }
 
-        return new ModelStats[]{modelStats.get(0)};
+        ModelStats[] stats = new ModelStats[modelStats.size()];
+        for (int i = 0; i < modelStats.size(); i++)
+        {
+            stats[i] = modelStats.get(i);
+        }
+
+        return stats;
     }
 
     private void lookupWeaponAnimationData()

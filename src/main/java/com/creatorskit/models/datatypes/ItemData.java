@@ -17,6 +17,9 @@ public class ItemData
     private final int femaleModel0;
     private final int femaleModel1;
     private final int femaleModel2;
+    private final int wearPos0;
+    private final int wearPos1;
+    private final int wearPos2;
     private final int femaleOffset;
     private final int maleHeadModel;
     private final int maleHeadModel2;

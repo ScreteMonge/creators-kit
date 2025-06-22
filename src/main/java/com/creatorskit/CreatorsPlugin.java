@@ -1030,9 +1030,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			{
 				if (player)
 				{
-					String name = "Item";
-					if (modelStats.getBodyPart() != BodyPart.NA)
-						name = modelStats.getBodyPart().toString();
+					String name = modelStats.getBodyPart().getName();
+					if (modelStats.getBodyPart() == BodyPart.NA)
+						name = "Item";
 
 					short[] itemRecolourTo = modelStats.getRecolourTo();
 					short[] itemRecolourFrom = modelStats.getRecolourFrom();
@@ -1059,7 +1059,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				}
 
 				creatorsPanel.getModelAnvil().createComplexPanel(
-						"Name",
+						modelStats.getBodyPart().getName(),
 						modelStats.getModelId(),
 						8,
 						0, 0, 0,
