@@ -551,7 +551,7 @@ public class TimeSheetPanel extends JPanel
                 orientation,
                 orientation,
                 1,
-                -1);
+                OrientationKeyFrame.TURN_RATE);
 
         addKeyFrameAction(okf);
     }
