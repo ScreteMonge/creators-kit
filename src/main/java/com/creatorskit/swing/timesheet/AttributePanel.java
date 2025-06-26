@@ -1914,17 +1914,33 @@ public class AttributePanel extends JPanel
         card.add(duplicatePanel, c);
         duplicatePanel.add(new JLabel("Duplicate To:"));
 
-        JButton type1 = new JButton("SpotAnim 1");
-        JButton type2 = new JButton("SpotAnim 2");
+        if (spotAnimType == KeyFrameType.SPOTANIM)
+        {
+            JLabel emptySpotAnim = new JLabel("Spotanim 1");
+            emptySpotAnim.setHorizontalAlignment(SwingConstants.CENTER);
+            duplicatePanel.add(emptySpotAnim);
+        }
+        else
+        {
+            JButton type1 = new JButton("SpotAnim 1");
+            type1.setBackground(ColorScheme.DARK_GRAY_COLOR);
+            duplicatePanel.add(type1);
+            type1.addActionListener(e -> timeSheetPanel.duplicateSpotanimKeyFrame(spotAnimType, KeyFrameType.SPOTANIM));
+        }
 
-        type1.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        type2.setBackground(ColorScheme.DARK_GRAY_COLOR);
-
-        duplicatePanel.add(type1);
-        duplicatePanel.add(type2);
-
-        type1.addActionListener(e -> timeSheetPanel.duplicateSpotanimKeyFrame(spotAnimType, KeyFrameType.SPOTANIM));
-        type2.addActionListener(e -> timeSheetPanel.duplicateSpotanimKeyFrame(spotAnimType, KeyFrameType.SPOTANIM2));
+        if (spotAnimType == KeyFrameType.SPOTANIM2)
+        {
+            JLabel emptySpotAnim = new JLabel("Spotanim 2");
+            emptySpotAnim.setHorizontalAlignment(SwingConstants.CENTER);
+            duplicatePanel.add(emptySpotAnim);
+        }
+        else
+        {
+            JButton type2 = new JButton("SpotAnim 2");
+            type2.setBackground(ColorScheme.DARK_GRAY_COLOR);
+            duplicatePanel.add(type2);
+            type2.addActionListener(e -> timeSheetPanel.duplicateSpotanimKeyFrame(spotAnimType, KeyFrameType.SPOTANIM2));
+        }
     }
 
     private void setupSpotAnimFinder()
@@ -2142,25 +2158,61 @@ public class AttributePanel extends JPanel
         card.add(duplicatePanel, c);
         duplicatePanel.add(new JLabel("Duplicate To:"));
 
-        JButton type1 = new JButton("Hitsplat 1");
-        JButton type2 = new JButton("Hitsplat 2");
-        JButton type3 = new JButton("Hitsplat 3");
-        JButton type4 = new JButton("Hitsplat 4");
+        if (hitsplatType == KeyFrameType.HITSPLAT_1)
+        {
+            JLabel emptyHitsplat = new JLabel("Hitsplat 1");
+            emptyHitsplat.setHorizontalAlignment(SwingConstants.CENTER);
+            duplicatePanel.add(emptyHitsplat);
+        }
+        else
+        {
+            JButton type1 = new JButton("Hitsplat 1");
+            type1.setBackground(ColorScheme.DARK_GRAY_COLOR);
+            duplicatePanel.add(type1);
+            type1.addActionListener(e -> timeSheetPanel.duplicateHitsplatKeyFrame(hitsplatType, KeyFrameType.HITSPLAT_1));
+        }
 
-        type1.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        type2.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        type3.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        type4.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        if (hitsplatType == KeyFrameType.HITSPLAT_2)
+        {
+            JLabel emptyHitsplat = new JLabel("Hitsplat 2");
+            emptyHitsplat.setHorizontalAlignment(SwingConstants.CENTER);
+            duplicatePanel.add(emptyHitsplat);
+        }
+        else
+        {
+            JButton type2 = new JButton("Hitsplat 2");
+            type2.setBackground(ColorScheme.DARK_GRAY_COLOR);
+            duplicatePanel.add(type2);
+            type2.addActionListener(e -> timeSheetPanel.duplicateHitsplatKeyFrame(hitsplatType, KeyFrameType.HITSPLAT_2));
+        }
 
-        duplicatePanel.add(type1);
-        duplicatePanel.add(type2);
-        duplicatePanel.add(type3);
-        duplicatePanel.add(type4);
+        if (hitsplatType == KeyFrameType.HITSPLAT_3)
+        {
+            JLabel emptyHitsplat = new JLabel("Hitsplat 3");
+            emptyHitsplat.setHorizontalAlignment(SwingConstants.CENTER);
+            duplicatePanel.add(emptyHitsplat);
+        }
+        else
+        {
+            JButton type3 = new JButton("Hitsplat 3");
+            type3.setBackground(ColorScheme.DARK_GRAY_COLOR);
+            duplicatePanel.add(type3);
+            type3.addActionListener(e -> timeSheetPanel.duplicateHitsplatKeyFrame(hitsplatType, KeyFrameType.HITSPLAT_3));
+        }
 
-        type1.addActionListener(e -> timeSheetPanel.duplicateHitsplatKeyFrame(hitsplatType, KeyFrameType.HITSPLAT_1));
-        type2.addActionListener(e -> timeSheetPanel.duplicateHitsplatKeyFrame(hitsplatType, KeyFrameType.HITSPLAT_2));
-        type3.addActionListener(e -> timeSheetPanel.duplicateHitsplatKeyFrame(hitsplatType, KeyFrameType.HITSPLAT_3));
-        type4.addActionListener(e -> timeSheetPanel.duplicateHitsplatKeyFrame(hitsplatType, KeyFrameType.HITSPLAT_4));
+        if (hitsplatType == KeyFrameType.HITSPLAT_4)
+        {
+            JLabel emptyHitsplat = new JLabel("Hitsplat 4");
+            emptyHitsplat.setHorizontalAlignment(SwingConstants.CENTER);
+            duplicatePanel.add(emptyHitsplat);
+        }
+        else
+        {
+            JButton type4 = new JButton("Hitsplat 4");
+            type4.setBackground(ColorScheme.DARK_GRAY_COLOR);
+            duplicatePanel.add(type4);
+            type4.addActionListener(e -> timeSheetPanel.duplicateHitsplatKeyFrame(hitsplatType, KeyFrameType.HITSPLAT_4));
+        }
     }
 
     public void switchCards(String cardName)
