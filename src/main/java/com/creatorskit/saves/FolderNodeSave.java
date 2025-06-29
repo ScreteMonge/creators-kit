@@ -1,6 +1,6 @@
 package com.creatorskit.saves;
 
-import com.creatorskit.swing.FolderType;
+import com.creatorskit.swing.manager.FolderType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;

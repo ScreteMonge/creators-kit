@@ -1,7 +1,8 @@
-package com.creatorskit.swing;
+package com.creatorskit.swing.anvil;
 
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.*;
+import com.creatorskit.swing.StringHandler;
 import com.creatorskit.swing.colours.ColourSwapPanel;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;

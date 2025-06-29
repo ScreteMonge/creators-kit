@@ -1,4 +1,4 @@
-package com.creatorskit.swing;
+package com.creatorskit.swing.anvil;
 
 import com.creatorskit.CreatorsPlugin;
 import net.runelite.api.Client;

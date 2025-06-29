@@ -2,7 +2,6 @@ package com.creatorskit.swing.manager;
 
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
-import com.creatorskit.swing.Folder;
 import com.creatorskit.swing.StringHandler;
 import com.creatorskit.swing.ToolBoxFrame;
 

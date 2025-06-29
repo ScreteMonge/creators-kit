@@ -1,4 +1,4 @@
-package com.creatorskit.swing;
+package com.creatorskit.swing.manager;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

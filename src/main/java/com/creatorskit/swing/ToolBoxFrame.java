@@ -6,14 +6,12 @@ import com.creatorskit.models.DataFinder;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.PathFinder;
 import com.creatorskit.programming.Programmer;
+import com.creatorskit.swing.anvil.ModelAnvil;
+import com.creatorskit.swing.manager.Folder;
+import com.creatorskit.swing.manager.FolderType;
 import com.creatorskit.swing.manager.ManagerPanel;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
-import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameAction;
-import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameCharacterAction;
-import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameCharacterActionType;
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
@@ -23,7 +21,6 @@ import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.LinkBrowser;
-import org.apache.commons.lang3.ArrayUtils;
 
 import javax.inject.Inject;
 import javax.swing.*;
@@ -32,7 +29,6 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
-import java.net.URI;
 
 @Getter
 public class ToolBoxFrame extends JFrame

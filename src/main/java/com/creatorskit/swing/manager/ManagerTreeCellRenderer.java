@@ -1,7 +1,6 @@
 package com.creatorskit.swing.manager;
 
 import com.creatorskit.Character;
-import com.creatorskit.swing.Folder;
 import net.runelite.client.util.ImageUtil;
 
 import javax.swing.*;

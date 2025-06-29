@@ -1,7 +1,6 @@
 package com.creatorskit.swing.colours;
 
-import com.creatorskit.swing.ComplexPanel;
-import com.creatorskit.swing.CreatorsPanel;
+import com.creatorskit.swing.anvil.ComplexPanel;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.Client;
