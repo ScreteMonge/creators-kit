@@ -71,16 +71,11 @@ public class CreatorsPanel extends PluginPanel
     private int npcPanels = 0;
     private ArrayList<Character> sidePanelCharacters = new ArrayList<>();
     private final ArrayList<JComboBox<CustomModel>> comboBoxes = new ArrayList<>();
-    private final Dimension spinnerSize = new Dimension(72, 30);
-    private final Dimension BUTTON_SIZE = new Dimension(25, 25);
-    private final int DEFAULT_TURN_SPEED = 40;
     private final BufferedImage SWITCH = ImageUtil.loadImageResource(getClass(), "/Switch.png");
     private final BufferedImage DUPLICATE = ImageUtil.loadImageResource(getClass(), "/Duplicate.png");
     private final BufferedImage CLOSE = ImageUtil.loadImageResource(getClass(), "/Close.png");
     private final BufferedImage HELP = ImageUtil.loadImageResource(getClass(), "/Help.png");
     private final BufferedImage NEW = ImageUtil.loadImageResource(getClass(), "/New.png");
-    private final BufferedImage LOAD = ImageUtil.loadImageResource(getClass(), "/Load.png");
-    private final BufferedImage SAVE = ImageUtil.loadImageResource(getClass(), "/Save.png");
     private final BufferedImage FIND = ImageUtil.loadImageResource(getClass(), "/Find.png");
     private final BufferedImage CUSTOM_MODEL = ImageUtil.loadImageResource(getClass(), "/Custom model.png");
     public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
@@ -474,10 +469,7 @@ public class CreatorsPanel extends PluginPanel
 
         objectPanel.setCharacter(character);
 
-        textField.addActionListener(e ->
-        {
-            onNameTextFieldChanged(character);
-        });
+        textField.addActionListener(e -> onNameTextFieldChanged(character));
 
         textField.addFocusListener(new FocusListener() {
             @Override
@@ -1879,15 +1871,6 @@ public class CreatorsPanel extends PluginPanel
             File selectedFile = fileChooser.getSelectedFile();
             plugin.loadCustomModel(selectedFile);
         }
-    }
-
-    private String replaceLast(String string, String from)
-    {
-        int lastIndex = string.lastIndexOf(from);
-        if (lastIndex < 0)
-            return string;
-        String tail = string.substring(lastIndex).replaceFirst(from, "");
-        return string.substring(0, lastIndex) + tail;
     }
 
     private String getPluginVersion()
