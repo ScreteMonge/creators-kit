@@ -1,7 +1,6 @@
 package com.creatorskit;
 
 import com.creatorskit.models.CustomModel;
-import com.creatorskit.swing.ObjectPanel;
 import com.creatorskit.swing.ParentPanel;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.*;
