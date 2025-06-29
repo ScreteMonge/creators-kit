@@ -278,6 +278,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	{
 		creatorsPanel.clearSidePanels(false);
 		creatorsPanel.clearManagerPanels();
+		creatorsPanel.getToolBox().dispose();
 
 		eventBus.unregister(creatorsPanel.getToolBox().getProgrammer());
 		eventBus.unregister(creatorsPanel.getToolBox().getTransmogPanel());
