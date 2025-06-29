@@ -940,7 +940,7 @@ public class ModelAnvil extends JPanel
 
     public Model forgeComplexModel(boolean setPriority, DetailedModel[] detailedModels, LightingStyle lightingStyle, CustomLighting lighting)
     {
-        return plugin.createComplexModel(detailedModels, setPriority, lightingStyle, lighting);
+        return plugin.createComplexModel(detailedModels, setPriority, lightingStyle, lighting, true);
     }
 
     private DetailedModel[] panelsToDetailedModels()

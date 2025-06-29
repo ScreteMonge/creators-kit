@@ -419,18 +419,6 @@ public interface CreatorsConfig extends Config
 	}
 
 	@ConfigItem(
-			keyName = "setOrbSpeed",
-			name = "Set Orb Speed",
-			description = "Hotkey to quickly set Oculus Orb speed",
-			section = cameraSettings,
-			position = 2
-	)
-	default Keybind setOrbSpeedHotkey()
-	{
-		return Keybind.NOT_SET;
-	}
-
-	@ConfigItem(
 			keyName = "orbPreset1",
 			name = "Orb Speed Hotkey 1",
 			description = "Hotkey to quickly set Oculus Orb speed to Preset 1",
