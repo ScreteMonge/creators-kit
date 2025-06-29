@@ -38,7 +38,7 @@ public class Character
     private boolean inPOH;
     private CustomModel storedModel;
     private ParentPanel parentPanel;
-    private ObjectPanel objectPanel;
+    private JPanel objectPanel;
     private boolean customMode;
     private JTextField nameField;
     private JComboBox<CustomModel> comboBox;

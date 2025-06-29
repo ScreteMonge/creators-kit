@@ -252,7 +252,7 @@ public class CreatorsPanel extends PluginPanel
                               boolean transplant,
                               boolean setHoveredLocation)
     {
-        ObjectPanel objectPanel = new ObjectPanel(name, null);
+        JPanel objectPanel = new JPanel();
         objectPanel.setLayout(new GridBagLayout());
 
         JTextField textField = new JTextField(name);
@@ -470,8 +470,6 @@ public class CreatorsPanel extends PluginPanel
                 null,
                 0);
 
-        objectPanel.setCharacter(character);
-
         textField.addActionListener(e -> onNameTextFieldChanged(character));
 
         textField.addFocusListener(new FocusListener() {
@@ -616,7 +614,7 @@ public class CreatorsPanel extends PluginPanel
 
     private void addAllSelectListeners(
             Character character,
-            ObjectPanel objectPanel,
+            JPanel objectPanel,
             JTextField textField,
             JPanel topButtonsPanel,
             JButton duplicateButton,
@@ -675,7 +673,7 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
-    private void addSelectListeners(Component component, Character character, ObjectPanel objectPanel, boolean pressedListener)
+    private void addSelectListeners(Component component, Character character, JPanel objectPanel, boolean pressedListener)
     {
         component.addMouseListener(new MouseAdapter() {
             @Override
@@ -708,7 +706,7 @@ public class CreatorsPanel extends PluginPanel
 
     public void addPanel(ParentPanel parentPanel, Character character, DefaultMutableTreeNode parentNode, boolean revalidate, boolean switching)
     {
-        ObjectPanel childPanel = character.getObjectPanel();
+        JPanel childPanel = character.getObjectPanel();
         ManagerPanel managerPanel = toolBox.getManagerPanel();
         ManagerTree managerTree = managerPanel.getManagerTree();
 
@@ -859,7 +857,6 @@ public class CreatorsPanel extends PluginPanel
         JTextField textField = character.getNameField();
         String text = StringHandler.cleanString(textField.getText());
         textField.setText(text);
-        character.getObjectPanel().setName(text);
         character.setName(text);
 
         DefaultMutableTreeNode node = character.getLinkedManagerNode();
@@ -931,7 +928,7 @@ public class CreatorsPanel extends PluginPanel
 
         for (Character character : characters)
         {
-            ObjectPanel objectPanel = character.getObjectPanel();
+            JPanel objectPanel = character.getObjectPanel();
             ParentPanel parentPanel = character.getParentPanel();
             if (parentPanel == ParentPanel.SIDE_PANEL)
             {
@@ -961,7 +958,7 @@ public class CreatorsPanel extends PluginPanel
         ManagerPanel managerPanel = toolBox.getManagerPanel();
         ManagerTree managerTree = managerPanel.getManagerTree();
 
-        ObjectPanel objectPanel = character.getObjectPanel();
+        JPanel objectPanel = character.getObjectPanel();
         ParentPanel parentPanel = character.getParentPanel();
         if (parentPanel == ParentPanel.SIDE_PANEL)
         {
@@ -1066,7 +1063,7 @@ public class CreatorsPanel extends PluginPanel
 
         for (int i = 0; i < characters.size(); i++)
         {
-            ObjectPanel panel = characters.get(i).getObjectPanel();
+            JPanel panel = characters.get(i).getObjectPanel();
             panel.setBorder(defaultBorder);
         }
 
@@ -1097,7 +1094,7 @@ public class CreatorsPanel extends PluginPanel
 
         for (int i = 0; i < characters.size(); i++)
         {
-            ObjectPanel panel = characters.get(i).getObjectPanel();
+            JPanel panel = characters.get(i).getObjectPanel();
             panel.setBorder(defaultBorder);
         }
 
