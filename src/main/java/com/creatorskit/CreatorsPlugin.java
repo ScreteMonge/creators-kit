@@ -1889,7 +1889,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyFrame.setCurrentStep(0);
 	}
 
-	private final HotkeyListener addOrientationStartListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_OPEN_BRACKET, InputEvent.CTRL_DOWN_MASK)) {
+	private final HotkeyListener addOrientationStartListener = new HotkeyListener(() -> config.orientationStart()) {
 		@Override
 		public void hotkeyPressed()
 		{
@@ -1897,7 +1897,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 	};
 
-	private final HotkeyListener addOrientationGoalListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_CLOSE_BRACKET, InputEvent.CTRL_DOWN_MASK)) {
+	private final HotkeyListener addOrientationGoalListener = new HotkeyListener(() -> config.orientationEnd()) {
 		@Override
 		public void hotkeyPressed()
 		{

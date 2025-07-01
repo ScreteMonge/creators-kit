@@ -137,6 +137,30 @@ public interface CreatorsConfig extends Config
 		return Rotation._90_DEGREES;
 	}
 
+	@ConfigItem(
+			keyName = "orientationStart",
+			name = "Set Orientation Start",
+			description = "Hotkey to set the Start Orientation of an Orientation Keyframe",
+			section = sceneSettings,
+			position = 14
+	)
+	default Keybind orientationStart()
+	{
+		return new Keybind(KeyEvent.VK_OPEN_BRACKET, KeyEvent.CTRL_DOWN_MASK);
+	}
+
+	@ConfigItem(
+			keyName = "orientationEnd",
+			name = "Set Orientation End",
+			description = "Hotkey to set the End Orientation of an Orientation Keyframe",
+			section = sceneSettings,
+			position = 15
+	)
+	default Keybind orientationEnd()
+	{
+		return new Keybind(KeyEvent.VK_CLOSE_BRACKET, KeyEvent.CTRL_DOWN_MASK);
+	}
+
 	@ConfigSection(
 			name = "Overlays",
 			description = "Settings for enabling/disabling overlays",
