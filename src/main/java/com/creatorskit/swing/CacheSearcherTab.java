@@ -448,6 +448,11 @@ public class CacheSearcherTab extends JPanel
 
         addKeyFrame.addActionListener(e ->
         {
+            if (plugin.getSelectedCharacter() == null)
+            {
+                return;
+            }
+
             Object o = itemTable.getSelectedObject();
             if (o instanceof ItemData)
             {
@@ -667,6 +672,11 @@ public class CacheSearcherTab extends JPanel
 
         addKeyFrame.addActionListener(e ->
         {
+            if (plugin.getSelectedCharacter() == null)
+            {
+                return;
+            }
+
             Object o = spotAnimTable.getSelectedObject();
             if (o instanceof SpotanimData)
             {
