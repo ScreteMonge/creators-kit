@@ -254,6 +254,7 @@ class ManagerTreeTransferHandler extends TransferHandler
                 folder.setLinkedManagerNode(node);
                 folder.setParentManagerNode(parentNode);
                 getCharacterNodeChildren(node, characters);
+                updateChildren(node);
             }
 
             if (node.getUserObject() instanceof Character)
@@ -287,6 +288,31 @@ class ManagerTreeTransferHandler extends TransferHandler
         tree.setSelectionPath(dest);
         tree.expandPath(dest);
         return true;
+    }
+
+    private void updateChildren(DefaultMutableTreeNode parent)
+    {
+        Enumeration<TreeNode> children = parent.children();
+        while (children.hasMoreElements())
+        {
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode) children.nextElement();
+            if (node.getUserObject() instanceof Folder)
+            {
+                Folder folder = (Folder) node.getUserObject();
+                folder.setLinkedManagerNode(node);
+                folder.setParentManagerNode(parent);
+            }
+
+            if (node.getUserObject() instanceof Character)
+            {
+                Character character = (Character) node.getUserObject();
+                character.setLinkedManagerNode(node);
+                character.setParentManagerNode(parent);
+            }
+
+            if (!node.isLeaf())
+                updateChildren(node);
+        }
     }
 
     public String toString()
