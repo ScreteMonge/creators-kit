@@ -8,6 +8,9 @@ import com.creatorskit.saves.FolderNodeSave;
 import com.creatorskit.saves.ModelKeyFrameSave;
 import com.creatorskit.saves.SetupSave;
 import com.creatorskit.models.*;
+import com.creatorskit.swing.anvil.ModelAnvil;
+import com.creatorskit.swing.manager.Folder;
+import com.creatorskit.swing.manager.FolderType;
 import com.creatorskit.swing.manager.ManagerPanel;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
@@ -71,16 +74,11 @@ public class CreatorsPanel extends PluginPanel
     private int npcPanels = 0;
     private ArrayList<Character> sidePanelCharacters = new ArrayList<>();
     private final ArrayList<JComboBox<CustomModel>> comboBoxes = new ArrayList<>();
-    private final Dimension spinnerSize = new Dimension(72, 30);
-    private final Dimension BUTTON_SIZE = new Dimension(25, 25);
-    private final int DEFAULT_TURN_SPEED = 40;
     private final BufferedImage SWITCH = ImageUtil.loadImageResource(getClass(), "/Switch.png");
     private final BufferedImage DUPLICATE = ImageUtil.loadImageResource(getClass(), "/Duplicate.png");
     private final BufferedImage CLOSE = ImageUtil.loadImageResource(getClass(), "/Close.png");
     private final BufferedImage HELP = ImageUtil.loadImageResource(getClass(), "/Help.png");
     private final BufferedImage NEW = ImageUtil.loadImageResource(getClass(), "/New.png");
-    private final BufferedImage LOAD = ImageUtil.loadImageResource(getClass(), "/Load.png");
-    private final BufferedImage SAVE = ImageUtil.loadImageResource(getClass(), "/Save.png");
     private final BufferedImage FIND = ImageUtil.loadImageResource(getClass(), "/Find.png");
     private final BufferedImage CUSTOM_MODEL = ImageUtil.loadImageResource(getClass(), "/Custom model.png");
     public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
@@ -254,7 +252,7 @@ public class CreatorsPanel extends PluginPanel
                               boolean transplant,
                               boolean setHoveredLocation)
     {
-        ObjectPanel objectPanel = new ObjectPanel(name, null);
+        JPanel objectPanel = new JPanel();
         objectPanel.setLayout(new GridBagLayout());
 
         JTextField textField = new JTextField(name);
@@ -472,12 +470,7 @@ public class CreatorsPanel extends PluginPanel
                 null,
                 0);
 
-        objectPanel.setCharacter(character);
-
-        textField.addActionListener(e ->
-        {
-            onNameTextFieldChanged(character);
-        });
+        textField.addActionListener(e -> onNameTextFieldChanged(character));
 
         textField.addFocusListener(new FocusListener() {
             @Override
@@ -621,7 +614,7 @@ public class CreatorsPanel extends PluginPanel
 
     private void addAllSelectListeners(
             Character character,
-            ObjectPanel objectPanel,
+            JPanel objectPanel,
             JTextField textField,
             JPanel topButtonsPanel,
             JButton duplicateButton,
@@ -680,7 +673,7 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
-    private void addSelectListeners(Component component, Character character, ObjectPanel objectPanel, boolean pressedListener)
+    private void addSelectListeners(Component component, Character character, JPanel objectPanel, boolean pressedListener)
     {
         component.addMouseListener(new MouseAdapter() {
             @Override
@@ -713,7 +706,7 @@ public class CreatorsPanel extends PluginPanel
 
     public void addPanel(ParentPanel parentPanel, Character character, DefaultMutableTreeNode parentNode, boolean revalidate, boolean switching)
     {
-        ObjectPanel childPanel = character.getObjectPanel();
+        JPanel childPanel = character.getObjectPanel();
         ManagerPanel managerPanel = toolBox.getManagerPanel();
         ManagerTree managerTree = managerPanel.getManagerTree();
 
@@ -864,7 +857,6 @@ public class CreatorsPanel extends PluginPanel
         JTextField textField = character.getNameField();
         String text = StringHandler.cleanString(textField.getText());
         textField.setText(text);
-        character.getObjectPanel().setName(text);
         character.setName(text);
 
         DefaultMutableTreeNode node = character.getLinkedManagerNode();
@@ -936,7 +928,7 @@ public class CreatorsPanel extends PluginPanel
 
         for (Character character : characters)
         {
-            ObjectPanel objectPanel = character.getObjectPanel();
+            JPanel objectPanel = character.getObjectPanel();
             ParentPanel parentPanel = character.getParentPanel();
             if (parentPanel == ParentPanel.SIDE_PANEL)
             {
@@ -966,7 +958,7 @@ public class CreatorsPanel extends PluginPanel
         ManagerPanel managerPanel = toolBox.getManagerPanel();
         ManagerTree managerTree = managerPanel.getManagerTree();
 
-        ObjectPanel objectPanel = character.getObjectPanel();
+        JPanel objectPanel = character.getObjectPanel();
         ParentPanel parentPanel = character.getParentPanel();
         if (parentPanel == ParentPanel.SIDE_PANEL)
         {
@@ -1071,7 +1063,7 @@ public class CreatorsPanel extends PluginPanel
 
         for (int i = 0; i < characters.size(); i++)
         {
-            ObjectPanel panel = characters.get(i).getObjectPanel();
+            JPanel panel = characters.get(i).getObjectPanel();
             panel.setBorder(defaultBorder);
         }
 
@@ -1102,7 +1094,7 @@ public class CreatorsPanel extends PluginPanel
 
         for (int i = 0; i < characters.size(); i++)
         {
-            ObjectPanel panel = characters.get(i).getObjectPanel();
+            JPanel panel = characters.get(i).getObjectPanel();
             panel.setBorder(defaultBorder);
         }
 
@@ -1575,7 +1567,7 @@ public class CreatorsPanel extends PluginPanel
             switch (comp.getType())
             {
                 case FORGED:
-                    model = plugin.createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle(), comp.getCustomLighting());
+                    model = plugin.createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle(), comp.getCustomLighting(), false);
                     customModel = new CustomModel(model, comp);
                     break;
                 case CACHE_NPC:
@@ -1879,15 +1871,6 @@ public class CreatorsPanel extends PluginPanel
             File selectedFile = fileChooser.getSelectedFile();
             plugin.loadCustomModel(selectedFile);
         }
-    }
-
-    private String replaceLast(String string, String from)
-    {
-        int lastIndex = string.lastIndexOf(from);
-        if (lastIndex < 0)
-            return string;
-        String tail = string.substring(lastIndex).replaceFirst(from, "");
-        return string.substring(0, lastIndex) + tail;
     }
 
     private String getPluginVersion()

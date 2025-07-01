@@ -1,7 +1,6 @@
 package com.creatorskit;
 
 import com.creatorskit.models.CustomModel;
-import com.creatorskit.swing.ObjectPanel;
 import com.creatorskit.swing.ParentPanel;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.*;
@@ -38,7 +37,7 @@ public class Character
     private boolean inPOH;
     private CustomModel storedModel;
     private ParentPanel parentPanel;
-    private ObjectPanel objectPanel;
+    private JPanel objectPanel;
     private boolean customMode;
     private JTextField nameField;
     private JComboBox<CustomModel> comboBox;

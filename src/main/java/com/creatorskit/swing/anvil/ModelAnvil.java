@@ -1,7 +1,8 @@
-package com.creatorskit.swing;
+package com.creatorskit.swing.anvil;
 
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.*;
+import com.creatorskit.swing.StringHandler;
 import com.creatorskit.swing.colours.ColourSwapPanel;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -940,7 +941,7 @@ public class ModelAnvil extends JPanel
 
     public Model forgeComplexModel(boolean setPriority, DetailedModel[] detailedModels, LightingStyle lightingStyle, CustomLighting lighting)
     {
-        return plugin.createComplexModel(detailedModels, setPriority, lightingStyle, lighting);
+        return plugin.createComplexModel(detailedModels, setPriority, lightingStyle, lighting, true);
     }
 
     private DetailedModel[] panelsToDetailedModels()

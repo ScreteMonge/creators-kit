@@ -1,12 +1,13 @@
 package com.creatorskit;
 
 import com.creatorskit.models.*;
-import com.creatorskit.models.exporters.ModelExporter;
 import com.creatorskit.programming.*;
 import com.creatorskit.programming.orientation.OrientationHotkeyMode;
 import com.creatorskit.saves.TransmogLoadOption;
 import com.creatorskit.saves.TransmogSave;
 import com.creatorskit.swing.*;
+import com.creatorskit.swing.anvil.ComplexPanel;
+import com.creatorskit.swing.anvil.ModelAnvil;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import com.google.gson.Gson;
@@ -120,9 +121,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private DataFinder dataFinder;
 
 	@Inject
-	private ModelExporter modelExporter;
-
-	@Inject
 	private Gson gson;
 
 	private CreatorsPanel creatorsPanel;
@@ -144,13 +142,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private int oculusOrbSpeed = 36;
 	private double clickX;
 	private double clickY;
-	private double mouseX;
-	private double mouseY;
 	private boolean mousePressed = false;
-	private boolean pauseMode = true;
 	private boolean autoSetupPathFound = true;
 	private boolean autoTransmogFound = true;
-	private boolean controlDown = false;
 	private boolean addProgramStep = false;
 
 	@Override
@@ -177,7 +171,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		keyManager.registerKeyListener(overlayKeyListener);
 		keyManager.registerKeyListener(oculusOrbListener);
-		keyManager.registerKeyListener(orbSpeedListener);
 		keyManager.registerKeyListener(orbPreset1Listener);
 		keyManager.registerKeyListener(orbPreset2Listener);
 		keyManager.registerKeyListener(orbPreset3Listener);
@@ -278,6 +271,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	{
 		creatorsPanel.clearSidePanels(false);
 		creatorsPanel.clearManagerPanels();
+		creatorsPanel.getToolBox().dispose();
 
 		eventBus.unregister(creatorsPanel.getToolBox().getProgrammer());
 		eventBus.unregister(creatorsPanel.getToolBox().getTransmogPanel());
@@ -291,7 +285,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		keyManager.unregisterKeyListener(overlayKeyListener);
 		keyManager.unregisterKeyListener(oculusOrbListener);
-		keyManager.unregisterKeyListener(orbSpeedListener);
 		keyManager.unregisterKeyListener(orbPreset1Listener);
 		keyManager.unregisterKeyListener(orbPreset2Listener);
 		keyManager.unregisterKeyListener(orbPreset3Listener);
@@ -760,16 +753,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		});
 	}
 
-	public void unsetAnimation(Character character)
-	{
-		CKObject ckObject = character.getCkObject();
-		clientThread.invokeLater(() ->
-				{
-						ckObject.setAnimation(AnimationType.ACTIVE, -1);
-						ckObject.setAnimation(AnimationType.POSE, -1);
-				});
-	}
-
 	public void setAnimationFrame(Character character, int animFrame, boolean allowPause)
 	{
 		if (client.getGameState() != GameState.LOGGED_IN)
@@ -859,7 +842,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		chatMessageManager.queue(QueuedMessage.builder().type(ChatMessageType.GAMEMESSAGE).runeLiteFormattedMessage(message).build());
 	}
 
-	public Model createComplexModel(DetailedModel[] detailedModels, boolean setPriority, LightingStyle lightingStyle, CustomLighting cl)
+	public Model createComplexModel(DetailedModel[] detailedModels, boolean setPriority, LightingStyle lightingStyle, CustomLighting cl, boolean sendModelStats)
 	{
 		ModelData modelData = createComplexModelData(detailedModels);
 
@@ -904,7 +887,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				Arrays.fill(renderPriorities, (byte) 0);
 		}
 
-		sendChatMessage("Model forged. Faces: " + model.getFaceCount() + ", Vertices: " + model.getVerticesCount());
+		if (sendModelStats)
+		{
+			sendChatMessage("Model forged. Faces: " + model.getFaceCount() + ", Vertices: " + model.getVerticesCount());
+		}
+
 		if (model.getFaceCount() >= 6200 && model.getVerticesCount() >= 3900)
 			sendChatMessage("You've exceeded the max face count of 6200 or vertex count of 3900 in this model; any additional faces or vertices will not render");
 
@@ -1391,7 +1378,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				if (cl == null)
 					cl = new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getY(), ls.getZ());
 
-				Model model = createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle(), cl);
+				Model model = createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle(), cl, true);
 				CustomModel customModel = new CustomModel(model, comp);
 				addCustomModel(customModel, false);
 			});
@@ -1446,7 +1433,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					CustomLighting cl = comp.getCustomLighting();
 					if (cl == null)
 						cl = new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getY(), ls.getZ());
-					Model model = createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle(), cl);
+					Model model = createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle(), cl, false);
 					CustomModel customModel = new CustomModel(model, comp);
 					addCustomModel(customModel, false);
 					creatorsPanel.getModelOrganizer().setTransmog(customModel);
@@ -1663,28 +1650,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			client.setCameraMode(1);
 			client.setFreeCameraSpeed(oculusOrbSpeed);
-		}
-	};
-
-	private final HotkeyListener orbSpeedListener = new HotkeyListener(() -> config.setOrbSpeedHotkey())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			SwingUtilities.invokeLater(() ->
-			{
-				String result = JOptionPane.showInputDialog(creatorsPanel, "Set Orb Speed (5 = Walk, 9 = Run)", 36);
-				try
-				{
-					int value = Integer.parseInt(result);
-					client.setFreeCameraSpeed(value);
-					oculusOrbSpeed = value;
-				}
-				catch (Exception f)
-				{
-					sendChatMessage("Invalid input; enter a number to set the Oculus Orb speed.");
-				}
-			});
 		}
 	};
 

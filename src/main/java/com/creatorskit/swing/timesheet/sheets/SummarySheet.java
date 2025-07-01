@@ -1,7 +1,7 @@
 package com.creatorskit.swing.timesheet.sheets;
 
 import com.creatorskit.Character;
-import com.creatorskit.swing.Folder;
+import com.creatorskit.swing.manager.Folder;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.AttributePanel;

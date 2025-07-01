@@ -1,4 +1,4 @@
-package com.creatorskit.swing;
+package com.creatorskit.swing.anvil;
 
 public enum GroupOperation
 {

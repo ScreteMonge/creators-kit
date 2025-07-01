@@ -11,7 +11,6 @@ import org.apache.commons.lang3.ArrayUtils;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -540,7 +539,7 @@ public class ManagerTree extends JTree
             getCharacterNodeChildren(node, list);
         }
 
-        ObjectPanel[] objectPanels = new ObjectPanel[0];
+        JPanel[] objectPanels = new JPanel[0];
         for (Character character : list)
         {
             if (character.getParentPanel() == ParentPanel.MANAGER)
@@ -559,7 +558,7 @@ public class ManagerTree extends JTree
 
     public void resetObjectHolder(Character[] charactersToAdd, boolean sidePanel)
     {
-        ObjectPanel[] panelsToAdd = new ObjectPanel[charactersToAdd.length];
+        JPanel[] panelsToAdd = new JPanel[charactersToAdd.length];
 
         for (int i = 0; i < charactersToAdd.length; i++)
         {
@@ -568,7 +567,7 @@ public class ManagerTree extends JTree
         resetObjectHolder(panelsToAdd, sidePanel);
     }
 
-    public void resetObjectHolder(ObjectPanel[] panelsToAdd, boolean sidePanel)
+    public void resetObjectHolder(JPanel[] panelsToAdd, boolean sidePanel)
     {
         if (sidePanel)
         {
@@ -580,7 +579,7 @@ public class ManagerTree extends JTree
         JPanel managerHolder = toolBox.getManagerPanel().getObjectHolder();
         managerHolder.removeAll();
 
-        for (ObjectPanel objectPanel : panelsToAdd)
+        for (JPanel objectPanel : panelsToAdd)
         {
             managerHolder.add(objectPanel);
         }
