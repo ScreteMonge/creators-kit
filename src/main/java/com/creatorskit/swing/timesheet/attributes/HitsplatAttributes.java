@@ -81,7 +81,7 @@ public class HitsplatAttributes extends Attributes
     public void resetAttributes(boolean resetBackground)
     {
         duration.setValue(-1);
-        sprite.setSelectedItem(HitsplatSprite.NONE);
+        sprite.setSelectedItem(HitsplatSprite.BLOCK);
         variant.setSelectedItem(HitsplatVariant.NORMAL);
         damage.setValue(0);
         super.resetAttributes(resetBackground);
