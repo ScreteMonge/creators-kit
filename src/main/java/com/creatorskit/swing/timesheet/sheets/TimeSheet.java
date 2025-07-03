@@ -1,6 +1,7 @@
 package com.creatorskit.swing.timesheet.sheets;
 
 import com.creatorskit.Character;
+import com.creatorskit.CreatorsConfig;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.AttributePanel;
@@ -24,13 +25,12 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 
-import static com.creatorskit.swing.timesheet.TimeSheetPanel.round;
-
 @Getter
 @Setter
 public class TimeSheet extends JPanel
 {
     private ToolBoxFrame toolBox;
+    private CreatorsConfig config;
     private ManagerTree managerTree;
     private AttributePanel attributePanel;
 
@@ -65,9 +65,10 @@ public class TimeSheet extends JPanel
     private boolean keyFrameClicked = false;
     private KeyFrame[] clickedKeyFrames = new KeyFrame[0];
 
-    public TimeSheet(ToolBoxFrame toolBox, ManagerTree managerTree, AttributePanel attributePanel)
+    public TimeSheet(ToolBoxFrame toolBox, CreatorsConfig config, ManagerTree managerTree, AttributePanel attributePanel)
     {
         this.toolBox = toolBox;
+        this.config = config;
         this.managerTree = managerTree;
         this.attributePanel = attributePanel;
 
@@ -219,15 +220,17 @@ public class TimeSheet extends JPanel
 
     private void drawBackgroundLines(Graphics g)
     {
+        double modeMultiplier = config.timelineUnits().getMultiplier();
+
         if (zoom <= SHOW_1_ZOOM)
         {
             g.setColor(ColorScheme.DARKER_GRAY_COLOR);
 
-            double spacing = this.getWidth() / zoom;
-            double startOffset = hScroll;
+            double spacing = this.getWidth() / zoom / modeMultiplier;
+            double startOffset = hScroll * modeMultiplier;
             int firstIteration = (int) Math.ceil(-1 * startOffset);
 
-            for (int i = firstIteration; i < zoom + firstIteration; i++)
+            for (int i = firstIteration; i < zoom / modeMultiplier + firstIteration; i++)
             {
                 g.drawLine((int) (i * spacing + startOffset * spacing), 0, (int) (i * spacing + startOffset * spacing), this.getHeight());
             }
@@ -237,23 +240,22 @@ public class TimeSheet extends JPanel
         {
             g.setColor(ColorScheme.DARKER_GRAY_COLOR.darker());
 
-            double iterations = zoom / 5;
+            double iterations = zoom / 5 * modeMultiplier;
             double spacing = this.getWidth() / iterations;
-            double startOffset = hScroll / 5;
+            double startOffset = hScroll * modeMultiplier / 5;
             int firstIteration = (int) Math.ceil(-1 * startOffset);
 
             for (int i = firstIteration; i < iterations + firstIteration; i++)
             {
                 g.drawLine((int) (i * spacing + startOffset * spacing), 0, (int) (i * spacing + startOffset * spacing), this.getHeight());
-
             }
         }
 
         g.setColor(ColorScheme.BORDER_COLOR.darker());
 
-        double iterations = zoom / 5;
+        double iterations = zoom / 5 * modeMultiplier;
         double spacing = this.getWidth() / iterations;
-        double startOffset = hScroll / 5;
+        double startOffset = hScroll * modeMultiplier / 5;
         int firstIteration = (int) Math.ceil(-1 * startOffset);
         boolean skip5Line = firstIteration % 2 != 0;
 
@@ -272,8 +274,11 @@ public class TimeSheet extends JPanel
 
     private void drawTimeIndicator(Graphics g)
     {
+        TimelineUnits timelineUnits = config.timelineUnits();
+        double modeMultiplier = timelineUnits.getMultiplier();
+
         double x = (currentTime + hScroll) * this.getWidth() / zoom;
-        char[] c = ("" + currentTime).toCharArray();
+        char[] c = ("" + round(timelineUnits, currentTime * modeMultiplier)).toCharArray();
         double width = g.getFontMetrics().charsWidth(c, 0, c.length);
         int textBuffer = 16;
 
@@ -294,8 +299,11 @@ public class TimeSheet extends JPanel
             return;
         }
 
-        double x = (previewTime + hScroll) * this.getWidth() / zoom;
-        char[] c = ("" + previewTime).toCharArray();
+        TimelineUnits timelineUnits = config.timelineUnits();
+        double modeMultiplier = timelineUnits.getMultiplier();
+
+        double x = (previewTime + hScroll)  * this.getWidth() / zoom;
+        char[] c = ("" + round(timelineUnits, previewTime * modeMultiplier)).toCharArray();
         double width = g.getFontMetrics().charsWidth(c, 0, c.length);
         int textBuffer = 16;
 
@@ -311,6 +319,8 @@ public class TimeSheet extends JPanel
 
     private void drawTextHeader(Graphics g)
     {
+        double modeMultiplier = config.timelineUnits().getMultiplier();
+
         g.setColor(Color.WHITE);
 
         if (zoom <= SHOW_1_ZOOM)
@@ -319,11 +329,11 @@ public class TimeSheet extends JPanel
             g.setFont(FontManager.getRunescapeSmallFont());
             FontMetrics fontMetrics = g.getFontMetrics();
 
-            double spacing = this.getWidth() / zoom;
-            double startOffset = hScroll;
+            double spacing = this.getWidth() / zoom / modeMultiplier;
+            double startOffset = hScroll * modeMultiplier;
             int firstIteration = (int) Math.ceil(-1 * startOffset);
 
-            for (int i = firstIteration; i < zoom + firstIteration; i++)
+            for (int i = firstIteration; i < zoom / modeMultiplier + firstIteration; i++)
             {
                 if (i % 5 == 0)
                 {
@@ -342,9 +352,9 @@ public class TimeSheet extends JPanel
             g.setFont(FontManager.getRunescapeSmallFont());
             FontMetrics fontMetrics = g.getFontMetrics();
 
-            double iterations = zoom / 5;
+            double iterations = zoom / 5 * modeMultiplier;
             double spacing = this.getWidth() / iterations;
-            double startOffset = hScroll / 5;
+            double startOffset = hScroll * modeMultiplier / 5;
             int firstIteration = (int) Math.ceil(-1 * startOffset);
 
             for (int i = firstIteration; i < iterations + firstIteration; i++)
@@ -365,9 +375,9 @@ public class TimeSheet extends JPanel
         g.setFont(FontManager.getRunescapeFont());
         FontMetrics fontMetrics = g.getFontMetrics();
 
-        double iterations = zoom / 10;
+        double iterations = zoom / 10 * modeMultiplier;
         double spacing = this.getWidth() / iterations;
-        double startOffset = hScroll / 10;
+        double startOffset = hScroll * modeMultiplier / 10;
         int firstIteration = (int) Math.ceil(-1 * startOffset);
 
         for (int i = firstIteration; i < iterations + firstIteration; i++)
@@ -444,10 +454,7 @@ public class TimeSheet extends JPanel
                 if (mousePosition.getY() < rowHeight)
                 {
                     timeIndicatorPressed = true;
-
-                    TimeSheetPanel timeSheetPanel = getTimeSheetPanel();
-                    double previewTime = getTimeIndicatorPosition();
-                    timeSheetPanel.setPreviewTime(previewTime);
+                    updatePreviewTime(getTimeIndicatorPosition());
                     return;
                 }
                 else
@@ -489,7 +496,7 @@ public class TimeSheet extends JPanel
                 if (timeIndicatorPressed)
                 {
                     double time = getTimeIndicatorPosition();
-                    timeSheetPanel.setCurrentTime(time, false);
+                    setCurrentTime(time, false);
                     timeIndicatorPressed = false;
                     return;
                 }
@@ -507,6 +514,9 @@ public class TimeSheet extends JPanel
                     }
                     else
                     {
+                        TimelineUnits timelineUnits = config.timelineUnits();
+                        double modeMultiplier = timelineUnits.getMultiplier();
+
                         KeyFrame[] keyFrames = getSelectedKeyFrames();
                         KeyFrameAction[] kfa = new KeyFrameAction[0];
 
@@ -522,7 +532,7 @@ public class TimeSheet extends JPanel
                         double change;
                         if (Math.abs(Math.abs(mouseX) - Math.abs(xCurrentTime)) > DRAG_STICK_RANGE)
                         {
-                            change = round((mouseX - getMousePointOnPressed().getX()) * getZoom() / getWidth());
+                            change = round(timelineUnits, (mouseX - getMousePointOnPressed().getX()) * getZoom() / getWidth());
                         }
                         else
                         {
@@ -532,7 +542,7 @@ public class TimeSheet extends JPanel
                             if (clickedFrames.length > 0)
                             {
                                 KeyFrame keyFrame = clickedFrames[0];
-                                change = round(getCurrentTime() - keyFrame.getTick());
+                                change = round(timelineUnits, getCurrentTime() - keyFrame.getTick());
                             }
                         }
 
@@ -540,7 +550,7 @@ public class TimeSheet extends JPanel
                         for (int i = 0; i < keyFrames.length; i++)
                         {
                             KeyFrame keyFrame = keyFrames[i];
-                            KeyFrame copy = KeyFrame.createCopy(keyFrame, round(keyFrame.getTick() + change));
+                            KeyFrame copy = KeyFrame.createCopy(keyFrame, round(timelineUnits, keyFrame.getTick() + change));
                             copies[i] = copy;
                             KeyFrame keyFrameToReplace = timeSheetPanel.addKeyFrame(selectedCharacter, copy);
                             if (keyFrameToReplace != null)
@@ -578,12 +588,7 @@ public class TimeSheet extends JPanel
             {
                 super.mouseDragged(e);
                 requestFocusInWindow();
-
-                TimeSheetPanel timeSheetPanel = getTimeSheetPanel();
-                double previewTime = getTimeIndicatorPosition();
-                timeSheetPanel.setPreviewTime(previewTime);
-
-
+                updatePreviewTime(getTimeIndicatorPosition());
             }
         });
 
@@ -697,14 +702,17 @@ public class TimeSheet extends JPanel
         double absoluteMouseX = MouseInfo.getPointerInfo().getLocation().getX();
         double x = absoluteMouseX - getLocationOnScreen().getX();
 
-        double time = round(x / getWidth() * zoom - hScroll);
+        TimelineUnits timelineUnits = config.timelineUnits();
+        double modeMultiplier = timelineUnits.getMultiplier();
 
-        if (time < -hScroll)
+        double time = round(timelineUnits, (x / getWidth() * zoom - hScroll) * modeMultiplier);
+
+        if (time < -hScroll * modeMultiplier)
         {
-            time = -hScroll;
+            time = -hScroll * modeMultiplier;
         }
 
-        double max = round(zoom - hScroll);
+        double max = round(timelineUnits, (zoom - hScroll) * modeMultiplier);
         if (time > max)
         {
             time = max;
@@ -737,5 +745,70 @@ public class TimeSheet extends JPanel
             KeyFrameType type = keyFrames[keyFrames.length - 1].getKeyFrameType();
             attributePanel.switchCards(type);
         }
+    }
+
+    private void updatePreviewTime(double time)
+    {
+        if (config.timelineUnits() == TimelineUnits.GAMETICKS)
+        {
+            getTimeSheetPanel().updatePreviewTime(time);
+            return;
+        }
+
+        getTimeSheetPanel().updatePreviewTime(round_10(time / 0.6));
+    }
+
+    private void setCurrentTime(double time, boolean playing)
+    {
+        if (config.timelineUnits() == TimelineUnits.GAMETICKS)
+        {
+            getTimeSheetPanel().setCurrentTime(time, playing);
+            return;
+        }
+
+        getTimeSheetPanel().setCurrentTime(round_10(time / 0.6), playing);
+    }
+
+    /**
+     * Rounds the given value to the nearest 1/100th
+     * @param value the value to round
+     * @return the value, rounded to 1 decimal place
+     */
+    public static double round(TimelineUnits timelineUnits, double value)
+    {
+        if (timelineUnits == TimelineUnits.GAMETICKS)
+        {
+            return round_10(value);
+        }
+
+        return round_100(roundToGametick(value));
+    }
+
+    public static double roundToGametick(double value)
+    {
+        double gameTicks = round_10(value / 0.6);
+        return gameTicks * 0.6;
+    }
+
+    /**
+     * Rounds the given value to the nearest 1/100th
+     * @param value the value to round
+     * @return the value, rounded to 1 decimal place
+     */
+    public static double round_10(double value)
+    {
+        int scale = (int) Math.pow(10, 1);
+        return (double) Math.round(value * scale) / scale;
+    }
+
+    /**
+     * Rounds the given value to the nearest 1/100th
+     * @param value the value to round
+     * @return the value, rounded to 2 decimal places
+     */
+    public static double round_100(double value)
+    {
+        int scale = (int) Math.pow(100, 1);
+        return (double) Math.round(value * scale) / scale;
     }
 }

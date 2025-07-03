@@ -2,6 +2,7 @@ package com.creatorskit;
 
 import com.creatorskit.models.exporters.ExportFileFormat;
 import com.creatorskit.programming.MovementType;
+import com.creatorskit.swing.timesheet.sheets.TimelineUnits;
 import net.runelite.client.config.*;
 
 import java.awt.event.KeyEvent;
@@ -365,6 +366,18 @@ public interface CreatorsConfig extends Config
 	default Keybind resetTimelineHotkey()
 	{
 		return new Keybind(KeyEvent.VK_R, KeyEvent.CTRL_DOWN_MASK);
+	}
+
+	@ConfigItem(
+			keyName = "timelineUnits",
+			name = "Timeline Units",
+			description = "Set whether the timeline displays in game ticks or seconds",
+			section = programmer,
+			position = 6
+	)
+	default TimelineUnits timelineUnits()
+	{
+		return TimelineUnits.GAMETICKS;
 	}
 
 	@ConfigSection(

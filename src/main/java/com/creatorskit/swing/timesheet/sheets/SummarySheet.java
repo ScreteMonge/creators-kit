@@ -1,6 +1,7 @@
 package com.creatorskit.swing.timesheet.sheets;
 
 import com.creatorskit.Character;
+import com.creatorskit.CreatorsConfig;
 import com.creatorskit.swing.manager.Folder;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
@@ -22,6 +23,7 @@ import java.util.ArrayList;
 public class SummarySheet extends TimeSheet
 {
     private ManagerTree tree;
+    private CreatorsConfig config;
     private AttributePanel attributePanel;
     private JPopupMenu popupMenu;
     private Character rightClickedCharacter;
@@ -29,9 +31,9 @@ public class SummarySheet extends TimeSheet
     private JMenu[] menuItems;
     private final int FONT_SPACER = 9;
 
-    public SummarySheet(ToolBoxFrame toolBox, ManagerTree tree, AttributePanel attributePanel)
+    public SummarySheet(ToolBoxFrame toolBox, CreatorsConfig config, ManagerTree tree, AttributePanel attributePanel)
     {
-        super(toolBox, tree, attributePanel);
+        super(toolBox, config, tree, attributePanel);
         this.tree = tree;
         this.attributePanel = attributePanel;
 

@@ -897,6 +897,11 @@ public class Programmer
 
     public void togglePlay(boolean play)
     {
+        if (client.getGameState() != GameState.LOGGED_IN)
+        {
+            return;
+        }
+
         if (play)
         {
             triggerPause = false;

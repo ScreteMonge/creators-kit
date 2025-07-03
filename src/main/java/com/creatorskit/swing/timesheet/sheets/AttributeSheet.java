@@ -1,13 +1,13 @@
 package com.creatorskit.swing.timesheet.sheets;
 
 import com.creatorskit.Character;
+import com.creatorskit.CreatorsConfig;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.AttributePanel;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import lombok.Getter;
 import lombok.Setter;
-import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -16,18 +16,18 @@ import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 
-import static com.creatorskit.swing.timesheet.TimeSheetPanel.round;
-
 @Getter
 @Setter
 public class AttributeSheet extends TimeSheet
 {
     private ManagerTree tree;
+    private CreatorsConfig config;
     private AttributePanel attributePanel;
 
-    public AttributeSheet(ToolBoxFrame toolBox, ManagerTree tree, AttributePanel attributePanel)
+    public AttributeSheet(ToolBoxFrame toolBox, CreatorsConfig config, ManagerTree tree, AttributePanel attributePanel)
     {
-        super(toolBox, tree, attributePanel);
+        super(toolBox, config, tree, attributePanel);
+        this.config = config;
         this.tree = tree;
         this.attributePanel = attributePanel;
 
@@ -202,6 +202,9 @@ public class AttributeSheet extends TimeSheet
             return;
         }
 
+        TimelineUnits timelineUnits = config.timelineUnits();
+        double modeMultiplier = timelineUnits.getMultiplier();
+
         BufferedImage image = getKeyframeImage();
         int yImageOffset = (image.getHeight() - rowHeight) / 2;
         int xImageOffset = image.getWidth() / 2;
@@ -219,12 +222,12 @@ public class AttributeSheet extends TimeSheet
         double change;
         if (Math.abs(Math.abs(mouseX) - Math.abs(xCurrentTime)) > DRAG_STICK_RANGE)
         {
-            change = round((mouseX - getMousePointOnPressed().getX()) * getZoom() / getWidth());
+            change = round(timelineUnits, (mouseX - getMousePointOnPressed().getX()) * getZoom() / getWidth());
         }
         else
         {
             KeyFrame keyFrame = getClickedKeyFrames()[0];
-            change = round(getCurrentTime() - keyFrame.getTick());
+            change = round(timelineUnits, getCurrentTime() - keyFrame.getTick());
         }
 
         int imageHeight = image.getHeight();

@@ -1035,7 +1035,7 @@ public class TimeSheetPanel extends JPanel
         playButton.setIcon(playing ? PAUSE : PLAY);
     }
 
-    public void setPreviewTime(double tick)
+    public void updatePreviewTime(double tick)
     {
         attributeSheet.setPreviewTime(tick);
         summarySheet.setPreviewTime(tick);
@@ -1144,8 +1144,8 @@ public class TimeSheetPanel extends JPanel
     private void setupAttributePanel()
     {
         attributePanel = new AttributePanel(client, clientThread, config, this, dataFinder);
-        summarySheet = new SummarySheet(toolBox, managerTree, attributePanel);
-        attributeSheet = new AttributeSheet(toolBox, managerTree, attributePanel);
+        summarySheet = new SummarySheet(toolBox, config, managerTree, attributePanel);
+        attributeSheet = new AttributeSheet(toolBox, config, managerTree, attributePanel);
     }
 
     private void setupAttributeSheet()
