@@ -16,6 +16,8 @@ import org.apache.commons.lang3.ArrayUtils;
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import java.awt.*;
+import java.util.Arrays;
+import java.util.Objects;
 
 @Getter
 @Setter
@@ -597,6 +599,12 @@ public class Character
         {
             keyFrame[i] = (MovementKeyFrame) keyFrames[i];
         }
+
+        if (Arrays.stream(keyFrame).allMatch(Objects::isNull))
+        {
+            return null;
+        }
+
         return keyFrame;
     }
 
@@ -613,6 +621,12 @@ public class Character
         {
             keyFrame[i] = (AnimationKeyFrame) keyFrames[i];
         }
+
+        if (Arrays.stream(keyFrame).allMatch(Objects::isNull))
+        {
+            return null;
+        }
+
         return keyFrame;
     }
 
@@ -629,6 +643,12 @@ public class Character
         {
             keyFrame[i] = (SpawnKeyFrame) keyFrames[i];
         }
+
+        if (Arrays.stream(keyFrame).allMatch(Objects::isNull))
+        {
+            return null;
+        }
+
         return keyFrame;
     }
 
@@ -645,6 +665,12 @@ public class Character
         {
             keyFrame[i] = (ModelKeyFrame) keyFrames[i];
         }
+
+        if (Arrays.stream(keyFrame).allMatch(Objects::isNull))
+        {
+            return null;
+        }
+
         return keyFrame;
     }
 
@@ -661,6 +687,12 @@ public class Character
         {
             keyFrame[i] = (OrientationKeyFrame) keyFrames[i];
         }
+
+        if (Arrays.stream(keyFrame).allMatch(Objects::isNull))
+        {
+            return null;
+        }
+
         return keyFrame;
     }
 
@@ -677,6 +709,12 @@ public class Character
         {
             keyFrame[i] = (TextKeyFrame) keyFrames[i];
         }
+
+        if (Arrays.stream(keyFrame).allMatch(Objects::isNull))
+        {
+            return null;
+        }
+
         return keyFrame;
     }
 
@@ -693,6 +731,12 @@ public class Character
         {
             keyFrame[i] = (OverheadKeyFrame) keyFrames[i];
         }
+
+        if (Arrays.stream(keyFrame).allMatch(Objects::isNull))
+        {
+            return null;
+        }
+
         return keyFrame;
     }
 
@@ -709,6 +753,12 @@ public class Character
         {
             keyFrame[i] = (HealthKeyFrame) keyFrames[i];
         }
+
+        if (Arrays.stream(keyFrame).allMatch(Objects::isNull))
+        {
+            return null;
+        }
+
         return keyFrame;
     }
 
@@ -725,6 +775,12 @@ public class Character
         {
             keyFrame[i] = (SpotAnimKeyFrame) keyFrames[i];
         }
+
+        if (Arrays.stream(keyFrame).allMatch(Objects::isNull))
+        {
+            return null;
+        }
+
         return keyFrame;
     }
 
