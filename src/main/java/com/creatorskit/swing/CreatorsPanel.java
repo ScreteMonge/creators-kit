@@ -1269,7 +1269,7 @@ public class CreatorsPanel extends PluginPanel
     {
         if (lastFileLoaded == null)
         {
-            openSaveDialog();
+            SwingUtilities.invokeLater(this::openSaveDialog);
             return;
         }
 

@@ -592,11 +592,20 @@ public class Character
             return null;
         }
 
-        MovementKeyFrame[] keyFrame = new MovementKeyFrame[keyFrames.length];
-        for (int i = 0; i < keyFrames.length; i++)
+        MovementKeyFrame[] keyFrame = new MovementKeyFrame[0];
+        for (KeyFrame kf : keyFrames)
         {
-            keyFrame[i] = (MovementKeyFrame) keyFrames[i];
+            if (kf != null)
+            {
+                keyFrame = ArrayUtils.add(keyFrame, (MovementKeyFrame) kf);
+            }
         }
+
+        if (keyFrame.length == 0)
+        {
+            return null;
+        }
+
         return keyFrame;
     }
 
@@ -608,11 +617,20 @@ public class Character
             return null;
         }
 
-        AnimationKeyFrame[] keyFrame = new AnimationKeyFrame[keyFrames.length];
-        for (int i = 0; i < keyFrames.length; i++)
+        AnimationKeyFrame[] keyFrame = new AnimationKeyFrame[0];
+        for (KeyFrame kf : keyFrames)
         {
-            keyFrame[i] = (AnimationKeyFrame) keyFrames[i];
+            if (kf != null)
+            {
+                keyFrame = ArrayUtils.add(keyFrame, (AnimationKeyFrame) kf);
+            }
         }
+
+        if (keyFrame.length == 0)
+        {
+            return null;
+        }
+
         return keyFrame;
     }
 
@@ -624,11 +642,20 @@ public class Character
             return null;
         }
 
-        SpawnKeyFrame[] keyFrame = new SpawnKeyFrame[keyFrames.length];
-        for (int i = 0; i < keyFrames.length; i++)
+        SpawnKeyFrame[] keyFrame = new SpawnKeyFrame[0];
+        for (KeyFrame kf : keyFrames)
         {
-            keyFrame[i] = (SpawnKeyFrame) keyFrames[i];
+            if (kf != null)
+            {
+                keyFrame = ArrayUtils.add(keyFrame, (SpawnKeyFrame) kf);
+            }
         }
+
+        if (keyFrame.length == 0)
+        {
+            return null;
+        }
+
         return keyFrame;
     }
 
@@ -640,11 +667,20 @@ public class Character
             return null;
         }
 
-        ModelKeyFrame[] keyFrame = new ModelKeyFrame[keyFrames.length];
-        for (int i = 0; i < keyFrames.length; i++)
+        ModelKeyFrame[] keyFrame = new ModelKeyFrame[0];
+        for (KeyFrame kf : keyFrames)
         {
-            keyFrame[i] = (ModelKeyFrame) keyFrames[i];
+            if (kf != null)
+            {
+                keyFrame = ArrayUtils.add(keyFrame, (ModelKeyFrame) kf);
+            }
         }
+
+        if (keyFrame.length == 0)
+        {
+            return null;
+        }
+
         return keyFrame;
     }
 
@@ -656,11 +692,20 @@ public class Character
             return null;
         }
 
-        OrientationKeyFrame[] keyFrame = new OrientationKeyFrame[keyFrames.length];
-        for (int i = 0; i < keyFrames.length; i++)
+        OrientationKeyFrame[] keyFrame = new OrientationKeyFrame[0];
+        for (KeyFrame kf : keyFrames)
         {
-            keyFrame[i] = (OrientationKeyFrame) keyFrames[i];
+            if (kf != null)
+            {
+                keyFrame = ArrayUtils.add(keyFrame, (OrientationKeyFrame) kf);
+            }
         }
+
+        if (keyFrame.length == 0)
+        {
+            return null;
+        }
+
         return keyFrame;
     }
 
@@ -672,11 +717,20 @@ public class Character
             return null;
         }
 
-        TextKeyFrame[] keyFrame = new TextKeyFrame[keyFrames.length];
-        for (int i = 0; i < keyFrames.length; i++)
+        TextKeyFrame[] keyFrame = new TextKeyFrame[0];
+        for (KeyFrame kf : keyFrames)
         {
-            keyFrame[i] = (TextKeyFrame) keyFrames[i];
+            if (kf != null)
+            {
+                keyFrame = ArrayUtils.add(keyFrame, (TextKeyFrame) kf);
+            }
         }
+
+        if (keyFrame.length == 0)
+        {
+            return null;
+        }
+
         return keyFrame;
     }
 
@@ -688,11 +742,20 @@ public class Character
             return null;
         }
 
-        OverheadKeyFrame[] keyFrame = new OverheadKeyFrame[keyFrames.length];
-        for (int i = 0; i < keyFrames.length; i++)
+        OverheadKeyFrame[] keyFrame = new OverheadKeyFrame[0];
+        for (KeyFrame kf : keyFrames)
         {
-            keyFrame[i] = (OverheadKeyFrame) keyFrames[i];
+            if (kf != null)
+            {
+                keyFrame = ArrayUtils.add(keyFrame, (OverheadKeyFrame) kf);
+            }
         }
+
+        if (keyFrame.length == 0)
+        {
+            return null;
+        }
+
         return keyFrame;
     }
 
@@ -704,11 +767,20 @@ public class Character
             return null;
         }
 
-        HealthKeyFrame[] keyFrame = new HealthKeyFrame[keyFrames.length];
-        for (int i = 0; i < keyFrames.length; i++)
+        HealthKeyFrame[] keyFrame = new HealthKeyFrame[0];
+        for (KeyFrame kf : keyFrames)
         {
-            keyFrame[i] = (HealthKeyFrame) keyFrames[i];
+            if (kf != null)
+            {
+                keyFrame = ArrayUtils.add(keyFrame, (HealthKeyFrame) kf);
+            }
         }
+
+        if (keyFrame.length == 0)
+        {
+            return null;
+        }
+
         return keyFrame;
     }
 
@@ -720,11 +792,20 @@ public class Character
             return null;
         }
 
-        SpotAnimKeyFrame[] keyFrame = new SpotAnimKeyFrame[keyFrames.length];
-        for (int i = 0; i < keyFrames.length; i++)
+        SpotAnimKeyFrame[] keyFrame = new SpotAnimKeyFrame[0];
+        for (KeyFrame kf : keyFrames)
         {
-            keyFrame[i] = (SpotAnimKeyFrame) keyFrames[i];
+            if (kf != null)
+            {
+                keyFrame = ArrayUtils.add(keyFrame, (SpotAnimKeyFrame) kf);
+            }
         }
+
+        if (keyFrame.length == 0)
+        {
+            return null;
+        }
+
         return keyFrame;
     }
 
