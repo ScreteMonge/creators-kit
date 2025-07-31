@@ -1575,7 +1575,7 @@ public class ModelGetter
 
         if (menuOption == ModelMenuOption.TRANSMOG)
         {
-            creatorsPanel.getModelOrganizer().setTransmog(customModel);
+            creatorsPanel.getToolBox().getTransmogPanel().setTransmog(customModel);
         }
 
         if (menuOption == ModelMenuOption.STORE_AND_ADD || menuOption == ModelMenuOption.STORE_ADD_ANIMATE)

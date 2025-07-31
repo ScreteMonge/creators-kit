@@ -1413,14 +1413,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			switch (transmogLoadOption)
 			{
 				case ANIMATIONS:
-					creatorsPanel.getTransmogPanel().loadTransmog(transmogSave);
+					creatorsPanel.getToolBox().getTransmogPanel().loadTransmog(transmogSave);
 					break;
 				case CUSTOM_MODEL:
 					if (comp != null)
 						loadCustomModel = true;
 					break;
 				case BOTH:
-					creatorsPanel.getTransmogPanel().loadTransmog(transmogSave);
+					creatorsPanel.getToolBox().getTransmogPanel().loadTransmog(transmogSave);
 					if (comp != null)
 						loadCustomModel = true;
 			}
@@ -1436,7 +1436,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					Model model = createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle(), cl, false);
 					CustomModel customModel = new CustomModel(model, comp);
 					addCustomModel(customModel, false);
-					creatorsPanel.getModelOrganizer().setTransmog(customModel);
+					creatorsPanel.getToolBox().getTransmogPanel().setTransmog(customModel);
 				});
 			}
 		}

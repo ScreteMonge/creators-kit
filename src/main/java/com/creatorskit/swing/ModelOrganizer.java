@@ -217,6 +217,8 @@ public class ModelOrganizer extends JPanel
         c.gridheight = 1;
         c.insets = new Insets(2, 2, 2, 2);
 
+        TransmogPanel transmogPanel = plugin.getCreatorsPanel().getToolBox().getTransmogPanel();
+
         c.gridx = 0;
         c.gridy = 0;
         JTextField textField = new JTextField();
@@ -230,7 +232,7 @@ public class ModelOrganizer extends JPanel
             textField.setText(text);
             model.getComp().setName(text);
             plugin.updatePanelComboBoxes();
-            plugin.getCreatorsPanel().getTransmogPanel().getTransmogLabel().setText(text);
+            transmogPanel.getTransmogLabel().setText(text);
         });
         textField.addFocusListener(new FocusListener() {
             @Override
@@ -272,7 +274,7 @@ public class ModelOrganizer extends JPanel
         transmogButton.setPreferredSize(buttonDimension);
         transmogButton.setToolTipText("Set this as your player transmog");
         buttonsPanel.add(transmogButton);
-        transmogButton.addActionListener(e -> setTransmog(model));
+        transmogButton.addActionListener(e -> transmogPanel.setTransmog(model));
 
         JButton exportButton = new JButton(new ImageIcon(EXPORT));
         exportButton.setPreferredSize(buttonDimension);
@@ -499,56 +501,5 @@ public class ModelOrganizer extends JPanel
         }
 
         return detailedModels;
-    }
-
-    public void setTransmog(CustomModel customModel)
-    {
-        CKObject transmog = plugin.getTransmog();
-        TransmogPanel transmogPanel = plugin.getCreatorsPanel().getTransmogPanel();
-
-        if (transmog == null)
-        {
-            clientThread.invokeLater(() ->
-            {
-                CKObject newTransmog = new CKObject(client);
-                client.registerRuneLiteObject(newTransmog);
-
-                newTransmog.setLoop(false);
-                newTransmog.setFreeze(false);
-                newTransmog.setHasAnimKeyFrame(false);
-                newTransmog.setActive(true);
-                newTransmog.setModel(customModel.getModel());
-                newTransmog.setRadius(transmogPanel.getRadius());
-                newTransmog.setupAnimController(AnimationType.ACTIVE, 0);
-                newTransmog.setupAnimController(AnimationType.POSE, 0);
-                newTransmog.setPlaying(true);
-
-                LocalPoint localPoint = client.getLocalPlayer().getLocalLocation();
-                if (localPoint != null)
-                {
-                    newTransmog.setLocation(localPoint, client.getTopLevelWorldView().getPlane());
-                }
-
-                plugin.setTransmog(newTransmog);
-                plugin.setTransmogModel(customModel);
-                transmogPanel.getTransmogLabel().setText(customModel.getComp().getName());
-            });
-            return;
-        }
-
-        clientThread.invokeLater(() ->
-        {
-            transmog.setActive(false);
-            transmog.setActive(true);
-            LocalPoint localPoint = client.getLocalPlayer().getLocalLocation();
-            if (localPoint != null)
-            {
-                transmog.setLocation(localPoint, client.getTopLevelWorldView().getPlane());
-            }
-        });
-        plugin.setTransmogModel(customModel);
-        transmogPanel.getTransmogLabel().setText(customModel.getComp().getName());
-        transmog.setModel(customModel.getModel());
-        transmog.setRadius(transmogPanel.getRadius());
     }
 }

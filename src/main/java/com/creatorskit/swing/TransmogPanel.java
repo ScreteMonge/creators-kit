@@ -331,6 +331,56 @@ public class TransmogPanel extends JPanel
         revalidate();
     }
 
+    public void setTransmog(CustomModel customModel)
+    {
+        CKObject transmog = plugin.getTransmog();
+
+        if (transmog == null)
+        {
+            clientThread.invokeLater(() ->
+            {
+                CKObject newTransmog = new CKObject(client);
+                client.registerRuneLiteObject(newTransmog);
+
+                newTransmog.setLoop(false);
+                newTransmog.setFreeze(false);
+                newTransmog.setHasAnimKeyFrame(false);
+                newTransmog.setActive(true);
+                newTransmog.setModel(customModel.getModel());
+                newTransmog.setRadius(radius);
+                newTransmog.setupAnimController(AnimationType.ACTIVE, 0);
+                newTransmog.setupAnimController(AnimationType.POSE, 0);
+
+                LocalPoint localPoint = client.getLocalPlayer().getLocalLocation();
+                if (localPoint != null)
+                {
+                    newTransmog.setLocation(localPoint, client.getTopLevelWorldView().getPlane());
+                }
+
+                plugin.setTransmog(newTransmog);
+                plugin.setTransmogModel(customModel);
+                transmogLabel.setText(customModel.getComp().getName());
+            });
+            return;
+        }
+
+        clientThread.invokeLater(() ->
+        {
+            transmog.setActive(false);
+            transmog.setActive(true);
+            LocalPoint localPoint = client.getLocalPlayer().getLocalLocation();
+            if (localPoint != null)
+            {
+                transmog.setLocation(localPoint, client.getTopLevelWorldView().getPlane());
+            }
+        });
+
+        plugin.setTransmogModel(customModel);
+        transmogLabel.setText(customModel.getComp().getName());
+        transmog.setModel(customModel.getModel());
+        transmog.setRadius(radius);
+    }
+
     @Subscribe
     public void onAnimationChanged(AnimationChanged event)
     {
@@ -425,7 +475,7 @@ public class TransmogPanel extends JPanel
 
             if (animationMode == TransmogAnimationMode.PLAYER)
             {
-                if (poseId != playerPose)
+                if (poseId != playerPose && playerPose != -1)
                 {
                     transmog.setAnimation(AnimationType.POSE, playerPose);
                 }
@@ -478,7 +528,7 @@ public class TransmogPanel extends JPanel
                         poseAnimId = rotate;
                 }
 
-                if (poseId != poseAnimId)
+                if (poseId != poseAnimId && poseAnimId != -1)
                 {
                     transmog.setAnimation(AnimationType.POSE, poseAnimId);
                 }

@@ -59,7 +59,6 @@ public class CreatorsPanel extends PluginPanel
     private final ModelAnvil modelAnvil;
     private final ModelOrganizer modelOrganizer;
     private final DataFinder dataFinder;
-    private final TransmogPanel transmogPanel;
     private final ModelImporter modelImporter;
 
     private final JButton addObjectButton = new JButton();
@@ -95,7 +94,6 @@ public class CreatorsPanel extends PluginPanel
         this.toolBox = toolBox;
         this.modelOrganizer = toolBox.getModelOrganizer();
         this.modelAnvil = toolBox.getModelAnvil();
-        this.transmogPanel = toolBox.getTransmogPanel();
         this.dataFinder = dataFinder;
         this.modelImporter = modelImporter;
 
