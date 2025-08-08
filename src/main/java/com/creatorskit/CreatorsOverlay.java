@@ -72,7 +72,7 @@ public class CreatorsOverlay extends Overlay
             renderRLObjects(graphics, keyHeld, worldView);
         }
 
-        renderObjectsOverlay(graphics, worldView);
+        //renderObjectsOverlay(graphics, worldView);
 
         if (config.pathOverlay())
         {
@@ -87,13 +87,19 @@ public class CreatorsOverlay extends Overlay
         }
 
         if (config.npcOverlay())
-            renderNPCOverlay(graphics, worldView);
+        {
+            //renderNPCOverlay(graphics, worldView);
+        }
 
         if (config.playerOverlay())
+        {
             renderPlayerOverlay(graphics, worldView);
+        }
 
         if (config.projectileOverlay())
-            renderProjectiles(graphics, worldView);
+        {
+            //renderProjectiles(graphics, worldView);
+        }
 
         return null;
     }
