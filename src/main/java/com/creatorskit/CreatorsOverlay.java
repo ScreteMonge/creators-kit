@@ -8,6 +8,7 @@ import net.runelite.api.*;
 import net.runelite.api.Point;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.gameval.ObjectID;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
@@ -15,6 +16,7 @@ import net.runelite.client.ui.overlay.OverlayUtil;
 
 import javax.inject.Inject;
 import java.awt.*;
+import java.util.Arrays;
 import java.util.Collection;
 
 public class CreatorsOverlay extends Overlay
@@ -72,7 +74,7 @@ public class CreatorsOverlay extends Overlay
             renderRLObjects(graphics, keyHeld, worldView);
         }
 
-        //renderObjectsOverlay(graphics, worldView);
+        renderObjectsOverlay(graphics, worldView);
 
         if (config.pathOverlay())
         {
@@ -88,7 +90,7 @@ public class CreatorsOverlay extends Overlay
 
         if (config.npcOverlay())
         {
-            //renderNPCOverlay(graphics, worldView);
+            renderNPCOverlay(graphics, worldView);
         }
 
         if (config.playerOverlay())
@@ -98,7 +100,7 @@ public class CreatorsOverlay extends Overlay
 
         if (config.projectileOverlay())
         {
-            //renderProjectiles(graphics, worldView);
+            renderProjectiles(graphics, worldView);
         }
 
         return null;
@@ -642,6 +644,12 @@ public class CreatorsOverlay extends Overlay
         GroundObject groundObject = tile.getGroundObject();
         if (groundObject != null)
         {
+            int id = groundObject.getId();
+            if (Arrays.stream(TOA_PUZZLE).anyMatch(e -> e == id))
+            {
+                return;
+            }
+
             LocalPoint camera = new LocalPoint(client.getCameraX(), client.getCameraY(), worldView);
             if (groundObject.getLocalLocation().distanceTo(camera) <= MAX_DISTANCE)
             {
@@ -649,6 +657,27 @@ public class CreatorsOverlay extends Overlay
             }
         }
     }
+
+    private final int[] TOA_PUZZLE = new int[]{
+            ObjectID.TOA_SCABARAS_MEMORYGAME_BUTTON1,
+            ObjectID.TOA_SCABARAS_MEMORYGAME_BUTTON2,
+            ObjectID.TOA_SCABARAS_MEMORYGAME_BUTTON3,
+            ObjectID.TOA_SCABARAS_MEMORYGAME_BUTTON4,
+            ObjectID.TOA_SCABARAS_MEMORYGAME_BUTTON5,
+            ObjectID.TOA_SCABARAS_MEMORYGAME_BUTTON6,
+            ObjectID.TOA_SCABARAS_MEMORYGAME_BUTTON7,
+            ObjectID.TOA_SCABARAS_MEMORYGAME_BUTTON8,
+            ObjectID.TOA_SCABARAS_MEMORYGAME_BUTTON9,
+            ObjectID.TOA_SCABARAS_MEMORYGAME_TILE1,
+            ObjectID.TOA_SCABARAS_MEMORYGAME_TILE2,
+            ObjectID.TOA_SCABARAS_MEMORYGAME_TILE3,
+            ObjectID.TOA_SCABARAS_MEMORYGAME_TILE4,
+            ObjectID.TOA_SCABARAS_MEMORYGAME_TILE5,
+            ObjectID.TOA_SCABARAS_MEMORYGAME_TILE6,
+            ObjectID.TOA_SCABARAS_MEMORYGAME_TILE7,
+            ObjectID.TOA_SCABARAS_MEMORYGAME_TILE8,
+            ObjectID.TOA_SCABARAS_MEMORYGAME_TILE9
+    };
 
     public void renderWallObjects(Graphics2D graphics, Tile tile, WorldView worldView)
     {
