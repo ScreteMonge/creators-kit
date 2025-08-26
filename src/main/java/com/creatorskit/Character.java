@@ -43,7 +43,7 @@ public class Character
     private boolean customMode;
     private JTextField nameField;
     private JComboBox<CustomModel> comboBox;
-    private JButton spawnButton;
+    private JCheckBox spawnCheckBox;
     private JButton modelButton;
     private JSpinner modelSpinner;
     private JSpinner animationSpinner;
@@ -813,12 +813,12 @@ public class Character
                     ckObject.setActive(false);
                 }
                 ckObject.setActive(true);
-                spawnButton.setText("Spawn");
+                spawnCheckBox.setSelected(true);
                 return;
             }
 
             ckObject.setActive(false);
-            spawnButton.setText("Despawn");
+            spawnCheckBox.setSelected(false);
         });
     }
 

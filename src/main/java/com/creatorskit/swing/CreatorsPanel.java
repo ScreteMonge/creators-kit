@@ -286,11 +286,10 @@ public class CreatorsPanel extends PluginPanel
         modelButton.setToolTipText("Toggle between Custom Model and Model ID");
         modelButton.setFocusable(false);
 
-        JButton spawnButton = new JButton();
-        spawnButton.setFont(FontManager.getRunescapeFont());
-        spawnButton.setText(active ? "Spawn" : "Despawn");
-        spawnButton.setToolTipText("Toggle the Object on or off");
-        spawnButton.setFocusable(false);
+        JCheckBox spawnCheckBox = new JCheckBox();
+        spawnCheckBox.setText("Spawn");
+        spawnCheckBox.setToolTipText("Toggle the Object on or off");
+        spawnCheckBox.setFocusable(false);
 
         JButton colourButton = new JButton();
         colourButton.setFont(FontManager.getRunescapeFont());
@@ -388,7 +387,7 @@ public class CreatorsPanel extends PluginPanel
             objectPanel.add(modelButton, c);
 
             c.gridy++;
-            objectPanel.add(spawnButton, c);
+            objectPanel.add(spawnCheckBox, c);
 
             c.gridy++;
             objectPanel.add(colourButton, c);
@@ -456,7 +455,7 @@ public class CreatorsPanel extends PluginPanel
                 customModeActive,
                 textField,
                 modelComboBox,
-                spawnButton,
+                spawnCheckBox,
                 modelButton,
                 modelSpinner,
                 animationSpinner,
@@ -511,7 +510,7 @@ public class CreatorsPanel extends PluginPanel
             }
         });
 
-        spawnButton.addActionListener(e -> character.toggleActive(clientThread));
+        spawnCheckBox.addActionListener(e -> character.toggleActive(clientThread));
 
         colourButton.addActionListener(e ->
         {
@@ -588,7 +587,7 @@ public class CreatorsPanel extends PluginPanel
                 switchButton,
                 deleteButton,
                 modelButton,
-                spawnButton,
+                spawnCheckBox,
                 colourButton,
                 animationFrameSpinner,
                 frameLabel,
@@ -619,7 +618,7 @@ public class CreatorsPanel extends PluginPanel
             JButton switchButton,
             JButton deleteButton,
             JButton modelButton,
-            JButton spawnButton,
+            JCheckBox spawnCheckBox,
             JButton colourButton,
             JSpinner animationFrameSpinner,
             JLabel frameLabel,
@@ -640,7 +639,7 @@ public class CreatorsPanel extends PluginPanel
         addSelectListeners(duplicateButton, character, objectPanel, false);
         addSelectListeners(deleteButton, character, objectPanel, false);
         addSelectListeners(modelButton, character, objectPanel, true);
-        addSelectListeners(spawnButton, character, objectPanel, true);
+        addSelectListeners(spawnCheckBox, character, objectPanel, true);
         addSelectListeners(colourButton, character, objectPanel, true);
         addSelectListeners(animationFrameSpinner, character, objectPanel, true);
         addSelectListeners(frameLabel, character, objectPanel, true);
