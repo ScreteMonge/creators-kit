@@ -650,6 +650,11 @@ public class CreatorsPanel extends PluginPanel
         addSelectListeners(animationLabel, character, objectPanel, true);
         addSelectListeners(modelComboBox, character, objectPanel, true);
 
+        for (Component c : modelComboBox.getComponents())
+        {
+            addSelectListeners(c, character, objectPanel, true);
+        }
+
         for (Component c : modelSpinner.getEditor().getComponents())
         {
             addSelectListeners(c, character, objectPanel, true);
