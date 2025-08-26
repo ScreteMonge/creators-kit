@@ -355,22 +355,34 @@ public class TimeSheetPanel extends JPanel
                 return;
             }
 
-            addKeyFrameAction(kf);
+            KeyFrame[] keyFrames = new KeyFrame[]{kf};
+            if (type == KeyFrameType.SPAWN && currentTick > 0)
+            {
+                keyFrames = checkDespawnKeyFrameAt0(kf, keyFrames, currentTick);
+            }
+
+            addKeyFrameAction(keyFrames);
             return;
         }
 
        removeKeyFrameAction(keyFrame);
     }
 
-    public void addKeyFrameAction(KeyFrame keyFrame)
+    public void addKeyFrameAction(KeyFrame[] keyFrames)
     {
-        KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.ADD)};
-        KeyFrame keyFrameToReplace = addKeyFrame(selectedCharacter, keyFrame);
+        KeyFrameAction[] kfa = new KeyFrameAction[0];
 
-        if (keyFrameToReplace != null)
+        for (KeyFrame keyFrame : keyFrames)
         {
-            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
+            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.ADD));
+
+            KeyFrame keyFrameToReplace = addKeyFrame(selectedCharacter, keyFrame);
+            if (keyFrameToReplace != null)
+            {
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
+            }
         }
+
         addKeyFrameActions(kfa);
     }
 
@@ -416,6 +428,21 @@ public class TimeSheetPanel extends JPanel
         KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(kf, selectedCharacter, KeyFrameCharacterActionType.ADD), new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.REMOVE)};
         addKeyFrame(selectedCharacter, kf);
         addKeyFrameActions(kfa);
+    }
+
+    public KeyFrame[] checkDespawnKeyFrameAt0(KeyFrame keyFrame, KeyFrame[] keyframes, double currentTick)
+    {
+        SpawnKeyFrame skf = (SpawnKeyFrame) keyFrame;
+
+        KeyFrame previousKeyFrame = selectedCharacter.findPreviousKeyFrame(KeyFrameType.SPAWN, currentTick, false);
+        if (previousKeyFrame == null)
+        {
+            SpawnKeyFrame spawn = new SpawnKeyFrame(0, !skf.isSpawnActive());
+            keyframes = ArrayUtils.add(keyframes, spawn);
+            return keyframes;
+        }
+
+        return keyframes;
     }
 
     public void onOrientationKeyPressed(OrientationHotkeyMode hotkeyMode)
@@ -521,7 +548,7 @@ public class TimeSheetPanel extends JPanel
                 turnDuration,
                 turnRate);
 
-        addKeyFrameAction(okf);
+        addKeyFrameAction(new KeyFrame[]{okf});
     }
 
     public void onAddOrientationMenuOptionPressed()
@@ -553,7 +580,7 @@ public class TimeSheetPanel extends JPanel
                 1,
                 OrientationKeyFrame.TURN_RATE);
 
-        addKeyFrameAction(okf);
+        addKeyFrameAction(new KeyFrame[]{okf});
     }
 
     public void onAddMovementKeyPressed()
@@ -686,7 +713,7 @@ public class TimeSheetPanel extends JPanel
         }
 
         KeyFrame hitsplatKeyFrame = attributePanel.createKeyFrame(type, currentTime);
-        addKeyFrameAction(hitsplatKeyFrame);
+        addKeyFrameAction(new KeyFrame[]{hitsplatKeyFrame});
 
         HitsplatKeyFrame hitsKF = (HitsplatKeyFrame) hitsplatKeyFrame;
 
@@ -727,7 +754,7 @@ public class TimeSheetPanel extends JPanel
                 maxHealth,
                 remaining);
 
-        addKeyFrameAction(nextKF);
+        addKeyFrameAction(new KeyFrame[]{nextKF});
     }
 
     public void addAnimationKeyFrameFromCache(WeaponAnimData weaponAnim)
@@ -748,7 +775,7 @@ public class TimeSheetPanel extends JPanel
                 WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_RIGHT),
                 WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_LEFT));
 
-        addKeyFrameAction(keyFrame);
+        addKeyFrameAction(new KeyFrame[]{keyFrame});
     }
 
     public void addSpotAnimKeyFrameFromCache(SpotanimData spotanimData)
@@ -771,7 +798,7 @@ public class TimeSheetPanel extends JPanel
                 false,
                 92);
 
-        addKeyFrameAction(keyFrame);
+        addKeyFrameAction(new KeyFrame[]{keyFrame});
     }
 
     public void duplicateHitsplatKeyFrame(KeyFrameType previousType, KeyFrameType targetType)
@@ -792,7 +819,7 @@ public class TimeSheetPanel extends JPanel
                 keyFrame.getVariant(),
                 keyFrame.getDamage());
 
-        addKeyFrameAction(hkf);
+        addKeyFrameAction(new KeyFrame[]{hkf});
     }
 
     public void duplicateSpotanimKeyFrame(KeyFrameType previousType, KeyFrameType targetType)
@@ -812,7 +839,7 @@ public class TimeSheetPanel extends JPanel
                 keyFrame.isLoop(),
                 keyFrame.getHeight());
 
-        addKeyFrameAction(spkf);
+        addKeyFrameAction(new KeyFrame[]{spkf});
     }
 
     /**
