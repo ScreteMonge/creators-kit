@@ -66,12 +66,16 @@ public class TimeSheetPanel extends JPanel
     private TreeScrollPane treeScrollPane;
     private final ManagerTree managerTree;
     private MovementManager movementManager;
+
     private final JComboBox<KeyFrameType> summaryComboBox = new JComboBox<>();
+    private final JSpinner timeSpinner = new JSpinner();
+    private boolean triggerTimeSpinnerChange = true;
     private JScrollBar scrollBar;
     private AttributePanel attributePanel;
     private final JScrollPane labelScrollPane = new JScrollPane();
     private final JPanel controlPanel = new JPanel();
     private final JButton playButton = new JButton();
+
     private final ImageIcon PLAY = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/Play.png"));
     private final ImageIcon STOP = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/Stop.png"));
     private final ImageIcon PAUSE = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/Pause.png"));
@@ -1035,6 +1039,10 @@ public class TimeSheetPanel extends JPanel
         attributeSheet.setCurrentTime(currentTime);
         summarySheet.setCurrentTime(currentTime);
 
+        triggerTimeSpinnerChange = false;
+        timeSpinner.setValue(currentTime);
+        triggerTimeSpinnerChange = true;
+
         Programmer programmer = toolBox.getProgrammer();
 
         if (client.getGameState() == GameState.LOGGED_IN)
@@ -1127,7 +1135,6 @@ public class TimeSheetPanel extends JPanel
         c.weighty = 1;
         c.gridx = 0;
         c.gridy = 0;
-        JSpinner timeSpinner = new JSpinner();
         timeSpinner.setBackground(ColorScheme.DARK_GRAY_COLOR);
         timeSpinner.setModel(new SpinnerNumberModel(0, -ABSOLUTE_MAX_SEQUENCE_LENGTH, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.1));
         JSpinner.NumberEditor editor = (JSpinner.NumberEditor) timeSpinner.getEditor();
@@ -1136,8 +1143,13 @@ public class TimeSheetPanel extends JPanel
         timeSpinner.setValue(0);
         timeSpinner.addChangeListener(e ->
         {
-            double tick = TimeSheetPanel.round((double) timeSpinner.getValue());
-            toolBox.getTimeSheetPanel().setCurrentTime(tick, false);
+            if (!triggerTimeSpinnerChange)
+            {
+                return;
+            }
+
+            double tick = round((double) timeSpinner.getValue());
+            setCurrentTime(tick, false);
         });
         controlPanel.add(timeSpinner, c);
 
