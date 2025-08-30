@@ -463,8 +463,6 @@ public class CreatorsPanel extends PluginPanel
                 orientationSpinner,
                 radiusSpinner,
                 new CKObject(client),
-                null,
-                null,
                 0);
 
         textField.addActionListener(e -> onNameTextFieldChanged(character));
@@ -893,18 +891,6 @@ public class CreatorsPanel extends PluginPanel
             clientThread.invokeLater(() ->
             {
                 c.getCkObject().setActive(false);
-
-                CKObject sp1 = c.getSpotAnim1();
-                if (sp1 != null)
-                {
-                    sp1.setActive(false);
-                }
-
-                CKObject sp2 = c.getSpotAnim2();
-                if (sp2 != null)
-                {
-                    sp2.setActive(false);
-                }
             });
             characters.remove(c);
             if (c == selectedCharacter)

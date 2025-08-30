@@ -51,8 +51,6 @@ public class Character
     private JSpinner orientationSpinner;
     private JSpinner radiusSpinner;
     private CKObject ckObject;
-    private CKObject spotAnim1;
-    private CKObject spotAnim2;
     private int targetOrientation;
 
     @Override
@@ -75,29 +73,11 @@ public class Character
     public void play()
     {
         ckObject.setPlaying(true);
-        if (spotAnim1 != null)
-        {
-            spotAnim1.setPlaying(true);
-        }
-
-        if (spotAnim2 != null)
-        {
-            spotAnim2.setPlaying(true);
-        }
     }
 
     public void pause()
     {
         ckObject.setPlaying(false);
-        if (spotAnim1 != null)
-        {
-            spotAnim1.setPlaying(false);
-        }
-
-        if (spotAnim2 != null)
-        {
-            spotAnim2.setPlaying(false);
-        }
     }
 
     /**
@@ -119,16 +99,6 @@ public class Character
         {
             ckObject.setOrientation(orientation);
         }
-
-        if (spotAnim1 != null)
-        {
-            spotAnim1.setOrientation(orientation);
-        }
-
-        if (spotAnim2 != null)
-        {
-            spotAnim2.setOrientation(orientation);
-        }
     }
 
     public void setLocation(LocalPoint lp, int plane)
@@ -136,29 +106,6 @@ public class Character
         if (ckObject != null)
         {
             ckObject.setLocation(lp, plane);
-        }
-
-        if (spotAnim1 != null)
-        {
-            spotAnim1.setLocation(lp, plane);
-        }
-
-        if (spotAnim2 != null)
-        {
-            spotAnim2.setLocation(lp, plane);
-        }
-    }
-
-    public void setSpotAnim(CKObject spotAnim, KeyFrameType spotAnimType)
-    {
-        if (spotAnimType == KeyFrameType.SPOTANIM)
-        {
-            setSpotAnim1(spotAnim);
-        }
-
-        if (spotAnimType == KeyFrameType.SPOTANIM2)
-        {
-            setSpotAnim2(spotAnim);
         }
     }
 

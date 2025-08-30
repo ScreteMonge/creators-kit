@@ -2,10 +2,12 @@ package com.creatorskit;
 
 import com.creatorskit.programming.AnimationType;
 import com.creatorskit.programming.CKAnimationController;
+import com.creatorskit.swing.timesheet.SpotAnim;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
+import org.apache.commons.lang3.ArrayUtils;
 
 @Getter
 @Setter
@@ -13,6 +15,8 @@ public class CKObject extends RuneLiteObjectController
 {
     private final Client client;
     private Model baseModel;
+    private SpotAnim spotAnim1;
+    private SpotAnim spotAnim2;
     private boolean freeze;
     private boolean playing;
     private boolean hasAnimKeyFrame;
@@ -24,6 +28,8 @@ public class CKObject extends RuneLiteObjectController
     public CKObject(Client client)
     {
         this.client = client;
+        spotAnim1 = new SpotAnim(client);
+        spotAnim2 = new SpotAnim(client);
     }
 
     private int startCycle;
@@ -159,28 +165,54 @@ public class CKObject extends RuneLiteObjectController
             setupAnimController(AnimationType.POSE, -1);
         }
 
+        if (!spotAnim1.isAnimationSetup())
+        {
+            spotAnim1.setupAnimationController(client);
+        }
+
+        if (!spotAnim2.isAnimationSetup())
+        {
+            spotAnim2.setupAnimationController(client);
+        }
+
         if (!freeze)
         {
             animationController.tick(ticksSinceLastFrame);
             poseAnimationController.tick(ticksSinceLastFrame);
+        }
+
+        if (playing)
+        {
+            spotAnim1.tick(ticksSinceLastFrame);
+            spotAnim2.tick(ticksSinceLastFrame);
         }
     }
 
     @Override
     public Model getModel()
     {
+        Model[] models = new Model[1];
+
         if (animationController != null)
         {
-            return animationController.animate(this.baseModel, this.poseAnimationController);
+            models[0] = animationController.animate(this.baseModel, this.poseAnimationController);
         }
         else if (poseAnimationController != null)
         {
-            return poseAnimationController.animate(this.baseModel);
+            models[0] = poseAnimationController.animate(this.baseModel);
         }
-        else
+
+        if (spotAnim1.getId() != -1 && !spotAnim1.isFinished())
         {
-            return baseModel;
+            models = ArrayUtils.add(models, spotAnim1.getModel());
         }
+
+        if (spotAnim2.getId() != -1 && !spotAnim2.isFinished())
+        {
+            models = ArrayUtils.add(models, spotAnim2.getModel());
+        }
+
+        return client.mergeModels(models, models.length);
     }
 
     public boolean isFinished()
