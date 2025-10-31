@@ -114,9 +114,12 @@ public class CreatorsPanel extends PluginPanel
         toolBoxButton.setFocusable(false);
         toolBoxButton.addActionListener(e ->
         {
-            toolBox.setVisible(!toolBox.isVisible());
-            revalidate();
-            repaint();
+            SwingUtilities.invokeLater(() ->
+            {
+                toolBox.setVisible(!toolBox.isVisible());
+                revalidate();
+                repaint();
+            });
         });
         add(toolBoxButton, c);
 

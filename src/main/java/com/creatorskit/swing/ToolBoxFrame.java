@@ -160,8 +160,8 @@ public class ToolBoxFrame extends JFrame
 
         add(jMenuBar, BorderLayout.PAGE_START);
         add(tabbedPane, BorderLayout.CENTER);
-        pack();
         revalidate();
+        pack();
     }
 
     private void setupWindow()
