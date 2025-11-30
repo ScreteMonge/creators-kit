@@ -451,7 +451,18 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 		}
 
-		WorldView worldView = client.getTopLevelWorldView();
+		WorldView topLevelWorldView = client.getTopLevelWorldView();
+		addMenuEntries(topLevelWorldView);
+
+		IndexedObjectSet<? extends WorldView> worldViews = topLevelWorldView.worldViews();
+		for (WorldView worldView : worldViews)
+		{
+			addMenuEntries(worldView);
+		}
+	}
+
+	public void addMenuEntries(WorldView worldView)
+	{
 		Tile tile = worldView.getSelectedSceneTile();
 		if (tile == null)
 		{
@@ -462,7 +473,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		boolean hoveringTile = false;
 		for (MenuEntry menuEntry : menuEntries)
 		{
-			if (menuEntry.getOption().equals("Walk here"))
+			String option = menuEntry.getOption();
+			if (option.equals("Walk here") || option.equals("Set heading"))
 			{
 				hoveringTile = true;
 				break;

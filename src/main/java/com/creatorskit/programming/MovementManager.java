@@ -73,6 +73,12 @@ public class MovementManager
 
     public static boolean useLocalLocations(WorldView worldView)
     {
+        int[] mapRegions = worldView.getMapRegions();
+        if (mapRegions == null)
+        {
+            return false;
+        }
+
         if (Arrays.stream(worldView.getMapRegions()).anyMatch(x -> Arrays.stream(POH_REGIONS).anyMatch(y -> y == x)))
         {
             return true;

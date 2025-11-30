@@ -56,8 +56,20 @@ public class CreatorsOverlay extends Overlay
             return null;
         }
 
-        WorldView worldView = client.getTopLevelWorldView();
+        WorldView topLevelWorldView = client.getTopLevelWorldView();
+        renderOverlays(graphics, topLevelWorldView);
 
+        IndexedObjectSet<? extends WorldView> worldViews = topLevelWorldView.worldViews();
+        for (WorldView worldView : worldViews)
+        {
+            renderOverlays(graphics, worldView);
+        }
+
+        return null;
+    }
+
+    public void renderOverlays(Graphics2D graphics, WorldView worldView)
+    {
         boolean keyHeld = config.enableCtrlHotkeys() && client.isKeyPressed(KeyCode.KC_CONTROL);
         if (keyHeld)
         {
@@ -66,7 +78,7 @@ public class CreatorsOverlay extends Overlay
 
         if (!plugin.isOverlaysActive())
         {
-            return null;
+            return;
         }
 
         if (config.myObjectOverlay())
@@ -102,8 +114,6 @@ public class CreatorsOverlay extends Overlay
         {
             renderProjectiles(graphics, worldView);
         }
-
-        return null;
     }
 
     public void renderWorldProgramOverlay(Graphics2D graphics, WorldView worldView)
@@ -424,11 +434,17 @@ public class CreatorsOverlay extends Overlay
     {
         Scene scene = worldView.getScene();
         Tile[][][] tiles = scene.getTiles();
+
+        if (tiles == null)
+        {
+            return;
+        }
+
         int z = worldView.getPlane();
 
-        for (int x = 0; x < Constants.SCENE_SIZE; x++)
+        for (int x = 0; x < worldView.getSizeX(); x++)
         {
-            for (int y = 0; y < Constants.SCENE_SIZE; y++)
+            for (int y = 0; y < worldView.getSizeY(); y++)
             {
                 Tile tile = tiles[z][x][y];
 
@@ -603,8 +619,11 @@ public class CreatorsOverlay extends Overlay
                         continue;
                     }
 
-                    LocalPoint camera = new LocalPoint(client.getCameraX(), client.getCameraY(), worldView);
-                    if (gameObject.getLocalLocation().distanceTo(camera) <= MAX_DISTANCE)
+                    LocalPoint camera = client.getCameraFocusEntity().getCameraFocus();
+                    LocalPoint freeCamera = new LocalPoint(client.getCameraX(), client.getCameraY(), worldView);
+                    LocalPoint localPoint = gameObject.getLocalLocation();
+
+                    if (!worldView.isTopLevel() || localPoint.distanceTo(camera) <= MAX_DISTANCE || localPoint.distanceTo(freeCamera) <= MAX_DISTANCE)
                     {
                         if (!config.gameObjectOverlay())
                         {
@@ -650,8 +669,11 @@ public class CreatorsOverlay extends Overlay
                 return;
             }
 
-            LocalPoint camera = new LocalPoint(client.getCameraX(), client.getCameraY(), worldView);
-            if (groundObject.getLocalLocation().distanceTo(camera) <= MAX_DISTANCE)
+            LocalPoint camera = client.getCameraFocusEntity().getCameraFocus();
+            LocalPoint freeCamera = new LocalPoint(client.getCameraX(), client.getCameraY(), worldView);
+            LocalPoint localPoint = groundObject.getLocalLocation();
+
+            if (!worldView.isTopLevel() || localPoint.distanceTo(camera) <= MAX_DISTANCE || localPoint.distanceTo(freeCamera) <= MAX_DISTANCE)
             {
                 OverlayUtil.renderTileOverlay(graphics, groundObject, "ID: " + groundObject.getId(), GROUND_OBJECT_COLOUR);
             }
@@ -684,8 +706,11 @@ public class CreatorsOverlay extends Overlay
         TileObject tileObject = tile.getWallObject();
         if (tileObject != null)
         {
-            LocalPoint camera = new LocalPoint(client.getCameraX(), client.getCameraY(), worldView);
-            if (tileObject.getLocalLocation().distanceTo(camera) <= MAX_DISTANCE)
+            LocalPoint camera = client.getCameraFocusEntity().getCameraFocus();
+            LocalPoint freeCamera = new LocalPoint(client.getCameraX(), client.getCameraY(), worldView);
+            LocalPoint localPoint = tileObject.getLocalLocation();
+
+            if (!worldView.isTopLevel() || localPoint.distanceTo(camera) <= MAX_DISTANCE || localPoint.distanceTo(freeCamera) <= MAX_DISTANCE)
             {
                 OverlayUtil.renderTileOverlay(graphics, tileObject, "ID: " + tileObject.getId(), WALL_OBJECT_COLOUR);
             }
@@ -697,8 +722,11 @@ public class CreatorsOverlay extends Overlay
         TileObject tileObject = tile.getDecorativeObject();
         if (tileObject != null)
         {
-            LocalPoint camera = new LocalPoint(client.getCameraX(), client.getCameraY(), worldView);
-            if (tileObject.getLocalLocation().distanceTo(camera) <= MAX_DISTANCE)
+            LocalPoint camera = client.getCameraFocusEntity().getCameraFocus();
+            LocalPoint freeCamera = new LocalPoint(client.getCameraX(), client.getCameraY(), worldView);
+            LocalPoint localPoint = tileObject.getLocalLocation();
+
+            if (!worldView.isTopLevel() || localPoint.distanceTo(camera) <= MAX_DISTANCE || localPoint.distanceTo(freeCamera) <= MAX_DISTANCE)
             {
                 OverlayUtil.renderTileOverlay(graphics, tileObject, "ID: " + tileObject.getId(), DECORATIVE_OBJECT_COLOUR);
             }
