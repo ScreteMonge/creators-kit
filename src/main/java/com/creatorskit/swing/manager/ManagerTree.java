@@ -274,14 +274,17 @@ public class ManagerTree extends JTree
             DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
             if (node.getUserObject() instanceof Character)
             {
-                charactersToRemove.add(node);
+                if (!charactersToRemove.contains(node))
+                {
+                    charactersToRemove.add(node);
+                }
                 continue;
             }
 
             Folder folder = (Folder) node.getUserObject();
             {
                 FolderType type = folder.getFolderType();
-                if (type == FolderType.STANDARD)
+                if (type == FolderType.STANDARD && !foldersToRemove.contains(node))
                 {
                     foldersToRemove.add(node);
                 }
@@ -342,14 +345,17 @@ public class ManagerTree extends JTree
             DefaultMutableTreeNode node = (DefaultMutableTreeNode) children.nextElement();
             if (node.getUserObject() instanceof Character)
             {
-                panelsToRemove.add(node);
+                if (!panelsToRemove.contains(node))
+                {
+                    panelsToRemove.add(node);
+                }
                 continue;
             }
 
             Folder folder = (Folder) node.getUserObject();
             {
                 FolderType type = folder.getFolderType();
-                if (type == FolderType.STANDARD)
+                if (type == FolderType.STANDARD && !foldersToRemove.contains(node))
                 {
                     foldersToRemove.add(node);
                 }
