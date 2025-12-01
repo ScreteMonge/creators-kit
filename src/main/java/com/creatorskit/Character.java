@@ -169,13 +169,9 @@ public class Character
         if (frame == -1)
         {
             pause = false;
-            if (randomizeStartFrame)
-            {
-                frame = random.nextInt(animation.getNumFrames());
-            }
         }
 
-        ckObject.setAnimationFrame(type, frame, pause);
+        ckObject.setAnimationFrame(type, frame, random, randomizeStartFrame, pause);
         KeyFrame kf = getCurrentKeyFrame(KeyFrameType.ANIMATION);
         if (kf == null)
         {

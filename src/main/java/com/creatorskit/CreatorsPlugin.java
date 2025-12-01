@@ -1575,7 +1575,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		previewObject.setModel(model);
 		previewObject.setOrientation(orientation);
 		previewObject.setAnimation(AnimationType.ACTIVE, animId);
-		previewObject.setAnimationFrame(AnimationType.ACTIVE, ckObject.getAnimationFrame(AnimationType.ACTIVE), true);
+		previewObject.setAnimationFrame(AnimationType.ACTIVE, ckObject.getAnimationFrame(AnimationType.ACTIVE), random, false,true);
 		previewObject.setLocation(lp, client.getTopLevelWorldView().getPlane());
 		previewObject.setRadius(ckObject.getRadius());
 		previewObject.setActive(true);

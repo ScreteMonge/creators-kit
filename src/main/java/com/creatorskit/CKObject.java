@@ -7,6 +7,8 @@ import lombok.Setter;
 import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
 
+import java.util.Random;
+
 @Getter
 @Setter
 public class CKObject extends RuneLiteObjectController
@@ -254,7 +256,7 @@ public class CKObject extends RuneLiteObjectController
         return new Animation[]{animationController.getAnimation(), poseAnimationController.getAnimation()};
     }
 
-    public void setAnimationFrame(AnimationType type, int animFrame, boolean allowFreeze)
+    public void setAnimationFrame(AnimationType type, int animFrame, Random random, boolean randomizeStartFrame, boolean allowFreeze)
     {
         CKAnimationController ac = getController(type);
         if (ac == null)
@@ -266,6 +268,11 @@ public class CKObject extends RuneLiteObjectController
         if (animation == null)
         {
             return;
+        }
+
+        if (randomizeStartFrame)
+        {
+            animFrame = random.nextInt(animation.getNumFrames());
         }
 
         if (animFrame >= animation.getDuration())

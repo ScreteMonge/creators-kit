@@ -1681,7 +1681,7 @@ public class ModelGetter
 
         for (int e = 0; e < maxAnimFrames; e++)
         {
-            exportObject.setAnimationFrame(AnimationType.ACTIVE, e, true);
+            exportObject.setAnimationFrame(AnimationType.ACTIVE, e, plugin.getRandom(), false, true);
             Model m = exportObject.getModel();
 
             int[][] verts = animVerts[e];
