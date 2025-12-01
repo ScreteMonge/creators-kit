@@ -25,6 +25,7 @@ import java.util.Collection;
 public class Programmer
 {
     private final Client client;
+    private final CreatorsConfig config;
     private final ClientThread clientThread;
     private final CreatorsPlugin plugin;
     private final TimeSheetPanel timeSheetPanel;
@@ -40,9 +41,10 @@ public class Programmer
     private boolean triggerPause = false;
 
     @Inject
-    public Programmer(Client client, ClientThread clientThread, CreatorsPlugin plugin, TimeSheetPanel timeSheetPanel, DataFinder dataFinder)
+    public Programmer(Client client, CreatorsConfig config, ClientThread clientThread, CreatorsPlugin plugin, TimeSheetPanel timeSheetPanel, DataFinder dataFinder)
     {
         this.client = client;
+        this.config = config;
         this.clientThread = clientThread;
         this.plugin = plugin;
         this.timeSheetPanel = timeSheetPanel;
@@ -588,7 +590,10 @@ public class Programmer
             Animation animation = ckObject.getAnimations()[0];
             if (animation == null || animation.getId() != animId)
             {
-                plugin.setAnimation(character, animId);
+                if (client.getGameState() == GameState.LOGGED_IN)
+                {
+
+                }
             }
             return;
         }
@@ -1351,16 +1356,17 @@ public class Programmer
         {
             ckObject.setHasAnimKeyFrame(false);
             int animId = (int) character.getAnimationSpinner().getValue();
+            int animFrame = (int) character.getAnimationFrameSpinner().getValue();
             Animation current = ckObject.getAnimations()[0];
             if (current == null)
             {
-                plugin.setAnimation(character, animId);
+                character.setAnimation(clientThread, client, plugin.getRandom(), AnimationType.ACTIVE, animId, animFrame, config.randomizeStartFrame(), true);
                 return;
             }
 
             if (current.getId() != animId)
             {
-                plugin.setAnimation(character, animId);
+                character.setAnimation(clientThread, client, plugin.getRandom(), AnimationType.ACTIVE, animId, animFrame, config.randomizeStartFrame(), true);
             }
 
             return;

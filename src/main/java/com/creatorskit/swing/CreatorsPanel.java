@@ -1,6 +1,8 @@
 package com.creatorskit.swing;
 
 import com.creatorskit.CKObject;
+import com.creatorskit.CreatorsConfig;
+import com.creatorskit.programming.AnimationType;
 import com.creatorskit.saves.CharacterSave;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.Character;
@@ -54,6 +56,7 @@ public class CreatorsPanel extends PluginPanel
 {
     private ClientThread clientThread;
     private final Client client;
+    private CreatorsConfig config;
     private final CreatorsPlugin plugin;
     private final ToolBoxFrame toolBox;
     private final ModelAnvil modelAnvil;
@@ -86,10 +89,11 @@ public class CreatorsPanel extends PluginPanel
     private final LineBorder selectedBorder = new LineBorder(Color.WHITE, 1);
 
     @Inject
-    public CreatorsPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin, ToolBoxFrame toolBox, DataFinder dataFinder, ModelImporter modelImporter)
+    public CreatorsPanel(@Nullable Client client, CreatorsConfig config, ClientThread clientThread, CreatorsPlugin plugin, ToolBoxFrame toolBox, DataFinder dataFinder, ModelImporter modelImporter)
     {
         this.clientThread = clientThread;
         this.client = client;
+        this.config = config;
         this.plugin = plugin;
         this.toolBox = toolBox;
         this.modelOrganizer = toolBox.getModelOrganizer();
@@ -564,15 +568,12 @@ public class CreatorsPanel extends PluginPanel
 
         animationSpinner.addChangeListener(e ->
         {
-            int animationNumber = (int) animationSpinner.getValue();
-            plugin.setAnimation(character, animationNumber);
-            plugin.setAnimationFrame(character, (int) animationFrameSpinner.getValue(), true);
+            character.setAnimation(clientThread, client, plugin.getRandom(), AnimationType.ACTIVE, (int) animationSpinner.getValue(), (int) animationFrameSpinner.getValue(), config.randomizeStartFrame(), true);
         });
 
         animationFrameSpinner.addChangeListener(e ->
         {
-            int animFrame = (int) animationFrameSpinner.getValue();
-            plugin.setAnimationFrame(character, animFrame, true);
+            character.setAnimation(clientThread, client, plugin.getRandom(), AnimationType.ACTIVE, (int) animationSpinner.getValue(), (int) animationFrameSpinner.getValue(), config.randomizeStartFrame(), true);
         });
 
         radiusSpinner.addChangeListener(e ->

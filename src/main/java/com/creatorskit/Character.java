@@ -1,12 +1,15 @@
 package com.creatorskit;
 
 import com.creatorskit.models.CustomModel;
+import com.creatorskit.programming.AnimationType;
 import com.creatorskit.swing.ParentPanel;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
+import net.runelite.api.Animation;
+import net.runelite.api.Client;
 import net.runelite.api.Constants;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
@@ -18,6 +21,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import java.awt.*;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.Random;
 
 @Getter
 @Setter
@@ -146,6 +150,43 @@ public class Character
         if (spotAnim2 != null)
         {
             spotAnim2.setLocation(lp, plane);
+        }
+    }
+
+    public void setAnimation(ClientThread clientThread, Client client, Random random, AnimationType type, int animId, int animFrame, boolean randomizeStartFrame, boolean allowPause)
+    {
+        clientThread.invokeLater(() -> setAnimation(client, random, type, animId, animFrame, randomizeStartFrame, allowPause));
+    }
+
+    public void setAnimation(Client client, Random random, AnimationType type, int animId, int animFrame, boolean randomizeStartFrame, boolean allowPause)
+    {
+        Animation animation = client.loadAnimation(animId);
+        ckObject.setAnimation(type, animation);
+
+        int frame = animFrame;
+        boolean pause = allowPause;
+
+        if (frame == -1)
+        {
+            pause = false;
+            if (randomizeStartFrame)
+            {
+                frame = random.nextInt(animation.getNumFrames());
+            }
+        }
+
+        ckObject.setAnimationFrame(type, frame, pause);
+        KeyFrame kf = getCurrentKeyFrame(KeyFrameType.ANIMATION);
+        if (kf == null)
+        {
+            ckObject.setPlaying(true);
+            ckObject.setLoop(true);
+            ckObject.setHasAnimKeyFrame(false);
+        }
+        else
+        {
+            pause();
+            ckObject.setHasAnimKeyFrame(true);
         }
     }
 

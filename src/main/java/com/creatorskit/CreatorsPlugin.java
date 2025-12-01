@@ -132,6 +132,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private Character hoveredCharacter;
 	private CKObject transmog;
 	private CKObject previewObject;
+	private Random random = new Random();
 	private Model previewArrow;
 	private CustomModel transmogModel;
 	private final int GOLDEN_CHIN = 29757;
@@ -740,59 +741,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		});
 	}
 
-	public void setAnimation(Character character, int animationId)
-	{
-		if (client.getGameState() != GameState.LOGGED_IN)
-			return;
-
-		CKObject ckObject = character.getCkObject();
-		clientThread.invokeLater(() ->
-		{
-			ckObject.setAnimation(AnimationType.ACTIVE, animationId);
-			KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.ANIMATION);
-			if (kf == null)
-			{
-				int frame = (int) character.getAnimationFrameSpinner().getValue();
-				ckObject.setLoop(true);
-				ckObject.setHasAnimKeyFrame(false);
-				ckObject.setAnimationFrame(AnimationType.ACTIVE, frame, true);
-			}
-			else
-			{
-				character.pause();
-				ckObject.setHasAnimKeyFrame(true);
-			}
-		});
-	}
-
-	public void setAnimationFrame(Character character, int animFrame, boolean allowPause)
-	{
-		if (client.getGameState() != GameState.LOGGED_IN)
-			return;
-
-		CKObject ckObject = character.getCkObject();
-		clientThread.invoke(() -> ckObject.setAnimationFrame(AnimationType.ACTIVE, animFrame, allowPause));
-	}
-
-	public void setAnimationWithFrame(Character character, int animationId, int animFrame)
-	{
-		CKObject ckObject = character.getCkObject();
-		ckObject.setAnimation(AnimationType.ACTIVE, animationId);
-		ckObject.setAnimationFrame(AnimationType.ACTIVE, animFrame, true);
-		KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.ANIMATION);
-		if (kf == null)
-		{
-			ckObject.setPlaying(true);
-			ckObject.setLoop(true);
-			ckObject.setHasAnimKeyFrame(false);
-		}
-		else
-		{
-			character.pause();
-			ckObject.setHasAnimKeyFrame(true);
-		}
-	}
-
 	public void setRadius(Character character, int radius)
 	{
 		CKObject ckObject = character.getCkObject();
@@ -833,7 +781,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			boolean active = character.isActive();
 
 			setModel(character, character.isCustomMode(), (int) character.getModelSpinner().getValue());
-			setAnimationWithFrame(character, (int) character.getAnimationSpinner().getValue(), (int) character.getAnimationFrameSpinner().getValue());
+			character.setAnimation(client, random, AnimationType.ACTIVE, (int) character.getAnimationSpinner().getValue(), (int) character.getAnimationFrameSpinner().getValue(), config.randomizeStartFrame(), true);
 
 			LocationOption locationOption = setHoveredTile ? LocationOption.TO_HOVERED_TILE : LocationOption.TO_SAVED_LOCATION;
 			setLocation(character, true, transplant, active ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, locationOption);

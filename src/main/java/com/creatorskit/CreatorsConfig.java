@@ -380,6 +380,18 @@ public interface CreatorsConfig extends Config
 		return TimelineUnits.GAMETICKS;
 	}
 
+	@ConfigItem(
+			keyName = "randomizeStartFrame",
+			name = "Randomize Start Frame",
+			description = "Randomizes the start frame of Pose (including default) animations, unless otherwise specified",
+			section = programmer,
+			position = 7
+	)
+	default boolean randomizeStartFrame()
+	{
+		return false;
+	}
+
 	@ConfigSection(
 			name = "Transmogrification",
 			description = "Settings for replacing your player character with a saved Custom Model",
