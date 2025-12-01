@@ -295,6 +295,12 @@ public class CKObject extends RuneLiteObjectController
         }
 
         freeze = false;
+
+        if (animFrame == -1)
+        {
+            return;
+        }
+
         ac.setFrame(animFrame);
     }
 
