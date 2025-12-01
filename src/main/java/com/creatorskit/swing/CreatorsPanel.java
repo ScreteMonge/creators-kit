@@ -1658,7 +1658,7 @@ public class CreatorsPanel extends PluginPanel
                                 animFrame,
                                 save.getRadius(),
                                 frames,
-                                save.getSummary(),
+                                new KeyFrameType[]{KeyFrameType.MOVEMENT, KeyFrameType.ANIMATION, KeyFrameType.ORIENTATION},
                                 new Color(save.getRgb()),
                                 save.isActive(),
                                 save.getNonInstancedPoint(),
