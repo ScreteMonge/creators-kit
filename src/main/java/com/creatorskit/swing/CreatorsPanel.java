@@ -1359,6 +1359,13 @@ public class CreatorsPanel extends PluginPanel
         {
             ModelKeyFrame keyFrame = keyFrames[i];
             CustomModel storedModel = keyFrame.getCustomModel();
+
+            if (storedModel == null)
+            {
+                saves[i] = new ModelKeyFrameSave(keyFrame.getTick(), false, keyFrame.getModelId(), 0, keyFrame.getRadius());
+                continue;
+            }
+
             int compId = 0;
 
             for (int e = 0; e < comps.length; e++)
