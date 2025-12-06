@@ -10,6 +10,7 @@ import lombok.Setter;
 public class ModelStats
 {
     private int modelId;
+    private String name;
     private BodyPart bodyPart;
     private short[] recolourFrom;
     private short[] recolourTo;

@@ -969,55 +969,63 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		return modelData;
 	}
 
-	public void cacheToAnvil(ModelStats[] modelStatsArray, int[] kitRecolours, boolean player)
+	public void cacheToAnvil(ModelStats[] modelStatsArray, int[] kitRecolours, CustomModelType type)
 	{
 		SwingUtilities.invokeLater(() ->
 		{
+			ModelAnvil modelAnvil = creatorsPanel.getModelAnvil();
 			for (ModelStats modelStats : modelStatsArray)
 			{
-				if (player)
-				{
-					String name = modelStats.getBodyPart().getName();
-					if (modelStats.getBodyPart() == BodyPart.NA)
-						name = "Item";
+				int id = modelStats.getModelId();
+				String name;
 
-					short[] itemRecolourTo = modelStats.getRecolourTo();
-					short[] itemRecolourFrom = modelStats.getRecolourFrom();
+				switch (type)
+				{
+					default:
+					case CACHE_NPC:
+						name = dataFinder.generateNameFromModel(id);
+						break;
+					case CACHE_PLAYER:
+					case CACHE_MAN_WEAR:
+					case CACHE_WOMAN_WEAR:
+					case CACHE_GROUND_ITEM:
+						name = modelStats.getName();
+				}
+
+				int group = type == CustomModelType.CACHE_PLAYER ? 9 : 8;
+				int tz = modelStats.getTranslateZ();
+				int rx = modelStats.getResizeX();
+				int ry = modelStats.getResizeY();
+				int rz = modelStats.getResizeZ();
+				short[] textFrom = modelStats.getTextureFrom();
+				short[] textTo = modelStats.getTextureTo();
+				short[] itemRecolourTo = modelStats.getRecolourTo();
+				short[] itemRecolourFrom = modelStats.getRecolourFrom();
+
+				if (type == CustomModelType.CACHE_PLAYER)
+				{
 					short[] kitRecolourTo = KitRecolourer.getKitRecolourTo(modelStats.getBodyPart(), kitRecolours);
 					short[] kitRecolourFrom = KitRecolourer.getKitRecolourFrom(modelStats.getBodyPart());
 
 					itemRecolourTo = ArrayUtils.addAll(itemRecolourTo, kitRecolourTo);
 					itemRecolourFrom = ArrayUtils.addAll(itemRecolourFrom, kitRecolourFrom);
-
-					creatorsPanel.getModelAnvil().createComplexPanel(
-							name,
-							modelStats.getModelId(),
-							9,
-							0, 0, 0,
-							0, 0, modelStats.getTranslateZ(),
-							modelStats.getResizeX(), modelStats.getResizeY(), modelStats.getResizeZ(),
-							0,
-							"", "",
-							itemRecolourFrom, itemRecolourTo,
-							modelStats.getTextureFrom(), modelStats.getTextureTo(),
-							false);
-
-					continue;
 				}
 
-				creatorsPanel.getModelAnvil().createComplexPanel(
-						modelStats.getBodyPart().getName(),
-						modelStats.getModelId(),
-						8,
+				modelAnvil.createComplexPanel(
+						name,
+						id,
+						group,
 						0, 0, 0,
-						0, 0, modelStats.getTranslateZ(),
-						modelStats.getResizeX(), modelStats.getResizeY(), modelStats.getResizeZ(),
+						0, 0, tz,
+						rx, ry, rz,
 						0,
 						"", "",
-						modelStats.getRecolourFrom(), modelStats.getRecolourTo(),
-						modelStats.getTextureFrom(), modelStats.getTextureTo(),
+						itemRecolourFrom, itemRecolourTo,
+						textFrom, textTo,
 						false);
 			}
+
+			modelAnvil.generateNames();
 		});
 	}
 
@@ -1026,34 +1034,27 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		Thread thread = new Thread(() ->
 		{
 			ModelStats[] modelStats;
-			String name;
 
 			switch (type)
 			{
 				case CACHE_NPC:
 					modelStats = dataFinder.findModelsForNPC(id);
-					name = dataFinder.getLastFound();
 					break;
 				default:
 				case CACHE_OBJECT:
 					modelStats = dataFinder.findModelsForObject(id, -1, LightingStyle.DEFAULT, true);
-					name = dataFinder.getLastFound();
 					break;
 				case CACHE_GROUND_ITEM:
 					modelStats = dataFinder.findModelsForGroundItem(id, CustomModelType.CACHE_GROUND_ITEM);
-					name = dataFinder.getLastFound();
 					break;
 				case CACHE_MAN_WEAR:
 					modelStats = dataFinder.findModelsForGroundItem(id, CustomModelType.CACHE_MAN_WEAR);
-					name = dataFinder.getLastFound();
 					break;
 				case CACHE_WOMAN_WEAR:
 					modelStats = dataFinder.findModelsForGroundItem(id, CustomModelType.CACHE_WOMAN_WEAR);
-					name = dataFinder.getLastFound();
 					break;
 				case CACHE_SPOTANIM:
 					modelStats = dataFinder.findSpotAnim(id);
-					name = dataFinder.getLastFound();
 			}
 
 			if (modelStats == null || modelStats.length == 0)
@@ -1062,8 +1063,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				return;
 			}
 
-			cacheToAnvil(modelStats, new int[0], false);
-			sendChatMessage("Model sent to Anvil: " + name);
+			cacheToAnvil(modelStats, new int[0], type);
+			sendChatMessage("Model sent to Anvil: " + modelStats[0].getName());
 		});
 		thread.start();
 	}
@@ -1073,7 +1074,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		Thread thread = new Thread(() ->
 		{
 			ModelStats[] modelStats;
-			String name;
 			CustomModelComp comp;
 			CustomLighting lighting;
 
@@ -1105,36 +1105,32 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				return;
 			}
 
+			String name = modelStats[0].getName();
+
 			switch (type)
 			{
 				case CACHE_NPC:
-					name = dataFinder.getLastFound();
 					lighting = new CustomLighting(64, 850, -30, -30, 50);
 					comp = new CustomModelComp(0, CustomModelType.CACHE_NPC, id, modelStats, null, null, null, LightingStyle.ACTOR, lighting, false, name);
 					break;
 				default:
 				case CACHE_OBJECT:
-					name = dataFinder.getLastFound();
 					lighting = modelStats[0].getLighting();
 					comp = new CustomModelComp(0, CustomModelType.CACHE_OBJECT, id, modelStats, null, null, null, LightingStyle.CUSTOM, lighting, false, name);
 					break;
 				case CACHE_GROUND_ITEM:
-					name = dataFinder.getLastFound();
 					lighting = new CustomLighting(64, 768, -50, -50, 10);
 					comp = new CustomModelComp(0, CustomModelType.CACHE_GROUND_ITEM, id, modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, name);
 					break;
 				case CACHE_MAN_WEAR:
-					name = dataFinder.getLastFound();
 					lighting = new CustomLighting(64, 768, -50, -50, 10);
 					comp = new CustomModelComp(0, CustomModelType.CACHE_MAN_WEAR, id, modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, name);
 					break;
 				case CACHE_WOMAN_WEAR:
-					name = dataFinder.getLastFound();
 					lighting = new CustomLighting(64, 768, -50, -50, 10);
 					comp = new CustomModelComp(0, CustomModelType.CACHE_WOMAN_WEAR, id, modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, name);
 					break;
 				case CACHE_SPOTANIM:
-					name = dataFinder.getLastFound();
 					lighting = modelStats[0].getLighting();
 					comp = new CustomModelComp(0, CustomModelType.CACHE_SPOTANIM, id, modelStats, null, null, null, LightingStyle.CUSTOM, lighting, false, name);
 					break;
@@ -1269,20 +1265,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				return;
 			}
 
-			switch(comp.getType())
-			{
-				case FORGED:
-				case CACHE_SPOTANIM:
-				case CACHE_NPC:
-				case CACHE_OBJECT:
-				case CACHE_GROUND_ITEM:
-				case CACHE_MAN_WEAR:
-				case CACHE_WOMAN_WEAR:
-					cacheToAnvil(comp.getModelStats(), comp.getKitRecolours(), false);
-					break;
-				case CACHE_PLAYER:
-					cacheToAnvil(comp.getModelStats(), comp.getKitRecolours(), true);
-			}
+			cacheToAnvil(comp.getModelStats(), comp.getKitRecolours(), comp.getType());
 		});
 	}
 

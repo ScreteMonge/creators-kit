@@ -198,6 +198,11 @@ public class ModelAnvil extends JPanel
         priorityCheckBox.setFocusable(false);
         headerPanel.add(priorityCheckBox);
 
+        JButton autoNameButton = new JButton("Generate Names");
+        autoNameButton.setToolTipText("Automatically generates names for entered models");
+        autoNameButton.addActionListener(e -> generateNames());
+        headerPanel.add(autoNameButton);
+
         JPanel sidePanel = new JPanel();
         sidePanel.setLayout(new GridBagLayout());
         scrollPane.setRowHeaderView(sidePanel);
@@ -1097,6 +1102,22 @@ public class ModelAnvil extends JPanel
             }
 
             plugin.loadCustomModelToAnvil(selectedFile);
+        }
+    }
+
+    public void generateNames()
+    {
+        DataFinder dataFinder = plugin.getDataFinder();
+        for (ComplexPanel complexPanel : complexPanels)
+        {
+            int modelId = (int) complexPanel.getModelIdSpinner().getValue();
+            String name = complexPanel.getNameField().getText();
+
+            if (name.equals("Name"))
+            {
+                name = dataFinder.generateNameFromModel(modelId);
+                complexPanel.getNameField().setText(name);
+            }
         }
     }
 

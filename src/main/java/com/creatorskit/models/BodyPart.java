@@ -60,6 +60,36 @@ public enum BodyPart
         }
     }
 
+    public static BodyPart bodyPartIdToBodyPart(int bodyPartId)
+    {
+        switch (bodyPartId)
+        {
+            case 0:
+            case 7:
+                return HEAD;
+            case 1:
+            case 8:
+                return JAW;
+            case 2:
+            case 9:
+                return TORSO;
+            case 3:
+            case 10:
+                return ARMS;
+            case 4:
+            case 11:
+                return HANDS;
+            case 5:
+            case 12:
+                return LEGS;
+            case 6:
+            case 13:
+                return FEET;
+            default:
+                return NA;
+        }
+    }
+
     @Override
     public String toString()
     {

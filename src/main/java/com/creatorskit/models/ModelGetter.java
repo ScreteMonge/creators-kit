@@ -39,6 +39,7 @@ public class ModelGetter
     private final DataFinder dataFinder;
     private final ModelExporter modelExporter;
     private CKObject exportObject;
+    private final String DEFAULT_NAME = "Name";
 
     @Inject
     public ModelGetter(Client client, ClientThread clientThread, CreatorsConfig config, CreatorsPlugin plugin, DataFinder dataFinder, ModelExporter modelExporter)
@@ -314,7 +315,7 @@ public class ModelGetter
 
         if (menuOption == ModelMenuOption.ANVIL)
         {
-            handleAnvilOption(modelStats, new int[0], false, name);
+            handleAnvilOption(modelStats, new int[0], CustomModelType.CACHE_NPC, name);
             return;
         }
 
@@ -663,7 +664,7 @@ public class ModelGetter
 
         if (menuOption == ModelMenuOption.ANVIL)
         {
-            handleAnvilOption(modelStats, colours, true, name);
+            handleAnvilOption(modelStats, colours, CustomModelType.CACHE_PLAYER, name);
             return;
         }
 
@@ -911,7 +912,7 @@ public class ModelGetter
 
         if (menuOption == ModelMenuOption.ANVIL)
         {
-            handleAnvilOption(modelStats, new int[0], false, name);
+            handleAnvilOption(modelStats, new int[0], CustomModelType.CACHE_OBJECT, name);
             return;
         }
 
@@ -1192,6 +1193,7 @@ public class ModelGetter
                     int modelId = (int) character.getModelSpinner().getValue();
                     ModelStats[] modelStats = new ModelStats[]{new ModelStats(
                             modelId,
+                            DEFAULT_NAME,
                             BodyPart.NA,
                             new short[0],
                             new short[0],
@@ -1360,6 +1362,7 @@ public class ModelGetter
                 int modelId = (int) character.getModelSpinner().getValue();
                 ModelStats[] modelStats = new ModelStats[]{new ModelStats(
                         modelId,
+                        DEFAULT_NAME,
                         BodyPart.NA,
                         new short[0],
                         new short[0],
@@ -1445,7 +1448,7 @@ public class ModelGetter
 
         if (menuOption == ModelMenuOption.ANVIL)
         {
-            handleAnvilOption(modelStats, new int[0], false, name);
+            handleAnvilOption(modelStats, new int[0], CustomModelType.CACHE_GROUND_ITEM, name);
             return;
         }
 
@@ -1537,11 +1540,11 @@ public class ModelGetter
         }
     }
 
-    private void handleAnvilOption(ModelStats[] modelStats, int[] kitRecolours, boolean player, String name)
+    private void handleAnvilOption(ModelStats[] modelStats, int[] kitRecolours, CustomModelType type, String name)
     {
         clientThread.invokeLater(() ->
         {
-            plugin.cacheToAnvil(modelStats, kitRecolours, player);
+            plugin.cacheToAnvil(modelStats, kitRecolours, type);
             plugin.sendChatMessage("Model sent to Anvil: " + name);
         });
     }
