@@ -4,11 +4,13 @@ import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.*;
 import com.creatorskit.models.datatypes.*;
+import com.creatorskit.swing.renderer.RenderPanel;
 import com.creatorskit.swing.searchabletable.JFilterableTable;
 import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import net.runelite.api.Model;
+import net.runelite.api.ModelData;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
@@ -42,6 +44,9 @@ public class CacheSearcherTab extends JPanel
     private final JPanel animPanel = new JPanel();
     private final JPanel spotAnimPanel = new JPanel();
 
+    private final JPanel previewPanel = new JPanel();
+    private RenderPanel renderPanel;
+
     private final JFilterableTable npcTable = new JFilterableTable("NPCs");
     private final JFilterableTable objectTable = new JFilterableTable("Objects");
     private final JFilterableTable itemTable = new JFilterableTable("Items");
@@ -69,6 +74,7 @@ public class CacheSearcherTab extends JPanel
         setupAnimPanel();
         setupSpotAnimPanel();
         setupDisplay();
+        setupRenderPanel();
         setupLayout();
     }
 
@@ -96,6 +102,21 @@ public class CacheSearcherTab extends JPanel
         JPanel animCard = new JPanel();
         setupAnimCard(animCard);
         display.add(animCard, ANIM);
+    }
+
+    private void setupRenderPanel()
+    {
+        previewPanel.setLayout(new BorderLayout());
+        previewPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        previewPanel.setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1));
+
+        renderPanel = new RenderPanel();
+        previewPanel.add(renderPanel, BorderLayout.CENTER);
+
+        JButton resetButton = new JButton("Reset Camera View");
+        resetButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        resetButton.addActionListener(e -> renderPanel.resetCameraView());
+        previewPanel.add(resetButton, BorderLayout.SOUTH);
     }
 
     private void setupLayout()
@@ -147,9 +168,16 @@ public class CacheSearcherTab extends JPanel
         c.gridy = 1;
         add(display, c);
 
+        c.gridheight = 6;
+        c.weighty = 5;
+        c.weightx = 4;
+        c.gridx = 3;
+        c.gridy = 1;
+        add(previewPanel, c);
+
         c.weighty = 1;
         c.weightx = 2;
-        c.gridx = 3;
+        c.gridx = 4;
         c.gridy = 7;
         add(new JLabel(""), c);
 
@@ -294,6 +322,20 @@ public class CacheSearcherTab extends JPanel
                 walkLeft.setText("Walk Left: " + data.getRotateLeftAnimation());
                 idleRight.setText("Idle Right: " + data.getIdleRotateRightAnimation());
                 idleLeft.setText("Idle Left: " + data.getIdleRotateLeftAnimation());
+
+                ModelStats[] modelStats = dataFinder.findModelsForNPC(data.getId());
+                if (modelStats == null)
+                {
+                    renderPanel.resetViewer();
+                }
+                else
+                {
+                    clientThread.invokeLater(() ->
+                    {
+                        ModelData md = modelUtilities.constructModelDataFromCache(modelStats, new int[0], false);
+                        renderPanel.updateModel(md);
+                    });
+                }
             }
         });
     }
@@ -377,6 +419,29 @@ public class CacheSearcherTab extends JPanel
             {
                 ObjectData data = (ObjectData) o;
                 addToAnvil(CustomModelType.CACHE_OBJECT, data.getId());
+            }
+        });
+
+        objectTable.getSelectionModel().addListSelectionListener(e ->
+        {
+            Object o = objectTable.getSelectedObject();
+            if (o instanceof ObjectData)
+            {
+                ObjectData data = (ObjectData) o;
+
+                ModelStats[] modelStats = dataFinder.findModelsForObject(data.getId(), 0, LightingStyle.DEFAULT, true);
+                if (modelStats == null)
+                {
+                    renderPanel.resetViewer();
+                }
+                else
+                {
+                    clientThread.invokeLater(() ->
+                    {
+                        ModelData md = modelUtilities.constructModelDataFromCache(modelStats, new int[0], false);
+                        renderPanel.updateModel(md);
+                    });
+                }
             }
         });
     }
@@ -543,6 +608,21 @@ public class CacheSearcherTab extends JPanel
                 ItemData data = (ItemData) o;
                 int itemId = data.getId();
 
+                CustomModelType type = (CustomModelType) itemType.getSelectedItem();
+                ModelStats[] modelStats = dataFinder.findModelsForGroundItem(data.getId(), type);
+                if (modelStats == null)
+                {
+                    renderPanel.resetViewer();
+                }
+                else
+                {
+                    clientThread.invokeLater(() ->
+                    {
+                        ModelData md = modelUtilities.constructModelDataFromCache(modelStats, new int[0], false);
+                        renderPanel.updateModel(md);
+                    });
+                }
+
                 boolean foundMatch = false;
 
                 List<WeaponAnimData> weaponAnimSets = dataFinder.getWeaponAnimData();
@@ -704,6 +784,29 @@ public class CacheSearcherTab extends JPanel
             {
                 SpotanimData data = (SpotanimData) o;
                 addToAnvil(CustomModelType.CACHE_SPOTANIM, data.getId());
+            }
+        });
+
+        spotAnimTable.getSelectionModel().addListSelectionListener(e ->
+        {
+            Object o = spotAnimTable.getSelectedObject();
+            if (o instanceof SpotanimData)
+            {
+                SpotanimData data = (SpotanimData) o;
+
+                ModelStats[] modelStats = dataFinder.findSpotAnim(data);
+                if (modelStats == null)
+                {
+                    renderPanel.resetViewer();
+                }
+                else
+                {
+                    clientThread.invokeLater(() ->
+                    {
+                        ModelData md = modelUtilities.constructModelDataFromCache(modelStats, new int[0], false);
+                        renderPanel.updateModel(md);
+                    });
+                }
             }
         });
     }

@@ -158,6 +158,7 @@ There's also a few camera features like Oculus Orb mode which can be found in th
 - Special thanks to Craig Wood for the [JTree Drag and Drop functionality](https://coderanch.com/t/346509/java/JTree-drag-drop-tree-Java) as well as Albert Hendriks for the [improved version.](https://gitlab.com/alberthendriks/jtree-drag-drop)
 - Special thanks to Yona-Appletree for the [HSLColor functions](https://gist.github.com/Yona-Appletree/0c4b58763f070ae8cdff7db583c82563)
 - Special thanks to Geheur for helping provide weapon animations via the [Weapon-Animation-Replacer plugin](https://github.com/geheur/weapon-animation-replacer/tree/master)
+- Special thanks to Rogach for the backbone behind the [3D renderer](https://github.com/runelite/plugin-hub/pull/8507#issuecomment-3092383309)
 
 
 
