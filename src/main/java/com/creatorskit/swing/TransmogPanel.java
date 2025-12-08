@@ -41,6 +41,7 @@ public class TransmogPanel extends JPanel
     private ClientThread clientThread;
     private final CreatorsPlugin plugin;
     private final CreatorsConfig config;
+    private final ModelUtilities modelUtilities;
 
     private final File TRANSMOGS_DIR = new File(Paths.get(RuneLite.RUNELITE_DIR.getPath(), "creatorskit").toString(), "transmogs");
     private final GridBagConstraints c = new GridBagConstraints();
@@ -69,12 +70,13 @@ public class TransmogPanel extends JPanel
     private int radius = 60;
 
     @Inject
-    public TransmogPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin, CreatorsConfig config)
+    public TransmogPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin, CreatorsConfig config, ModelUtilities modelUtilities)
     {
         this.client = client;
         this.clientThread = clientThread;
         this.plugin = plugin;
         this.config = config;
+        this.modelUtilities = modelUtilities;
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new BorderLayout());
@@ -810,7 +812,7 @@ public class TransmogPanel extends JPanel
         if (option == JFileChooser.APPROVE_OPTION)
         {
             File selectedFile = fileChooser.getSelectedFile();
-            plugin.loadTransmog(selectedFile, (TransmogLoadOption) comboBox.getSelectedItem());
+            modelUtilities.loadTransmog(selectedFile, (TransmogLoadOption) comboBox.getSelectedItem());
         }
     }
 

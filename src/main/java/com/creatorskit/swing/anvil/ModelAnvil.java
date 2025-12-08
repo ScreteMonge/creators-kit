@@ -31,6 +31,8 @@ public class ModelAnvil extends JPanel
     private ClientThread clientThread;
     private final Client client;
     private final CreatorsPlugin plugin;
+    private final ModelUtilities modelUtilities;
+
     private final BufferedImage DUPLICATE = ImageUtil.loadImageResource(getClass(), "/Duplicate.png");
     private final BufferedImage CLOSE = ImageUtil.loadImageResource(getClass(), "/Close.png");
     private final BufferedImage ARROW_LEFT = ImageUtil.loadImageResource(getClass(), "/Arrow_Left.png");
@@ -69,11 +71,12 @@ public class ModelAnvil extends JPanel
     private final int COMPLEX_GRID_COLUMNS = 3;
 
     @Inject
-    public ModelAnvil(Client client, ClientThread clientThread, CreatorsPlugin plugin)
+    public ModelAnvil(Client client, ClientThread clientThread, CreatorsPlugin plugin, ModelUtilities modelUtilities)
     {
         this.client = client;
         this.clientThread = clientThread;
         this.plugin = plugin;
+        this.modelUtilities = modelUtilities;
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new GridBagLayout());
@@ -940,13 +943,13 @@ public class ModelAnvil extends JPanel
 
             CustomModelComp comp = new CustomModelComp(plugin.getStoredModels().size(), CustomModelType.FORGED, -1, null, null, detailedModels, null, LightingStyle.CUSTOM, lighting, setPriority, nameField.getText());
             CustomModel customModel = new CustomModel(model, comp);
-            plugin.addCustomModel(customModel, forgeAndSet);
+            modelUtilities.addCustomModel(customModel, forgeAndSet);
         });
     }
 
     public Model forgeComplexModel(boolean setPriority, DetailedModel[] detailedModels, LightingStyle lightingStyle, CustomLighting lighting)
     {
-        return plugin.createComplexModel(detailedModels, setPriority, lightingStyle, lighting, true);
+        return modelUtilities.createComplexModel(detailedModels, setPriority, lightingStyle, lighting, true);
     }
 
     private DetailedModel[] panelsToDetailedModels()
@@ -1101,7 +1104,7 @@ public class ModelAnvil extends JPanel
                 }
             }
 
-            plugin.loadCustomModelToAnvil(selectedFile);
+            modelUtilities.loadCustomModelToAnvil(selectedFile);
         }
     }
 

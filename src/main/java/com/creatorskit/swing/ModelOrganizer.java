@@ -43,6 +43,8 @@ public class ModelOrganizer extends JPanel
     private final ClientThread clientThread;
     private final ModelImporter modelImporter;
     private final ModelExporter modelExporter;
+    private final ModelUtilities modelUtilities;
+
     private final BufferedImage CLEAR = ImageUtil.loadImageResource(getClass(), "/Clear.png");
     private final BufferedImage ANVIL = ImageUtil.loadImageResource(getClass(), "/Anvil.png");
     private final BufferedImage SAVE = ImageUtil.loadImageResource(getClass(), "/Save.png");
@@ -55,7 +57,7 @@ public class ModelOrganizer extends JPanel
     public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
 
     @Inject
-    public ModelOrganizer(Client client, CreatorsPlugin plugin, CreatorsConfig config, ClientThread clientThread, ModelImporter modelImporter, ModelExporter modelExporter)
+    public ModelOrganizer(Client client, CreatorsPlugin plugin, CreatorsConfig config, ClientThread clientThread, ModelImporter modelImporter, ModelExporter modelExporter, ModelUtilities modelUtilities)
     {
         this.client = client;
         this.plugin = plugin;
@@ -63,6 +65,7 @@ public class ModelOrganizer extends JPanel
         this.clientThread = clientThread;
         this.modelImporter = modelImporter;
         this.modelExporter = modelExporter;
+        this.modelUtilities = modelUtilities;
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new BorderLayout());
@@ -152,9 +155,10 @@ public class ModelOrganizer extends JPanel
             CustomModel transmogModel = plugin.getTransmogModel();
             ArrayList<Character> characters = plugin.getCharacters();
 
-            for (int i = 0; i < plugin.getStoredModels().size(); i++)
+            ArrayList<CustomModel> storedModels = plugin.getStoredModels();
+            for (int i = 0; i < storedModels.size(); i++)
             {
-                CustomModel customModel = plugin.getStoredModels().get(i);
+                CustomModel customModel = storedModels.get(i);
 
                 if (customModel == transmogModel)
                     continue;
@@ -196,7 +200,7 @@ public class ModelOrganizer extends JPanel
             }
 
             for (CustomModel customModel : unusedModels)
-                plugin.removeCustomModel(customModel);
+                modelUtilities.removeCustomModel(customModel);
         });
 
         revalidate();
@@ -231,7 +235,7 @@ public class ModelOrganizer extends JPanel
             String text = StringHandler.cleanString(textField.getText());
             textField.setText(text);
             model.getComp().setName(text);
-            plugin.updatePanelComboBoxes();
+            modelUtilities.updatePanelComboBoxes();
             transmogPanel.getTransmogLabel().setText(text);
         });
         textField.addFocusListener(new FocusListener() {
@@ -255,14 +259,14 @@ public class ModelOrganizer extends JPanel
         JButton deleteButton = new JButton(new ImageIcon(CLEAR));
         deleteButton.setPreferredSize(buttonDimension);
         deleteButton.setToolTipText("Remove this model from all Objects and dropdown menus");
-        deleteButton.addActionListener(e -> plugin.removeCustomModel(model));
+        deleteButton.addActionListener(e -> modelUtilities.removeCustomModel(model));
         buttonsPanel.add(deleteButton);
 
         JButton anvilButton = new JButton(new ImageIcon(ANVIL));
         anvilButton.setPreferredSize(buttonDimension);
         anvilButton.setToolTipText("Send this model to the Anvil");
         buttonsPanel.add(anvilButton);
-        anvilButton.addActionListener(e -> plugin.customModelToAnvil(model));
+        anvilButton.addActionListener(e -> modelUtilities.customModelToAnvil(model));
 
         JButton saveButton = new JButton(new ImageIcon(SAVE));
         saveButton.setPreferredSize(buttonDimension);
@@ -353,7 +357,7 @@ public class ModelOrganizer extends JPanel
                     }
                 }
 
-                plugin.loadCustomModel(selectedFile);
+                modelUtilities.loadCustomModel(selectedFile);
             }
         }
     }

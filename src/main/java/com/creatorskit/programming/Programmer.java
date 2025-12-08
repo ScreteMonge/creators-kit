@@ -30,6 +30,8 @@ public class Programmer
     private final CreatorsPlugin plugin;
     private final TimeSheetPanel timeSheetPanel;
     private final DataFinder dataFinder;
+    private final ModelUtilities modelUtilities;
+
     private int clientTickAtLastProgramTick = 0;
     private final int GOLDEN_CHIN = 29757;
     private final int TILE_LENGTH = 128;
@@ -41,7 +43,7 @@ public class Programmer
     private boolean triggerPause = false;
 
     @Inject
-    public Programmer(Client client, CreatorsConfig config, ClientThread clientThread, CreatorsPlugin plugin, TimeSheetPanel timeSheetPanel, DataFinder dataFinder)
+    public Programmer(Client client, CreatorsConfig config, ClientThread clientThread, CreatorsPlugin plugin, TimeSheetPanel timeSheetPanel, DataFinder dataFinder, ModelUtilities modelUtilities)
     {
         this.client = client;
         this.config = config;
@@ -49,6 +51,7 @@ public class Programmer
         this.plugin = plugin;
         this.timeSheetPanel = timeSheetPanel;
         this.dataFinder = dataFinder;
+        this.modelUtilities = modelUtilities;
     }
 
     @Subscribe
@@ -1518,7 +1521,7 @@ public class Programmer
                     ms.setTranslateZ(height);
                 }
 
-                Model model = plugin.constructModelFromCache(stats, new int[0], false, LightingStyle.CUSTOM, cl);
+                Model model = modelUtilities.constructModelFromCache(stats, new int[0], false, LightingStyle.CUSTOM, cl);
 
                 ckObject.setModel(model);
                 setActiveAnimationFrame(ckObject, data.getAnimationId(), currentTime, startTick, 0, loop, false, true);

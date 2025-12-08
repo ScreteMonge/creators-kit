@@ -38,11 +38,13 @@ public class ModelGetter
     private final CreatorsPlugin plugin;
     private final DataFinder dataFinder;
     private final ModelExporter modelExporter;
+    private final ModelUtilities modelUtilities;
+
     private CKObject exportObject;
     private final String DEFAULT_NAME = "Name";
 
     @Inject
-    public ModelGetter(Client client, ClientThread clientThread, CreatorsConfig config, CreatorsPlugin plugin, DataFinder dataFinder, ModelExporter modelExporter)
+    public ModelGetter(Client client, ClientThread clientThread, CreatorsConfig config, CreatorsPlugin plugin, DataFinder dataFinder, ModelExporter modelExporter, ModelUtilities modelUtilities)
     {
         this.client = client;
         this.clientThread = clientThread;
@@ -50,6 +52,7 @@ public class ModelGetter
         this.plugin = plugin;
         this.dataFinder = dataFinder;
         this.modelExporter = modelExporter;
+        this.modelUtilities = modelUtilities;
     }
 
     public void addCharacterMenuEntries(Tile tile)
@@ -553,7 +556,7 @@ public class ModelGetter
                 int anim = dataFinder.getLastAnim();
                 Model model = modelData.light(lighting.getAmbient(), lighting.getContrast(), lighting.getX(), lighting.getZ() * -1, lighting.getY());
                 CustomModel customModel = new CustomModel(model, comp);
-                plugin.addCustomModel(customModel, false);
+                modelUtilities.addCustomModel(customModel, false);
                 plugin.sendChatMessage("Model stored: " + name + "; Anim: " + anim + "; Ambient/Contrast: " + lighting.getAmbient() + "/" + lighting.getContrast());
                 CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
 
@@ -1167,7 +1170,7 @@ public class ModelGetter
                         switch (comp.getType())
                         {
                             case FORGED:
-                                ModelData modelData = plugin.createComplexModelData(comp.getDetailedModels());
+                                ModelData modelData = modelUtilities.createComplexModelData(comp.getDetailedModels());
                                 initiateAnimationExport(animId, name, modelData.light(), bm);
                                 break;
                             default:
@@ -1270,7 +1273,7 @@ public class ModelGetter
                     switch (comp.getType())
                     {
                         case FORGED:
-                            modelData = plugin.createComplexModelData(comp.getDetailedModels());
+                            modelData = modelUtilities.createComplexModelData(comp.getDetailedModels());
                             bm = modelExporter.bmFaceColoursForForgedModel(
                                     modelData,
                                     vX,
@@ -1544,7 +1547,7 @@ public class ModelGetter
     {
         clientThread.invokeLater(() ->
         {
-            plugin.cacheToAnvil(modelStats, kitRecolours, type);
+            modelUtilities.cacheToAnvil(modelStats, kitRecolours, type);
             plugin.sendChatMessage("Model sent to Anvil: " + name);
         });
     }
@@ -1553,7 +1556,7 @@ public class ModelGetter
     {
         clientThread.invokeLater(() ->
         {
-            Model model = plugin.constructModelFromCache(modelStats, kitRecolours, player, ls, null);
+            Model model = modelUtilities.constructModelFromCache(modelStats, kitRecolours, player, ls, null);
             store(model, modelStats, menuOption, customModelType, name, kitRecolours, ls, orientation, poseAnimation, keyFrame, spkfs);
         });
     }
@@ -1572,7 +1575,7 @@ public class ModelGetter
         CustomLighting lighting = new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getY(), ls.getZ());
         CustomModelComp comp = new CustomModelComp(0, customModelType, 7699, modelStats, kitRecolours, null, null, ls, lighting, false, name);
         CustomModel customModel = new CustomModel(model, comp);
-        plugin.addCustomModel(customModel, false);
+        modelUtilities.addCustomModel(customModel, false);
         plugin.sendChatMessage("Model stored: " + name);
         CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
 
@@ -1622,7 +1625,7 @@ public class ModelGetter
 
     private void initiateAnimationExport(int animId, String name, BlenderModel bm, ModelStats[] modelStats, int[] kitRecolours, boolean player, LightingStyle ls, CustomLighting cl)
     {
-        Model model = plugin.constructModelFromCache(modelStats, kitRecolours, player, ls, cl);
+        Model model = modelUtilities.constructModelFromCache(modelStats, kitRecolours, player, ls, cl);
         initiateAnimationExport(animId, name, model, bm);
     }
 

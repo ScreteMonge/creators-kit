@@ -16,14 +16,10 @@ import java.nio.file.Files;
 
 public class ModelImporter
 {
-    @Inject
-    private CreatorsPlugin plugin;
-
-    @Inject
-    private ClientThread clientThread;
-
-    @Inject
     private Client client;
+    private ClientThread clientThread;
+    private CreatorsPlugin plugin;
+    private final ModelUtilities modelUtilities;
 
     public static final File BLENDER_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/blender-models");
     private final int BASIC_MODEL = 823;
@@ -34,6 +30,15 @@ public class ModelImporter
     private final int ANIMATED_MODEL_2_5 = 21201;
     private final int ANIMATED_MODEL_13_13 = 80;
     private final int TEST_MODEL = 23901;
+
+    @Inject
+    public ModelImporter(Client client, ClientThread clientThread, CreatorsPlugin plugin, ModelUtilities modelUtilities)
+    {
+        this.client = client;
+        this.clientThread = clientThread;
+        this.plugin = plugin;
+        this.modelUtilities = modelUtilities;
+    }
 
     public void openLoadDialog()
     {
@@ -196,7 +201,7 @@ public class ModelImporter
 
         CustomModelComp comp = new CustomModelComp(0, CustomModelType.BLENDER, -1, null, null, null, blenderModel, lightingStyle, lighting, false, name);
         CustomModel customModel = new CustomModel(model, comp);
-        plugin.addCustomModel(customModel, false);
+        modelUtilities.addCustomModel(customModel, false);
     }
 
     public Model createModel(BlenderModel blenderModel, LightingStyle lightingStyle)

@@ -27,6 +27,7 @@ public class CacheSearcherTab extends JPanel
     private final CreatorsPlugin plugin;
     private ClientThread clientThread;
     private final DataFinder dataFinder;
+    private final ModelUtilities modelUtilities;
 
     private final GridBagConstraints c = new GridBagConstraints();
     private final String NPC = "NPC";
@@ -52,11 +53,12 @@ public class CacheSearcherTab extends JPanel
     private final JPanel display = new JPanel();
 
     @Inject
-    public CacheSearcherTab(CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder)
+    public CacheSearcherTab(CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ModelUtilities modelUtilities)
     {
         this.plugin = plugin;
         this.clientThread = clientThread;
         this.dataFinder = dataFinder;
+        this.modelUtilities = modelUtilities;
 
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
         setLayout(new GridBagLayout());
@@ -1261,12 +1263,12 @@ public class CacheSearcherTab extends JPanel
 
     private void addToAnvil(CustomModelType type, int id)
     {
-        plugin.cacheToAnvil(type, id);
+        modelUtilities.cacheToAnvil(type, id);
     }
 
     private void addCustomModel(CustomModelType type, int id)
     {
-        plugin.cacheToCustomModel(type, id, -1);
+        modelUtilities.cacheToCustomModel(type, id, -1);
     }
 
     private void addItemObject(int id, CustomModelType customModelType)
@@ -1315,11 +1317,11 @@ public class CacheSearcherTab extends JPanel
                     ls.getY(),
                     ls.getZ());
 
-            Model model = plugin.constructModelFromCache(modelStats, new int[0], false, ls, lighting);
+            Model model = modelUtilities.constructModelFromCache(modelStats, new int[0], false, ls, lighting);
 
             CustomModelComp comp = new CustomModelComp(0, customModelType, data.getId(), modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, data.getName());
             CustomModel customModel = new CustomModel(model, comp);
-            plugin.addCustomModel(customModel, false);
+            modelUtilities.addCustomModel(customModel, false);
 
             CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
             Character character = creatorsPanel.createCharacter(
@@ -1374,10 +1376,10 @@ public class CacheSearcherTab extends JPanel
         clientThread.invokeLater(() ->
         {
             CustomLighting lighting = new CustomLighting(64, 768, -50, -50, 10);
-            Model model = plugin.constructModelFromCache(modelStats, new int[0], false, LightingStyle.DEFAULT, lighting);
+            Model model = modelUtilities.constructModelFromCache(modelStats, new int[0], false, LightingStyle.DEFAULT, lighting);
             CustomModelComp comp = new CustomModelComp(0, CustomModelType.CACHE_OBJECT, data.getId(), modelStats, null, null, null, LightingStyle.DEFAULT, lighting, false, data.getName());
             CustomModel customModel = new CustomModel(model, comp);
-            plugin.addCustomModel(customModel, false);
+            modelUtilities.addCustomModel(customModel, false);
 
             CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
             Character character = creatorsPanel.createCharacter(
@@ -1432,10 +1434,10 @@ public class CacheSearcherTab extends JPanel
         clientThread.invokeLater(() ->
         {
             CustomLighting lighting = new CustomLighting(64, 850, -30, -30, 50);
-            Model model = plugin.constructModelFromCache(modelStats, new int[0], false, LightingStyle.ACTOR, lighting);
+            Model model = modelUtilities.constructModelFromCache(modelStats, new int[0], false, LightingStyle.ACTOR, lighting);
             CustomModelComp comp = new CustomModelComp(0, CustomModelType.CACHE_NPC, data.getId(), modelStats, null, null, null, LightingStyle.ACTOR, lighting, false, data.getName());
             CustomModel customModel = new CustomModel(model, comp);
-            plugin.addCustomModel(customModel, false);
+            modelUtilities.addCustomModel(customModel, false);
 
             CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
             Character character = creatorsPanel.createCharacter(
@@ -1513,10 +1515,10 @@ public class CacheSearcherTab extends JPanel
         {
             LightingStyle ls = LightingStyle.SPOTANIM;
             CustomLighting lighting = new CustomLighting(ls.getAmbient() + data.getAmbient(), ls.getContrast() + data.getContrast(), ls.getX(), ls.getY(), ls.getZ());
-            Model model = plugin.constructModelFromCache(modelStats, new int[0], false, LightingStyle.CUSTOM, lighting);
+            Model model = modelUtilities.constructModelFromCache(modelStats, new int[0], false, LightingStyle.CUSTOM, lighting);
             CustomModelComp comp = new CustomModelComp(0, CustomModelType.CACHE_SPOTANIM, data.getId(), modelStats, null, null, null, LightingStyle.CUSTOM, lighting, false, data.getName());
             CustomModel customModel = new CustomModel(model, comp);
-            plugin.addCustomModel(customModel, false);
+            modelUtilities.addCustomModel(customModel, false);
 
             CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
             Character character = creatorsPanel.createCharacter(

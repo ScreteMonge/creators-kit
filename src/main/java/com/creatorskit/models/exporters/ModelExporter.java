@@ -22,14 +22,17 @@ public class ModelExporter
     private final Client client;
     private final CreatorsPlugin plugin;
     private final CreatorsConfig config;
+    private final ModelUtilities modelUtilities;
+
     public final File BLENDER_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/blender-models");
 
     @Inject
-    public ModelExporter(Client client, CreatorsPlugin plugin, CreatorsConfig config)
+    public ModelExporter(Client client, CreatorsPlugin plugin, CreatorsConfig config, ModelUtilities modelUtilities)
     {
         this.client = client;
         this.plugin = plugin;
         this.config = config;
+        this.modelUtilities = modelUtilities;
     }
 
     public void saveToFile(String name, BlenderModel blenderModel)
@@ -564,7 +567,7 @@ public class ModelExporter
         switch (comp.getType())
         {
             case FORGED:
-                md = plugin.createComplexModelData(comp.getDetailedModels());
+                md = modelUtilities.createComplexModelData(comp.getDetailedModels());
                 fCount = md.getFaceCount();
 
                 if (model.getFaceRenderPriorities() == null)
@@ -621,7 +624,7 @@ public class ModelExporter
             case CACHE_GROUND_ITEM:
             case CACHE_MAN_WEAR:
             case CACHE_WOMAN_WEAR:
-                md = plugin.constructModelDataFromCache(comp.getModelStats(), new int[0], false);
+                md = modelUtilities.constructModelDataFromCache(comp.getModelStats(), new int[0], false);
                 fCount = md.getFaceCount();
 
                 if (model.getFaceRenderPriorities() == null)
@@ -675,7 +678,7 @@ public class ModelExporter
                         renderPriorities);
                 break;
             case CACHE_PLAYER:
-                md = plugin.constructModelDataFromCache(comp.getModelStats(), comp.getKitRecolours(), true);
+                md = modelUtilities.constructModelDataFromCache(comp.getModelStats(), comp.getKitRecolours(), true);
                 fCount = md.getFaceCount();
 
                 if (model.getFaceRenderPriorities() == null)

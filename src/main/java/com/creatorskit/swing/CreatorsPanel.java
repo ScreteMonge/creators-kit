@@ -1560,6 +1560,7 @@ public class CreatorsPanel extends PluginPanel
 
     private void loadSetup(File file, SetupSave saveFile)
     {
+        ModelUtilities modelUtilities = toolBox.getModelUtilities();
         updateLoadedFile(file);
         CustomModelComp[] comps = saveFile.getComps();
         FolderNodeSave folderNodeSave = saveFile.getMasterFolderNode();
@@ -1580,17 +1581,17 @@ public class CreatorsPanel extends PluginPanel
             switch (comp.getType())
             {
                 case FORGED:
-                    model = plugin.createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle(), comp.getCustomLighting(), false);
+                    model = modelUtilities.createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle(), comp.getCustomLighting(), false);
                     customModel = new CustomModel(model, comp);
                     break;
                 case CACHE_NPC:
                     modelStats = comp.getModelStats();
-                    model = plugin.constructModelFromCache(modelStats, new int[0], false, LightingStyle.ACTOR, null);
+                    model = modelUtilities.constructModelFromCache(modelStats, new int[0], false, LightingStyle.ACTOR, null);
                     customModel = new CustomModel(model, comp);
                     break;
                 case CACHE_PLAYER:
                     modelStats = comp.getModelStats();
-                    model = plugin.constructModelFromCache(modelStats, comp.getKitRecolours(), true, LightingStyle.ACTOR, null);
+                    model = modelUtilities.constructModelFromCache(modelStats, comp.getKitRecolours(), true, LightingStyle.ACTOR, null);
                     customModel = new CustomModel(model, comp);
                     break;
                 default:
@@ -1600,7 +1601,7 @@ public class CreatorsPanel extends PluginPanel
                 case CACHE_MAN_WEAR:
                 case CACHE_WOMAN_WEAR:
                     modelStats = comp.getModelStats();
-                    model = plugin.constructModelFromCache(modelStats, null, false, LightingStyle.DEFAULT, null);
+                    model = modelUtilities.constructModelFromCache(modelStats, null, false, LightingStyle.DEFAULT, null);
                     customModel = new CustomModel(model, comp);
                     break;
                 case BLENDER:
@@ -1608,7 +1609,7 @@ public class CreatorsPanel extends PluginPanel
                     customModel = new CustomModel(model, comp);
             }
 
-            plugin.addCustomModel(customModel, false);
+            modelUtilities.addCustomModel(customModel, false);
             customModels[i] = customModel;
         }
 
@@ -1882,7 +1883,7 @@ public class CreatorsPanel extends PluginPanel
         if (option == JFileChooser.APPROVE_OPTION)
         {
             File selectedFile = fileChooser.getSelectedFile();
-            plugin.loadCustomModel(selectedFile);
+            toolBox.getModelUtilities().loadCustomModel(selectedFile);
         }
     }
 
