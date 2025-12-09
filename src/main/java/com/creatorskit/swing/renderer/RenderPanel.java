@@ -28,6 +28,8 @@ public class RenderPanel extends JPanel
     public static final double Z_DEFAULT = 275;
     public static final int FOV_DEFAULT = 150;
 
+    public final int MIN_CAMERA_DISTANCE = 50;
+
     private double heading = 0;
     private double pitch = 0;
 
@@ -36,7 +38,7 @@ public class RenderPanel extends JPanel
     private double z = 275;
 
     private final int ROLL = 0;
-    private final int ZOOM_FACTOR = 25;
+    private final int ZOOM_FACTOR = 35;
 
     private double mouseX = 0;
     private double mouseY = 0;
@@ -76,7 +78,7 @@ public class RenderPanel extends JPanel
 
         addMouseWheelListener(e ->
         {
-            z += ZOOM_FACTOR * e.getWheelRotation();
+            z = Math.max(z + ZOOM_FACTOR * e.getWheelRotation(), MIN_CAMERA_DISTANCE);
             repaint();
         });
 
@@ -210,6 +212,12 @@ public class RenderPanel extends JPanel
             Vertex v2 = transform.transform(t.v2);
             Vertex v3 = transform.transform(t.v3);
 
+            double NEAR_CULL_DISTANCE = 50.0;
+            if (v1.z > -NEAR_CULL_DISTANCE && v2.z > -NEAR_CULL_DISTANCE && v3.z > -NEAR_CULL_DISTANCE)
+            {
+                continue;
+            }
+
             Vertex ab = new Vertex(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z, v2.w - v1.w);
             Vertex ac = new Vertex(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z, v3.w - v1.w);
             Vertex norm = new Vertex(
@@ -238,6 +246,14 @@ public class RenderPanel extends JPanel
             v2.y += viewportHeight / 2;
             v3.x += viewportWidth / 2;
             v3.y += viewportHeight / 2;
+
+            if ((v1.x < 0   && v2.x < 0   && v3.x < 0) ||
+                    (v1.x >= viewportWidth  && v2.x >= viewportWidth  && v3.x >= viewportWidth) ||
+                    (v1.y < 0   && v2.y < 0   && v3.y < 0) ||
+                    (v1.y >= viewportHeight && v2.y >= viewportHeight))
+            {
+                continue;
+            }
 
             int minX = (int) Math.max(0, Math.ceil(Math.min(v1.x, Math.min(v2.x, v3.x))));
             int maxX = (int) Math.min(img.getWidth() - 1, Math.floor(Math.max(v1.x, Math.max(v2.x, v3.x))));
