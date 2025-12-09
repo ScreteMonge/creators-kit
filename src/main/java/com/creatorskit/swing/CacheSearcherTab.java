@@ -110,7 +110,10 @@ public class CacheSearcherTab extends JPanel
         previewPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         previewPanel.setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1));
 
-        renderPanel = new RenderPanel();
+        JSlider fovSlider = new JSlider(1, 179, 150);
+        previewPanel.add(fovSlider, BorderLayout.NORTH);
+
+        renderPanel = new RenderPanel(fovSlider);
         previewPanel.add(renderPanel, BorderLayout.CENTER);
 
         JButton resetButton = new JButton("Reset Camera View");

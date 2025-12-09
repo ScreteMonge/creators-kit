@@ -19,23 +19,25 @@ public class RenderPanel extends JPanel
     @Setter
     private ModelData model;
     private boolean modelExists = false;
+    private final JSlider fovSlider;
 
     private double heading = 0;
     private double pitch = 0;
-    private int fov = 90;
 
     private double x = 0;
-    private double y = -75;
-    private double z = 400;
+    private double y = -90;
+    private double z = 275;
 
     private final int ROLL = 0;
-    private final int ZOOM_FACTOR = 5;
+    private final int ZOOM_FACTOR = 15;
 
     private double mouseX = 0;
     private double mouseY = 0;
 
-    public RenderPanel()
+    public RenderPanel(JSlider fovSlider)
     {
+        this.fovSlider = fovSlider;
+
         addMouseListener(new MouseAdapter()
         {
             @Override
@@ -76,9 +78,11 @@ public class RenderPanel extends JPanel
 
         addMouseWheelListener(e ->
         {
-            fov = Math.max(1, Math.min(179, fov - (ZOOM_FACTOR * e.getWheelRotation())));
+            z += ZOOM_FACTOR * e.getWheelRotation();
             repaint();
         });
+
+        fovSlider.addChangeListener(e -> repaint());
     }
 
     public void updateModel(ModelData md)
@@ -147,7 +151,7 @@ public class RenderPanel extends JPanel
 
         double viewportWidth = getWidth();
         double viewportHeight = getHeight();
-        double fovAngle = Math.toRadians(fov);
+        double fovAngle = Math.toRadians(fovSlider.getValue());
         double fov = Math.tan(fovAngle / 2) * 170;
 
         Matrix4 transform =
@@ -286,10 +290,10 @@ public class RenderPanel extends JPanel
     {
         heading = 0;
         pitch = 0;
-        fov = 90;
+        fovSlider.setValue(150);
         x = 0;
-        y = -75;
-        z = 400;
+        y = -90;
+        z = 275;
         repaint();
     }
 }
