@@ -20,19 +20,19 @@ public class RenderPanel extends JPanel
     private ModelData model;
     private boolean modelExists = false;
 
-    private int heading = 0;
-    private int pitch = 0;
+    private double heading = 0;
+    private double pitch = 0;
     private int fov = 140;
 
-    private int x = 0;
-    private int y = 75;
-    private int z = 400;
+    private double x = 0;
+    private double y = 75;
+    private double z = 400;
 
     private final int ROLL = 0;
     private final int ZOOM_FACTOR = 5;
 
-    private int mouseX = 0;
-    private int mouseY = 0;
+    private double mouseX = 0;
+    private double mouseY = 0;
 
     public RenderPanel()
     {
@@ -42,8 +42,8 @@ public class RenderPanel extends JPanel
             public void mousePressed(MouseEvent e)
             {
                 Point p = e.getLocationOnScreen();
-                mouseX = (int) p.getX();
-                mouseY = (int) p.getY();
+                mouseX = p.getX();
+                mouseY = p.getY();
             }
         });
 
@@ -53,8 +53,8 @@ public class RenderPanel extends JPanel
             public void mouseDragged(MouseEvent e)
             {
                 Point p = e.getLocationOnScreen();
-                int dx = (int) ((p.getX() - mouseX));
-                int dy = (int) (p.getY() - mouseY);
+                double dx = p.getX() - mouseX;
+                double dy = p.getY() - mouseY;
 
                 if (e.isShiftDown())
                 {
@@ -75,9 +75,9 @@ public class RenderPanel extends JPanel
                     double moveY = ry * -dx + uy * -dy;
                     double moveZ = rz * -dx + uz * -dy;
 
-                    x += (int) moveX;
-                    y += (int) moveY;
-                    z += (int) moveZ;
+                    x += moveX;
+                    y += moveY;
+                    z += moveZ;
                 }
                 else
                 {
@@ -155,7 +155,7 @@ public class RenderPanel extends JPanel
                 0, 0, 0, 1
         });
 
-        Matrix4 panOutTransform = new Matrix4(new double[] {
+        Matrix4 panTransform = new Matrix4(new double[] {
                 1, 0, 0, 0,
                 0, 1, 0, 0,
                 0, 0, 1, 0,
@@ -170,7 +170,7 @@ public class RenderPanel extends JPanel
         Matrix4 transform =
                 headingTransform
                         .multiply(pitchTransform)
-                        .multiply(panOutTransform);
+                        .multiply(panTransform);
 
         BufferedImage img = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
 
