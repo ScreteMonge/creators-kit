@@ -337,10 +337,10 @@ public class ModelAnvil extends JPanel
                 colourSwapPanel.removeAllComplexPanelOptions();
             }
 
-            updateRenderPanel();
             repaint();
             revalidate();
             complexPanels.clear();
+            updateRenderPanel();
         });
         headerPanel.add(clearButton);
 
