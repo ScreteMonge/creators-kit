@@ -22,10 +22,10 @@ public class RenderPanel extends JPanel
 
     private double heading = 0;
     private double pitch = 0;
-    private int fov = 140;
+    private int fov = 90;
 
     private double x = 0;
-    private double y = 75;
+    private double y = -75;
     private double z = 400;
 
     private final int ROLL = 0;
@@ -58,26 +58,9 @@ public class RenderPanel extends JPanel
 
                 if (e.isShiftDown())
                 {
-                    double ch = Math.cos(Math.toRadians(heading));
-                    double sh = Math.sin(Math.toRadians(heading));
-                    double cp = Math.cos(Math.toRadians(pitch));
-                    double sp = Math.sin(Math.toRadians(pitch));
-
-                    double rx =  ch;
-                    double ry =  0;
-                    double rz = -sh;
-
-                    double ux =  sh * sp;
-                    double uy =  cp;
-                    double uz =  ch * sp;
-
-                    double moveX = rx * -dx + ux * -dy;
-                    double moveY = ry * -dx + uy * -dy;
-                    double moveZ = rz * -dx + uz * -dy;
-
-                    x += moveX;
-                    y += moveY;
-                    z += moveZ;
+                    double panSpeed = 0.5;
+                    x -= dx * panSpeed;
+                    y -= dy * panSpeed;
                 }
                 else
                 {
@@ -303,9 +286,9 @@ public class RenderPanel extends JPanel
     {
         heading = 0;
         pitch = 0;
-        fov = 140;
+        fov = 90;
         x = 0;
-        y = 75;
+        y = -75;
         z = 400;
         repaint();
     }
