@@ -29,7 +29,7 @@ public class RenderPanel extends JPanel
     private double z = 275;
 
     private final int ROLL = 0;
-    private final int ZOOM_FACTOR = 15;
+    private final int ZOOM_FACTOR = 25;
 
     private double mouseX = 0;
     private double mouseY = 0;
@@ -279,11 +279,14 @@ public class RenderPanel extends JPanel
         double greenLinear = Math.pow(color.getGreen(), 2.4) * shade;
         double blueLinear = Math.pow(color.getBlue(), 2.4) * shade;
 
-        int red = (int) Math.pow(redLinear, 1/2.4);
-        int green = (int) Math.pow(greenLinear, 1/2.4);
-        int blue = (int) Math.pow(blueLinear, 1/2.4);
+        int red = (int) Math.pow(redLinear, 1.0/2.4);
+        int green = (int) Math.pow(greenLinear, 1.0/2.4);
+        int blue = (int) Math.pow(blueLinear, 1.0/2.4);
 
-        return new Color(red, green, blue);
+        return new Color(
+                Math.min(255, Math.max(0, red)),
+                Math.min(255, Math.max(0, green)),
+                Math.min(255, Math.max(0, blue)));
     }
 
     public void resetCameraView()
