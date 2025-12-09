@@ -65,17 +65,8 @@ public class RenderPanel extends JPanel
                 double dx = p.getX() - mouseX;
                 double dy = p.getY() - mouseY;
 
-                if (e.isShiftDown())
-                {
-                    double panSpeed = 0.5;
-                    x -= dx * panSpeed;
-                    y -= dy * panSpeed;
-                }
-                else
-                {
-                    heading = heading + dx;
-                    pitch = pitch - dy;
-                }
+                heading = heading + dx;
+                pitch = pitch - dy;
 
                 mouseX = (int) p.getX();
                 mouseY = (int) p.getY();
