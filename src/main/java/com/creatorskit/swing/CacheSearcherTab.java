@@ -110,7 +110,7 @@ public class CacheSearcherTab extends JPanel
         previewPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         previewPanel.setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1));
 
-        JSlider fovSlider = new JSlider(1, 179, 150);
+        JSlider fovSlider = new JSlider(1, 179, RenderPanel.FOV_DEFAULT);
         previewPanel.add(fovSlider, BorderLayout.NORTH);
 
         renderPanel = new RenderPanel(fovSlider);

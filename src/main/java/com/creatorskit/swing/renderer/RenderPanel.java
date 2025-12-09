@@ -21,6 +21,13 @@ public class RenderPanel extends JPanel
     private boolean modelExists = false;
     private final JSlider fovSlider;
 
+    public static final double HEADING_DEFAULT = 0;
+    public static final double PITCH_DEFAULT = 0;
+    public static final double X_DEFAULT = 0;
+    public static final double Y_DEFAULT = -90;
+    public static final double Z_DEFAULT = 275;
+    public static final int FOV_DEFAULT = 150;
+
     private double heading = 0;
     private double pitch = 0;
 
@@ -291,12 +298,12 @@ public class RenderPanel extends JPanel
 
     public void resetCameraView()
     {
-        heading = 0;
-        pitch = 0;
-        fovSlider.setValue(150);
-        x = 0;
-        y = -90;
-        z = 275;
+        heading = HEADING_DEFAULT;
+        pitch = PITCH_DEFAULT;
+        fovSlider.setValue(FOV_DEFAULT);
+        x = X_DEFAULT;
+        y = Y_DEFAULT;
+        z = Z_DEFAULT;
         repaint();
     }
 }
