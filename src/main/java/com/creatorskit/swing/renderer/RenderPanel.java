@@ -25,17 +25,17 @@ public class RenderPanel extends JPanel
     public static final double PITCH_DEFAULT = 0;
     public static final double X_DEFAULT = 0;
     public static final double Y_DEFAULT = -90;
-    public static final double Z_DEFAULT = 275;
+    public static final double Z_DEFAULT = 350;
     public static final int FOV_DEFAULT = 150;
 
     public final int MIN_CAMERA_DISTANCE = 50;
 
-    private double heading = 0;
-    private double pitch = 0;
+    private double heading = HEADING_DEFAULT;
+    private double pitch = PITCH_DEFAULT;
 
-    private double x = 0;
-    private double y = -90;
-    private double z = 275;
+    private double x = X_DEFAULT;
+    private double y = Y_DEFAULT;
+    private double z = Z_DEFAULT;
 
     private final int ROLL = 0;
     private final int ZOOM_FACTOR = 35;
