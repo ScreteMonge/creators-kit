@@ -23,7 +23,6 @@ import java.util.HashMap;
 public class GroupPanel extends JPanel
 {
     private final CreatorsPlugin plugin;
-    private Client client;
     private final ClientThread clientThread;
     private final GridBagConstraints c = new GridBagConstraints();
 
@@ -36,63 +35,52 @@ public class GroupPanel extends JPanel
     private final JSpinner groupSpinner = new JSpinner();
 
     @Inject
-    public GroupPanel(@Nullable Client client, CreatorsPlugin plugin, ClientThread clientThread)
+    public GroupPanel(CreatorsPlugin plugin, ClientThread clientThread)
     {
         this.plugin = plugin;
         this.clientThread = clientThread;
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
-        setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 1));
         setLayout(new GridBagLayout());
 
         c.fill = GridBagConstraints.BOTH;
         c.insets = new Insets(4, 4, 4, 4);
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.weightx = 1;
 
         c.gridx = 0;
         c.gridy = 0;
-        c.gridwidth = 2;
-        c.gridheight = 1;
-        JLabel title = new JLabel("Group Transformer");
-        title.setFont(FontManager.getRunescapeBoldFont());
-        title.setHorizontalAlignment(SwingConstants.CENTER);
-        add(title, c);
+        JLabel title1 = new JLabel("Group");
+        title1.setFont(FontManager.getRunescapeBoldFont());
+        title1.setHorizontalAlignment(SwingConstants.CENTER);
+        add(title1, c);
 
         c.gridx = 0;
         c.gridy = 1;
-        c.gridwidth = 1;
-        c.gridheight = 1;
-        JLabel groupLabel = new JLabel("Group:");
-        groupLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        add(groupLabel, c);
+        JLabel title2 = new JLabel("Transformer");
+        title2.setFont(FontManager.getRunescapeBoldFont());
+        title2.setHorizontalAlignment(SwingConstants.CENTER);
+        add(title2, c);
 
-        c.gridx = 1;
-        c.gridy = 1;
-        c.gridwidth = 1;
-        c.gridheight = 1;
+        c.gridx = 0;
+        c.gridy = 2;
         SpinnerNumberModel spinnerNumberModel = new SpinnerNumberModel(1, 1, 99, 1);
         groupSpinner.setModel(spinnerNumberModel);
         groupSpinner.setBackground(ModelAnvil.getBorderColour(6));
         groupSpinner.setToolTipText("Pick the Group number to Group Transform");
+        groupSpinner.addChangeListener(e -> groupSpinner.setBackground(ModelAnvil.getBorderColour((int) groupSpinner.getValue() * 6)));
         add(groupSpinner, c);
-        groupSpinner.addChangeListener(e ->
-                groupSpinner.setBackground(ModelAnvil.getBorderColour((int) groupSpinner.getValue() * 6)));
 
         JPanel adjustPanel = createAdjustPanel();
         c.gridx = 0;
-        c.gridy = 2;
-        c.gridwidth = 1;
-        c.gridheight = 1;
+        c.gridy = 3;
         add(adjustPanel, c);
 
         JPanel setPanel = createSetPanel();
-        c.gridx = 1;
-        c.gridy = 2;
-        c.gridwidth = 1;
-        c.gridheight = 1;
+        c.gridx = 0;
+        c.gridy = 4;
         add(setPanel, c);
-
-        revalidate();
-        repaint();
     }
 
     public JPanel createAdjustPanel()

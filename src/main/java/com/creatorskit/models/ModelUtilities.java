@@ -297,7 +297,9 @@ public class ModelUtilities
                         false);
             }
 
-            creatorsPanel.getModelAnvil().generateNames();
+            ModelAnvil modelAnvil = creatorsPanel.getModelAnvil();
+            modelAnvil.generateNames();
+            modelAnvil.updateRenderPanel();
         });
     }
 
@@ -518,6 +520,8 @@ public class ModelUtilities
                 {
                     modelAnvil.createComplexPanel(detailedModel);
                 }
+
+                modelAnvil.updateRenderPanel();
             });
 
             LightingStyle ls = comp.getLightingStyle();

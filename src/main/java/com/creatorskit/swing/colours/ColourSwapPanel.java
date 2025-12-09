@@ -1,6 +1,7 @@
 package com.creatorskit.swing.colours;
 
 import com.creatorskit.swing.anvil.ComplexPanel;
+import com.creatorskit.swing.anvil.ModelAnvil;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.Client;
@@ -27,6 +28,8 @@ public class ColourSwapPanel extends JPanel
 {
     private final Client client;
     private final ClientThread clientThread;
+    private final ModelAnvil modelAnvil;
+
     private final ArrayList<ComplexPanel> complexPanels;
     private final GridBagConstraints c = new GridBagConstraints();
     private final Dimension LABEL_DIMENSION = new Dimension(250, 30);
@@ -52,15 +55,15 @@ public class ColourSwapPanel extends JPanel
     private short[][] copiedColoursTextures = new short[4][0];
 
     @Inject
-    public ColourSwapPanel(Client client, ClientThread clientThread, ArrayList<ComplexPanel> complexPanels)
+    public ColourSwapPanel(Client client, ClientThread clientThread, ArrayList<ComplexPanel> complexPanels, ModelAnvil modelAnvil)
     {
         this.client = client;
         this.clientThread = clientThread;
         this.complexPanels = complexPanels;
+        this.modelAnvil = modelAnvil;
 
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
         setLayout(new GridBagLayout());
-        setBorder(new EmptyBorder(2, 2, 2, 2));
 
         c.fill = GridBagConstraints.BOTH;
         c.insets = new Insets(4, 4, 4, 4);
@@ -464,6 +467,7 @@ public class ColourSwapPanel extends JPanel
             setColour(colourPanel, colour);
             addColourSwap(colourPanel.getOldColour(), colourPanel.getNewColour());
         }
+        modelAnvil.updateRenderPanel();
     }
 
     public void setColoursEverything()
@@ -499,6 +503,7 @@ public class ColourSwapPanel extends JPanel
             }
 
             onSwapperPressed((ComplexPanel) comboBox.getSelectedItem());
+            modelAnvil.updateRenderPanel();
         });
     }
 
@@ -516,6 +521,7 @@ public class ColourSwapPanel extends JPanel
         }
 
         onSwapperPressed((ComplexPanel) comboBox.getSelectedItem());
+        modelAnvil.updateRenderPanel();
     }
 
     private void setColour(ColourPanel colourPanel, Color rgbColour)
@@ -555,12 +561,14 @@ public class ColourSwapPanel extends JPanel
             unsetColour(colourPanel);
 
         removeAllColourSwaps();
+        modelAnvil.updateRenderPanel();
     }
 
     private void addColourSwap(short colourFrom, short colourTo)
     {
         currentComplexPanel.setColoursFrom(ArrayUtils.add(currentComplexPanel.getColoursFrom(), colourFrom));
         currentComplexPanel.setColoursTo(ArrayUtils.add(currentComplexPanel.getColoursTo(), colourTo));
+        modelAnvil.updateRenderPanel();
     }
 
     public void pasteColourSwaps(ComplexPanel complexPanel, short[] newColoursFrom, short[] newColoursTo)
@@ -590,6 +598,7 @@ public class ColourSwapPanel extends JPanel
 
         complexPanel.setColoursFrom(coloursFrom);
         complexPanel.setColoursTo(coloursTo);
+        modelAnvil.updateRenderPanel();
     }
 
     private void removeColourSwap(short colourFrom)
@@ -600,6 +609,7 @@ public class ColourSwapPanel extends JPanel
         int index = ArrayUtils.indexOf(coloursFrom, colourFrom);
         currentComplexPanel.setColoursFrom(ArrayUtils.remove(coloursFrom, index));
         currentComplexPanel.setColoursTo(ArrayUtils.remove(coloursTo, index));
+        modelAnvil.updateRenderPanel();
     }
 
     private void replaceColourSwap(short colourFrom, short newColourTo)
@@ -609,12 +619,14 @@ public class ColourSwapPanel extends JPanel
 
         int index = ArrayUtils.indexOf(coloursFrom, colourFrom);
         coloursTo[index] = newColourTo;
+        modelAnvil.updateRenderPanel();
     }
 
     public void removeAllColourSwaps()
     {
         currentComplexPanel.setColoursFrom(new short[0]);
         currentComplexPanel.setColoursTo(new short[0]);
+        modelAnvil.updateRenderPanel();
     }
 
     public static Color colourFromShort(short s)
@@ -670,6 +682,7 @@ public class ColourSwapPanel extends JPanel
 
             setTexture(texturePanel, textureToAdd);
             addTextureSwap(texturePanel.getOldTexture(), textureToAdd);
+            modelAnvil.updateRenderPanel();
         });
         newTextureButton.addActionListener(e ->
         {
@@ -683,6 +696,7 @@ public class ColourSwapPanel extends JPanel
             short textureToAdd = (short) ((int) spinner.getValue());
             setTexture(texturePanel, textureToAdd);
             addTextureSwap(texturePanel.getOldTexture(), texturePanel.getNewTexture());
+            modelAnvil.updateRenderPanel();
         });
 
         textureHolder.add(texturePanel);
@@ -802,6 +816,8 @@ public class ColourSwapPanel extends JPanel
 
         if (currentComplexPanel == complexPanel)
             onSwapperPressed(complexPanel);
+
+        modelAnvil.updateRenderPanel();
     }
 
     public void clearColoursTextures(ComplexPanel complexPanel)
@@ -810,6 +826,7 @@ public class ColourSwapPanel extends JPanel
         {
             unsetAllColours();
             unsetAllTextures();
+            modelAnvil.updateRenderPanel();
             return;
         }
 
@@ -817,5 +834,6 @@ public class ColourSwapPanel extends JPanel
         complexPanel.setColoursTo(new short[0]);
         complexPanel.setTexturesFrom(new short[0]);
         complexPanel.setTexturesTo(new short[0]);
+        modelAnvil.updateRenderPanel();
     }
 }
