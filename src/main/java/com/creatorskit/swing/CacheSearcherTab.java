@@ -37,6 +37,7 @@ public class CacheSearcherTab extends JPanel
     private final String ITEM = "ITEM";
     private final String ANIM = "ANIM";
     private final String SPOTANIM = "SPOTANIM";
+    private String currentCard = NPC;
 
     private final JPanel npcPanel = new JPanel();
     private final JPanel objectPanel = new JPanel();
@@ -45,6 +46,7 @@ public class CacheSearcherTab extends JPanel
     private final JPanel spotAnimPanel = new JPanel();
 
     private final JPanel previewPanel = new JPanel();
+    private final JPanel breakdownPanel = new JPanel();
     private RenderPanel renderPanel;
 
     private final JFilterableTable npcTable = new JFilterableTable("NPCs");
@@ -52,6 +54,7 @@ public class CacheSearcherTab extends JPanel
     private final JFilterableTable itemTable = new JFilterableTable("Items");
     private final JFilterableTable animTable = new JFilterableTable("Animations");
     private final JFilterableTable spotAnimTable = new JFilterableTable("SpotAnims");
+    private final JFilterableTable modelTable = new JFilterableTable("Model Id Breakdown");
 
     private final JComboBox<CustomModelType> itemType = new JComboBox<>();
 
@@ -74,6 +77,7 @@ public class CacheSearcherTab extends JPanel
         setupAnimPanel();
         setupSpotAnimPanel();
         setupDisplay();
+        setupBreakdownTable();
         setupRenderPanel();
         setupLayout();
     }
@@ -104,6 +108,176 @@ public class CacheSearcherTab extends JPanel
         display.add(animCard, ANIM);
     }
 
+    private void setupBreakdownTable()
+    {
+        breakdownPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        breakdownPanel.setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1));
+        breakdownPanel.setLayout(new BorderLayout());
+        JPanel holderPanel = new JPanel();
+        holderPanel.setBorder(new EmptyBorder(8, 8, 8, 8));
+        holderPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        holderPanel.setLayout(new GridBagLayout());
+        breakdownPanel.add(holderPanel, BorderLayout.CENTER);
+
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(2, 2, 2, 2);
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.weightx = 1;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 0;
+        JLabel title = new JLabel("Model Id Breakdown");
+        title.setFont(FontManager.getRunescapeBoldFont());
+        holderPanel.add(title, c);
+
+        c.gridx = 0;
+        c.gridy = 1;
+        c.weighty = 1;
+        modelTable.getSelectionModel().addListSelectionListener(e ->
+        {
+            boolean renderAll = false;
+            int modelId = 0;
+
+            Object o = modelTable.getSelectedObject();
+            if (o instanceof String)
+            {
+                String s = (String) o;
+                if (s.equals("All"))
+                {
+                    renderAll = true;
+                }
+            }
+
+            if (o instanceof Integer)
+            {
+                modelId = (Integer) o;
+            }
+
+
+            CustomModelType type = getCurrentTypeSelected();
+            if (type == null)
+            {
+                renderPanel.resetViewer();
+                return;
+            }
+
+            switch (type)
+            {
+                case CACHE_NPC:
+                    Object npc = npcTable.getSelectedObject();
+                    if (npc instanceof NPCData)
+                    {
+                        NPCData data = (NPCData) npc;
+                        updateRenderPanel(CustomModelType.CACHE_NPC, data.getId(), renderAll, modelId);
+                    }
+                    break;
+                case CACHE_OBJECT:
+                    Object object = objectTable.getSelectedObject();
+                    if (object instanceof ObjectData)
+                    {
+                        ObjectData data = (ObjectData) object;
+                        updateRenderPanel(CustomModelType.CACHE_OBJECT, data.getId(), renderAll, modelId);
+                    }
+                    break;
+                case CACHE_GROUND_ITEM:
+                case CACHE_MAN_WEAR:
+                case CACHE_WOMAN_WEAR:
+                    Object item = itemTable.getSelectedObject();
+                    if (item instanceof ItemData)
+                    {
+                        ItemData data = (ItemData) item;
+                        updateRenderPanel(type, data.getId(), renderAll, modelId);
+                    }
+                    break;
+                case CACHE_SPOTANIM:
+                    Object spotAnim = spotAnimTable.getSelectedObject();
+                    if (spotAnim instanceof SpotanimData)
+                    {
+                        SpotanimData data = (SpotanimData) spotAnim;
+                        updateRenderPanel(type, data.getId(), renderAll, modelId);
+                    }
+                    break;
+                default:
+                    renderPanel.resetViewer();
+            }
+        });
+
+        holderPanel.add(modelTable, c);
+    }
+
+    private void updateRenderPanel(CustomModelType type, int id, boolean renderAll, int modelId)
+    {
+        ModelStats[] modelStats = new ModelStats[0];
+        switch (type)
+        {
+            case CACHE_NPC:
+                modelStats = dataFinder.findModelsForNPC(id);
+                break;
+            case CACHE_OBJECT:
+                modelStats = dataFinder.findModelsForObject(id, 0, LightingStyle.DEFAULT, true);
+                break;
+            case CACHE_GROUND_ITEM:
+            case CACHE_MAN_WEAR:
+            case CACHE_WOMAN_WEAR:
+                modelStats = dataFinder.findModelsForGroundItem(id, type);
+                break;
+            case CACHE_SPOTANIM:
+                modelStats = dataFinder.findSpotAnim(id);
+        }
+
+        if (modelStats == null || modelStats.length == 0)
+        {
+            renderPanel.resetViewer();
+            return;
+        }
+
+        if (renderAll)
+        {
+            ModelStats[] allModelStats = modelStats;
+            clientThread.invokeLater(() ->
+            {
+                ModelData md = modelUtilities.constructModelDataFromCache(allModelStats, new int[0], false);
+                renderPanel.updateModel(md);
+            });
+            return;
+        }
+
+        for (ModelStats modelStat : modelStats)
+        {
+            if (modelStat.getModelId() == modelId)
+            {
+                clientThread.invokeLater(() ->
+                {
+                    ModelData md = modelUtilities.constructModelDataFromCache(new ModelStats[]{modelStat}, new int[0], false);
+                    renderPanel.updateModel(md);
+                });
+                return;
+            }
+        }
+
+        renderPanel.resetViewer();
+    }
+
+    private void updateModelBreakdownTable(int[] modelIds)
+    {
+        List<Object> dataList = new ArrayList<>();
+        Object all = "All";
+        dataList.add(all);
+
+        for (int i : modelIds)
+        {
+            Object e = i;
+            dataList.add(e);
+        }
+
+        List<Object> list = new ArrayList<>(dataList);
+        modelTable.initialize(list);
+        modelTable.searchAndListEntries("");
+        revalidate();
+    }
+
     private void setupRenderPanel()
     {
         previewPanel.setLayout(new BorderLayout());
@@ -129,8 +303,8 @@ public class CacheSearcherTab extends JPanel
 
         c.gridwidth = 1;
         c.gridheight = 1;
-        c.weightx = 2;
-        c.weighty = 1;
+        c.weightx = 0;
+        c.weighty = 0;
         c.gridx = 0;
         c.gridy = 0;
         JLabel empty = new JLabel("");
@@ -141,48 +315,47 @@ public class CacheSearcherTab extends JPanel
         c.weightx = 2;
         c.weighty = 0;
         c.gridx = 1;
-        c.gridy = 1;
+        c.gridy = 0;
         add(npcPanel, c);
 
         c.gridx = 1;
-        c.gridy = 2;
+        c.gridy = 1;
         add(objectPanel, c);
 
         c.gridx = 1;
-        c.gridy = 3;
+        c.gridy = 2;
         add(itemPanel, c);
 
         c.gridx = 1;
-        c.gridy = 4;
+        c.gridy = 3;
         add(spotAnimPanel, c);
 
         c.gridx = 1;
-        c.gridy = 5;
+        c.gridy = 4;
         add(animPanel, c);
 
         c.gridx = 1;
+        c.gridy = 5;
+        add(breakdownPanel, c);
+
+        c.gridx = 1;
         c.gridy = 6;
+        c.weighty = 1;
         add(new JLabel(""), c);
 
-        c.gridheight = 6;
+        c.gridheight = 7;
         c.weighty = 5;
         c.weightx = 2;
         c.gridx = 2;
-        c.gridy = 1;
+        c.gridy = 0;
         add(display, c);
 
-        c.gridheight = 6;
+        c.gridheight = 7;
         c.weighty = 5;
-        c.weightx = 4;
+        c.weightx = 8;
         c.gridx = 3;
-        c.gridy = 1;
+        c.gridy = 0;
         add(previewPanel, c);
-
-        c.weighty = 1;
-        c.weightx = 2;
-        c.gridx = 4;
-        c.gridy = 7;
-        add(new JLabel(""), c);
 
         repaint();
         revalidate();
@@ -326,19 +499,8 @@ public class CacheSearcherTab extends JPanel
                 idleRight.setText("Idle Right: " + data.getIdleRotateRightAnimation());
                 idleLeft.setText("Idle Left: " + data.getIdleRotateLeftAnimation());
 
-                ModelStats[] modelStats = dataFinder.findModelsForNPC(data.getId());
-                if (modelStats == null)
-                {
-                    renderPanel.resetViewer();
-                }
-                else
-                {
-                    clientThread.invokeLater(() ->
-                    {
-                        ModelData md = modelUtilities.constructModelDataFromCache(modelStats, new int[0], false);
-                        renderPanel.updateModel(md);
-                    });
-                }
+                updateRenderPanel(CustomModelType.CACHE_NPC, data.getId(), true, -1);
+                updateModelBreakdownTable(data.getModels());
             }
         });
     }
@@ -432,19 +594,8 @@ public class CacheSearcherTab extends JPanel
             {
                 ObjectData data = (ObjectData) o;
 
-                ModelStats[] modelStats = dataFinder.findModelsForObject(data.getId(), 0, LightingStyle.DEFAULT, true);
-                if (modelStats == null)
-                {
-                    renderPanel.resetViewer();
-                }
-                else
-                {
-                    clientThread.invokeLater(() ->
-                    {
-                        ModelData md = modelUtilities.constructModelDataFromCache(modelStats, new int[0], false);
-                        renderPanel.updateModel(md);
-                    });
-                }
+                updateRenderPanel(CustomModelType.CACHE_OBJECT, data.getId(), true, -1);
+                updateModelBreakdownTable(data.getObjectModels());
             }
         });
     }
@@ -612,19 +763,22 @@ public class CacheSearcherTab extends JPanel
                 int itemId = data.getId();
 
                 CustomModelType type = (CustomModelType) itemType.getSelectedItem();
-                ModelStats[] modelStats = dataFinder.findModelsForGroundItem(data.getId(), type);
-                if (modelStats == null)
+                updateRenderPanel((CustomModelType) itemType.getSelectedItem(), itemId, true, -1);
+
+                int[] modelIds;
+                switch (type)
                 {
-                    renderPanel.resetViewer();
+                    default:
+                    case CACHE_GROUND_ITEM:
+                        modelIds = new int[]{data.getInventoryModel()};
+                        break;
+                    case CACHE_MAN_WEAR:
+                        modelIds = new int[]{data.getMaleModel0(), data.getMaleModel1(), data.getMaleModel2()};
+                        break;
+                    case CACHE_WOMAN_WEAR:
+                        modelIds = new int[]{data.getFemaleModel0(), data.getFemaleModel1(), data.getFemaleModel2()};
                 }
-                else
-                {
-                    clientThread.invokeLater(() ->
-                    {
-                        ModelData md = modelUtilities.constructModelDataFromCache(modelStats, new int[0], false);
-                        renderPanel.updateModel(md);
-                    });
-                }
+                updateModelBreakdownTable(modelIds);
 
                 boolean foundMatch = false;
 
@@ -797,19 +951,8 @@ public class CacheSearcherTab extends JPanel
             {
                 SpotanimData data = (SpotanimData) o;
 
-                ModelStats[] modelStats = dataFinder.findSpotAnim(data);
-                if (modelStats == null)
-                {
-                    renderPanel.resetViewer();
-                }
-                else
-                {
-                    clientThread.invokeLater(() ->
-                    {
-                        ModelData md = modelUtilities.constructModelDataFromCache(modelStats, new int[0], false);
-                        renderPanel.updateModel(md);
-                    });
-                }
+                updateRenderPanel(CustomModelType.CACHE_SPOTANIM, data.getId(), true, -1);
+                updateModelBreakdownTable(new int[]{data.getModelId()});
             }
         });
     }
@@ -879,6 +1022,28 @@ public class CacheSearcherTab extends JPanel
     {
         CardLayout cl = (CardLayout) (display.getLayout());
         cl.show(display, cardName);
+        if (!cardName.equals(ANIM))
+        {
+            currentCard = cardName;
+        }
+    }
+
+    private CustomModelType getCurrentTypeSelected()
+    {
+        //Ignores Anim
+        switch(currentCard)
+        {
+            default:
+                return null;
+            case NPC:
+                return CustomModelType.CACHE_NPC;
+            case OBJECT:
+                return CustomModelType.CACHE_OBJECT;
+            case ITEM:
+                return (CustomModelType) itemType.getSelectedItem();
+            case SPOTANIM:
+                return CustomModelType.CACHE_SPOTANIM;
+        }
     }
 
     private void setupNPCPanel()
@@ -1115,19 +1280,22 @@ public class CacheSearcherTab extends JPanel
                 ItemData data = (ItemData) o;
 
                 CustomModelType type = (CustomModelType) itemType.getSelectedItem();
-                ModelStats[] modelStats = dataFinder.findModelsForGroundItem(data.getId(), type);
-                if (modelStats == null)
+                updateRenderPanel(type, data.getId(), true, -1);
+
+                int[] modelIds;
+                switch (type)
                 {
-                    renderPanel.resetViewer();
+                    default:
+                    case CACHE_GROUND_ITEM:
+                        modelIds = new int[]{data.getInventoryModel()};
+                        break;
+                    case CACHE_MAN_WEAR:
+                        modelIds = new int[]{data.getMaleModel0(), data.getMaleModel1(), data.getMaleModel2()};
+                        break;
+                    case CACHE_WOMAN_WEAR:
+                        modelIds = new int[]{data.getFemaleModel0(), data.getFemaleModel1(), data.getFemaleModel2()};
                 }
-                else
-                {
-                    clientThread.invokeLater(() ->
-                    {
-                        ModelData md = modelUtilities.constructModelDataFromCache(modelStats, new int[0], false);
-                        renderPanel.updateModel(md);
-                    });
-                }
+                updateModelBreakdownTable(modelIds);
             }
         });
         holderPanel.add(itemType, c);
