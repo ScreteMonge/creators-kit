@@ -121,8 +121,8 @@ public class ModelUtilities
             }
 
             //swapping y and z, making y positive to align with traditional axes
-            modelData.translate(detailedModel.getXTranslate() + detailedModel.getXTile() * 128, -1 * (detailedModel.getZTranslate() + detailedModel.getZTile() * 128), detailedModel.getYTranslate() + detailedModel.getYTile() * 128);
             modelData.scale(detailedModel.getXScale(), detailedModel.getZScale(), detailedModel.getYScale());
+            modelData.translate(detailedModel.getXTranslate() + detailedModel.getXTile() * 128, -1 * (detailedModel.getZTranslate() + detailedModel.getZTile() * 128), detailedModel.getYTranslate() + detailedModel.getYTile() * 128);
 
             boolean[] faceInvert = new boolean[modelData.getFaceCount()];
             Arrays.fill(faceInvert, detailedModel.isInvertFaces());

@@ -1107,6 +1107,29 @@ public class CacheSearcherTab extends JPanel
         itemType.addItem(CustomModelType.CACHE_GROUND_ITEM);
         itemType.addItem(CustomModelType.CACHE_MAN_WEAR);
         itemType.addItem(CustomModelType.CACHE_WOMAN_WEAR);
+        itemType.addItemListener(e ->
+        {
+            Object o = itemTable.getSelectedObject();
+            if (o instanceof ItemData)
+            {
+                ItemData data = (ItemData) o;
+
+                CustomModelType type = (CustomModelType) itemType.getSelectedItem();
+                ModelStats[] modelStats = dataFinder.findModelsForGroundItem(data.getId(), type);
+                if (modelStats == null)
+                {
+                    renderPanel.resetViewer();
+                }
+                else
+                {
+                    clientThread.invokeLater(() ->
+                    {
+                        ModelData md = modelUtilities.constructModelDataFromCache(modelStats, new int[0], false);
+                        renderPanel.updateModel(md);
+                    });
+                }
+            }
+        });
         holderPanel.add(itemType, c);
 
         c.gridwidth = 1;
