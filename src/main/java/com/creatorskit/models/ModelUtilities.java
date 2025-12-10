@@ -203,7 +203,7 @@ public class ModelUtilities
         return modelData;
     }
 
-    public void cacheToAnvil(CustomModelType type, int id)
+    public void cacheToAnvil(CustomModelType type, int id, boolean all, int modelId)
     {
         ModelStats[] modelStats;
         DataFinder dataFinder = plugin.getDataFinder();
@@ -236,7 +236,22 @@ public class ModelUtilities
             return;
         }
 
-        cacheToAnvil(modelStats, new int[0], type);
+        if (all)
+        {
+            cacheToAnvil(modelStats, new int[0], type);
+        }
+        else
+        {
+            for (ModelStats stats : modelStats)
+            {
+                if (stats.getModelId() == modelId)
+                {
+                    cacheToAnvil(new ModelStats[]{stats}, new int[0], type);
+                    break;
+                }
+            }
+        }
+
         sendChatMessage("Model sent to Anvil: " + modelStats[0].getName());
     }
 

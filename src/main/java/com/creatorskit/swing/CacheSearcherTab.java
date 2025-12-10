@@ -155,7 +155,6 @@ public class CacheSearcherTab extends JPanel
                 modelId = (Integer) o;
             }
 
-
             CustomModelType type = getCurrentTypeSelected();
             if (type == null)
             {
@@ -1272,6 +1271,19 @@ public class CacheSearcherTab extends JPanel
         itemType.addItem(CustomModelType.CACHE_GROUND_ITEM);
         itemType.addItem(CustomModelType.CACHE_MAN_WEAR);
         itemType.addItem(CustomModelType.CACHE_WOMAN_WEAR);
+        itemType.addFocusListener(new FocusListener()
+        {
+            @Override
+            public void focusGained(FocusEvent e) {
+                switchCards(ITEM);
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+
+            }
+        });
+
         itemType.addItemListener(e ->
         {
             Object o = itemTable.getSelectedObject();
@@ -1560,7 +1572,31 @@ public class CacheSearcherTab extends JPanel
 
     private void addToAnvil(CustomModelType type, int id)
     {
-        modelUtilities.cacheToAnvil(type, id);
+        boolean renderAll = false;
+        int modelId = 0;
+
+        Object o = modelTable.getSelectedObject();
+        if (o == null)
+        {
+            modelUtilities.cacheToAnvil(type, id, true, -1);
+            return;
+        }
+
+        if (o instanceof String)
+        {
+            String s = (String) o;
+            if (s.equals("All"))
+            {
+                renderAll = true;
+            }
+        }
+
+        if (o instanceof Integer)
+        {
+            modelId = (Integer) o;
+        }
+
+        modelUtilities.cacheToAnvil(type, id, renderAll, modelId);
     }
 
     private void addCustomModel(CustomModelType type, int id)
