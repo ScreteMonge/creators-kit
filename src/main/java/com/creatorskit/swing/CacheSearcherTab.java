@@ -396,7 +396,7 @@ public class CacheSearcherTab extends JPanel
         c.gridx = 0;
         c.gridy = 3;
         JPanel grid = new JPanel();
-        grid.setLayout(new GridLayout(0, 4, 2, 0));
+        grid.setLayout(new GridLayout(0, 3, 2, 0));
         card.add(grid, c);
 
         JButton addObject = new JButton("Store & Add");
@@ -415,6 +415,10 @@ public class CacheSearcherTab extends JPanel
         JButton addAnvil = new JButton("Add to Anvil");
         addAnvil.setToolTipText("Sends the NPC's models to the Model Anvil");
         grid.add(addAnvil);
+
+        JButton export = new JButton("Export 3D");
+        export.setToolTipText("Exports the selected 3D model");
+        grid.add(export);
 
         addObject.addActionListener(e ->
         {
@@ -453,6 +457,16 @@ public class CacheSearcherTab extends JPanel
             {
                 NPCData data = (NPCData) o;
                 addToAnvil(CustomModelType.CACHE_NPC, data.getId());
+            }
+        });
+
+        export.addActionListener(e ->
+        {
+            Object o = npcTable.getSelectedObject();
+            if (o instanceof NPCData)
+            {
+                NPCData data = (NPCData) o;
+                export3DModel(CustomModelType.CACHE_NPC, data.getId(), data.getName());
             }
         });
 
@@ -552,9 +566,16 @@ public class CacheSearcherTab extends JPanel
         addModel.setToolTipText("Stores the selected Object as a new Custom Model");
         grid.add(addModel);
 
+        JLabel empty = new JLabel("");
+        grid.add(empty);
+
         JButton addAnvil = new JButton("Add to Anvil");
         addAnvil.setToolTipText("Sends the Object's models to the Model Anvil");
         grid.add(addAnvil);
+
+        JButton export = new JButton("Export 3D");
+        export.setToolTipText("Exports the selected 3D model");
+        grid.add(export);
 
         addObject.addActionListener(e ->
         {
@@ -583,6 +604,16 @@ public class CacheSearcherTab extends JPanel
             {
                 ObjectData data = (ObjectData) o;
                 addToAnvil(CustomModelType.CACHE_OBJECT, data.getId());
+            }
+        });
+
+        export.addActionListener(e ->
+        {
+            Object o = objectTable.getSelectedObject();
+            if (o instanceof ObjectData)
+            {
+                ObjectData data = (ObjectData) o;
+                export3DModel(CustomModelType.CACHE_OBJECT, data.getId(), data.getName());
             }
         });
 
@@ -636,7 +667,7 @@ public class CacheSearcherTab extends JPanel
         c.gridx = 0;
         c.gridy = 3;
         JPanel grid = new JPanel();
-        grid.setLayout(new GridLayout(0, 4, 2, 0));
+        grid.setLayout(new GridLayout(0, 3, 2, 0));
         card.add(grid, c);
 
         JButton addObject = new JButton("Store & Add");
@@ -654,6 +685,10 @@ public class CacheSearcherTab extends JPanel
         JButton addAnvil = new JButton("Add to Anvil");
         addAnvil.setToolTipText("Sends the Item's models to the Model Anvil");
         grid.add(addAnvil);
+
+        JButton export = new JButton("Export 3D");
+        export.setToolTipText("Exports the selected 3D model");
+        grid.add(export);
 
         addObject.addActionListener(e ->
         {
@@ -710,6 +745,16 @@ public class CacheSearcherTab extends JPanel
             }
         });
 
+        export.addActionListener(e ->
+        {
+            Object o = itemTable.getSelectedObject();
+            if (o instanceof ItemData)
+            {
+                CustomModelType type = (CustomModelType) itemType.getSelectedItem();
+                ItemData data = (ItemData) o;
+                export3DModel(type, data.getId(), data.getName());
+            }
+        });
 
         c.gridx = 0;
         c.gridy = 4;
@@ -879,7 +924,7 @@ public class CacheSearcherTab extends JPanel
         c.gridx = 0;
         c.gridy = 3;
         JPanel grid = new JPanel();
-        grid.setLayout(new GridLayout(0, 4, 2, 0));
+        grid.setLayout(new GridLayout(0, 3, 2, 0));
         card.add(grid, c);
 
         JButton addObject = new JButton("Store & Add");
@@ -897,6 +942,10 @@ public class CacheSearcherTab extends JPanel
         JButton addAnvil = new JButton("Add to Anvil");
         addAnvil.setToolTipText("Sends the SpotAnim's models to the Model Anvil");
         grid.add(addAnvil);
+
+        JButton export = new JButton("Export 3D");
+        export.setToolTipText("Exports the selected 3D model");
+        grid.add(export);
 
         addObject.addActionListener(e ->
         {
@@ -940,6 +989,16 @@ public class CacheSearcherTab extends JPanel
             {
                 SpotanimData data = (SpotanimData) o;
                 addToAnvil(CustomModelType.CACHE_SPOTANIM, data.getId());
+            }
+        });
+
+        export.addActionListener(e ->
+        {
+            Object o = spotAnimTable.getSelectedObject();
+            if (o instanceof SpotanimData)
+            {
+                SpotanimData data = (SpotanimData) o;
+                export3DModel(CustomModelType.CACHE_SPOTANIM, data.getId(), data.getName());
             }
         });
 
@@ -1877,5 +1936,35 @@ public class CacheSearcherTab extends JPanel
 
             SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true, false));
         });
+    }
+
+    private void export3DModel(CustomModelType type, int id, String name)
+    {
+        ModelGetter modelGetter = plugin.getModelGetter();
+        boolean renderAll = false;
+        int modelId = 0;
+
+        Object o = modelTable.getSelectedObject();
+        if (o == null)
+        {
+            modelGetter.exportModelFromCache(type, id, name, true, -1);;
+            return;
+        }
+
+        if (o instanceof String)
+        {
+            String s = (String) o;
+            if (s.equals("All"))
+            {
+                renderAll = true;
+            }
+        }
+
+        if (o instanceof Integer)
+        {
+            modelId = (Integer) o;
+        }
+
+        modelGetter.exportModelFromCache(type, id, name, renderAll, modelId);
     }
 }

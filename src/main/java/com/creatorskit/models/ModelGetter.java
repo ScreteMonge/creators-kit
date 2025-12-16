@@ -15,6 +15,7 @@ import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import com.creatorskit.swing.timesheet.keyframe.SpotAnimKeyFrame;
+import lombok.Getter;
 import net.runelite.api.*;
 import net.runelite.api.Menu;
 import net.runelite.api.coords.LocalPoint;
@@ -37,6 +38,7 @@ public class ModelGetter
     private final CreatorsConfig config;
     private final CreatorsPlugin plugin;
     private final DataFinder dataFinder;
+    @Getter
     private final ModelExporter modelExporter;
     private final ModelUtilities modelUtilities;
 
@@ -1621,6 +1623,116 @@ public class ModelGetter
                 creatorsPanel.getToolBox().getProgrammer().updateProgram(character);
             }
         }
+    }
+
+    public void exportModelFromCache(CustomModelType type, int id, String name, boolean all, int modelId)
+    {
+        ModelStats[] modelStats = new ModelStats[0];
+        switch (type)
+        {
+            case CACHE_NPC:
+                modelStats = dataFinder.findModelsForNPC(id);
+                break;
+            case CACHE_OBJECT:
+                modelStats = dataFinder.findModelsForObject(id, 0, LightingStyle.DEFAULT, true);
+                break;
+            case CACHE_GROUND_ITEM:
+            case CACHE_MAN_WEAR:
+            case CACHE_WOMAN_WEAR:
+                modelStats = dataFinder.findModelsForGroundItem(id, type);
+                break;
+            case CACHE_SPOTANIM:
+                modelStats = dataFinder.findSpotAnim(id);
+        }
+
+        if (modelStats == null || modelStats.length == 0)
+        {
+            plugin.sendChatMessage("Could not find this element in the cache.");
+            plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+            return;
+        }
+
+        if (!all)
+        {
+            for (ModelStats stats : modelStats)
+            {
+                if (stats.getModelId() == modelId)
+                {
+                    modelStats = new ModelStats[]{stats};
+                    break;
+                }
+            }
+        }
+
+        ModelStats[] finalModelStats = modelStats;
+        clientThread.invokeLater(() ->
+        {
+            ModelData modelData = modelUtilities.constructModelDataFromCache(finalModelStats, new int[0], false);
+            Model model = modelData.light();
+
+            int vCount = model.getVerticesCount();
+            int fCount = model.getFaceCount();
+            float[] fvX = Arrays.copyOf(model.getVerticesX(), vCount);
+            float[] fvY = Arrays.copyOf(model.getVerticesY(), vCount);
+            float[] fvZ = Arrays.copyOf(model.getVerticesZ(), vCount);
+
+            int[] vX = new int[vCount];
+            int[] vY = new int[vCount];
+            int[] vZ = new int[vCount];
+
+            for (int i = 0; i < vCount; i++)
+            {
+                vX[i] = (int) fvX[i];
+                vY[i] = (int) fvY[i];
+                vZ[i] = (int) fvZ[i];
+            }
+
+            byte[] renderPriorities;
+            if (model.getFaceRenderPriorities() == null)
+            {
+                renderPriorities = new byte[fCount];
+                Arrays.fill(renderPriorities, (byte) 0);
+            }
+            else
+            {
+                renderPriorities = model.getFaceRenderPriorities();
+            }
+
+            byte[] transparencies;
+            if (model.getFaceTransparencies() == null)
+            {
+                transparencies = new byte[fCount];
+                Arrays.fill(transparencies, (byte) 0);
+            }
+            else
+            {
+                transparencies = model.getFaceTransparencies();
+            }
+
+            BlenderModel bm;
+            if (config.vertexColours())
+            {
+                bm = modelExporter.bmVertexColours(model);
+            }
+            else
+            {
+                bm = modelExporter.bmFaceColours(
+                        finalModelStats,
+                        false,
+                        new int[0],
+                        false,
+                        vX,
+                        vY,
+                        vZ,
+                        model.getFaceIndices1(),
+                        model.getFaceIndices2(),
+                        model.getFaceIndices3(),
+                        transparencies,
+                        renderPriorities);
+            }
+
+            modelExporter.saveToFile(name, bm);
+        });
     }
 
     private void initiateAnimationExport(int animId, String name, BlenderModel bm, ModelStats[] modelStats, int[] kitRecolours, boolean player, LightingStyle ls, CustomLighting cl)
