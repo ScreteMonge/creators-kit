@@ -11,6 +11,7 @@ public enum OverheadSprite
     NONE("None", SpriteID.OVERHEAD_PROTECT_FROM_MELEE, 0),
     SKULL("Skull", SpriteID.PLAYER_KILLER_SKULL, 0),
     SKULL_HIGH_RISK("High Risk", 525, 0),
+    SKULL_FIGHT_PITS("Fight Pits", 524, 0),
     SKULL_BH_1("Bounty Hunter 1", 6316, 0),
     SKULL_BH_2("Bounty Hunter 2", 6333, 0),
     SKULL_BH_3("Bounty Hunter 3", 6334, 0),

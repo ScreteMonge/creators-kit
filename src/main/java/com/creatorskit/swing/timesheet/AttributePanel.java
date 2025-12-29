@@ -1596,6 +1596,7 @@ public class AttributePanel extends JPanel
         toggleSkull.addItem(OverheadSprite.NONE);
         toggleSkull.addItem(OverheadSprite.SKULL);
         toggleSkull.addItem(OverheadSprite.SKULL_HIGH_RISK);
+        toggleSkull.addItem(OverheadSprite.SKULL_FIGHT_PITS);
         toggleSkull.addItem(OverheadSprite.SKULL_BH_1);
         toggleSkull.addItem(OverheadSprite.SKULL_BH_2);
         toggleSkull.addItem(OverheadSprite.SKULL_BH_3);

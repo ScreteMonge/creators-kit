@@ -3,7 +3,6 @@ package com.creatorskit.programming;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.CKObject;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import com.creatorskit.swing.timesheet.keyframe.OverheadKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.TextKeyFrame;
