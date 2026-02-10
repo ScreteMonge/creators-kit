@@ -679,24 +679,54 @@ public class ModelGetter
         {
             int itemId = player.getPlayerComposition().getEquipmentId(KitType.WEAPON);
             WeaponAnimData weaponAnim = dataFinder.findWeaponAnimData(itemId);
-            if (weaponAnim != null)
+
+            int idle;
+            int walk;
+            int run;
+            int rotate180;
+            int rotateRight;
+            int rotateLeft;
+            int idleRotateRight;
+            int idleRotateLeft;
+
+            if (weaponAnim == null)
             {
-                akf = new AnimationKeyFrame(
-                        plugin.getCurrentTick(),
-                        false,
-                        player.getAnimation(),
-                        0,
-                        false,
-                        false,
-                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE),
-                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.WALK),
-                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.RUN),
-                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_180),
-                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_RIGHT),
-                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_LEFT),
-                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_RIGHT),
-                        WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_LEFT));
+                idle = WeaponAnimData.IDLE_UNARMED;
+                walk = WeaponAnimData.WALK_UNARMED;
+                run = WeaponAnimData.RUN_UNARMED;
+                rotate180 = WeaponAnimData.ROTATE_180;
+                rotateRight = WeaponAnimData.ROTATE_RIGHT;
+                rotateLeft = WeaponAnimData.ROTATE_LEFT;
+                idleRotateRight = WeaponAnimData.IDLE_ROTATE_RIGHT_UNARMED;
+                idleRotateLeft = WeaponAnimData.IDLE_ROTATE_LEFT_UNARMED;
             }
+            else
+            {
+                idle = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE);
+                walk = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.WALK);
+                run = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.RUN);
+                rotate180 = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_180);
+                rotateRight = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_RIGHT);
+                rotateLeft = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_LEFT);
+                idleRotateRight = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_RIGHT);
+                idleRotateLeft = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_LEFT);
+            }
+
+            akf = new AnimationKeyFrame(
+                    plugin.getCurrentTick(),
+                    false,
+                    player.getAnimation(),
+                    0,
+                    false,
+                    false,
+                    idle,
+                    walk,
+                    run,
+                    rotate180,
+                    rotateRight,
+                    rotateLeft,
+                    idleRotateRight,
+                    idleRotateLeft);
 
             int i = 0;
             for (ActorSpotAnim actorSpotAnim : actorSpotAnims)

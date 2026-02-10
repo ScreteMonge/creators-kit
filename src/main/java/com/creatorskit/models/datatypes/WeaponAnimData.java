@@ -10,6 +10,15 @@ public class WeaponAnimData
     private final int[] id;
     private final int[] animations;
 
+    public final static int IDLE_UNARMED = 808;
+    public final static int WALK_UNARMED = 819;
+    public final static int RUN_UNARMED = 824;
+    public final static int IDLE_ROTATE_LEFT_UNARMED = 823;
+    public final static int IDLE_ROTATE_RIGHT_UNARMED = 823;
+    public final static int ROTATE_180 = 820;
+    public final static int ROTATE_LEFT = 821;
+    public final static int ROTATE_RIGHT = 821;
+
     public static int getAnimation(WeaponAnimData weaponAnimData, PlayerAnimationType type)
     {
         int[] animations = weaponAnimData.getAnimations();
