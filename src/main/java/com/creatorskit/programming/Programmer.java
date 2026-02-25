@@ -1168,7 +1168,7 @@ public class Programmer
             for (KeyFrameType hitsplatType : KeyFrameType.HITSPLAT_TYPES)
             {
                 KeyFrame currentHitsplat = currentFrames[KeyFrameType.getIndex(hitsplatType)];
-                double lastHitsplatTick = 0;
+                double lastHitsplatTick = Integer.MIN_VALUE;
                 if (currentHitsplat != null)
                 {
                     lastHitsplatTick = currentHitsplat.getTick();
