@@ -17,7 +17,7 @@ public class MovementManager
     private Client client;
     private CreatorsConfig config;
     private PathFinder pathFinder;
-    private static final int[] POH_REGIONS = new int[]{7257, 7513, 7514, 7769, 7770, 8025, 8026};
+    private static final int[] POH_REGIONS = new int[]{7534, 7535, 7790, 7791, 8046, 8047, 8302, 8303};
     private static final int[] GAUNTLET_REGIONS = new int[]{7512, 7768};
 
     @Inject
