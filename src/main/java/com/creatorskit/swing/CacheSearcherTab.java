@@ -37,6 +37,7 @@ public class CacheSearcherTab extends JPanel
     private final String ITEM = "ITEM";
     private final String ANIM = "ANIM";
     private final String SPOTANIM = "SPOTANIM";
+    private final String SOUND = "SOUND";
     private String currentCard = NPC;
 
     private final JPanel npcPanel = new JPanel();
@@ -44,6 +45,7 @@ public class CacheSearcherTab extends JPanel
     private final JPanel itemPanel = new JPanel();
     private final JPanel animPanel = new JPanel();
     private final JPanel spotAnimPanel = new JPanel();
+    private final JPanel soundPanel = new JPanel();
 
     private final JPanel previewPanel = new JPanel();
     private final JPanel breakdownPanel = new JPanel();
@@ -54,6 +56,7 @@ public class CacheSearcherTab extends JPanel
     private final JFilterableTable itemTable = new JFilterableTable("Items");
     private final JFilterableTable animTable = new JFilterableTable("Animations");
     private final JFilterableTable spotAnimTable = new JFilterableTable("SpotAnims");
+    private final JFilterableTable soundTable = new JFilterableTable("Sounds");
     private final JFilterableTable modelTable = new JFilterableTable("Model Id Breakdown");
 
     private final JComboBox<CustomModelType> itemType = new JComboBox<>();
@@ -76,6 +79,7 @@ public class CacheSearcherTab extends JPanel
         setupItemPanel();
         setupAnimPanel();
         setupSpotAnimPanel();
+        setupSoundPanel();
         setupDisplay();
         setupBreakdownTable();
         setupRenderPanel();
@@ -106,6 +110,10 @@ public class CacheSearcherTab extends JPanel
         JPanel animCard = new JPanel();
         setupAnimCard(animCard);
         display.add(animCard, ANIM);
+
+        JPanel soundCard = new JPanel();
+        setupSoundCard(soundCard);
+        display.add(soundCard, SOUND);
     }
 
     private void setupBreakdownTable()
@@ -335,21 +343,25 @@ public class CacheSearcherTab extends JPanel
 
         c.gridx = 1;
         c.gridy = 5;
-        add(breakdownPanel, c);
+        add(soundPanel, c);
 
         c.gridx = 1;
         c.gridy = 6;
+        add(breakdownPanel, c);
+
+        c.gridx = 1;
+        c.gridy = 7;
         c.weighty = 1;
         add(new JLabel(""), c);
 
-        c.gridheight = 7;
+        c.gridheight = 8;
         c.weighty = 5;
         c.weightx = 2;
         c.gridx = 2;
         c.gridy = 0;
         add(display, c);
 
-        c.gridheight = 7;
+        c.gridheight = 8;
         c.weighty = 5;
         c.weightx = 8;
         c.gridx = 3;
@@ -1076,6 +1088,45 @@ public class CacheSearcherTab extends JPanel
         card.add(instructionLabel, c);
     }
 
+    private void setupSoundCard(JPanel card)
+    {
+        card.setLayout(new GridBagLayout());
+        card.setBorder(new EmptyBorder(8, 8, 8, 8));
+        c.fill = GridBagConstraints.BOTH;
+        c.insets = new Insets(2, 2, 2, 2);
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 0;
+        JLabel title = new JLabel("Sounds Found:");
+        title.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32));
+        title.setHorizontalAlignment(SwingConstants.LEFT);
+        card.add(title, c);
+
+        c.weightx = 1;
+        c.weighty = 1;
+        c.gridx = 0;
+        c.gridy = 1;
+        JScrollPane scrollPane = new JScrollPane(soundTable);
+        scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+        card.add(scrollPane, c);
+
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 2;
+        JLabel buffer = new JLabel(" ");
+        card.add(buffer, c);
+
+        c.gridx = 0;
+        c.gridy = 3;
+        JLabel instructionLabel = new JLabel("Select any sound to play. Ensure you're logged in, and that Sound Effects volume is up/not muted.");
+        card.add(instructionLabel, c);
+    }
+
     private void switchCards(String cardName)
     {
         CardLayout cl = (CardLayout) (display.getLayout());
@@ -1656,6 +1707,110 @@ public class CacheSearcherTab extends JPanel
         }
 
         modelUtilities.cacheToAnvil(type, id, renderAll, modelId);
+    }
+
+    private void setupSoundPanel()
+    {
+        soundPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        soundPanel.setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1));
+        soundPanel.setLayout(new BorderLayout());
+        JPanel holderPanel = new JPanel();
+        holderPanel.setBorder(new EmptyBorder(8, 8, 8, 8));
+        holderPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        holderPanel.setLayout(new GridBagLayout());
+        soundPanel.add(holderPanel, BorderLayout.CENTER);
+
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(2, 2, 2, 2);
+
+        c.gridwidth = 2;
+        c.gridheight = 1;
+        c.weightx = 1;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 0;
+        JLabel title = new JLabel("Sound Searcher");
+        title.setFont(FontManager.getRunescapeBoldFont());
+        holderPanel.add(title, c);
+
+        c.gridwidth = 1;
+        c.weightx = 0;
+        c.gridx = 0;
+        c.gridy = 1;
+        JLabel nameLabel = new JLabel("Sound name: ");
+        nameLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        holderPanel.add(nameLabel, c);
+
+        c.gridwidth = 1;
+        c.weightx = 1;
+        c.gridx = 1;
+        c.gridy = 1;
+        JTextField field = new JTextField("");
+        field.setFont(FontManager.getRunescapeBoldFont());
+        field.setForeground(ColorScheme.BRAND_ORANGE);
+        holderPanel.add(field, c);
+
+        field.addFocusListener(new FocusListener()
+        {
+            @Override
+            public void focusGained(FocusEvent e)
+            {
+                switchCards(SOUND);
+            }
+
+            @Override
+            public void focusLost(FocusEvent e)
+            {
+
+            }
+        });
+
+        KeyListener keyListener = new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e)
+            {
+                switchCards(SOUND);
+                String text = field.getText();
+                soundTable.searchAndListEntries(text);
+            }
+        };
+        field.addKeyListener(keyListener);
+
+        if (dataFinder.isDataLoaded(DataFinder.DataType.SOUND))
+        {
+            List<SoundData> dataList = dataFinder.getSoundData();
+            List<Object> list = new ArrayList<>(dataList);
+            soundTable.initialize(list);
+        }
+        else
+        {
+            dataFinder.addLoadCallback(DataFinder.DataType.SOUND, () ->
+            {
+                List<SoundData> dataList = dataFinder.getSoundData();
+                List<Object> list = new ArrayList<>(dataList);
+                soundTable.initialize(list);
+            });
+        }
+
+        soundTable.getSelectionModel().addListSelectionListener(e ->
+        {
+            Object o = soundTable.getSelectedObject();
+            if (o instanceof SoundData)
+            {
+                SoundData data = (SoundData) o;
+                clientThread.invokeLater(() -> plugin.getClient().playSoundEffect(data.getId()));
+            }
+        });
     }
 
     private void addCustomModel(CustomModelType type, int id)

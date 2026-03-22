@@ -35,7 +35,8 @@ public class DataFinder
         KIT,
         SEQ,
         ANIM,
-        WEAPON_ANIM
+        WEAPON_ANIM,
+        SOUND
     }
 
     @Data
@@ -67,6 +68,7 @@ public class DataFinder
     private final List<SeqData> seqData = new ArrayList<>();
     private final List<AnimData> animData = new ArrayList<>();
     private final List<WeaponAnimData> weaponAnimData = new ArrayList<>();
+    private final List<SoundData> soundData = new ArrayList<>();
 
     private static final BodyPart[] bodyParts = new BodyPart[]{
             BodyPart.HEAD,
@@ -99,6 +101,7 @@ public class DataFinder
         lookupSeqData();
         lookupAnimData();
         lookupWeaponAnimationData();
+        lookupSoundData();
     }
 
     /**
@@ -1526,6 +1529,38 @@ public class DataFinder
         }
 
         return null;
+    }
+
+    private void lookupSoundData()
+    {
+        Request request = new Request.Builder().url("https://raw.githubusercontent.com/ScreteMonge/cache-converter/refs/heads/master/.venv/sounds.json").build();
+        Call call = httpClient.newCall(request);
+        call.enqueue(new Callback()
+        {
+            @Override
+            public void onFailure(Call call, IOException e)
+            {
+                log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/refs/heads/master/.venv/sounds.json");
+                executeCallbacks(DataType.SOUND);
+            }
+
+            @Override
+            public void onResponse(Call call, Response response)
+            {
+                if (response.isSuccessful() && response.body() != null)
+                {
+                    //create a reader to read the URL
+                    InputStreamReader reader = new InputStreamReader(response.body().byteStream());
+
+                    Type listType = new TypeToken<List<SoundData>>() {}.getType();
+                    List<SoundData> list = gson.fromJson(reader, listType);
+
+                    soundData.addAll(list);
+                    response.body().close();
+                }
+                executeCallbacks(DataType.SOUND);
+            }
+        });
     }
 
     public String generateNameFromModel(int id)
