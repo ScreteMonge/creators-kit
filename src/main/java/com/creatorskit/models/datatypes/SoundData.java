@@ -15,4 +15,14 @@ public class SoundData
     {
         return name + " (" + id + ")";
     }
+
+    public String createLookupName()
+    {
+        if (name.isEmpty())
+        {
+            return "" + id;
+        }
+
+        return id + "%20" + name;
+    }
 }

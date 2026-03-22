@@ -9,11 +9,14 @@ import com.creatorskit.swing.searchabletable.JFilterableTable;
 import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
+import com.google.gson.reflect.TypeToken;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Model;
 import net.runelite.api.ModelData;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
+import okhttp3.*;
 
 import javax.inject.Inject;
 import javax.swing.*;
@@ -21,15 +24,19 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.*;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 public class CacheSearcherTab extends JPanel
 {
     private final CreatorsPlugin plugin;
     private ClientThread clientThread;
     private final DataFinder dataFinder;
     private final ModelUtilities modelUtilities;
+    private OkHttpClient httpClient;
 
     private final GridBagConstraints c = new GridBagConstraints();
     private final String NPC = "NPC";
@@ -64,12 +71,13 @@ public class CacheSearcherTab extends JPanel
     private final JPanel display = new JPanel();
 
     @Inject
-    public CacheSearcherTab(CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ModelUtilities modelUtilities)
+    public CacheSearcherTab(CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ModelUtilities modelUtilities, OkHttpClient httpClient)
     {
         this.plugin = plugin;
         this.clientThread = clientThread;
         this.dataFinder = dataFinder;
         this.modelUtilities = modelUtilities;
+        this.httpClient = httpClient;
 
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
         setLayout(new GridBagLayout());
@@ -1125,6 +1133,67 @@ public class CacheSearcherTab extends JPanel
         c.gridy = 3;
         JLabel instructionLabel = new JLabel("Select any sound to play. Ensure you're logged in, and that Sound Effects volume is up/not muted.");
         card.add(instructionLabel, c);
+
+        c.gridx = 0;
+        c.gridy = 4;
+        JButton export = new JButton("Export Sound File");
+        card.add(export, c);
+
+        export.addActionListener((e ->
+        {
+            Object o = soundTable.getSelectedObject();
+            if (o == null)
+            {
+                return;
+            }
+
+            if (o instanceof SoundData)
+            {
+                SoundData sd = (SoundData) o;
+                String url = "https://github.com/ScreteMonge/Sound-Effect-Cache/raw/refs/heads/main/.idea/SoundEffects/" + sd.createLookupName() + ".wav";
+
+                Request request = new Request.Builder().url(url).build();
+                Call call = httpClient.newCall(request);
+                call.enqueue(new Callback()
+                {
+                    @Override
+                    public void onFailure(Call call, IOException e)
+                    {
+                        log.debug("Failed to access URL: " + url);
+                        plugin.sendChatMessage("This sound file could not be found.");
+                    }
+
+                    @Override
+                    public void onResponse(Call call, Response response) throws IOException
+                    {
+                        if (response.isSuccessful() && response.body() != null)
+                        {
+                            InputStream inputStream = response.body().byteStream();
+
+                            String home = System.getProperty("user.home");
+                            File downloadsDir = new File(home, "Downloads");
+                            if (!downloadsDir.exists())
+                            {
+                                downloadsDir.mkdirs();
+                            }
+
+                            FileOutputStream outputStream = new FileOutputStream(new File(downloadsDir, sd + ".wav"));
+                            byte[] buffer = new byte[8192];
+                            int bytesRead;
+                            while ((bytesRead = inputStream.read(buffer)) != -1)
+                            {
+                                outputStream.write(buffer, 0, bytesRead);
+                            }
+                            outputStream.close();
+                            inputStream.close();
+
+                            plugin.sendChatMessage("Exported " + sd + ".wav");
+                            response.body().close();
+                        }
+                    }
+                });
+            }
+        }));
     }
 
     private void switchCards(String cardName)

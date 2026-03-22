@@ -22,6 +22,7 @@ import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.LinkBrowser;
+import okhttp3.OkHttpClient;
 
 import javax.inject.Inject;
 import javax.swing.*;
@@ -51,12 +52,13 @@ public class ToolBoxFrame extends JFrame
     private final TimeSheetPanel timeSheetPanel;
     private final Programmer programmer;
     private final PathFinder pathFinder;
+    private OkHttpClient httpClient;
 
     private final JTabbedPane tabbedPane = new JTabbedPane();
     private final BufferedImage ICON = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
 
     @Inject
-    public ToolBoxFrame(Client client, EventBus eventBus, ClientThread clientThread, CreatorsPlugin plugin, CreatorsConfig config, ConfigManager configManager, DataFinder dataFinder, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, TransmogPanel transmogPanel, PathFinder pathFinder, ModelUtilities modelUtilities)
+    public ToolBoxFrame(Client client, EventBus eventBus, ClientThread clientThread, CreatorsPlugin plugin, CreatorsConfig config, ConfigManager configManager, DataFinder dataFinder, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, TransmogPanel transmogPanel, PathFinder pathFinder, ModelUtilities modelUtilities, OkHttpClient httpClient)
     {
         this.client = client;
         this.clientThread = clientThread;
@@ -71,6 +73,7 @@ public class ToolBoxFrame extends JFrame
         this.modelAnvil = modelAnvil;
         this.transmogPanel = transmogPanel;
         this.pathFinder = pathFinder;
+        this.httpClient = httpClient;
 
         Folder rootFolder = new Folder("Master Folder", FolderType.MASTER, null, null);
         DefaultMutableTreeNode managerRootNode = new DefaultMutableTreeNode(rootFolder);
@@ -90,7 +93,7 @@ public class ToolBoxFrame extends JFrame
         setupMenuBar();
         this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, config, clientThread, dataFinder, managerTree, movementManager);
         this.managerPanel = new ManagerPanel(client, plugin, objectHolder, managerTree);
-        this.cacheSearcher = new CacheSearcherTab(plugin, clientThread, dataFinder, modelUtilities);
+        this.cacheSearcher = new CacheSearcherTab(plugin, clientThread, dataFinder, modelUtilities, httpClient);
         this.programmer = new Programmer(client, config, clientThread, plugin, timeSheetPanel, dataFinder, modelUtilities);
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
