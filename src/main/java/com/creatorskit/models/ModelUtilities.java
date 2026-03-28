@@ -1,11 +1,16 @@
 package com.creatorskit.models;
 
+import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.saves.TransmogLoadOption;
 import com.creatorskit.saves.TransmogSave;
 import com.creatorskit.swing.CreatorsPanel;
+import com.creatorskit.swing.ParentPanel;
 import com.creatorskit.swing.TransmogPanel;
 import com.creatorskit.swing.anvil.ModelAnvil;
+import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import com.google.gson.Gson;
 import net.runelite.api.Client;
 import net.runelite.api.Model;
@@ -318,7 +323,7 @@ public class ModelUtilities
         });
     }
 
-    public void cacheToCustomModel(CustomModelType type, int id, int modelType)
+    public void cacheToCustomModel(CustomModelType type, int id, int modelType, int size, String name, int animId, boolean addObject, AnimationKeyFrame akf)
     {
         DataFinder dataFinder = plugin.getDataFinder();
         Thread thread = new Thread(() ->
@@ -355,8 +360,6 @@ public class ModelUtilities
                 return;
             }
 
-            String name = modelStats[0].getName();
-
             switch (type)
             {
                 case CACHE_NPC:
@@ -392,6 +395,39 @@ public class ModelUtilities
                 CustomModel customModel = new CustomModel(model, comp);
                 addCustomModel(customModel, false);
                 sendChatMessage("Model stored: " + name);
+
+                if (addObject)
+                {
+                    CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
+                    Character character = creatorsPanel.createCharacter(
+                            ParentPanel.SIDE_PANEL,
+                            name,
+                            7699,
+                            customModel,
+                            true,
+                            0,
+                            animId,
+                            -1,
+                            60 * size,
+                            new KeyFrame[KeyFrameType.getTotalFrameTypes()][],
+                            KeyFrameType.createDefaultSummary(),
+                            creatorsPanel.getRandomColor(),
+                            false,
+                            null,
+                            null,
+                            -1,
+                            false,
+                            false,
+                            false);
+
+                    SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true, false));
+
+                    if (akf != null)
+                    {
+                        character.setKeyFrames(new KeyFrame[]{akf}, KeyFrameType.ANIMATION);
+                        creatorsPanel.getToolBox().getProgrammer().updateProgram(character);
+                    }
+                }
             });
         });
         thread.start();
