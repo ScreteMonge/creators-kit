@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.Model;
 import net.runelite.api.ModelData;
+import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
@@ -70,8 +71,8 @@ public class CacheSearcherTab extends JPanel
     private final JFilterableTable modelTable = new JFilterableTable("Model Id Breakdown");
 
     private final JComboBox<CustomModelType> itemType = new JComboBox<>();
-
     private final JPanel display = new JPanel();
+    public static final File SOUNDS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/sound-exports");
 
     @Inject
     public CacheSearcherTab(Client client, CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ModelUtilities modelUtilities, OkHttpClient httpClient)
@@ -1185,14 +1186,12 @@ public class CacheSearcherTab extends JPanel
                         {
                             InputStream inputStream = response.body().byteStream();
 
-                            String home = System.getProperty("user.home");
-                            File downloadsDir = new File(home, "Downloads");
-                            if (!downloadsDir.exists())
+                            if (!SOUNDS_DIR.exists())
                             {
-                                downloadsDir.mkdirs();
+                                SOUNDS_DIR.mkdirs();
                             }
 
-                            FileOutputStream outputStream = new FileOutputStream(new File(downloadsDir, sd + ".wav"));
+                            FileOutputStream outputStream = new FileOutputStream(new File(SOUNDS_DIR, sd + ".wav"));
                             byte[] buffer = new byte[8192];
                             int bytesRead;
                             while ((bytesRead = inputStream.read(buffer)) != -1)
@@ -1202,7 +1201,7 @@ public class CacheSearcherTab extends JPanel
                             outputStream.close();
                             inputStream.close();
 
-                            plugin.sendChatMessage("Exported " + sd + ".wav");
+                            plugin.sendChatMessage("Exported " + sd + ".wav to your /.runelite/creatorskit/sound-exports directory.");
                             response.body().close();
                         }
                     }
