@@ -310,10 +310,28 @@ public class CacheSearcherTab extends JPanel
         renderPanel = new RenderPanel(client, clientThread, fovSlider);
         previewPanel.add(renderPanel, BorderLayout.CENTER);
 
+        JPanel footer = new JPanel();
+        footer.setLayout(new BorderLayout());
+        previewPanel.add(footer, BorderLayout.SOUTH);
+
+        JPanel controlPanel = new JPanel(new FlowLayout());
+        footer.add(controlPanel, BorderLayout.NORTH);
+
         JButton resetButton = new JButton("Reset Camera View");
         resetButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
         resetButton.addActionListener(e -> renderPanel.resetCameraView());
-        previewPanel.add(resetButton, BorderLayout.SOUTH);
+        controlPanel.add(resetButton);
+
+        JCheckBox animate = new JCheckBox();
+        animate.setSelected(true);
+        animate.addActionListener(e ->
+        {
+            clientThread.invokeLater(() -> renderPanel.toggleAnimations(animate.isSelected()));
+        });
+        controlPanel.add(animate);
+
+        JPanel footerButtons = new JPanel(new GridLayout());
+        footer.add(footerButtons, BorderLayout.CENTER);
     }
 
     private void setupLayout()

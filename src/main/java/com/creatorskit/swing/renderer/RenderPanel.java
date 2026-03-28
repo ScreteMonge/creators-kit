@@ -2,6 +2,7 @@ package com.creatorskit.swing.renderer;
 
 import com.creatorskit.swing.colours.ColourSwapPanel;
 import net.runelite.api.*;
+import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.PostClientTick;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.Subscribe;
@@ -25,6 +26,7 @@ public class RenderPanel extends JPanel
     private AnimationController ac;
     private boolean modelExists = false;
     private final JSlider fovSlider;
+    private boolean enableAnimations = true;
 
     public static final double HEADING_DEFAULT = 0;
     public static final double PITCH_DEFAULT = 0;
@@ -103,7 +105,7 @@ public class RenderPanel extends JPanel
     @Subscribe
     public void onPostClientTick(PostClientTick event)
     {
-        if (!modelExists || ac.getAnimation() == null)
+        if (!modelExists || ac.getAnimation() == null || !enableAnimations)
         {
             return;
         }
@@ -122,6 +124,7 @@ public class RenderPanel extends JPanel
 
     public void updateAnimation(Animation animation)
     {
+        enableAnimations = animation.getId() != -1;
         ac.setAnimation(animation);
         repaint();
     }
@@ -131,6 +134,14 @@ public class RenderPanel extends JPanel
         faceColours = Arrays.copyOf(md.getFaceColors(), md.getFaceCount());
         model = md.light();
         modelExists = true;
+        updateModelParameters(model);
+        repaint();
+    }
+
+    public void toggleAnimations(boolean enable)
+    {
+        enableAnimations = enable;
+        ac.reset();
         updateModelParameters(model);
         repaint();
     }
