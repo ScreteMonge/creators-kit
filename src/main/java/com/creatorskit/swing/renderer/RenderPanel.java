@@ -124,7 +124,6 @@ public class RenderPanel extends JPanel
 
     public void updateAnimation(Animation animation)
     {
-        enableAnimations = animation.getId() != -1;
         ac.setAnimation(animation);
         repaint();
     }
@@ -164,12 +163,14 @@ public class RenderPanel extends JPanel
     private void updateModelParameters(Model model)
     {
         int fc = model.getFaceCount();
+        int vc = model.getVerticesCount();
+
         f1 = Arrays.copyOf(model.getFaceIndices1(), fc);
         f2 = Arrays.copyOf(model.getFaceIndices2(), fc);
         f3 = Arrays.copyOf(model.getFaceIndices3(), fc);
-        mx = Arrays.copyOf(model.getVerticesX(), fc);
-        my = Arrays.copyOf(model.getVerticesY(), fc);
-        mz = Arrays.copyOf(model.getVerticesZ(), fc);
+        mx = Arrays.copyOf(model.getVerticesX(), vc);
+        my = Arrays.copyOf(model.getVerticesY(), vc);
+        mz = Arrays.copyOf(model.getVerticesZ(), vc);
     }
 
     @Override
