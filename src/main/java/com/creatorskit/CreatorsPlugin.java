@@ -156,8 +156,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				.panel(creatorsPanel)
 				.build();
 
-		eventBus.register(creatorsPanel.getToolBox().getProgrammer());
-		eventBus.register(creatorsPanel.getToolBox().getTransmogPanel());
+		ToolBoxFrame toolBox = creatorsPanel.getToolBox();
+
+		eventBus.register(toolBox.getProgrammer());
+		eventBus.register(toolBox.getTransmogPanel());
+		eventBus.register(toolBox.getCacheSearcher().getRenderPanel());
 
 		clientToolbar.addNavigation(navigationButton);
 		overlayManager.add(overlay);

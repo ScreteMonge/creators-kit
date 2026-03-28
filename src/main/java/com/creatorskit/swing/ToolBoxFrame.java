@@ -93,7 +93,7 @@ public class ToolBoxFrame extends JFrame
         setupMenuBar();
         this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, config, clientThread, dataFinder, managerTree, movementManager);
         this.managerPanel = new ManagerPanel(client, plugin, objectHolder, managerTree);
-        this.cacheSearcher = new CacheSearcherTab(plugin, clientThread, dataFinder, modelUtilities, httpClient);
+        this.cacheSearcher = new CacheSearcherTab(client, plugin, clientThread, dataFinder, modelUtilities, httpClient);
         this.programmer = new Programmer(client, config, clientThread, plugin, timeSheetPanel, dataFinder, modelUtilities);
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);

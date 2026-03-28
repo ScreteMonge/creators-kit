@@ -1,23 +1,28 @@
 package com.creatorskit.swing.renderer;
 
 import com.creatorskit.swing.colours.ColourSwapPanel;
-import lombok.Getter;
-import lombok.Setter;
-import net.runelite.api.ModelData;
+import net.runelite.api.*;
+import net.runelite.api.events.PostClientTick;
+import net.runelite.client.callback.ClientThread;
+import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.Point;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class RenderPanel extends JPanel
 {
-    @Getter
-    @Setter
-    private ModelData model;
+    private Client client;
+
+    private Model model;
+    private short[] faceColours;
+    private AnimationController ac;
     private boolean modelExists = false;
     private final JSlider fovSlider;
 
@@ -43,9 +48,19 @@ public class RenderPanel extends JPanel
     private double mouseX = 0;
     private double mouseY = 0;
 
-    public RenderPanel(JSlider fovSlider)
+    public RenderPanel(Client client, ClientThread clientThread, JSlider fovSlider)
     {
         this.fovSlider = fovSlider;
+        this.client = client;
+
+        clientThread.invokeLater(() ->
+        {
+            this.ac = new AnimationController(client, -1);
+            ac.setOnFinished(e ->
+            {
+                ac.reset();
+            });
+        });
 
         addMouseListener(new MouseAdapter()
         {
@@ -85,12 +100,39 @@ public class RenderPanel extends JPanel
         fovSlider.addChangeListener(e -> repaint());
     }
 
+    @Subscribe
+    public void onPostClientTick(PostClientTick event)
+    {
+        if (!modelExists || ac.getAnimation() == null)
+        {
+            return;
+        }
+
+        int frame = ac.getFrame();
+        ac.tick(1);
+        if (frame == ac.getFrame())
+        {
+            return;
+        }
+
+        Model animated = ac.animate(model);
+        updateModelParameters(animated);
+        repaint();
+    }
+
+    public void updateAnimation(Animation animation)
+    {
+        ac.setAnimation(animation);
+        repaint();
+    }
+
     public void updateModel(ModelData md)
     {
+        faceColours = Arrays.copyOf(md.getFaceColors(), md.getFaceCount());
+        model = md.light();
         modelExists = true;
-        model = md;
+        updateModelParameters(model);
         repaint();
-        revalidate();
     }
 
     public void resetViewer()
@@ -100,6 +142,25 @@ public class RenderPanel extends JPanel
         revalidate();
     }
 
+    private int[] f1;
+    private int[] f2;
+    private int[] f3;
+
+    private float[] mx;
+    private float[] my;
+    private float[] mz;
+
+    private void updateModelParameters(Model model)
+    {
+        int fc = model.getFaceCount();
+        f1 = Arrays.copyOf(model.getFaceIndices1(), fc);
+        f2 = Arrays.copyOf(model.getFaceIndices2(), fc);
+        f3 = Arrays.copyOf(model.getFaceIndices3(), fc);
+        mx = Arrays.copyOf(model.getVerticesX(), fc);
+        my = Arrays.copyOf(model.getVerticesY(), fc);
+        mz = Arrays.copyOf(model.getVerticesZ(), fc);
+    }
+
     @Override
     public void paintComponent(Graphics g)
     {
@@ -107,7 +168,7 @@ public class RenderPanel extends JPanel
         g2.setColor(ColorScheme.DARKER_GRAY_COLOR);
         g2.fillRect(0, 0, getWidth(), getHeight());
 
-        if (model == null || !modelExists)
+        if (!modelExists)
         {
             g.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 16));
             g.setColor(ColorScheme.BRAND_ORANGE);
@@ -168,17 +229,8 @@ public class RenderPanel extends JPanel
             zBuffer[q] = Double.NEGATIVE_INFINITY;
         }
 
-        short[] colours = model.getFaceColors();
-        int[] f1 = model.getFaceIndices1();
-        int[] f2 = model.getFaceIndices2();
-        int[] f3 = model.getFaceIndices3();
-
-        float[] mx = model.getVerticesX();
-        float[] my = model.getVerticesY();
-        float[] mz = model.getVerticesZ();
-
         ArrayList<Triangle> tris = new ArrayList<>();
-        for (int i = 0; i < model.getFaceCount(); i++)
+        for (int i = 0; i < f1.length; i++)
         {
             int vert1 = f1[i];
             int vert2 = f2[i];
@@ -196,7 +248,7 @@ public class RenderPanel extends JPanel
             double v3y = my[vert3];
             double v3z = -mz[vert3];
 
-            Color color = ColourSwapPanel.colourFromShort(colours[i]);
+            Color color = ColourSwapPanel.colourFromShort(faceColours[i]);
 
             tris.add(new Triangle(
                     new Vertex(v1x, v1y, v1z, 1),

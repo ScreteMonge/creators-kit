@@ -134,7 +134,7 @@ public class ModelAnvil extends JPanel
         JSlider fovSlider = new JSlider(1, 179, RenderPanel.FOV_DEFAULT);
         previewPanel.add(fovSlider, BorderLayout.NORTH);
 
-        renderPanel = new RenderPanel(fovSlider);
+        renderPanel = new RenderPanel(client, clientThread, fovSlider);
         previewPanel.add(renderPanel, BorderLayout.CENTER);
 
         JButton resetButton = new JButton("Reset Camera View");

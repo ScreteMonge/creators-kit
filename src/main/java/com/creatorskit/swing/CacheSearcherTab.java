@@ -9,8 +9,9 @@ import com.creatorskit.swing.searchabletable.JFilterableTable;
 import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
-import com.google.gson.reflect.TypeToken;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.Client;
 import net.runelite.api.Model;
 import net.runelite.api.ModelData;
 import net.runelite.client.callback.ClientThread;
@@ -25,13 +26,13 @@ import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
 public class CacheSearcherTab extends JPanel
 {
+    private Client client;
     private final CreatorsPlugin plugin;
     private ClientThread clientThread;
     private final DataFinder dataFinder;
@@ -56,6 +57,8 @@ public class CacheSearcherTab extends JPanel
 
     private final JPanel previewPanel = new JPanel();
     private final JPanel breakdownPanel = new JPanel();
+
+    @Getter
     private RenderPanel renderPanel;
 
     private final JFilterableTable npcTable = new JFilterableTable("NPCs");
@@ -71,8 +74,9 @@ public class CacheSearcherTab extends JPanel
     private final JPanel display = new JPanel();
 
     @Inject
-    public CacheSearcherTab(CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ModelUtilities modelUtilities, OkHttpClient httpClient)
+    public CacheSearcherTab(Client client, CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ModelUtilities modelUtilities, OkHttpClient httpClient)
     {
+        this.client = client;
         this.plugin = plugin;
         this.clientThread = clientThread;
         this.dataFinder = dataFinder;
@@ -302,7 +306,7 @@ public class CacheSearcherTab extends JPanel
         JSlider fovSlider = new JSlider(1, 179, RenderPanel.FOV_DEFAULT);
         previewPanel.add(fovSlider, BorderLayout.NORTH);
 
-        renderPanel = new RenderPanel(fovSlider);
+        renderPanel = new RenderPanel(client, clientThread, fovSlider);
         previewPanel.add(renderPanel, BorderLayout.CENTER);
 
         JButton resetButton = new JButton("Reset Camera View");
@@ -1061,6 +1065,17 @@ public class CacheSearcherTab extends JPanel
         scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
         card.add(scrollPane, c);
 
+        animTable.getSelectionModel().addListSelectionListener(e ->
+        {
+            Object o = animTable.getSelectedObject();
+            if (o instanceof AnimData)
+            {
+                AnimData data = (AnimData) o;
+                int animId = data.getId();
+                clientThread.invokeLater(() -> renderPanel.updateAnimation(client.loadAnimation(animId)));
+            }
+        });
+
         animTable.addMouseListener(new MouseAdapter()
         {
             @Override
@@ -1092,7 +1107,7 @@ public class CacheSearcherTab extends JPanel
 
         c.gridx = 0;
         c.gridy = 3;
-        JLabel instructionLabel = new JLabel("Double click any Animation to set it to the currently selected Object");
+        JLabel instructionLabel = new JLabel("<html>Select an Animation to play it in the renderer to the right (if a Model is being displayed)<br>Double click an Animation to set it to the currently selected Object</html>");
         card.add(instructionLabel, c);
     }
 
