@@ -273,8 +273,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		creatorsPanel.clearManagerPanels();
 		creatorsPanel.getToolBox().dispose();
 
-		eventBus.unregister(creatorsPanel.getToolBox().getProgrammer());
-		eventBus.unregister(creatorsPanel.getToolBox().getTransmogPanel());
+		ToolBoxFrame toolBox = creatorsPanel.getToolBox();
+
+		eventBus.unregister(toolBox.getProgrammer());
+		eventBus.unregister(toolBox.getTransmogPanel());
+		eventBus.unregister(toolBox.getCacheSearcher().getRenderPanel());
 
 		clientToolbar.removeNavigation(navigationButton);
 		overlayManager.remove(overlay);
