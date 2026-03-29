@@ -22,7 +22,6 @@ public class RenderPanel extends JPanel
     private Client client;
 
     private Model model;
-    private short[] faceColours;
     private AnimationController ac;
     private boolean modelExists = false;
     private final JSlider fovSlider;
@@ -130,7 +129,6 @@ public class RenderPanel extends JPanel
 
     public void updateModel(ModelData md)
     {
-        faceColours = Arrays.copyOf(md.getFaceColors(), md.getFaceCount());
         model = md.light();
         modelExists = true;
         updateModelParameters(model);
@@ -160,6 +158,10 @@ public class RenderPanel extends JPanel
     private float[] my;
     private float[] mz;
 
+    private short[] c1;
+    private short[] c2;
+    private short[] c3;
+
     private void updateModelParameters(Model model)
     {
         int fc = model.getFaceCount();
@@ -171,6 +173,21 @@ public class RenderPanel extends JPanel
         mx = Arrays.copyOf(model.getVerticesX(), vc);
         my = Arrays.copyOf(model.getVerticesY(), vc);
         mz = Arrays.copyOf(model.getVerticesZ(), vc);
+
+        int[] col1 = Arrays.copyOf(model.getFaceColors1(), fc);
+        int[] col2 = Arrays.copyOf(model.getFaceColors2(), fc);
+        int[] col3 = Arrays.copyOf(model.getFaceColors3(), fc);
+
+        c1 = new short[fc];
+        c2 = new short[fc];
+        c3 = new short[fc];
+
+        for (int i = 0; i < fc; i++)
+        {
+            c1[i] = (short) col1[i];
+            c2[i] = (short) col2[i];
+            c3[i] = (short) col3[i];
+        }
     }
 
     @Override
@@ -260,13 +277,13 @@ public class RenderPanel extends JPanel
             double v3y = my[vert3];
             double v3z = -mz[vert3];
 
-            Color color = ColourSwapPanel.colourFromShort(faceColours[i]);
-
             tris.add(new Triangle(
                     new Vertex(v1x, v1y, v1z, 1),
                     new Vertex(v2x, v2y, v2z, 1),
                     new Vertex(v3x, v3y, v3z, 1),
-                    color
+                    ColourSwapPanel.colourFromShort(c1[i]),
+                    ColourSwapPanel.colourFromShort(c2[i]),
+                    ColourSwapPanel.colourFromShort(c3[i])
             ));
         }
 
@@ -339,7 +356,9 @@ public class RenderPanel extends JPanel
                         int zIndex = y * img.getWidth() + x;
                         if (zBuffer[zIndex] < depth)
                         {
-                            img.setRGB(x, y, getShade(t.color, angleCos).getRGB());
+                            Color c = interpolateColor(t.c1, t.c2, t.c3, b1, b2, b3);
+                            c = getShade(c, angleCos);
+                            img.setRGB(x, y, c.getRGB());
                             zBuffer[zIndex] = depth;
                         }
                     }
@@ -351,20 +370,34 @@ public class RenderPanel extends JPanel
         g2.drawImage(img, 0, 0, null);
     }
 
+    private Color interpolateColor(Color c1, Color c2, Color c3, double b1, double b2, double b3)
+    {
+        int r = (int)(c1.getRed()   * b1 + c2.getRed()   * b2 + c3.getRed()   * b3);
+        int g = (int)(c1.getGreen() * b1 + c2.getGreen() * b2 + c3.getGreen() * b3);
+        int b = (int)(c1.getBlue()  * b1 + c2.getBlue()  * b2 + c3.getBlue()  * b3);
+
+        return new Color(r, g, b);
+    }
+
     public static Color getShade(Color color, double shade)
     {
-        double redLinear = Math.pow(color.getRed(), 2.4) * shade;
-        double greenLinear = Math.pow(color.getGreen(), 2.4) * shade;
-        double blueLinear = Math.pow(color.getBlue(), 2.4) * shade;
+        double r = Math.pow(color.getRed()   / 255.0, 2.4);
+        double g = Math.pow(color.getGreen() / 255.0, 2.4);
+        double b = Math.pow(color.getBlue()  / 255.0, 2.4);
 
-        int red = (int) Math.pow(redLinear, 1.0/2.4);
-        int green = (int) Math.pow(greenLinear, 1.0/2.4);
-        int blue = (int) Math.pow(blueLinear, 1.0/2.4);
+        r *= shade;
+        g *= shade;
+        b *= shade;
+
+        int red   = (int)(255 * Math.pow(r, 1.0 / 2.4));
+        int green = (int)(255 * Math.pow(g, 1.0 / 2.4));
+        int blue  = (int)(255 * Math.pow(b, 1.0 / 2.4));
 
         return new Color(
                 Math.min(255, Math.max(0, red)),
                 Math.min(255, Math.max(0, green)),
-                Math.min(255, Math.max(0, blue)));
+                Math.min(255, Math.max(0, blue))
+        );
     }
 
     public void resetCameraView()
@@ -438,14 +471,18 @@ class Triangle
     Vertex v1;
     Vertex v2;
     Vertex v3;
-    Color color;
+    Color c1;
+    Color c2;
+    Color c3;
 
-    Triangle (Vertex v1, Vertex v2, Vertex v3, Color color)
+    Triangle (Vertex v1, Vertex v2, Vertex v3, Color c1, Color c2, Color c3)
     {
         this.v1 = v1;
         this.v2 = v2;
         this.v3 = v3;
-        this.color = color;
+        this.c1 = c1;
+        this.c2 = c2;
+        this.c3 = c3;
     }
 }
 
