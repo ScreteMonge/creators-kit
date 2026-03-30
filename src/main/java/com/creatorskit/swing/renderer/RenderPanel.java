@@ -237,7 +237,7 @@ public class RenderPanel extends JPanel
         }
 
         tris = new ArrayList<>();
-        for (int i = 0; i < f1.length; i++)
+        for (int i = 0; i < fc; i++)
         {
             int vert1 = f1[i];
             int vert2 = f2[i];
@@ -364,6 +364,9 @@ public class RenderPanel extends JPanel
             return;
         }
 
+        ArrayList<RenderTriangle> opaque = new ArrayList<>();
+        ArrayList<RenderTriangle> transparent = new ArrayList<>();
+
         for (int i = 0; i < tris.size(); i++)
         {
             Triangle t = tris.get(i);
@@ -399,6 +402,32 @@ public class RenderPanel extends JPanel
                 continue;
             }
 
+            double avgDepth = (v1.z + v2.z + v3.z) / 3.0;
+
+            RenderTriangle rt = new RenderTriangle(
+                    v1, v2, v3,
+                    t.c1, t.c2, t.c3,
+                    t.n1, t.n2, t.n3,
+                    t.alpha,
+                    avgDepth
+            );
+
+            if (t.alpha == 255)
+            {
+                opaque.add(rt);
+            }
+            else
+            {
+                transparent.add(rt);
+            }
+        }
+
+        for (RenderTriangle t : opaque)
+        {
+            Vertex v1 = t.v1;
+            Vertex v2 = t.v2;
+            Vertex v3 = t.v3;
+
             int minX = (int) Math.max(0, Math.ceil(Math.min(v1.x, Math.min(v2.x, v3.x))));
             int maxX = (int) Math.min(img.getWidth() - 1, Math.floor(Math.max(v1.x, Math.max(v2.x, v3.x))));
             int minY = (int) Math.max(0, Math.ceil(Math.min(v1.y, Math.min(v2.y, v3.y))));
@@ -425,7 +454,7 @@ public class RenderPanel extends JPanel
                             normal = new Vector3(rotated.x, rotated.y, rotated.z);
                             normal.normalize();
 
-                            Color c = interpolateColor(t.c1, t.c2, t.c3, b1, b2, b3);
+                            Color c = interpolateColor(t.c1, t.c2, t.c3, b1, b2, b3, t.alpha);
 
                             img.setRGB(x, y, c.getRGB());
                             zBuffer[zIndex] = depth;
@@ -433,19 +462,63 @@ public class RenderPanel extends JPanel
                     }
                 }
             }
+        }
 
+        transparent.sort((a, b) -> Double.compare(a.avgDepth, b.avgDepth));
+
+        for (RenderTriangle t : transparent)
+        {
+            Vertex v1 = t.v1;
+            Vertex v2 = t.v2;
+            Vertex v3 = t.v3;
+
+            int minX = (int) Math.max(0, Math.ceil(Math.min(v1.x, Math.min(v2.x, v3.x))));
+            int maxX = (int) Math.min(img.getWidth() - 1, Math.floor(Math.max(v1.x, Math.max(v2.x, v3.x))));
+            int minY = (int) Math.max(0, Math.ceil(Math.min(v1.y, Math.min(v2.y, v3.y))));
+            int maxY = (int) Math.min(img.getHeight() - 1, Math.floor(Math.max(v1.y, Math.max(v2.y, v3.y))));
+
+            double triangleArea = (v1.y - v3.y) * (v2.x - v3.x) + (v2.y - v3.y) * (v3.x - v1.x);
+
+            for (int y = minY; y <= maxY; y++)
+            {
+                for (int x = minX; x <= maxX; x++)
+                {
+                    double b1 = ((y - v3.y) * (v2.x - v3.x) + (v2.y - v3.y) * (v3.x - x)) / triangleArea;
+                    double b2 = ((y - v1.y) * (v3.x - v1.x) + (v3.y - v1.y) * (v1.x - x)) / triangleArea;
+                    double b3 = ((y - v2.y) * (v1.x - v2.x) + (v1.y - v2.y) * (v2.x - x)) / triangleArea;
+                    if (b1 >= 0 && b1 <= 1 && b2 >= 0 && b2 <= 1 && b3 >= 0 && b3 <= 1)
+                    {
+                        double depth = b1 * v1.z + b2 * v2.z + b3 * v3.z;
+                        int zIndex = y * img.getWidth() + x;
+                        if (zBuffer[zIndex] < depth)
+                        {
+                            Vector3 normal = interpolateNormal(t.n1, t.n2, t.n3, b1, b2, b3);
+
+                            Vertex rotated = rotation.transform(new Vertex(normal.x, normal.y, normal.z, 0));
+                            normal = new Vector3(rotated.x, rotated.y, rotated.z);
+                            normal.normalize();
+
+                            Color c = interpolateColor(t.c1, t.c2, t.c3, b1, b2, b3, t.alpha);
+
+                            int dstARGB = img.getRGB(x, y);
+                            int blended = blend(c, dstARGB);
+                            img.setRGB(x, y, blended);
+                        }
+                    }
+                }
+            }
         }
 
         g2.drawImage(img, 0, 0, null);
     }
 
-    private Color interpolateColor(Color c1, Color c2, Color c3, double b1, double b2, double b3)
+    private Color interpolateColor(Color c1, Color c2, Color c3, double b1, double b2, double b3, int alpha)
     {
         int r = (int)(c1.getRed()   * b1 + c2.getRed()   * b2 + c3.getRed()   * b3);
         int g = (int)(c1.getGreen() * b1 + c2.getGreen() * b2 + c3.getGreen() * b3);
         int b = (int)(c1.getBlue()  * b1 + c2.getBlue()  * b2 + c3.getBlue()  * b3);
 
-        return new Color(r, g, b);
+        return new Color(r, g, b, alpha);
     }
 
     private Vector3 interpolateNormal(Vector3 n1, Vector3 n2, Vector3 n3,
@@ -455,6 +528,33 @@ public class RenderPanel extends JPanel
         double y = n1.y * b1 + n2.y * b2 + n3.y * b3;
         double z = n1.z * b1 + n2.z * b2 + n3.z * b3;
         return new Vector3(x, y, z);
+    }
+
+    private int blend(Color src, int dstARGB)
+    {
+        int sa = src.getAlpha();
+        if (sa == 0)
+        {
+            return dstARGB;
+        }
+
+        double a = sa / 255.0;
+
+        int sr = src.getRed();
+        int sg = src.getGreen();
+        int sb = src.getBlue();
+
+        int da = (dstARGB >> 24) & 0xFF;
+        int dr = (dstARGB >> 16) & 0xFF;
+        int dg = (dstARGB >> 8) & 0xFF;
+        int db = dstARGB & 0xFF;
+
+        int outA = (int)(sa + da * (1 - a));
+        int outR = (int)(sr * a + dr * (1 - a));
+        int outG = (int)(sg * a + dg * (1 - a));
+        int outB = (int)(sb * a + db * (1 - a));
+
+        return (outA << 24) | (outR << 16) | (outG << 8) | outB;
     }
 
     public void resetCameraView()
@@ -530,6 +630,16 @@ class Triangle
     Color c1, c2, c3;
     Vector3 n1, n2, n3;
     int alpha;
+}
+
+class RenderTriangle extends Triangle
+{
+    double avgDepth;
+    public RenderTriangle(Vertex v1, Vertex v2, Vertex v3, Color c1, Color c2, Color c3, Vector3 n1, Vector3 n2, Vector3 n3, int alpha, double avgDepth)
+    {
+        super(v1, v2, v3, c1, c2, c3, n1, n2, n3, alpha);
+        this.avgDepth = avgDepth;
+    }
 }
 
 class Vertex
