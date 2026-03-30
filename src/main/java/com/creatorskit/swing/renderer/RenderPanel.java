@@ -1,8 +1,8 @@
 package com.creatorskit.swing.renderer;
 
 import com.creatorskit.swing.colours.ColourSwapPanel;
+import lombok.AllArgsConstructor;
 import net.runelite.api.*;
-import net.runelite.api.events.ClientTick;
 import net.runelite.api.events.PostClientTick;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.Subscribe;
@@ -158,6 +158,10 @@ public class RenderPanel extends JPanel
     private float[] my;
     private float[] mz;
 
+    private double[] nx;
+    private double[] ny;
+    private double[] nz;
+
     private short[] c1;
     private short[] c2;
     private short[] c3;
@@ -173,6 +177,9 @@ public class RenderPanel extends JPanel
         mx = Arrays.copyOf(model.getVerticesX(), vc);
         my = Arrays.copyOf(model.getVerticesY(), vc);
         mz = Arrays.copyOf(model.getVerticesZ(), vc);
+        nx = new double[vc];
+        ny = new double[vc];
+        nz = new double[vc];
 
         int[] col1 = Arrays.copyOf(model.getFaceColors1(), fc);
         int[] col2 = Arrays.copyOf(model.getFaceColors2(), fc);
@@ -187,6 +194,43 @@ public class RenderPanel extends JPanel
             c1[i] = (short) col1[i];
             c2[i] = (short) col2[i];
             c3[i] = (short) col3[i];
+        }
+
+        for (int i = 0; i < f1.length; i++)
+        {
+            int v1 = f1[i];
+            int v2 = f2[i];
+            int v3 = f3[i];
+
+            double x1 = mx[v1], y1 = my[v1], z1 = mz[v1];
+            double x2 = mx[v2], y2 = my[v2], z2 = mz[v2];
+            double x3 = mx[v3], y3 = my[v3], z3 = mz[v3];
+
+            double ax = x2 - x1;
+            double ay = y2 - y1;
+            double az = z2 - z1;
+
+            double bx = x3 - x1;
+            double by = y3 - y1;
+            double bz = z3 - z1;
+
+            double nxFace = ay * bz - az * by;
+            double nyFace = az * bx - ax * bz;
+            double nzFace = ax * by - ay * bx;
+
+            nx[v1] += nxFace; ny[v1] += nyFace; nz[v1] += nzFace;
+            nx[v2] += nxFace; ny[v2] += nyFace; nz[v2] += nzFace;
+            nx[v3] += nxFace; ny[v3] += nyFace; nz[v3] += nzFace;
+        }
+
+        for (int i = 0; i < nx.length; i++)
+        {
+            double len = Math.sqrt(nx[i]*nx[i] + ny[i]*ny[i] + nz[i]*nz[i]);
+            if (len != 0) {
+                nx[i] /= len;
+                ny[i] /= len;
+                nz[i] /= len;
+            }
         }
     }
 
@@ -277,13 +321,18 @@ public class RenderPanel extends JPanel
             double v3y = my[vert3];
             double v3z = -mz[vert3];
 
+            Vector3 n1 = new Vector3(nx[vert1], ny[vert1], nz[vert1]);
+            Vector3 n2 = new Vector3(nx[vert2], ny[vert2], nz[vert2]);
+            Vector3 n3 = new Vector3(nx[vert3], ny[vert3], nz[vert3]);
+
             tris.add(new Triangle(
                     new Vertex(v1x, v1y, v1z, 1),
                     new Vertex(v2x, v2y, v2z, 1),
                     new Vertex(v3x, v3y, v3z, 1),
                     ColourSwapPanel.colourFromShort(c1[i]),
                     ColourSwapPanel.colourFromShort(c2[i]),
-                    ColourSwapPanel.colourFromShort(c3[i])
+                    ColourSwapPanel.colourFromShort(c3[i]),
+                    n1, n2, n3
             ));
         }
 
@@ -311,8 +360,6 @@ public class RenderPanel extends JPanel
             norm.x /= normalLength;
             norm.y /= normalLength;
             norm.z /= normalLength;
-
-            double angleCos = Math.abs(norm.z);
 
             v1.x = v1.x / (-v1.z) * fov;
             v1.y = v1.y / (-v1.z) * fov;
@@ -343,6 +390,10 @@ public class RenderPanel extends JPanel
 
             double triangleArea = (v1.y - v3.y) * (v2.x - v3.x) + (v2.y - v3.y) * (v3.x - v1.x);
 
+            Vector3 light = new Vector3(-30, 30, -50);
+            light.normalize();
+            double ambient = 1;
+
             for (int y = minY; y <= maxY; y++)
             {
                 for (int x = minX; x <= maxX; x++)
@@ -356,8 +407,15 @@ public class RenderPanel extends JPanel
                         int zIndex = y * img.getWidth() + x;
                         if (zBuffer[zIndex] < depth)
                         {
+                            Vector3 normal = interpolateNormal(t.n1, t.n2, t.n3, b1, b2, b3);
+                            normal.normalize();
+
+                            double diffuse = Math.max(0, normal.dot(light));
+                            double shade = ambient + (1 - ambient) * diffuse;
+
                             Color c = interpolateColor(t.c1, t.c2, t.c3, b1, b2, b3);
-                            c = getShade(c, angleCos);
+                            c = getShade(c, shade);
+
                             img.setRGB(x, y, c.getRGB());
                             zBuffer[zIndex] = depth;
                         }
@@ -377,6 +435,15 @@ public class RenderPanel extends JPanel
         int b = (int)(c1.getBlue()  * b1 + c2.getBlue()  * b2 + c3.getBlue()  * b3);
 
         return new Color(r, g, b);
+    }
+
+    private Vector3 interpolateNormal(Vector3 n1, Vector3 n2, Vector3 n3,
+                                      double b1, double b2, double b3)
+    {
+        double x = n1.x * b1 + n2.x * b2 + n3.x * b3;
+        double y = n1.y * b1 + n2.y * b2 + n3.y * b3;
+        double z = n1.z * b1 + n2.z * b2 + n3.z * b3;
+        return new Vector3(x, y, z);
     }
 
     public static Color getShade(Color color, double shade)
@@ -466,24 +533,12 @@ class Matrix4
     }
 }
 
+@AllArgsConstructor
 class Triangle
 {
-    Vertex v1;
-    Vertex v2;
-    Vertex v3;
-    Color c1;
-    Color c2;
-    Color c3;
-
-    Triangle (Vertex v1, Vertex v2, Vertex v3, Color c1, Color c2, Color c3)
-    {
-        this.v1 = v1;
-        this.v2 = v2;
-        this.v3 = v3;
-        this.c1 = c1;
-        this.c2 = c2;
-        this.c3 = c3;
-    }
+    Vertex v1, v2, v3;
+    Color c1, c2, c3;
+    Vector3 n1, n2, n3;
 }
 
 class Vertex
@@ -499,5 +554,37 @@ class Vertex
         this.y = y;
         this.z = z;
         this.w = w;
+    }
+}
+
+@AllArgsConstructor
+class Vector3
+{
+    public double x, y, z;
+
+    public Vector3 add(Vector3 other)
+    {
+        return new Vector3(
+                this.x + other.x,
+                this.y + other.y,
+                this.z + other.z
+        );
+    }
+
+    public double dot(Vector3 other)
+    {
+        return this.x * other.x +
+                this.y * other.y +
+                this.z * other.z;
+    }
+
+    public void normalize()
+    {
+        double len = Math.sqrt(x * x + y * y + z * z);
+        if (len != 0) {
+            x /= len;
+            y /= len;
+            z /= len;
+        }
     }
 }
