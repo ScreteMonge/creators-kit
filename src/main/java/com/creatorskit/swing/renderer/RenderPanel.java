@@ -28,6 +28,7 @@ public class RenderPanel extends JPanel
     private boolean modelExists = false;
     private final JSlider fovSlider;
     private boolean enableAnimations = true;
+    BufferedImage img;
 
     public static final double HEADING_DEFAULT = 0;
     public static final double PITCH_DEFAULT = 0;
@@ -350,7 +351,7 @@ public class RenderPanel extends JPanel
         Matrix4 rotation = headingTransform.multiply(pitchTransform);
         Matrix4 transform = rotation.multiply(panTransform);
 
-        BufferedImage img = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
+        img = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
 
         double[] zBuffer = new double[img.getWidth() * img.getHeight()];
 
@@ -394,6 +395,18 @@ public class RenderPanel extends JPanel
             v3.x += viewportWidth / 2;
             v3.y += viewportHeight / 2;
 
+            double ax = v2.x - v1.x;
+            double ay = v2.y - v1.y;
+            double bx = v3.x - v1.x;
+            double by = v3.y - v1.y;
+
+            double cross = ax * by - ay * bx;
+
+            if (cross >= 0)
+            {
+                continue;
+            }
+
             if ((v1.x < 0   && v2.x < 0   && v3.x < 0) ||
                     (v1.x >= viewportWidth  && v2.x >= viewportWidth  && v3.x >= viewportWidth) ||
                     (v1.y < 0   && v2.y < 0   && v3.y < 0) ||
@@ -404,10 +417,14 @@ public class RenderPanel extends JPanel
 
             double avgDepth = (v1.z + v2.z + v3.z) / 3.0;
 
+            Vector3 n1t = transformNormal(rotation, t.n1);
+            Vector3 n2t = transformNormal(rotation, t.n2);
+            Vector3 n3t = transformNormal(rotation, t.n3);
+
             RenderTriangle rt = new RenderTriangle(
                     v1, v2, v3,
                     t.c1, t.c2, t.c3,
-                    t.n1, t.n2, t.n3,
+                    n1t, n2t, n3t,
                     t.alpha,
                     avgDepth
             );
@@ -457,9 +474,6 @@ public class RenderPanel extends JPanel
                         if (zBuffer[zIndex] < depth)
                         {
                             Vector3 normal = interpolateNormal(t.n1, t.n2, t.n3, b1, b2, b3);
-
-                            Vertex rotated = rotation.transform(new Vertex(normal.x, normal.y, normal.z, 0));
-                            normal = new Vector3(rotated.x, rotated.y, rotated.z);
                             normal.normalize();
 
                             Color c = interpolateColor(t.c1, t.c2, t.c3, b1, b2, b3, t.alpha);
@@ -480,6 +494,14 @@ public class RenderPanel extends JPanel
                 }
             }
         }
+    }
+
+    private Vector3 transformNormal(Matrix4 rotation, Vector3 n)
+    {
+        Vertex v = rotation.transform(new Vertex(n.x, n.y, n.z, 0));
+        Vector3 out = new Vector3(v.x, v.y, v.z);
+        out.normalize();
+        return out;
     }
 
     private Color interpolateColor(Color c1, Color c2, Color c3, double b1, double b2, double b3, int alpha)
