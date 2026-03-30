@@ -422,51 +422,15 @@ public class RenderPanel extends JPanel
             }
         }
 
-        for (RenderTriangle t : opaque)
-        {
-            Vertex v1 = t.v1;
-            Vertex v2 = t.v2;
-            Vertex v3 = t.v3;
-
-            int minX = (int) Math.max(0, Math.ceil(Math.min(v1.x, Math.min(v2.x, v3.x))));
-            int maxX = (int) Math.min(img.getWidth() - 1, Math.floor(Math.max(v1.x, Math.max(v2.x, v3.x))));
-            int minY = (int) Math.max(0, Math.ceil(Math.min(v1.y, Math.min(v2.y, v3.y))));
-            int maxY = (int) Math.min(img.getHeight() - 1, Math.floor(Math.max(v1.y, Math.max(v2.y, v3.y))));
-
-            double triangleArea = (v1.y - v3.y) * (v2.x - v3.x) + (v2.y - v3.y) * (v3.x - v1.x);
-
-            for (int y = minY; y <= maxY; y++)
-            {
-                for (int x = minX; x <= maxX; x++)
-                {
-                    double b1 = ((y - v3.y) * (v2.x - v3.x) + (v2.y - v3.y) * (v3.x - x)) / triangleArea;
-                    double b2 = ((y - v1.y) * (v3.x - v1.x) + (v3.y - v1.y) * (v1.x - x)) / triangleArea;
-                    double b3 = ((y - v2.y) * (v1.x - v2.x) + (v1.y - v2.y) * (v2.x - x)) / triangleArea;
-                    if (b1 >= 0 && b1 <= 1 && b2 >= 0 && b2 <= 1 && b3 >= 0 && b3 <= 1)
-                    {
-                        double depth = b1 * v1.z + b2 * v2.z + b3 * v3.z;
-                        int zIndex = y * img.getWidth() + x;
-                        if (zBuffer[zIndex] < depth)
-                        {
-                            Vector3 normal = interpolateNormal(t.n1, t.n2, t.n3, b1, b2, b3);
-
-                            Vertex rotated = rotation.transform(new Vertex(normal.x, normal.y, normal.z, 0));
-                            normal = new Vector3(rotated.x, rotated.y, rotated.z);
-                            normal.normalize();
-
-                            Color c = interpolateColor(t.c1, t.c2, t.c3, b1, b2, b3, t.alpha);
-
-                            img.setRGB(x, y, c.getRGB());
-                            zBuffer[zIndex] = depth;
-                        }
-                    }
-                }
-            }
-        }
-
+        renderTriangles(opaque, img, zBuffer, rotation, false);
         transparent.sort((a, b) -> Double.compare(a.avgDepth, b.avgDepth));
+        renderTriangles(transparent, img, zBuffer, rotation, true);
+        g2.drawImage(img, 0, 0, null);
+    }
 
-        for (RenderTriangle t : transparent)
+    private void renderTriangles(ArrayList<RenderTriangle> renderTriangles, BufferedImage img, double[] zBuffer, Matrix4 rotation, boolean transparent)
+    {
+        for (RenderTriangle t : renderTriangles)
         {
             Vertex v1 = t.v1;
             Vertex v2 = t.v2;
@@ -500,16 +464,22 @@ public class RenderPanel extends JPanel
 
                             Color c = interpolateColor(t.c1, t.c2, t.c3, b1, b2, b3, t.alpha);
 
-                            int dstARGB = img.getRGB(x, y);
-                            int blended = blend(c, dstARGB);
-                            img.setRGB(x, y, blended);
+                            if (transparent)
+                            {
+                                int dstARGB = img.getRGB(x, y);
+                                int blended = blend(c, dstARGB);
+                                img.setRGB(x, y, blended);
+                            }
+                            else
+                            {
+                                img.setRGB(x, y, c.getRGB());
+                                zBuffer[zIndex] = depth;
+                            }
                         }
                     }
                 }
             }
         }
-
-        g2.drawImage(img, 0, 0, null);
     }
 
     private Color interpolateColor(Color c1, Color c2, Color c3, double b1, double b2, double b3, int alpha)
