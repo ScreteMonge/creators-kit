@@ -227,10 +227,13 @@ public class CacheSearcherTab extends JPanel
     private void updateRenderPanel(CustomModelType type, int id, boolean renderAll, int modelId)
     {
         ModelStats[] modelStats = new ModelStats[0];
+        LightingStyle ls = LightingStyle.DEFAULT;
+
         switch (type)
         {
             case CACHE_NPC:
                 modelStats = dataFinder.findModelsForNPC(id);
+                ls = LightingStyle.ACTOR;
                 break;
             case CACHE_OBJECT:
                 modelStats = dataFinder.findModelsForObject(id, 0, LightingStyle.DEFAULT, true);
@@ -242,6 +245,7 @@ public class CacheSearcherTab extends JPanel
                 break;
             case CACHE_SPOTANIM:
                 modelStats = dataFinder.findSpotAnim(id);
+                ls = LightingStyle.SPOTANIM;
         }
 
         if (modelStats == null || modelStats.length == 0)
@@ -250,13 +254,14 @@ public class CacheSearcherTab extends JPanel
             return;
         }
 
+        LightingStyle finalLs = ls;
         if (renderAll)
         {
             ModelStats[] allModelStats = modelStats;
             clientThread.invokeLater(() ->
             {
                 ModelData md = modelUtilities.constructModelDataFromCache(allModelStats, new int[0], false);
-                renderPanel.updateModel(md);
+                renderPanel.updateModel(md, finalLs);
             });
             return;
         }
@@ -268,7 +273,7 @@ public class CacheSearcherTab extends JPanel
                 clientThread.invokeLater(() ->
                 {
                     ModelData md = modelUtilities.constructModelDataFromCache(new ModelStats[]{modelStat}, new int[0], false);
-                    renderPanel.updateModel(md);
+                    renderPanel.updateModel(md, finalLs);
                 });
                 return;
             }

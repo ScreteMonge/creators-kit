@@ -1,5 +1,7 @@
 package com.creatorskit.swing.renderer;
 
+import com.creatorskit.models.CustomLighting;
+import com.creatorskit.models.LightingStyle;
 import com.creatorskit.swing.colours.ColourSwapPanel;
 import lombok.AllArgsConstructor;
 import net.runelite.api.*;
@@ -127,9 +129,14 @@ public class RenderPanel extends JPanel
         repaint();
     }
 
-    public void updateModel(ModelData md)
+    public void updateModel(ModelData md, LightingStyle ls)
     {
-        model = md.light();
+        updateModel(md, new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getY(), ls.getZ()));
+    }
+
+    public void updateModel(ModelData md, CustomLighting ls)
+    {
+        model = md.light(ls.getAmbient(), ls.getContrast(), ls.getX(), -ls.getZ(), ls.getY());
         modelExists = true;
         updateModelParameters(model);
         repaint();
@@ -150,44 +157,30 @@ public class RenderPanel extends JPanel
         revalidate();
     }
 
-    private int[] f1;
-    private int[] f2;
-    private int[] f3;
-
-    private float[] mx;
-    private float[] my;
-    private float[] mz;
-
-    private double[] nx;
-    private double[] ny;
-    private double[] nz;
-
-    private short[] c1;
-    private short[] c2;
-    private short[] c3;
+    private ArrayList<Triangle> tris;
 
     private void updateModelParameters(Model model)
     {
         int fc = model.getFaceCount();
         int vc = model.getVerticesCount();
 
-        f1 = Arrays.copyOf(model.getFaceIndices1(), fc);
-        f2 = Arrays.copyOf(model.getFaceIndices2(), fc);
-        f3 = Arrays.copyOf(model.getFaceIndices3(), fc);
-        mx = Arrays.copyOf(model.getVerticesX(), vc);
-        my = Arrays.copyOf(model.getVerticesY(), vc);
-        mz = Arrays.copyOf(model.getVerticesZ(), vc);
-        nx = new double[vc];
-        ny = new double[vc];
-        nz = new double[vc];
+        int[] f1 = Arrays.copyOf(model.getFaceIndices1(), fc);
+        int[] f2 = Arrays.copyOf(model.getFaceIndices2(), fc);
+        int[] f3 = Arrays.copyOf(model.getFaceIndices3(), fc);
+        float[] mx = Arrays.copyOf(model.getVerticesX(), vc);
+        float[] my = Arrays.copyOf(model.getVerticesY(), vc);
+        float[] mz = Arrays.copyOf(model.getVerticesZ(), vc);
+        double[] nx = new double[vc];
+        double[] ny = new double[vc];
+        double[] nz = new double[vc];
 
         int[] col1 = Arrays.copyOf(model.getFaceColors1(), fc);
         int[] col2 = Arrays.copyOf(model.getFaceColors2(), fc);
         int[] col3 = Arrays.copyOf(model.getFaceColors3(), fc);
 
-        c1 = new short[fc];
-        c2 = new short[fc];
-        c3 = new short[fc];
+        short[] c1 = new short[fc];
+        short[] c2 = new short[fc];
+        short[] c3 = new short[fc];
 
         for (int i = 0; i < fc; i++)
         {
@@ -231,6 +224,40 @@ public class RenderPanel extends JPanel
                 ny[i] /= len;
                 nz[i] /= len;
             }
+        }
+
+        tris = new ArrayList<>();
+        for (int i = 0; i < f1.length; i++)
+        {
+            int vert1 = f1[i];
+            int vert2 = f2[i];
+            int vert3 = f3[i];
+
+            double v1x = mx[vert1];
+            double v1y = my[vert1];
+            double v1z = -mz[vert1];
+
+            double v2x = mx[vert2];
+            double v2y = my[vert2];
+            double v2z = -mz[vert2];
+
+            double v3x = mx[vert3];
+            double v3y = my[vert3];
+            double v3z = -mz[vert3];
+
+            Vector3 n1 = new Vector3(nx[vert1], ny[vert1], nz[vert1]);
+            Vector3 n2 = new Vector3(nx[vert2], ny[vert2], nz[vert2]);
+            Vector3 n3 = new Vector3(nx[vert3], ny[vert3], nz[vert3]);
+
+            tris.add(new Triangle(
+                    new Vertex(v1x, v1y, v1z, 1),
+                    new Vertex(v2x, v2y, v2z, 1),
+                    new Vertex(v3x, v3y, v3z, 1),
+                    ColourSwapPanel.colourFromShort(c1[i]),
+                    ColourSwapPanel.colourFromShort(c2[i]),
+                    ColourSwapPanel.colourFromShort(c3[i]),
+                    n1, n2, n3
+            ));
         }
     }
 
@@ -288,10 +315,8 @@ public class RenderPanel extends JPanel
         double fovAngle = Math.toRadians(fovSlider.getValue());
         double fov = Math.tan(fovAngle / 2) * 170;
 
-        Matrix4 transform =
-                headingTransform
-                        .multiply(pitchTransform)
-                        .multiply(panTransform);
+        Matrix4 rotation = headingTransform.multiply(pitchTransform);
+        Matrix4 transform = rotation.multiply(panTransform);
 
         BufferedImage img = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
 
@@ -302,38 +327,9 @@ public class RenderPanel extends JPanel
             zBuffer[q] = Double.NEGATIVE_INFINITY;
         }
 
-        ArrayList<Triangle> tris = new ArrayList<>();
-        for (int i = 0; i < f1.length; i++)
+        if (tris == null)
         {
-            int vert1 = f1[i];
-            int vert2 = f2[i];
-            int vert3 = f3[i];
-
-            double v1x = mx[vert1];
-            double v1y = my[vert1];
-            double v1z = -mz[vert1];
-
-            double v2x = mx[vert2];
-            double v2y = my[vert2];
-            double v2z = -mz[vert2];
-
-            double v3x = mx[vert3];
-            double v3y = my[vert3];
-            double v3z = -mz[vert3];
-
-            Vector3 n1 = new Vector3(nx[vert1], ny[vert1], nz[vert1]);
-            Vector3 n2 = new Vector3(nx[vert2], ny[vert2], nz[vert2]);
-            Vector3 n3 = new Vector3(nx[vert3], ny[vert3], nz[vert3]);
-
-            tris.add(new Triangle(
-                    new Vertex(v1x, v1y, v1z, 1),
-                    new Vertex(v2x, v2y, v2z, 1),
-                    new Vertex(v3x, v3y, v3z, 1),
-                    ColourSwapPanel.colourFromShort(c1[i]),
-                    ColourSwapPanel.colourFromShort(c2[i]),
-                    ColourSwapPanel.colourFromShort(c3[i]),
-                    n1, n2, n3
-            ));
+            return;
         }
 
         for (Triangle t : tris)
@@ -347,19 +343,6 @@ public class RenderPanel extends JPanel
             {
                 continue;
             }
-
-            Vertex ab = new Vertex(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z, v2.w - v1.w);
-            Vertex ac = new Vertex(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z, v3.w - v1.w);
-            Vertex norm = new Vertex(
-                    ab.y * ac.z - ab.z * ac.y,
-                    ab.z * ac.x - ab.x * ac.z,
-                    ab.x * ac.y - ab.y * ac.x,
-                    1
-            );
-            double normalLength = Math.sqrt(norm.x * norm.x + norm.y * norm.y + norm.z * norm.z);
-            norm.x /= normalLength;
-            norm.y /= normalLength;
-            norm.z /= normalLength;
 
             v1.x = v1.x / (-v1.z) * fov;
             v1.y = v1.y / (-v1.z) * fov;
@@ -390,10 +373,6 @@ public class RenderPanel extends JPanel
 
             double triangleArea = (v1.y - v3.y) * (v2.x - v3.x) + (v2.y - v3.y) * (v3.x - v1.x);
 
-            Vector3 light = new Vector3(-30, 30, -50);
-            light.normalize();
-            double ambient = 1;
-
             for (int y = minY; y <= maxY; y++)
             {
                 for (int x = minX; x <= maxX; x++)
@@ -408,13 +387,12 @@ public class RenderPanel extends JPanel
                         if (zBuffer[zIndex] < depth)
                         {
                             Vector3 normal = interpolateNormal(t.n1, t.n2, t.n3, b1, b2, b3);
+
+                            Vertex rotated = rotation.transform(new Vertex(normal.x, normal.y, normal.z, 0));
+                            normal = new Vector3(rotated.x, rotated.y, rotated.z);
                             normal.normalize();
 
-                            double diffuse = Math.max(0, normal.dot(light));
-                            double shade = ambient + (1 - ambient) * diffuse;
-
                             Color c = interpolateColor(t.c1, t.c2, t.c3, b1, b2, b3);
-                            c = getShade(c, shade);
 
                             img.setRGB(x, y, c.getRGB());
                             zBuffer[zIndex] = depth;
@@ -444,27 +422,6 @@ public class RenderPanel extends JPanel
         double y = n1.y * b1 + n2.y * b2 + n3.y * b3;
         double z = n1.z * b1 + n2.z * b2 + n3.z * b3;
         return new Vector3(x, y, z);
-    }
-
-    public static Color getShade(Color color, double shade)
-    {
-        double r = Math.pow(color.getRed()   / 255.0, 2.4);
-        double g = Math.pow(color.getGreen() / 255.0, 2.4);
-        double b = Math.pow(color.getBlue()  / 255.0, 2.4);
-
-        r *= shade;
-        g *= shade;
-        b *= shade;
-
-        int red   = (int)(255 * Math.pow(r, 1.0 / 2.4));
-        int green = (int)(255 * Math.pow(g, 1.0 / 2.4));
-        int blue  = (int)(255 * Math.pow(b, 1.0 / 2.4));
-
-        return new Color(
-                Math.min(255, Math.max(0, red)),
-                Math.min(255, Math.max(0, green)),
-                Math.min(255, Math.max(0, blue))
-        );
     }
 
     public void resetCameraView()

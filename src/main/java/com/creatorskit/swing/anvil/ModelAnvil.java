@@ -404,7 +404,7 @@ public class ModelAnvil extends JPanel
             }
             else
             {
-                renderPanel.updateModel(md);
+                renderPanel.updateModel(md, getLightingSettings());
             }
         });
     }
@@ -987,17 +987,21 @@ public class ModelAnvil extends JPanel
 
     private void onForgeButtonPressed(Client client, JTextField nameField, boolean forgeAndSet)
     {
-        CustomLighting lighting = new CustomLighting(
+        CustomLighting lighting = getLightingSettings();
+        if (lighting.getX() == 0 && lighting.getY() == 0 && lighting.getZ() == 0)
+            lighting.setZ(1);
+
+        forgeModel(client, nameField, priorityCheckBox.isSelected(), lighting, forgeAndSet);
+    }
+
+    private CustomLighting getLightingSettings()
+    {
+        return new CustomLighting(
                 (int) lightingSpinners[0].getValue(),
                 (int) lightingSpinners[1].getValue(),
                 (int) lightingSpinners[2].getValue(),
                 (int) lightingSpinners[3].getValue(),
                 (int) lightingSpinners[4].getValue());
-
-        if (lighting.getX() == 0 && lighting.getY() == 0 && lighting.getZ() == 0)
-            lighting.setZ(1);
-
-        forgeModel(client, nameField, priorityCheckBox.isSelected(), lighting, forgeAndSet);
     }
 
     private void forgeModel(Client client, JTextField nameField, boolean setPriority, CustomLighting lighting, boolean forgeAndSet)
