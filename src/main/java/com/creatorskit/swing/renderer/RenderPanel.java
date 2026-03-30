@@ -182,6 +182,16 @@ public class RenderPanel extends JPanel
         short[] c2 = new short[fc];
         short[] c3 = new short[fc];
 
+        boolean transparencyExists = false;
+        byte[] faceAlpha = new byte[fc];
+        Arrays.fill(faceAlpha, (byte) 255);
+
+        if (model.getFaceTransparencies() != null)
+        {
+            transparencyExists = true;
+            faceAlpha = Arrays.copyOf(model.getFaceTransparencies(), fc);
+        }
+
         for (int i = 0; i < fc; i++)
         {
             c1[i] = (short) col1[i];
@@ -249,6 +259,13 @@ public class RenderPanel extends JPanel
             Vector3 n2 = new Vector3(nx[vert2], ny[vert2], nz[vert2]);
             Vector3 n3 = new Vector3(nx[vert3], ny[vert3], nz[vert3]);
 
+            int alpha = 255;
+
+            if (transparencyExists)
+            {
+                alpha = 255 - (faceAlpha[i] & 0xFF);
+            }
+
             tris.add(new Triangle(
                     new Vertex(v1x, v1y, v1z, 1),
                     new Vertex(v2x, v2y, v2z, 1),
@@ -256,7 +273,8 @@ public class RenderPanel extends JPanel
                     ColourSwapPanel.colourFromShort(c1[i]),
                     ColourSwapPanel.colourFromShort(c2[i]),
                     ColourSwapPanel.colourFromShort(c3[i]),
-                    n1, n2, n3
+                    n1, n2, n3,
+                    alpha
             ));
         }
     }
@@ -496,6 +514,7 @@ class Triangle
     Vertex v1, v2, v3;
     Color c1, c2, c3;
     Vector3 n1, n2, n3;
+    int alpha;
 }
 
 class Vertex
