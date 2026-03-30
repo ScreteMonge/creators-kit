@@ -350,8 +350,9 @@ public class RenderPanel extends JPanel
             return;
         }
 
-        for (Triangle t : tris)
+        for (int i = 0; i < tris.size(); i++)
         {
+            Triangle t = tris.get(i);
             Vertex v1 = transform.transform(t.v1);
             Vertex v2 = transform.transform(t.v2);
             Vertex v3 = transform.transform(t.v3);

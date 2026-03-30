@@ -288,10 +288,13 @@ public class CacheSearcherTab extends JPanel
         Object all = "All";
         dataList.add(all);
 
-        for (int i : modelIds)
+        if (modelIds != null)
         {
-            Object e = i;
-            dataList.add(e);
+            for (int i : modelIds)
+            {
+                Object e = i;
+                dataList.add(e);
+            }
         }
 
         List<Object> list = new ArrayList<>(dataList);
