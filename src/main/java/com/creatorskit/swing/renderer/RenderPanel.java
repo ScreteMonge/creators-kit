@@ -259,6 +259,20 @@ public class RenderPanel extends JPanel
             Vector3 n2 = new Vector3(nx[vert2], ny[vert2], nz[vert2]);
             Vector3 n3 = new Vector3(nx[vert3], ny[vert3], nz[vert3]);
 
+            short fc1 = c1[i];
+            short fc2 = c2[i];
+            short fc3 = c3[i];
+
+            if (fc3 == -1)
+            {
+                fc2 = fc1;
+                fc3 = fc1;
+            }
+
+            Color color1 = ColourSwapPanel.colourFromShort(fc1);
+            Color color2 = ColourSwapPanel.colourFromShort(fc2);
+            Color color3 = ColourSwapPanel.colourFromShort(fc3);
+
             int alpha = 255;
 
             if (transparencyExists)
@@ -270,9 +284,9 @@ public class RenderPanel extends JPanel
                     new Vertex(v1x, v1y, v1z, 1),
                     new Vertex(v2x, v2y, v2z, 1),
                     new Vertex(v3x, v3y, v3z, 1),
-                    ColourSwapPanel.colourFromShort(c1[i]),
-                    ColourSwapPanel.colourFromShort(c2[i]),
-                    ColourSwapPanel.colourFromShort(c3[i]),
+                    color1,
+                    color2,
+                    color3,
                     n1, n2, n3,
                     alpha
             ));
