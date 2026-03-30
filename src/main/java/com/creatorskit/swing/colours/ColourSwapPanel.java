@@ -13,6 +13,7 @@ import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
 import org.apache.commons.lang3.ArrayUtils;
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -37,6 +38,7 @@ public class ColourSwapPanel extends JPanel
     private final BufferedImage COPY_COLOURS = ImageUtil.loadImageResource(getClass(), "/Copy_Colours.png");
     private final BufferedImage PASTE_COLOURS = ImageUtil.loadImageResource(getClass(), "/Paste_Colours.png");
     private final JColorChooser colourChooser = new JColorChooser();
+    private ColourPanel selectedPanel;
     @Getter
     private final JComboBox<ComplexPanel> comboBox = new JComboBox<>();
     @Getter
@@ -126,8 +128,14 @@ public class ColourSwapPanel extends JPanel
         colourChooser.setBorder(new LineBorder(colourChooser.getColor(), 2));
         colourChooser.getSelectionModel().addChangeListener(e ->
         {
-            colourChooser.setBorder(new LineBorder(colourChooser.getColor(), 2));
-            previewPanel.setBackground(colourChooser.getColor());
+            Color color = colourChooser.getColor();
+            colourChooser.setBorder(new LineBorder(color, 2));
+            previewPanel.setBackground(color);
+
+            if (selectedPanel != null)
+            {
+                replaceColourSwap(selectedPanel, shortFromColour(color));
+            }
         });
         add(colourChooser, c);
 
@@ -382,6 +390,8 @@ public class ColourSwapPanel extends JPanel
         colourHolder.removeAll();
         colourPanels = new ColourPanel[0];
 
+        setSelectedColourPanel(null);
+
         textureHolder.removeAll();
         texturePanels = new TexturePanel[0];
 
@@ -395,26 +405,35 @@ public class ColourSwapPanel extends JPanel
         oldColourLabel.setBorder(new LineBorder(colourFromShort(oldColour), 10));
         oldColourLabel.setBackground(ColorScheme.DARK_GRAY_COLOR);
 
-        JButton newColourButton = new JButton("" + (isColourSet ? newColour : "Set"));
-        newColourButton.setToolTipText("Swap this Old colour to the colour currently selected in the Colour Picker");
+        JButton newColourButton = new JButton("" + (isColourSet ? newColour : oldColour));
+        newColourButton.setToolTipText("Select this colour to start modifying in the Colour Picker");
         newColourButton.setFont(FontManager.getRunescapeSmallFont());
         newColourButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
         if (isColourSet)
             newColourButton.setBorder(new LineBorder(colourFromShort(newColour), 10));
 
         JPanel buttonPanel = new JPanel();
-        buttonPanel.setLayout(new GridLayout(0, 1, 0, 1));
+        buttonPanel.setLayout(new GridLayout(0, 2, 0, 1));
+
+        JButton resetButton = new JButton("Reset");
+        resetButton.setToolTipText("Clear the current swap back to its default colour");
+        buttonPanel.add(resetButton);
 
         JButton findButton = new JButton("Find");
         findButton.setToolTipText("Find the current New colour swap in the colour picker");
         buttonPanel.add(findButton);
 
+        JButton setButton = new JButton("Set");
+        setButton.setToolTipText("Set the New colour to whatever's currently displayed in the colour picker");
+        buttonPanel.add(setButton);
+
         JSpinner spinner = new JSpinner(new SpinnerNumberModel(0, -32768, 32767, 1));
         spinner.setToolTipText("Apply an exact Jagex colour as it is stored in the cache");
         buttonPanel.add(spinner);
 
-        ColourPanel colourPanel = new ColourPanel(isColourSet, oldColour, newColour, oldColourLabel, newColourButton, spinner);
+        ColourPanel colourPanel = new ColourPanel(oldColour, newColour, oldColourLabel, newColourButton, spinner);
         colourPanel.setLayout(new GridLayout(1, 0, 1, 1));
+        colourPanel.setBorder(new EmptyBorder(1, 1, 1, 1));
         colourPanel.add(oldColourLabel);
         colourPanel.add(newColourButton);
         colourPanel.add(buttonPanel);
@@ -422,33 +441,32 @@ public class ColourSwapPanel extends JPanel
         spinner.addChangeListener(e ->
         {
             short colourToAdd = (short) ((int) spinner.getValue());
-            if (colourPanel.isColourSet())
-            {
-                replaceColour(colourPanel, colourToAdd);
-                replaceColourSwap(colourPanel.getOldColour(), colourToAdd);
-                return;
-            }
-
-            setColour(colourPanel, colourToAdd);
-            addColourSwap(colourPanel.getOldColour(), colourToAdd);
+            replaceColourSwap(colourPanel, colourToAdd);
         });
+
+        resetButton.addActionListener(e -> replaceColourSwap(colourPanel, (short) -1));
         findButton.addActionListener(e -> colourChooser.setColor(colourFromShort(colourPanel.getNewColour())));
-        newColourButton.addActionListener(e ->
-        {
-            if (colourPanel.isColourSet())
-            {
-                unsetColour(colourPanel);
-                removeColourSwap(colourPanel.getOldColour());
-                return;
-            }
-
-            setColour(colourPanel, colourChooser.getColor());
-            addColourSwap(colourPanel.getOldColour(), colourPanel.getNewColour());
-        });
+        setButton.addActionListener(e -> replaceColourSwap(colourPanel, shortFromColour(colourChooser.getColor())));
+        newColourButton.addActionListener(e -> setSelectedColourPanel(colourPanel));
 
         colourHolder.add(colourPanel);
         colourPanels = ArrayUtils.add(colourPanels, colourPanel);
         return colourPanel;
+    }
+
+    private void setSelectedColourPanel(@Nullable ColourPanel panel)
+    {
+        for (int i = 0; i < colourPanels.length; i++)
+        {
+            ColourPanel cp = colourPanels[i];
+            cp.setBorder(new EmptyBorder(1, 1, 1, 1));
+        }
+
+        selectedPanel = panel;
+        if (panel != null)
+        {
+            panel.setBorder(new LineBorder(Color.WHITE, 1));
+        }
     }
 
     private void setAllColoursHere()
@@ -457,15 +475,7 @@ public class ColourSwapPanel extends JPanel
 
         for (ColourPanel colourPanel : colourPanels)
         {
-            if (colourPanel.isColourSet())
-            {
-                replaceColour(colourPanel, colour);
-                replaceColourSwap(colourPanel.getOldColour(), colour);
-                continue;
-            }
-
-            setColour(colourPanel, colour);
-            addColourSwap(colourPanel.getOldColour(), colourPanel.getNewColour());
+            replaceColourSwap(colourPanel, colour);
         }
         modelAnvil.updateRenderPanel();
     }
@@ -524,50 +534,12 @@ public class ColourSwapPanel extends JPanel
         modelAnvil.updateRenderPanel();
     }
 
-    private void setColour(ColourPanel colourPanel, Color rgbColour)
-    {
-        setColour(colourPanel, shortFromColour(rgbColour));
-    }
-
-    private void setColour(ColourPanel colourPanel, short colour)
-    {
-        JButton newColourButton = colourPanel.getNewColourButton();
-        newColourButton.setText("" + colour);
-        newColourButton.setBorder(new LineBorder(colourFromShort(colour), 10));
-        colourPanel.setNewColour(colour);
-        colourPanel.setColourSet(true);
-    }
-
-    private void unsetColour(ColourPanel colourPanel)
-    {
-        JButton newColourButton = colourPanel.getNewColourButton();
-        newColourButton.setText("Set");
-        newColourButton.setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 2));
-        colourPanel.setNewColour(colourPanel.getOldColour());
-        colourPanel.setColourSet(false);
-    }
-
-    private void replaceColour(ColourPanel colourPanel, short newColourTo)
-    {
-        JButton newColourButton = colourPanel.getNewColourButton();
-        newColourButton.setText("" + newColourTo);
-        newColourButton.setBorder(new LineBorder(colourFromShort(newColourTo), 10));
-        colourPanel.setNewColour(newColourTo);
-    }
-
     public void unsetAllColours()
     {
         for (ColourPanel colourPanel : colourPanels)
-            unsetColour(colourPanel);
+            replaceColourSwap(colourPanel, (short) -1);
 
         removeAllColourSwaps();
-        modelAnvil.updateRenderPanel();
-    }
-
-    private void addColourSwap(short colourFrom, short colourTo)
-    {
-        currentComplexPanel.setColoursFrom(ArrayUtils.add(currentComplexPanel.getColoursFrom(), colourFrom));
-        currentComplexPanel.setColoursTo(ArrayUtils.add(currentComplexPanel.getColoursTo(), colourTo));
         modelAnvil.updateRenderPanel();
     }
 
@@ -601,25 +573,57 @@ public class ColourSwapPanel extends JPanel
         modelAnvil.updateRenderPanel();
     }
 
-    private void removeColourSwap(short colourFrom)
+    private void replaceColourSwap(ColourPanel colourPanel, short newColourTo)
     {
         short[] coloursFrom = currentComplexPanel.getColoursFrom();
         short[] coloursTo = currentComplexPanel.getColoursTo();
 
+        short colourFrom = colourPanel.getOldColour();
         int index = ArrayUtils.indexOf(coloursFrom, colourFrom);
-        currentComplexPanel.setColoursFrom(ArrayUtils.remove(coloursFrom, index));
-        currentComplexPanel.setColoursTo(ArrayUtils.remove(coloursTo, index));
+
+        // Removing a swap
+        if (newColourTo == -1)
+        {
+            if (index != -1)
+            {
+                currentComplexPanel.setColoursFrom(ArrayUtils.remove(coloursFrom, index));
+                currentComplexPanel.setColoursTo(ArrayUtils.remove(coloursTo, index));
+            }
+
+            updateColourPanel(colourPanel, colourFrom);
+            modelAnvil.updateRenderPanel();
+            return;
+        }
+
+        // Adding entirely new swap
+        if (index == -1)
+        {
+            currentComplexPanel.setColoursFrom(ArrayUtils.add(currentComplexPanel.getColoursFrom(), colourFrom));
+            currentComplexPanel.setColoursTo(ArrayUtils.add(currentComplexPanel.getColoursTo(), newColourTo));
+            updateColourPanel(colourPanel, newColourTo);
+            modelAnvil.updateRenderPanel();
+            return;
+        }
+
+        // Replacing a swap
+        coloursTo[index] = newColourTo;
+        updateColourPanel(colourPanel, newColourTo);
         modelAnvil.updateRenderPanel();
     }
 
-    private void replaceColourSwap(short colourFrom, short newColourTo)
+    private void updateColourPanel(ColourPanel colourPanel, short newColourTo)
     {
-        short[] coloursFrom = currentComplexPanel.getColoursFrom();
-        short[] coloursTo = currentComplexPanel.getColoursTo();
+        JButton newColourButton = colourPanel.getNewColourButton();
+        newColourButton.setText("" + newColourTo);
+        colourPanel.setNewColour(newColourTo);
 
-        int index = ArrayUtils.indexOf(coloursFrom, colourFrom);
-        coloursTo[index] = newColourTo;
-        modelAnvil.updateRenderPanel();
+        if (newColourTo == colourPanel.getOldColour())
+        {
+            newColourButton.setBorder(new EmptyBorder(1, 1, 1, 1));
+            return;
+        }
+
+        newColourButton.setBorder(new LineBorder(colourFromShort(newColourTo), 10));
     }
 
     public void removeAllColourSwaps()

@@ -250,6 +250,11 @@ public class ModelAnvil extends JPanel
         lightYSpinner.setToolTipText("<html>Set the sun's y coordinate relative to the player<br>Range: -1000 to 1000</html>");
         lightZSpinner.setToolTipText("<html>Set the sun's z coordinate relative to the player<br>Range: -1000 to 1000</html>");
 
+        for (JSpinner spinner : lightingSpinners)
+        {
+            spinner.addChangeListener(e -> updateRenderPanel());
+        }
+
         presetComboBox.addItem(LightingStyle.DEFAULT);
         presetComboBox.addItem(LightingStyle.ACTOR);
         presetComboBox.addItem(LightingStyle.SPOTANIM);

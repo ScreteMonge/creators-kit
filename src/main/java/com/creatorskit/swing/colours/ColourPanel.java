@@ -11,7 +11,6 @@ import javax.swing.*;
 @Setter
 public class ColourPanel extends JPanel
 {
-    private boolean colourSet;
     private short oldColour;
     private short newColour;
     private JLabel oldColourLabel;
