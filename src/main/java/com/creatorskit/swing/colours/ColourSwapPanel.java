@@ -462,6 +462,12 @@ public class ColourSwapPanel extends JPanel
             cp.setBorder(new EmptyBorder(1, 1, 1, 1));
         }
 
+        if (selectedPanel == panel)
+        {
+            selectedPanel = null;
+            return;
+        }
+
         selectedPanel = panel;
         if (panel != null)
         {
