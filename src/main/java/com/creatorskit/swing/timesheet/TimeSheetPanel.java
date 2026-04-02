@@ -1082,7 +1082,6 @@ public class TimeSheetPanel extends JSplitPane
     private void setupTreeScrollPane()
     {
         treeScrollPane = new TreeScrollPane(managerTree);
-        treeScrollPane.setPreferredSize(new Dimension(614, 0));
 
         MouseWheelListener[] mouseWheelListeners = treeScrollPane.getMouseWheelListeners();
         for (int i = 0; i < mouseWheelListeners.length; i++)

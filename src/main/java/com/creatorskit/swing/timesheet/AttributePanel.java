@@ -1533,14 +1533,18 @@ public class AttributePanel extends JPanel
         duration.setModel(new SpinnerNumberModel(5.0, 0, 1000000, 0.1));
         card.add(duration, c);
 
-        c.gridwidth = 1;
+        c.gridx = 2;
+        c.gridy = 1;
+        JLabel empty = new JLabel();
+        empty.setPreferredSize(new Dimension(300, 25));
+        card.add(empty, c);
+
         c.gridx = 0;
         c.gridy = 2;
         JLabel textLabel = new JLabel("Overhead Text: ");
         textLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(textLabel, c);
 
-        c.weightx = 1;
         c.gridwidth = 2;
         c.gridx = 1;
         c.gridy = 2;
@@ -1548,6 +1552,7 @@ public class AttributePanel extends JPanel
         text.setToolTipText("The text to show overhead");
         text.setText("");
         text.setLineWrap(true);
+        text.setWrapStyleWord(true);
         card.add(text, c);
 
         c.gridwidth = 1;
