@@ -53,7 +53,7 @@ public class AttributePanel extends JPanel
     private final GridBagConstraints c = new GridBagConstraints();
     private final JPanel cardPanel = new JPanel();
     private final JLabel objectLabel = new JLabel("[No Object Selected]");
-    private final JLabel cardLabel = new JLabel("");
+    private final JComboBox<KeyFrameType> cardComboBox = new JComboBox<>();
     private final JButton keyFramed = new JButton();
 
     private final JFilterableTable npcTable = new JFilterableTable("NPCs");
@@ -137,10 +137,21 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 0;
         c.weightx = 0;
-        cardLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        cardLabel.setFont(FontManager.getRunescapeBoldFont());
-        cardLabel.setText(MOVE_CARD);
-        add(cardLabel, c);
+        cardComboBox.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        KeyFrameType[] types = KeyFrameType.ALL_KEYFRAME_TYPES;
+        for (KeyFrameType type : types)
+        {
+            cardComboBox.addItem(type);
+        }
+        cardComboBox.addActionListener(e ->
+                {
+                    if (e.getSource() instanceof JComboBox)
+                    {
+                        switchCards((KeyFrameType) cardComboBox.getSelectedItem());
+                    }
+                });
+        cardComboBox.setFont(FontManager.getRunescapeBoldFont());
+        add(cardComboBox, c);
 
         c.gridx = 2;
         c.gridy = 0;
@@ -2274,7 +2285,6 @@ public class AttributePanel extends JPanel
         String cardName = selectedKeyFramePage.getName();
         CardLayout cl = (CardLayout)(cardPanel.getLayout());
         cl.show(cardPanel, cardName);
-        cardLabel.setText(cardName);
 
         JLabel[] labels = timeSheetPanel.getLabels();
         JLabel selectedLabel;

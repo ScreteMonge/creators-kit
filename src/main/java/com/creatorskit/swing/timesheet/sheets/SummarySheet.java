@@ -122,6 +122,43 @@ public class SummarySheet extends TimeSheet
     }
 
     @Override
+    public void drawRowLabels(Graphics g)
+    {
+        ArrayList<DefaultMutableTreeNode> nodes = new ArrayList<>();
+        nodes.add(tree.getRootNode());
+        tree.getAllNodes(tree.getRootNode(), nodes);
+        int index = -2;
+
+        g.setFont(FontManager.getRunescapeFont());
+        g.setColor(ColorScheme.LIGHT_GRAY_COLOR);
+
+        FontMetrics fontMetrics = g.getFontMetrics();
+        int textHeight = fontMetrics.getHeight();
+        final int X = 5;
+
+        for (DefaultMutableTreeNode node : nodes)
+        {
+            index++;
+
+            TreePath path = tree.getPathForRow(index);
+            if (path == null)
+            {
+                continue;
+            }
+
+            if (node.getUserObject() instanceof Folder)
+            {
+                continue;
+            }
+
+            Character character = (Character) node.getUserObject();
+
+            int y = index * rowHeight - getVScroll() + rowHeight - textHeight / 2;
+            g.drawString(character.getName(), X, y);
+        }
+    }
+
+    @Override
     public void drawKeyFrames(Graphics g)
     {
         ArrayList<DefaultMutableTreeNode> nodes = new ArrayList<>();
@@ -278,7 +315,7 @@ public class SummarySheet extends TimeSheet
     }
 
     @Override
-    public void onMouseButton1DoublePressed(Point p)
+    public void updateTableSelection(Point p)
     {
         getTree().setRowSelection(p);
     }

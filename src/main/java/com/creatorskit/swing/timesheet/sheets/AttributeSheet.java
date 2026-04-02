@@ -8,6 +8,7 @@ import com.creatorskit.swing.timesheet.AttributePanel;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import lombok.Getter;
 import lombok.Setter;
+import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -34,7 +35,6 @@ public class AttributeSheet extends TimeSheet
         setIndexBuffers(0);
         setSelectedIndex(1);
         this.rowHeightOffset = 1;
-        this.rowHeight = 24;
     }
 
     @Override
@@ -60,6 +60,26 @@ public class AttributeSheet extends TimeSheet
     {
         g.setColor(Color.DARK_GRAY);
         g.fillRect(0, (getSelectedIndex() + getIndexBuffers()) * rowHeight + rowHeightOffset - getVScroll(), this.getWidth(), rowHeight);
+    }
+
+    @Override
+    public void drawRowLabels(Graphics g)
+    {
+        g.setFont(FontManager.getRunescapeFont());
+        g.setColor(ColorScheme.LIGHT_GRAY_COLOR);
+
+        FontMetrics fontMetrics = g.getFontMetrics();
+        int textHeight = fontMetrics.getHeight();
+        final int X = 5;
+        final int HEIGHT_BUFFER = 1;
+
+        KeyFrameType[] keyFrameTypes = KeyFrameType.ALL_KEYFRAME_TYPES;
+        for (int i = 0; i < keyFrameTypes.length; i++)
+        {
+            KeyFrameType type = keyFrameTypes[i];
+            int y = (i + 2) * rowHeight - textHeight / 2 + HEIGHT_BUFFER;
+            g.drawString(type.getName(), X, y);
+        }
     }
 
     @Override
@@ -439,16 +459,11 @@ public class AttributeSheet extends TimeSheet
     }
 
     @Override
-    public void checkRectangleForKeyFrames(Point point, boolean shiftKey)
+    public boolean checkRectangleForKeyFrames(Point point, boolean shiftKey)
     {
         if (getSelectedCharacter() == null)
         {
-            return;
-        }
-
-        if (!isAllowRectangleSelect())
-        {
-            return;
+            return false;
         }
 
         Point absoluteMouse = MouseInfo.getPointerInfo().getLocation();
@@ -461,7 +476,7 @@ public class AttributeSheet extends TimeSheet
 
         if (Math.abs(x1 - x2) < 10 && Math.abs(y1 - y2) < 10)
         {
-            return;
+            return false;
         }
 
         int startX;
@@ -567,5 +582,22 @@ public class AttributeSheet extends TimeSheet
         }
 
         setSelectedKeyFrames(foundKeyFrames);
+        return true;
+    }
+
+    @Override
+    public void updateTableSelection(Point p)
+    {
+        KeyFrameType[] types = KeyFrameType.ALL_KEYFRAME_TYPES;
+        int y = (int) p.getY();
+        final int ROW_BUFFER = 1;
+
+        int row = y / rowHeight - ROW_BUFFER;
+        if (row > types.length)
+        {
+            return;
+        }
+
+        attributePanel.switchCards(types[row]);
     }
 }

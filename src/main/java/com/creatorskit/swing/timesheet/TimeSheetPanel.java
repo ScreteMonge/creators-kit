@@ -31,6 +31,7 @@ import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.config.ConfigManager;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
@@ -51,14 +52,14 @@ import java.util.ArrayList;
 
 @Getter
 @Setter
-public class TimeSheetPanel extends JPanel
+public class TimeSheetPanel extends JSplitPane
 {
     private Client client;
     private ClientThread clientThread;
     private final CreatorsPlugin plugin;
     private final CreatorsConfig config;
+    private final ConfigManager configManager;
 
-    private final GridBagConstraints c = new GridBagConstraints();
     private final ToolBoxFrame toolBox;
     private final DataFinder dataFinder;
     private SummarySheet summarySheet;
@@ -67,6 +68,8 @@ public class TimeSheetPanel extends JPanel
     private final ManagerTree managerTree;
     private MovementManager movementManager;
 
+    private JSplitPane leftSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, true);
+    private JSplitPane rightSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, true);
     private final JComboBox<KeyFrameType> summaryComboBox = new JComboBox<>();
     private final JSpinner timeSpinner = new JSpinner();
     private boolean triggerTimeSpinnerChange = true;
@@ -109,18 +112,18 @@ public class TimeSheetPanel extends JPanel
     private int undoStack = 0;
 
     @Inject
-    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, CreatorsConfig config, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, MovementManager movementManager)
+    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, CreatorsConfig config, ConfigManager configManager, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, MovementManager movementManager)
     {
         this.client = client;
         this.toolBox = toolBox;
         this.plugin = plugin;
         this.config = config;
+        this.configManager = configManager;
         this.clientThread = clientThread;
         this.dataFinder = dataFinder;
         this.managerTree = managerTree;
         this.movementManager = movementManager;
 
-        setLayout(new GridBagLayout());
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
         setupTreeScrollPane();
@@ -129,7 +132,7 @@ public class TimeSheetPanel extends JPanel
         setupAttributeSheet();
         setupScrollBar();
         setupTimeTreeListener();
-        setupManager();
+        setupLayout();
         setKeyBindings();
         setMouseListeners();
     }
@@ -1126,6 +1129,7 @@ public class TimeSheetPanel extends JPanel
         controlPanel.setLayout(new GridBagLayout());
         controlPanel.setFocusable(true);
 
+        GridBagConstraints c = new GridBagConstraints();
         c.fill = GridBagConstraints.BOTH;
         c.insets = new Insets(2, 2, 2, 2);
 
@@ -1551,70 +1555,88 @@ public class TimeSheetPanel extends JPanel
         attributePanel.switchCards(KeyFrameType.getKeyFrameType(index).toString());
     }
 
-    private void setupManager()
+    private void setupLayout()
     {
-        c.fill = GridBagConstraints.BOTH;
-        c.insets = new Insets(2, 2, 2, 2);
+        setOrientation(JSplitPane.HORIZONTAL_SPLIT);
+        setContinuousLayout(true);
 
-        c.gridwidth = 2;
-        c.gridheight = 2;
-        c.weightx = 0;
-        c.weighty = 5;
-        c.gridx = 0;
-        c.gridy = 0;
-        add(treeScrollPane, c);
+        leftSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, true);
+        rightSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, true);
+        leftSplitPane.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        rightSplitPane.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        add(leftSplitPane, JSplitPane.LEFT);
+        add(rightSplitPane, JSplitPane.RIGHT);
 
-        c.gridheight = 1;
-        c.gridwidth = 1;
-        c.weightx = 0;
-        c.weighty = 0;
-        c.gridx = 2;
-        c.gridy = 0;
+        JPanel summaryPanel = new JPanel(new BorderLayout());
+        summaryPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         JLabel summaryLabel = new JLabel("Summary");
+        summaryLabel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         summaryLabel.setFont(FontManager.getRunescapeBoldFont());
-        summaryLabel.setBorder(new EmptyBorder(1, 2, 2, 2));
-        add(summaryLabel, c);
+        summaryLabel.setBorder(new EmptyBorder(4, 2, 3, 2));
+        summaryPanel.add(summaryLabel, BorderLayout.NORTH);
+        summaryPanel.add(summarySheet, BorderLayout.CENTER);
 
-        c.gridheight = 1;
-        c.gridwidth = 1;
-        c.weightx = 8;
-        c.weighty = 5;
-        c.gridx = 2;
-        c.gridy = 1;
-        add(summarySheet, c);
+        JPanel attributeControls = new JPanel(new BorderLayout());
+        attributeControls.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        JPanel scrollControls = new JPanel(new BorderLayout());
+        scrollControls.add(scrollBar, BorderLayout.NORTH);
+        scrollControls.add(controlPanel, BorderLayout.CENTER);
+        attributeControls.add(scrollControls, BorderLayout.NORTH);
+        attributeControls.add(attributeSheet, BorderLayout.CENTER);
 
-        c.gridheight = 1;
-        c.weightx = 0;
-        c.weighty = 0;
-        c.gridx = 2;
-        c.gridy = 2;
-        add(scrollBar, c);
+        leftSplitPane.add(treeScrollPane);
+        leftSplitPane.add(attributePanel);
+        rightSplitPane.add(summaryPanel);
+        rightSplitPane.add(attributeControls);
+        initializeDimensions();
+    }
 
-        c.weightx = 0;
-        c.weighty = 0;
-        c.gridx = 2;
-        c.gridy = 3;
-        add(controlPanel, c);
+    private void initializeDimensions()
+    {
+        int horizontalSplit = 700;
+        int verticalLeftSplit = 600;
+        int verticalRightSplit = 600;
+        String summaryConfig = configManager.getConfiguration("creatorssuite", "timesheetsplit");
+        if (summaryConfig != null)
+        {
+            String[] dimensions = summaryConfig.split(",");
+            horizontalSplit = Integer.parseInt(dimensions[0]);
+            verticalLeftSplit = Integer.parseInt(dimensions[1]);
+            verticalRightSplit = Integer.parseInt(dimensions[2]);
+        }
 
-        c.gridheight = 3;
-        c.weightx = 0;
-        c.weighty = 0;
-        c.gridx = 0;
-        c.gridy = 2;
-        add(attributePanel, c);
+        setDividerLocation(horizontalSplit + getInsets().left);
+        leftSplitPane.setDividerLocation(verticalLeftSplit + getInsets().bottom);
+        rightSplitPane.setDividerLocation(verticalRightSplit + getInsets().bottom);
 
-        c.gridheight = 1;
-        c.weightx = 0;
-        c.weighty = 0;
-        c.gridx = 1;
-        c.gridy = 4;
-        add(labelScrollPane, c);
+        addPropertyChangeListener("dividerLocation", e -> updateDividerDimensions());
+        leftSplitPane.addPropertyChangeListener("dividerLocation", e -> updateDividerDimensions());
+        rightSplitPane.addPropertyChangeListener("dividerLocation", e -> updateDividerDimensions());
+    }
 
-        c.weightx = 8;
-        c.weighty = 0;
-        c.gridx = 2;
-        c.gridy = 4;
-        add(attributeSheet, c);
+    public void updateDividerDimensions()
+    {
+        int horizontalSplit = getLastDividerLocation();
+        int verticalLeftSplit = leftSplitPane.getLastDividerLocation();
+        int verticalRightSplit = rightSplitPane.getLastDividerLocation();
+
+        if (horizontalSplit == -1)
+        {
+            horizontalSplit = getDividerLocation();
+        }
+
+        if (verticalLeftSplit == -1)
+        {
+            verticalLeftSplit = leftSplitPane.getDividerLocation();
+        }
+
+        if (verticalRightSplit == -1)
+        {
+            verticalRightSplit = rightSplitPane.getDividerLocation();
+        }
+
+        String dividerDimensions = horizontalSplit + "," + verticalLeftSplit + "," + verticalRightSplit;
+        configManager.setConfiguration("creatorssuite", "timesheetsplit", dividerDimensions);
     }
 
     private void updateSheets()
