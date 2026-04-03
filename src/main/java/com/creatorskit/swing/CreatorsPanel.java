@@ -257,7 +257,7 @@ public class CreatorsPanel extends PluginPanel
                               boolean transplant,
                               boolean setHoveredLocation)
     {
-        JPanel objectPanel = new JPanel();
+        ObjectPanel objectPanel = new ObjectPanel();
         objectPanel.setLayout(new GridBagLayout());
 
         JTextField textField = new JTextField(name);
@@ -534,7 +534,7 @@ public class CreatorsPanel extends PluginPanel
                 modelButton.setText("Id");
                 modelSpinner.setVisible(true);
                 modelComboBox.setVisible(false);
-                plugin.setModel(character, false, (int) modelSpinner.getValue());
+                character.setToBaseModel(client, clientThread, false, (int) modelSpinner.getValue());
             }
             else
             {
@@ -542,14 +542,14 @@ public class CreatorsPanel extends PluginPanel
                 modelButton.setText("Custom");
                 modelSpinner.setVisible(false);
                 modelComboBox.setVisible(true);
-                plugin.setModel(character, true, -1);
+                character.setToBaseModel(client, clientThread, true, -1);
             }
         });
 
         modelSpinner.addChangeListener(e ->
         {
             int modelNumber = (int) modelSpinner.getValue();
-            plugin.setModel(character, false, modelNumber);
+            character.setToBaseModel(client, clientThread, false, modelNumber);
         });
 
         modelComboBox.addItemListener(e ->
@@ -557,7 +557,7 @@ public class CreatorsPanel extends PluginPanel
             CustomModel m = (CustomModel) modelComboBox.getSelectedItem();
             character.setStoredModel(m);
             if (modelComboBox.isVisible() && character == plugin.getSelectedCharacter())
-                plugin.setModel(character, true, -1);
+                character.setToBaseModel(client, clientThread, true, -1);
         });
 
         orientationSpinner.addChangeListener(e ->
@@ -1164,7 +1164,7 @@ public class CreatorsPanel extends PluginPanel
             }
 
             selectedCharacter.setStoredModel(model);
-            plugin.setModel(selectedCharacter, true, -1);
+            selectedCharacter.setToBaseModel(client, clientThread, true, -1);
         }
     }
 

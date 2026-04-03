@@ -2,6 +2,7 @@ package com.creatorskit;
 
 import com.creatorskit.models.CustomModel;
 import com.creatorskit.programming.AnimationType;
+import com.creatorskit.swing.ObjectPanel;
 import com.creatorskit.swing.ParentPanel;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.*;
@@ -11,6 +12,7 @@ import lombok.Setter;
 import net.runelite.api.Animation;
 import net.runelite.api.Client;
 import net.runelite.api.Constants;
+import net.runelite.api.Model;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.callback.ClientThread;
@@ -43,7 +45,7 @@ public class Character
     private boolean inPOH;
     private CustomModel storedModel;
     private ParentPanel parentPanel;
-    private JPanel objectPanel;
+    private ObjectPanel objectPanel;
     private boolean customMode;
     private JTextField nameField;
     private JComboBox<CustomModel> comboBox;
@@ -151,6 +153,34 @@ public class Character
         {
             spotAnim2.setLocation(lp, plane);
         }
+    }
+
+    public void resetToBaseModel(Client client, ClientThread clientThread)
+    {
+        setToBaseModel(client, clientThread, customMode, (int) modelSpinner.getValue());
+    }
+
+    public void setToBaseModel(Client client, ClientThread clientThread, boolean modelMode, int modelId)
+    {
+        if (ckObject == null)
+        {
+            return;
+        }
+
+        clientThread.invokeLater(() -> {
+            Model model;
+            if (modelMode)
+            {
+                model = storedModel == null ? client.loadModel(29757) : storedModel.getModel();
+            }
+            else
+            {
+                model = client.loadModel(modelId);
+            }
+
+            ckObject.setModel(model);
+            objectPanel.updateImage(model);
+        });
     }
 
     public void setAnimation(ClientThread clientThread, Client client, Random random, AnimationType type, int animId, int animFrame, boolean randomizeStartFrame, boolean allowPause)

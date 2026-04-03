@@ -1394,7 +1394,7 @@ public class Programmer
 
         if (modelKeyFrame == null)
         {
-            plugin.setModel(character, character.isCustomMode(), (int) character.getModelSpinner().getValue());
+            character.resetToBaseModel(client, clientThread);
             ckObject.setRadius((int) character.getRadiusSpinner().getValue());
             return;
         }

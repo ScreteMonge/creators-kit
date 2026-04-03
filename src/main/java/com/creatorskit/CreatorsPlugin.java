@@ -131,7 +131,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private Random random = new Random();
 	private Model previewArrow;
 	private CustomModel transmogModel;
-	private final int GOLDEN_CHIN = 29757;
 	private int savedRegion = -1;
 	private int savedPlane = -1;
 	private AutoRotate autoRotateYaw = AutoRotate.OFF;
@@ -720,28 +719,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		return creatorsPanel.getToolBox().getTimeSheetPanel().getCurrentTime();
 	}
 
-	public void setModel(Character character, boolean modelMode, int modelId)
-	{
-		CKObject ckObject = character.getCkObject();
-		if (ckObject == null)
-		{
-			return;
-		}
-
-		clientThread.invokeLater(() -> {
-			if (modelMode)
-			{
-				CustomModel customModel = character.getStoredModel();
-				Model model = customModel == null ? client.loadModel(GOLDEN_CHIN) : customModel.getModel();
-				ckObject.setModel(model);
-				return;
-			}
-
-			Model model = client.loadModel(modelId);
-			ckObject.setModel(model);
-		});
-	}
-
 	public void setRadius(Character character, int radius)
 	{
 		CKObject ckObject = character.getCkObject();
@@ -781,7 +758,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			boolean active = character.isActive();
 
-			setModel(character, character.isCustomMode(), (int) character.getModelSpinner().getValue());
+			character.resetToBaseModel(client, clientThread);
 			character.setAnimation(client, random, AnimationType.ACTIVE, (int) character.getAnimationSpinner().getValue(), (int) character.getAnimationFrameSpinner().getValue(), config.randomizeStartFrame(), true);
 
 			LocationOption locationOption = setHoveredTile ? LocationOption.TO_HOVERED_TILE : LocationOption.TO_SAVED_LOCATION;
