@@ -104,6 +104,11 @@ public class RenderPanel extends JPanel
     @Subscribe
     public void onPostClientTick(PostClientTick event)
     {
+        if (!isShowing())
+        {
+            return;
+        }
+
         if (!modelExists || ac.getAnimation() == null || !enableAnimations)
         {
             return;
