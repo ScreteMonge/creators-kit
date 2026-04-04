@@ -687,6 +687,13 @@ public class ManagerTree extends JTree
         int y = (int) p.getY();
         int row = getClosestRowForLocation(x, y);
 
+        Rectangle rect = getRowBounds(row);
+
+        if (!rect.contains(rect.getX(), y))
+        {
+            return;
+        }
+
         TreePath path = getPathForRow(row);
         if (path == null)
         {
@@ -701,6 +708,13 @@ public class ManagerTree extends JTree
         int x = (int) p.getX();
         int y = (int) p.getY();
         int row = getClosestRowForLocation(x, y);
+
+        Rectangle rect = getRowBounds(row);
+
+        if (!rect.contains(rect.getX(), y))
+        {
+            return;
+        }
 
         TreePath path = getPathForRow(row);
         if (path == null)

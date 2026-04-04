@@ -1,14 +1,22 @@
 package com.creatorskit.swing.timesheet.sheets;
 
+import com.creatorskit.CKObject;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsConfig;
+import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.swing.manager.Folder;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
+import com.creatorskit.swing.renderer.RenderPosition;
+import com.creatorskit.swing.renderer.RenderUtilities;
+import com.creatorskit.swing.renderer.Triangle;
 import com.creatorskit.swing.timesheet.AttributePanel;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import lombok.Getter;
 import lombok.Setter;
+import net.runelite.api.Model;
+import net.runelite.api.events.PostClientTick;
+import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 
@@ -16,6 +24,7 @@ import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 
 @Getter
@@ -30,6 +39,12 @@ public class SummarySheet extends TimeSheet
     private JLabel popupTitle;
     private JMenu[] menuItems;
     private final int FONT_SPACER = 9;
+
+    private BufferedImage img;
+    private ArrayList<Triangle> tris;
+    private int orientation;
+
+    private static final int PITCH = -25;
 
     public SummarySheet(ToolBoxFrame toolBox, CreatorsConfig config, ManagerTree tree, AttributePanel attributePanel)
     {
@@ -108,6 +123,31 @@ public class SummarySheet extends TimeSheet
         }
     }
 
+    @Subscribe
+    public void onPostClientTick(PostClientTick event)
+    {
+        if (!isShowing())
+        {
+            return;
+        }
+
+        Character character = getSelectedCharacter();
+        if (character == null)
+        {
+            tris = new ArrayList<>();
+            return;
+        }
+
+        CKObject ckObject = character.getCkObject();
+        if (ckObject == null)
+        {
+            tris = new ArrayList<>();
+            return;
+        }
+
+        updateModelParameters(ckObject);
+    }
+
     @Override
     public void drawHighlight(Graphics g)
     {
@@ -119,6 +159,30 @@ public class SummarySheet extends TimeSheet
         }
 
         g.fillRect(0, selectedIndex * rowHeight - rowHeightOffset - getVScroll(), this.getWidth(), rowHeight);
+    }
+
+    public void updateModelParameters(CKObject ckObject)
+    {
+        Model model = ckObject.getModel();
+
+        if (model == null)
+        {
+            return;
+        }
+
+        tris = RenderUtilities.buildTriangleList(model);
+        orientation = ckObject.getOrientation();
+    }
+
+    @Override
+    public void draw3DPreview(Graphics g)
+    {
+        double heightScale = (double) getHeight() / 25;
+        int fov = (int) (120 + heightScale);
+        int heading = -Orientation.jAngleToDegrees(orientation);
+        img = RenderUtilities.render(img, tris, heading, PITCH, 0, 0, 500, getWidth(), getHeight(), RenderPosition.SOUTHEAST, fov);
+        RenderUtilities.overrideAlpha(img, (byte) 200);
+        g.drawImage(img, 0, 0, null);
     }
 
     @Override

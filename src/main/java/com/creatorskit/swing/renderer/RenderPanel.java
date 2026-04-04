@@ -180,7 +180,7 @@ public class RenderPanel extends JPanel
             return;
         }
 
-        img = RenderUtilities.render(img, tris, heading, pitch, x, y, z, getWidth(), getHeight(), fovSlider.getValue());
+        img = RenderUtilities.render(img, tris, heading, pitch, x, y, z, getWidth(), getHeight(), RenderPosition.CENTER, fovSlider.getValue());
         g2.drawImage(img, 0, 0, null);
     }
 

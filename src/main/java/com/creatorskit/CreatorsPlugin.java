@@ -158,6 +158,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		ToolBoxFrame toolBox = creatorsPanel.getToolBox();
 
 		eventBus.register(toolBox.getProgrammer());
+		eventBus.register(toolBox.getTimeSheetPanel().getSummarySheet());
 		eventBus.register(toolBox.getTransmogPanel());
 		eventBus.register(toolBox.getCacheSearcher().getRenderPanel());
 
@@ -273,6 +274,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		ToolBoxFrame toolBox = creatorsPanel.getToolBox();
 		eventBus.unregister(toolBox.getProgrammer());
+		eventBus.unregister(toolBox.getTimeSheetPanel().getSummarySheet());
 		eventBus.unregister(toolBox.getTransmogPanel());
 		eventBus.unregister(toolBox.getCacheSearcher().getRenderPanel());
 		toolBox.dispose();

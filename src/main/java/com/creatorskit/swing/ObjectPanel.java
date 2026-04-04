@@ -1,5 +1,6 @@
 package com.creatorskit.swing;
 
+import com.creatorskit.swing.renderer.RenderPosition;
 import com.creatorskit.swing.renderer.RenderUtilities;
 import com.creatorskit.swing.renderer.Triangle;
 import lombok.Setter;
@@ -17,6 +18,8 @@ public class ObjectPanel extends JPanel
     private static final int HEADING = -35;
     private static final int PITCH = -15;
     private static final int FOV_DEFAULT = 150;
+    private final int WIDTH_DEFAULT = 227;
+    private final int HEIGHT_DEFAULT = 157;
 
     private BufferedImage image;
 
@@ -32,6 +35,14 @@ public class ObjectPanel extends JPanel
 
     public void updateImage(Model model)
     {
+        int width = getWidth();
+        int height = getHeight();
+        if (getWidth() <= 0 || getHeight() <= 0)
+        {
+            width = WIDTH_DEFAULT;
+            height = HEIGHT_DEFAULT;
+        }
+
         if (model == null)
         {
             return;
@@ -56,14 +67,14 @@ public class ObjectPanel extends JPanel
 
         double xAvg = (maxX - minX) / 2;
         double yAvg = (maxY - minY) / 2;
-        final int ZOOM_FACTOR = 15;
-        double zoom = Math.max(xAvg, yAvg) * ZOOM_FACTOR;
+        final int Z_FACTOR = 20;
+        double z = Math.max(xAvg, yAvg) * Z_FACTOR;
 
         double xTranslate = xAvg + minX;
         double yTranslate = yAvg + minY;
 
         ArrayList<Triangle> tris = RenderUtilities.buildTriangleList(model);
-        image = RenderUtilities.render(image, tris, HEADING, PITCH, xTranslate, yTranslate, zoom, getWidth(), getHeight(), FOV_DEFAULT);
+        image = RenderUtilities.render(image, tris, HEADING, PITCH, xTranslate, yTranslate, z, width, height, RenderPosition.CENTER, FOV_DEFAULT);
         RenderUtilities.overrideAlpha(image, (byte) 175);
         repaint();
     }

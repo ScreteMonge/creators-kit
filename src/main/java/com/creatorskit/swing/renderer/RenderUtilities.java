@@ -12,7 +12,7 @@ public class RenderUtilities
 {
     private static final int ROLL = 0;
 
-    public static BufferedImage render(BufferedImage img, ArrayList<Triangle> tris, double heading, double pitch, double x, double y, double z, double viewportWidth, double viewportHeight, int fov)
+    public static BufferedImage render(BufferedImage img, ArrayList<Triangle> tris, double heading, double pitch, double x, double y, double z, double viewportWidth, double viewportHeight, RenderPosition renderPosition, int fov)
     {
         double convertedHeading = Math.toRadians(heading);
         Matrix4 headingTransform = new Matrix4(new double[] {
@@ -88,12 +88,14 @@ public class RenderUtilities
             v3.x = v3.x / (-v3.z) * fovAdjusted;
             v3.y = v3.y / (-v3.z) * fovAdjusted;
 
-            v1.x += viewportWidth / 2;
-            v1.y += viewportHeight / 2;
-            v2.x += viewportWidth / 2;
-            v2.y += viewportHeight / 2;
-            v3.x += viewportWidth / 2;
-            v3.y += viewportHeight / 2;
+            double positionFactor = renderPosition == RenderPosition.CENTER ? 0.5 : 0.8;
+
+            v1.x += viewportWidth * positionFactor;
+            v1.y += viewportHeight * positionFactor;
+            v2.x += viewportWidth * positionFactor;
+            v2.y += viewportHeight * positionFactor;
+            v3.x += viewportWidth * positionFactor;
+            v3.y += viewportHeight * positionFactor;
 
             double ax = v2.x - v1.x;
             double ay = v2.y - v1.y;
