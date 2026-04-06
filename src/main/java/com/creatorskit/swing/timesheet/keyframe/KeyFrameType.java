@@ -21,7 +21,8 @@ public enum KeyFrameType
     HITSPLAT_1("Hitsplat 1","H1"),
     HITSPLAT_2("Hitsplat 2","H2"),
     HITSPLAT_3("Hitsplat 3","H3"),
-    HITSPLAT_4("Hitsplat 4","H4");
+    HITSPLAT_4("Hitsplat 4","H4"),
+    PROJECTILE("Projectile", "P");
 
     private final String name;
     private final String shortHand;
@@ -45,7 +46,8 @@ public enum KeyFrameType
             HITSPLAT_1,
             HITSPLAT_2,
             HITSPLAT_3,
-            HITSPLAT_4
+            HITSPLAT_4,
+            PROJECTILE
     };
 
     public static final KeyFrameType[] HITSPLAT_TYPES = new KeyFrameType[]{KeyFrameType.HITSPLAT_1, KeyFrameType.HITSPLAT_2, KeyFrameType.HITSPLAT_3, KeyFrameType.HITSPLAT_4};
@@ -84,6 +86,8 @@ public enum KeyFrameType
                 return 12;
             case HITSPLAT_4:
                 return 13;
+            case PROJECTILE:
+                return 14;
         }
     }
 
@@ -120,12 +124,14 @@ public enum KeyFrameType
                 return HITSPLAT_3;
             case 13:
                 return HITSPLAT_4;
+            case 14:
+                return PROJECTILE;
         }
     }
 
     public static int getTotalFrameTypes()
     {
-        return 14;
+        return 15;
     }
 
     public static KeyFrameType[] createDefaultSummary()

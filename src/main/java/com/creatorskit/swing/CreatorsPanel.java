@@ -3,12 +3,9 @@ package com.creatorskit.swing;
 import com.creatorskit.CKObject;
 import com.creatorskit.CreatorsConfig;
 import com.creatorskit.programming.AnimationType;
-import com.creatorskit.saves.CharacterSave;
+import com.creatorskit.saves.*;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.Character;
-import com.creatorskit.saves.FolderNodeSave;
-import com.creatorskit.saves.ModelKeyFrameSave;
-import com.creatorskit.saves.SetupSave;
 import com.creatorskit.models.*;
 import com.creatorskit.swing.anvil.ModelAnvil;
 import com.creatorskit.swing.manager.Folder;
@@ -1403,6 +1400,16 @@ public class CreatorsPanel extends PluginPanel
         return keyFrames;
     }
 
+    private ProjectileKeyFrameSave[] saveProjectileKeyFrames(ProjectileKeyFrame[] keyFrames)
+    {
+        return new ProjectileKeyFrameSave[0];//change
+    }
+
+    private ProjectileKeyFrame[] loadProjectileKeyFrames(ProjectileKeyFrame[] keyFrames)
+    {
+        return new ProjectileKeyFrame[0];//change
+    }
+
     private CharacterSave createCharacterSave(Character character, CustomModelComp[] comps)
     {
         String name = character.getName();
@@ -1434,6 +1441,7 @@ public class CreatorsPanel extends PluginPanel
         int frame = (int) character.getAnimationFrameSpinner().getValue();
         int rgb = character.getColor().getRGB();
         ModelKeyFrameSave[] modelKeyFrameSaves = saveModelKeyFrames(character.getModelKeyFrames(), comps);
+        ProjectileKeyFrameSave[] projectileKeyFrameSaves = saveProjectileKeyFrames(character.getProjectileKeyFrames());
 
         SpotAnimKeyFrame[][] spotAnimKeyFrames = new SpotAnimKeyFrame[][]
                 {
@@ -1474,6 +1482,7 @@ public class CreatorsPanel extends PluginPanel
                 character.getHealthKeyFrames(),
                 spotAnimKeyFrames,
                 hitsplatKeyFrames,
+                projectileKeyFrameSaves,
                 character.getSummary());
     }
 

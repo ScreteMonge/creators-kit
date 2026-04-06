@@ -36,5 +36,6 @@ public class CharacterSave
     private HealthKeyFrame[] healthKeyFrames;
     private SpotAnimKeyFrame[][] spotanimKeyFrames;
     private HitsplatKeyFrame[][] hitsplatKeyFrames;
+    private ProjectileKeyFrameSave[] projectileKeyFrames;
     private KeyFrameType[] summary;
 }

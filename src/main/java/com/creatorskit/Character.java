@@ -851,6 +851,27 @@ public class Character
         return keyFrame;
     }
 
+    public ProjectileKeyFrame[] getProjectileKeyFrames()
+    {
+        KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.PROJECTILE);
+        if (keyFrames == null)
+        {
+            return null;
+        }
+
+        ProjectileKeyFrame[] keyFrame = new ProjectileKeyFrame[keyFrames.length];
+        for (int i = 0; i < keyFrames.length; i++)
+        {
+            keyFrame[i] = (ProjectileKeyFrame) keyFrames[i];
+        }
+
+        if (Arrays.stream(keyFrame).allMatch(Objects::isNull))
+        {
+            return null;
+        }
+
+        return keyFrame;
+    }
 
     public void toggleActive(ClientThread clientThread)
     {
