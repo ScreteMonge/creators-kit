@@ -1,5 +1,6 @@
 package com.creatorskit;
 
+import com.creatorskit.models.*;
 import com.creatorskit.programming.AnimationType;
 import com.creatorskit.programming.CKAnimationController;
 import lombok.Getter;
@@ -7,6 +8,7 @@ import lombok.Setter;
 import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
 
+import javax.annotation.Nullable;
 import java.util.Random;
 
 @Getter
@@ -14,7 +16,8 @@ import java.util.Random;
 public class CKObject extends RuneLiteObjectController
 {
     private final Client client;
-    private Model baseModel;
+    private CKModel baseModel;
+    private ModelMode modelMode;
     private boolean freeze;
     private boolean playing;
     private boolean hasAnimKeyFrame;
@@ -29,11 +32,6 @@ public class CKObject extends RuneLiteObjectController
     }
 
     private int startCycle;
-
-    public void setModel(Model baseModel)
-    {
-        this.baseModel = baseModel;
-    }
 
     @Override
     public void setLocation(LocalPoint point, int level)
@@ -168,21 +166,53 @@ public class CKObject extends RuneLiteObjectController
         }
     }
 
+    public void setModel(int id)
+    {
+
+    }
+
+    public void setModel(@Nullable CKModel model)
+    {
+        if (model == null)
+        {
+            CKModelComposition comp = new CKModelComposition(
+                    "Default",
+                    client.loadModel(29757),
+                    29757,
+                    8,
+                    new int[0],
+                    new short[0],
+                    new short[0],
+                    new short[0],
+                    new short[0],
+                    false,
+                    false,
+                    new CustomLighting(LightingStyle.ACTOR),
+                    0,
+                    0,
+                    0,
+                    128,
+                    128,
+                    128,
+                    0
+            );
+
+            baseModel = new CKModel(
+                    "Default",
+                    new CKModelComposition[]{comp},
+                    CustomModelType.CACHE_NPC,
+                    null
+            );
+            return;
+        }
+
+        this.baseModel = model;
+    }
+
     @Override
     public Model getModel()
     {
-        if (animationController != null)
-        {
-            return animationController.animate(this.baseModel, this.poseAnimationController);
-        }
-        else if (poseAnimationController != null)
-        {
-            return poseAnimationController.animate(this.baseModel);
-        }
-        else
-        {
-            return baseModel;
-        }
+        return baseModel.getModel(client, animationController, poseAnimationController);
     }
 
     public boolean isFinished()

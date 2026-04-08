@@ -1,5 +1,6 @@
 package com.creatorskit;
 
+import com.creatorskit.models.CKModel;
 import com.creatorskit.models.CustomModel;
 import com.creatorskit.programming.AnimationType;
 import com.creatorskit.swing.ObjectPanel;
@@ -43,7 +44,7 @@ public class Character
     private LocalPoint instancedPoint;
     private int instancedPlane;
     private boolean inPOH;
-    private CustomModel storedModel;
+    private CKModel storedModel;
     private ParentPanel parentPanel;
     private ObjectPanel objectPanel;
     private boolean customMode;
@@ -168,10 +169,10 @@ public class Character
         }
 
         clientThread.invokeLater(() -> {
-            Model model;
+            CKModel model;
             if (modelMode)
             {
-                model = storedModel == null ? client.loadModel(29757) : storedModel.getModel();
+                model = storedModel == null ? client.loadModel(29757) : storedModel;
             }
             else
             {
@@ -179,7 +180,7 @@ public class Character
             }
 
             ckObject.setModel(model);
-            objectPanel.updateImage(model);
+            objectPanel.updateImage(model.getBaseModel(client));
         });
     }
 

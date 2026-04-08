@@ -14,4 +14,13 @@ public class CustomLighting
     private int x;
     private int y;
     private int z;
+
+    public CustomLighting(LightingStyle ls)
+    {
+        this.ambient = ls.getAmbient();
+        this.contrast = ls.getContrast();
+        this.x = ls.getX();
+        this.y = ls.getY();
+        this.z = ls.getZ();
+    }
 }
