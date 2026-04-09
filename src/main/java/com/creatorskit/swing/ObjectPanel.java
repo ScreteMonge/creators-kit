@@ -3,7 +3,6 @@ package com.creatorskit.swing;
 import com.creatorskit.swing.renderer.RenderPosition;
 import com.creatorskit.swing.renderer.RenderUtilities;
 import com.creatorskit.swing.renderer.Triangle;
-import lombok.Setter;
 import net.runelite.api.Model;
 
 import javax.swing.*;
@@ -12,7 +11,6 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-@Setter
 public class ObjectPanel extends JPanel
 {
     private static final int HEADING = -35;

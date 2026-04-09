@@ -90,6 +90,7 @@ public class TimeSheet extends JPanel
         vScroll = scroll;
     }
 
+    @Override
     public void paintComponent(Graphics g)
     {
         super.paintComponent(g);
@@ -107,7 +108,6 @@ public class TimeSheet extends JPanel
         drawTimeIndicator(g2);
         drawPreviewTimeIndicator(g2);
         drawRowLabels(g2);
-        revalidate();
         repaint();
     }
 
