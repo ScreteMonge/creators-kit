@@ -27,4 +27,22 @@ public enum LightingStyle
     {
         return string;
     }
+
+    public static LightingStyle getCompatibleLightingStyle(CustomLighting cl)
+    {
+        LightingStyle[] styles = new LightingStyle[]{DEFAULT, ACTOR, SPOTANIM, DYNAMIC, NONE};
+        for (LightingStyle ls : styles)
+        {
+            if (ls.getAmbient() == cl.getAmbient()
+                && ls.getContrast() == cl.getContrast()
+                && ls.getX() == cl.getX()
+                && ls.getY() == cl.getY()
+                && ls.getZ() == cl.getZ())
+            {
+                return ls;
+            }
+        }
+
+        return LightingStyle.CUSTOM;
+    }
 }

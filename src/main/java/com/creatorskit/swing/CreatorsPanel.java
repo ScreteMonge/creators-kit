@@ -75,7 +75,7 @@ public class CreatorsPanel extends PluginPanel
     private final Pattern pattern = Pattern.compile("\\(\\d+\\)\\Z");
     private int npcPanels = 0;
     private ArrayList<Character> sidePanelCharacters = new ArrayList<>();
-    private final ArrayList<JComboBox<CustomModel>> comboBoxes = new ArrayList<>();
+    private final ArrayList<JComboBox<CKModel>> comboBoxes = new ArrayList<>();
     private final BufferedImage SWITCH = ImageUtil.loadImageResource(getClass(), "/Switch.png");
     private final BufferedImage DUPLICATE = ImageUtil.loadImageResource(getClass(), "/Duplicate.png");
     private final BufferedImage CLOSE = ImageUtil.loadImageResource(getClass(), "/Close.png");
@@ -343,13 +343,13 @@ public class CreatorsPanel extends PluginPanel
         modelSpinner.setValue(modelId);
         modelSpinner.setVisible(!customModeActive);
 
-        JComboBox<CustomModel> modelComboBox = new JComboBox<>();
+        JComboBox<CKModel> modelComboBox = new JComboBox<>();
         modelComboBox.setPreferredSize(topButtonsPanelSize);
         modelComboBox.setMaximumSize(topButtonsPanelSize);
         modelComboBox.setMinimumSize(topButtonsPanelSize);
         modelComboBox.setFont(FontManager.getRunescapeFont());
         modelComboBox.setVisible(customModeActive);
-        for (CustomModel model : plugin.getStoredModels())
+        for (CKModel model : plugin.getStoredModels())
         {
             modelComboBox.addItem(model);
         }
@@ -456,7 +456,7 @@ public class CreatorsPanel extends PluginPanel
                 localPoint,
                 plane,
                 inPOH,
-                (CustomModel) modelComboBox.getSelectedItem(),
+                (CKModel) modelComboBox.getSelectedItem(),
                 parentPanel,
                 objectPanel,
                 customModeActive,
@@ -1130,7 +1130,7 @@ public class CreatorsPanel extends PluginPanel
         jPanel.setBorder(defaultBorder);
     }
 
-    public void addModelOption(CustomModel model, boolean setComboBox)
+    public void addModelOption(CKModel model, boolean setComboBox)
     {
         modelOrganizer.createModelPanel(model);
         Character selectedCharacter = plugin.getSelectedCharacter();
@@ -1168,7 +1168,7 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
-    public void removeModelOption(CustomModel model)
+    public void removeModelOption(CKModel model)
     {
         toolBox.getTimeSheetPanel()
                 .getAttributePanel()
@@ -1176,7 +1176,7 @@ public class CreatorsPanel extends PluginPanel
                 .getCustomModel()
                 .removeItem(model);
 
-        for (JComboBox<CustomModel> comboBox : comboBoxes)
+        for (JComboBox<CKModel> comboBox : comboBoxes)
         {
             comboBox.removeItem(model);
         }
@@ -1284,18 +1284,18 @@ public class CreatorsPanel extends PluginPanel
 
     public void saveToFile(File file)
     {
-        ArrayList<CustomModel> customModels = plugin.getStoredModels();
-        CustomModelComp[] comps = new CustomModelComp[customModels.size()];
+        ArrayList<CKModel> ckModels = plugin.getStoredModels();
+        CKModelComposition[][] comps = new CKModelComposition[ckModels.size()][];
 
         for (int i = 0; i < comps.length; i++)
         {
-            comps[i] = customModels.get(i).getComp();
+            comps[i] = ckModels.get(i).getModelComps();
         }
 
         //Get Folder structure and all characters contained within
         FolderNodeSave folderNodeSave = getFolders(comps);
 
-        SetupSave saveFile = new SetupSave(getPluginVersion(), comps, folderNodeSave, new CharacterSave[0]);
+        SetupSave saveFile = new SetupSave(getPluginVersion(), comps, null, folderNodeSave, new CharacterSave[0]);
 
         try
         {
@@ -1313,14 +1313,14 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
-    public FolderNodeSave getFolders(CustomModelComp[] comps)
+    public FolderNodeSave getFolders(CKModelComposition[][] comps)
     {
         FolderNodeSave folderNodeSave = new FolderNodeSave(FolderType.MASTER, "Master Panel", new CharacterSave[0], new FolderNodeSave[0]);
         getFolderChildren(folderNodeSave, toolBox.getManagerPanel().getManagerTree().getRootNode(), comps);
         return folderNodeSave;
     }
 
-    public void getFolderChildren(FolderNodeSave parentNodeSave, DefaultMutableTreeNode parent, CustomModelComp[] comps)
+    public void getFolderChildren(FolderNodeSave parentNodeSave, DefaultMutableTreeNode parent, CKModelComposition[][] comps)
     {
         Enumeration<TreeNode> children = parent.children();
         while (children.hasMoreElements())
@@ -1347,7 +1347,7 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
-    private ModelKeyFrameSave[] saveModelKeyFrames(ModelKeyFrame[] keyFrames, CustomModelComp[] comps)
+    private ModelKeyFrameSave[] saveModelKeyFrames(ModelKeyFrame[] keyFrames, CKModelComposition[][] comps)
     {
         if (keyFrames == null)
         {
@@ -1358,7 +1358,7 @@ public class CreatorsPanel extends PluginPanel
         for (int i = 0; i < keyFrames.length; i++)
         {
             ModelKeyFrame keyFrame = keyFrames[i];
-            CustomModel storedModel = keyFrame.getCustomModel();
+            CKModel storedModel = keyFrame.getCkModel();
 
             if (storedModel == null)
             {
@@ -1370,8 +1370,8 @@ public class CreatorsPanel extends PluginPanel
 
             for (int e = 0; e < comps.length; e++)
             {
-                CustomModelComp comp = comps[e];
-                if (storedModel.getComp() == comp)
+                CKModelComposition[] comp = comps[e];
+                if (storedModel.getModelComps() == comp)
                 {
                     compId = e;
                     break;
@@ -1384,6 +1384,7 @@ public class CreatorsPanel extends PluginPanel
         return saves;
     }
 
+    @Deprecated
     private ModelKeyFrame[] loadModelKeyFrames(ModelKeyFrameSave[] saves, CustomModel[] customModels)
     {
         ModelKeyFrame[] keyFrames = new ModelKeyFrame[saves.length];
@@ -1403,7 +1404,7 @@ public class CreatorsPanel extends PluginPanel
         return keyFrames;
     }
 
-    private CharacterSave createCharacterSave(Character character, CustomModelComp[] comps)
+    private CharacterSave createCharacterSave(Character character, CKModelComposition[][] comps)
     {
         String name = character.getName();
         WorldPoint savedWorldPoint = character.getNonInstancedPoint();
@@ -1411,13 +1412,13 @@ public class CreatorsPanel extends PluginPanel
         int localPointPlane = character.getInstancedPlane();
         boolean inPOH = character.isInPOH();
         int compId = 0;
-        CustomModel storedModel = character.getStoredModel();
+        CKModel storedModel = character.getStoredModel();
         if (storedModel != null)
         {
             for (int e = 0; e < comps.length; e++)
             {
-                CustomModelComp comp = comps[e];
-                if (storedModel.getComp() == comp)
+                CKModelComposition[] comp = comps[e];
+                if (storedModel.getModelComps() == comp)
                 {
                     compId = e;
                     break;
@@ -1609,7 +1610,7 @@ public class CreatorsPanel extends PluginPanel
                     customModel = new CustomModel(model, comp);
             }
 
-            modelUtilities.addCustomModel(customModel, false);
+            modelUtilities.addCKModel(customModel, false);
             customModels[i] = customModel;
         }
 

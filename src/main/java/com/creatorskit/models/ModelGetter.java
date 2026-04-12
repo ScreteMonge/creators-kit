@@ -558,7 +558,7 @@ public class ModelGetter
                 int anim = dataFinder.getLastAnim();
                 Model model = modelData.light(lighting.getAmbient(), lighting.getContrast(), lighting.getX(), lighting.getZ() * -1, lighting.getY());
                 CustomModel customModel = new CustomModel(model, comp);
-                modelUtilities.addCustomModel(customModel, false);
+                modelUtilities.addCKModel(customModel, false);
                 plugin.sendChatMessage("Model stored: " + name + "; Anim: " + anim + "; Ambient/Contrast: " + lighting.getAmbient() + "/" + lighting.getContrast());
                 CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
 
@@ -1607,7 +1607,7 @@ public class ModelGetter
         CustomLighting lighting = new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getY(), ls.getZ());
         CustomModelComp comp = new CustomModelComp(0, customModelType, 7699, modelStats, kitRecolours, null, null, ls, lighting, false, name);
         CustomModel customModel = new CustomModel(model, comp);
-        modelUtilities.addCustomModel(customModel, false);
+        modelUtilities.addCKModel(customModel, false);
         plugin.sendChatMessage("Model stored: " + name);
         CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
 

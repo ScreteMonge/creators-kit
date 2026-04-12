@@ -3,15 +3,12 @@ package com.creatorskit.swing;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
-import com.creatorskit.CKObject;
 import com.creatorskit.models.ModelImporter;
 import com.creatorskit.models.*;
 import com.creatorskit.models.exporters.ModelExporter;
-import com.creatorskit.programming.AnimationType;
 import com.creatorskit.swing.timesheet.keyframe.ModelKeyFrame;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
-import net.runelite.api.coords.LocalPoint;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
@@ -51,7 +48,7 @@ public class ModelOrganizer extends JPanel
     private final BufferedImage TRANSMOG = ImageUtil.loadImageResource(getClass(), "/Transmog.png");
     private final BufferedImage EXPORT = ImageUtil.loadImageResource(getClass(), "/Export.png");
     private final Dimension buttonDimension = new Dimension(30, 25);
-    private final HashMap<CustomModel, JPanel> panelMap = new HashMap<>();
+    private final HashMap<CKModel, JPanel> panelMap = new HashMap<>();
     private final JPanel modelPanel = new JPanel();
     private final GridBagConstraints c = new GridBagConstraints();
     public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
@@ -182,7 +179,7 @@ public class ModelOrganizer extends JPanel
                     for (int f = 0; f < modelKeyFrames.length; f++)
                     {
                         ModelKeyFrame keyFrame = modelKeyFrames[f];
-                        if (keyFrame.isUseCustomModel() && keyFrame.getCustomModel() == customModel)
+                        if (keyFrame.isUseCustomModel() && keyFrame.getCkModel() == customModel)
                         {
                             isBeingUsed = true;
                             break;
@@ -200,13 +197,13 @@ public class ModelOrganizer extends JPanel
             }
 
             for (CustomModel customModel : unusedModels)
-                modelUtilities.removeCustomModel(customModel);
+                modelUtilities.removeCKModel(customModel);
         });
 
         revalidate();
     }
 
-    public void createModelPanel(CustomModel model)
+    public void createModelPanel(CKModel model)
     {
         JPanel panel = new JPanel();
         panel.setLayout(new GridBagLayout());
@@ -226,7 +223,7 @@ public class ModelOrganizer extends JPanel
         c.gridx = 0;
         c.gridy = 0;
         JTextField textField = new JTextField();
-        textField.setText(model.getComp().getName());
+        textField.setText(model.getName());
         textField.setHorizontalAlignment(SwingConstants.CENTER);
         panel.add(textField, c);
         panelMap.put(model, panel);
@@ -234,7 +231,7 @@ public class ModelOrganizer extends JPanel
         {
             String text = StringHandler.cleanString(textField.getText());
             textField.setText(text);
-            model.getComp().setName(text);
+            model.setName(text);
             modelUtilities.updatePanelComboBoxes();
             transmogPanel.getTransmogLabel().setText(text);
         });
@@ -247,7 +244,7 @@ public class ModelOrganizer extends JPanel
             public void focusLost(FocusEvent e) {
                 String text = StringHandler.cleanString(textField.getText());
                 textField.setText(text);
-                model.getComp().setName(text);
+                model.setName(text);
             }
         });
 
@@ -259,14 +256,14 @@ public class ModelOrganizer extends JPanel
         JButton deleteButton = new JButton(new ImageIcon(CLEAR));
         deleteButton.setPreferredSize(buttonDimension);
         deleteButton.setToolTipText("Remove this model from all Objects and dropdown menus");
-        deleteButton.addActionListener(e -> modelUtilities.removeCustomModel(model));
+        deleteButton.addActionListener(e -> modelUtilities.removeCKModel(model));
         buttonsPanel.add(deleteButton);
 
         JButton anvilButton = new JButton(new ImageIcon(ANVIL));
         anvilButton.setPreferredSize(buttonDimension);
         anvilButton.setToolTipText("Send this model to the Anvil");
         buttonsPanel.add(anvilButton);
-        anvilButton.addActionListener(e -> modelUtilities.customModelToAnvil(model));
+        anvilButton.addActionListener(e -> modelUtilities.ckModelToAnvil(model));
 
         JButton saveButton = new JButton(new ImageIcon(SAVE));
         saveButton.setPreferredSize(buttonDimension);
@@ -288,7 +285,7 @@ public class ModelOrganizer extends JPanel
         {
             clientThread.invokeLater(() ->
             {
-                String name = model.getComp().getName();
+                String name = model.getName();
                 BlenderModel blenderModel = modelExporter.bmFromCustomModel(model);
                 modelExporter.saveToFile(name, blenderModel);
             });
@@ -298,7 +295,7 @@ public class ModelOrganizer extends JPanel
         repaint();
     }
 
-    public void removeModelPanel(CustomModel model)
+    public void removeModelPanel(CKModel model)
     {
         JPanel panel = panelMap.get(model);
         modelPanel.remove(panel);
@@ -371,7 +368,7 @@ public class ModelOrganizer extends JPanel
         return string.substring(0, lastIndex) + tail;
     }
 
-    private void openSaveDialog(CustomModel customModel, String name)
+    private void openSaveDialog(CKModel ckModel, String name)
     {
         File outputDir = MODELS_DIR;
         outputDir.mkdirs();
@@ -421,22 +418,16 @@ public class ModelOrganizer extends JPanel
             {
                 selectedFile = new File(selectedFile.getPath() + ".json");
             }
-            saveToFile(selectedFile, customModel);
+            saveToFile(selectedFile, ckModel);
         }
     }
 
-    public void saveToFile(File file, CustomModel customModel)
+    public void saveToFile(File file, CKModel ckModel)
     {
         try {
             FileWriter writer = new FileWriter(file, false);
 
-            CustomModelComp comp = customModel.getComp();
-            DetailedModel[] detailedModels = comp.getDetailedModels();
-            if (detailedModels == null)
-            {
-                detailedModels = modelToDetailedPanels(customModel);
-                comp.setDetailedModels(detailedModels);
-            }
+            CKModelComposition[] comp = ckModel.getModelComps();
 
             String string = plugin.getGson().toJson(comp);
             writer.write(string);
@@ -444,7 +435,7 @@ public class ModelOrganizer extends JPanel
         }
         catch (IOException e)
         {
-            log.debug("Error when saving Custom Model to file");
+            log.debug("Error when saving CKModel to file");
         }
     }
 

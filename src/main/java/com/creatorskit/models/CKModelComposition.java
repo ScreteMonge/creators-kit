@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.Model;
 
+import javax.annotation.Nullable;
+
 @AllArgsConstructor
 @Getter
 @Setter
@@ -14,14 +16,11 @@ public class CKModelComposition
     private Model model;
     private int modelId;
     private int groupId;
-    private int[] kitRecolours;
     private short[] coloursFrom;
     private short[] coloursTo;
     private short[] texturesFrom;
     private short[] texturesTo;
     private boolean invertFaces;
-    private boolean overridePriority;
-    private CustomLighting customLighting;
 
     private int tx;
     private int ty;

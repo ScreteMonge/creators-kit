@@ -311,7 +311,6 @@ public class ModelUtilities
                         0, 0, tz,
                         rx, ry, rz,
                         0,
-                        "", "",
                         itemRecolourFrom, itemRecolourTo,
                         textFrom, textTo,
                         false);
@@ -393,7 +392,7 @@ public class ModelUtilities
             {
                 Model model = constructModelFromCache(modelStats, new int[0], false, LightingStyle.CUSTOM, lighting);
                 CustomModel customModel = new CustomModel(model, comp);
-                addCustomModel(customModel, false);
+                addCKModel(customModel, false);
                 sendChatMessage("Model stored: " + name);
 
                 if (addObject)
@@ -501,9 +500,9 @@ public class ModelUtilities
         return client.mergeModels(mds);
     }
 
-    public void customModelToAnvil(CustomModel customModel)
+    public void ckModelToAnvil(CKModel ckModel)
     {
-        if (customModel.getComp().getType() == CustomModelType.BLENDER)
+        if (ckModel.getType() == CustomModelType.BLENDER)
         {
             sendChatMessage("Blender models cannot currently be used in the Anvil.");
             return;
@@ -513,46 +512,23 @@ public class ModelUtilities
 
         SwingUtilities.invokeLater(() ->
         {
-            CustomModelComp comp = customModel.getComp();
-            sendChatMessage("Model sent to Anvil: " + comp.getName());
+            CKModelComposition[] comps = ckModel.getModelComps();
+            sendChatMessage("Model sent to Anvil: " + ckModel.getName());
 
-            CustomLighting cl;
-            LightingStyle lightingStyle = comp.getLightingStyle();
-            if (lightingStyle == LightingStyle.CUSTOM)
-            {
-                cl = comp.getCustomLighting();
-            }
-            else
-            {
-                cl = new CustomLighting(
-                        lightingStyle.getAmbient(),
-                        lightingStyle.getContrast(),
-                        lightingStyle.getX(),
-                        lightingStyle.getY(),
-                        lightingStyle.getZ());
-            }
+            CustomLighting cl = ckModel.getCustomLighting();
+            LightingStyle ls = LightingStyle.getCompatibleLightingStyle(cl);
 
             modelAnvil.setLightingSettings(
-                    comp.getLightingStyle(),
+                    ls,
                     cl.getAmbient(),
                     cl.getContrast(),
                     cl.getX(),
                     cl.getY(),
                     cl.getZ());
 
-            modelAnvil.getPriorityCheckBox().setSelected(comp.isPriority());
-            modelAnvil.getNameField().setText(comp.getName());
-
-            if (comp.getModelStats() == null)
-            {
-                DetailedModel[] detailedModels = comp.getDetailedModels();
-                for (DetailedModel detailedModel : detailedModels)
-                    modelAnvil.createComplexPanel(detailedModel);
-
-                return;
-            }
-
-            cacheToAnvil(comp.getModelStats(), comp.getKitRecolours(), comp.getType());
+            modelAnvil.getPriorityCheckBox().setSelected(ckModel.isPriority());
+            modelAnvil.getNameField().setText(ckModel.getName());
+            modelAnvil.createComplexPanels(comps);
         });
     }
 
@@ -563,43 +539,121 @@ public class ModelUtilities
         try
         {
             Reader reader = Files.newBufferedReader(file.toPath());
-            CustomModelComp comp = gson.fromJson(reader, CustomModelComp.class);
+            CKModel ckModel = gson.fromJson(reader, CKModel.class);
+            CKModelComposition[] comps = ckModel.getModelComps();
 
             SwingUtilities.invokeLater(() ->
             {
-                for (DetailedModel detailedModel : comp.getDetailedModels())
-                {
-                    modelAnvil.createComplexPanel(detailedModel);
-                }
-
+                modelAnvil.createComplexPanels(comps);
                 modelAnvil.updateRenderPanel();
             });
 
-            LightingStyle ls = comp.getLightingStyle();
-            CustomLighting cl = comp.getCustomLighting();
-            if (cl == null)
-                cl = new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getY(), ls.getZ());
+            CustomLighting cl = ckModel.getCustomLighting();
+            LightingStyle ls = LightingStyle.getCompatibleLightingStyle(cl);
 
             modelAnvil.setLightingSettings(
-                    comp.getLightingStyle(),
+                    ls,
                     cl.getAmbient(),
                     cl.getContrast(),
                     cl.getX(),
                     cl.getY(),
                     cl.getZ());
 
-            modelAnvil.getPriorityCheckBox().setSelected(comp.isPriority());
-            modelAnvil.getNameField().setText(comp.getName());
+            modelAnvil.getPriorityCheckBox().setSelected(ckModel.isPriority());
+            modelAnvil.getNameField().setText(ckModel.getName());
+            reader.close();
+        }
+        catch (Exception e)
+        {
+            try
+            {
+                Reader reader = Files.newBufferedReader(file.toPath());
+                CustomModelComp cmc = gson.fromJson(reader, CustomModelComp.class);
+                CKModelComposition[] comps = customToCKModelComp(cmc);
+
+                SwingUtilities.invokeLater(() ->
+                {
+                    modelAnvil.createComplexPanels(comps);
+                    modelAnvil.updateRenderPanel();
+                });
+
+                LightingStyle ls = cmc.getLightingStyle();
+                CustomLighting cl = cmc.getCustomLighting();
+                if (cl == null)
+                    cl = new CustomLighting(ls);
+
+                LightingStyle lightingStyle = LightingStyle.getCompatibleLightingStyle(cl);
+
+                modelAnvil.setLightingSettings(
+                        lightingStyle,
+                        cl.getAmbient(),
+                        cl.getContrast(),
+                        cl.getX(),
+                        cl.getY(),
+                        cl.getZ());
+
+                modelAnvil.getPriorityCheckBox().setSelected(cmc.isPriority());
+                modelAnvil.getNameField().setText(cmc.getName());
+                reader.close();
+            }
+            catch (Exception f)
+            {
+                sendChatMessage("Failed to load this CKModel file.");
+            }
+        }
+    }
+
+    public CKModelComposition[] customToCKModelComp(CustomModelComp cmc)
+    {
+        DetailedModel[] detailedModels = cmc.getDetailedModels();
+        CKModelComposition[] comps = new CKModelComposition[detailedModels.length];
+        for (int i = 0; i < detailedModels.length; i++)
+        {
+            DetailedModel dm = detailedModels[i];
+
+            comps[i] = new CKModelComposition(
+                    dm.getName(),
+                    client.loadModel(dm.getModelId()),
+                    dm.getModelId(),
+                    dm.getGroup(),
+                    dm.getColoursFrom(),
+                    dm.getColoursTo(),
+                    dm.getTexturesFrom(),
+                    dm.getTexturesTo(),
+                    dm.isInvertFaces(),
+                    dm.getXTile() * 128 + dm.getXTranslate(),
+                    dm.getYTile() * 128 + dm.getYTranslate(),
+                    dm.getZTile() * 128 + dm.getZTranslate(),
+                    dm.getXScale(), dm.getYScale(), dm.getZScale(),
+                    dm.getRotate() * 90
+            );
+        }
+
+        return comps;
+    }
+
+    public void loadCustomModel(File file)
+    {
+        try
+        {
+            Reader reader = Files.newBufferedReader(file.toPath());
+            CKModel ckModel = gson.fromJson(reader, CKModel.class);
+            clientThread.invokeLater(() ->
+            {
+                CustomLighting cl = ckModel.getCustomLighting();
+                LightingStyle ls = LightingStyle.getCompatibleLightingStyle(cl);
+
+                Model model = createComplexModel(ckModel.getDetailedModels(), ckModel.isPriority(), ckModel.getLightingStyle(), cl, true);
+                CustomModel customModel = new CustomModel(model, ckModel);
+                addCKModel(customModel, false);
+            });
             reader.close();
         }
         catch (Exception e)
         {
             sendChatMessage("Failed to load this Saved Model file.");
         }
-    }
 
-    public void loadCustomModel(File file)
-    {
         try
         {
             Reader reader = Files.newBufferedReader(file.toPath());
@@ -613,7 +667,7 @@ public class ModelUtilities
 
                 Model model = createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle(), cl, true);
                 CustomModel customModel = new CustomModel(model, comp);
-                addCustomModel(customModel, false);
+                addCKModel(customModel, false);
             });
             reader.close();
         }
@@ -671,7 +725,7 @@ public class ModelUtilities
                         cl = new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getY(), ls.getZ());
                     Model model = createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle(), cl, false);
                     CustomModel customModel = new CustomModel(model, comp);
-                    addCustomModel(customModel, false);
+                    addCKModel(customModel, false);
                     transmogPanel.setTransmog(customModel);
                 });
             }
@@ -682,23 +736,23 @@ public class ModelUtilities
         }
     }
 
-    public void addCustomModel(CustomModel customModel, boolean setComboBox)
+    public void addCKModel(CKModel ckModel, boolean setComboBox)
     {
-        SwingUtilities.invokeLater(() -> plugin.getCreatorsPanel().addModelOption(customModel, setComboBox));
-        plugin.getStoredModels().add(customModel);
+        SwingUtilities.invokeLater(() -> plugin.getCreatorsPanel().addModelOption(ckModel, setComboBox));
+        plugin.getStoredModels().add(ckModel);
     }
 
-    public void removeCustomModel(CustomModel customModel)
+    public void removeCKModel(CKModel ckModel)
     {
-        plugin.getCreatorsPanel().removeModelOption(customModel);
-        plugin.getStoredModels().remove(customModel);
+        plugin.getCreatorsPanel().removeModelOption(ckModel);
+        plugin.getStoredModels().remove(ckModel);
     }
 
     public void updatePanelComboBoxes()
     {
         SwingUtilities.invokeLater(() ->
         {
-            for (JComboBox<CustomModel> comboBox : plugin.getCreatorsPanel().getComboBoxes())
+            for (JComboBox<CKModel> comboBox : plugin.getCreatorsPanel().getComboBoxes())
                 comboBox.updateUI();
         });
     }

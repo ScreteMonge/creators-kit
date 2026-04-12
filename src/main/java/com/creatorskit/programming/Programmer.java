@@ -1403,7 +1403,7 @@ public class Programmer
 
         if (modelKeyFrame.isUseCustomModel())
         {
-            CustomModel customModel = modelKeyFrame.getCustomModel();
+            CustomModel customModel = modelKeyFrame.getCkModel();
             if (customModel == null)
             {
                 clientThread.invokeLater(() -> ckObject.setModel(client.loadModel(GOLDEN_CHIN)));

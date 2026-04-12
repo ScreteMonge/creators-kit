@@ -201,7 +201,7 @@ public class ModelImporter
 
         CustomModelComp comp = new CustomModelComp(0, CustomModelType.BLENDER, -1, null, null, null, blenderModel, lightingStyle, lighting, false, name);
         CustomModel customModel = new CustomModel(model, comp);
-        modelUtilities.addCustomModel(customModel, false);
+        modelUtilities.addCKModel(customModel, false);
     }
 
     public Model createModel(BlenderModel blenderModel, LightingStyle lightingStyle)

@@ -123,7 +123,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private NavigationButton navigationButton;
 	private boolean overlaysActive = false;
 	private final ArrayList<Character> characters = new ArrayList<>();
-	private final ArrayList<CustomModel> storedModels = new ArrayList<>();
+	private final ArrayList<CKModel> storedModels = new ArrayList<>();
 	private Character selectedCharacter;
 	private Character hoveredCharacter;
 	private CKObject transmog;
@@ -869,30 +869,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			orientation = ckObject.getOrientation();
 		}
 
-		Model model;
-		if (mousePressed && previewArrow != null && allowArrow)
-		{
-			model = previewArrow;
-		}
-		else
-		{
-			if (selectedCharacter.isCustomMode())
-			{
-				if (selectedCharacter.getStoredModel() == null)
-				{
-					model = client.loadModel(29757);
-				}
-				else
-				{
-					model = selectedCharacter.getStoredModel().getModel();
-				}
-			}
-			else
-			{
-				model = client.loadModel((int) selectedCharacter.getModelSpinner().getValue());
-			}
-		}
-
 		LocalPoint lp;
 		if (mousePressed)
 		{
@@ -926,7 +902,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			animId = ckObject.getAnimationId();
 		}
 
-		previewObject.setModel(model);
+		previewObject.setModel(ckObject.getBaseModel());
 		previewObject.setOrientation(orientation);
 		previewObject.setAnimation(AnimationType.ACTIVE, animId);
 		previewObject.setAnimationFrame(AnimationType.ACTIVE, ckObject.getAnimationFrame(AnimationType.ACTIVE), random, false,true);

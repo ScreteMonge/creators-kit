@@ -2,6 +2,7 @@ package com.creatorskit;
 
 import com.creatorskit.models.CKModel;
 import com.creatorskit.models.CustomModel;
+import com.creatorskit.models.ModelMode;
 import com.creatorskit.programming.AnimationType;
 import com.creatorskit.swing.ObjectPanel;
 import com.creatorskit.swing.ParentPanel;
@@ -169,18 +170,16 @@ public class Character
         }
 
         clientThread.invokeLater(() -> {
-            CKModel model;
-            if (modelMode)
+            if (modelMode && storedModel != null)
             {
-                model = storedModel == null ? client.loadModel(29757) : storedModel;
+                ckObject.setModel(storedModel);
             }
             else
             {
-                model = client.loadModel(modelId);
+                ckObject.setModel(modelId);
             }
 
-            ckObject.setModel(model);
-            objectPanel.updateImage(model.getBaseModel(client));
+            objectPanel.updateImage(ckObject.getBaseModel().getBaseModel(client));
         });
     }
 

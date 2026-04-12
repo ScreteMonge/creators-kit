@@ -16,6 +16,8 @@ public class CKModel
     private CKModelComposition[] modelComps;
     private CustomModelType type;
     private BlenderModel blenderModel;
+    private CustomLighting customLighting;
+    private boolean priority;
 
     public Model getBaseModel(Client client)
     {

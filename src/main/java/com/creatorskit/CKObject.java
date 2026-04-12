@@ -166,12 +166,46 @@ public class CKObject extends RuneLiteObjectController
         }
     }
 
-    public void setModel(int id)
+    public CKModel setModel(int id)
     {
+        if (id == -1)
+        {
+            id = 29757;
+        }
 
+        CKModelComposition comp = new CKModelComposition(
+                "" + id,
+                client.loadModel(id),
+                29757,
+                0,
+                new int[0],
+                new short[0],
+                new short[0],
+                new short[0],
+                new short[0],
+                false,
+                0,
+                0,
+                0,
+                128,
+                128,
+                128,
+                0
+        );
+
+        baseModel = new CKModel(
+                "" + id,
+                new CKModelComposition[]{comp},
+                CustomModelType.CACHE_OBJECT,
+                null,
+                new CustomLighting(LightingStyle.DEFAULT),
+                false
+        );
+
+        return baseModel;
     }
 
-    public void setModel(@Nullable CKModel model)
+    public CKModel setModel(@Nullable CKModel model)
     {
         if (model == null)
         {
@@ -186,8 +220,6 @@ public class CKObject extends RuneLiteObjectController
                     new short[0],
                     new short[0],
                     false,
-                    false,
-                    new CustomLighting(LightingStyle.ACTOR),
                     0,
                     0,
                     0,
@@ -201,12 +233,15 @@ public class CKObject extends RuneLiteObjectController
                     "Default",
                     new CKModelComposition[]{comp},
                     CustomModelType.CACHE_NPC,
-                    null
+                    null,
+                    new CustomLighting(LightingStyle.ACTOR),
+                    false
             );
-            return;
+            return baseModel;
         }
 
         this.baseModel = model;
+        return baseModel;
     }
 
     @Override

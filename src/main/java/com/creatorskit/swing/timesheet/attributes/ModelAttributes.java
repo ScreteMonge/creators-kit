@@ -1,9 +1,7 @@
 package com.creatorskit.swing.timesheet.attributes;
 
 import com.creatorskit.models.CustomModel;
-import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrameState;
 import com.creatorskit.swing.timesheet.keyframe.ModelKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.settings.ModelToggle;
 import lombok.Getter;
@@ -31,7 +29,7 @@ public class ModelAttributes extends Attributes
         ModelKeyFrame kf = (ModelKeyFrame) keyFrame;
         modelId.setValue(kf.getModelId());
         modelOverride.setSelectedItem(kf.isUseCustomModel() ? ModelToggle.CUSTOM_MODEL : ModelToggle.MODEL_ID);
-        customModel.setSelectedItem(kf.getCustomModel());
+        customModel.setSelectedItem(kf.getCkModel());
         radius.setValue(kf.getRadius());
     }
 

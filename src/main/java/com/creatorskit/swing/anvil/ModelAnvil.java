@@ -430,8 +430,6 @@ public class ModelAnvil extends JPanel
                 128,
                 128,
                 0,
-                "",
-                "",
                 new short[0],
                 new short[0],
                 new short[0],
@@ -439,29 +437,42 @@ public class ModelAnvil extends JPanel
                 false);
     }
 
-    public void createComplexPanel(DetailedModel dm)
+    public void createComplexPanels(CKModelComposition[] comps)
     {
-        createComplexPanel(
-                dm.getName(),
-                dm.getModelId(),
-                dm.getGroup(),
-                dm.getXTile(),
-                dm.getYTile(),
-                dm.getZTile(),
-                dm.getXTranslate(),
-                dm.getYTranslate(),
-                dm.getZTranslate(),
-                dm.getXScale(),
-                dm.getYScale(),
-                dm.getZScale(),
-                dm.getRotate(),
-                dm.getRecolourNew(),
-                dm.getRecolourOld(),
-                dm.getColoursFrom(),
-                dm.getColoursTo(),
-                dm.getTexturesFrom(),
-                dm.getTexturesTo(),
-                dm.isInvertFaces());
+        for (CKModelComposition comp : comps)
+        {
+            int subTileX = comp.getTx();
+            int subTileY = comp.getTy();
+            int subTileZ = comp.getTz();
+
+            int tileX = subTileX % 128;
+            int tileY = subTileY % 128;
+            int tileZ = subTileZ % 128;
+
+            subTileX = subTileX - (tileX * 128);
+            subTileY = subTileY - (tileY * 128);
+            subTileZ = subTileZ - (tileZ * 128);
+
+            createComplexPanel(
+                    comp.getName(),
+                    comp.getModelId(),
+                    comp.getGroupId(),
+                    tileX,
+                    tileY,
+                    tileZ,
+                    subTileX,
+                    subTileY,
+                    subTileZ,
+                    comp.getSx(),
+                    comp.getSy(),
+                    comp.getSz(),
+                    comp.getRotate(),
+                    comp.getColoursFrom(),
+                    comp.getColoursTo(),
+                    comp.getTexturesFrom(),
+                    comp.getTexturesTo(),
+                    comp.isInvertFaces());
+        }
     }
 
     public void createComplexPanel(
@@ -478,8 +489,6 @@ public class ModelAnvil extends JPanel
             int scaleY,
             int scaleZ,
             int rotate,
-            String newColours,
-            String oldColours,
             short[] coloursFrom,
             short[] coloursTo,
             short[] texturesFrom,
@@ -502,12 +511,6 @@ public class ModelAnvil extends JPanel
         JCheckBox check180 = new JCheckBox();
         JCheckBox check270 = new JCheckBox();
         JCheckBox checkInvertFaces = new JCheckBox();
-
-        if (coloursFrom == null)
-            coloursFrom = stringToShort(oldColours);
-
-        if (coloursTo == null)
-            coloursTo = stringToShort(newColours);
 
         if (texturesFrom == null)
             texturesFrom = new short[0];
@@ -1030,7 +1033,7 @@ public class ModelAnvil extends JPanel
 
             CustomModelComp comp = new CustomModelComp(plugin.getStoredModels().size(), CustomModelType.FORGED, -1, null, null, detailedModels, null, LightingStyle.CUSTOM, lighting, setPriority, nameField.getText());
             CustomModel customModel = new CustomModel(model, comp);
-            modelUtilities.addCustomModel(customModel, forgeAndSet);
+            modelUtilities.addCKModel(customModel, forgeAndSet);
         });
     }
 
