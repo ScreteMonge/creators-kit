@@ -24,7 +24,7 @@ dependencies {
 }
 
 group = 'com.creatorssuite'
-version = '2.1.18'
+version = '2.1.19'
 sourceCompatibility = '1.9'
 
 tasks.withType(JavaCompile) {

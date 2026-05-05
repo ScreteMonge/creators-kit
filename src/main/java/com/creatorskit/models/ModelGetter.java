@@ -423,7 +423,7 @@ public class ModelGetter
 
                     clientThread.invokeLater(() ->
                     {
-                        initiateAnimationExport(finalAnimId, name, bm, modelStats, new int[0], false, LightingStyle.ACTOR, null);
+                        initiateAnimationExport(finalAnimId, name, bm, modelStats, new int[0], false, CustomLighting.fromLightingStyle(LightingStyle.ACTOR));
                     });
                 });
                 thread.start();
@@ -518,7 +518,7 @@ public class ModelGetter
 
                     if (exportAnimation)
                     {
-                        initiateAnimationExport(finalAnimId, name, bm, modelStats, new int[0], false, LightingStyle.ACTOR, null);
+                        initiateAnimationExport(finalAnimId, name, bm, modelStats, new int[0], false, CustomLighting.fromLightingStyle(LightingStyle.ACTOR));
                     }
                     else
                     {
@@ -546,7 +546,7 @@ public class ModelGetter
             clientThread.invokeLater(() ->
             {
                 CustomLighting lighting = modelStats[0].getLighting();
-                CustomModelComp comp = new CustomModelComp(0, CustomModelType.CACHE_SPOTANIM, spotAnim.getId(), modelStats, null, null, null, LightingStyle.CUSTOM, lighting, false, name);
+                CustomModelComp comp = new CustomModelComp(CustomModelType.CACHE_SPOTANIM, spotAnim.getId(), modelStats, null, null, null, lighting, false, name);
 
                 ModelData modelData = client.loadModelData(modelStats[0].getModelId()).cloneColors().cloneVertices();
                 short[] recolFrom = modelStats[0].getRecolourFrom();
@@ -845,7 +845,7 @@ public class ModelGetter
                     ModelStats[] modelStats = dataFinder.findModelsForPlayer(false, comp.getGender() == 0, items, finalAnimId, fSpotAnims);
                     clientThread.invokeLater(() ->
                     {
-                        initiateAnimationExport(finalAnimId, finalName, bm, modelStats, comp.getColors(), true, LightingStyle.ACTOR, null);
+                        initiateAnimationExport(finalAnimId, finalName, bm, modelStats, comp.getColors(), true, CustomLighting.fromLightingStyle(LightingStyle.ACTOR));
                     });
                 });
                 thread.start();
@@ -879,7 +879,7 @@ public class ModelGetter
 
                     if (exportAnimation)
                     {
-                        initiateAnimationExport(finalAnimId, finalName, bm, modelStats, comp.getColors(), true, LightingStyle.ACTOR, null);
+                        initiateAnimationExport(finalAnimId, finalName, bm, modelStats, comp.getColors(), true, CustomLighting.fromLightingStyle(LightingStyle.ACTOR));
                     }
                     else
                     {
@@ -1111,7 +1111,7 @@ public class ModelGetter
 
                                 clientThread.invokeLater(() ->
                                 {
-                                    initiateAnimationExport(animId, name, bm, modelStats, new int[0], false, LightingStyle.DYNAMIC, null);
+                                    initiateAnimationExport(animId, name, bm, modelStats, new int[0], false, CustomLighting.fromLightingStyle(LightingStyle.DYNAMIC));
                                 });
                             });
                             thread.start();
@@ -1162,7 +1162,7 @@ public class ModelGetter
 
                                 if (exportAnimation)
                                 {
-                                    initiateAnimationExport(animId, name, bm, modelStats, new int[0], false, LightingStyle.DYNAMIC, null);
+                                    initiateAnimationExport(animId, name, bm, modelStats, new int[0], false, CustomLighting.fromLightingStyle(LightingStyle.DYNAMIC));
                                 }
                                 else
                                 {
@@ -1212,10 +1212,10 @@ public class ModelGetter
                             case CACHE_GROUND_ITEM:
                             case CACHE_MAN_WEAR:
                             case CACHE_WOMAN_WEAR:
-                                initiateAnimationExport(animId, name, bm, comp.getModelStats(), new int[0], false, comp.getLightingStyle(), comp.getCustomLighting());
+                                initiateAnimationExport(animId, name, bm, comp.getModelStats(), new int[0], false, comp.getCustomLighting());
                                 break;
                             case CACHE_PLAYER:
-                                initiateAnimationExport(animId, name, bm, comp.getModelStats(), comp.getKitRecolours(), true, comp.getLightingStyle(), comp.getCustomLighting());
+                                initiateAnimationExport(animId, name, bm, comp.getModelStats(), comp.getKitRecolours(), true, comp.getCustomLighting());
                                 break;
                             case BLENDER:
                                 plugin.sendChatMessage("This model already came from Blender.");
@@ -1242,7 +1242,7 @@ public class ModelGetter
 
                     clientThread.invokeLater(() ->
                     {
-                        initiateAnimationExport(animId, name, bm, modelStats, new int[0], false, LightingStyle.DEFAULT, null);
+                        initiateAnimationExport(animId, name, bm, modelStats, new int[0], false, CustomLighting.fromLightingStyle(LightingStyle.DEFAULT));
                     });
                 }
             }
@@ -1374,10 +1374,10 @@ public class ModelGetter
                             case CACHE_GROUND_ITEM:
                             case CACHE_MAN_WEAR:
                             case CACHE_WOMAN_WEAR:
-                                initiateAnimationExport(animId, name, bm, comp.getModelStats(), new int[0], false, comp.getLightingStyle(), comp.getCustomLighting());
+                                initiateAnimationExport(animId, name, bm, comp.getModelStats(), new int[0], false, comp.getCustomLighting());
                                 break;
                             case CACHE_PLAYER:
-                                initiateAnimationExport(animId, name, bm, comp.getModelStats(), comp.getKitRecolours(), true, comp.getLightingStyle(), comp.getCustomLighting());
+                                initiateAnimationExport(animId, name, bm, comp.getModelStats(), comp.getKitRecolours(), true, comp.getCustomLighting());
                                 break;
                             case BLENDER:
                                 plugin.sendChatMessage("This model already came from Blender.");
@@ -1427,7 +1427,7 @@ public class ModelGetter
 
                     if (exportAnimation)
                     {
-                        initiateAnimationExport(animId, name, bm, modelStats, new int[0], false, LightingStyle.DEFAULT, null);
+                        initiateAnimationExport(animId, name, bm, modelStats, new int[0], false, CustomLighting.fromLightingStyle(LightingStyle.DEFAULT));
                     }
                     else
                     {
@@ -1588,7 +1588,7 @@ public class ModelGetter
     {
         clientThread.invokeLater(() ->
         {
-            Model model = modelUtilities.constructModelFromCache(modelStats, kitRecolours, player, ls, null);
+            Model model = modelUtilities.constructModelFromCache(modelStats, kitRecolours, player, CustomLighting.fromLightingStyle(ls));
             store(model, modelStats, menuOption, customModelType, name, kitRecolours, ls, orientation, poseAnimation, keyFrame, spkfs);
         });
     }
@@ -1604,8 +1604,7 @@ public class ModelGetter
 
     private void store(Model model, ModelStats[] modelStats, ModelMenuOption menuOption, CustomModelType customModelType, String name, int[] kitRecolours, LightingStyle ls, int orientation, int poseAnimation, AnimationKeyFrame keyFrame, SpotAnimKeyFrame[] spkfs)
     {
-        CustomLighting lighting = new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getY(), ls.getZ());
-        CustomModelComp comp = new CustomModelComp(0, customModelType, 7699, modelStats, kitRecolours, null, null, ls, lighting, false, name);
+        CustomModelComp comp = new CustomModelComp(customModelType, 7699, modelStats, kitRecolours, null, null, CustomLighting.fromLightingStyle(ls), false, name);
         CustomModel customModel = new CustomModel(model, comp);
         modelUtilities.addCustomModel(customModel, false);
         plugin.sendChatMessage("Model stored: " + name);
@@ -1765,9 +1764,9 @@ public class ModelGetter
         });
     }
 
-    private void initiateAnimationExport(int animId, String name, BlenderModel bm, ModelStats[] modelStats, int[] kitRecolours, boolean player, LightingStyle ls, CustomLighting cl)
+    private void initiateAnimationExport(int animId, String name, BlenderModel bm, ModelStats[] modelStats, int[] kitRecolours, boolean player, CustomLighting cl)
     {
-        Model model = modelUtilities.constructModelFromCache(modelStats, kitRecolours, player, ls, cl);
+        Model model = modelUtilities.constructModelFromCache(modelStats, kitRecolours, player, cl);
         initiateAnimationExport(animId, name, model, bm);
     }
 

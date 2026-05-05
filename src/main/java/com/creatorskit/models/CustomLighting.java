@@ -14,4 +14,15 @@ public class CustomLighting
     private int x;
     private int y;
     private int z;
+
+    public static CustomLighting fromLightingStyle(LightingStyle ls)
+    {
+        return new CustomLighting(
+                ls.getAmbient(),
+                ls.getContrast(),
+                ls.getX(),
+                ls.getY(),
+                ls.getZ()
+        );
+    }
 }

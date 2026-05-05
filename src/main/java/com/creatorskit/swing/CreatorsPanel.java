@@ -3,6 +3,7 @@ package com.creatorskit.swing;
 import com.creatorskit.CKObject;
 import com.creatorskit.CreatorsConfig;
 import com.creatorskit.programming.AnimationType;
+import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.saves.CharacterSave;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.Character;
@@ -562,7 +563,7 @@ public class CreatorsPanel extends PluginPanel
 
         orientationSpinner.addChangeListener(e ->
         {
-            int orient = (int) orientationSpinner.getValue();
+            int orient = Orientation.boundOrientation((int) orientationSpinner.getValue());
             plugin.setOrientation(character, orient);
         });
 
@@ -1581,17 +1582,17 @@ public class CreatorsPanel extends PluginPanel
             switch (comp.getType())
             {
                 case FORGED:
-                    model = modelUtilities.createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle(), comp.getCustomLighting(), false);
+                    model = modelUtilities.createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getCustomLighting(), false);
                     customModel = new CustomModel(model, comp);
                     break;
                 case CACHE_NPC:
                     modelStats = comp.getModelStats();
-                    model = modelUtilities.constructModelFromCache(modelStats, new int[0], false, LightingStyle.ACTOR, null);
+                    model = modelUtilities.constructModelFromCache(modelStats, new int[0], false, CustomLighting.fromLightingStyle(LightingStyle.ACTOR));
                     customModel = new CustomModel(model, comp);
                     break;
                 case CACHE_PLAYER:
                     modelStats = comp.getModelStats();
-                    model = modelUtilities.constructModelFromCache(modelStats, comp.getKitRecolours(), true, LightingStyle.ACTOR, null);
+                    model = modelUtilities.constructModelFromCache(modelStats, comp.getKitRecolours(), true, CustomLighting.fromLightingStyle(LightingStyle.ACTOR));
                     customModel = new CustomModel(model, comp);
                     break;
                 default:
@@ -1601,11 +1602,11 @@ public class CreatorsPanel extends PluginPanel
                 case CACHE_MAN_WEAR:
                 case CACHE_WOMAN_WEAR:
                     modelStats = comp.getModelStats();
-                    model = modelUtilities.constructModelFromCache(modelStats, null, false, LightingStyle.DEFAULT, null);
+                    model = modelUtilities.constructModelFromCache(modelStats, null, false, CustomLighting.fromLightingStyle(LightingStyle.DEFAULT));
                     customModel = new CustomModel(model, comp);
                     break;
                 case BLENDER:
-                    model = modelImporter.createModel(comp.getBlenderModel(), comp.getLightingStyle());
+                    model = modelImporter.createModel(comp.getBlenderModel(), comp.getCustomLighting());
                     customModel = new CustomModel(model, comp);
             }
 

@@ -1022,21 +1022,21 @@ public class ModelAnvil extends JPanel
         clientThread.invokeLater(() ->
         {
             DetailedModel[] detailedModels = panelsToDetailedModels();
-            Model model = forgeComplexModel(setPriority, detailedModels, LightingStyle.CUSTOM, lighting);
+            Model model = forgeComplexModel(setPriority, detailedModels, lighting);
             if (model == null)
             {
                 return;
             }
 
-            CustomModelComp comp = new CustomModelComp(plugin.getStoredModels().size(), CustomModelType.FORGED, -1, null, null, detailedModels, null, LightingStyle.CUSTOM, lighting, setPriority, nameField.getText());
+            CustomModelComp comp = new CustomModelComp(CustomModelType.FORGED, -1, null, null, detailedModels, null, lighting, setPriority, nameField.getText());
             CustomModel customModel = new CustomModel(model, comp);
             modelUtilities.addCustomModel(customModel, forgeAndSet);
         });
     }
 
-    public Model forgeComplexModel(boolean setPriority, DetailedModel[] detailedModels, LightingStyle lightingStyle, CustomLighting lighting)
+    public Model forgeComplexModel(boolean setPriority, DetailedModel[] detailedModels, CustomLighting lighting)
     {
-        return modelUtilities.createComplexModel(detailedModels, setPriority, lightingStyle, lighting, true);
+        return modelUtilities.createComplexModel(detailedModels, setPriority, lighting, true);
     }
 
     private DetailedModel[] panelsToDetailedModels()
@@ -1149,17 +1149,17 @@ public class ModelAnvil extends JPanel
             {
                 selectedFile = new File(selectedFile.getPath() + ".json");
             }
-            saveToFile(selectedFile, name, priority, lightingStyle, lighting);
+            saveToFile(selectedFile, name, priority, lighting);
         }
     }
 
-    public void saveToFile(File file, String name, boolean priority, LightingStyle lightingStyle, CustomLighting lighting)
+    public void saveToFile(File file, String name, boolean priority, CustomLighting lighting)
     {
         try {
             FileWriter writer = new FileWriter(file, false);
 
             DetailedModel[] detailedModels = panelsToDetailedModels();
-            CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, null, lightingStyle, lighting, priority, name);
+            CustomModelComp comp = new CustomModelComp(CustomModelType.FORGED, -1, null, null, detailedModels, null, lighting, priority, name);
             String string = plugin.getGson().toJson(comp);
             writer.write(string);
             writer.close();

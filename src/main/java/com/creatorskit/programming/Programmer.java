@@ -1521,7 +1521,7 @@ public class Programmer
                     ms.setTranslateZ(height);
                 }
 
-                Model model = modelUtilities.constructModelFromCache(stats, new int[0], false, LightingStyle.CUSTOM, cl);
+                Model model = modelUtilities.constructModelFromCache(stats, new int[0], false, cl);
 
                 ckObject.setModel(model);
                 setActiveAnimationFrame(ckObject, data.getAnimationId(), currentTime, startTick, 0, loop, false, true);
