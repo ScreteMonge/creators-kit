@@ -2,6 +2,7 @@ package com.creatorskit.swing.manager;
 
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
+import com.creatorskit.selection.SelectionManager;
 import com.creatorskit.swing.*;
 import lombok.Getter;
 import net.runelite.client.ui.ColorScheme;
@@ -13,6 +14,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Enumeration;
 import javax.inject.Inject;
 import javax.swing.*;
@@ -28,6 +30,7 @@ public class ManagerTree extends JTree
 {
     private final ToolBoxFrame toolBox;
     private final CreatorsPlugin plugin;
+    private final SelectionManager selectionManager;
     private final JPanel objectHolder;
     private final DefaultMutableTreeNode rootNode;
     private final DefaultMutableTreeNode sidePanelNode;
@@ -35,6 +38,7 @@ public class ManagerTree extends JTree
     private final ManagerTreeModel treeModel;
     private final GridBagConstraints c = new GridBagConstraints();
     private Folder[] selectedFolders = new Folder[0];
+    private boolean syncingFromSelectionManager = false;
     private final int ROW_HEIGHT = 28;
 
     private final BufferedImage FOLDER_OPEN = ImageUtil.loadImageResource(getClass(), "/Folder_Open.png");
@@ -46,10 +50,11 @@ public class ManagerTree extends JTree
     private final Color backgroundNonSelectionColor2 = new Color(33, 33, 33);
 
     @Inject
-    public ManagerTree(ToolBoxFrame toolBox, CreatorsPlugin plugin, JPanel objectHolder, DefaultMutableTreeNode rootNode, DefaultMutableTreeNode sidePanelNode, DefaultMutableTreeNode managerNode)
+    public ManagerTree(ToolBoxFrame toolBox, CreatorsPlugin plugin, SelectionManager selectionManager, JPanel objectHolder, DefaultMutableTreeNode rootNode, DefaultMutableTreeNode sidePanelNode, DefaultMutableTreeNode managerNode)
     {
         this.toolBox = toolBox;
         this.plugin = plugin;
+        this.selectionManager = selectionManager;
         this.objectHolder = objectHolder;
         this.rootNode = rootNode;
         this.sidePanelNode = sidePanelNode;
@@ -67,7 +72,7 @@ public class ManagerTree extends JTree
         setEditable(true);
         setOpaque(false);
         setRowHeight(ROW_HEIGHT);
-        getSelectionModel().setSelectionMode(TreeSelectionModel.CONTIGUOUS_TREE_SELECTION);
+        getSelectionModel().setSelectionMode(TreeSelectionModel.DISCONTIGUOUS_TREE_SELECTION);
         setShowsRootHandles(true);
         setRootVisible(false);
         setDragEnabled(true);
@@ -433,20 +438,31 @@ public class ManagerTree extends JTree
             TreePath[] treePaths = getSelectionPaths();
             if (treePaths == null)
             {
-                plugin.getCreatorsPanel().setSelectedCharacter(null, false);
+                if (!syncingFromSelectionManager)
+                {
+                    selectionManager.clear();
+                }
                 return;
             }
 
             updateTreeSelectionIndex();
 
-            DefaultMutableTreeNode first = (DefaultMutableTreeNode) (treePaths[0].getLastPathComponent());
-            if (first.getUserObject() instanceof Character)
+            if (!syncingFromSelectionManager)
             {
-                plugin.getCreatorsPanel().setSelectedCharacter((Character) first.getUserObject(), false);
-            }
-            else
-            {
-                plugin.getCreatorsPanel().setSelectedCharacter(null, false);
+                ArrayList<Character> selectedChars = new ArrayList<>();
+                for (TreePath treePath : treePaths)
+                {
+                    Object node = treePath.getLastPathComponent();
+                    if (node instanceof DefaultMutableTreeNode)
+                    {
+                        Object user = ((DefaultMutableTreeNode) node).getUserObject();
+                        if (user instanceof Character)
+                        {
+                            selectedChars.add((Character) user);
+                        }
+                    }
+                }
+                selectionManager.selectAll(selectedChars);
             }
 
             JPanel objectHolder = toolBox.getManagerPanel().getObjectHolder();
@@ -611,6 +627,51 @@ public class ManagerTree extends JTree
         setSelectionPath(treePath);
         scrollPathToVisible(treePath);
         updateTreeSelectionIndex();
+    }
+
+    /**
+     * Updates the tree's visual selection to match SelectionManager. Called from sidebar
+     * click handlers so the tree reflects multi-selection done elsewhere. The
+     * syncingFromSelectionManager flag prevents the resulting TreeSelectionEvent from
+     * pushing the same state back into SelectionManager.
+     */
+    public void syncTreeFromSelection()
+    {
+        syncingFromSelectionManager = true;
+        try
+        {
+            java.util.Set<Character> selected = selectionManager.getSelected();
+            if (selected.isEmpty())
+            {
+                clearSelection();
+                return;
+            }
+
+            TreePath[] paths = new TreePath[selected.size()];
+            int i = 0;
+            for (Character c : selected)
+            {
+                DefaultMutableTreeNode node = c.getLinkedManagerNode();
+                if (node != null)
+                {
+                    paths[i++] = new TreePath(node.getPath());
+                }
+            }
+            if (i < paths.length)
+            {
+                paths = Arrays.copyOf(paths, i);
+            }
+            setSelectionPaths(paths);
+            if (paths.length > 0)
+            {
+                scrollPathToVisible(paths[paths.length - 1]);
+            }
+            updateTreeSelectionIndex();
+        }
+        finally
+        {
+            syncingFromSelectionManager = false;
+        }
     }
 
     public void scrollSelectedIndex(int direction)

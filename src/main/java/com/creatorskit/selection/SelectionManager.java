@@ -4,6 +4,7 @@ import com.creatorskit.Character;
 
 import javax.inject.Singleton;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -65,6 +66,30 @@ public class SelectionManager
 		selected.clear();
 		selected.add(c);
 		primary = c;
+		fireChanged();
+	}
+
+	/**
+	 * Replace the entire selection with the given Characters. The last element of the
+	 * iteration becomes the primary. A null or empty collection clears the selection.
+	 */
+	public void selectAll(Collection<Character> characters)
+	{
+		if (characters == null || characters.isEmpty())
+		{
+			clear();
+			return;
+		}
+		selected.clear();
+		Character last = null;
+		for (Character c : characters)
+		{
+			if (c != null && selected.add(c))
+			{
+				last = c;
+			}
+		}
+		primary = last;
 		fireChanged();
 	}
 

@@ -10,6 +10,7 @@ import com.creatorskit.saves.FolderNodeSave;
 import com.creatorskit.saves.ModelKeyFrameSave;
 import com.creatorskit.saves.SetupSave;
 import com.creatorskit.models.*;
+import com.creatorskit.selection.SelectionManager;
 import com.creatorskit.swing.anvil.ModelAnvil;
 import com.creatorskit.swing.manager.Folder;
 import com.creatorskit.swing.manager.FolderType;
@@ -35,6 +36,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.border.LineBorder;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -63,6 +65,7 @@ public class CreatorsPanel extends PluginPanel
     private final ModelOrganizer modelOrganizer;
     private final DataFinder dataFinder;
     private final ModelImporter modelImporter;
+    private final SelectionManager selectionManager;
 
     private final JButton addObjectButton = new JButton();
     private final JPanel sidePanel = new JPanel();
@@ -89,7 +92,7 @@ public class CreatorsPanel extends PluginPanel
     private final LineBorder selectedBorder = new LineBorder(Color.WHITE, 1);
 
     @Inject
-    public CreatorsPanel(@Nullable Client client, CreatorsConfig config, ClientThread clientThread, CreatorsPlugin plugin, ToolBoxFrame toolBox, DataFinder dataFinder, ModelImporter modelImporter)
+    public CreatorsPanel(@Nullable Client client, CreatorsConfig config, ClientThread clientThread, CreatorsPlugin plugin, ToolBoxFrame toolBox, DataFinder dataFinder, ModelImporter modelImporter, SelectionManager selectionManager)
     {
         this.clientThread = clientThread;
         this.client = client;
@@ -100,6 +103,8 @@ public class CreatorsPanel extends PluginPanel
         this.modelAnvil = toolBox.getModelAnvil();
         this.dataFinder = dataFinder;
         this.modelImporter = modelImporter;
+        this.selectionManager = selectionManager;
+        selectionManager.addListener(mgr -> refreshSelectionBorders());
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new GridBagLayout());
@@ -265,6 +270,9 @@ public class CreatorsPanel extends PluginPanel
         textField.setMaximumSize(textDimension);
         textField.setPreferredSize(textDimension);
         textField.setMinimumSize(textDimension);
+
+        final Border textFieldInnerBorder = textField.getBorder();
+        textField.setBorder(buildNameFieldBorder(textFieldInnerBorder, color));
 
         JPanel topButtonsPanel = new JPanel();
         Dimension topButtonsPanelSize = new Dimension(81, 30);
@@ -498,7 +506,7 @@ public class CreatorsPanel extends PluginPanel
             @Override
             public void mousePressed(MouseEvent e)
             {
-                setSelectedCharacter(character);
+                onCharacterPanelClicked(character, e);
             }
         });
 
@@ -524,6 +532,7 @@ public class CreatorsPanel extends PluginPanel
             Color colour = getRandomColor();
             character.setColor(colour);
             colourButton.setForeground(colour);
+            textField.setBorder(buildNameFieldBorder(textFieldInnerBorder, colour));
         });
 
         modelButton.addActionListener(e ->
@@ -699,7 +708,7 @@ public class CreatorsPanel extends PluginPanel
             component.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mousePressed(MouseEvent e) {
-                    setSelectedCharacter(character);
+                    onCharacterPanelClicked(character, e);
                 }
             });
         }
@@ -1065,25 +1074,102 @@ public class CreatorsPanel extends PluginPanel
 
     public void setSelectedCharacter(Character selected, boolean updateManagerTree)
     {
-        ArrayList<Character> characters = plugin.getCharacters();
-
-        for (int i = 0; i < characters.size(); i++)
-        {
-            JPanel panel = characters.get(i).getObjectPanel();
-            panel.setBorder(defaultBorder);
-        }
-
         plugin.setSelectedCharacter(selected);
 
-        ManagerTree tree = toolBox.getManagerPanel().getManagerTree();
         if (updateManagerTree)
         {
-            tree.setTreeSelection(selected);
+            toolBox.getManagerPanel().getManagerTree().setTreeSelection(selected);
+        }
+    }
+
+    /**
+     * Modifier-aware click router for Character panels.
+     * Plain click   = replace selection. Ctrl+Click = toggle. Shift+Click = range.
+     */
+    public void onCharacterPanelClicked(Character character, MouseEvent e)
+    {
+        if (character == null)
+        {
+            return;
         }
 
-        if (selected != null)
+        if (e.isShiftDown())
         {
-            selected.getObjectPanel().setBorder(selectedBorder);
+            extendSelectionTo(character);
+            return;
+        }
+
+        if (e.isControlDown())
+        {
+            selectionManager.toggle(character);
+            toolBox.getManagerPanel().getManagerTree().syncTreeFromSelection();
+            return;
+        }
+
+        setSelectedCharacter(character);
+    }
+
+    private void extendSelectionTo(Character character)
+    {
+        ArrayList<Character> all = plugin.getCharacters();
+        Character primary = selectionManager.getPrimary();
+        int target = all.indexOf(character);
+        if (target < 0)
+        {
+            setSelectedCharacter(character);
+            return;
+        }
+        int anchor = primary == null ? target : all.indexOf(primary);
+        if (anchor < 0)
+        {
+            anchor = target;
+        }
+        int start = Math.min(anchor, target);
+        int end = Math.max(anchor, target);
+        ArrayList<Character> range = new ArrayList<>(end - start + 1);
+        for (int i = start; i <= end; i++)
+        {
+            range.add(all.get(i));
+        }
+        selectionManager.selectAll(range);
+        toolBox.getManagerPanel().getManagerTree().syncTreeFromSelection();
+    }
+
+    private static Border buildNameFieldBorder(Border inner, Color accent)
+    {
+        Color safe = accent == null ? ColorScheme.MEDIUM_GRAY_COLOR : accent;
+        Border swatch = BorderFactory.createMatteBorder(0, 6, 0, 0, safe);
+        return BorderFactory.createCompoundBorder(swatch, inner);
+    }
+
+    /**
+     * Iterates every Character panel and applies the correct border based on
+     * whether it's selected (per SelectionManager) or hovered.
+     */
+    public void refreshSelectionBorders()
+    {
+        ArrayList<Character> characters = plugin.getCharacters();
+        Character hovered = plugin.getHoveredCharacter();
+        for (int i = 0; i < characters.size(); i++)
+        {
+            Character c = characters.get(i);
+            JPanel panel = c.getObjectPanel();
+            if (panel == null)
+            {
+                continue;
+            }
+            if (selectionManager.isSelected(c))
+            {
+                panel.setBorder(selectedBorder);
+            }
+            else if (c == hovered)
+            {
+                panel.setBorder(hoveredBorder);
+            }
+            else
+            {
+                panel.setBorder(defaultBorder);
+            }
         }
     }
 
@@ -1096,20 +1182,12 @@ public class CreatorsPanel extends PluginPanel
 
     public void unsetSelectedCharacter()
     {
-        ArrayList<Character> characters = plugin.getCharacters();
-
-        for (int i = 0; i < characters.size(); i++)
-        {
-            JPanel panel = characters.get(i).getObjectPanel();
-            panel.setBorder(defaultBorder);
-        }
-
         plugin.setSelectedCharacter(null);
     }
 
     public void setHoveredCharacter(Character hovered, JPanel jPanel)
     {
-        if (plugin.getSelectedCharacter() == hovered)
+        if (selectionManager.isSelected(hovered))
         {
             return;
         }
@@ -1122,7 +1200,7 @@ public class CreatorsPanel extends PluginPanel
     {
         plugin.setHoveredCharacter(null);
 
-        if (plugin.getSelectedCharacter() == hoverRemoved)
+        if (selectionManager.isSelected(hoverRemoved))
         {
             return;
         }

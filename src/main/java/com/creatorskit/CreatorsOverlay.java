@@ -24,6 +24,7 @@ public class CreatorsOverlay extends Overlay
     private final Client client;
     private final CreatorsPlugin plugin;
     private final CreatorsConfig config;
+    private final com.creatorskit.selection.SelectionManager selectionManager;
     private static final Color HOVERED_COLOUR = new Color(146, 206, 193, 255);
     private static final Color SELECTED_COLOUR = new Color(220, 253, 245);
     private static final Color GAME_OBJECT_COLOUR = new Color(255, 138, 18);
@@ -39,13 +40,14 @@ public class CreatorsOverlay extends Overlay
 
 
     @Inject
-    private CreatorsOverlay(Client client, CreatorsPlugin plugin, CreatorsConfig config)
+    private CreatorsOverlay(Client client, CreatorsPlugin plugin, CreatorsConfig config, com.creatorskit.selection.SelectionManager selectionManager)
     {
         setPosition(OverlayPosition.DYNAMIC);
         setLayer(OverlayLayer.ABOVE_SCENE);
         this.client = client;
         this.plugin = plugin;
         this.config = config;
+        this.selectionManager = selectionManager;
     }
 
     @Override
@@ -149,7 +151,7 @@ public class CreatorsOverlay extends Overlay
 
             int[][] path = keyFrame.getPath();
 
-            boolean selectedCharacter = character == plugin.getSelectedCharacter();
+            boolean selectedCharacter = selectionManager.isSelected(character);
             Color color = character.getColor();
             if (selectedCharacter)
             {
@@ -289,7 +291,7 @@ public class CreatorsOverlay extends Overlay
                 continue;
             }
 
-            boolean selectedCharacter = character == plugin.getSelectedCharacter();
+            boolean selectedCharacter = selectionManager.isSelected(character);
             Color color = character.getColor().brighter();
             if (selectedCharacter)
             {
@@ -484,47 +486,44 @@ public class CreatorsOverlay extends Overlay
 
     public void renderSelectedRLObject(Graphics2D graphics, WorldView worldView)
     {
-        Character character = plugin.getSelectedCharacter();
-        if (character == null)
-        {
-            return;
-        }
-
-        if (!character.isInScene())
-        {
-            return;
-        }
-
         boolean poh = MovementManager.useLocalLocations(worldView);
-        if ((!poh && character.isInPOH()) || (poh && !character.isInPOH()))
+        for (Character character : selectionManager.getSelected())
         {
-            return;
-        }
+            if (character == null || !character.isInScene())
+            {
+                continue;
+            }
 
-        CKObject ckObject = character.getCkObject();
-        if (ckObject == null || !ckObject.isActive())
-        {
-            return;
-        }
+            if ((!poh && character.isInPOH()) || (poh && !character.isInPOH()))
+            {
+                continue;
+            }
 
-        LocalPoint lp = ckObject.getLocation();
-        if (lp == null || !lp.isInScene())
-        {
-            return;
-        }
+            CKObject ckObject = character.getCkObject();
+            if (ckObject == null || !ckObject.isActive())
+            {
+                continue;
+            }
 
-        Model model = ckObject.getModel();
-        if (model == null)
-        {
-            return;
-        }
+            LocalPoint lp = ckObject.getLocation();
+            if (lp == null || !lp.isInScene())
+            {
+                continue;
+            }
 
-        model.calculateBoundsCylinder();
+            Model model = ckObject.getModel();
+            if (model == null)
+            {
+                continue;
+            }
 
-        Point p = Perspective.getCanvasTextLocation(client, graphics, lp, character.getName(), model.getModelHeight());
-        if (p != null)
-        {
-            OverlayUtil.renderTextLocation(graphics, p, character.getName(), SELECTED_COLOUR);
+            model.calculateBoundsCylinder();
+
+            Point p = Perspective.getCanvasTextLocation(client, graphics, lp, character.getName(), model.getModelHeight());
+            if (p != null)
+            {
+                OverlayUtil.renderTextLocation(graphics, p, character.getName(), SELECTED_COLOUR);
+            }
         }
     }
 
@@ -566,7 +565,7 @@ public class CreatorsOverlay extends Overlay
                 continue;
             }
 
-            if (plugin.getSelectedCharacter() == character)
+            if (selectionManager.isSelected(character))
             {
                 if (keyHeld)
                 {
@@ -589,7 +588,7 @@ public class CreatorsOverlay extends Overlay
             }
 
             Color colour = character.getColor();
-            if (plugin.getSelectedCharacter() == character)
+            if (selectionManager.isSelected(character))
             {
                 colour = SELECTED_COLOUR;
             }

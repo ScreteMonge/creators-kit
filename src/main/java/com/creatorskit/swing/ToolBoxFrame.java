@@ -7,6 +7,7 @@ import com.creatorskit.models.ModelUtilities;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.PathFinder;
 import com.creatorskit.programming.Programmer;
+import com.creatorskit.selection.SelectionManager;
 import com.creatorskit.swing.anvil.ModelAnvil;
 import com.creatorskit.swing.manager.Folder;
 import com.creatorskit.swing.manager.FolderType;
@@ -58,7 +59,7 @@ public class ToolBoxFrame extends JFrame
     private final BufferedImage ICON = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
 
     @Inject
-    public ToolBoxFrame(Client client, EventBus eventBus, ClientThread clientThread, CreatorsPlugin plugin, CreatorsConfig config, ConfigManager configManager, DataFinder dataFinder, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, TransmogPanel transmogPanel, PathFinder pathFinder, ModelUtilities modelUtilities, OkHttpClient httpClient)
+    public ToolBoxFrame(Client client, EventBus eventBus, ClientThread clientThread, CreatorsPlugin plugin, CreatorsConfig config, ConfigManager configManager, DataFinder dataFinder, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, TransmogPanel transmogPanel, PathFinder pathFinder, ModelUtilities modelUtilities, OkHttpClient httpClient, SelectionManager selectionManager)
     {
         this.client = client;
         this.clientThread = clientThread;
@@ -87,7 +88,7 @@ public class ToolBoxFrame extends JFrame
         managerPanelFolder.setLinkedManagerNode(managerManagerNode);
 
         JPanel objectHolder = new JPanel();
-        ManagerTree managerTree = new ManagerTree(this, plugin, objectHolder, managerRootNode, managerSideNode, managerManagerNode);
+        ManagerTree managerTree = new ManagerTree(this, plugin, selectionManager, objectHolder, managerRootNode, managerSideNode, managerManagerNode);
         MovementManager movementManager = new MovementManager(client, config, pathFinder);
 
         setupMenuBar();
