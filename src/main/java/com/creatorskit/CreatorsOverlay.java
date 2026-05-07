@@ -1,6 +1,7 @@
 package com.creatorskit;
 
 import com.creatorskit.programming.MovementManager;
+import com.creatorskit.selection.SelectionManager;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import com.creatorskit.swing.timesheet.keyframe.MovementKeyFrame;
@@ -24,7 +25,7 @@ public class CreatorsOverlay extends Overlay
     private final Client client;
     private final CreatorsPlugin plugin;
     private final CreatorsConfig config;
-    private final com.creatorskit.selection.SelectionManager selectionManager;
+    private final SelectionManager selectionManager;
     private static final Color HOVERED_COLOUR = new Color(146, 206, 193, 255);
     private static final Color SELECTED_COLOUR = new Color(220, 253, 245);
     private static final Color GAME_OBJECT_COLOUR = new Color(255, 138, 18);
@@ -151,7 +152,7 @@ public class CreatorsOverlay extends Overlay
 
             int[][] path = keyFrame.getPath();
 
-            boolean selectedCharacter = selectionManager.isSelected(character);
+            boolean selectedCharacter = selectionManager.contains(character);
             Color color = character.getColor();
             if (selectedCharacter)
             {
@@ -291,7 +292,7 @@ public class CreatorsOverlay extends Overlay
                 continue;
             }
 
-            boolean selectedCharacter = selectionManager.isSelected(character);
+            boolean selectedCharacter = selectionManager.contains(character);
             Color color = character.getColor().brighter();
             if (selectedCharacter)
             {
@@ -487,52 +488,44 @@ public class CreatorsOverlay extends Overlay
     public void renderSelectedRLObject(Graphics2D graphics, WorldView worldView)
     {
         boolean poh = MovementManager.useLocalLocations(worldView);
-        Font originalFont = graphics.getFont();
-        graphics.setFont(originalFont.deriveFont(Font.BOLD));
-        try
+
+        for (Character character : selectionManager.getSelected())
         {
-            for (Character character : selectionManager.getSelected())
+            if (!character.isInScene())
             {
-                if (character == null || !character.isInScene())
-                {
-                    continue;
-                }
-
-                if ((!poh && character.isInPOH()) || (poh && !character.isInPOH()))
-                {
-                    continue;
-                }
-
-                CKObject ckObject = character.getCkObject();
-                if (ckObject == null || !ckObject.isActive())
-                {
-                    continue;
-                }
-
-                LocalPoint lp = ckObject.getLocation();
-                if (lp == null || !lp.isInScene())
-                {
-                    continue;
-                }
-
-                Model model = ckObject.getModel();
-                if (model == null)
-                {
-                    continue;
-                }
-
-                model.calculateBoundsCylinder();
-
-                Point p = Perspective.getCanvasTextLocation(client, graphics, lp, character.getName(), model.getModelHeight());
-                if (p != null)
-                {
-                    OverlayUtil.renderTextLocation(graphics, p, character.getName(), SELECTED_COLOUR);
-                }
+                continue;
             }
-        }
-        finally
-        {
-            graphics.setFont(originalFont);
+
+            if ((!poh && character.isInPOH()) || (poh && !character.isInPOH()))
+            {
+                continue;
+            }
+
+            CKObject ckObject = character.getCkObject();
+            if (ckObject == null || !ckObject.isActive())
+            {
+                continue;
+            }
+
+            LocalPoint lp = ckObject.getLocation();
+            if (lp == null || !lp.isInScene())
+            {
+                continue;
+            }
+
+            Model model = ckObject.getModel();
+            if (model == null)
+            {
+                continue;
+            }
+
+            model.calculateBoundsCylinder();
+
+            Point p = Perspective.getCanvasTextLocation(client, graphics, lp, character.getName(), model.getModelHeight());
+            if (p != null)
+            {
+                OverlayUtil.renderTextLocation(graphics, p, character.getName(), SELECTED_COLOUR);
+            }
         }
     }
 
@@ -574,23 +567,14 @@ public class CreatorsOverlay extends Overlay
                 continue;
             }
 
-            if (selectionManager.isSelected(character))
+            if (selectionManager.contains(character))
             {
                 if (keyHeld)
                 {
                     continue;
                 }
 
-                Font prev = graphics.getFont();
-                graphics.setFont(prev.deriveFont(Font.BOLD));
-                try
-                {
-                    OverlayUtil.renderTextLocation(graphics, point, name, SELECTED_COLOUR);
-                }
-                finally
-                {
-                    graphics.setFont(prev);
-                }
+                OverlayUtil.renderTextLocation(graphics, point, name, SELECTED_COLOUR);
                 continue;
             }
 

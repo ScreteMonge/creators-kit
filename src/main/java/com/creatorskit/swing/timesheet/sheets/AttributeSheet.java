@@ -16,6 +16,7 @@ import java.awt.*;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
+import java.util.List;
 
 @Getter
 @Setter
@@ -85,13 +86,11 @@ public class AttributeSheet extends TimeSheet
     @Override
     public void drawKeyFrames(Graphics g)
     {
-        java.util.List<Character> visible = getVisibleCharacters();
+        List<Character> visible = getVisibleCharacters();
         if (visible.isEmpty())
         {
             return;
         }
-
-        g.setColor(new Color(219, 137, 0));
 
         BufferedImage image = getKeyframeImage();
         int imageHeight = image.getHeight();
@@ -113,6 +112,9 @@ public class AttributeSheet extends TimeSheet
         {
             return;
         }
+
+        g.setColor(character.getColor());
+
         for (int i = 0; i < frames.length; i++)
         {
             KeyFrameType type = KeyFrameType.getKeyFrameType(i);
@@ -137,11 +139,6 @@ public class AttributeSheet extends TimeSheet
                 int x = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor);
                 int y = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
 
-                Color tailColor = g.getColor();
-                if (multi && character.getColor() != null)
-                {
-                    g.setColor(character.getColor());
-                }
                 switch (type)
                 {
                     case MOVEMENT:
@@ -203,18 +200,8 @@ public class AttributeSheet extends TimeSheet
 
                 g.drawImage(endImage, x - xImageOffset, y, null);
 
-                if (multi && character.getColor() != null)
-                {
-                    Color prev = g.getColor();
-                    g.setColor(character.getColor());
-                    int dotSize = 6;
-                    g.fillOval(x - xImageOffset, y + endImage.getHeight() - dotSize, dotSize, dotSize);
-                    g.setColor(prev);
-                }
-                else
-                {
-                    g.setColor(tailColor);
-                }
+                int dotSize = 7;
+                g.fillOval(x - xImageOffset, y + endImage.getHeight() - dotSize, dotSize, dotSize);
             }
         }
     }
@@ -373,7 +360,7 @@ public class AttributeSheet extends TimeSheet
     @Override
     public KeyFrame[] getKeyFrameClicked(Point point)
     {
-        java.util.List<Character> visible = getVisibleCharacters();
+        List<Character> visible = getVisibleCharacters();
         if (visible.isEmpty())
         {
             return null;
@@ -391,6 +378,7 @@ public class AttributeSheet extends TimeSheet
             {
                 continue;
             }
+
             for (int i = 0; i < frames.length; i++)
             {
                 KeyFrame[] keyFrames = frames[i];
@@ -424,7 +412,7 @@ public class AttributeSheet extends TimeSheet
     @Override
     public void updateSelectedKeyFrameOnRelease(Point point, boolean shiftKey)
     {
-        java.util.List<Character> visible = getVisibleCharacters();
+        List<Character> visible = getVisibleCharacters();
         if (visible.isEmpty())
         {
             return;
@@ -436,7 +424,7 @@ public class AttributeSheet extends TimeSheet
         double zoomFactor = this.getWidth() / getZoom();
 
         KeyFrame foundKeyFrame = null;
-        outer:
+
         for (Character c : visible)
         {
             KeyFrame[][] frames = c.getFrames();
@@ -444,6 +432,7 @@ public class AttributeSheet extends TimeSheet
             {
                 continue;
             }
+
             for (int i = 0; i < frames.length; i++)
             {
                 KeyFrame[] keyFrames = frames[i];
@@ -464,7 +453,7 @@ public class AttributeSheet extends TimeSheet
                             && point.getY() >= y1 && point.getY() <= y2)
                     {
                         foundKeyFrame = keyFrame;
-                        break outer;
+                        break;
                     }
                 }
             }
@@ -503,7 +492,7 @@ public class AttributeSheet extends TimeSheet
     @Override
     public boolean checkRectangleForKeyFrames(Point point, boolean shiftKey)
     {
-        java.util.List<Character> visible = getVisibleCharacters();
+        List<Character> visible = getVisibleCharacters();
         if (visible.isEmpty())
         {
             return false;

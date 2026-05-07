@@ -241,6 +241,7 @@ class ManagerTreeTransferHandler extends TransferHandler
         }
 
         ArrayList<Character> characters = new ArrayList<>();
+        ArrayList<Folder> folders = new ArrayList<>();
 
         // Add data to model.
         for (int i = 0; i < nodes.length; i++)
@@ -255,6 +256,7 @@ class ManagerTreeTransferHandler extends TransferHandler
                 folder.setParentManagerNode(parentNode);
                 getCharacterNodeChildren(node, characters);
                 updateChildren(node);
+                folders.add(folder);
             }
 
             if (node.getUserObject() instanceof Character)
@@ -285,7 +287,11 @@ class ManagerTreeTransferHandler extends TransferHandler
             arrayTo.add(character);
         }
 
-        tree.setSelectionPath(dest);
+        for (Folder folder : folders)
+        {
+            folder.setParentPanel(newParent);
+        }
+
         tree.expandPath(dest);
         return true;
     }

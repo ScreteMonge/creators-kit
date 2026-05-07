@@ -31,7 +31,6 @@ public class ManagerPanel extends JPanel
     private final TreeScrollPane treeScrollPane;
     private final ArrayList<Character> managerCharacters = new ArrayList<>();
     private final ManagerTree managerTree;
-    private final JLabel objectLabel = new JLabel("Current Folder: Master Folder");
 
     @Inject
     public ManagerPanel(@Nullable Client client, CreatorsPlugin plugin, JPanel objectHolder, ManagerTree managerTree)
@@ -87,9 +86,6 @@ public class ManagerPanel extends JPanel
         objectHeader.setBackground(ColorScheme.DARK_GRAY_COLOR);
         objectHeader.setLayout(new BorderLayout());
         objectScrollPane.setColumnHeaderView(objectHeader);
-
-        objectLabel.setFont(FontManager.getRunescapeBoldFont());
-        objectHeader.add(objectLabel, BorderLayout.LINE_START);
 
         JPanel rightButtons = new JPanel();
         objectHeader.add(rightButtons, BorderLayout.LINE_END);

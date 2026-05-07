@@ -60,7 +60,7 @@ import java.util.*;
 @Getter
 @Setter
 @PluginDescriptor(
-		name = "Creator's Kit (DEV)",
+		name = "Creator's Kit",
 		description = "A suite of tools for creators",
 		tags = {"tool", "creator", "content", "kit", "camera", "immersion", "export"}
 )
@@ -131,23 +131,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private final ArrayList<Character> characters = new ArrayList<>();
 	private final ArrayList<CustomModel> storedModels = new ArrayList<>();
 	private Character hoveredCharacter;
-
-	public Character getSelectedCharacter()
-	{
-		return selectionManager.getPrimary();
-	}
-
-	public void setSelectedCharacter(Character selected)
-	{
-		if (selected == null)
-		{
-			selectionManager.clear();
-		}
-		else
-		{
-			selectionManager.select(selected);
-		}
-	}
 	private CKObject transmog;
 	private CKObject previewObject;
 	private Random random = new Random();
@@ -453,7 +436,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	{
 		if (config.enableCtrlHotkeys() && client.isKeyPressed(KeyCode.KC_CONTROL))
 		{
-			Character selectedCharacter = getSelectedCharacter();
+			Character selectedCharacter = selectionManager.getFirstSelected();
 			if (selectedCharacter != null)
 			{
 				client.getMenu().createMenuEntry(-1)
@@ -853,7 +836,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 		}
 
-		Character selectedCharacter = getSelectedCharacter();
+		Character selectedCharacter = selectionManager.getFirstSelected();
 		if (!client.isKeyPressed(KeyCode.KC_CONTROL)
 			|| client.isMenuOpen()
 			|| tile == null
@@ -1037,7 +1020,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			Character selectedCharacter = getSelectedCharacter();
+			Character selectedCharacter = selectionManager.getFirstSelected();
 			if (selectedCharacter != null)
 			{
 				selectedCharacter.toggleActive(clientThread);
@@ -1050,7 +1033,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			Character selectedCharacter = getSelectedCharacter();
+			Character selectedCharacter = selectionManager.getFirstSelected();
 			if (selectedCharacter != null)
 			{
 				setLocation(selectedCharacter, false, true, ActiveOption.ACTIVE, LocationOption.TO_HOVERED_TILE);
@@ -1063,7 +1046,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			Character selectedCharacter = getSelectedCharacter();
+			Character selectedCharacter = selectionManager.getFirstSelected();
 			if (selectedCharacter != null)
 			{
 				creatorsPanel.onDuplicatePressed(selectedCharacter, true);
@@ -1076,7 +1059,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			Character selectedCharacter = getSelectedCharacter();
+			Character selectedCharacter = selectionManager.getFirstSelected();
 			if (selectedCharacter != null)
 			{
 				addOrientation(selectedCharacter, config.rotateDegrees().degrees * -1);
@@ -1089,7 +1072,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			Character selectedCharacter = getSelectedCharacter();
+			Character selectedCharacter = selectionManager.getFirstSelected();
 			if (selectedCharacter != null)
 			{
 				addOrientation(selectedCharacter, config.rotateDegrees().degrees);
@@ -1158,7 +1141,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 	private void removeProgramStep()
 	{
-		Character selectedCharacter = getSelectedCharacter();
+		Character selectedCharacter = selectionManager.getFirstSelected();
 		if (selectedCharacter == null)
 		{
 			return;
@@ -1194,7 +1177,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 	private void clearProgramSteps()
 	{
-		Character selectedCharacter = getSelectedCharacter();
+		Character selectedCharacter = selectionManager.getFirstSelected();
 		if (selectedCharacter == null)
 		{
 			return;
@@ -1349,7 +1332,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	{
 		mousePressed = false;
 
-		Character selectedCharacter = getSelectedCharacter();
+		Character selectedCharacter = selectionManager.getFirstSelected();
 		if (config.enableCtrlHotkeys() &&
 				e.getButton() == MouseEvent.BUTTON1 &&
 				client.isKeyPressed(KeyCode.KC_CONTROL) &&

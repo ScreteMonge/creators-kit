@@ -114,7 +114,7 @@ public class TreeScrollPane extends JScrollPane
         JToggleButton reorderToggle = new JToggleButton("Edit");
         reorderToggle.setPreferredSize(buttonDimension);
         reorderToggle.setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR));
-        reorderToggle.setToolTipText("Toggle drag-to-reorder and inline rename. Off by default to prevent misclicks.");
+        reorderToggle.setToolTipText("Toggle drag-to-reorder and inline rename");
         reorderToggle.setBackground(ColorScheme.DARK_GRAY_COLOR);
         reorderToggle.setFocusable(false);
         reorderToggle.addActionListener(e ->

@@ -9,6 +9,7 @@ import com.creatorskit.models.datatypes.PlayerAnimationType;
 import com.creatorskit.models.datatypes.WeaponAnimData;
 import com.creatorskit.models.exporters.ModelExporter;
 import com.creatorskit.programming.AnimationType;
+import com.creatorskit.selection.SelectionManager;
 import com.creatorskit.swing.CreatorsPanel;
 import com.creatorskit.swing.ParentPanel;
 import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
@@ -41,12 +42,13 @@ public class ModelGetter
     @Getter
     private final ModelExporter modelExporter;
     private final ModelUtilities modelUtilities;
+    private final SelectionManager selectionManager;
 
     private CKObject exportObject;
     private final String DEFAULT_NAME = "Name";
 
     @Inject
-    public ModelGetter(Client client, ClientThread clientThread, CreatorsConfig config, CreatorsPlugin plugin, DataFinder dataFinder, ModelExporter modelExporter, ModelUtilities modelUtilities)
+    public ModelGetter(Client client, ClientThread clientThread, CreatorsConfig config, CreatorsPlugin plugin, DataFinder dataFinder, ModelExporter modelExporter, ModelUtilities modelUtilities, SelectionManager selectionManager)
     {
         this.client = client;
         this.clientThread = clientThread;
@@ -55,6 +57,7 @@ public class ModelGetter
         this.dataFinder = dataFinder;
         this.modelExporter = modelExporter;
         this.modelUtilities = modelUtilities;
+        this.selectionManager = selectionManager;
     }
 
     public void addCharacterMenuEntries(Tile tile)
@@ -73,7 +76,7 @@ public class ModelGetter
                             .setOption(ColorUtil.prependColorTag("Select", Color.ORANGE))
                             .setTarget(ColorUtil.colorTag(Color.GREEN) + character.getName())
                             .setType(MenuAction.RUNELITE)
-                            .onClick(e -> plugin.getCreatorsPanel().setSelectedCharacter(character));
+                            .onClick(e -> selectionManager.select(character));
 
                     Menu menu = menuEntry.createSubMenu();
 

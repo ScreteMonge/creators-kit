@@ -51,6 +51,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.time.LocalTime;
 import java.util.*;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -91,8 +92,8 @@ public class CreatorsPanel extends PluginPanel
     private final BufferedImage CUSTOM_MODEL = ImageUtil.loadImageResource(getClass(), "/Custom model.png");
     public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
     private final LineBorder defaultBorder = new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1);
-    private final LineBorder hoveredBorder = new LineBorder(ColorScheme.LIGHT_GRAY_COLOR, 2);
-    private final LineBorder selectedBorder = new LineBorder(Color.WHITE, 2);
+    private final LineBorder hoveredBorder = new LineBorder(ColorScheme.LIGHT_GRAY_COLOR, 1);
+    private final LineBorder selectedBorder = new LineBorder(Color.WHITE, 1);
 
     @Inject
     public CreatorsPanel(@Nullable Client client, CreatorsConfig config, ClientThread clientThread, CreatorsPlugin plugin, ToolBoxFrame toolBox, DataFinder dataFinder, ModelImporter modelImporter, SelectionManager selectionManager)
@@ -207,17 +208,6 @@ public class CreatorsPanel extends PluginPanel
         c.gridy = 3;
         c.weightx = 1;
         c.weighty = 0;
-        JButton deselectButton = new JButton("Deselect All");
-        deselectButton.setFocusable(false);
-        deselectButton.setToolTipText("Clear the current Character selection");
-        deselectButton.addActionListener(e -> selectionManager.clear());
-        add(deselectButton, c);
-
-        c.gridwidth = 3;
-        c.gridx = 0;
-        c.gridy = 4;
-        c.weightx = 1;
-        c.weighty = 0;
         sidePanel.setLayout(new GridLayout(0, 1, 4, 4));
         sidePanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         add(sidePanel, c);
@@ -322,7 +312,6 @@ public class CreatorsPanel extends PluginPanel
         colourButton.setToolTipText("Rerolls the Object's colour overlays");
         colourButton.setPreferredSize(new Dimension(90, 25));
         colourButton.setFocusable(false);
-        colourButton.setForeground(color);
 
         JPanel framePanel = new JPanel();
         framePanel.setLayout(new BorderLayout());
@@ -482,7 +471,6 @@ public class CreatorsPanel extends PluginPanel
                 modelComboBox,
                 spawnCheckBox,
                 modelButton,
-                null,
                 modelSpinner,
                 animationSpinner,
                 animationFrameSpinner,
@@ -515,15 +503,6 @@ public class CreatorsPanel extends PluginPanel
         objectPanel.addMouseListener(new MouseAdapter()
         {
             @Override
-            public void mousePressed(MouseEvent e)
-            {
-                onCharacterPanelClicked(character, e);
-            }
-        });
-
-        objectPanel.addMouseListener(new MouseAdapter()
-        {
-            @Override
             public void mouseEntered (MouseEvent e)
             {
                 setHoveredCharacter(character, objectPanel);
@@ -542,7 +521,6 @@ public class CreatorsPanel extends PluginPanel
             propagateActive(character, character.isActive());
         });
 
-        character.setColourButton(colourButton);
         colourButton.addActionListener(e -> showColorPickerFor(character, colourButton));
 
         modelButton.addActionListener(e ->
@@ -587,7 +565,7 @@ public class CreatorsPanel extends PluginPanel
         {
             CustomModel m = (CustomModel) modelComboBox.getSelectedItem();
             character.setStoredModel(m);
-            if (modelComboBox.isVisible() && character == plugin.getSelectedCharacter())
+            if (modelComboBox.isVisible() && character == selectionManager.getFirstSelected())
                 character.setToBaseModel(client, clientThread, true, -1);
             propagateCustomModel(character, m);
         });
@@ -796,7 +774,7 @@ public class CreatorsPanel extends PluginPanel
             npcPanels++;
         }
 
-        setSelectedCharacter(character);
+        selectionManager.select(character);
     }
 
     public void onSwitchButtonPressed(Character character)
@@ -925,8 +903,7 @@ public class CreatorsPanel extends PluginPanel
         TimeSheetPanel timeSheetPanel = toolBox.getTimeSheetPanel();
 
         ArrayList<Character> characters = plugin.getCharacters();
-        Character selectedCharacter = plugin.getSelectedCharacter();
-        Character tspSelectedCharacter = timeSheetPanel.getSelectedCharacter();
+        Character selectedCharacter = selectionManager.getFirstSelected();
 
         for (Character c : charactersToRemove)
         {
@@ -949,12 +926,7 @@ public class CreatorsPanel extends PluginPanel
             characters.remove(c);
             if (c == selectedCharacter)
             {
-                plugin.setSelectedCharacter(null);
-            }
-
-            if (c == tspSelectedCharacter)
-            {
-                timeSheetPanel.setSelectedCharacter(null);
+                selectionManager.clear();
             }
 
             toolBox.getTimeSheetPanel().removeKeyFrameActions(c);
@@ -1037,11 +1009,7 @@ public class CreatorsPanel extends PluginPanel
 
         for (Character character : sidePanelCharacters)
         {
-            if (character == plugin.getSelectedCharacter())
-            {
-                unsetSelectedCharacter();
-                break;
-            }
+            selectionManager.remove(character);
         }
 
         Character[] charactersToRemove = sidePanelCharacters.toArray(new Character[sidePanelCharacters.size()]);
@@ -1059,15 +1027,7 @@ public class CreatorsPanel extends PluginPanel
         ManagerPanel managerPanel = toolBox.getManagerPanel();
         JPanel objectHolder = managerPanel.getObjectHolder();
         ArrayList<Character> managerCharacters = managerPanel.getManagerCharacters();
-
-        for (Character character : managerCharacters)
-        {
-            if (character == plugin.getSelectedCharacter())
-            {
-                unsetSelectedCharacter();
-                break;
-            }
-        }
+        selectionManager.clear();
 
         Character[] charactersToRemove = managerCharacters.toArray(new Character[managerCharacters.size()]);
 
@@ -1094,79 +1054,15 @@ public class CreatorsPanel extends PluginPanel
         sidePanel.revalidate();
     }
 
-    public void setSelectedCharacter(Character selected)
-    {
-        setSelectedCharacter(selected, true);
-    }
-
-    public void setSelectedCharacter(Character selected, boolean updateManagerTree)
-    {
-        plugin.setSelectedCharacter(selected);
-
-        if (updateManagerTree)
-        {
-            toolBox.getManagerPanel().getManagerTree().setTreeSelection(selected);
-        }
-    }
-
-    /**
-     * Modifier-aware click router for Character panels.
-     * Plain click   = replace selection. Ctrl+Click = toggle. Shift+Click = range.
-     * If the Character is already part of an active multi-selection, a plain click
-     * preserves the selection (so clicks on inner buttons don't collapse the group).
-     */
     public void onCharacterPanelClicked(Character character, MouseEvent e)
     {
-        if (character == null)
-        {
-            return;
-        }
-
-        if (e.isShiftDown())
-        {
-            extendSelectionTo(character);
-            return;
-        }
-
         if (e.isControlDown())
         {
             selectionManager.toggle(character);
-            toolBox.getManagerPanel().getManagerTree().syncTreeFromSelection();
             return;
         }
 
-        if (selectionManager.size() > 1 && selectionManager.isSelected(character))
-        {
-            return;
-        }
-
-        setSelectedCharacter(character);
-    }
-
-    private void extendSelectionTo(Character character)
-    {
-        ArrayList<Character> all = plugin.getCharacters();
-        Character primary = selectionManager.getPrimary();
-        int target = all.indexOf(character);
-        if (target < 0)
-        {
-            setSelectedCharacter(character);
-            return;
-        }
-        int anchor = primary == null ? target : all.indexOf(primary);
-        if (anchor < 0)
-        {
-            anchor = target;
-        }
-        int start = Math.min(anchor, target);
-        int end = Math.max(anchor, target);
-        ArrayList<Character> range = new ArrayList<>(end - start + 1);
-        for (int i = start; i <= end; i++)
-        {
-            range.add(all.get(i));
-        }
-        selectionManager.selectAll(range);
-        toolBox.getManagerPanel().getManagerTree().syncTreeFromSelection();
+        selectionManager.select(character);
     }
 
     private static Border buildNameFieldBorder(Border inner, Color accent)
@@ -1190,11 +1086,6 @@ public class CreatorsPanel extends PluginPanel
         showColorPickerAt(anchor, 0, anchor.getHeight(), character);
     }
 
-    /**
-     * Show the swatch picker rooted at (x, y) within {@code invoker}. The picked
-     * colour is applied to every selected Character (when {@code target} is part of
-     * the multi-selection) or to just {@code target} otherwise.
-     */
     public void showColorPickerAt(Component invoker, int x, int y, Character target)
     {
         JPopupMenu popup = new JPopupMenu();
@@ -1233,32 +1124,22 @@ public class CreatorsPanel extends PluginPanel
         popup.show(invoker, x, y);
     }
 
-    /**
-     * Returns the Characters a per-Character UI edit should fan out to. If {@code source}
-     * is part of an active multi-selection, the full selected set is returned; otherwise
-     * just {@code source}.
-     */
-    private java.util.Set<Character> getBulkTargets(Character source)
+    private Set<Character> getBulkTargets(Character source)
     {
-        if (selectionManager.size() > 1 && selectionManager.isSelected(source))
+        if (selectionManager.getSelectionSize() > 1 && selectionManager.contains(source))
         {
             return selectionManager.getSelected();
         }
-        return java.util.Collections.singleton(source);
+        return Collections.singleton(source);
     }
 
-    /**
-     * Propagate a spinner value to every other selected Character's spinner. Setting the
-     * spinner value re-fires its ChangeListener, which applies to its own Character;
-     * the {@code bulkEditing} flag prevents that nested call from re-propagating.
-     */
-    private void propagateSpinner(Character source, Object value, java.util.function.Function<Character, JSpinner> getter)
+    private void propagateSpinner(Character source, Object value, Function<Character, JSpinner> getter)
     {
         if (bulkEditing)
         {
             return;
         }
-        java.util.Set<Character> targets = getBulkTargets(source);
+        Set<Character> targets = getBulkTargets(source);
         if (targets.size() == 1)
         {
             return;
@@ -1273,7 +1154,7 @@ public class CreatorsPanel extends PluginPanel
                     continue;
                 }
                 JSpinner s = getter.apply(c);
-                if (s != null && !java.util.Objects.equals(s.getValue(), value))
+                if (s != null && !Objects.equals(s.getValue(), value))
                 {
                     s.setValue(value);
                 }
@@ -1285,10 +1166,6 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
-    /**
-     * Apply the Id/Custom model toggle to a single Character (used both for the
-     * source click and for fan-out to selected siblings).
-     */
     private void applyModelMode(Character c, boolean customMode, JButton modelBtn, JSpinner modelSp, JComboBox<CustomModel> modelCb)
     {
         c.setCustomMode(customMode);
@@ -1306,25 +1183,22 @@ public class CreatorsPanel extends PluginPanel
         }
         if (customMode)
         {
-            plugin.setModel(c, true, -1);
+            c.setToBaseModel(client, clientThread, true, -1);
         }
         else
         {
             int idValue = modelSp != null ? (int) modelSp.getValue() : 0;
-            plugin.setModel(c, false, idValue);
+            c.setToBaseModel(client, clientThread, false, idValue);
         }
     }
 
-    /**
-     * Propagate a custom-model selection to every other selected Character.
-     */
     private void propagateCustomModel(Character source, CustomModel m)
     {
         if (bulkEditing)
         {
             return;
         }
-        java.util.Set<Character> targets = getBulkTargets(source);
+        Set<Character> targets = getBulkTargets(source);
         if (targets.size() == 1)
         {
             return;
@@ -1346,7 +1220,7 @@ public class CreatorsPanel extends PluginPanel
                 }
                 if (c.isCustomMode())
                 {
-                    plugin.setModel(c, true, -1);
+                    c.setToBaseModel(client, clientThread, true, -1);
                 }
             }
         }
@@ -1356,16 +1230,13 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
-    /**
-     * Propagate the spawn checkbox state to every other selected Character.
-     */
     private void propagateActive(Character source, boolean active)
     {
         if (bulkEditing)
         {
             return;
         }
-        java.util.Set<Character> targets = getBulkTargets(source);
+        Set<Character> targets = getBulkTargets(source);
         if (targets.size() == 1)
         {
             return;
@@ -1396,13 +1267,9 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
-    /**
-     * Apply the chosen color to either every selected Character (when the clicked
-     * Character is part of the multi-selection) or to just the clicked Character.
-     */
     public void applyColorToTargets(Character clicked, Color color)
     {
-        java.util.Set<Character> selected = selectionManager.getSelected();
+        Set<Character> selected = selectionManager.getSelected();
         if (selected.size() > 1 && selected.contains(clicked))
         {
             for (Character c : selected)
@@ -1419,20 +1286,10 @@ public class CreatorsPanel extends PluginPanel
     private void applyCharacterColor(Character c, Color color)
     {
         c.setColor(color);
-        JButton btn = c.getColourButton();
-        if (btn != null)
-        {
-            btn.setForeground(color);
-        }
         JTextField nameField = c.getNameField();
-        if (nameField != null)
-        {
-            Border current = nameField.getBorder();
-            Border inner = current instanceof CompoundBorder
-                    ? ((CompoundBorder) current).getInsideBorder()
-                    : current;
-            nameField.setBorder(buildNameFieldBorder(inner, color));
-        }
+        CompoundBorder current = (CompoundBorder) nameField.getBorder();
+        Border inner = current.getInsideBorder();
+        nameField.setBorder(buildNameFieldBorder(inner, color));
     }
 
     /**
@@ -1443,15 +1300,13 @@ public class CreatorsPanel extends PluginPanel
     {
         ArrayList<Character> characters = plugin.getCharacters();
         Character hovered = plugin.getHoveredCharacter();
+
         for (int i = 0; i < characters.size(); i++)
         {
             Character c = characters.get(i);
             JPanel panel = c.getObjectPanel();
-            if (panel == null)
-            {
-                continue;
-            }
-            if (selectionManager.isSelected(c))
+
+            if (selectionManager.contains(c))
             {
                 panel.setBorder(selectedBorder);
             }
@@ -1473,14 +1328,9 @@ public class CreatorsPanel extends PluginPanel
                 scrollSelectedIndex(clicks);
     }
 
-    public void unsetSelectedCharacter()
-    {
-        plugin.setSelectedCharacter(null);
-    }
-
     public void setHoveredCharacter(Character hovered, JPanel jPanel)
     {
-        if (selectionManager.isSelected(hovered))
+        if (selectionManager.contains(hovered))
         {
             return;
         }
@@ -1493,7 +1343,7 @@ public class CreatorsPanel extends PluginPanel
     {
         plugin.setHoveredCharacter(null);
 
-        if (selectionManager.isSelected(hoverRemoved))
+        if (selectionManager.contains(hoverRemoved))
         {
             return;
         }
@@ -1504,7 +1354,7 @@ public class CreatorsPanel extends PluginPanel
     public void addModelOptions(CustomModel[] models, boolean setComboBox)
     {
         modelOrganizer.addModels(models);
-        Character selectedCharacter = plugin.getSelectedCharacter();
+        Character selectedCharacter = selectionManager.getFirstSelected();
 
         JComboBox<CustomModel> modelAttributesBox = toolBox.getTimeSheetPanel()
                 .getAttributePanel()
@@ -2078,7 +1928,7 @@ public class CreatorsPanel extends PluginPanel
 
         if (isVersionLessThan(fileVersion, "1.5.4"))
         {
-            node = managerTree.addFolderNode(parentNode, name);
+            node = managerTree.addFolderNode(parentNode, ParentPanel.MANAGER, name);
         }
         else
         {
@@ -2086,7 +1936,7 @@ public class CreatorsPanel extends PluginPanel
             {
                 default:
                 case STANDARD:
-                    node = managerTree.addFolderNode(parentNode, name);
+                    node = managerTree.addFolderNode(parentNode, ParentPanel.MANAGER, name);
                     break;
                 case MASTER:
                 case MANAGER:

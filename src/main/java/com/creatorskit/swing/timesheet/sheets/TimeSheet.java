@@ -24,6 +24,7 @@ import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
+import java.util.List;
 
 @Getter
 @Setter
@@ -65,17 +66,12 @@ public class TimeSheet extends JPanel
     private boolean keyFrameClicked = false;
     private KeyFrame[] clickedKeyFrames = new KeyFrame[0];
 
-    /**
-     * Characters whose keyframes should be rendered and interactive.
-     * If a multi-selection is active, returns the full selected set. Otherwise the single
-     * primary Character (or empty if none).
-     */
-    public java.util.List<Character> getVisibleCharacters()
+    public List<Character> getVisibleCharacters()
     {
         com.creatorskit.selection.SelectionManager mgr = getTimeSheetPanel() == null
                 ? null
                 : getTimeSheetPanel().getSelectionManager();
-        if (mgr != null && mgr.size() > 1)
+        if (mgr != null && mgr.getSelectionSize() > 1)
         {
             return new java.util.ArrayList<>(mgr.getSelected());
         }
@@ -87,10 +83,6 @@ public class TimeSheet extends JPanel
         return java.util.Collections.singletonList(primary);
     }
 
-    /**
-     * Finds the Character that owns the given keyframe by scanning each visible
-     * Character's frame array. Returns null if not found.
-     */
     public Character findKeyFrameOwner(KeyFrame keyFrame)
     {
         if (keyFrame == null)
@@ -830,11 +822,6 @@ public class TimeSheet extends JPanel
 
     public void setSelectedKeyFrames(KeyFrame[] keyFrames)
     {
-        // When every selected keyframe shares one type, switch to that type's card
-        // BEFORE storing the selection — that way TimeSheetPanel.setSelectedKeyFrames'
-        // refresh + resetAttributes use the new active type. When the selection spans
-        // multiple types we leave the active card alone so refreshKeyFrameSelectionState
-        // can show the mixed-types placeholder.
         if (keyFrames != null && keyFrames.length > 0)
         {
             KeyFrameType firstType = keyFrames[0].getKeyFrameType();
@@ -852,6 +839,7 @@ public class TimeSheet extends JPanel
                 attributePanel.switchCards(firstType);
             }
         }
+
         getTimeSheetPanel().setSelectedKeyFrames(keyFrames);
         if (keyFrames == null || keyFrames.length != 1)
         {

@@ -13,6 +13,7 @@ import com.creatorskit.programming.Programmer;
 import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.programming.orientation.OrientationGoal;
 import com.creatorskit.programming.orientation.OrientationHotkeyMode;
+import com.creatorskit.selection.SelectionManager;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.manager.TreeScrollPane;
@@ -42,13 +43,12 @@ import javax.inject.Inject;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
-import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -67,6 +67,7 @@ public class TimeSheetPanel extends JSplitPane
     private TreeScrollPane treeScrollPane;
     private final ManagerTree managerTree;
     private MovementManager movementManager;
+    private final SelectionManager selectionManager;
 
     private JSplitPane leftSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, true);
     private JSplitPane rightSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, true);
@@ -102,7 +103,6 @@ public class TimeSheetPanel extends JSplitPane
     private double currentTime = 0;
     private boolean pauseScrollBarListener = false;
     private Character selectedCharacter;
-    private final com.creatorskit.selection.SelectionManager selectionManager;
 
     private ArrayList<KeyFrameAction> keyFrameStack = new ArrayList<>();
     private KeyFrame[] selectedKeyFrames = new KeyFrame[0];
@@ -133,10 +133,10 @@ public class TimeSheetPanel extends JSplitPane
         setupAttributePanel();
         setupAttributeSheet();
         setupScrollBar();
-        setupTimeTreeListener();
         setupLayout();
         setKeyBindings();
         setMouseListeners();
+        selectionManager.addListener(mgr -> setSelectedCharacter(mgr.getFirstSelected()));
     }
 
     public void onAttributeSkipForward()
@@ -406,22 +406,17 @@ public class TimeSheetPanel extends JSplitPane
     {
         KeyFrameType type = attributePanel.getSelectedKeyFramePage();
 
-        // Build the target list: every currently-selected keyframe of the panel's type.
-        // If no matching selection, fall back to the legacy single-keyframe behavior
-        // (the keyframe of `type` previous to the current playhead on the primary).
-        java.util.List<KeyFrame> targets = new java.util.ArrayList<>();
-        java.util.List<Character> owners = new java.util.ArrayList<>();
+        List<KeyFrame> targets = new ArrayList<>();
+        List<Character> owners = new ArrayList<>();
         for (KeyFrame kf : selectedKeyFrames)
         {
             if (kf == null || kf.getKeyFrameType() != type)
             {
                 continue;
             }
+
             Character owner = findKeyFrameOwner(kf);
-            if (owner == null)
-            {
-                continue;
-            }
+
             targets.add(kf);
             owners.add(owner);
         }
@@ -432,11 +427,13 @@ public class TimeSheetPanel extends JSplitPane
             {
                 return;
             }
+
             KeyFrame keyFrame = selectedCharacter.findPreviousKeyFrame(type, currentTime, true);
             if (keyFrame == null)
             {
                 return;
             }
+
             targets.add(keyFrame);
             owners.add(selectedCharacter);
         }
@@ -482,26 +479,13 @@ public class TimeSheetPanel extends JSplitPane
      */
     private Character findKeyFrameOwner(KeyFrame keyFrame)
     {
-        if (keyFrame == null)
-        {
-            return null;
-        }
-        java.util.List<Character> visible = (selectionManager != null && selectionManager.size() > 1)
-                ? new ArrayList<>(selectionManager.getSelected())
-                : (selectedCharacter != null ? java.util.Collections.singletonList(selectedCharacter) : java.util.Collections.emptyList());
+        List<Character> visible = new ArrayList<>(selectionManager.getSelected());
         for (Character c : visible)
         {
             KeyFrame[][] frames = c.getFrames();
-            if (frames == null)
-            {
-                continue;
-            }
+
             for (KeyFrame[] row : frames)
             {
-                if (row == null)
-                {
-                    continue;
-                }
                 for (KeyFrame kf : row)
                 {
                     if (kf == keyFrame)
@@ -1098,22 +1082,13 @@ public class TimeSheetPanel extends JSplitPane
         attributePanel.resetAttributes(character, currentTime);
     }
 
-    /**
-     * Explicit setter so that selection-state UI (AttributePanel) refreshes whenever
-     * the keyframe selection changes. Replaces Lombok's auto-generated setter.
-     * Also re-pulls the displayed attribute values so clicking a keyframe shows
-     * THAT keyframe's data instead of the seeker-bar keyframe.
-     */
     public void setSelectedKeyFrames(KeyFrame[] keyFrames)
     {
         this.selectedKeyFrames = keyFrames;
-        if (attributePanel != null)
+        attributePanel.refreshKeyFrameSelectionState();
+        if (selectedCharacter != null)
         {
-            attributePanel.refreshKeyFrameSelectionState();
-            if (selectedCharacter != null)
-            {
-                attributePanel.resetAttributes(selectedCharacter, currentTime);
-            }
+            attributePanel.resetAttributes(selectedCharacter, currentTime);
         }
     }
 
@@ -1430,33 +1405,6 @@ public class TimeSheetPanel extends JSplitPane
             hScroll = -e.getValue();
             updateScrollBar();
             updateSheets();
-        });
-    }
-
-    private void setupTimeTreeListener()
-    {
-        managerTree.addTreeSelectionListener(e ->
-        {
-            TreePath treePath = e.getPath();
-            if (treePath == null)
-            {
-                return;
-            }
-
-            DefaultMutableTreeNode node = (DefaultMutableTreeNode) treePath.getLastPathComponent();
-            Object o = node.getUserObject();
-            if (o == null)
-            {
-                return;
-            }
-
-            if (o instanceof Character)
-            {
-                setSelectedCharacter((Character) o);
-                return;
-            }
-
-            setSelectedCharacter(null);
         });
     }
 

@@ -6,6 +6,7 @@ import com.creatorskit.selection.SelectionManager;
 import com.creatorskit.swing.*;
 import lombok.Getter;
 import net.runelite.client.ui.ColorScheme;
+import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -13,11 +14,12 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Enumeration;
+import java.util.*;
+import java.util.List;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.event.TreeExpansionEvent;
 import javax.swing.event.TreeExpansionListener;
@@ -37,8 +39,7 @@ public class ManagerTree extends JTree
     private final DefaultMutableTreeNode managerNode;
     private final ManagerTreeModel treeModel;
     private final GridBagConstraints c = new GridBagConstraints();
-    private Folder[] selectedFolders = new Folder[0];
-    private boolean syncingFromSelectionManager = false;
+    private List<Folder> selectedFolders = new ArrayList<>();
     private final int ROW_HEIGHT = 28;
 
     private final BufferedImage FOLDER_OPEN = ImageUtil.loadImageResource(getClass(), "/Folder_Open.png");
@@ -59,6 +60,15 @@ public class ManagerTree extends JTree
         this.rootNode = rootNode;
         this.sidePanelNode = sidePanelNode;
         this.managerNode = managerNode;
+        selectionManager.addListener(mgr ->
+        {
+            if (!triggerTreeSelectionListener)
+            {
+                return;
+            }
+
+            setTreeSelection(mgr.getSelected());
+        });
 
         setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 1));
 
@@ -69,7 +79,6 @@ public class ManagerTree extends JTree
         setModel(treeModel);
         expandRow(0);
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        setEditable(false);
         setOpaque(false);
         setRowHeight(ROW_HEIGHT);
         getSelectionModel().setSelectionMode(TreeSelectionModel.DISCONTIGUOUS_TREE_SELECTION);
@@ -167,22 +176,22 @@ public class ManagerTree extends JTree
 
     public DefaultMutableTreeNode addFolderNode(String name, ParentPanel parentPanel)
     {
-        return addFolderNode(getParentFolderNode(parentPanel, false), name, true);
+        return addFolderNode(getParentFolderNode(parentPanel, false), name, parentPanel, true);
     }
 
-    public DefaultMutableTreeNode addFolderNode(DefaultMutableTreeNode parent, String name)
+    public DefaultMutableTreeNode addFolderNode(DefaultMutableTreeNode parent, ParentPanel parentPanel, String name)
     {
-        return addFolderNode(parent, name, false);
+        return addFolderNode(parent, name, parentPanel, false);
     }
 
-    public DefaultMutableTreeNode addFolderNode(DefaultMutableTreeNode managerParent, String name, boolean shouldBeVisible)
+    public DefaultMutableTreeNode addFolderNode(DefaultMutableTreeNode managerParent, String name, ParentPanel parentPanel, boolean shouldBeVisible)
     {
         if (managerParent == rootNode)
         {
             managerParent = managerNode;
         }
 
-        Folder folder = new Folder(name, FolderType.STANDARD, null, managerParent);
+        Folder folder = new Folder(name, FolderType.STANDARD, parentPanel, null, managerParent);
         DefaultMutableTreeNode linkedManagerNode = new DefaultMutableTreeNode(folder);
         folder.setLinkedManagerNode(linkedManagerNode);
 
@@ -321,7 +330,10 @@ public class ManagerTree extends JTree
                 removeFolderNode(node);
             }
 
-            getCellEditor().cancelCellEditing();
+            if (cellEditor != null)
+            {
+                getCellEditor().cancelCellEditing();
+            }
         });
         thread.start();
     }
@@ -399,38 +411,15 @@ public class ManagerTree extends JTree
         }
     }
 
-    /**
-     * Walks every descendant of {@code parent} and appends each child's TreePath to
-     * {@code out}. Used to visually highlight every subfolder + Character node in
-     * the tree when the user clicks a parent folder. Returns true if at least one
-     * descendant was added.
-     */
-    private boolean collectDescendantPaths(DefaultMutableTreeNode parent, ArrayList<TreePath> out)
-    {
-        boolean added = false;
-        Enumeration<TreeNode> children = parent.children();
-        while (children.hasMoreElements())
-        {
-            DefaultMutableTreeNode child = (DefaultMutableTreeNode) children.nextElement();
-            TreePath childPath = new TreePath(child.getPath());
-            if (!out.contains(childPath))
-            {
-                out.add(childPath);
-                added = true;
-            }
-            if (!child.isLeaf())
-            {
-                added |= collectDescendantPaths(child, out);
-            }
-        }
-        return added;
-    }
-
-    public void getObjectPanelChildren(DefaultMutableTreeNode parent, ArrayList<Character> characters)
+    public void getObjectPanelChildren(DefaultMutableTreeNode parent, ArrayList<Character> characters, @Nullable ParentPanel parentPanel)
     {
         if (parent.getUserObject() instanceof Character)
         {
-            characters.add((Character) parent.getUserObject());
+            Character character = (Character) parent.getUserObject();
+            if (parentPanel == null || parentPanel == character.getParentPanel())
+            {
+                characters.add(character);
+            }
             return;
         }
 
@@ -443,11 +432,16 @@ public class ManagerTree extends JTree
             {
                 Character character = (Character) object;
                 if (!characters.contains(character))
-                    characters.add(character);
+                {
+                    if (parentPanel == null || parentPanel == character.getParentPanel())
+                    {
+                        characters.add(character);
+                    }
+                }
             }
 
             if (!node.isLeaf())
-                getObjectPanelChildren(node, characters);
+                getObjectPanelChildren(node, characters, parentPanel);
         }
     }
 
@@ -459,125 +453,75 @@ public class ManagerTree extends JTree
             TreePath[] treePaths = getSelectionPaths();
             if (treePaths == null)
             {
-                if (!syncingFromSelectionManager)
-                {
-                    selectionManager.clear();
-                }
+                triggerTreeSelectionListener = false;
+                selectionManager.clear();
+                triggerTreeSelectionListener = true;
                 return;
             }
 
             updateTreeSelectionIndex();
 
-            if (!syncingFromSelectionManager)
+            ArrayList<Character> characters = new ArrayList<>();
+            ArrayList<Folder> folders = new ArrayList<>();
+
+            for (TreePath path : treePaths)
             {
-                ArrayList<Character> selectedChars = new ArrayList<>();
-                ArrayList<TreePath> expandedPaths = new ArrayList<>();
-                boolean addedDescendants = false;
-                for (TreePath treePath : treePaths)
-                {
-                    expandedPaths.add(treePath);
-                    Object component = treePath.getLastPathComponent();
-                    if (!(component instanceof DefaultMutableTreeNode))
-                    {
-                        continue;
-                    }
-                    DefaultMutableTreeNode node = (DefaultMutableTreeNode) component;
-                    Object user = node.getUserObject();
-                    if (user instanceof Character)
-                    {
-                        Character character = (Character) user;
-                        if (!selectedChars.contains(character))
-                        {
-                            selectedChars.add(character);
-                        }
-                    }
-                    else if (user instanceof Folder)
-                    {
-                        // Folder selection = select every Character recursively under it
-                        getObjectPanelChildren(node, selectedChars);
-                        // Visually highlight every descendant subfolder + Character node too
-                        addedDescendants |= collectDescendantPaths(node, expandedPaths);
-                    }
-                }
-                selectionManager.selectAll(selectedChars);
+                DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
 
-                if (addedDescendants)
+                if (node.getUserObject() instanceof Character)
                 {
-                    syncingFromSelectionManager = true;
-                    try
-                    {
-                        setSelectionPaths(expandedPaths.toArray(new TreePath[0]));
-                    }
-                    finally
-                    {
-                        syncingFromSelectionManager = false;
-                    }
-                }
-            }
-
-            JPanel objectHolder = toolBox.getManagerPanel().getObjectHolder();
-
-            boolean containsSidePanel = false;
-            for (TreePath treePath : treePaths)
-            {
-                if (treePath.getLastPathComponent() == rootNode)
-                {
-                    objectHolder.removeAll();
-                    objectHolder.revalidate();
-                    return;
-                }
-
-                if (treeContainsSidePanel((TreeNode) treePath.getLastPathComponent()))
-                {
-                    containsSidePanel = true;
+                    characters.add((Character) node.getUserObject());
                 }
             }
 
             ArrayList<Character> panelsToAdd = new ArrayList<>();
-            Folder[] folders = new Folder[0];
-
-            boolean folderSelected = false;
-            String folderName = "";
-            for (TreePath treePath : treePaths)
-            {
-                DefaultMutableTreeNode node = (DefaultMutableTreeNode) treePath.getLastPathComponent();
-                if (node.getUserObject() instanceof Folder)
-                {
-                    Folder folder = (Folder) node.getUserObject();
-                    if (folderName.isEmpty())
-                    {
-                        folderName = folder.getName();
-                    }
-
-                    folderSelected = true;
-                    folders = ArrayUtils.add(folders, folder);
-                }
-            }
-
-            if (folderSelected)
-            {
-                for (TreePath treePath : treePaths)
-                {
-                    getObjectPanelChildren((DefaultMutableTreeNode) treePath.getLastPathComponent(), panelsToAdd);
-                }
-            }
-            else
-            {
-                TreePath parentPath = treePaths[0].getParentPath();
-                if (parentPath == null)
-                    return;
-
-                DefaultMutableTreeNode folderNode = (DefaultMutableTreeNode) parentPath.getLastPathComponent();
-                Folder folder = (Folder) folderNode.getUserObject();
-                folderName = folder.getName();
-                getObjectPanelChildren(folderNode, panelsToAdd);
-                folders = ArrayUtils.add(folders, folder);
-            }
+            getPanelsToShow(panelsToAdd, folders, ParentPanel.MANAGER);
 
             selectedFolders = folders;
+            triggerTreeSelectionListener = false;
+            selectionManager.selectAll(characters);
+            triggerTreeSelectionListener = true;
 
-            toolBox.getManagerPanel().getObjectLabel().setText("Current Folder: " + folderName);
-            resetObjectHolder(panelsToAdd, containsSidePanel);
+            resetObjectHolder(panelsToAdd);
+        }
+    }
+
+    public void getPanelsToShow(ArrayList<Character> characters, ArrayList<Folder> folders, ParentPanel parentPanel)
+    {
+        TreePath[] treePaths = getSelectionPaths();
+        if (treePaths == null)
+        {
+            return;
+        }
+
+        for (TreePath treePath : treePaths)
+        {
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode) treePath.getLastPathComponent();
+            if (node.getUserObject() instanceof Folder)
+            {
+                Folder folder = (Folder) node.getUserObject();
+                if (folder.getParentPanel() == parentPanel)
+                {
+                    folders.add(folder);
+                }
+            }
+        }
+
+        if (!folders.isEmpty())
+        {
+            for (TreePath treePath : treePaths)
+            {
+                getObjectPanelChildren((DefaultMutableTreeNode) treePath.getLastPathComponent(), characters,  parentPanel);
+            }
+        }
+        else
+        {
+            TreePath parentPath = treePaths[0].getParentPath();
+            if (parentPath == null)
+                return;
+
+            DefaultMutableTreeNode folderNode = (DefaultMutableTreeNode) parentPath.getLastPathComponent();
+            getObjectPanelChildren(folderNode, characters,  parentPanel);
         }
     }
 
@@ -620,15 +564,15 @@ public class ManagerTree extends JTree
             }
         }
 
-        resetObjectHolder(objectPanels, false);
+        resetObjectHolder(objectPanels);
     }
 
-    public void resetObjectHolder(ArrayList<Character> charactersToAdd, boolean sidePanel)
+    public void resetObjectHolder(ArrayList<Character> charactersToAdd)
     {
-        resetObjectHolder(charactersToAdd.toArray(new Character[charactersToAdd.size()]), sidePanel);
+        resetObjectHolder(charactersToAdd.toArray(new Character[charactersToAdd.size()]));
     }
 
-    public void resetObjectHolder(Character[] charactersToAdd, boolean sidePanel)
+    public void resetObjectHolder(Character[] charactersToAdd)
     {
         JPanel[] panelsToAdd = new JPanel[charactersToAdd.length];
 
@@ -636,18 +580,11 @@ public class ManagerTree extends JTree
         {
             panelsToAdd[i] = charactersToAdd[i].getObjectPanel();
         }
-        resetObjectHolder(panelsToAdd, sidePanel);
+        resetObjectHolder(panelsToAdd);
     }
 
-    public void resetObjectHolder(JPanel[] panelsToAdd, boolean sidePanel)
+    public void resetObjectHolder(JPanel[] panelsToAdd)
     {
-        if (sidePanel)
-        {
-            objectHolder.removeAll();
-            objectHolder.revalidate();
-            return;
-        }
-
         JPanel managerHolder = toolBox.getManagerPanel().getObjectHolder();
         managerHolder.removeAll();
 
@@ -665,78 +602,40 @@ public class ManagerTree extends JTree
         toolBox.getTimeSheetPanel().getSummarySheet().onVerticalScrollEvent(scroll);
     }
 
-    public void setTreeSelection(Character character)
+    private boolean triggerTreeSelectionListener = true;
+
+    public void setTreeSelection(Set<Character> selected)
     {
-        if (character == null)
+        List<Character> characters = new ArrayList<>(selected);
+        if (characters.isEmpty())
         {
             updateTreeSelectionIndex();
             return;
         }
 
-        TreePath treePath = new TreePath(character.getLinkedManagerNode().getPath());
-        setSelectionPath(treePath);
-        scrollPathToVisible(treePath);
+        TreePath[] paths = new TreePath[characters.size()];
+        for (int i = 0; i < characters.size(); i++)
+        {
+            Character character = characters.get(i);
+            TreePath path = new TreePath(character.getLinkedManagerNode().getPath());
+            paths[i] = path;
+        }
+
+        for (int i = 0; i < selectedFolders.size(); i++)
+        {
+            Folder folder = selectedFolders.get(i);
+            paths = ArrayUtils.add(paths, new TreePath(folder.getLinkedManagerNode().getPath()));
+        }
+
+        triggerTreeSelectionListener = false;
+        setSelectionPaths(paths);
+        triggerTreeSelectionListener = true;
         updateTreeSelectionIndex();
     }
 
-    /**
-     * Reorder mode toggles drag-to-reorder and inline-rename together. Disabled by
-     * default so misclicks between rows don't accidentally reorder or rename Characters.
-     */
     public void setReorderMode(boolean enabled)
     {
-        setEditable(enabled);
         setDragEnabled(enabled);
-    }
-
-    public boolean isReorderMode()
-    {
-        return isEditable();
-    }
-
-    /**
-     * Updates the tree's visual selection to match SelectionManager. Called from sidebar
-     * click handlers so the tree reflects multi-selection done elsewhere. The
-     * syncingFromSelectionManager flag prevents the resulting TreeSelectionEvent from
-     * pushing the same state back into SelectionManager.
-     */
-    public void syncTreeFromSelection()
-    {
-        syncingFromSelectionManager = true;
-        try
-        {
-            java.util.Set<Character> selected = selectionManager.getSelected();
-            if (selected.isEmpty())
-            {
-                clearSelection();
-                return;
-            }
-
-            TreePath[] paths = new TreePath[selected.size()];
-            int i = 0;
-            for (Character c : selected)
-            {
-                DefaultMutableTreeNode node = c.getLinkedManagerNode();
-                if (node != null)
-                {
-                    paths[i++] = new TreePath(node.getPath());
-                }
-            }
-            if (i < paths.length)
-            {
-                paths = Arrays.copyOf(paths, i);
-            }
-            setSelectionPaths(paths);
-            if (paths.length > 0)
-            {
-                scrollPathToVisible(paths[paths.length - 1]);
-            }
-            updateTreeSelectionIndex();
-        }
-        finally
-        {
-            syncingFromSelectionManager = false;
-        }
     }
 
     public void scrollSelectedIndex(int direction)
@@ -850,49 +749,138 @@ public class ManagerTree extends JTree
 
         DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
 
-        if (!(node.getUserObject() instanceof Character))
+        if (node.getUserObject() instanceof Character)
         {
+            Character character = (Character) node.getUserObject();
+            showCharacterContextMenu(character, x, y);
             return;
         }
 
-        Character character = (Character) node.getUserObject();
-        showCharacterContextMenu(character, x, y);
+        if (node.getUserObject() instanceof Folder)
+        {
+            Folder folder = (Folder) node.getUserObject();
+            showFolderContextMenu(folder, x, y);
+        }
     }
 
-    /**
-     * Right-click context menu for a Character node in the tree. Shows the existing
-     * keyframe-summary submenu plus a "Recolour" submenu that operates on the current
-     * SelectionManager state (so multi-select recolour works from the tree).
-     */
     private void showCharacterContextMenu(Character character, int x, int y)
     {
-        if (!selectionManager.isSelected(character))
-        {
-            selectionManager.select(character);
-            syncTreeFromSelection();
-        }
-
-        int count = selectionManager.size();
+        int count = selectionManager.getSelectionSize();
         JPopupMenu popup = new JPopupMenu();
 
-        JLabel title = new JLabel(count > 1
-                ? count + " Characters selected"
-                : character.getName());
-        title.setFont(net.runelite.client.ui.FontManager.getRunescapeBoldFont());
-        title.setBorder(new javax.swing.border.EmptyBorder(2, 6, 2, 6));
+        JLabel title = new JLabel(count > 1 ? count + " Characters selected" : character.getName());
+        title.setFont(FontManager.getRunescapeBoldFont());
+        title.setBorder(new EmptyBorder(2, 6, 2, 6));
         popup.add(title);
         popup.addSeparator();
 
-        JMenuItem recolour = new JMenuItem("Recolour...");
+        JMenuItem rename = new JMenuItem("Rename");
+        rename.addActionListener(e -> showRenamePopup(character.getLinkedManagerNode(), x, y));
+        popup.add(rename);
+
+        JMenuItem recolour = new JMenuItem("Recolour");
         recolour.addActionListener(e ->
                 plugin.getCreatorsPanel().showColorPickerAt(this, x, y, character));
         popup.add(recolour);
 
-        JMenuItem keyframes = new JMenuItem("Show keyframes...");
+        JMenuItem keyframes = new JMenuItem("Change Summary Preview");
         keyframes.addActionListener(e ->
                 toolBox.getTimeSheetPanel().getSummarySheet().showSummaryPopup(this, character, x, y));
         popup.add(keyframes);
 
+        popup.show(this, x, y);
+    }
+
+    private void showFolderContextMenu(Folder folder, int x, int y)
+    {
+        JPopupMenu popup = new JPopupMenu();
+
+        JLabel title = new JLabel(folder.getName());
+        title.setFont(FontManager.getRunescapeBoldFont());
+        title.setBorder(new EmptyBorder(2, 6, 2, 6));
+        popup.add(title);
+        popup.addSeparator();
+
+        JMenuItem selectAll = new JMenuItem("Select All");
+        selectAll.addActionListener(e ->
+        {
+            ArrayList<DefaultMutableTreeNode> list = new ArrayList<>();
+            DefaultMutableTreeNode parent = folder.getLinkedManagerNode();
+            getAllNodes(parent, list);
+            list.add(parent);
+
+            List<Character> characters = new ArrayList<>();
+            List<Folder> folders = new ArrayList<>();
+
+            for (DefaultMutableTreeNode node : list)
+            {
+                Object o = node.getUserObject();
+                if (o instanceof Character)
+                {
+                    characters.add((Character) o);
+                }
+
+                if (o instanceof Folder)
+                {
+                    folders.add((Folder) o);
+                }
+            }
+
+            selectedFolders = folders;
+            plugin.getSelectionManager().selectAll(characters);
+        });
+        popup.add(selectAll);
+
+        FolderType type = folder.getFolderType();
+        if (type != FolderType.MASTER
+                && type != FolderType.SIDE_PANEL
+                && type != FolderType.MANAGER)
+        {
+            JMenuItem rename = new JMenuItem("Rename");
+            rename.addActionListener(e -> showRenamePopup(folder.getLinkedManagerNode(), x, y));
+            popup.add(rename);
+        }
+
+        popup.show(this, x, y);
+    }
+
+    private void showRenamePopup(DefaultMutableTreeNode node, int x, int y)
+    {
+        JPopupMenu popup = new JPopupMenu();
+
+        JLabel title = new JLabel("Rename");
+        title.setFont(FontManager.getRunescapeBoldFont());
+        title.setBorder(new EmptyBorder(2, 2, 2, 2));
+        popup.add(title);
+        popup.addSeparator();
+
+        Object o = node.getUserObject();
+
+        JTextField textField = new JTextField();
+        textField.setColumns(25);
+
+        textField.addActionListener(e ->
+        {
+            String text = textField.getText();
+            text = StringHandler.cleanString(text);
+
+            if (o instanceof Character)
+            {
+                Character character = (Character) o;
+                character.getNameField().setText(text);
+                plugin.getCreatorsPanel().onNameTextFieldChanged(character);
+            }
+
+            if (o instanceof Folder)
+            {
+                Folder folder = (Folder) o;
+                folder.setName(text);
+            }
+
+            treeModel.nodeChanged(node);
+        });
+
+        popup.add(textField);
         popup.show(this, x, y);
     }
 }

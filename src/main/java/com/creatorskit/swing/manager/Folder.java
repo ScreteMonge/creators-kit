@@ -1,5 +1,6 @@
 package com.creatorskit.swing.manager;
 
+import com.creatorskit.swing.ParentPanel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,6 +14,7 @@ public class Folder
 {
     private String name;
     private FolderType folderType;
+    private ParentPanel parentPanel;
     private DefaultMutableTreeNode linkedManagerNode;
     private DefaultMutableTreeNode parentManagerNode;
 

@@ -13,6 +13,7 @@ import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 import java.awt.*;
@@ -44,8 +45,10 @@ public class SummarySheet extends TimeSheet
     {
         popupMenu = new JPopupMenu();
         popupTitle = new JLabel("");
+        popupTitle.setBorder(new EmptyBorder(2, 6, 2, 6));
         popupTitle.setFont(FontManager.getRunescapeBoldFont());
         popupMenu.add(popupTitle);
+        popupMenu.addSeparator();
 
         menuItems = new JMenu[]
                 {
@@ -152,6 +155,11 @@ public class SummarySheet extends TimeSheet
                 continue;
             }
 
+            if (!tree.isVisible(path))
+            {
+                continue;
+            }
+
             if (node.getUserObject() instanceof Folder)
             {
                 continue;
@@ -173,7 +181,6 @@ public class SummarySheet extends TimeSheet
         int index = -2;
 
         g.setFont(FontManager.getRunescapeSmallFont());
-        g.setColor(ColorScheme.BRAND_ORANGE);
 
         for (DefaultMutableTreeNode node : nodes)
         {
@@ -200,6 +207,8 @@ public class SummarySheet extends TimeSheet
         KeyFrameType[] types = character.getSummary();
         FontMetrics fontMetrics = g.getFontMetrics();
         int stringHeight = fontMetrics.getHeight();
+
+        g.setColor(character.getColor());
 
         for (int i = 0; i < types.length; i++)
         {

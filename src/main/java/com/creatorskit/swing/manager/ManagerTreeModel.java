@@ -44,7 +44,6 @@ public class ManagerTreeModel extends DefaultTreeModel
             folder.setName(name);
             node.setUserObject(folder);
             nodeChanged(node);
-            toolBox.getManagerPanel().getObjectLabel().setText("Current Folder: " + name);
         }
 
         //Check if node being modified is an ObjectPanel

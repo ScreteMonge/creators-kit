@@ -38,7 +38,7 @@ public interface CreatorsConfig extends Config
 	)
 	default boolean enableCtrlHotkeys()
 	{
-		return false;
+		return true;
 	}
 
 	@ConfigItem(
@@ -87,7 +87,7 @@ public interface CreatorsConfig extends Config
 	)
 	default Keybind quickLocationHotkey()
 	{
-		return new Keybind(KeyEvent.VK_HOME, 0);
+		return Keybind.NOT_SET;
 	}
 
 	@ConfigItem(

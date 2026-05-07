@@ -76,12 +76,12 @@ public class ToolBoxFrame extends JFrame
         this.pathFinder = pathFinder;
         this.httpClient = httpClient;
 
-        Folder rootFolder = new Folder("Master Folder", FolderType.MASTER, null, null);
+        Folder rootFolder = new Folder("Master Folder", FolderType.MASTER, ParentPanel.MANAGER, null, null);
         DefaultMutableTreeNode managerRootNode = new DefaultMutableTreeNode(rootFolder);
         rootFolder.setLinkedManagerNode(managerRootNode);
 
-        Folder sidePanelFolder = new Folder("Side Panel", FolderType.SIDE_PANEL, null, managerRootNode);
-        Folder managerPanelFolder = new Folder("Manager", FolderType.MANAGER, null, managerRootNode);
+        Folder sidePanelFolder = new Folder("Side Panel", FolderType.SIDE_PANEL, ParentPanel.MANAGER,null, managerRootNode);
+        Folder managerPanelFolder = new Folder("Manager", FolderType.MANAGER, ParentPanel.MANAGER,null, managerRootNode);
         DefaultMutableTreeNode managerSideNode = new DefaultMutableTreeNode(sidePanelFolder);
         DefaultMutableTreeNode managerManagerNode = new DefaultMutableTreeNode(managerPanelFolder);
         sidePanelFolder.setLinkedManagerNode(managerSideNode);

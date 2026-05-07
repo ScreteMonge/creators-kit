@@ -118,7 +118,7 @@ public class AttributePanel extends JPanel
         this.timeSheetPanel = timeSheetPanel;
         this.dataFinder = dataFinder;
         this.selectionManager = selectionManager;
-        selectionManager.addListener(mgr -> updateObjectLabel(mgr.getPrimary()));
+        selectionManager.addListener(mgr -> updateObjectLabel(mgr.getFirstSelected()));
 
         setLayout(new GridBagLayout());
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
@@ -205,6 +205,7 @@ public class AttributePanel extends JPanel
         JPanel hitsplat2Card = new JPanel();
         JPanel hitsplat3Card = new JPanel();
         JPanel hitsplat4Card = new JPanel();
+        JPanel mixedTypesCard = new JPanel();
         cardPanel.add(moveCard, MOVE_CARD);
         cardPanel.add(animCard, ANIM_CARD);
         cardPanel.add(oriCard, ORI_CARD);
@@ -219,12 +220,6 @@ public class AttributePanel extends JPanel
         cardPanel.add(hitsplat2Card, HITSPLAT_2_CARD);
         cardPanel.add(hitsplat3Card, HITSPLAT_3_CARD);
         cardPanel.add(hitsplat4Card, HITSPLAT_4_CARD);
-
-        // Empty placeholder shown when the keyframe selection spans multiple types.
-        // Using a CardLayout entry keeps the cardPanel at its normal height instead
-        // of letting the layout collapse when we hide editing controls.
-        JPanel mixedTypesCard = new JPanel();
-        mixedTypesCard.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         cardPanel.add(mixedTypesCard, MIXED_TYPES_CARD);
 
         setupMoveCard(moveCard);
@@ -2363,10 +2358,6 @@ public class AttributePanel extends JPanel
      */
     private KeyFrame findSelectedKeyFrameOfCurrentType()
     {
-        if (timeSheetPanel == null)
-        {
-            return null;
-        }
         KeyFrame[] selected = timeSheetPanel.getSelectedKeyFrames();
         for (KeyFrame kf : selected)
         {
@@ -2387,12 +2378,8 @@ public class AttributePanel extends JPanel
      */
     public void refreshKeyFrameSelectionState()
     {
-        if (timeSheetPanel == null)
-        {
-            return;
-        }
         KeyFrame[] selected = timeSheetPanel.getSelectedKeyFrames();
-        java.util.EnumSet<KeyFrameType> types = java.util.EnumSet.noneOf(KeyFrameType.class);
+        List<KeyFrameType> types = new ArrayList<>();
         for (KeyFrame kf : selected)
         {
             if (kf != null)
@@ -2400,29 +2387,27 @@ public class AttributePanel extends JPanel
                 types.add(kf.getKeyFrameType());
             }
         }
+
         boolean mixedTypes = types.size() > 1;
 
         CardLayout cl = (CardLayout) cardPanel.getLayout();
         if (mixedTypes)
         {
             cl.show(cardPanel, MIXED_TYPES_CARD);
-            cardLabel.setText("Mixed types");
         }
         else
         {
             cl.show(cardPanel, activeCard);
-            cardLabel.setText(activeCard);
         }
+
         updateButton.setEnabled(!mixedTypes);
         resetButton.setEnabled(!mixedTypes);
         keyFramed.setEnabled(!mixedTypes);
-        revalidate();
-        repaint();
     }
 
     public void updateObjectLabel(Character character)
     {
-        int selectionSize = selectionManager == null ? 0 : selectionManager.size();
+        int selectionSize = selectionManager.getSelectionSize();
         if (selectionSize > 1)
         {
             objectLabel.setForeground(ColorScheme.BRAND_ORANGE);
@@ -2671,9 +2656,6 @@ public class AttributePanel extends JPanel
             return;
         }
 
-        // Prefer a user-selected keyframe of the current type over the time-based
-        // lookup so clicking a keyframe in the timeline immediately edits THAT
-        // keyframe rather than whichever one happens to live under the seeker bar.
         KeyFrame keyFrame = findSelectedKeyFrameOfCurrentType();
         if (keyFrame != null)
         {

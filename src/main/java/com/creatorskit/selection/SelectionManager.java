@@ -1,6 +1,7 @@
 package com.creatorskit.selection;
 
 import com.creatorskit.Character;
+import lombok.Getter;
 
 import javax.inject.Singleton;
 import java.util.ArrayList;
@@ -10,31 +11,20 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-/**
- * Single source of truth for which Characters are currently selected.
- *
- * Insertion order is preserved (LinkedHashSet) so the most-recently-added
- * Character can be treated as the "primary" — used to keep existing
- * single-selection call sites working unchanged via {@link #getPrimary()}.
- */
 @Singleton
 public class SelectionManager
 {
 	private final LinkedHashSet<Character> selected = new LinkedHashSet<>();
-	private Character primary;
+	@Getter
+    private Character firstSelected;
 	private final List<SelectionListener> listeners = new ArrayList<>();
 
-	public Character getPrimary()
-	{
-		return primary;
-	}
-
-	public Set<Character> getSelected()
+    public Set<Character> getSelected()
 	{
 		return Collections.unmodifiableSet(selected);
 	}
 
-	public boolean isSelected(Character c)
+	public boolean contains(Character c)
 	{
 		return c != null && selected.contains(c);
 	}
@@ -44,14 +34,11 @@ public class SelectionManager
 		return selected.isEmpty();
 	}
 
-	public int size()
+	public int getSelectionSize()
 	{
 		return selected.size();
 	}
 
-	/**
-	 * Replace the entire selection with this single Character. A null argument clears.
-	 */
 	public void select(Character c)
 	{
 		if (c == null)
@@ -59,20 +46,18 @@ public class SelectionManager
 			clear();
 			return;
 		}
-		if (selected.size() == 1 && primary == c)
+
+		if (selected.size() == 1 && firstSelected == c)
 		{
 			return;
 		}
+
 		selected.clear();
 		selected.add(c);
-		primary = c;
+		firstSelected = c;
 		fireChanged();
 	}
 
-	/**
-	 * Replace the entire selection with the given Characters. The last element of the
-	 * iteration becomes the primary. A null or empty collection clears the selection.
-	 */
 	public void selectAll(Collection<Character> characters)
 	{
 		if (characters == null || characters.isEmpty())
@@ -80,6 +65,7 @@ public class SelectionManager
 			clear();
 			return;
 		}
+
 		selected.clear();
 		Character last = null;
 		for (Character c : characters)
@@ -89,43 +75,37 @@ public class SelectionManager
 				last = c;
 			}
 		}
-		primary = last;
+
+		firstSelected = last;
 		fireChanged();
 	}
 
-	/**
-	 * Add c to the selection without removing existing entries. Becomes the new primary.
-	 */
 	public void add(Character c)
 	{
-		if (c == null || !selected.add(c))
+		if (!selected.add(c))
 		{
 			return;
 		}
-		primary = c;
+
+		firstSelected = c;
 		fireChanged();
 	}
 
-	/**
-	 * Remove c from the selection. If it was the primary, primary falls back to the
-	 * most-recently-added remaining entry, or null if the selection is now empty.
-	 */
 	public void remove(Character c)
 	{
-		if (c == null || !selected.remove(c))
+		if (!selected.remove(c))
 		{
 			return;
 		}
-		if (primary == c)
+
+		if (firstSelected == c)
 		{
-			primary = lastInSet();
+			firstSelected = lastInSet();
 		}
+
 		fireChanged();
 	}
 
-	/**
-	 * Toggle membership: add if absent, remove if present.
-	 */
 	public void toggle(Character c)
 	{
 		if (c == null)
@@ -144,26 +124,14 @@ public class SelectionManager
 
 	public void clear()
 	{
-		if (selected.isEmpty())
-		{
-			return;
-		}
 		selected.clear();
-		primary = null;
+		firstSelected = null;
 		fireChanged();
 	}
 
 	public void addListener(SelectionListener listener)
 	{
-		if (listener != null)
-		{
-			listeners.add(listener);
-		}
-	}
-
-	public void removeListener(SelectionListener listener)
-	{
-		listeners.remove(listener);
+		listeners.add(listener);
 	}
 
 	private void fireChanged()
