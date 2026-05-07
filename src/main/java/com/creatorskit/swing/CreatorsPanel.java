@@ -1083,6 +1083,8 @@ public class CreatorsPanel extends PluginPanel
     /**
      * Modifier-aware click router for Character panels.
      * Plain click   = replace selection. Ctrl+Click = toggle. Shift+Click = range.
+     * If the Character is already part of an active multi-selection, a plain click
+     * preserves the selection (so clicks on inner buttons don't collapse the group).
      */
     public void onCharacterPanelClicked(Character character, MouseEvent e)
     {
@@ -1101,6 +1103,11 @@ public class CreatorsPanel extends PluginPanel
         {
             selectionManager.toggle(character);
             toolBox.getManagerPanel().getManagerTree().syncTreeFromSelection();
+            return;
+        }
+
+        if (selectionManager.size() > 1 && selectionManager.isSelected(character))
+        {
             return;
         }
 
@@ -1151,6 +1158,16 @@ public class CreatorsPanel extends PluginPanel
 
     private void showColorPickerFor(Character character, JButton anchor)
     {
+        showColorPickerAt(anchor, 0, anchor.getHeight(), character);
+    }
+
+    /**
+     * Show the swatch picker rooted at (x, y) within {@code invoker}. The picked
+     * colour is applied to every selected Character (when {@code target} is part of
+     * the multi-selection) or to just {@code target} otherwise.
+     */
+    public void showColorPickerAt(Component invoker, int x, int y, Character target)
+    {
         JPopupMenu popup = new JPopupMenu();
         JPanel row = new JPanel(new GridLayout(1, 0, 2, 0));
         row.setBorder(new EmptyBorder(2, 2, 2, 2));
@@ -1166,7 +1183,7 @@ public class CreatorsPanel extends PluginPanel
             swatch.setFocusable(false);
             swatch.addActionListener(ev ->
             {
-                applyColorToTargets(character, c);
+                applyColorToTargets(target, c);
                 popup.setVisible(false);
             });
             row.add(swatch);
@@ -1178,20 +1195,20 @@ public class CreatorsPanel extends PluginPanel
         random.setToolTipText("Random colour");
         random.addActionListener(ev ->
         {
-            applyColorToTargets(character, getRandomColor());
+            applyColorToTargets(target, getRandomColor());
             popup.setVisible(false);
         });
         row.add(random);
 
         popup.add(row);
-        popup.show(anchor, 0, anchor.getHeight());
+        popup.show(invoker, x, y);
     }
 
     /**
      * Apply the chosen color to either every selected Character (when the clicked
      * Character is part of the multi-selection) or to just the clicked Character.
      */
-    private void applyColorToTargets(Character clicked, Color color)
+    public void applyColorToTargets(Character clicked, Color color)
     {
         java.util.Set<Character> selected = selectionManager.getSelected();
         if (selected.size() > 1 && selected.contains(clicked))

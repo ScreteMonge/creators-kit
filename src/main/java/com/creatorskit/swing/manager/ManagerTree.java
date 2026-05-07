@@ -777,7 +777,44 @@ public class ManagerTree extends JTree
         }
 
         Character character = (Character) node.getUserObject();
-        toolBox.getTimeSheetPanel().getSummarySheet().showSummaryPopup(this, character, x, y);
+        showCharacterContextMenu(character, x, y);
+    }
+
+    /**
+     * Right-click context menu for a Character node in the tree. Shows the existing
+     * keyframe-summary submenu plus a "Recolour" submenu that operates on the current
+     * SelectionManager state (so multi-select recolour works from the tree).
+     */
+    private void showCharacterContextMenu(Character character, int x, int y)
+    {
+        if (!selectionManager.isSelected(character))
+        {
+            selectionManager.select(character);
+            syncTreeFromSelection();
+        }
+
+        int count = selectionManager.size();
+        JPopupMenu popup = new JPopupMenu();
+
+        JLabel title = new JLabel(count > 1
+                ? count + " Characters selected"
+                : character.getName());
+        title.setFont(net.runelite.client.ui.FontManager.getRunescapeBoldFont());
+        title.setBorder(new javax.swing.border.EmptyBorder(2, 6, 2, 6));
+        popup.add(title);
+        popup.addSeparator();
+
+        JMenuItem recolour = new JMenuItem("Recolour...");
+        recolour.addActionListener(e ->
+                plugin.getCreatorsPanel().showColorPickerAt(this, x, y, character));
+        popup.add(recolour);
+
+        JMenuItem keyframes = new JMenuItem("Show keyframes...");
+        keyframes.addActionListener(e ->
+                toolBox.getTimeSheetPanel().getSummarySheet().showSummaryPopup(this, character, x, y));
+        popup.add(keyframes);
+
+        popup.show(this, x, y);
     }
 }
 
