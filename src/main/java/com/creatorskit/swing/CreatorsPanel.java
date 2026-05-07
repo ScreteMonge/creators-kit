@@ -68,6 +68,7 @@ public class CreatorsPanel extends PluginPanel
     private final DataFinder dataFinder;
     private final ModelImporter modelImporter;
     private final SelectionManager selectionManager;
+    private boolean bulkEditing = false;
 
     private final JButton addObjectButton = new JButton();
     private final JPanel sidePanel = new JPanel();
@@ -528,28 +529,43 @@ public class CreatorsPanel extends PluginPanel
             }
         });
 
-        spawnCheckBox.addActionListener(e -> character.toggleActive(clientThread));
+        spawnCheckBox.addActionListener(e ->
+        {
+            character.toggleActive(clientThread);
+            propagateActive(character, character.isActive());
+        });
 
         character.setColourButton(colourButton);
         colourButton.addActionListener(e -> showColorPickerFor(character, colourButton));
 
         modelButton.addActionListener(e ->
         {
-            if (character.isCustomMode())
+            boolean newCustomMode = !character.isCustomMode();
+            applyModelMode(character, newCustomMode, modelButton, modelSpinner, modelComboBox);
+            if (bulkEditing)
             {
-                character.setCustomMode(false);
-                modelButton.setText("Id");
-                modelSpinner.setVisible(true);
-                modelComboBox.setVisible(false);
-                plugin.setModel(character, false, (int) modelSpinner.getValue());
+                return;
             }
-            else
+            java.util.Set<Character> targets = getBulkTargets(character);
+            if (targets.size() == 1)
             {
-                character.setCustomMode(true);
-                modelButton.setText("Custom");
-                modelSpinner.setVisible(false);
-                modelComboBox.setVisible(true);
-                plugin.setModel(character, true, -1);
+                return;
+            }
+            bulkEditing = true;
+            try
+            {
+                for (Character c : targets)
+                {
+                    if (c == character || c.isCustomMode() == newCustomMode)
+                    {
+                        continue;
+                    }
+                    applyModelMode(c, newCustomMode, c.getModelButton(), c.getModelSpinner(), c.getComboBox());
+                }
+            }
+            finally
+            {
+                bulkEditing = false;
             }
         });
 
@@ -557,6 +573,7 @@ public class CreatorsPanel extends PluginPanel
         {
             int modelNumber = (int) modelSpinner.getValue();
             plugin.setModel(character, false, modelNumber);
+            propagateSpinner(character, modelNumber, Character::getModelSpinner);
         });
 
         modelComboBox.addItemListener(e ->
@@ -565,28 +582,33 @@ public class CreatorsPanel extends PluginPanel
             character.setStoredModel(m);
             if (modelComboBox.isVisible() && character == plugin.getSelectedCharacter())
                 plugin.setModel(character, true, -1);
+            propagateCustomModel(character, m);
         });
 
         orientationSpinner.addChangeListener(e ->
         {
             int orient = (int) orientationSpinner.getValue();
             plugin.setOrientation(character, orient);
+            propagateSpinner(character, orient, Character::getOrientationSpinner);
         });
 
         animationSpinner.addChangeListener(e ->
         {
             character.setAnimation(clientThread, client, plugin.getRandom(), AnimationType.ACTIVE, (int) animationSpinner.getValue(), (int) animationFrameSpinner.getValue(), config.randomizeStartFrame(), true);
+            propagateSpinner(character, (int) animationSpinner.getValue(), Character::getAnimationSpinner);
         });
 
         animationFrameSpinner.addChangeListener(e ->
         {
             character.setAnimation(clientThread, client, plugin.getRandom(), AnimationType.ACTIVE, (int) animationSpinner.getValue(), (int) animationFrameSpinner.getValue(), config.randomizeStartFrame(), true);
+            propagateSpinner(character, (int) animationFrameSpinner.getValue(), Character::getAnimationFrameSpinner);
         });
 
         radiusSpinner.addChangeListener(e ->
         {
             int rad = (int) radiusSpinner.getValue();
             plugin.setRadius(character, rad);
+            propagateSpinner(character, rad, Character::getRadiusSpinner);
         });
 
         addAllSelectListeners(
@@ -1202,6 +1224,169 @@ public class CreatorsPanel extends PluginPanel
 
         popup.add(row);
         popup.show(invoker, x, y);
+    }
+
+    /**
+     * Returns the Characters a per-Character UI edit should fan out to. If {@code source}
+     * is part of an active multi-selection, the full selected set is returned; otherwise
+     * just {@code source}.
+     */
+    private java.util.Set<Character> getBulkTargets(Character source)
+    {
+        if (selectionManager.size() > 1 && selectionManager.isSelected(source))
+        {
+            return selectionManager.getSelected();
+        }
+        return java.util.Collections.singleton(source);
+    }
+
+    /**
+     * Propagate a spinner value to every other selected Character's spinner. Setting the
+     * spinner value re-fires its ChangeListener, which applies to its own Character;
+     * the {@code bulkEditing} flag prevents that nested call from re-propagating.
+     */
+    private void propagateSpinner(Character source, Object value, java.util.function.Function<Character, JSpinner> getter)
+    {
+        if (bulkEditing)
+        {
+            return;
+        }
+        java.util.Set<Character> targets = getBulkTargets(source);
+        if (targets.size() == 1)
+        {
+            return;
+        }
+        bulkEditing = true;
+        try
+        {
+            for (Character c : targets)
+            {
+                if (c == source)
+                {
+                    continue;
+                }
+                JSpinner s = getter.apply(c);
+                if (s != null && !java.util.Objects.equals(s.getValue(), value))
+                {
+                    s.setValue(value);
+                }
+            }
+        }
+        finally
+        {
+            bulkEditing = false;
+        }
+    }
+
+    /**
+     * Apply the Id/Custom model toggle to a single Character (used both for the
+     * source click and for fan-out to selected siblings).
+     */
+    private void applyModelMode(Character c, boolean customMode, JButton modelBtn, JSpinner modelSp, JComboBox<CustomModel> modelCb)
+    {
+        c.setCustomMode(customMode);
+        if (modelBtn != null)
+        {
+            modelBtn.setText(customMode ? "Custom" : "Id");
+        }
+        if (modelSp != null)
+        {
+            modelSp.setVisible(!customMode);
+        }
+        if (modelCb != null)
+        {
+            modelCb.setVisible(customMode);
+        }
+        if (customMode)
+        {
+            plugin.setModel(c, true, -1);
+        }
+        else
+        {
+            int idValue = modelSp != null ? (int) modelSp.getValue() : 0;
+            plugin.setModel(c, false, idValue);
+        }
+    }
+
+    /**
+     * Propagate a custom-model selection to every other selected Character.
+     */
+    private void propagateCustomModel(Character source, CustomModel m)
+    {
+        if (bulkEditing)
+        {
+            return;
+        }
+        java.util.Set<Character> targets = getBulkTargets(source);
+        if (targets.size() == 1)
+        {
+            return;
+        }
+        bulkEditing = true;
+        try
+        {
+            for (Character c : targets)
+            {
+                if (c == source)
+                {
+                    continue;
+                }
+                c.setStoredModel(m);
+                JComboBox<CustomModel> cb = c.getComboBox();
+                if (cb != null && cb.getSelectedItem() != m)
+                {
+                    cb.setSelectedItem(m);
+                }
+                if (c.isCustomMode())
+                {
+                    plugin.setModel(c, true, -1);
+                }
+            }
+        }
+        finally
+        {
+            bulkEditing = false;
+        }
+    }
+
+    /**
+     * Propagate the spawn checkbox state to every other selected Character.
+     */
+    private void propagateActive(Character source, boolean active)
+    {
+        if (bulkEditing)
+        {
+            return;
+        }
+        java.util.Set<Character> targets = getBulkTargets(source);
+        if (targets.size() == 1)
+        {
+            return;
+        }
+        bulkEditing = true;
+        try
+        {
+            for (Character c : targets)
+            {
+                if (c == source)
+                {
+                    continue;
+                }
+                if (c.isActive() != active)
+                {
+                    JCheckBox cb = c.getSpawnCheckBox();
+                    if (cb != null)
+                    {
+                        cb.setSelected(active);
+                    }
+                    c.setActive(active, active, true, clientThread);
+                }
+            }
+        }
+        finally
+        {
+            bulkEditing = false;
+        }
     }
 
     /**
