@@ -9,6 +9,7 @@ import com.creatorskit.models.datatypes.*;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.programming.orientation.OrientationGoal;
+import com.creatorskit.selection.SelectionManager;
 import com.creatorskit.swing.searchabletable.JFilterableTable;
 import com.creatorskit.swing.timesheet.attributes.*;
 import com.creatorskit.swing.timesheet.keyframe.*;
@@ -43,6 +44,7 @@ public class AttributePanel extends JPanel
     private CreatorsConfig config;
     private TimeSheetPanel timeSheetPanel;
     private DataFinder dataFinder;
+    private SelectionManager selectionManager;
 
     private final BufferedImage HELP = ImageUtil.loadImageResource(getClass(), "/Help.png");
     private final BufferedImage COMPASS = ImageUtil.loadImageResource(getClass(), "/Orientation_compass.png");
@@ -103,13 +105,15 @@ public class AttributePanel extends JPanel
     private final Random random = new Random();
 
     @Inject
-    public AttributePanel(Client client, ClientThread clientThread, CreatorsConfig config, TimeSheetPanel timeSheetPanel, DataFinder dataFinder)
+    public AttributePanel(Client client, ClientThread clientThread, CreatorsConfig config, TimeSheetPanel timeSheetPanel, DataFinder dataFinder, SelectionManager selectionManager)
     {
         this.client = client;
         this.clientThread = clientThread;
         this.config = config;
         this.timeSheetPanel = timeSheetPanel;
         this.dataFinder = dataFinder;
+        this.selectionManager = selectionManager;
+        selectionManager.addListener(mgr -> updateObjectLabel(mgr.getPrimary()));
 
         setLayout(new GridBagLayout());
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
@@ -2327,6 +2331,14 @@ public class AttributePanel extends JPanel
 
     public void updateObjectLabel(Character character)
     {
+        int selectionSize = selectionManager == null ? 0 : selectionManager.size();
+        if (selectionSize > 1)
+        {
+            objectLabel.setForeground(ColorScheme.BRAND_ORANGE);
+            objectLabel.setText("[" + selectionSize + " Objects Selected]");
+            return;
+        }
+
         if (character == null)
         {
             objectLabel.setForeground(Color.WHITE);

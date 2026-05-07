@@ -37,6 +37,8 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.*;
 import javax.swing.border.Border;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -88,8 +90,8 @@ public class CreatorsPanel extends PluginPanel
     private final BufferedImage CUSTOM_MODEL = ImageUtil.loadImageResource(getClass(), "/Custom model.png");
     public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
     private final LineBorder defaultBorder = new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1);
-    private final LineBorder hoveredBorder = new LineBorder(ColorScheme.LIGHT_GRAY_COLOR, 1);
-    private final LineBorder selectedBorder = new LineBorder(Color.WHITE, 1);
+    private final LineBorder hoveredBorder = new LineBorder(ColorScheme.LIGHT_GRAY_COLOR, 2);
+    private final LineBorder selectedBorder = new LineBorder(Color.WHITE, 2);
 
     @Inject
     public CreatorsPanel(@Nullable Client client, CreatorsConfig config, ClientThread clientThread, CreatorsPlugin plugin, ToolBoxFrame toolBox, DataFinder dataFinder, ModelImporter modelImporter, SelectionManager selectionManager)
@@ -472,6 +474,7 @@ public class CreatorsPanel extends PluginPanel
                 modelComboBox,
                 spawnCheckBox,
                 modelButton,
+                null,
                 modelSpinner,
                 animationSpinner,
                 animationFrameSpinner,
@@ -527,13 +530,8 @@ public class CreatorsPanel extends PluginPanel
 
         spawnCheckBox.addActionListener(e -> character.toggleActive(clientThread));
 
-        colourButton.addActionListener(e ->
-        {
-            Color colour = getRandomColor();
-            character.setColor(colour);
-            colourButton.setForeground(colour);
-            textField.setBorder(buildNameFieldBorder(textFieldInnerBorder, colour));
-        });
+        character.setColourButton(colourButton);
+        colourButton.addActionListener(e -> showColorPickerFor(character, colourButton));
 
         modelButton.addActionListener(e ->
         {
@@ -1140,6 +1138,92 @@ public class CreatorsPanel extends PluginPanel
         Color safe = accent == null ? ColorScheme.MEDIUM_GRAY_COLOR : accent;
         Border swatch = BorderFactory.createMatteBorder(0, 6, 0, 0, safe);
         return BorderFactory.createCompoundBorder(swatch, inner);
+    }
+
+    private static final Color[] COLOUR_PALETTE = new Color[]{
+            new Color(255, 99, 99),    // red
+            new Color(255, 165, 60),   // orange
+            new Color(255, 220, 60),   // yellow
+            new Color(80, 220, 100),   // green
+            new Color(80, 160, 255),   // blue
+            new Color(190, 110, 240),  // purple
+    };
+
+    private void showColorPickerFor(Character character, JButton anchor)
+    {
+        JPopupMenu popup = new JPopupMenu();
+        JPanel row = new JPanel(new GridLayout(1, 0, 2, 0));
+        row.setBorder(new EmptyBorder(2, 2, 2, 2));
+
+        Dimension swatchSize = new Dimension(22, 22);
+        for (Color c : COLOUR_PALETTE)
+        {
+            JButton swatch = new JButton();
+            swatch.setBackground(c);
+            swatch.setOpaque(true);
+            swatch.setBorderPainted(false);
+            swatch.setPreferredSize(swatchSize);
+            swatch.setFocusable(false);
+            swatch.addActionListener(ev ->
+            {
+                applyColorToTargets(character, c);
+                popup.setVisible(false);
+            });
+            row.add(swatch);
+        }
+
+        JButton random = new JButton("?");
+        random.setPreferredSize(swatchSize);
+        random.setFocusable(false);
+        random.setToolTipText("Random colour");
+        random.addActionListener(ev ->
+        {
+            applyColorToTargets(character, getRandomColor());
+            popup.setVisible(false);
+        });
+        row.add(random);
+
+        popup.add(row);
+        popup.show(anchor, 0, anchor.getHeight());
+    }
+
+    /**
+     * Apply the chosen color to either every selected Character (when the clicked
+     * Character is part of the multi-selection) or to just the clicked Character.
+     */
+    private void applyColorToTargets(Character clicked, Color color)
+    {
+        java.util.Set<Character> selected = selectionManager.getSelected();
+        if (selected.size() > 1 && selected.contains(clicked))
+        {
+            for (Character c : selected)
+            {
+                applyCharacterColor(c, color);
+            }
+        }
+        else
+        {
+            applyCharacterColor(clicked, color);
+        }
+    }
+
+    private void applyCharacterColor(Character c, Color color)
+    {
+        c.setColor(color);
+        JButton btn = c.getColourButton();
+        if (btn != null)
+        {
+            btn.setForeground(color);
+        }
+        JTextField nameField = c.getNameField();
+        if (nameField != null)
+        {
+            Border current = nameField.getBorder();
+            Border inner = current instanceof CompoundBorder
+                    ? ((CompoundBorder) current).getInsideBorder()
+                    : current;
+            nameField.setBorder(buildNameFieldBorder(inner, color));
+        }
     }
 
     /**

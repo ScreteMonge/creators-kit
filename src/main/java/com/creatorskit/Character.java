@@ -49,6 +49,7 @@ public class Character
     private JComboBox<CustomModel> comboBox;
     private JCheckBox spawnCheckBox;
     private JButton modelButton;
+    private JButton colourButton;
     private JSpinner modelSpinner;
     private JSpinner animationSpinner;
     private JSpinner animationFrameSpinner;

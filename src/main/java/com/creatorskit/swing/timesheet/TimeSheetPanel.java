@@ -99,6 +99,7 @@ public class TimeSheetPanel extends JPanel
     private double currentTime = 0;
     private boolean pauseScrollBarListener = false;
     private Character selectedCharacter;
+    private final com.creatorskit.selection.SelectionManager selectionManager;
 
     private ArrayList<KeyFrameAction> keyFrameStack = new ArrayList<>();
     private KeyFrame[] selectedKeyFrames = new KeyFrame[0];
@@ -109,7 +110,7 @@ public class TimeSheetPanel extends JPanel
     private int undoStack = 0;
 
     @Inject
-    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, CreatorsConfig config, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, MovementManager movementManager)
+    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, CreatorsConfig config, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, MovementManager movementManager, com.creatorskit.selection.SelectionManager selectionManager)
     {
         this.client = client;
         this.toolBox = toolBox;
@@ -119,6 +120,7 @@ public class TimeSheetPanel extends JPanel
         this.dataFinder = dataFinder;
         this.managerTree = managerTree;
         this.movementManager = movementManager;
+        this.selectionManager = selectionManager;
 
         setLayout(new GridBagLayout());
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
@@ -1182,7 +1184,7 @@ public class TimeSheetPanel extends JPanel
 
     private void setupAttributePanel()
     {
-        attributePanel = new AttributePanel(client, clientThread, config, this, dataFinder);
+        attributePanel = new AttributePanel(client, clientThread, config, this, dataFinder, selectionManager);
         summarySheet = new SummarySheet(toolBox, config, managerTree, attributePanel);
         attributeSheet = new AttributeSheet(toolBox, config, managerTree, attributePanel);
     }
