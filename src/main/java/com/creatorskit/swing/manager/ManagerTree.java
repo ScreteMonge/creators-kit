@@ -69,13 +69,13 @@ public class ManagerTree extends JTree
         setModel(treeModel);
         expandRow(0);
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        setEditable(true);
+        setEditable(false);
         setOpaque(false);
         setRowHeight(ROW_HEIGHT);
         getSelectionModel().setSelectionMode(TreeSelectionModel.DISCONTIGUOUS_TREE_SELECTION);
         setShowsRootHandles(true);
         setRootVisible(false);
-        setDragEnabled(true);
+        setDragEnabled(false);
         setDropMode(DropMode.ON_OR_INSERT);
         setTransferHandler(new ManagerTreeTransferHandler(plugin, toolBox));
         addTreeSelectionListener(new MyTreeSelectionListener());
@@ -627,6 +627,21 @@ public class ManagerTree extends JTree
         setSelectionPath(treePath);
         scrollPathToVisible(treePath);
         updateTreeSelectionIndex();
+    }
+
+    /**
+     * Reorder mode toggles drag-to-reorder and inline-rename together. Disabled by
+     * default so misclicks between rows don't accidentally reorder or rename Characters.
+     */
+    public void setReorderMode(boolean enabled)
+    {
+        setEditable(enabled);
+        setDragEnabled(enabled);
+    }
+
+    public boolean isReorderMode()
+    {
+        return isEditable();
     }
 
     /**

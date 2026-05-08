@@ -211,6 +211,17 @@ public class CreatorsPanel extends PluginPanel
         c.gridy = 3;
         c.weightx = 1;
         c.weighty = 0;
+        JButton deselectButton = new JButton("Deselect All");
+        deselectButton.setFocusable(false);
+        deselectButton.setToolTipText("Clear the current Character selection");
+        deselectButton.addActionListener(e -> selectionManager.clear());
+        add(deselectButton, c);
+
+        c.gridwidth = 3;
+        c.gridx = 0;
+        c.gridy = 4;
+        c.weightx = 1;
+        c.weighty = 0;
         sidePanel.setLayout(new GridLayout(0, 1, 4, 4));
         sidePanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         add(sidePanel, c);
@@ -219,7 +230,7 @@ public class CreatorsPanel extends PluginPanel
 
         c.gridwidth = 3;
         c.gridx = 0;
-        c.gridy = 4;
+        c.gridy = 5;
         c.weightx = 1;
         c.weighty = 1;
         JLabel emptyLabel = new JLabel("");

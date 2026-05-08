@@ -113,6 +113,22 @@ public class TreeScrollPane extends JScrollPane
         });
         folderHeader.add(newSetupButton, c);
 
+        c.gridx = 4;
+        c.gridy = 0;
+        JToggleButton reorderToggle = new JToggleButton("Edit");
+        reorderToggle.setPreferredSize(buttonDimension);
+        reorderToggle.setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR));
+        reorderToggle.setToolTipText("Toggle drag-to-reorder and inline rename. Off by default to prevent misclicks.");
+        reorderToggle.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        reorderToggle.setFocusable(false);
+        reorderToggle.addActionListener(e ->
+        {
+            boolean enabled = reorderToggle.isSelected();
+            tree.setReorderMode(enabled);
+            reorderToggle.setBackground(enabled ? ColorScheme.BRAND_ORANGE : ColorScheme.DARK_GRAY_COLOR);
+        });
+        folderHeader.add(reorderToggle, c);
+
         return folderHeader;
     }
 }
