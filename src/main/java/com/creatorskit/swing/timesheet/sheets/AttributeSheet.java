@@ -65,7 +65,8 @@ public class AttributeSheet extends TimeSheet
     @Override
     public void drawKeyFrames(Graphics g)
     {
-        if (getSelectedCharacter() == null)
+        java.util.List<Character> visible = getVisibleCharacters();
+        if (visible.isEmpty())
         {
             return;
         }
@@ -77,8 +78,21 @@ public class AttributeSheet extends TimeSheet
         int yImageOffset = (imageHeight - rowHeight) / 2;
         int xImageOffset = image.getWidth() / 2;
         double zoomFactor = this.getWidth() / getZoom();
+        boolean multi = visible.size() > 1;
 
-        KeyFrame[][] frames = getSelectedCharacter().getFrames();
+        for (Character character : visible)
+        {
+            drawCharacterKeyFrames(g, character, image, imageHeight, yImageOffset, xImageOffset, zoomFactor, multi);
+        }
+    }
+
+    private void drawCharacterKeyFrames(Graphics g, Character character, BufferedImage image, int imageHeight, int yImageOffset, int xImageOffset, double zoomFactor, boolean multi)
+    {
+        KeyFrame[][] frames = character.getFrames();
+        if (frames == null)
+        {
+            return;
+        }
         for (int i = 0; i < frames.length; i++)
         {
             KeyFrameType type = KeyFrameType.getKeyFrameType(i);
@@ -103,6 +117,11 @@ public class AttributeSheet extends TimeSheet
                 int x = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor);
                 int y = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
 
+                Color tailColor = g.getColor();
+                if (multi && character.getColor() != null)
+                {
+                    g.setColor(character.getColor());
+                }
                 switch (type)
                 {
                     case MOVEMENT:
@@ -163,6 +182,19 @@ public class AttributeSheet extends TimeSheet
 
 
                 g.drawImage(endImage, x - xImageOffset, y, null);
+
+                if (multi && character.getColor() != null)
+                {
+                    Color prev = g.getColor();
+                    g.setColor(character.getColor());
+                    int dotSize = 6;
+                    g.fillOval(x - xImageOffset, y + endImage.getHeight() - dotSize, dotSize, dotSize);
+                    g.setColor(prev);
+                }
+                else
+                {
+                    g.setColor(tailColor);
+                }
             }
         }
     }
@@ -321,7 +353,8 @@ public class AttributeSheet extends TimeSheet
     @Override
     public KeyFrame[] getKeyFrameClicked(Point point)
     {
-        if (getSelectedCharacter() == null)
+        java.util.List<Character> visible = getVisibleCharacters();
+        if (visible.isEmpty())
         {
             return null;
         }
@@ -331,28 +364,35 @@ public class AttributeSheet extends TimeSheet
         int xImageOffset = image.getWidth() / 2;
         double zoomFactor = this.getWidth() / getZoom();
 
-        KeyFrame[][] frames = getSelectedCharacter().getFrames();
-        for (int i = 0; i < frames.length; i++)
+        for (Character c : visible)
         {
-            KeyFrame[] keyFrames = frames[i];
-            if (keyFrames == null)
+            KeyFrame[][] frames = c.getFrames();
+            if (frames == null)
             {
                 continue;
             }
-
-            for (int e = 0; e < keyFrames.length; e++)
+            for (int i = 0; i < frames.length; i++)
             {
-                KeyFrame keyFrame = keyFrames[e];
-                int x1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
-                int x2 = x1 + image.getWidth();
-                int y1 = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
-                int y2 = y1 + image.getHeight();
-
-                if (point.getX() >= x1 && point.getX() <= x2)
+                KeyFrame[] keyFrames = frames[i];
+                if (keyFrames == null)
                 {
-                    if (point.getY() >= y1 && point.getY() <= y2)
+                    continue;
+                }
+
+                for (int e = 0; e < keyFrames.length; e++)
+                {
+                    KeyFrame keyFrame = keyFrames[e];
+                    int x1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
+                    int x2 = x1 + image.getWidth();
+                    int y1 = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
+                    int y2 = y1 + image.getHeight();
+
+                    if (point.getX() >= x1 && point.getX() <= x2)
                     {
-                        return new KeyFrame[]{keyFrame};
+                        if (point.getY() >= y1 && point.getY() <= y2)
+                        {
+                            return new KeyFrame[]{keyFrame};
+                        }
                     }
                 }
             }
@@ -364,7 +404,8 @@ public class AttributeSheet extends TimeSheet
     @Override
     public void updateSelectedKeyFrameOnRelease(Point point, boolean shiftKey)
     {
-        if (getSelectedCharacter() == null)
+        java.util.List<Character> visible = getVisibleCharacters();
+        if (visible.isEmpty())
         {
             return;
         }
@@ -374,65 +415,66 @@ public class AttributeSheet extends TimeSheet
         int xImageOffset = image.getWidth() / 2;
         double zoomFactor = this.getWidth() / getZoom();
 
-        boolean foundFrame = false;
-        KeyFrame[][] frames = getSelectedCharacter().getFrames();
-        for (int i = 0; i < frames.length; i++)
+        KeyFrame foundKeyFrame = null;
+        outer:
+        for (Character c : visible)
         {
-            KeyFrame[] keyFrames = frames[i];
-            if (keyFrames == null)
+            KeyFrame[][] frames = c.getFrames();
+            if (frames == null)
             {
                 continue;
             }
-
-            for (int e = 0; e < keyFrames.length; e++)
+            for (int i = 0; i < frames.length; i++)
             {
-                KeyFrame keyFrame = keyFrames[e];
-                int x1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
-                int x2 = x1 + image.getWidth();
-                int y1 = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
-                int y2 = y1 + image.getHeight();
-
-                if (point.getX() >= x1 && point.getX() <= x2)
+                KeyFrame[] keyFrames = frames[i];
+                if (keyFrames == null)
                 {
-                    if (point.getY() >= y1 && point.getY() <= y2)
+                    continue;
+                }
+
+                for (int e = 0; e < keyFrames.length; e++)
+                {
+                    KeyFrame keyFrame = keyFrames[e];
+                    int x1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
+                    int x2 = x1 + image.getWidth();
+                    int y1 = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
+                    int y2 = y1 + image.getHeight();
+
+                    if (point.getX() >= x1 && point.getX() <= x2
+                            && point.getY() >= y1 && point.getY() <= y2)
                     {
-                        if (shiftKey)
-                        {
-                            KeyFrame[] selectedKeyFrames = getSelectedKeyFrames();
-                            boolean alreadyContains = false;
-
-                            for (KeyFrame kf : selectedKeyFrames)
-                            {
-                                if (kf == keyFrame)
-                                {
-                                    alreadyContains = true;
-                                    break;
-                                }
-                            }
-
-                            if (!alreadyContains)
-                            {
-                                setSelectedKeyFrames(ArrayUtils.add(getSelectedKeyFrames(), keyFrame));
-                            }
-                        }
-                        else
-                        {
-                            setSelectedKeyFrames(new KeyFrame[]{keyFrame});
-                        }
-
-                        foundFrame = true;
-                        break;
+                        foundKeyFrame = keyFrame;
+                        break outer;
                     }
                 }
             }
-
-            if (foundFrame)
-            {
-                break;
-            }
         }
 
-        if (!foundFrame && !shiftKey)
+        if (foundKeyFrame != null)
+        {
+            if (shiftKey)
+            {
+                KeyFrame[] selectedKeyFrames = getSelectedKeyFrames();
+                boolean alreadyContains = false;
+                for (KeyFrame kf : selectedKeyFrames)
+                {
+                    if (kf == foundKeyFrame)
+                    {
+                        alreadyContains = true;
+                        break;
+                    }
+                }
+                if (!alreadyContains)
+                {
+                    setSelectedKeyFrames(ArrayUtils.add(selectedKeyFrames, foundKeyFrame));
+                }
+            }
+            else
+            {
+                setSelectedKeyFrames(new KeyFrame[]{foundKeyFrame});
+            }
+        }
+        else if (!shiftKey)
         {
             setSelectedKeyFrames(new KeyFrame[0]);
         }
@@ -441,7 +483,8 @@ public class AttributeSheet extends TimeSheet
     @Override
     public void checkRectangleForKeyFrames(Point point, boolean shiftKey)
     {
-        if (getSelectedCharacter() == null)
+        java.util.List<Character> visible = getVisibleCharacters();
+        if (visible.isEmpty())
         {
             return;
         }
@@ -526,42 +569,49 @@ public class AttributeSheet extends TimeSheet
             foundKeyFrames = getSelectedKeyFrames();
         }
 
-        KeyFrame[][] frames = getSelectedCharacter().getFrames();
-        for (int i = 0; i < frames.length; i++)
+        for (Character c : visible)
         {
-            KeyFrame[] keyFrames = frames[i];
-            if (keyFrames == null)
+            KeyFrame[][] frames = c.getFrames();
+            if (frames == null)
             {
                 continue;
             }
-
-            for (int e = 0; e < keyFrames.length; e++)
+            for (int i = 0; i < frames.length; i++)
             {
-                KeyFrame keyFrame = keyFrames[e];
-                boolean alreadyContains = false;
-
-                for (KeyFrame kf : foundKeyFrames)
-                {
-                    if (keyFrame == kf)
-                    {
-                        alreadyContains = true;
-                        break;
-                    }
-                }
-
-                if (alreadyContains)
+                KeyFrame[] keyFrames = frames[i];
+                if (keyFrames == null)
                 {
                     continue;
                 }
 
-                int kx1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
-                int ky1 = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
-
-                Rectangle2D frameRect = new Rectangle(kx1, ky1, image.getWidth(), image.getHeight());
-
-                if (rectangle.intersects(frameRect))
+                for (int e = 0; e < keyFrames.length; e++)
                 {
-                    foundKeyFrames = ArrayUtils.add(foundKeyFrames, keyFrame);
+                    KeyFrame keyFrame = keyFrames[e];
+                    boolean alreadyContains = false;
+
+                    for (KeyFrame kf : foundKeyFrames)
+                    {
+                        if (keyFrame == kf)
+                        {
+                            alreadyContains = true;
+                            break;
+                        }
+                    }
+
+                    if (alreadyContains)
+                    {
+                        continue;
+                    }
+
+                    int kx1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
+                    int ky1 = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
+
+                    Rectangle2D frameRect = new Rectangle(kx1, ky1, image.getWidth(), image.getHeight());
+
+                    if (rectangle.intersects(frameRect))
+                    {
+                        foundKeyFrames = ArrayUtils.add(foundKeyFrames, keyFrame);
+                    }
                 }
             }
         }

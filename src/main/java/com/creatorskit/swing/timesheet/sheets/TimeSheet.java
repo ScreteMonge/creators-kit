@@ -65,6 +65,63 @@ public class TimeSheet extends JPanel
     private boolean keyFrameClicked = false;
     private KeyFrame[] clickedKeyFrames = new KeyFrame[0];
 
+    /**
+     * Characters whose keyframes should be rendered and interactive.
+     * If a multi-selection is active, returns the full selected set. Otherwise the single
+     * primary Character (or empty if none).
+     */
+    public java.util.List<Character> getVisibleCharacters()
+    {
+        com.creatorskit.selection.SelectionManager mgr = getTimeSheetPanel() == null
+                ? null
+                : getTimeSheetPanel().getSelectionManager();
+        if (mgr != null && mgr.size() > 1)
+        {
+            return new java.util.ArrayList<>(mgr.getSelected());
+        }
+        Character primary = selectedCharacter;
+        if (primary == null)
+        {
+            return java.util.Collections.emptyList();
+        }
+        return java.util.Collections.singletonList(primary);
+    }
+
+    /**
+     * Finds the Character that owns the given keyframe by scanning each visible
+     * Character's frame array. Returns null if not found.
+     */
+    public Character findKeyFrameOwner(KeyFrame keyFrame)
+    {
+        if (keyFrame == null)
+        {
+            return null;
+        }
+        for (Character c : getVisibleCharacters())
+        {
+            KeyFrame[][] frames = c.getFrames();
+            if (frames == null)
+            {
+                continue;
+            }
+            for (KeyFrame[] row : frames)
+            {
+                if (row == null)
+                {
+                    continue;
+                }
+                for (KeyFrame kf : row)
+                {
+                    if (kf == keyFrame)
+                    {
+                        return c;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
     public TimeSheet(ToolBoxFrame toolBox, CreatorsConfig config, ManagerTree managerTree, AttributePanel attributePanel)
     {
         this.toolBox = toolBox;
@@ -520,10 +577,18 @@ public class TimeSheet extends JPanel
                         KeyFrame[] keyFrames = getSelectedKeyFrames();
                         KeyFrameAction[] kfa = new KeyFrameAction[0];
 
-                        for (KeyFrame keyFrame : keyFrames)
+                        Character[] owners = new Character[keyFrames.length];
+                        for (int i = 0; i < keyFrames.length; i++)
                         {
-                            timeSheetPanel.removeKeyFrame(selectedCharacter, keyFrame);
-                            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
+                            KeyFrame keyFrame = keyFrames[i];
+                            Character owner = findKeyFrameOwner(keyFrame);
+                            if (owner == null)
+                            {
+                                owner = selectedCharacter;
+                            }
+                            owners[i] = owner;
+                            timeSheetPanel.removeKeyFrame(owner, keyFrame);
+                            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrame, owner, KeyFrameCharacterActionType.REMOVE));
                         }
 
                         double mouseX = Math.max(0, Math.min(mousePosition.getX(), getWidth()));
@@ -550,15 +615,16 @@ public class TimeSheet extends JPanel
                         for (int i = 0; i < keyFrames.length; i++)
                         {
                             KeyFrame keyFrame = keyFrames[i];
+                            Character owner = owners[i];
                             KeyFrame copy = KeyFrame.createCopy(keyFrame, round(timelineUnits, keyFrame.getTick() + change));
                             copies[i] = copy;
-                            KeyFrame keyFrameToReplace = timeSheetPanel.addKeyFrame(selectedCharacter, copy);
+                            KeyFrame keyFrameToReplace = timeSheetPanel.addKeyFrame(owner, copy);
                             if (keyFrameToReplace != null)
                             {
-                                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
+                                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, owner, KeyFrameCharacterActionType.REMOVE));
                             }
 
-                            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(copy, selectedCharacter, KeyFrameCharacterActionType.ADD));
+                            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(copy, owner, KeyFrameCharacterActionType.ADD));
                         }
 
                         setSelectedKeyFrames(copies);
