@@ -295,6 +295,60 @@ public class Programmer
     }
 
     /**
+     * Feature B helper: if the AnimationKeyFrame names a target Character that exists
+     * in the scene, snap the source's orientation to face it. Combat-style "turn before
+     * attacking" — applied per tick so the source tracks a moving target.
+     */
+    private void applyFaceTarget(Character source, AnimationKeyFrame animKeyFrame)
+    {
+        if (animKeyFrame == null)
+        {
+            return;
+        }
+        String targetName = animKeyFrame.getTargetCharacterName();
+        if (targetName == null || targetName.isEmpty())
+        {
+            return;
+        }
+        Character target = findCharacterByName(targetName);
+        if (target == null || target == source)
+        {
+            return;
+        }
+        CKObject sourceObj = source.getCkObject();
+        CKObject targetObj = target.getCkObject();
+        if (sourceObj == null || targetObj == null)
+        {
+            return;
+        }
+        LocalPoint sourceLp = sourceObj.getLocation();
+        LocalPoint targetLp = targetObj.getLocation();
+        if (sourceLp == null || targetLp == null
+                || (sourceLp.getX() == targetLp.getX() && sourceLp.getY() == targetLp.getY()))
+        {
+            return;
+        }
+        int angle = (int) Orientation.getAngleBetween(sourceLp, targetLp);
+        source.setOrientation(angle);
+    }
+
+    private Character findCharacterByName(String name)
+    {
+        if (name == null)
+        {
+            return null;
+        }
+        for (Character c : plugin.getCharacters())
+        {
+            if (name.equals(c.getName()))
+            {
+                return c;
+            }
+        }
+        return null;
+    }
+
+    /**
      * For auto-face mode: look ahead by the keyframe's tick distance (ceil of speed)
      * and compute the angle from the current tile to the look-ahead tile. Falls back
      * to the MovementComposition's own goal when the path can't supply both points.
@@ -653,6 +707,11 @@ public class Programmer
         }
 
         AnimationKeyFrame keyFrame = (AnimationKeyFrame) kf;
+
+        // Feature B: face-target. If the AnimationKeyFrame names a target Character,
+        // snap orientation to face it. Runs after any movement-derived orientation has
+        // been applied for this tick, so this wins.
+        applyFaceTarget(character, keyFrame);
         boolean randomizeStartFrame = false;
         int pose = getPoseAnimation(keyFrame, isMoving, orientationDifference, speed);
         int poseStartFrame = 0;

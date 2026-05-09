@@ -20,8 +20,14 @@ public class AnimationKeyFrame extends KeyFrame
     private int walkLeft;
     private int idleRight;
     private int idleLeft;
+    private String targetCharacterName;
 
     public AnimationKeyFrame(double tick, boolean stall, int active, int startFrame, boolean loop, boolean freeze, int idle, int walk, int run, int walk180, int walkRight, int walkLeft, int idleRight, int idleLeft)
+    {
+        this(tick, stall, active, startFrame, loop, freeze, idle, walk, run, walk180, walkRight, walkLeft, idleRight, idleLeft, null);
+    }
+
+    public AnimationKeyFrame(double tick, boolean stall, int active, int startFrame, boolean loop, boolean freeze, int idle, int walk, int run, int walk180, int walkRight, int walkLeft, int idleRight, int idleLeft, String targetCharacterName)
     {
         super(KeyFrameType.ANIMATION, tick);
         this.stall = stall;
@@ -37,5 +43,6 @@ public class AnimationKeyFrame extends KeyFrame
         this.walkLeft = walkLeft;
         this.idleRight = idleRight;
         this.idleLeft = idleLeft;
+        this.targetCharacterName = targetCharacterName;
     }
 }

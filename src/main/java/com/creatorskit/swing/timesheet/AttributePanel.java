@@ -287,7 +287,8 @@ public class AttributePanel extends JPanel
                         (int) animAttributes.getWalkRight().getValue(),
                         (int) animAttributes.getWalkLeft().getValue(),
                         (int) animAttributes.getIdleRight().getValue(),
-                        (int) animAttributes.getIdleLeft().getValue()
+                        (int) animAttributes.getIdleLeft().getValue(),
+                        animAttributes.getTargetCharacterNameValue()
                 );
             case ORIENTATION:
                 return new OrientationKeyFrame(
@@ -721,6 +722,24 @@ public class AttributePanel extends JPanel
         idleLeft.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
         idleLeft.setPreferredSize(spinnerSize);
         card.add(idleLeft, c);
+
+        // Face target row: lets the user enter another Character's name. While this
+        // animation keyframe is active the Object snaps to face that Character every
+        // tick (combat-style "turn before attacking").
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 9;
+        JLabel faceTargetLabel = new JLabel("Face target: ");
+        faceTargetLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(faceTargetLabel, c);
+
+        c.gridwidth = 3;
+        c.gridx = 1;
+        c.gridy = 9;
+        JTextField faceTarget = animAttributes.getTargetCharacterName();
+        faceTarget.setPreferredSize(spinnerSize);
+        card.add(faceTarget, c);
+        c.gridwidth = 1;
 
         c.gridwidth = 1;
         c.gridx = 0;
