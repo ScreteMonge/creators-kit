@@ -805,12 +805,29 @@ public class TimeSheet extends JPanel
 
     public void setSelectedKeyFrames(KeyFrame[] keyFrames)
     {
-        getTimeSheetPanel().setSelectedKeyFrames(keyFrames);
+        // When every selected keyframe shares one type, switch to that type's card
+        // BEFORE storing the selection — that way TimeSheetPanel.setSelectedKeyFrames'
+        // refresh + resetAttributes use the new active type. When the selection spans
+        // multiple types we leave the active card alone so refreshKeyFrameSelectionState
+        // can show the mixed-types placeholder.
         if (keyFrames != null && keyFrames.length > 0)
         {
-            KeyFrameType type = keyFrames[keyFrames.length - 1].getKeyFrameType();
-            attributePanel.switchCards(type);
+            KeyFrameType firstType = keyFrames[0].getKeyFrameType();
+            boolean sameType = true;
+            for (KeyFrame kf : keyFrames)
+            {
+                if (kf == null || kf.getKeyFrameType() != firstType)
+                {
+                    sameType = false;
+                    break;
+                }
+            }
+            if (sameType)
+            {
+                attributePanel.switchCards(firstType);
+            }
         }
+        getTimeSheetPanel().setSelectedKeyFrames(keyFrames);
     }
 
     private void updatePreviewTime(double time)
