@@ -1098,6 +1098,8 @@ public class TimeSheetPanel extends JPanel
     /**
      * Explicit setter so that selection-state UI (AttributePanel) refreshes whenever
      * the keyframe selection changes. Replaces Lombok's auto-generated setter.
+     * Also re-pulls the displayed attribute values so clicking a keyframe shows
+     * THAT keyframe's data instead of the seeker-bar keyframe.
      */
     public void setSelectedKeyFrames(KeyFrame[] keyFrames)
     {
@@ -1105,6 +1107,10 @@ public class TimeSheetPanel extends JPanel
         if (attributePanel != null)
         {
             attributePanel.refreshKeyFrameSelectionState();
+            if (selectedCharacter != null)
+            {
+                attributePanel.resetAttributes(selectedCharacter, currentTime);
+            }
         }
     }
 

@@ -81,8 +81,10 @@ public class AttributePanel extends JPanel
     public static final String HITSPLAT_2_CARD = "Hitsplat 2";
     public static final String HITSPLAT_3_CARD = "Hitsplat 3";
     public static final String HITSPLAT_4_CARD = "Hitsplat 4";
+    public static final String MIXED_TYPES_CARD = "MixedTypes";
 
     private final String NO_OBJECT_SELECTED = "[No Object Selected]";
+    private String activeCard = MOVE_CARD;
     private Font attributeFont = new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32);
 
     private KeyFrameType hoveredKeyFrameType;
@@ -205,6 +207,13 @@ public class AttributePanel extends JPanel
         cardPanel.add(hitsplat2Card, HITSPLAT_2_CARD);
         cardPanel.add(hitsplat3Card, HITSPLAT_3_CARD);
         cardPanel.add(hitsplat4Card, HITSPLAT_4_CARD);
+
+        // Empty placeholder shown when the keyframe selection spans multiple types.
+        // Using a CardLayout entry keeps the cardPanel at its normal height instead
+        // of letting the layout collapse when we hide editing controls.
+        JPanel mixedTypesCard = new JPanel();
+        mixedTypesCard.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        cardPanel.add(mixedTypesCard, MIXED_TYPES_CARD);
 
         setupMoveCard(moveCard);
         setupAnimCard(animCard);
@@ -2277,6 +2286,7 @@ public class AttributePanel extends JPanel
     {
         selectedKeyFramePage = type;
         String cardName = selectedKeyFramePage.getName();
+        activeCard = cardName;
         CardLayout cl = (CardLayout)(cardPanel.getLayout());
         cl.show(cardPanel, cardName);
         cardLabel.setText(cardName);
@@ -2331,10 +2341,33 @@ public class AttributePanel extends JPanel
     }
 
     /**
+     * Returns the first user-selected keyframe whose type matches the panel's
+     * current page (selectedKeyFramePage). Used so the panel always reflects the
+     * keyframe the user clicked, not the one under the seeker bar.
+     */
+    private KeyFrame findSelectedKeyFrameOfCurrentType()
+    {
+        if (timeSheetPanel == null)
+        {
+            return null;
+        }
+        KeyFrame[] selected = timeSheetPanel.getSelectedKeyFrames();
+        for (KeyFrame kf : selected)
+        {
+            if (kf != null && kf.getKeyFrameType() == selectedKeyFramePage)
+            {
+                return kf;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Reflects the current keyframe selection in the panel: when multiple keyframe
-     * TYPES are selected (e.g. Movement + Animation across the marquee), hide the
-     * card editor and disable Update/Reset/keyframe-icon — editing one card while
-     * many types are highlighted would be ambiguous.
+     * TYPES are selected (e.g. Movement + Animation across the marquee), swap the
+     * card editor for an empty placeholder and disable Update/Reset/keyframe-icon.
+     * The placeholder card preserves the cardPanel's height so the panel doesn't
+     * collapse vertically.
      */
     public void refreshKeyFrameSelectionState()
     {
@@ -2352,8 +2385,18 @@ public class AttributePanel extends JPanel
             }
         }
         boolean mixedTypes = types.size() > 1;
-        cardPanel.setVisible(!mixedTypes);
-        cardLabel.setVisible(!mixedTypes);
+
+        CardLayout cl = (CardLayout) cardPanel.getLayout();
+        if (mixedTypes)
+        {
+            cl.show(cardPanel, MIXED_TYPES_CARD);
+            cardLabel.setText("Mixed types");
+        }
+        else
+        {
+            cl.show(cardPanel, activeCard);
+            cardLabel.setText(activeCard);
+        }
         updateButton.setEnabled(!mixedTypes);
         resetButton.setEnabled(!mixedTypes);
         keyFramed.setEnabled(!mixedTypes);
@@ -2612,17 +2655,28 @@ public class AttributePanel extends JPanel
             return;
         }
 
-        setKeyFramedIcon(character.findKeyFrame(selectedKeyFramePage, tick) != null);
-        KeyFrame keyFrame = character.findPreviousKeyFrame(selectedKeyFramePage, tick, true);
-
-        if (keyFrame == null)
+        // Prefer a user-selected keyframe of the current type over the time-based
+        // lookup so clicking a keyframe in the timeline immediately edits THAT
+        // keyframe rather than whichever one happens to live under the seeker bar.
+        KeyFrame keyFrame = findSelectedKeyFrameOfCurrentType();
+        if (keyFrame != null)
         {
-            keyFrame = character.findNextKeyFrame(selectedKeyFramePage, tick);
+            setKeyFramedIcon(true);
+        }
+        else
+        {
+            setKeyFramedIcon(character.findKeyFrame(selectedKeyFramePage, tick) != null);
+            keyFrame = character.findPreviousKeyFrame(selectedKeyFramePage, tick, true);
 
             if (keyFrame == null)
             {
-                setAttributesEmpty(true);
-                return;
+                keyFrame = character.findNextKeyFrame(selectedKeyFramePage, tick);
+
+                if (keyFrame == null)
+                {
+                    setAttributesEmpty(true);
+                    return;
+                }
             }
         }
 

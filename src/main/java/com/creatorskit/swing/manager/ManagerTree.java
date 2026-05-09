@@ -405,6 +405,33 @@ public class ManagerTree extends JTree
         }
     }
 
+    /**
+     * Walks every descendant of {@code parent} and appends each child's TreePath to
+     * {@code out}. Used to visually highlight every subfolder + Character node in
+     * the tree when the user clicks a parent folder. Returns true if at least one
+     * descendant was added.
+     */
+    private boolean collectDescendantPaths(DefaultMutableTreeNode parent, ArrayList<TreePath> out)
+    {
+        boolean added = false;
+        Enumeration<TreeNode> children = parent.children();
+        while (children.hasMoreElements())
+        {
+            DefaultMutableTreeNode child = (DefaultMutableTreeNode) children.nextElement();
+            TreePath childPath = new TreePath(child.getPath());
+            if (!out.contains(childPath))
+            {
+                out.add(childPath);
+                added = true;
+            }
+            if (!child.isLeaf())
+            {
+                added |= collectDescendantPaths(child, out);
+            }
+        }
+        return added;
+    }
+
     public void getObjectPanelChildren(DefaultMutableTreeNode parent, ArrayList<Character> characters)
     {
         if (parent.getUserObject() instanceof Character)
@@ -450,8 +477,11 @@ public class ManagerTree extends JTree
             if (!syncingFromSelectionManager)
             {
                 ArrayList<Character> selectedChars = new ArrayList<>();
+                ArrayList<TreePath> expandedPaths = new ArrayList<>();
+                boolean addedDescendants = false;
                 for (TreePath treePath : treePaths)
                 {
+                    expandedPaths.add(treePath);
                     Object component = treePath.getLastPathComponent();
                     if (!(component instanceof DefaultMutableTreeNode))
                     {
@@ -471,9 +501,24 @@ public class ManagerTree extends JTree
                     {
                         // Folder selection = select every Character recursively under it
                         getObjectPanelChildren(node, selectedChars);
+                        // Visually highlight every descendant subfolder + Character node too
+                        addedDescendants |= collectDescendantPaths(node, expandedPaths);
                     }
                 }
                 selectionManager.selectAll(selectedChars);
+
+                if (addedDescendants)
+                {
+                    syncingFromSelectionManager = true;
+                    try
+                    {
+                        setSelectionPaths(expandedPaths.toArray(new TreePath[0]));
+                    }
+                    finally
+                    {
+                        syncingFromSelectionManager = false;
+                    }
+                }
             }
 
             JPanel objectHolder = toolBox.getManagerPanel().getObjectHolder();
