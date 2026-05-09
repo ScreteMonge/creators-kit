@@ -269,7 +269,8 @@ public class AttributePanel extends JPanel
                         0,
                         movementAttributes.getLoop().getSelectedItem() == Toggle.ENABLE,
                         (double) movementAttributes.getSpeed().getValue(),
-                        (int) movementAttributes.getTurnRate().getValue()
+                        (int) movementAttributes.getTurnRate().getValue(),
+                        movementAttributes.getAutoFaceMovement().isSelected()
                 );
             case ANIMATION:
                 return new AnimationKeyFrame(
@@ -457,6 +458,14 @@ public class AttributePanel extends JPanel
         turnRate.setToolTipText("Determines the rate at which the Object rotates during movement in JUnits/clientTick");
         turnRate.setModel(new SpinnerNumberModel(OrientationKeyFrame.TURN_RATE, 0, 2048, 1));
         card.add(turnRate, c);
+
+        c.gridx = 0;
+        c.gridy = 4;
+        c.gridwidth = 2;
+        JCheckBox autoFace = movementAttributes.getAutoFaceMovement();
+        autoFace.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        card.add(autoFace, c);
+        c.gridwidth = 1;
 
         c.gridwidth = 1;
         c.gridheight = 1;

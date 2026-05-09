@@ -17,11 +17,16 @@ public class MovementAttributes extends Attributes
     private final JComboBox<Toggle> loop = new JComboBox<>();
     private final JSpinner speed = new JSpinner();
     private final JSpinner turnRate = new JSpinner();
+    private final JCheckBox autoFaceMovement = new JCheckBox("Auto-face movement");
 
     public MovementAttributes()
     {
         addChangeListeners();
         loop.setOpaque(true);
+        autoFaceMovement.setToolTipText("<html>When on, this Object faces the next path tile each tick like an OSRS NPC."
+                + "<br>Overrides any Orientation keyframes that overlap this Movement."
+                + "<br>Look-ahead = ceil(speed) tiles (1 walking, 2 running).</html>");
+        autoFaceMovement.setFocusable(false);
     }
 
     @Override
@@ -31,6 +36,7 @@ public class MovementAttributes extends Attributes
         loop.setSelectedItem(kf.isLoop() ? Toggle.ENABLE : Toggle.DISABLE);
         speed.setValue(kf.getSpeed());
         turnRate.setValue(kf.getTurnRate());
+        autoFaceMovement.setSelected(kf.isAutoFaceMovement());
     }
 
     @Override
@@ -39,6 +45,7 @@ public class MovementAttributes extends Attributes
         loop.setBackground(color);
         speed.setBackground(color);
         turnRate.setBackground(color);
+        autoFaceMovement.setBackground(color);
     }
 
     @Override
@@ -48,7 +55,8 @@ public class MovementAttributes extends Attributes
                 {
                         loop,
                         speed,
-                        turnRate
+                        turnRate,
+                        autoFaceMovement
                 };
     }
 
@@ -69,6 +77,11 @@ public class MovementAttributes extends Attributes
         {
             turnRate.setBackground(getRed());
         });
+
+        autoFaceMovement.addActionListener(e ->
+        {
+            autoFaceMovement.setBackground(getRed());
+        });
     }
 
     @Override
@@ -77,6 +90,7 @@ public class MovementAttributes extends Attributes
         loop.setSelectedItem(Toggle.DISABLE);
         speed.setValue(1.0);
         turnRate.setValue(OrientationKeyFrame.TURN_RATE);
+        autoFaceMovement.setSelected(false);
         super.resetAttributes(resetBackground);
     }
 }
