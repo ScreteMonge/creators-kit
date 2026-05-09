@@ -401,39 +401,114 @@ public class TimeSheetPanel extends JPanel
 
     public void onUpdateButtonPressed()
     {
-        if (selectedCharacter == null)
+        KeyFrameType type = attributePanel.getSelectedKeyFramePage();
+
+        // Build the target list: every currently-selected keyframe of the panel's type.
+        // If no matching selection, fall back to the legacy single-keyframe behavior
+        // (the keyframe of `type` previous to the current playhead on the primary).
+        java.util.List<KeyFrame> targets = new java.util.ArrayList<>();
+        java.util.List<Character> owners = new java.util.ArrayList<>();
+        for (KeyFrame kf : selectedKeyFrames)
         {
-            return;
+            if (kf == null || kf.getKeyFrameType() != type)
+            {
+                continue;
+            }
+            Character owner = findKeyFrameOwner(kf);
+            if (owner == null)
+            {
+                continue;
+            }
+            targets.add(kf);
+            owners.add(owner);
         }
 
-        KeyFrameType type = attributePanel.getSelectedKeyFramePage();
-        KeyFrame keyFrame = selectedCharacter.findPreviousKeyFrame(type, currentTime, true);
+        if (targets.isEmpty())
+        {
+            if (selectedCharacter == null)
+            {
+                return;
+            }
+            KeyFrame keyFrame = selectedCharacter.findPreviousKeyFrame(type, currentTime, true);
+            if (keyFrame == null)
+            {
+                return;
+            }
+            targets.add(keyFrame);
+            owners.add(selectedCharacter);
+        }
+
+        KeyFrameAction[] kfa = new KeyFrameAction[0];
+        for (int i = 0; i < targets.size(); i++)
+        {
+            KeyFrame oldKeyFrame = targets.get(i);
+            Character owner = owners.get(i);
+
+            KeyFrame newKf = attributePanel.createKeyFrame(type, oldKeyFrame.getTick());
+            if (newKf == null)
+            {
+                continue;
+            }
+
+            if (type == KeyFrameType.MOVEMENT)
+            {
+                MovementKeyFrame oldKF = (MovementKeyFrame) oldKeyFrame;
+                MovementKeyFrame newKF = (MovementKeyFrame) newKf;
+                newKF.setPlane(oldKF.getPlane());
+                newKF.setPoh(oldKF.isPoh());
+                newKF.setPath(oldKF.getPath());
+                newKF.setCurrentStep(0);
+                newKF.setStepClientTick(0);
+            }
+
+            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(newKf, owner, KeyFrameCharacterActionType.ADD));
+            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(oldKeyFrame, owner, KeyFrameCharacterActionType.REMOVE));
+            addKeyFrame(owner, newKf);
+        }
+
+        if (kfa.length > 0)
+        {
+            addKeyFrameActions(kfa);
+        }
+    }
+
+    /**
+     * Locate the Character that owns the given keyframe by scanning the visible
+     * Characters' frame arrays (selection-aware). Used by Update so multi-selected
+     * keyframes spread across owners can all be edited at once.
+     */
+    private Character findKeyFrameOwner(KeyFrame keyFrame)
+    {
         if (keyFrame == null)
         {
-            return;
+            return null;
         }
-
-        KeyFrame kf = attributePanel.createKeyFrame(type, keyFrame.getTick());
-        if (kf == null)
+        java.util.List<Character> visible = (selectionManager != null && selectionManager.size() > 1)
+                ? new ArrayList<>(selectionManager.getSelected())
+                : (selectedCharacter != null ? java.util.Collections.singletonList(selectedCharacter) : java.util.Collections.emptyList());
+        for (Character c : visible)
         {
-            return;
+            KeyFrame[][] frames = c.getFrames();
+            if (frames == null)
+            {
+                continue;
+            }
+            for (KeyFrame[] row : frames)
+            {
+                if (row == null)
+                {
+                    continue;
+                }
+                for (KeyFrame kf : row)
+                {
+                    if (kf == keyFrame)
+                    {
+                        return c;
+                    }
+                }
+            }
         }
-
-        if (type == KeyFrameType.MOVEMENT)
-        {
-            MovementKeyFrame oldKF = (MovementKeyFrame) keyFrame;
-
-            MovementKeyFrame newKF = (MovementKeyFrame) kf;
-            newKF.setPlane(oldKF.getPlane());
-            newKF.setPoh(oldKF.isPoh());
-            newKF.setPath(oldKF.getPath());
-            newKF.setCurrentStep(0);
-            newKF.setStepClientTick(0);
-        }
-
-        KeyFrameAction[] kfa = new KeyFrameAction[]{new KeyFrameCharacterAction(kf, selectedCharacter, KeyFrameCharacterActionType.ADD), new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.REMOVE)};
-        addKeyFrame(selectedCharacter, kf);
-        addKeyFrameActions(kfa);
+        return null;
     }
 
     public KeyFrame[] checkDespawnKeyFrameAt0(KeyFrame keyFrame, KeyFrame[] keyframes, double currentTick)
@@ -1018,6 +1093,19 @@ public class TimeSheetPanel extends JPanel
         attributeSheet.setSelectedCharacter(character);
         attributePanel.setSelectedCharacter(character);
         attributePanel.resetAttributes(character, currentTime);
+    }
+
+    /**
+     * Explicit setter so that selection-state UI (AttributePanel) refreshes whenever
+     * the keyframe selection changes. Replaces Lombok's auto-generated setter.
+     */
+    public void setSelectedKeyFrames(KeyFrame[] keyFrames)
+    {
+        this.selectedKeyFrames = keyFrames;
+        if (attributePanel != null)
+        {
+            attributePanel.refreshKeyFrameSelectionState();
+        }
     }
 
     public void setCurrentTime(double tick, boolean playing)

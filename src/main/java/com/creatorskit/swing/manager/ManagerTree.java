@@ -452,14 +452,25 @@ public class ManagerTree extends JTree
                 ArrayList<Character> selectedChars = new ArrayList<>();
                 for (TreePath treePath : treePaths)
                 {
-                    Object node = treePath.getLastPathComponent();
-                    if (node instanceof DefaultMutableTreeNode)
+                    Object component = treePath.getLastPathComponent();
+                    if (!(component instanceof DefaultMutableTreeNode))
                     {
-                        Object user = ((DefaultMutableTreeNode) node).getUserObject();
-                        if (user instanceof Character)
+                        continue;
+                    }
+                    DefaultMutableTreeNode node = (DefaultMutableTreeNode) component;
+                    Object user = node.getUserObject();
+                    if (user instanceof Character)
+                    {
+                        Character character = (Character) user;
+                        if (!selectedChars.contains(character))
                         {
-                            selectedChars.add((Character) user);
+                            selectedChars.add(character);
                         }
+                    }
+                    else if (user instanceof Folder)
+                    {
+                        // Folder selection = select every Character recursively under it
+                        getObjectPanelChildren(node, selectedChars);
                     }
                 }
                 selectionManager.selectAll(selectedChars);

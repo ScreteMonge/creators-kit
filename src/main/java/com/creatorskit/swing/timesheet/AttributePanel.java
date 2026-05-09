@@ -57,6 +57,8 @@ public class AttributePanel extends JPanel
     private final JLabel objectLabel = new JLabel("[No Object Selected]");
     private final JLabel cardLabel = new JLabel("");
     private final JButton keyFramed = new JButton();
+    private final JButton updateButton = new JButton("Update");
+    private final JButton resetButton = new JButton();
 
     private final JFilterableTable npcTable = new JFilterableTable("NPCs");
     private final JFilterableTable itemTable = new JFilterableTable("Items");
@@ -148,18 +150,17 @@ public class AttributePanel extends JPanel
 
         c.gridx = 2;
         c.gridy = 0;
-        JButton update = new JButton("Update");
-        update.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        update.addActionListener(e -> timeSheetPanel.onUpdateButtonPressed());
-        add(update, c);
+        updateButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        updateButton.addActionListener(e -> timeSheetPanel.onUpdateButtonPressed());
+        add(updateButton, c);
 
         c.gridx = 3;
         c.gridy = 0;
-        JButton reset = new JButton(new ImageIcon(RESET));
-        reset.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        reset.setToolTipText("Reset all the parameters of the currently visible KeyFrame");
-        reset.addActionListener(e -> setAttributesEmpty(false));
-        add(reset, c);
+        resetButton.setIcon(new ImageIcon(RESET));
+        resetButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        resetButton.setToolTipText("Reset all the parameters of the currently visible KeyFrame");
+        resetButton.addActionListener(e -> setAttributesEmpty(false));
+        add(resetButton, c);
 
         c.gridx = 4;
         c.gridy = 0;
@@ -2327,6 +2328,37 @@ public class AttributePanel extends JPanel
         KeyFrame keyFrame = character.findKeyFrame(selectedKeyFramePage, tick);
         setKeyFramedIcon(keyFrame != null);
         resetAttributes(character, tick);
+    }
+
+    /**
+     * Reflects the current keyframe selection in the panel: when multiple keyframe
+     * TYPES are selected (e.g. Movement + Animation across the marquee), hide the
+     * card editor and disable Update/Reset/keyframe-icon — editing one card while
+     * many types are highlighted would be ambiguous.
+     */
+    public void refreshKeyFrameSelectionState()
+    {
+        if (timeSheetPanel == null)
+        {
+            return;
+        }
+        KeyFrame[] selected = timeSheetPanel.getSelectedKeyFrames();
+        java.util.EnumSet<KeyFrameType> types = java.util.EnumSet.noneOf(KeyFrameType.class);
+        for (KeyFrame kf : selected)
+        {
+            if (kf != null)
+            {
+                types.add(kf.getKeyFrameType());
+            }
+        }
+        boolean mixedTypes = types.size() > 1;
+        cardPanel.setVisible(!mixedTypes);
+        cardLabel.setVisible(!mixedTypes);
+        updateButton.setEnabled(!mixedTypes);
+        resetButton.setEnabled(!mixedTypes);
+        keyFramed.setEnabled(!mixedTypes);
+        revalidate();
+        repaint();
     }
 
     public void updateObjectLabel(Character character)
