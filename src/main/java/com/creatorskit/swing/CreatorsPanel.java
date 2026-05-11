@@ -93,6 +93,7 @@ public class CreatorsPanel extends PluginPanel
     private final LineBorder defaultBorder = new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1);
     private final LineBorder hoveredBorder = new LineBorder(ColorScheme.LIGHT_GRAY_COLOR, 2);
     private final LineBorder selectedBorder = new LineBorder(Color.WHITE, 2);
+    private final JLabel stepSpeedLabel = new JLabel("Step speed: 1.0");
 
     @Inject
     public CreatorsPanel(@Nullable Client client, CreatorsConfig config, ClientThread clientThread, CreatorsPlugin plugin, ToolBoxFrame toolBox, DataFinder dataFinder, ModelImporter modelImporter, SelectionManager selectionManager)
@@ -217,9 +218,19 @@ public class CreatorsPanel extends PluginPanel
         deselectButton.addActionListener(e -> selectionManager.clear());
         add(deselectButton, c);
 
+        // Live indicator of the Add-Program-Step speed; updated when the user holds
+        // the hotkey and scrolls the mouse wheel.
         c.gridwidth = 3;
         c.gridx = 0;
-        c.gridy = 4;
+        c.gridy++;
+        stepSpeedLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        stepSpeedLabel.setToolTipText("<html>Speed used when adding a new movement step."
+                + "<br>Hold the Add Program Step hotkey and scroll up/down to change in 0.5 increments.</html>");
+        add(stepSpeedLabel, c);
+
+        c.gridwidth = 3;
+        c.gridx = 0;
+        c.gridy = 5;
         c.weightx = 1;
         c.weighty = 0;
         sidePanel.setLayout(new GridLayout(0, 1, 4, 4));
@@ -230,11 +241,16 @@ public class CreatorsPanel extends PluginPanel
 
         c.gridwidth = 3;
         c.gridx = 0;
-        c.gridy = 5;
+        c.gridy = 6;
         c.weightx = 1;
         c.weighty = 1;
         JLabel emptyLabel = new JLabel("");
         add(emptyLabel, c);
+    }
+
+    public void updateStepSpeedLabel(double speed)
+    {
+        stepSpeedLabel.setText(String.format("Step speed: %.1f", speed));
     }
 
     public Character createCharacter(ParentPanel parentPanel)

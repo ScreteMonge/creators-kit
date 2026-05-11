@@ -735,29 +735,56 @@ public class TimeSheetPanel extends JPanel
 
         boolean poh = MovementManager.useLocalLocations(worldView);
 
-        KeyFrame kf = selectedCharacter.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
-        if (newKeyFrame || kf == null)
+        int x = localPoint.getSceneX();
+        int y = localPoint.getSceneY();
+        if (!poh)
         {
-            int x = localPoint.getSceneX();
-            int y = localPoint.getSceneY();
-            if (!poh)
-            {
-                WorldPoint wp = WorldPoint.fromLocalInstance(client, localPoint, worldView.getPlane());
-                x = wp.getX();
-                y = wp.getY();
-            }
+            WorldPoint wp = WorldPoint.fromLocalInstance(client, localPoint, worldView.getPlane());
+            x = wp.getX();
+            y = wp.getY();
+        }
 
+        double stepSpeed = plugin.getCurrentStepSpeed();
+
+        MovementKeyFrame previous = findLastMovementKeyFrame(selectedCharacter);
+        if (newKeyFrame || previous == null)
+        {
+            // First step for this Character: spawn at the clicked tile (1-tile path).
             int[][] path = new int[][]{new int[]{x, y}};
-            initializeMovementKeyFrame(selectedCharacter, currentTime, worldView.getPlane(), poh, path, false, 1, OrientationKeyFrame.TURN_RATE);
+            initializeMovementKeyFrame(selectedCharacter, currentTime, worldView.getPlane(), poh, path, false, stepSpeed, OrientationKeyFrame.TURN_RATE);
         }
         else
         {
-            MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
-            int[][] path = movementManager.addProgramStep(keyFrame, worldView, localPoint);
-            initializeMovementKeyFrame(selectedCharacter, keyFrame.getTick(), worldView.getPlane(), poh, path, keyFrame.isLoop(), keyFrame.getSpeed(), keyFrame.getTurnRate());
+            // Chained step: a new keyframe with a 2-tile path from the previous step's
+            // end tile to the new destination. The new keyframe's tick comes after the
+            // previous keyframe finishes (its path duration in game ticks).
+            int[] prevEnd = previous.getPath()[previous.getPath().length - 1];
+            double prevDuration = (previous.getPath().length - 1) / Math.max(0.0001, previous.getSpeed());
+            if (prevDuration < 1.0)
+            {
+                prevDuration = 1.0; // ensure at least 1 game tick separation so MKFs don't collide
+            }
+            double newTick = previous.getTick() + prevDuration;
+
+            int[][] path = new int[][]{prevEnd, new int[]{x, y}};
+            initializeMovementKeyFrame(selectedCharacter, newTick, worldView.getPlane(), poh, path, false, stepSpeed, previous.getTurnRate());
         }
 
         programmer.register3DChanges(selectedCharacter);
+    }
+
+    /**
+     * Returns the latest-in-time MovementKeyFrame for the Character, or null if there
+     * are none. Used by onAddMovement to chain a new step after the existing path.
+     */
+    private MovementKeyFrame findLastMovementKeyFrame(Character character)
+    {
+        KeyFrame[] frames = character.getKeyFrames(KeyFrameType.MOVEMENT);
+        if (frames == null || frames.length == 0)
+        {
+            return null;
+        }
+        return (MovementKeyFrame) frames[frames.length - 1];
     }
 
     public void initializeMovementKeyFrame(Character character, double tick, int plane, boolean poh, int[][] path, boolean loop, double speed, int turnRate)

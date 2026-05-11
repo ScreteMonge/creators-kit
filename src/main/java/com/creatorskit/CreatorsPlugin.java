@@ -163,6 +163,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private boolean autoSetupPathFound = true;
 	private boolean autoTransmogFound = true;
 	private boolean addProgramStep = false;
+	private boolean addStepKeyHeld = false;
+	private boolean scrolledDuringStepHold = false;
+	private double currentStepSpeed = 1.0;
 
 	@Override
 	protected void startUp() throws Exception
@@ -1140,7 +1143,19 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			addProgramStep = true;
+			addStepKeyHeld = true;
+			scrolledDuringStepHold = false;
+		}
+
+		@Override
+		public void hotkeyReleased()
+		{
+			// Press without scrolling = add a step. Press + scroll = speed adjust only.
+			if (!scrolledDuringStepHold)
+			{
+				addProgramStep = true;
+			}
+			addStepKeyHeld = false;
 		}
 	};
 
@@ -1322,6 +1337,25 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 	public MouseWheelEvent mouseWheelMoved(MouseWheelEvent event)
 	{
+		// While the Add Program Step hotkey is held, scrolling adjusts the speed used
+		// for new movement keyframes by 0.5 increments (up = faster, down = slower).
+		if (addStepKeyHeld)
+		{
+			double next = currentStepSpeed - event.getWheelRotation() * 0.5;
+			next = Math.max(0.5, Math.min(10.0, next));
+			if (next != currentStepSpeed)
+			{
+				currentStepSpeed = next;
+				scrolledDuringStepHold = true;
+				if (creatorsPanel != null)
+				{
+					creatorsPanel.updateStepSpeedLabel(currentStepSpeed);
+				}
+			}
+			event.consume();
+			return event;
+		}
+
 		if (config.enableCtrlHotkeys() && event.isControlDown())
 		{
 			creatorsPanel.scrollSelectedCharacter(event.getWheelRotation());
