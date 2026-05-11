@@ -253,20 +253,8 @@ public class Programmer
         setLocation(character, mkf, mc);
 
         int orientation = ckObject.getOrientation();
-        int orientationGoal = mkf.isAutoFaceMovement()
-                ? computeAutoFaceGoal(worldView, mkf, currentStep, mc)
-                : mc.getOrientationGoal();
+        int orientationGoal = mc.getOrientationGoal();
         int difference = Orientation.subtract(orientationGoal, orientation);
-
-        // Auto-face mode: ignore overlapping Orientation keyframes; the path-derived
-        // angle is the source of truth so the user doesn't need to babysit Orientation
-        // alongside Movement.
-        if (mkf.isAutoFaceMovement())
-        {
-            setOrientation(character, mc, orientationGoal, difference, stepsComplete, turnRate);
-            setAnimation(character, mc.isMoving(), difference, finalSpeed);
-            return;
-        }
 
         KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.ORIENTATION);
         if (kf == null)
@@ -348,34 +336,6 @@ public class Programmer
         return null;
     }
 
-    /**
-     * For auto-face mode: look ahead by the keyframe's tick distance (ceil of speed)
-     * and compute the angle from the current tile to the look-ahead tile. Falls back
-     * to the MovementComposition's own goal when the path can't supply both points.
-     */
-    private int computeAutoFaceGoal(WorldView worldView, MovementKeyFrame mkf, int currentStep, MovementComposition mc)
-    {
-        int[][] path = mkf.getPath();
-        if (path == null || path.length == 0)
-        {
-            return mc.getOrientationGoal();
-        }
-        int lookAhead = Math.max(1, (int) Math.ceil(mkf.getSpeed()));
-        int targetStep = Math.min(currentStep + lookAhead, path.length - 1);
-        if (targetStep <= currentStep)
-        {
-            return mc.getOrientationGoal();
-        }
-        LocalPoint here = getLocation(worldView, mkf, currentStep);
-        LocalPoint future = getLocation(worldView, mkf, targetStep);
-        if (here == null || future == null
-                || (here.getX() == future.getX() && here.getY() == future.getY()))
-        {
-            return mc.getOrientationGoal();
-        }
-        return (int) Orientation.getAngleBetween(here, future);
-    }
-
     private OrientationInstruction findLastOrientation(MovementKeyFrame mkf, OrientationKeyFrame okf, double clientTicksForCurrentTime)
     {
         double oriEndClientTick = (okf.getTick() + okf.getDuration()) * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH;
@@ -444,26 +404,13 @@ public class Programmer
         {
             character.setInScene(true);
             setLocation(character, mkf, mc);
-            orientationGoal = mkf.isAutoFaceMovement()
-                    ? computeAutoFaceGoal(worldView, mkf, currentStep, mc)
-                    : mc.getOrientationGoal();
+            orientationGoal = mc.getOrientationGoal();
             difference = Orientation.subtract(orientationGoal, orientation);
             differenceToGoal = Orientation.subtract(mc.getOrientationToSet(), orientation);
             isMoving = mc.isMoving();
         }
 
         KeyFrameType orientationDeterminant = findLastOrientation(character);
-
-        // Auto-face overrides any Orientation keyframe in the static (scrubbing) view too,
-        // so the timeline preview matches what playback will show.
-        if (mkf.isAutoFaceMovement() && mc != null)
-        {
-            setOrientation(character, mc, orientationGoal, difference, stepsComplete, turnRate);
-            orientation = ckObject.getOrientation();
-            difference = Orientation.subtract(orientationGoal, orientation);
-            setAnimation(character, mc.isMoving(), difference, finalSpeed);
-            return;
-        }
 
         if (orientationDeterminant == KeyFrameType.ORIENTATION)
         {

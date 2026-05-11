@@ -37,8 +37,7 @@ public class KeyFrame
                         moveKF.getStepClientTick(),
                         moveKF.isLoop(),
                         moveKF.getSpeed(),
-                        moveKF.getTurnRate(),
-                        moveKF.isAutoFaceMovement());
+                        moveKF.getTurnRate());
             case ANIMATION:
                 AnimationKeyFrame animKF = (AnimationKeyFrame) keyFrame;
                 return new AnimationKeyFrame(
