@@ -286,8 +286,7 @@ public class AttributePanel extends JPanel
                         (int) animAttributes.getWalkRight().getValue(),
                         (int) animAttributes.getWalkLeft().getValue(),
                         (int) animAttributes.getIdleRight().getValue(),
-                        (int) animAttributes.getIdleLeft().getValue(),
-                        animAttributes.getTargetCharacterNameValue()
+                        (int) animAttributes.getIdleLeft().getValue()
                 );
             case ORIENTATION:
                 return new OrientationKeyFrame(
@@ -296,7 +295,8 @@ public class AttributePanel extends JPanel
                         (int) oriAttributes.getStart().getValue(),
                         (int) oriAttributes.getEnd().getValue(),
                         (double) oriAttributes.getDuration().getValue(),
-                        (int) oriAttributes.getTurnRate().getValue()
+                        (int) oriAttributes.getTurnRate().getValue(),
+                        oriAttributes.getTargetCharacterNameValue()
                 );
             case SPAWN:
                 return new SpawnKeyFrame(
@@ -713,24 +713,6 @@ public class AttributePanel extends JPanel
         idleLeft.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
         idleLeft.setPreferredSize(spinnerSize);
         card.add(idleLeft, c);
-
-        // Face target row: lets the user enter another Character's name. While this
-        // animation keyframe is active the Object snaps to face that Character every
-        // tick (combat-style "turn before attacking").
-        c.gridwidth = 1;
-        c.gridx = 0;
-        c.gridy = 9;
-        JLabel faceTargetLabel = new JLabel("Face target: ");
-        faceTargetLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(faceTargetLabel, c);
-
-        c.gridwidth = 3;
-        c.gridx = 1;
-        c.gridy = 9;
-        JTextField faceTarget = animAttributes.getTargetCharacterName();
-        faceTarget.setPreferredSize(spinnerSize);
-        card.add(faceTarget, c);
-        c.gridwidth = 1;
 
         c.gridwidth = 1;
         c.gridx = 0;
@@ -1304,6 +1286,23 @@ public class AttributePanel extends JPanel
         turnRate.setToolTipText("Determines the rate at which the Object rotates in JUnits/clientTick");
         turnRate.setModel(new SpinnerNumberModel(OrientationKeyFrame.TURN_RATE, 0, 2048, 1));
         card.add(turnRate, c);
+
+        // Face target row: while this orientation keyframe is active, the Object snaps
+        // every tick to face the named Character (combat-style turn-to-target).
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 5;
+        JLabel faceTargetLabel = new JLabel("Face target: ");
+        faceTargetLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(faceTargetLabel, c);
+
+        c.gridwidth = 3;
+        c.gridx = 1;
+        c.gridy = 5;
+        JTextField faceTarget = oriAttributes.getTargetCharacterName();
+        faceTarget.setPreferredSize(spinnerSize);
+        card.add(faceTarget, c);
+        c.gridwidth = 1;
 
         calculate.addActionListener(e ->
         {

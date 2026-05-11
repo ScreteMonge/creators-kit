@@ -54,8 +54,7 @@ public class KeyFrame
                         animKF.getWalkRight(),
                         animKF.getWalkLeft(),
                         animKF.getIdleRight(),
-                        animKF.getIdleLeft(),
-                        animKF.getTargetCharacterName());
+                        animKF.getIdleLeft());
             case ORIENTATION:
                 OrientationKeyFrame oriKF = (OrientationKeyFrame) keyFrame;
                 return new OrientationKeyFrame(
@@ -64,7 +63,8 @@ public class KeyFrame
                         oriKF.getStart(),
                         oriKF.getEnd(),
                         oriKF.getDuration(),
-                        oriKF.getTurnRate());
+                        oriKF.getTurnRate(),
+                        oriKF.getTargetCharacterName());
             case SPAWN:
                 SpawnKeyFrame spawnKF = (SpawnKeyFrame) keyFrame;
                 return new SpawnKeyFrame(

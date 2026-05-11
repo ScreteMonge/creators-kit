@@ -15,8 +15,14 @@ public class OrientationKeyFrame extends KeyFrame
     private int end;
     private double duration;
     private int turnRate;
+    private String targetCharacterName;
 
     public OrientationKeyFrame(double tick, OrientationGoal goal, int start, int end, double duration, int turnRate)
+    {
+        this(tick, goal, start, end, duration, turnRate, null);
+    }
+
+    public OrientationKeyFrame(double tick, OrientationGoal goal, int start, int end, double duration, int turnRate, String targetCharacterName)
     {
         super(KeyFrameType.ORIENTATION, tick);
         this.goal = goal;
@@ -24,5 +30,6 @@ public class OrientationKeyFrame extends KeyFrame
         this.end = end;
         this.duration = duration;
         this.turnRate = turnRate;
+        this.targetCharacterName = targetCharacterName;
     }
 }

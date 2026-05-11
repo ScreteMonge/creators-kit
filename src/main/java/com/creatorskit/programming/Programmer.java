@@ -202,12 +202,21 @@ public class Programmer
 
             setAnimation(character, false, 0, 0);
             setOrientationStatic(character);
+            if (okf instanceof OrientationKeyFrame)
+            {
+                applyFaceTarget(character, (OrientationKeyFrame) okf);
+            }
             plugin.setLocation(character, false, false, ActiveOption.UNCHANGED, LocationOption.TO_SAVED_LOCATION);
             return;
         }
 
         setAnimation(character, false, 0, 0);
         setOrientation(character, currentClientTick);
+        KeyFrame activeOri = character.getCurrentKeyFrame(KeyFrameType.ORIENTATION);
+        if (activeOri instanceof OrientationKeyFrame)
+        {
+            applyFaceTarget(character, (OrientationKeyFrame) activeOri);
+        }
     }
 
     /**
@@ -269,6 +278,7 @@ public class Programmer
         if (instruction.getType() == KeyFrameType.ORIENTATION)
         {
             setOrientation(character, currentClientTick);
+            applyFaceTarget(character, okf);
             setAnimation(character, mc.isMoving(), difference, finalSpeed);
             return;
         }
@@ -283,17 +293,17 @@ public class Programmer
     }
 
     /**
-     * Feature B helper: if the AnimationKeyFrame names a target Character that exists
-     * in the scene, snap the source's orientation to face it. Combat-style "turn before
-     * attacking" — applied per tick so the source tracks a moving target.
+     * Feature B helper: if the OrientationKeyFrame names a target Character that
+     * exists in the scene, snap the source's orientation to face it. Combat-style
+     * "turn before attacking" — applied per tick so the source tracks a moving target.
      */
-    private void applyFaceTarget(Character source, AnimationKeyFrame animKeyFrame)
+    private void applyFaceTarget(Character source, OrientationKeyFrame oriKeyFrame)
     {
-        if (animKeyFrame == null)
+        if (oriKeyFrame == null)
         {
             return;
         }
-        String targetName = animKeyFrame.getTargetCharacterName();
+        String targetName = oriKeyFrame.getTargetCharacterName();
         if (targetName == null || targetName.isEmpty())
         {
             return;
@@ -415,6 +425,11 @@ public class Programmer
         if (orientationDeterminant == KeyFrameType.ORIENTATION)
         {
             setOrientationStatic(character);
+            KeyFrame activeOri = character.getCurrentKeyFrame(KeyFrameType.ORIENTATION);
+            if (activeOri instanceof OrientationKeyFrame)
+            {
+                applyFaceTarget(character, (OrientationKeyFrame) activeOri);
+            }
             setAnimation(character, isMoving, differenceToGoal, finalSpeed);
             return;
         }
@@ -654,11 +669,6 @@ public class Programmer
         }
 
         AnimationKeyFrame keyFrame = (AnimationKeyFrame) kf;
-
-        // Feature B: face-target. If the AnimationKeyFrame names a target Character,
-        // snap orientation to face it. Runs after any movement-derived orientation has
-        // been applied for this tick, so this wins.
-        applyFaceTarget(character, keyFrame);
         boolean randomizeStartFrame = false;
         int pose = getPoseAnimation(keyFrame, isMoving, orientationDifference, speed);
         int poseStartFrame = 0;

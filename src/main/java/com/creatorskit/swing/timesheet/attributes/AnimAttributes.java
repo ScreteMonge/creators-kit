@@ -26,7 +26,6 @@ public class AnimAttributes extends Attributes
     private final JSpinner walkLeft = new JSpinner();
     private final JSpinner idleRight = new JSpinner();
     private final JSpinner idleLeft = new JSpinner();
-    private final JTextField targetCharacterName = new JTextField();
 
     public AnimAttributes()
     {
@@ -34,24 +33,6 @@ public class AnimAttributes extends Attributes
         active.setOpaque(true);
         loop.setOpaque(true);
         freeze.setOpaque(true);
-        targetCharacterName.setToolTipText("<html>Optional Character name to face while this animation plays."
-                + "<br>The Object snaps to face that Character at the start of every tick the animation is active."
-                + "<br>Leave empty for normal orientation behavior.</html>");
-    }
-
-    /**
-     * Returns the target Character name as stored in the keyframe — null if blank
-     * so we don't roundtrip empty strings.
-     */
-    public String getTargetCharacterNameValue()
-    {
-        String text = targetCharacterName.getText();
-        if (text == null)
-        {
-            return null;
-        }
-        text = text.trim();
-        return text.isEmpty() ? null : text;
     }
 
     @Override
@@ -77,7 +58,6 @@ public class AnimAttributes extends Attributes
         walkLeft.setValue(kf.getWalkLeft());
         idleRight.setValue(kf.getIdleRight());
         idleLeft.setValue(kf.getIdleLeft());
-        targetCharacterName.setText(kf.getTargetCharacterName() == null ? "" : kf.getTargetCharacterName());
     }
 
     @Override
@@ -96,7 +76,6 @@ public class AnimAttributes extends Attributes
         walkLeft.setBackground(color);
         idleRight.setBackground(color);
         idleLeft.setBackground(color);
-        targetCharacterName.setBackground(color);
     }
 
     @Override
@@ -116,8 +95,7 @@ public class AnimAttributes extends Attributes
                         walkRight,
                         walkLeft,
                         idleRight,
-                        idleLeft,
-                        targetCharacterName
+                        idleLeft
                 };
     }
 
@@ -188,13 +166,6 @@ public class AnimAttributes extends Attributes
         {
             idleLeft.setBackground(getRed());
         });
-
-        targetCharacterName.getDocument().addDocumentListener(new javax.swing.event.DocumentListener()
-        {
-            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { targetCharacterName.setBackground(getRed()); }
-            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { targetCharacterName.setBackground(getRed()); }
-            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { targetCharacterName.setBackground(getRed()); }
-        });
     }
 
     @Override
@@ -213,7 +184,6 @@ public class AnimAttributes extends Attributes
         walkLeft.setValue(-1);
         idleRight.setValue(-1);
         idleLeft.setValue(-1);
-        targetCharacterName.setText("");
         super.resetAttributes(resetBackground);
     }
 }
