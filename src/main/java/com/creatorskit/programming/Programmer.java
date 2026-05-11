@@ -817,12 +817,7 @@ public class Programmer
             double directionX = last.getSceneX() - secondLast.getSceneX();
             double directionY = last.getSceneY() - secondLast.getSceneY();
             double angle = Orientation.radiansToJAngle(Math.atan(directionY / directionX), directionX, directionY);
-            // ADJUST instead of SET so the orientation keeps interpolating toward the
-            // last path direction instead of snapping. When a chained MovementKeyFrame
-            // takes over immediately after, the in-progress turn carries through
-            // continuously — same look as a single multi-tile path crossing the same
-            // corners.
-            return new MovementComposition(false, last, OrientationAction.ADJUST, (int) angle, 0);
+            return new MovementComposition(false, last, OrientationAction.SET, (int) angle, 0);
         }
 
         LocalPoint previous = getLocation(worldView, keyFrame, currentStep - 1);

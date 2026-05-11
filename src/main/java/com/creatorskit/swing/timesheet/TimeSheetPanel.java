@@ -787,6 +787,13 @@ public class TimeSheetPanel extends JPanel
                     0);
             int[][] path = movementManager.addProgramStep(seed, worldView, localPoint);
             initializeMovementKeyFrame(selectedCharacter, currentTime, worldView.getPlane(), poh, path, false, stepSpeed, speedAwareTurnRate);
+
+            // Auto-advance the seeker to the end of the keyframe we just placed so the
+            // next add-step lands chained immediately after — and so the user sees the
+            // KF appear at the seeker's previous position rather than "1 tick later".
+            double tilesMoved = Math.max(0, path.length - 1);
+            double newDuration = tilesMoved / Math.max(0.0001, stepSpeed);
+            setCurrentTime(currentTime + newDuration, false);
         }
         else
         {
@@ -823,6 +830,11 @@ public class TimeSheetPanel extends JPanel
             double newTick = previous.getTick() + prevDuration;
 
             initializeMovementKeyFrame(selectedCharacter, newTick, worldView.getPlane(), poh, newPath, false, stepSpeed, speedAwareTurnRate);
+
+            // Auto-advance the seeker to the end of this just-placed keyframe.
+            double tilesMoved = Math.max(0, newPath.length - 1);
+            double newDuration = tilesMoved / Math.max(0.0001, stepSpeed);
+            setCurrentTime(newTick + newDuration, false);
         }
 
         programmer.register3DChanges(selectedCharacter);
