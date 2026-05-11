@@ -817,7 +817,11 @@ public class Programmer
             double directionX = last.getSceneX() - secondLast.getSceneX();
             double directionY = last.getSceneY() - secondLast.getSceneY();
             double angle = Orientation.radiansToJAngle(Math.atan(directionY / directionX), directionX, directionY);
-            return new MovementComposition(false, last, OrientationAction.SET, (int) angle, 0);
+            // ADJUST so the orientation keeps interpolating toward this keyframe's last
+            // direction instead of snapping. A chained keyframe taking over on the next
+            // game tick will pick up mid-turn and continue interpolating toward its own
+            // direction — no visible snap between keyframes.
+            return new MovementComposition(false, last, OrientationAction.ADJUST, (int) angle, 0);
         }
 
         LocalPoint previous = getLocation(worldView, keyFrame, currentStep - 1);
@@ -875,7 +879,11 @@ public class Programmer
         }
 
         double angle = Orientation.getAngleBetween(previous, start);
-        return new MovementComposition(false, start, OrientationAction.SET, (int) angle, 0);
+        // ADJUST instead of SET so an in-progress turn at the last tile of this
+        // keyframe keeps interpolating instead of snapping. When a chained
+        // MovementKeyFrame takes over on the next game tick, its own ADJUST
+        // continues seamlessly toward the new direction — no visible snap.
+        return new MovementComposition(false, start, OrientationAction.ADJUST, (int) angle, 0);
     }
 
     private int getOrientationFromTick(LocalPoint previous, LocalPoint start, double angle, int clientTicksPassed, int currentStep, double speed, double turnRate)
