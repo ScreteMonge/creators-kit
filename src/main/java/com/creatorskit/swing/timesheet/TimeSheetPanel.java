@@ -755,12 +755,26 @@ public class TimeSheetPanel extends JPanel
         }
         else
         {
-            // Chained step: a new keyframe with a 2-tile path from the previous step's
-            // end tile to the new destination. The new keyframe's tick comes after the
-            // previous keyframe finishes (its path duration in game ticks). Walking
-            // (speed 1) puts steps 1 tick apart; running (speed 2) puts them 0.5 ticks
-            // apart, matching how a multi-tile path of that speed plays out in OSRS.
+            // Chained step: pathfind from the previous keyframe's end tile to the
+            // clicked tile. The new MovementKeyFrame's path is the FULL pathfinder
+            // output (multiple tiles for far-away clicks), so a 10-tile click takes
+            // ~10 ticks at speed 1 instead of teleporting in one tick.
             int[] prevEnd = previous.getPath()[previous.getPath().length - 1];
+            MovementKeyFrame pathfindSeed = new MovementKeyFrame(
+                    0,
+                    previous.getPlane(),
+                    previous.isPoh(),
+                    new int[][]{prevEnd},
+                    0,
+                    0,
+                    false,
+                    stepSpeed,
+                    0);
+            int[][] newPath = movementManager.addProgramStep(pathfindSeed, worldView, localPoint);
+
+            // Schedule the new keyframe right after the previous one finishes.
+            // Walking (speed 1) puts the next keyframe 1 tick per tile after this one;
+            // running (speed 2) puts it 0.5 ticks per tile after.
             int prevTiles = previous.getPath().length;
             double prevDuration;
             if (prevTiles <= 1)
@@ -774,8 +788,7 @@ public class TimeSheetPanel extends JPanel
             }
             double newTick = previous.getTick() + prevDuration;
 
-            int[][] path = new int[][]{prevEnd, new int[]{x, y}};
-            initializeMovementKeyFrame(selectedCharacter, newTick, worldView.getPlane(), poh, path, false, stepSpeed, previous.getTurnRate());
+            initializeMovementKeyFrame(selectedCharacter, newTick, worldView.getPlane(), poh, newPath, false, stepSpeed, previous.getTurnRate());
         }
 
         programmer.register3DChanges(selectedCharacter);
