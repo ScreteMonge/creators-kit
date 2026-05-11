@@ -757,12 +757,20 @@ public class TimeSheetPanel extends JPanel
         {
             // Chained step: a new keyframe with a 2-tile path from the previous step's
             // end tile to the new destination. The new keyframe's tick comes after the
-            // previous keyframe finishes (its path duration in game ticks).
+            // previous keyframe finishes (its path duration in game ticks). Walking
+            // (speed 1) puts steps 1 tick apart; running (speed 2) puts them 0.5 ticks
+            // apart, matching how a multi-tile path of that speed plays out in OSRS.
             int[] prevEnd = previous.getPath()[previous.getPath().length - 1];
-            double prevDuration = (previous.getPath().length - 1) / Math.max(0.0001, previous.getSpeed());
-            if (prevDuration < 1.0)
+            int prevTiles = previous.getPath().length;
+            double prevDuration;
+            if (prevTiles <= 1)
             {
-                prevDuration = 1.0; // ensure at least 1 game tick separation so MKFs don't collide
+                // Spawn keyframe is instantaneous; give the next step 1 tick to play.
+                prevDuration = 1.0;
+            }
+            else
+            {
+                prevDuration = (prevTiles - 1) / Math.max(0.0001, previous.getSpeed());
             }
             double newTick = previous.getTick() + prevDuration;
 
