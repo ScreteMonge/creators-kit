@@ -1085,7 +1085,13 @@ public class Programmer
                 {
                     character.setCurrentKeyFrame(nextMovement, KeyFrameType.MOVEMENT);
                     character.resetMovementKeyFrame(client.getGameCycle(), currentTime);
-                    register3DChanges(character);
+                    // Intentionally skip register3DChanges here during playback. That
+                    // helper calls transform3DStatic which uses OrientationAction.SET
+                    // and snaps the orientation to the new MKF's first segment angle —
+                    // visible as the snap at every keyframe boundary. Letting the next
+                    // updateCharacter3D tick render with ADJUST instead means the in-
+                    // progress turn from the previous keyframe carries through and
+                    // smoothly interpolates toward this keyframe's direction.
                 }
             }
 
