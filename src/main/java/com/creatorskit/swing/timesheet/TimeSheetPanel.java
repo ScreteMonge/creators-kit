@@ -746,12 +746,47 @@ public class TimeSheetPanel extends JPanel
 
         double stepSpeed = plugin.getCurrentStepSpeed();
 
+        // turnRate scales with step speed so a turn completes within roughly one tile of
+        // movement (180 degrees per game tick at speed 1, faster at speed 2).
+        int speedAwareTurnRate = (int) Math.round(OrientationKeyFrame.TURN_RATE * stepSpeed);
+
         MovementKeyFrame previous = findLastMovementKeyFrame(selectedCharacter);
         if (newKeyFrame || previous == null)
         {
-            // First step for this Character: spawn at the clicked tile (1-tile path).
-            int[][] path = new int[][]{new int[]{x, y}};
-            initializeMovementKeyFrame(selectedCharacter, currentTime, worldView.getPlane(), poh, path, false, stepSpeed, OrientationKeyFrame.TURN_RATE);
+            // First step: pathfind from the Character's current visual location to the
+            // clicked tile. No separate spawn keyframe — the keyframe lands exactly on
+            // the seeker bar, not 1 tick ahead.
+            int srcX = x;
+            int srcY = y;
+            CKObject ckObject = selectedCharacter.getCkObject();
+            LocalPoint sourceLp = ckObject == null ? null : ckObject.getLocation();
+            if (sourceLp != null && sourceLp.isInScene())
+            {
+                if (poh)
+                {
+                    srcX = sourceLp.getSceneX();
+                    srcY = sourceLp.getSceneY();
+                }
+                else
+                {
+                    WorldPoint sourceWp = WorldPoint.fromLocalInstance(client, sourceLp, worldView.getPlane());
+                    srcX = sourceWp.getX();
+                    srcY = sourceWp.getY();
+                }
+            }
+
+            MovementKeyFrame seed = new MovementKeyFrame(
+                    0,
+                    worldView.getPlane(),
+                    poh,
+                    new int[][]{new int[]{srcX, srcY}},
+                    0,
+                    0,
+                    false,
+                    stepSpeed,
+                    0);
+            int[][] path = movementManager.addProgramStep(seed, worldView, localPoint);
+            initializeMovementKeyFrame(selectedCharacter, currentTime, worldView.getPlane(), poh, path, false, stepSpeed, speedAwareTurnRate);
         }
         else
         {
@@ -779,7 +814,6 @@ public class TimeSheetPanel extends JPanel
             double prevDuration;
             if (prevTiles <= 1)
             {
-                // Spawn keyframe is instantaneous; give the next step 1 tick to play.
                 prevDuration = 1.0;
             }
             else
@@ -788,7 +822,7 @@ public class TimeSheetPanel extends JPanel
             }
             double newTick = previous.getTick() + prevDuration;
 
-            initializeMovementKeyFrame(selectedCharacter, newTick, worldView.getPlane(), poh, newPath, false, stepSpeed, previous.getTurnRate());
+            initializeMovementKeyFrame(selectedCharacter, newTick, worldView.getPlane(), poh, newPath, false, stepSpeed, speedAwareTurnRate);
         }
 
         programmer.register3DChanges(selectedCharacter);
