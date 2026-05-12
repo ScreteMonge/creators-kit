@@ -44,6 +44,13 @@ public class Programmer
      */
     private final java.util.IdentityHashMap<CKObject, float[][]> projectileOriginalVertices = new java.util.IdentityHashMap<>();
 
+    /**
+     * Tracks which projectile spotanim id each slot's CKObject was built from, so
+     * ensureProjectileSlot can detect when the keyframe's projectileId has changed
+     * and rebuild the model instead of stalely reusing the previous one.
+     */
+    private final java.util.IdentityHashMap<CKObject, Integer> projectileLoadedIds = new java.util.IdentityHashMap<>();
+
     @Getter
     @Setter
     private boolean playing = false;
@@ -1459,8 +1466,11 @@ public class Programmer
 
     /**
      * Lazily allocates a CKObject for the given projectile slot, loads its model from the
-     * spotanim cache, and registers it with the scene. Idempotent — only allocates and
-     * loads the model the first time, or when the projectile id changes.
+     * spotanim cache, and registers it with the scene. Rebuilds the slot's CKObject when
+     * the projectile id has changed since it was last loaded — without this, editing the
+     * keyframe's Projectile ID (or deleting and re-adding the keyframe) would keep
+     * rendering the original model because the slot was non-null and the previous
+     * implementation early-returned on null check alone.
      */
     private void ensureProjectileSlot(Character character, java.util.List<CKObject> projObjs, int slot, int projectileId)
     {
@@ -1468,9 +1478,29 @@ public class Programmer
         {
             projObjs.add(null);
         }
-        if (projObjs.get(slot) != null)
+
+        CKObject existing = projObjs.get(slot);
+        if (existing != null)
         {
-            return;
+            Integer loadedId = projectileLoadedIds.get(existing);
+            if (loadedId != null && loadedId == projectileId)
+            {
+                return; // Slot is up to date.
+            }
+            // Projectile id has changed — tear down the old CKObject so a fresh one
+            // gets built with the new spotanim's model. Done on the client thread to
+            // avoid racing with the renderer.
+            final CKObject oldObj = existing;
+            projectileOriginalVertices.remove(oldObj);
+            projectileLoadedIds.remove(oldObj);
+            clientThread.invokeLater(() ->
+            {
+                if (oldObj.isActive())
+                {
+                    oldObj.setActive(false);
+                }
+            });
+            projObjs.set(slot, null);
         }
 
         SpotanimData data = dataFinder.getSpotAnimData(projectileId);
@@ -1484,6 +1514,7 @@ public class Programmer
         obj.setDrawFrontTilesFirst(true);
         obj.setHasAnimKeyFrame(true);
         projObjs.set(slot, obj);
+        projectileLoadedIds.put(obj, projectileId);
 
         clientThread.invokeLater(() ->
         {
