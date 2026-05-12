@@ -1005,6 +1005,33 @@ public class TimeSheetPanel extends JPanel
         addKeyFrameAction(new KeyFrame[]{keyFrame});
     }
 
+    /**
+     * Creates a ProjectileKeyFrame using the selected projectile spotanim's id, anchored
+     * at the current seeker tick on the selected Character. Other ProjectileKeyFrame
+     * fields (target, height, slope, etc.) default to the constants on the class so the
+     * user can edit them in the AttributePanel afterwards.
+     */
+    public void addProjectileKeyFrameFromCache(SpotanimData spotanimData)
+    {
+        if (selectedCharacter == null)
+        {
+            return;
+        }
+
+        ProjectileKeyFrame keyFrame = new ProjectileKeyFrame(
+                plugin.getCurrentTick(),
+                spotanimData.getId(),
+                "",
+                ProjectileKeyFrame.DEFAULT_START_HEIGHT,
+                ProjectileKeyFrame.DEFAULT_END_HEIGHT,
+                ProjectileKeyFrame.DEFAULT_SLOPE,
+                ProjectileKeyFrame.DEFAULT_START_POS,
+                ProjectileKeyFrame.DEFAULT_DURATION,
+                ProjectileKeyFrame.DEFAULT_START_DELAY);
+
+        addKeyFrameAction(new KeyFrame[]{keyFrame});
+    }
+
     public void duplicateHitsplatKeyFrame(KeyFrameType previousType, KeyFrameType targetType)
     {
         KeyFrame kf = selectedCharacter.findPreviousKeyFrame(previousType, currentTime, true);
