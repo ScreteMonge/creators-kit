@@ -1402,9 +1402,10 @@ public class Programmer
 
             // Pitch angle for the face-trajectory feature. Velocity is the analytic
             // derivative of the arc position: horizontal is constant (target - source),
-            // vertical is the derivative of (tileZ_lerp - heightOffset). Note +world-Z
-            // is DOWN in render space (subtracting heightOffset from tileZ moves the
-            // projectile UP), so "vertical velocity up" = -dz/dt.
+            // vertical is the derivative of (tileZ_lerp - heightOffset). Sign is chosen
+            // to match the visual convention "nose follows velocity": on ascent the
+            // projectile's head tilts up, on descent it tilts down. Determined
+            // empirically -- adjust the dzDt sign if the model points the wrong way.
             double pitchRadians = 0.0;
             if (kf.isFaceTrajectory())
             {
@@ -1418,7 +1419,7 @@ public class Programmer
                 double horizDist = Math.hypot(dx, dy);
                 if (horizDist > 0.0001 || Math.abs(dzDt) > 0.0001)
                 {
-                    pitchRadians = Math.atan2(-dzDt, horizDist);
+                    pitchRadians = Math.atan2(dzDt, horizDist);
                 }
             }
 
