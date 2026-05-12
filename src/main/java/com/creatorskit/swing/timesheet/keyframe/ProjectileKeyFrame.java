@@ -18,8 +18,8 @@ import lombok.Setter;
 public class ProjectileKeyFrame extends KeyFrame
 {
     public static final int DEFAULT_PROJECTILE_ID = 9; // SpotanimID.IRON_ARROW_TRAVEL — verified visible arrow projectile
-    public static final int DEFAULT_START_HEIGHT = 40;
-    public static final int DEFAULT_END_HEIGHT = 0;
+    public static final int DEFAULT_START_HEIGHT = 80;
+    public static final int DEFAULT_END_HEIGHT = 80;
     public static final int DEFAULT_SLOPE = 15;
     public static final int DEFAULT_START_POS = 64;
     public static final double DEFAULT_DURATION = 2.0;

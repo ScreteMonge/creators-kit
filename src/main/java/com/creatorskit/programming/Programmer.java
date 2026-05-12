@@ -1382,13 +1382,15 @@ public class Programmer
                     + kf.getSlope() * t * (1 - t);
             int zFinal = (int) Math.round(tileZ - heightOffset);
 
-            // angle from source -> target (JAU). 0 = south, 1024 = north, 512 = west, 1536 = east
+            // Angle from source -> target in JAU (0 = south, 512 = west, 1024 = north,
+            // 1536 = east). atan2(dx,dy) measures angle from north going east; +1024
+            // rotates from "facing the source" to "facing the target".
             int dx = tx - sx;
             int dy = ty - sy;
             int orientation = 0;
             if (dx != 0 || dy != 0)
             {
-                orientation = (int) (Math.atan2(dx, dy) * 2048.0 / (2 * Math.PI)) & 0x7FF;
+                orientation = ((int) Math.round(Math.atan2(dx, dy) * 2048.0 / (2 * Math.PI)) + 1024) & 0x7FF;
             }
 
             ensureProjectileSlot(character, projObjs, slot, kf.getProjectileId());
