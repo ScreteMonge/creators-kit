@@ -95,6 +95,13 @@ public class Programmer
                 continue;
             }
 
+            // Smoothly render the active ProjectileKeyFrame every client tick, blending
+            // through sub-tick time so the arc stays in sync with the timeline at any
+            // playback speed and remains pause-correct when scrubbing stops here.
+            double projectileTime = timeSheetPanel.getCurrentTime()
+                    + clientTickAtLastProgramTick * Constants.CLIENT_TICK_LENGTH / (double) Constants.GAME_TICK_LENGTH;
+            updateProjectiles(character, projectileTime);
+
             KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
             if (kf == null)
             {
@@ -1042,6 +1049,7 @@ public class Programmer
         registerActiveAnimationChanges(character);
         registerModelChanges(character);
         registerSpawnChanges(character);
+        updateProjectiles(character, tick);
     }
 
     /**
@@ -1269,92 +1277,225 @@ public class Programmer
             KeyFrame nextProjectile = character.findNextKeyFrame(KeyFrameType.PROJECTILE, lastProjectileTick);
             if (nextProjectile != null && nextProjectile.getTick() <= currentTime)
             {
+                // Just advance the current PROJECTILE pointer so currentFrames stays in sync.
+                // Rendering is handled per-frame by updateProjectiles(...) from updateCharacter3D,
+                // so timeline scrubbing and pausing reflect the projectile's true position.
                 character.setCurrentKeyFrame(nextProjectile, KeyFrameType.PROJECTILE);
-                fireProjectile(character, (ProjectileKeyFrame) nextProjectile);
             }
         }
     }
 
     /**
-     * Spawns OSRS projectile(s) for a ProjectileKeyFrame. Uses the game's native
-     * createProjectile API, so arc / height / slope are interpolated by the engine
-     * itself — same look as real spells. Resolves the keyframe's target string to
-     * one or more Characters and fires one projectile per target.
+     * Renders the active ProjectileKeyFrame for a Character based on the current timeline
+     * position. Unlike {@code client.createProjectile} (which is driven by real-world game
+     * cycles and so doesn't pause when the timeline pauses), this manually places one
+     * CKObject per resolved target, computing position and parabolic Z arc from
+     * {@code currentTime} so scrubbing, pausing, and stepping all behave correctly.
+     *
+     * <p>Active window is {@code [tick + startDelay, tick + startDelay + duration]}.
+     * Outside that window all of the Character's projectile CKObjects are deactivated.
      */
-    private void fireProjectile(Character caster, ProjectileKeyFrame kf)
+    private void updateProjectiles(Character character, double currentTime)
     {
-        if (kf == null || kf.getTarget() == null || kf.getTarget().trim().isEmpty())
+        java.util.List<CKObject> projObjs = character.getProjectileObjects();
+
+        ProjectileKeyFrame kf = (ProjectileKeyFrame) character.findPreviousKeyFrame(KeyFrameType.PROJECTILE, currentTime, true);
+        if (kf == null)
         {
-            plugin.sendChatMessage("[Projectile] no target specified on " + caster.getName());
+            deactivateProjectileObjects(projObjs, 0);
             return;
         }
 
-        WorldPoint sourceWp = resolveCharacterWorldPoint(caster);
-        if (sourceWp == null)
+        double startTime = kf.getTick() + kf.getStartDelayTicks();
+        double duration = Math.max(0.0001, kf.getDurationTicks());
+        double endTime = startTime + duration;
+
+        if (currentTime < startTime || currentTime > endTime)
         {
-            plugin.sendChatMessage("[Projectile] " + caster.getName() + " has no world position yet — make sure it's spawned in the scene before its projectile keyframe fires");
+            deactivateProjectileObjects(projObjs, 0);
+            return;
+        }
+
+        if (kf.getTarget() == null || kf.getTarget().trim().isEmpty())
+        {
+            deactivateProjectileObjects(projObjs, 0);
+            return;
+        }
+
+        WorldView worldView = client.getTopLevelWorldView();
+        LocalPoint sourceLp = resolveCharacterLocalPoint(character, worldView);
+        if (sourceLp == null)
+        {
+            deactivateProjectileObjects(projObjs, 0);
             return;
         }
 
         java.util.List<Character> targets = resolveProjectileTargets(kf.getTarget());
         if (targets.isEmpty())
         {
-            plugin.sendChatMessage("[Projectile] no targets matched: \"" + kf.getTarget() + "\"");
+            deactivateProjectileObjects(projObjs, 0);
             return;
         }
 
-        int startDelayCycles = (int) Math.round(kf.getStartDelayTicks() * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH);
-        int durationCycles = Math.max(1, (int) Math.round(kf.getDurationTicks() * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH));
+        double t = (currentTime - startTime) / duration;
+        if (t < 0) t = 0;
+        if (t > 1) t = 1;
 
-        int fired = 0;
+        int level = character.getCkObject() != null ? character.getCkObject().getLevel() : worldView.getPlane();
+        int sourceTileZ = Perspective.getTileHeight(client, sourceLp, level);
+
+        int slot = 0;
         for (Character target : targets)
         {
-            if (target == caster)
+            if (target == character)
             {
                 continue;
             }
-            WorldPoint targetWp = resolveCharacterWorldPoint(target);
-            if (targetWp == null)
+            LocalPoint targetLp = resolveCharacterLocalPoint(target, worldView);
+            if (targetLp == null)
             {
-                plugin.sendChatMessage("[Projectile] target \"" + target.getName() + "\" has no world position; skipping");
                 continue;
             }
 
-            final WorldPoint sWp = sourceWp;
-            final WorldPoint tWp = targetWp;
+            int sx = sourceLp.getX();
+            int sy = sourceLp.getY();
+            int tx = targetLp.getX();
+            int ty = targetLp.getY();
+
+            int x = (int) Math.round(sx + (tx - sx) * t);
+            int y = (int) Math.round(sy + (ty - sy) * t);
+
+            LocalPoint here = new LocalPoint(x, y, sourceLp.getWorldView());
+            int tileZ;
+            if (here.isInScene())
+            {
+                int targetTileZ = Perspective.getTileHeight(client, targetLp, level);
+                tileZ = (int) Math.round(sourceTileZ + (targetTileZ - sourceTileZ) * t);
+            }
+            else
+            {
+                tileZ = sourceTileZ;
+            }
+
+            double heightOffset = kf.getStartHeight() * (1 - t)
+                    + kf.getEndHeight() * t
+                    + kf.getSlope() * t * (1 - t);
+            int zFinal = (int) Math.round(tileZ - heightOffset);
+
+            // angle from source -> target (JAU). 0 = south, 1024 = north, 512 = west, 1536 = east
+            int dx = tx - sx;
+            int dy = ty - sy;
+            int orientation = 0;
+            if (dx != 0 || dy != 0)
+            {
+                orientation = (int) (Math.atan2(dx, dy) * 2048.0 / (2 * Math.PI)) & 0x7FF;
+            }
+
+            ensureProjectileSlot(character, projObjs, slot, kf.getProjectileId());
+
+            CKObject obj = projObjs.get(slot);
+            final int finalZ = zFinal;
+            final int finalOrientation = orientation;
+            final LocalPoint finalHere = here;
+            final int finalLevel = level;
             clientThread.invokeLater(() ->
             {
-                int startCycle = client.getGameCycle() + startDelayCycles;
-                int endCycle = startCycle + durationCycles;
-                client.createProjectile(
-                        kf.getProjectileId(),
-                        sWp,
-                        kf.getStartHeight(),
-                        null,
-                        tWp,
-                        kf.getEndHeight(),
-                        null,
-                        startCycle,
-                        endCycle,
-                        kf.getSlope(),
-                        kf.getStartPos());
+                if (!finalHere.isInScene())
+                {
+                    obj.setActive(false);
+                    return;
+                }
+                // setLocation copies x/y from the LocalPoint (which is already sub-tile
+                // accurate) and sets z to the tile baseline; we then override z with our
+                // computed arc height so the projectile travels along the parabola.
+                obj.setLocation(finalHere, finalLevel);
+                obj.setZ(finalZ);
+                obj.setOrientation(finalOrientation);
+                if (!obj.isActive())
+                {
+                    obj.setActive(true);
+                }
             });
-            fired++;
+
+            slot++;
         }
 
-        if (fired > 0)
+        deactivateProjectileObjects(projObjs, slot);
+    }
+
+    /**
+     * Lazily allocates a CKObject for the given projectile slot, loads its model from the
+     * spotanim cache, and registers it with the scene. Idempotent — only allocates and
+     * loads the model the first time, or when the projectile id changes.
+     */
+    private void ensureProjectileSlot(Character character, java.util.List<CKObject> projObjs, int slot, int projectileId)
+    {
+        while (projObjs.size() <= slot)
         {
-            plugin.sendChatMessage("[Projectile] " + caster.getName() + " fired id=" + kf.getProjectileId() + " to " + fired + " target(s)");
+            projObjs.add(null);
+        }
+        if (projObjs.get(slot) != null)
+        {
+            return;
+        }
+
+        SpotanimData data = dataFinder.getSpotAnimData(projectileId);
+        if (data == null)
+        {
+            return;
+        }
+        ModelStats[] stats = dataFinder.findSpotAnim(data);
+
+        CKObject obj = new CKObject(client);
+        obj.setDrawFrontTilesFirst(true);
+        obj.setHasAnimKeyFrame(true);
+        projObjs.set(slot, obj);
+
+        clientThread.invokeLater(() ->
+        {
+            LightingStyle ls = LightingStyle.SPOTANIM;
+            CustomLighting cl = new CustomLighting(ls.getAmbient() + data.getAmbient(), ls.getContrast() + data.getContrast(), ls.getX(), ls.getY(), ls.getZ());
+            Model model = modelUtilities.constructModelFromCache(stats, new int[0], false, LightingStyle.CUSTOM, cl);
+            obj.setModel(model);
+            if (data.getAnimationId() != -1)
+            {
+                obj.setAnimation(AnimationType.ACTIVE, data.getAnimationId());
+                obj.setLoop(true);
+                obj.setPlaying(true);
+            }
+        });
+    }
+
+    /**
+     * Deactivates and removes from the scene every CKObject in {@code projObjs} at index
+     * {@code fromIndex} and above. Used both when the projectile is inactive (deactivate
+     * all) and when the active target count shrinks between frames (deactivate extras).
+     */
+    private void deactivateProjectileObjects(java.util.List<CKObject> projObjs, int fromIndex)
+    {
+        for (int i = fromIndex; i < projObjs.size(); i++)
+        {
+            CKObject obj = projObjs.get(i);
+            if (obj == null)
+            {
+                continue;
+            }
+            clientThread.invokeLater(() ->
+            {
+                if (obj.isActive())
+                {
+                    obj.setActive(false);
+                }
+            });
         }
     }
 
     /**
-     * Returns the Character's best-known world position. Prefers the live CKObject
-     * location (set during playback), falls back to the saved nonInstancedPoint
-     * (or instancedPoint converted to world) so projectiles fire correctly even at
-     * tick 0 before any movement keyframe has positioned the Character.
+     * Returns the Character's best-known LocalPoint, preferring the live CKObject location
+     * (set during playback / scrubbing) and falling back to the saved nonInstancedPoint /
+     * instancedPoint so projectile endpoints work even before any movement keyframe.
      */
-    private WorldPoint resolveCharacterWorldPoint(Character character)
+    private LocalPoint resolveCharacterLocalPoint(Character character, WorldView worldView)
     {
         CKObject ckObject = character.getCkObject();
         if (ckObject != null)
@@ -1362,16 +1503,33 @@ public class Programmer
             LocalPoint lp = ckObject.getLocation();
             if (lp != null && lp.isInScene())
             {
-                return WorldPoint.fromLocal(client, lp);
+                return lp;
+            }
+        }
+        if (character.getInstancedPoint() != null)
+        {
+            LocalPoint lp = character.getInstancedPoint();
+            if (lp.isInScene())
+            {
+                return lp;
             }
         }
         if (character.getNonInstancedPoint() != null)
         {
-            return character.getNonInstancedPoint();
-        }
-        if (character.getInstancedPoint() != null)
-        {
-            return WorldPoint.fromLocal(client, character.getInstancedPoint());
+            WorldPoint wp = character.getNonInstancedPoint();
+            if (worldView.isInstance())
+            {
+                Collection<WorldPoint> wps = WorldPoint.toLocalInstance(worldView, wp);
+                if (!wps.isEmpty())
+                {
+                    wp = wps.iterator().next();
+                }
+            }
+            LocalPoint lp = LocalPoint.fromWorld(worldView, wp);
+            if (lp != null && lp.isInScene())
+            {
+                return lp;
+            }
         }
         return null;
     }

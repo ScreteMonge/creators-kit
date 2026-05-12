@@ -58,6 +58,8 @@ public class Character
     private CKObject ckObject;
     private CKObject spotAnim1;
     private CKObject spotAnim2;
+    /** One CKObject per active projectile-target instance; lazily allocated by the Programmer. */
+    private final java.util.List<CKObject> projectileObjects = new java.util.ArrayList<>();
     private int targetOrientation;
 
     @Override
