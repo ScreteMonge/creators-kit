@@ -2203,7 +2203,13 @@ public class CreatorsPanel extends PluginPanel
             KeyFrame[][] frames = new KeyFrame[KeyFrameType.getTotalFrameTypes()][];
             if (save.getMovementKeyFrames() != null)
             {
-                frames[KeyFrameType.getIndex(KeyFrameType.MOVEMENT)] = save.getMovementKeyFrames();
+                // Auto-migrate old single-keyframe multi-tile walks into the per-step
+                // format the new movement system uses. Detection is data-driven (any KF
+                // with path.length > 2 is by definition old-format -- the new system
+                // never creates one) so this works on any save file regardless of the
+                // version stamp it carries.
+                MovementKeyFrame[] migrated = splitMultiTileMovementKeyFrames(save.getMovementKeyFrames());
+                frames[KeyFrameType.getIndex(KeyFrameType.MOVEMENT)] = migrated;
 
                 if (resetTurnRate)
                 {
@@ -2411,6 +2417,93 @@ public class CreatorsPanel extends PluginPanel
         }
 
         return false;
+    }
+
+    /**
+     * Migrates pre-per-step MovementKeyFrames into the new format the live system uses.
+     *
+     * <p>Old saves had one MovementKeyFrame per Character whose {@code path} held the
+     * entire walk (e.g. 5 tiles in a row). The new system creates a fresh keyframe
+     * each Add Program Step, so individual steps can have their own speed and be
+     * edited independently. To keep old saves loadable without forcing the user to
+     * run an external converter, this splits every keyframe with {@code path.length > 2}
+     * into {@code N - 1} two-tile keyframes, chained at {@code tick + i / speed}
+     * (matches what the in-game chaining logic produces).
+     *
+     * <p>plane / poh / speed / turnRate are preserved on every sub-keyframe. The loop
+     * flag is kept on the FIRST sub-keyframe only — a per-step loop on every link
+     * would replay differently than the old single-keyframe loop semantics, and the
+     * user can re-toggle individual steps after the upgrade if they need to.
+     */
+    private MovementKeyFrame[] splitMultiTileMovementKeyFrames(MovementKeyFrame[] input)
+    {
+        if (input == null || input.length == 0)
+        {
+            return input;
+        }
+
+        // Quick check: if nothing needs splitting, return the original array unchanged
+        // so we don't allocate when loading already-new-format saves (the common case
+        // once everyone's saves have been migrated once).
+        boolean needsSplit = false;
+        for (MovementKeyFrame kf : input)
+        {
+            if (kf != null && kf.getPath() != null && kf.getPath().length > 2)
+            {
+                needsSplit = true;
+                break;
+            }
+        }
+        if (!needsSplit)
+        {
+            return input;
+        }
+
+        java.util.ArrayList<MovementKeyFrame> out = new java.util.ArrayList<>(input.length);
+        for (MovementKeyFrame kf : input)
+        {
+            if (kf == null)
+            {
+                continue;
+            }
+            int[][] path = kf.getPath();
+            if (path == null || path.length <= 2)
+            {
+                out.add(kf);
+                continue;
+            }
+
+            double speed = kf.getSpeed();
+            if (speed <= 0)
+            {
+                speed = 1.0;
+            }
+            double stepDuration = 1.0 / speed;
+            double baseTick = kf.getTick();
+
+            for (int i = 0; i < path.length - 1; i++)
+            {
+                int[][] segment = new int[][]{
+                    new int[]{path[i][0], path[i][1]},
+                    new int[]{path[i + 1][0], path[i + 1][1]}
+                };
+                MovementKeyFrame sub = new MovementKeyFrame(
+                        baseTick + i * stepDuration,
+                        kf.getPlane(),
+                        kf.isPoh(),
+                        segment,
+                        0,
+                        0,
+                        i == 0 && kf.isLoop(),
+                        speed,
+                        kf.getTurnRate());
+                out.add(sub);
+            }
+        }
+
+        // Keep ticks monotonic — the same invariant the rest of the load path assumes.
+        out.sort(java.util.Comparator.comparingDouble(MovementKeyFrame::getTick));
+        return out.toArray(new MovementKeyFrame[0]);
     }
 
     private void setKeyBindings()
