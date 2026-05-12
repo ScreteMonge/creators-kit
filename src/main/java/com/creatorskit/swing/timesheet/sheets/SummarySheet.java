@@ -249,6 +249,10 @@ public class SummarySheet extends TimeSheet
 
                     drawTail(g, e, keyFrames, duration, zoomFactor, hskf.getTick(), x, y, xStringOffset, stringHeight);
                     break;
+                case PROJECTILE:
+                    ProjectileKeyFrame pkf = (ProjectileKeyFrame) keyFrame;
+                    drawTail(g, e, keyFrames, pkf.getStartDelayTicks() + pkf.getDurationTicks(), zoomFactor, pkf.getTick(), x, y, xStringOffset, stringHeight);
+                    break;
                 default:
                     break;
             }

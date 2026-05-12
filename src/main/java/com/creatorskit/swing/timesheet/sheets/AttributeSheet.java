@@ -176,6 +176,12 @@ public class AttributeSheet extends TimeSheet
 
                         drawTail(g, e, keyFrames, duration, zoomFactor, hskf.getTick(), x, y, imageHeight);
                         break;
+                    case PROJECTILE:
+                        ProjectileKeyFrame pkf = (ProjectileKeyFrame) keyFrame;
+                        // Total visible duration of the projectile = optional start delay +
+                        // flight duration. Render the tail length to match.
+                        drawTail(g, e, keyFrames, pkf.getStartDelayTicks() + pkf.getDurationTicks(), zoomFactor, pkf.getTick(), x, y, imageHeight);
+                        break;
                     default:
                         break;
                 }

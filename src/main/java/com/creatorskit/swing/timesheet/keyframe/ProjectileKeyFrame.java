@@ -17,7 +17,7 @@ import lombok.Setter;
 @Setter
 public class ProjectileKeyFrame extends KeyFrame
 {
-    public static final int DEFAULT_PROJECTILE_ID = 119; // a generic fireball travel
+    public static final int DEFAULT_PROJECTILE_ID = 9; // SpotanimID.IRON_ARROW_TRAVEL — verified visible arrow projectile
     public static final int DEFAULT_START_HEIGHT = 40;
     public static final int DEFAULT_END_HEIGHT = 0;
     public static final int DEFAULT_SLOPE = 15;

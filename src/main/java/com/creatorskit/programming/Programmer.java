@@ -1285,58 +1285,53 @@ public class Programmer
     {
         if (kf == null || kf.getTarget() == null || kf.getTarget().trim().isEmpty())
         {
+            plugin.sendChatMessage("[Projectile] no target specified on " + caster.getName());
             return;
         }
 
-        CKObject sourceCk = caster.getCkObject();
-        if (sourceCk == null)
+        WorldPoint sourceWp = resolveCharacterWorldPoint(caster);
+        if (sourceWp == null)
         {
+            plugin.sendChatMessage("[Projectile] " + caster.getName() + " has no world position yet — make sure it's spawned in the scene before its projectile keyframe fires");
             return;
         }
-        LocalPoint sourceLp = sourceCk.getLocation();
-        if (sourceLp == null)
-        {
-            return;
-        }
-        WorldPoint sourceWp = WorldPoint.fromLocal(client, sourceLp);
 
         java.util.List<Character> targets = resolveProjectileTargets(kf.getTarget());
         if (targets.isEmpty())
         {
+            plugin.sendChatMessage("[Projectile] no targets matched: \"" + kf.getTarget() + "\"");
             return;
         }
 
         int startDelayCycles = (int) Math.round(kf.getStartDelayTicks() * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH);
         int durationCycles = Math.max(1, (int) Math.round(kf.getDurationTicks() * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH));
 
+        int fired = 0;
         for (Character target : targets)
         {
             if (target == caster)
             {
                 continue;
             }
-            CKObject targetCk = target.getCkObject();
-            if (targetCk == null)
+            WorldPoint targetWp = resolveCharacterWorldPoint(target);
+            if (targetWp == null)
             {
+                plugin.sendChatMessage("[Projectile] target \"" + target.getName() + "\" has no world position; skipping");
                 continue;
             }
-            LocalPoint targetLp = targetCk.getLocation();
-            if (targetLp == null)
-            {
-                continue;
-            }
-            WorldPoint targetWp = WorldPoint.fromLocal(client, targetLp);
 
+            final WorldPoint sWp = sourceWp;
+            final WorldPoint tWp = targetWp;
             clientThread.invokeLater(() ->
             {
                 int startCycle = client.getGameCycle() + startDelayCycles;
                 int endCycle = startCycle + durationCycles;
                 client.createProjectile(
                         kf.getProjectileId(),
-                        sourceWp,
+                        sWp,
                         kf.getStartHeight(),
                         null,
-                        targetWp,
+                        tWp,
                         kf.getEndHeight(),
                         null,
                         startCycle,
@@ -1344,7 +1339,41 @@ public class Programmer
                         kf.getSlope(),
                         kf.getStartPos());
             });
+            fired++;
         }
+
+        if (fired > 0)
+        {
+            plugin.sendChatMessage("[Projectile] " + caster.getName() + " fired id=" + kf.getProjectileId() + " to " + fired + " target(s)");
+        }
+    }
+
+    /**
+     * Returns the Character's best-known world position. Prefers the live CKObject
+     * location (set during playback), falls back to the saved nonInstancedPoint
+     * (or instancedPoint converted to world) so projectiles fire correctly even at
+     * tick 0 before any movement keyframe has positioned the Character.
+     */
+    private WorldPoint resolveCharacterWorldPoint(Character character)
+    {
+        CKObject ckObject = character.getCkObject();
+        if (ckObject != null)
+        {
+            LocalPoint lp = ckObject.getLocation();
+            if (lp != null && lp.isInScene())
+            {
+                return WorldPoint.fromLocal(client, lp);
+            }
+        }
+        if (character.getNonInstancedPoint() != null)
+        {
+            return character.getNonInstancedPoint();
+        }
+        if (character.getInstancedPoint() != null)
+        {
+            return WorldPoint.fromLocal(client, character.getInstancedPoint());
+        }
+        return null;
     }
 
     /**
