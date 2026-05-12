@@ -38,13 +38,6 @@ public class Programmer
     private final int TILE_DIAGONAL = 181; //Math.sqrt(Math.pow(128, 2) + Math.pow(128, 2))
 
     /**
-     * Snapshots of the (Y, Z) vertex arrays for each projectile CKObject taken right
-     * after the model is built. Used by the face-trajectory pitch feature to apply a
-     * fresh X-axis rotation each frame without compounding rotations across frames.
-     */
-    private final java.util.IdentityHashMap<CKObject, float[][]> projectileOriginalVertices = new java.util.IdentityHashMap<>();
-
-    /**
      * Tracks which projectile spotanim id each slot's CKObject was built from, so
      * ensureProjectileSlot can detect when the keyframe's projectileId has changed
      * and rebuild the model instead of stalely reusing the previous one.
@@ -1491,7 +1484,6 @@ public class Programmer
             // gets built with the new spotanim's model. Done on the client thread to
             // avoid racing with the renderer.
             final CKObject oldObj = existing;
-            projectileOriginalVertices.remove(oldObj);
             projectileLoadedIds.remove(oldObj);
             clientThread.invokeLater(() ->
             {
@@ -1510,7 +1502,10 @@ public class Programmer
         }
         ModelStats[] stats = dataFinder.findSpotAnim(data);
 
-        CKObject obj = new CKObject(client);
+        // Use ProjectileCKObject so face-trajectory pitch can be applied AFTER animation
+        // in getModel(), rather than by pre-rotating baseModel vertices (which breaks
+        // bone-skin correspondence and tears the rigging at non-zero pitch).
+        ProjectileCKObject obj = new ProjectileCKObject(client);
         obj.setDrawFrontTilesFirst(true);
         obj.setHasAnimKeyFrame(true);
         projObjs.set(slot, obj);
@@ -1522,37 +1517,6 @@ public class Programmer
             CustomLighting cl = new CustomLighting(ls.getAmbient() + data.getAmbient(), ls.getContrast() + data.getContrast(), ls.getX(), ls.getY(), ls.getZ());
             Model model = modelUtilities.constructModelFromCache(stats, new int[0], false, LightingStyle.CUSTOM, cl);
             obj.setModel(model);
-            // Snapshot the unpitched Y/Z vertices so face-trajectory rotation can start
-            // from a clean baseline each frame instead of compounding. We only need Y
-            // and Z because pitch is around the model-local X axis (X stays put).
-            //
-            // Also precompute the (Y, Z) centroid -- pitch needs to rotate around the
-            // model's geometric center, not the origin. Composite models built via
-            // client.mergeModels() keep each sub-model's vertices at their already-
-            // translated positions (ModelStats.translateZ shifts each part vertically),
-            // so the merged model's origin is often far from the visible mass. Rotating
-            // around (0,0,0) sweeps off-center sub-models around in wide arcs and tears
-            // the rigging apart visually; rotating around the centroid keeps each piece
-            // pivoting in place relative to the whole.
-            if (model != null && model.getVerticesY() != null && model.getVerticesZ() != null)
-            {
-                float[] origY = model.getVerticesY().clone();
-                float[] origZ = model.getVerticesZ().clone();
-                double sumY = 0;
-                double sumZ = 0;
-                for (int i = 0; i < origY.length; i++)
-                {
-                    sumY += origY[i];
-                    sumZ += origZ[i];
-                }
-                float cy = origY.length == 0 ? 0 : (float) (sumY / origY.length);
-                float cz = origZ.length == 0 ? 0 : (float) (sumZ / origZ.length);
-                projectileOriginalVertices.put(obj, new float[][]{
-                        origY,
-                        origZ,
-                        new float[]{cy, cz}
-                });
-            }
             if (data.getAnimationId() != -1)
             {
                 obj.setAnimation(AnimationType.ACTIVE, data.getAnimationId());
@@ -1563,66 +1527,20 @@ public class Programmer
     }
 
     /**
-     * Applies (or clears) the trajectory-pitch rotation on the projectile's baseModel
-     * by re-rotating the snapshotted Y/Z vertex arrays each frame. Rotates around the
-     * model's (Y, Z) centroid -- NOT the merged-model origin -- so off-center sub-models
-     * (like the smoke particles on a magic projectile) pivot in place rather than swing
-     * around in wide arcs that tear the visible rigging apart at non-zero pitch.
-     *
-     * <p>OSRS yaw (CKObject.orientation) handles the horizontal facing so the combined
-     * transform aligns the model's nose with the velocity vector. In OSRS model space Y
-     * is vertical with -Y = up (the existing {@code translate(0, -translateZ, 0)} pattern
-     * in ModelUtilities confirms this), so a positive pitch lifts the nose -- exactly what
-     * we want when ascending. Must run on the client thread because it mutates Model
-     * state the renderer reads each frame.
+     * Updates the pitch the {@link ProjectileCKObject} applies after animation in its
+     * getModel() override. baseModel is never mutated -- the rotation is layered on top
+     * of the animation pipeline output each frame, so animation skinning stays correct
+     * even at extreme pitches.
      */
     private void applyProjectilePitch(CKObject obj, double pitchRadians, boolean enabled)
     {
-        Model baseModel = obj.getBaseModel();
-        if (baseModel == null)
+        if (!(obj instanceof ProjectileCKObject))
         {
             return;
         }
-        float[][] snap = projectileOriginalVertices.get(obj);
-        if (snap == null || snap.length < 3)
-        {
-            return;
-        }
-        float[] originalY = snap[0];
-        float[] originalZ = snap[1];
-        float cy = snap[2][0];
-        float cz = snap[2][1];
-
-        float[] verticesY = baseModel.getVerticesY();
-        float[] verticesZ = baseModel.getVerticesZ();
-        if (verticesY == null || verticesZ == null
-                || verticesY.length != originalY.length
-                || verticesZ.length != originalZ.length)
-        {
-            return;
-        }
-
-        if (!enabled || pitchRadians == 0.0)
-        {
-            // Restore the snapshot so we don't leave stale pitched vertices when the
-            // user toggles the checkbox off mid-flight.
-            System.arraycopy(originalY, 0, verticesY, 0, originalY.length);
-            System.arraycopy(originalZ, 0, verticesZ, 0, originalZ.length);
-            baseModel.calculateBoundsCylinder();
-            return;
-        }
-
-        double sinP = Math.sin(pitchRadians);
-        double cosP = Math.cos(pitchRadians);
-        for (int i = 0; i < originalY.length; i++)
-        {
-            // Translate to centroid-origin, rotate around model-local X, translate back.
-            double dy = originalY[i] - cy;
-            double dz = originalZ[i] - cz;
-            verticesY[i] = (float) (dy * cosP - dz * sinP + cy);
-            verticesZ[i] = (float) (dy * sinP + dz * cosP + cz);
-        }
-        baseModel.calculateBoundsCylinder();
+        ProjectileCKObject pco = (ProjectileCKObject) obj;
+        pco.setPitchEnabled(enabled);
+        pco.setPitchRadians(enabled ? pitchRadians : 0.0);
     }
 
     /**
