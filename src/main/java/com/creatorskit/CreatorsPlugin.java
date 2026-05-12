@@ -166,6 +166,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private boolean addStepKeyHeld = false;
 	private boolean scrolledDuringStepHold = false;
 	private double currentStepSpeed = 1.0;
+	private java.util.concurrent.ScheduledExecutorService setupVersionExecutor;
+	private java.util.concurrent.ScheduledFuture<?> setupVersionTask;
 
 	@Override
 	protected void startUp() throws Exception
@@ -284,11 +286,71 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		{
 			overlaysActive = false;
 		}
+
+		scheduleSetupVersioning();
+	}
+
+	/**
+	 * (Re)schedules the periodic setup snapshot task based on the current config
+	 * value. Cancels any existing task first. 0 interval disables periodic snapshots
+	 * (manual saves still version via CreatorsPanel.saveToFile).
+	 */
+	private void scheduleSetupVersioning()
+	{
+		if (setupVersionTask != null)
+		{
+			setupVersionTask.cancel(false);
+			setupVersionTask = null;
+		}
+		int minutes = config.setupVersionIntervalMinutes();
+		if (minutes <= 0)
+		{
+			return;
+		}
+		if (setupVersionExecutor == null)
+		{
+			setupVersionExecutor = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r ->
+			{
+				Thread t = new Thread(r, "ck-setup-versioner");
+				t.setDaemon(true);
+				return t;
+			});
+		}
+		long periodMs = minutes * 60_000L;
+		setupVersionTask = setupVersionExecutor.scheduleAtFixedRate(
+				() ->
+				{
+					try
+					{
+						if (creatorsPanel != null)
+						{
+							creatorsPanel.periodicSetupSnapshot();
+						}
+					}
+					catch (Exception ex)
+					{
+						log.warn("Periodic setup snapshot failed: {}", ex.toString());
+					}
+				},
+				periodMs,
+				periodMs,
+				java.util.concurrent.TimeUnit.MILLISECONDS);
 	}
 
 	@Override
 	protected void shutDown() throws Exception
 	{
+		if (setupVersionTask != null)
+		{
+			setupVersionTask.cancel(false);
+			setupVersionTask = null;
+		}
+		if (setupVersionExecutor != null)
+		{
+			setupVersionExecutor.shutdownNow();
+			setupVersionExecutor = null;
+		}
+
 		creatorsPanel.clearSidePanels(false);
 		creatorsPanel.clearManagerPanels();
 		creatorsPanel.getToolBox().dispose();
@@ -440,6 +502,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			{
 				transmog.setActive(config.enableTransmog());
 			});
+		}
+
+		if (event.getKey().equals("setupVersionInterval"))
+		{
+			scheduleSetupVersioning();
 		}
 	}
 

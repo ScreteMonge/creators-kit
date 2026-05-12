@@ -75,6 +75,9 @@ public class CreatorsPanel extends PluginPanel
     private final Random random = new Random();
 
     public static final File SETUP_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/setups");
+    public static final File SETUP_VERSIONS_DIR = new File(SETUP_DIR, ".versions");
+    private static final java.time.format.DateTimeFormatter VERSION_STAMP =
+            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
     public static final File CREATORS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
     public File lastFileLoaded;
 
@@ -1673,8 +1676,75 @@ public class CreatorsPanel extends PluginPanel
         saveToFile(lastFileLoaded);
     }
 
+    /**
+     * Copies an about-to-be-overwritten setup file into the rotating versions
+     * directory, then prunes to the configured retention count. Called from
+     * {@link #saveToFile(File)} before every manual or quick save.
+     */
+    public void snapshotExistingFile(File file)
+    {
+        if (file == null || !file.exists())
+        {
+            return;
+        }
+
+        try
+        {
+            File charDir = new File(SETUP_VERSIONS_DIR, file.getName());
+            if (!charDir.exists() && !charDir.mkdirs())
+            {
+                return;
+            }
+
+            String stamp = java.time.LocalDateTime.now().format(VERSION_STAMP);
+            File snapshot = new File(charDir, stamp + ".json");
+            java.nio.file.Files.copy(
+                    file.toPath(),
+                    snapshot.toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+            pruneOldVersions(charDir);
+        }
+        catch (Exception ex)
+        {
+            log.warn("Failed to snapshot setup {}: {}", file.getName(), ex.toString());
+        }
+    }
+
+    /**
+     * Snapshot the currently-loaded Setup's on-disk file into the versions dir.
+     * Invoked by the timer in CreatorsPlugin at the user-configured cadence.
+     * No-op when no setup is loaded or the source file no longer exists.
+     */
+    public void periodicSetupSnapshot()
+    {
+        snapshotExistingFile(lastFileLoaded);
+    }
+
+    private void pruneOldVersions(File charDir)
+    {
+        int keep = Math.max(1, config.setupVersionKeep());
+        File[] versions = charDir.listFiles((d, name) -> name.endsWith(".json"));
+        if (versions == null || versions.length <= keep)
+        {
+            return;
+        }
+        java.util.Arrays.sort(versions, java.util.Comparator.comparing(File::getName));
+        int toDelete = versions.length - keep;
+        for (int i = 0; i < toDelete; i++)
+        {
+            // Best-effort delete; ignore failures.
+            //noinspection ResultOfMethodCallIgnored
+            versions[i].delete();
+        }
+    }
+
     public void saveToFile(File file)
     {
+        // Snapshot the existing file into the rotating versions dir before we
+        // overwrite. Best-effort; doesn't block save on failure.
+        snapshotExistingFile(file);
+
         ArrayList<CustomModel> customModels = plugin.getStoredModels();
         CustomModelComp[] comps = new CustomModelComp[customModels.size()];
 

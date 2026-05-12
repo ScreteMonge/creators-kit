@@ -67,6 +67,32 @@ public interface CreatorsConfig extends Config
 	}
 
 	@ConfigItem(
+			keyName = "setupVersionInterval",
+			name = "Auto-version interval (min)",
+			description = "How often (in minutes) the currently loaded Setup is snapshotted into the versions folder. 0 disables periodic snapshots — manual saves still create versions.",
+			section = sceneSettings,
+			position = 8
+	)
+	@Range(min = 0, max = 120)
+	default int setupVersionIntervalMinutes()
+	{
+		return 5;
+	}
+
+	@ConfigItem(
+			keyName = "setupVersionKeep",
+			name = "Keep N setup versions",
+			description = "Number of older snapshots to keep per Setup file. Older ones are pruned automatically. Stored under <setups>/.versions/<setup_name>/.",
+			section = sceneSettings,
+			position = 9
+	)
+	@Range(min = 1, max = 50)
+	default int setupVersionKeep()
+	{
+		return 3;
+	}
+
+	@ConfigItem(
 			keyName = "quickSpawn",
 			name = "Spawn Hotkey",
 			description = "Hotkey to toggle the spawn or despawn state of the selected object",
