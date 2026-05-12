@@ -21,7 +21,8 @@ public class SubMenuCreator
                     KeyFrameType.OVERHEAD,
                     KeyFrameType.HEALTH,
                     KeyFrameType.SPOTANIM,
-                    KeyFrameType.SPOTANIM2
+                    KeyFrameType.SPOTANIM2,
+                    KeyFrameType.PROJECTILE
             };
 
     public static void createSubMenus(TimeSheetPanel timeSheetPanel, Menu menu)

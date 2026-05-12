@@ -1,0 +1,61 @@
+package com.creatorskit.swing.timesheet.keyframe;
+
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * Schedules an OSRS projectile firing during playback. When this keyframe's
+ * tick is crossed, the Programmer calls {@code client.createProjectile(...)}
+ * once per resolved target — the game engine then handles arc, height,
+ * trajectory, and despawn natively, so the visual is indistinguishable from
+ * a real spell or arrow in-game.
+ *
+ * <p>The keyframe lives on the "caster" Character — its world position at the
+ * keyframe's tick becomes the projectile's source point.
+ */
+@Getter
+@Setter
+public class ProjectileKeyFrame extends KeyFrame
+{
+    public static final int DEFAULT_PROJECTILE_ID = 119; // a generic fireball travel
+    public static final int DEFAULT_START_HEIGHT = 40;
+    public static final int DEFAULT_END_HEIGHT = 0;
+    public static final int DEFAULT_SLOPE = 15;
+    public static final int DEFAULT_START_POS = 64;
+    public static final double DEFAULT_DURATION = 2.0;
+    public static final double DEFAULT_START_DELAY = 0.0;
+
+    /** Spotanim / projectile gfx id used by client.createProjectile. */
+    private int projectileId;
+
+    /**
+     * Target specifier. Accepts:
+     *   - a single Character name ("Player")
+     *   - a comma-separated list ("Player, NPC1, NPC2")
+     *   - "folder:Foldername" to fan out to every Character under that folder
+     * Empty string means no targets — no projectile fires.
+     */
+    private String target;
+
+    private int startHeight;
+    private int endHeight;
+    private int slope;
+    private int startPos;
+    /** Game ticks the projectile takes to traverse from source to target. */
+    private double durationTicks;
+    /** Game ticks of delay between this keyframe firing and the projectile spawning. */
+    private double startDelayTicks;
+
+    public ProjectileKeyFrame(double tick, int projectileId, String target, int startHeight, int endHeight, int slope, int startPos, double durationTicks, double startDelayTicks)
+    {
+        super(KeyFrameType.PROJECTILE, tick);
+        this.projectileId = projectileId;
+        this.target = target;
+        this.startHeight = startHeight;
+        this.endHeight = endHeight;
+        this.slope = slope;
+        this.startPos = startPos;
+        this.durationTicks = durationTicks;
+        this.startDelayTicks = startDelayTicks;
+    }
+}

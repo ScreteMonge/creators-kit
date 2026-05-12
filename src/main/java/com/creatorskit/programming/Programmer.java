@@ -1258,7 +1258,158 @@ public class Programmer
                     }
                 }
             }
+
+            KeyFrame currentProjectile = currentFrames[KeyFrameType.getIndex(KeyFrameType.PROJECTILE)];
+            double lastProjectileTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
+            if (currentProjectile != null)
+            {
+                lastProjectileTick = currentProjectile.getTick();
+            }
+
+            KeyFrame nextProjectile = character.findNextKeyFrame(KeyFrameType.PROJECTILE, lastProjectileTick);
+            if (nextProjectile != null && nextProjectile.getTick() <= currentTime)
+            {
+                character.setCurrentKeyFrame(nextProjectile, KeyFrameType.PROJECTILE);
+                fireProjectile(character, (ProjectileKeyFrame) nextProjectile);
+            }
         }
+    }
+
+    /**
+     * Spawns OSRS projectile(s) for a ProjectileKeyFrame. Uses the game's native
+     * createProjectile API, so arc / height / slope are interpolated by the engine
+     * itself — same look as real spells. Resolves the keyframe's target string to
+     * one or more Characters and fires one projectile per target.
+     */
+    private void fireProjectile(Character caster, ProjectileKeyFrame kf)
+    {
+        if (kf == null || kf.getTarget() == null || kf.getTarget().trim().isEmpty())
+        {
+            return;
+        }
+
+        CKObject sourceCk = caster.getCkObject();
+        if (sourceCk == null)
+        {
+            return;
+        }
+        LocalPoint sourceLp = sourceCk.getLocation();
+        if (sourceLp == null)
+        {
+            return;
+        }
+        WorldPoint sourceWp = WorldPoint.fromLocal(client, sourceLp);
+
+        java.util.List<Character> targets = resolveProjectileTargets(kf.getTarget());
+        if (targets.isEmpty())
+        {
+            return;
+        }
+
+        int startDelayCycles = (int) Math.round(kf.getStartDelayTicks() * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH);
+        int durationCycles = Math.max(1, (int) Math.round(kf.getDurationTicks() * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH));
+
+        for (Character target : targets)
+        {
+            if (target == caster)
+            {
+                continue;
+            }
+            CKObject targetCk = target.getCkObject();
+            if (targetCk == null)
+            {
+                continue;
+            }
+            LocalPoint targetLp = targetCk.getLocation();
+            if (targetLp == null)
+            {
+                continue;
+            }
+            WorldPoint targetWp = WorldPoint.fromLocal(client, targetLp);
+
+            clientThread.invokeLater(() ->
+            {
+                int startCycle = client.getGameCycle() + startDelayCycles;
+                int endCycle = startCycle + durationCycles;
+                client.createProjectile(
+                        kf.getProjectileId(),
+                        sourceWp,
+                        kf.getStartHeight(),
+                        null,
+                        targetWp,
+                        kf.getEndHeight(),
+                        null,
+                        startCycle,
+                        endCycle,
+                        kf.getSlope(),
+                        kf.getStartPos());
+            });
+        }
+    }
+
+    /**
+     * Parses a ProjectileKeyFrame target string. Supports:
+     *   "Player"                    -> single Character lookup
+     *   "Player, NPC1, NPC2"        -> comma-separated list
+     *   "folder:Foldername"         -> every Character recursively under that folder
+     */
+    private java.util.List<Character> resolveProjectileTargets(String spec)
+    {
+        java.util.ArrayList<Character> out = new java.util.ArrayList<>();
+        if (spec == null)
+        {
+            return out;
+        }
+        String trimmed = spec.trim();
+        if (trimmed.isEmpty())
+        {
+            return out;
+        }
+
+        if (trimmed.toLowerCase().startsWith("folder:"))
+        {
+            String folderName = trimmed.substring(7).trim();
+            if (folderName.isEmpty())
+            {
+                return out;
+            }
+            com.creatorskit.swing.manager.ManagerTree tree = plugin.getCreatorsPanel().getToolBox().getManagerPanel().getManagerTree();
+            javax.swing.tree.DefaultMutableTreeNode root = tree.getRootNode();
+            java.util.ArrayList<javax.swing.tree.DefaultMutableTreeNode> all = new java.util.ArrayList<>();
+            tree.getAllNodes(root, all);
+            for (javax.swing.tree.DefaultMutableTreeNode node : all)
+            {
+                Object user = node.getUserObject();
+                if (user instanceof com.creatorskit.swing.manager.Folder
+                        && folderName.equalsIgnoreCase(((com.creatorskit.swing.manager.Folder) user).getName()))
+                {
+                    tree.getObjectPanelChildren(node, out);
+                    break;
+                }
+            }
+            return out;
+        }
+
+        for (String name : trimmed.split(","))
+        {
+            String n = name.trim();
+            if (n.isEmpty())
+            {
+                continue;
+            }
+            for (Character c : plugin.getCharacters())
+            {
+                if (n.equals(c.getName()))
+                {
+                    if (!out.contains(c))
+                    {
+                        out.add(c);
+                    }
+                    break;
+                }
+            }
+        }
+        return out;
     }
 
     private void registerSpawnChanges(Character character)

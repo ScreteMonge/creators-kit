@@ -119,6 +119,18 @@ public class KeyFrame
                         hitsplatKF.getSprite(),
                         hitsplatKF.getVariant(),
                         hitsplatKF.getDamage());
+            case PROJECTILE:
+                ProjectileKeyFrame projKF = (ProjectileKeyFrame) keyFrame;
+                return new ProjectileKeyFrame(
+                        tick,
+                        projKF.getProjectileId(),
+                        projKF.getTarget(),
+                        projKF.getStartHeight(),
+                        projKF.getEndHeight(),
+                        projKF.getSlope(),
+                        projKF.getStartPos(),
+                        projKF.getDurationTicks(),
+                        projKF.getStartDelayTicks());
         }
     }
 }

@@ -81,6 +81,7 @@ public class AttributePanel extends JPanel
     public static final String HITSPLAT_2_CARD = "Hitsplat 2";
     public static final String HITSPLAT_3_CARD = "Hitsplat 3";
     public static final String HITSPLAT_4_CARD = "Hitsplat 4";
+    public static final String PROJECTILE_CARD = "Projectile";
     public static final String MIXED_TYPES_CARD = "MixedTypes";
 
     private final String NO_OBJECT_SELECTED = "[No Object Selected]";
@@ -105,6 +106,7 @@ public class AttributePanel extends JPanel
     private final HitsplatAttributes hitsplat2Attributes = new HitsplatAttributes();
     private final HitsplatAttributes hitsplat3Attributes = new HitsplatAttributes();
     private final HitsplatAttributes hitsplat4Attributes = new HitsplatAttributes();
+    private final ProjectileAttributes projectileAttributes = new ProjectileAttributes();
 
     private final Random random = new Random();
 
@@ -193,6 +195,7 @@ public class AttributePanel extends JPanel
         JPanel hitsplat2Card = new JPanel();
         JPanel hitsplat3Card = new JPanel();
         JPanel hitsplat4Card = new JPanel();
+        JPanel projectileCard = new JPanel();
         cardPanel.add(moveCard, MOVE_CARD);
         cardPanel.add(animCard, ANIM_CARD);
         cardPanel.add(oriCard, ORI_CARD);
@@ -207,6 +210,7 @@ public class AttributePanel extends JPanel
         cardPanel.add(hitsplat2Card, HITSPLAT_2_CARD);
         cardPanel.add(hitsplat3Card, HITSPLAT_3_CARD);
         cardPanel.add(hitsplat4Card, HITSPLAT_4_CARD);
+        cardPanel.add(projectileCard, PROJECTILE_CARD);
 
         // Empty placeholder shown when the keyframe selection spans multiple types.
         // Using a CardLayout entry keeps the cardPanel at its normal height instead
@@ -230,6 +234,7 @@ public class AttributePanel extends JPanel
         setupHitsplatCard(hitsplat2Card, KeyFrameType.HITSPLAT_2);
         setupHitsplatCard(hitsplat3Card, KeyFrameType.HITSPLAT_3);
         setupHitsplatCard(hitsplat4Card, KeyFrameType.HITSPLAT_4);
+        setupProjectileCard(projectileCard);
 
         setupKeyListeners();
     }
@@ -378,6 +383,18 @@ public class AttributePanel extends JPanel
                         (HitsplatSprite) attributes.getSprite().getSelectedItem(),
                         (HitsplatVariant) attributes.getVariant().getSelectedItem(),
                         (int) attributes.getDamage().getValue()
+                );
+            case PROJECTILE:
+                return new ProjectileKeyFrame(
+                        tick,
+                        (int) projectileAttributes.getProjectileId().getValue(),
+                        projectileAttributes.getTargetValue(),
+                        (int) projectileAttributes.getStartHeight().getValue(),
+                        (int) projectileAttributes.getEndHeight().getValue(),
+                        (int) projectileAttributes.getSlope().getValue(),
+                        (int) projectileAttributes.getStartPos().getValue(),
+                        ((Number) projectileAttributes.getDurationTicks().getValue()).doubleValue(),
+                        ((Number) projectileAttributes.getStartDelayTicks().getValue()).doubleValue()
                 );
         }
     }
@@ -2248,6 +2265,145 @@ public class AttributePanel extends JPanel
         }
     }
 
+    private void setupProjectileCard(JPanel card)
+    {
+        card.setLayout(new GridBagLayout());
+        card.setBorder(new EmptyBorder(4, 4, 4, 4));
+        card.setFocusable(true);
+        addMouseFocusListener(card);
+
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(2, 2, 2, 2);
+
+        c.gridwidth = 4;
+        c.gridheight = 1;
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 0;
+        JPanel titlePanel = new JPanel();
+        titlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        card.add(titlePanel, c);
+
+        JLabel title = new JLabel("Projectile");
+        title.setHorizontalAlignment(SwingConstants.LEFT);
+        title.setFont(FontManager.getRunescapeBoldFont());
+        titlePanel.add(title);
+
+        JLabel titleHelp = new JLabel(new ImageIcon(HELP));
+        titleHelp.setBorder(new EmptyBorder(0, 4, 0, 4));
+        titleHelp.setToolTipText("<html>Fires an OSRS projectile from this Character's position toward the named target(s)."
+                + "<br>Uses the game's native createProjectile API — arc / height / slope are interpolated"
+                + "<br>by the engine just like real spells and arrows.<br>"
+                + "<br>Target accepts: single name, comma-separated list, or \"folder:Foldername\".</html>");
+        titlePanel.add(titleHelp);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 1;
+        card.add(rightLabel("Projectile ID:"), c);
+
+        c.gridx = 1;
+        c.gridy = 1;
+        JSpinner projectileId = projectileAttributes.getProjectileId();
+        projectileId.setToolTipText("SpotanimID of the projectile graphic (e.g. 119 = fireball travel, 9 = iron arrow travel)");
+        projectileId.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_PROJECTILE_ID, -1, 99999, 1));
+        card.add(projectileId, c);
+
+        c.gridx = 0;
+        c.gridy = 2;
+        card.add(rightLabel("Target:"), c);
+
+        c.gridwidth = 3;
+        c.gridx = 1;
+        c.gridy = 2;
+        JTextField target = projectileAttributes.getTarget();
+        target.setToolTipText(titleHelp.getToolTipText());
+        card.add(target, c);
+        c.gridwidth = 1;
+
+        c.gridx = 0;
+        c.gridy = 3;
+        card.add(rightLabel("Start Height:"), c);
+
+        c.gridx = 1;
+        c.gridy = 3;
+        JSpinner startHeight = projectileAttributes.getStartHeight();
+        startHeight.setToolTipText("Z height at the source tile when the projectile spawns");
+        startHeight.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_START_HEIGHT, -1000, 1000, 1));
+        card.add(startHeight, c);
+
+        c.gridx = 2;
+        c.gridy = 3;
+        card.add(rightLabel("End Height:"), c);
+
+        c.gridx = 3;
+        c.gridy = 3;
+        JSpinner endHeight = projectileAttributes.getEndHeight();
+        endHeight.setToolTipText("Z height at the target tile when the projectile impacts");
+        endHeight.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_END_HEIGHT, -1000, 1000, 1));
+        card.add(endHeight, c);
+
+        c.gridx = 0;
+        c.gridy = 4;
+        card.add(rightLabel("Slope:"), c);
+
+        c.gridx = 1;
+        c.gridy = 4;
+        JSpinner slope = projectileAttributes.getSlope();
+        slope.setToolTipText("Arc magnitude — higher = taller arc at the midpoint. Default 15.");
+        slope.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_SLOPE, -1000, 1000, 1));
+        card.add(slope, c);
+
+        c.gridx = 2;
+        c.gridy = 4;
+        card.add(rightLabel("Start Pos:"), c);
+
+        c.gridx = 3;
+        c.gridy = 4;
+        JSpinner startPos = projectileAttributes.getStartPos();
+        startPos.setToolTipText("Offset from the source tile (game's internal start offset). Default 64.");
+        startPos.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_START_POS, -1000, 1000, 1));
+        card.add(startPos, c);
+
+        c.gridx = 0;
+        c.gridy = 5;
+        card.add(rightLabel("Duration:"), c);
+
+        c.gridx = 1;
+        c.gridy = 5;
+        JSpinner duration = projectileAttributes.getDurationTicks();
+        duration.setToolTipText("Game ticks the projectile takes to fly from source to target");
+        duration.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_DURATION, 0.1, 100, 0.1));
+        card.add(duration, c);
+
+        c.gridx = 2;
+        c.gridy = 5;
+        card.add(rightLabel("Start Delay:"), c);
+
+        c.gridx = 3;
+        c.gridy = 5;
+        JSpinner startDelay = projectileAttributes.getStartDelayTicks();
+        startDelay.setToolTipText("Game ticks of delay between this keyframe firing and the projectile actually spawning. Useful for syncing with cast animations.");
+        startDelay.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_START_DELAY, 0, 100, 0.1));
+        card.add(startDelay, c);
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.weightx = 1;
+        c.weighty = 1;
+        c.gridx = 4;
+        c.gridy = 6;
+        card.add(new JLabel(""), c);
+    }
+
+    private JLabel rightLabel(String text)
+    {
+        JLabel label = new JLabel(text);
+        label.setHorizontalAlignment(SwingConstants.RIGHT);
+        return label;
+    }
+
     public void switchCards(String cardName)
     {
         KeyFrameType type;
@@ -2295,6 +2451,9 @@ public class AttributePanel extends JPanel
                 break;
             case HITSPLAT_4_CARD:
                 type = KeyFrameType.HITSPLAT_4;
+                break;
+            case PROJECTILE_CARD:
+                type = KeyFrameType.PROJECTILE;
         }
 
         switchCards(type);
@@ -2758,6 +2917,10 @@ public class AttributePanel extends JPanel
             case HITSPLAT_4:
                 hitsplat4Attributes.setAttributes(keyFrame);
                 hitsplat4Attributes.setBackgroundColours(keyFrameState);
+                break;
+            case PROJECTILE:
+                projectileAttributes.setAttributes(keyFrame);
+                projectileAttributes.setBackgroundColours(keyFrameState);
         }
     }
 
@@ -2807,6 +2970,9 @@ public class AttributePanel extends JPanel
                 break;
             case HITSPLAT_4:
                 hitsplat4Attributes.resetAttributes(resetBackground);
+                break;
+            case PROJECTILE:
+                projectileAttributes.resetAttributes(resetBackground);
         }
     }
 
