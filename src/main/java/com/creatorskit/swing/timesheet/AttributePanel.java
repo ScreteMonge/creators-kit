@@ -394,7 +394,8 @@ public class AttributePanel extends JPanel
                         (int) projectileAttributes.getSlope().getValue(),
                         (int) projectileAttributes.getStartPos().getValue(),
                         ((Number) projectileAttributes.getDurationTicks().getValue()).doubleValue(),
-                        ((Number) projectileAttributes.getStartDelayTicks().getValue()).doubleValue()
+                        ((Number) projectileAttributes.getStartDelayTicks().getValue()).doubleValue(),
+                        projectileAttributes.getFaceTrajectory().isSelected()
                 );
         }
     }
@@ -2329,8 +2330,8 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 3;
         JSpinner startHeight = projectileAttributes.getStartHeight();
-        startHeight.setToolTipText("Z height at the source tile when the projectile spawns");
-        startHeight.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_START_HEIGHT, -1000, 1000, 1));
+        startHeight.setToolTipText("Z height at the source tile when the projectile spawns. Range supports extreme values for bosses like Yama that shoot straight up.");
+        startHeight.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_START_HEIGHT, -100000, 100000, 1));
         card.add(startHeight, c);
 
         c.gridx = 2;
@@ -2341,7 +2342,7 @@ public class AttributePanel extends JPanel
         c.gridy = 3;
         JSpinner endHeight = projectileAttributes.getEndHeight();
         endHeight.setToolTipText("Z height at the target tile when the projectile impacts");
-        endHeight.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_END_HEIGHT, -1000, 1000, 1));
+        endHeight.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_END_HEIGHT, -100000, 100000, 1));
         card.add(endHeight, c);
 
         c.gridx = 0;
@@ -2351,8 +2352,8 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 4;
         JSpinner slope = projectileAttributes.getSlope();
-        slope.setToolTipText("Arc magnitude — higher = taller arc at the midpoint. Default 15.");
-        slope.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_SLOPE, -1000, 1000, 1));
+        slope.setToolTipText("Arc magnitude — higher = taller arc at the midpoint. Default 15. Large values (10000+) produce the extreme up-and-back-down arcs used by bosses like Yama.");
+        slope.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_SLOPE, -100000, 100000, 1));
         card.add(slope, c);
 
         c.gridx = 2;
@@ -2363,7 +2364,7 @@ public class AttributePanel extends JPanel
         c.gridy = 4;
         JSpinner startPos = projectileAttributes.getStartPos();
         startPos.setToolTipText("Offset from the source tile (game's internal start offset). Default 64.");
-        startPos.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_START_POS, -1000, 1000, 1));
+        startPos.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_START_POS, -100000, 100000, 1));
         card.add(startPos, c);
 
         c.gridx = 0;
@@ -2388,12 +2389,23 @@ public class AttributePanel extends JPanel
         startDelay.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_START_DELAY, 0, 100, 0.1));
         card.add(startDelay, c);
 
+        c.gridwidth = 4;
+        c.gridx = 0;
+        c.gridy = 6;
+        JCheckBox faceTrajectory = projectileAttributes.getFaceTrajectory();
+        faceTrajectory.setToolTipText("<html>When enabled, the projectile model pitches to follow the trajectory:"
+                + "<br>nose-up while ascending, nose-down while crashing back down."
+                + "<br>Recommended for high-slope arcs (e.g. Yama's overhead barrage) where"
+                + "<br>a fixed-pitch model looks unnatural at the top of the arc.</html>");
+        card.add(faceTrajectory, c);
+        c.gridwidth = 1;
+
         c.gridwidth = 1;
         c.gridheight = 1;
         c.weightx = 1;
         c.weighty = 1;
         c.gridx = 4;
-        c.gridy = 6;
+        c.gridy = 7;
         card.add(new JLabel(""), c);
     }
 

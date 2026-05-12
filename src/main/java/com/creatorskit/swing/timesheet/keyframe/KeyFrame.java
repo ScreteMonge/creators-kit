@@ -130,7 +130,8 @@ public class KeyFrame
                         projKF.getSlope(),
                         projKF.getStartPos(),
                         projKF.getDurationTicks(),
-                        projKF.getStartDelayTicks());
+                        projKF.getStartDelayTicks(),
+                        projKF.isFaceTrajectory());
         }
     }
 }

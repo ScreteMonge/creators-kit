@@ -1027,7 +1027,8 @@ public class TimeSheetPanel extends JPanel
                 ProjectileKeyFrame.DEFAULT_SLOPE,
                 ProjectileKeyFrame.DEFAULT_START_POS,
                 ProjectileKeyFrame.DEFAULT_DURATION,
-                ProjectileKeyFrame.DEFAULT_START_DELAY);
+                ProjectileKeyFrame.DEFAULT_START_DELAY,
+                ProjectileKeyFrame.DEFAULT_FACE_TRAJECTORY);
 
         addKeyFrameAction(new KeyFrame[]{keyFrame});
     }

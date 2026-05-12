@@ -18,6 +18,7 @@ public class ProjectileAttributes extends Attributes
     private final JSpinner startPos = new JSpinner();
     private final JSpinner durationTicks = new JSpinner();
     private final JSpinner startDelayTicks = new JSpinner();
+    private final JCheckBox faceTrajectory = new JCheckBox("Face trajectory");
 
     public ProjectileAttributes()
     {
@@ -55,6 +56,7 @@ public class ProjectileAttributes extends Attributes
         startPos.setValue(kf.getStartPos());
         durationTicks.setValue(kf.getDurationTicks());
         startDelayTicks.setValue(kf.getStartDelayTicks());
+        faceTrajectory.setSelected(kf.isFaceTrajectory());
     }
 
     @Override
@@ -68,6 +70,7 @@ public class ProjectileAttributes extends Attributes
         startPos.setBackground(color);
         durationTicks.setBackground(color);
         startDelayTicks.setBackground(color);
+        faceTrajectory.setBackground(color);
     }
 
     @Override
@@ -82,7 +85,8 @@ public class ProjectileAttributes extends Attributes
                         slope,
                         startPos,
                         durationTicks,
-                        startDelayTicks
+                        startDelayTicks,
+                        faceTrajectory
                 };
     }
 
@@ -96,6 +100,7 @@ public class ProjectileAttributes extends Attributes
         startPos.addChangeListener(e -> startPos.setBackground(getRed()));
         durationTicks.addChangeListener(e -> durationTicks.setBackground(getRed()));
         startDelayTicks.addChangeListener(e -> startDelayTicks.setBackground(getRed()));
+        faceTrajectory.addItemListener(e -> faceTrajectory.setBackground(getRed()));
 
         target.getDocument().addDocumentListener(new javax.swing.event.DocumentListener()
         {
@@ -116,6 +121,7 @@ public class ProjectileAttributes extends Attributes
         startPos.setValue(ProjectileKeyFrame.DEFAULT_START_POS);
         durationTicks.setValue(ProjectileKeyFrame.DEFAULT_DURATION);
         startDelayTicks.setValue(ProjectileKeyFrame.DEFAULT_START_DELAY);
+        faceTrajectory.setSelected(ProjectileKeyFrame.DEFAULT_FACE_TRAJECTORY);
         super.resetAttributes(resetBackground);
     }
 }

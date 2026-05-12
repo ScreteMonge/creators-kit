@@ -37,6 +37,13 @@ public class Programmer
     private final int TILE_LENGTH = 128;
     private final int TILE_DIAGONAL = 181; //Math.sqrt(Math.pow(128, 2) + Math.pow(128, 2))
 
+    /**
+     * Snapshots of the (Y, Z) vertex arrays for each projectile CKObject taken right
+     * after the model is built. Used by the face-trajectory pitch feature to apply a
+     * fresh X-axis rotation each frame without compounding rotations across frames.
+     */
+    private final java.util.IdentityHashMap<CKObject, float[][]> projectileOriginalVertices = new java.util.IdentityHashMap<>();
+
     @Getter
     @Setter
     private boolean playing = false;
@@ -1393,6 +1400,28 @@ public class Programmer
                 orientation = ((int) Math.round(Math.atan2(dx, dy) * 2048.0 / (2 * Math.PI)) + 1024) & 0x7FF;
             }
 
+            // Pitch angle for the face-trajectory feature. Velocity is the analytic
+            // derivative of the arc position: horizontal is constant (target - source),
+            // vertical is the derivative of (tileZ_lerp - heightOffset). Note +world-Z
+            // is DOWN in render space (subtracting heightOffset from tileZ moves the
+            // projectile UP), so "vertical velocity up" = -dz/dt.
+            double pitchRadians = 0.0;
+            if (kf.isFaceTrajectory())
+            {
+                double dHeightOffsetDt = (kf.getEndHeight() - kf.getStartHeight())
+                        + kf.getSlope() * (1 - 2 * t);
+                int targetTileZForPitch = here.isInScene()
+                        ? Perspective.getTileHeight(client, targetLp, level)
+                        : sourceTileZ;
+                double dTileZDt = targetTileZForPitch - sourceTileZ;
+                double dzDt = dTileZDt - dHeightOffsetDt;
+                double horizDist = Math.hypot(dx, dy);
+                if (horizDist > 0.0001 || Math.abs(dzDt) > 0.0001)
+                {
+                    pitchRadians = Math.atan2(-dzDt, horizDist);
+                }
+            }
+
             ensureProjectileSlot(character, projObjs, slot, kf.getProjectileId());
 
             CKObject obj = projObjs.get(slot);
@@ -1400,6 +1429,8 @@ public class Programmer
             final int finalOrientation = orientation;
             final LocalPoint finalHere = here;
             final int finalLevel = level;
+            final double finalPitch = pitchRadians;
+            final boolean applyPitch = kf.isFaceTrajectory();
             clientThread.invokeLater(() ->
             {
                 if (!finalHere.isInScene())
@@ -1413,6 +1444,7 @@ public class Programmer
                 obj.setLocation(finalHere, finalLevel);
                 obj.setZ(finalZ);
                 obj.setOrientation(finalOrientation);
+                applyProjectilePitch(obj, finalPitch, applyPitch);
                 if (!obj.isActive())
                 {
                     obj.setActive(true);
@@ -1459,6 +1491,16 @@ public class Programmer
             CustomLighting cl = new CustomLighting(ls.getAmbient() + data.getAmbient(), ls.getContrast() + data.getContrast(), ls.getX(), ls.getY(), ls.getZ());
             Model model = modelUtilities.constructModelFromCache(stats, new int[0], false, LightingStyle.CUSTOM, cl);
             obj.setModel(model);
+            // Snapshot the unpitched Y/Z vertices so face-trajectory rotation can start
+            // from a clean baseline each frame instead of compounding. We only need Y
+            // and Z because pitch is around the model-local X axis (X stays put).
+            if (model != null && model.getVerticesY() != null && model.getVerticesZ() != null)
+            {
+                projectileOriginalVertices.put(obj, new float[][]{
+                        model.getVerticesY().clone(),
+                        model.getVerticesZ().clone()
+                });
+            }
             if (data.getAnimationId() != -1)
             {
                 obj.setAnimation(AnimationType.ACTIVE, data.getAnimationId());
@@ -1466,6 +1508,65 @@ public class Programmer
                 obj.setPlaying(true);
             }
         });
+    }
+
+    /**
+     * Applies (or clears) the trajectory-pitch rotation on the projectile's baseModel
+     * by re-rotating the snapshotted Y/Z vertex arrays each frame. Rotates around the
+     * model-local X axis; OSRS yaw (CKObject.orientation) handles the horizontal facing
+     * so the combined transform aligns the model's nose with the velocity vector.
+     *
+     * <p>In OSRS model space Y is vertical with -Y = up (the existing {@code translate(0,
+     * -translateZ, 0)} pattern in ModelUtilities confirms this), so a positive pitch
+     * lifts the nose -- exactly what we want when ascending. Must run on the client
+     * thread because it mutates Model state the renderer reads each frame.
+     */
+    private void applyProjectilePitch(CKObject obj, double pitchRadians, boolean enabled)
+    {
+        Model baseModel = obj.getBaseModel();
+        if (baseModel == null)
+        {
+            return;
+        }
+        float[] originalY;
+        float[] originalZ;
+        float[][] snap = projectileOriginalVertices.get(obj);
+        if (snap == null)
+        {
+            return;
+        }
+        originalY = snap[0];
+        originalZ = snap[1];
+
+        float[] verticesY = baseModel.getVerticesY();
+        float[] verticesZ = baseModel.getVerticesZ();
+        if (verticesY == null || verticesZ == null
+                || verticesY.length != originalY.length
+                || verticesZ.length != originalZ.length)
+        {
+            return;
+        }
+
+        if (!enabled || pitchRadians == 0.0)
+        {
+            // Restore the snapshot so we don't leave stale pitched vertices when the
+            // user toggles the checkbox off mid-flight.
+            System.arraycopy(originalY, 0, verticesY, 0, originalY.length);
+            System.arraycopy(originalZ, 0, verticesZ, 0, originalZ.length);
+            baseModel.calculateBoundsCylinder();
+            return;
+        }
+
+        double sinP = Math.sin(pitchRadians);
+        double cosP = Math.cos(pitchRadians);
+        for (int i = 0; i < originalY.length; i++)
+        {
+            float oy = originalY[i];
+            float oz = originalZ[i];
+            verticesY[i] = (float) (oy * cosP - oz * sinP);
+            verticesZ[i] = (float) (oy * sinP + oz * cosP);
+        }
+        baseModel.calculateBoundsCylinder();
     }
 
     /**
