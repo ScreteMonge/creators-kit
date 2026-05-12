@@ -1525,11 +1525,32 @@ public class Programmer
             // Snapshot the unpitched Y/Z vertices so face-trajectory rotation can start
             // from a clean baseline each frame instead of compounding. We only need Y
             // and Z because pitch is around the model-local X axis (X stays put).
+            //
+            // Also precompute the (Y, Z) centroid -- pitch needs to rotate around the
+            // model's geometric center, not the origin. Composite models built via
+            // client.mergeModels() keep each sub-model's vertices at their already-
+            // translated positions (ModelStats.translateZ shifts each part vertically),
+            // so the merged model's origin is often far from the visible mass. Rotating
+            // around (0,0,0) sweeps off-center sub-models around in wide arcs and tears
+            // the rigging apart visually; rotating around the centroid keeps each piece
+            // pivoting in place relative to the whole.
             if (model != null && model.getVerticesY() != null && model.getVerticesZ() != null)
             {
+                float[] origY = model.getVerticesY().clone();
+                float[] origZ = model.getVerticesZ().clone();
+                double sumY = 0;
+                double sumZ = 0;
+                for (int i = 0; i < origY.length; i++)
+                {
+                    sumY += origY[i];
+                    sumZ += origZ[i];
+                }
+                float cy = origY.length == 0 ? 0 : (float) (sumY / origY.length);
+                float cz = origZ.length == 0 ? 0 : (float) (sumZ / origZ.length);
                 projectileOriginalVertices.put(obj, new float[][]{
-                        model.getVerticesY().clone(),
-                        model.getVerticesZ().clone()
+                        origY,
+                        origZ,
+                        new float[]{cy, cz}
                 });
             }
             if (data.getAnimationId() != -1)
@@ -1544,13 +1565,16 @@ public class Programmer
     /**
      * Applies (or clears) the trajectory-pitch rotation on the projectile's baseModel
      * by re-rotating the snapshotted Y/Z vertex arrays each frame. Rotates around the
-     * model-local X axis; OSRS yaw (CKObject.orientation) handles the horizontal facing
-     * so the combined transform aligns the model's nose with the velocity vector.
+     * model's (Y, Z) centroid -- NOT the merged-model origin -- so off-center sub-models
+     * (like the smoke particles on a magic projectile) pivot in place rather than swing
+     * around in wide arcs that tear the visible rigging apart at non-zero pitch.
      *
-     * <p>In OSRS model space Y is vertical with -Y = up (the existing {@code translate(0,
-     * -translateZ, 0)} pattern in ModelUtilities confirms this), so a positive pitch
-     * lifts the nose -- exactly what we want when ascending. Must run on the client
-     * thread because it mutates Model state the renderer reads each frame.
+     * <p>OSRS yaw (CKObject.orientation) handles the horizontal facing so the combined
+     * transform aligns the model's nose with the velocity vector. In OSRS model space Y
+     * is vertical with -Y = up (the existing {@code translate(0, -translateZ, 0)} pattern
+     * in ModelUtilities confirms this), so a positive pitch lifts the nose -- exactly what
+     * we want when ascending. Must run on the client thread because it mutates Model
+     * state the renderer reads each frame.
      */
     private void applyProjectilePitch(CKObject obj, double pitchRadians, boolean enabled)
     {
@@ -1559,15 +1583,15 @@ public class Programmer
         {
             return;
         }
-        float[] originalY;
-        float[] originalZ;
         float[][] snap = projectileOriginalVertices.get(obj);
-        if (snap == null)
+        if (snap == null || snap.length < 3)
         {
             return;
         }
-        originalY = snap[0];
-        originalZ = snap[1];
+        float[] originalY = snap[0];
+        float[] originalZ = snap[1];
+        float cy = snap[2][0];
+        float cz = snap[2][1];
 
         float[] verticesY = baseModel.getVerticesY();
         float[] verticesZ = baseModel.getVerticesZ();
@@ -1592,10 +1616,11 @@ public class Programmer
         double cosP = Math.cos(pitchRadians);
         for (int i = 0; i < originalY.length; i++)
         {
-            float oy = originalY[i];
-            float oz = originalZ[i];
-            verticesY[i] = (float) (oy * cosP - oz * sinP);
-            verticesZ[i] = (float) (oy * sinP + oz * cosP);
+            // Translate to centroid-origin, rotate around model-local X, translate back.
+            double dy = originalY[i] - cy;
+            double dz = originalZ[i] - cz;
+            verticesY[i] = (float) (dy * cosP - dz * sinP + cy);
+            verticesZ[i] = (float) (dy * sinP + dz * cosP + cz);
         }
         baseModel.calculateBoundsCylinder();
     }
