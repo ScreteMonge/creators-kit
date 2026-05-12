@@ -439,6 +439,12 @@ public class TimeSheetPanel extends JPanel
         }
 
         KeyFrameAction[] kfa = new KeyFrameAction[0];
+        // Map old keyframe ref -> new replacement, so we can re-point selectedKeyFrames
+        // at the end. Without this the AttributePanel's resetAttributes(...) keeps finding
+        // the stale old reference via findSelectedKeyFrameOfCurrentType() and re-renders
+        // the card with the pre-edit values — visible as the card "snapping back" right
+        // after Update is clicked when the seeker isn't on the edited keyframe.
+        java.util.IdentityHashMap<KeyFrame, KeyFrame> replacements = new java.util.IdentityHashMap<>();
         for (int i = 0; i < targets.size(); i++)
         {
             KeyFrame oldKeyFrame = targets.get(i);
@@ -464,11 +470,34 @@ public class TimeSheetPanel extends JPanel
             kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(newKf, owner, KeyFrameCharacterActionType.ADD));
             kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(oldKeyFrame, owner, KeyFrameCharacterActionType.REMOVE));
             addKeyFrame(owner, newKf);
+            replacements.put(oldKeyFrame, newKf);
         }
 
         if (kfa.length > 0)
         {
             addKeyFrameActions(kfa);
+        }
+
+        // Rebind any stale selected-keyframe refs to their replacements and trigger one
+        // final attribute refresh so the card reflects the just-committed values even
+        // when the seeker bar is far from the edited keyframe.
+        if (!replacements.isEmpty() && selectedKeyFrames.length > 0)
+        {
+            KeyFrame[] updated = selectedKeyFrames.clone();
+            boolean changed = false;
+            for (int i = 0; i < updated.length; i++)
+            {
+                KeyFrame replacement = replacements.get(updated[i]);
+                if (replacement != null)
+                {
+                    updated[i] = replacement;
+                    changed = true;
+                }
+            }
+            if (changed)
+            {
+                setSelectedKeyFrames(updated);
+            }
         }
     }
 
