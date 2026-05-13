@@ -190,8 +190,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	 * <p>Engaging captures the (camera focal point - Character position) offset and
 	 * switches the camera into free-camera mode (the mode that exposes
 	 * setCameraFocalPointX/Y/Z). The per-tick focal-point update in
-	 * {@link #onClientTickForCameraLock(ClientTick)} keeps the camera glued to the
-	 * Character through movement keyframes and sub-tile offsets. Disengaging restores
+	 * {@link #updateCameraLock()} (called from the main onClientTick) keeps the camera
+	 * glued to the Character through movement keyframes and sub-tile offsets. Disengaging restores
 	 * whatever camera mode was active before the lock so the user isn't stranded in
 	 * free-camera mode.
 	 *
@@ -260,8 +260,12 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		});
 	}
 
-	@Subscribe
-	public void onClientTickForCameraLock(ClientTick event)
+	/**
+	 * Per-tick camera-lock pump. Called from the main {@link #onClientTick(ClientTick)}
+	 * handler -- can't be its own {@code @Subscribe} method because RuneLite's EventBus
+	 * requires the method name to match the event type, and that name is already taken.
+	 */
+	private void updateCameraLock()
 	{
 		if (cameraLockedCharacter == null)
 		{
@@ -614,6 +618,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 
 		updatePreviewObject(client.getTopLevelWorldView().getSelectedSceneTile());
+
+		updateCameraLock();
 
 		if (addProgramStep)
 		{
