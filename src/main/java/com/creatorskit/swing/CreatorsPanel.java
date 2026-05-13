@@ -245,9 +245,13 @@ public class CreatorsPanel extends PluginPanel
                 + "<br>Hold the Add Program Step hotkey and scroll up/down to change in 0.5 increments.</html>");
         add(stepSpeedLabel, c);
 
+        // Switched from hardcoded gridy values to c.gridy++ so subsequent additions
+        // (e.g. Unlock Camera between Deselect All and stepSpeedLabel) don't collide
+        // with rows below. Earlier hardcoded gridy=5 for sidePanel overlapped with
+        // stepSpeedLabel once the Unlock button pushed everything down a row.
         c.gridwidth = 3;
         c.gridx = 0;
-        c.gridy = 5;
+        c.gridy++;
         c.weightx = 1;
         c.weighty = 0;
         sidePanel.setLayout(new GridLayout(0, 1, 4, 4));
@@ -258,7 +262,7 @@ public class CreatorsPanel extends PluginPanel
 
         c.gridwidth = 3;
         c.gridx = 0;
-        c.gridy = 6;
+        c.gridy++;
         c.weightx = 1;
         c.weighty = 1;
         JLabel emptyLabel = new JLabel("");

@@ -311,7 +311,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			// factor 0.15 the camera reaches ~95% of the target within one game
 			// tick (~30 client ticks), matching vanilla's "responsive but not
 			// snappy" feel. Configurable so users can dial in faster or slower.
-			double easing = clamp01(config.cameraLockEasing());
+			// Config returns int percent (5-100); convert to 0.05-1.0 lerp factor.
+			double easing = clamp01(config.cameraLockEasing() / 100.0);
 			double targetX = ck.getX();
 			double targetY = ck.getY();
 			double targetZ = ck.getZ();

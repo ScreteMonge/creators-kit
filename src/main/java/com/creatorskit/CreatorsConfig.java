@@ -190,22 +190,18 @@ public interface CreatorsConfig extends Config
 
 	@ConfigItem(
 			keyName = "cameraLockEasing",
-			name = "Camera lock easing",
+			name = "Camera lock easing (%)",
 			description = "How quickly the camera-lock follow closes the distance to the target each client tick. " +
-					"Range 0.05-1.0; lower = smoother / more lag, higher = snappier. Default 0.15 closes ~95% of the " +
-					"distance within one game tick, matching vanilla's responsive-but-not-snappy feel.",
+					"Range 5-100%; lower = smoother / more lag, higher = snappier. Default 15% closes ~95% of the " +
+					"distance within one game tick, matching vanilla's responsive-but-not-snappy feel. Divide by 100 " +
+					"to get the per-tick lerp factor.",
 			section = sceneSettings,
 			position = 16
 	)
 	@net.runelite.client.config.Range(min = 5, max = 100)
-	default int cameraLockEasingPercent()
+	default int cameraLockEasing()
 	{
 		return 15;
-	}
-
-	default double cameraLockEasing()
-	{
-		return cameraLockEasingPercent() / 100.0;
 	}
 
 	@ConfigSection(
