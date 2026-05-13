@@ -1050,6 +1050,13 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		previewObject.setOrientation(orientation);
 		previewObject.setAnimation(AnimationType.ACTIVE, animId);
 		previewObject.setAnimationFrame(AnimationType.ACTIVE, ckObject.getAnimationFrame(AnimationType.ACTIVE), random, false,true);
+		// Mirror sub-tile offsets onto the preview BEFORE setLocation so the previewObject's
+		// own setLocation override picks them up and shifts the ghost off the tile center the
+		// same way the placed Character will be. Without this the preview sits at the raw tile
+		// position while the real Character is offset by whatever SHIFT+WASD/R/F set.
+		previewObject.setOffsetX(ckObject.getOffsetX());
+		previewObject.setOffsetY(ckObject.getOffsetY());
+		previewObject.setOffsetZ(ckObject.getOffsetZ());
 		previewObject.setLocation(lp, client.getTopLevelWorldView().getPlane());
 		previewObject.setRadius(ckObject.getRadius());
 		// Mirror render-fix state onto the preview so the ghost runs through the same
