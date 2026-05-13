@@ -139,6 +139,28 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private Character cameraLockedCharacter;
 
 	/**
+	 * Captured (focalPoint - characterPosition) offset at lock engage-time.
+	 *
+	 * <p>Why we keep this instead of snapping focal = character.position: the OSRS
+	 * client API has no setter for camera POSITION, only the focal point. In normal
+	 * camera mode the engine auto-derives camera position from focal each frame; in
+	 * free-camera mode (which we have to use to expose setCameraFocalPointZ) it does
+	 * NOT. So setting focal = character.position teleports the look-AT point onto the
+	 * character but leaves the camera POSITION wherever the engine last put it --
+	 * typically near the local player from before the mode switch. Net effect: camera
+	 * stares at the character from across the map ("way far away" in user reports).
+	 *
+	 * <p>Re-applying the captured offset each tick means focal = character + offset.
+	 * As the character moves by ΔC, focal moves by ΔC; since the camera position is
+	 * frozen relative to focal in free-camera mode, the user's pre-engage framing is
+	 * preserved as the character moves. The trade-off is the lock can't dead-center
+	 * the character; the user has to frame them with the mouse before engaging.
+	 */
+	private double cameraLockOffsetX;
+	private double cameraLockOffsetY;
+	private double cameraLockOffsetZ;
+
+	/**
 	 * Captured camera mode at lock engage-time so the camera restores to whatever it
 	 * was in (0 = normal, 1 = free) when the lock disengages. Without this the user
 	 * would be stuck in free-camera mode after unlocking.
@@ -265,6 +287,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			// on every ClientTick (50/s) until the JVM heap filled with stack traces.
 			client.setOculusOrbState(0);
 			client.setCameraMode(1);
+
+			// Capture the offset AFTER the mode switch so we read the focal point in
+			// its post-switch state. See cameraLockOffsetX/Y/Z javadoc for why this
+			// is necessary instead of snapping focal = character.position.
+			cameraLockOffsetX = client.getCameraFocalPointX() - ck.getX();
+			cameraLockOffsetY = client.getCameraFocalPointY() - ck.getY();
+			cameraLockOffsetZ = client.getCameraFocalPointZ() - ck.getZ();
+
 			cameraLockedCharacter = finalTarget;
 			if (finalTarget.getCameraLockCheckBox() != null
 					&& !finalTarget.getCameraLockCheckBox().isSelected())
@@ -304,21 +334,21 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 		try
 		{
-			// Center on the Character: focal point IS the Character's position. In
-			// free-camera mode the engine recomputes camera position each frame as
-			// focal + (offset_from_yaw_pitch_zoom), so the camera follows along.
-			// The captured-offset approach we tried earlier preserved the user's
-			// pre-engage framing -- explicitly NOT centering. Now we just snap to
-			// center each tick (with easing to make it visually smooth).
+			// Target = Character position + captured engage-time offset. The offset
+			// preserves the user's pre-engage framing through Character movement:
+			// as ck moves by ΔC, focal moves by ΔC, and since the engine doesn't
+			// auto-update camera position from focal in free-camera mode the camera
+			// position stays put while the focal point glides along. The whole
+			// scene appears to scroll as the Character moves. See the offset field
+			// javadoc for why direct-set (focal = character.position) doesn't work.
 			//
-			// Exponential decay easing: each tick the focal point closes a fixed
-			// fraction of the remaining distance to the target. Gives natural
-			// ease-out, plus ease-in on engage (smooth acceleration from rest).
-			// Config returns int percent (5-100); convert to 0.05-1.0 lerp factor.
+			// Easing: exponential decay toward the target. Natural ease-out, plus
+			// ease-in on engage (smooth acceleration from rest). Config returns
+			// int percent (5-100); convert to 0.05-1.0 lerp factor.
 			double easing = clamp01(config.cameraLockEasing() / 100.0);
-			double targetX = ck.getX();
-			double targetY = ck.getY();
-			double targetZ = ck.getZ();
+			double targetX = ck.getX() + cameraLockOffsetX;
+			double targetY = ck.getY() + cameraLockOffsetY;
+			double targetZ = ck.getZ() + cameraLockOffsetZ;
 			double cx = client.getCameraFocalPointX();
 			double cy = client.getCameraFocalPointY();
 			double cz = client.getCameraFocalPointZ();
