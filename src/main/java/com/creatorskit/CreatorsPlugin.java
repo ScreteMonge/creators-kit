@@ -139,18 +139,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private Character cameraLockedCharacter;
 
 	/**
-	 * Captured (focalPoint - characterPosition) offset at lock engage-time. Re-applied
-	 * each tick so the camera follows the Character while preserving the relative
-	 * viewing distance / angle the user had set up before engaging. Without this the
-	 * camera ends up looking at the Character's exact coords from across the map,
-	 * because free-camera mode doesn't move the camera POSITION when the focal point
-	 * changes -- only the look-direction does. The relative offset keeps both glued.
-	 */
-	private double cameraLockOffsetX;
-	private double cameraLockOffsetY;
-	private double cameraLockOffsetZ;
-
-	/**
 	 * Captured camera mode at lock engage-time so the camera restores to whatever it
 	 * was in (0 = normal, 1 = free) when the lock disengages. Without this the user
 	 * would be stuck in free-camera mode after unlocking.
@@ -277,17 +265,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			// on every ClientTick (50/s) until the JVM heap filled with stack traces.
 			client.setOculusOrbState(0);
 			client.setCameraMode(1);
-
-			// Capture the offset AFTER the mode switch so we read the focal point in
-			// its post-switch state. The lock preserves whatever viewing distance /
-			// angle the user had configured before engaging -- without this the
-			// camera position stays put while the focal point teleports to the
-			// Character's exact coords, making the camera look at the Character
-			// from wherever it was sitting (often far across the map).
-			cameraLockOffsetX = client.getCameraFocalPointX() - ck.getX();
-			cameraLockOffsetY = client.getCameraFocalPointY() - ck.getY();
-			cameraLockOffsetZ = client.getCameraFocalPointZ() - ck.getZ();
-
 			cameraLockedCharacter = finalTarget;
 			if (finalTarget.getCameraLockCheckBox() != null
 					&& !finalTarget.getCameraLockCheckBox().isSelected())
@@ -327,23 +304,21 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 		try
 		{
-			// Target = Character position + captured engage-time offset. The offset
-			// preserves the user's viewing distance / angle: the focal point follows
-			// the Character through movement keyframes, animation, and sub-tile
-			// nudges, and the engine moves the camera POSITION in lockstep with the
-			// focal point so the relative geometry stays intact. Setting focal = ck
-			// directly (no offset) would teleport the look-AT point onto the
-			// Character while leaving the camera POSITION wherever it was, making
-			// the camera stare at the Character from across the map.
+			// Center on the Character: focal point IS the Character's position. In
+			// free-camera mode the engine recomputes camera position each frame as
+			// focal + (offset_from_yaw_pitch_zoom), so the camera follows along.
+			// The captured-offset approach we tried earlier preserved the user's
+			// pre-engage framing -- explicitly NOT centering. Now we just snap to
+			// center each tick (with easing to make it visually smooth).
 			//
 			// Exponential decay easing: each tick the focal point closes a fixed
 			// fraction of the remaining distance to the target. Gives natural
 			// ease-out, plus ease-in on engage (smooth acceleration from rest).
 			// Config returns int percent (5-100); convert to 0.05-1.0 lerp factor.
 			double easing = clamp01(config.cameraLockEasing() / 100.0);
-			double targetX = ck.getX() + cameraLockOffsetX;
-			double targetY = ck.getY() + cameraLockOffsetY;
-			double targetZ = ck.getZ() + cameraLockOffsetZ;
+			double targetX = ck.getX();
+			double targetY = ck.getY();
+			double targetZ = ck.getZ();
 			double cx = client.getCameraFocalPointX();
 			double cy = client.getCameraFocalPointY();
 			double cz = client.getCameraFocalPointZ();
