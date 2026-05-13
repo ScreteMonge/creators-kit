@@ -2352,6 +2352,20 @@ public class CacheSearcherTab extends JPanel
                     false,
                     false);
 
+            // Autodetect render-fix need from NPC cache scales. The cache resizes the
+            // model at construction time via these values; the animation rigging is
+            // baked at the canonical 128 scale regardless, so any divergence from
+            // 128/128 produces a scale mismatch the render-fix bracket undoes.
+            int widthScale = data.getWidthScale();
+            int heightScale = data.getHeightScale();
+            if (widthScale > 0 && heightScale > 0
+                    && (widthScale != 128 || heightScale != 128))
+            {
+                character.setRenderFixWidth(widthScale);
+                character.setRenderFixHeight(heightScale);
+                character.setRenderFix(true);
+            }
+
             SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true, false));
 
             if (addAnimKeyFrame)

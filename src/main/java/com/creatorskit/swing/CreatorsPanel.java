@@ -526,7 +526,8 @@ public class CreatorsPanel extends PluginPanel
                 null,
                 0,
                 false,
-                300);
+                128,
+                128);
 
         textField.addActionListener(e -> onNameTextFieldChanged(character));
 
@@ -1955,7 +1956,8 @@ public class CreatorsPanel extends PluginPanel
                 character.getSummary(),
                 character.getProjectileKeyFrames(),
                 character.isRenderFix(),
-                character.getRenderFixScale());
+                character.getRenderFixWidth(),
+                character.getRenderFixHeight());
     }
 
     public void openLoadSetupDialog()
@@ -2348,12 +2350,16 @@ public class CreatorsPanel extends PluginPanel
                     false,
                     false);
 
-            // Restore both the toggle and the scale. If renderFixScale wasn't in the
-            // save (pre-2.2 saves serialize it as 0), fall back to the in-class default
-            // so the field stays a usable value rather than producing a 0 / no-op scale.
-            if (save.getRenderFixScale() > 0)
+            // Restore both the toggle and the per-axis scales. Pre-2.2 saves have
+            // these fields serialized as 0; the setters treat 0 as "no value, keep the
+            // class default of 128" so old saves still render correctly.
+            if (save.getRenderFixWidth() > 0)
             {
-                character.setRenderFixScale(save.getRenderFixScale());
+                character.setRenderFixWidth(save.getRenderFixWidth());
+            }
+            if (save.getRenderFixHeight() > 0)
+            {
+                character.setRenderFixHeight(save.getRenderFixHeight());
             }
             character.setRenderFix(save.isRenderFix());
 

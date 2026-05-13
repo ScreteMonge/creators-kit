@@ -76,22 +76,22 @@ public class Character
     private boolean renderFix;
 
     /**
-     * The model's natural cache scale, in OSRS 1/128 units (128 = native rigging size,
-     * 300 = Sol Heredit and similar new bosses). Used as the inverse of the pre-animation
-     * shrink so the rendered size stays at the model's intended display size while the
-     * animation runs against a temporarily-128-scale mesh.
-     *
-     * <p>Default 300 matches the most common problematic case from user reports. If
-     * other problem models have different natural scales, expose this via UI later --
-     * for now keep it editable on the data model and persisted via CharacterSave.
+     * Horizontal display scale of this Character's model in OSRS 1/128 units. Mirrors
+     * NPCComposition.getWidthScale(); captured at NPC-import time (auto-detect path)
+     * or settable manually for custom models. 128 = no scaling needed (matches the
+     * canonical rigging size); other values trigger the render-fix bracket when the
+     * toggle is on.
      */
-    private int renderFixScale = 300;
+    private int renderFixWidth = 128;
+
+    /** Vertical companion to {@link #renderFixWidth}; matches NPCComposition.getHeightScale(). */
+    private int renderFixHeight = 128;
 
     /**
      * Overrides Lombok's auto-generated setter so toggling renderFix on the Character
-     * also (a) pushes the flag + scale to the live CKObject, so the renderer picks up
-     * the change next frame, and (b) syncs the side-panel checkbox so programmatic
-     * toggles (e.g. loading a save) visibly reflect on the UI without an extra refresh.
+     * also (a) pushes the flag + per-axis scales to the live CKObject, so the renderer
+     * picks up the change next frame, and (b) syncs the side-panel checkbox so
+     * programmatic toggles (e.g. loading a save) visibly reflect on the UI.
      */
     public void setRenderFix(boolean renderFix)
     {
@@ -99,9 +99,10 @@ public class Character
         if (ckObject != null)
         {
             ckObject.setRenderFix(renderFix);
-            // Display scale only matters when the fix is active; when off, keep
-            // CKObject at the no-op default so getModel() short-circuits.
-            ckObject.setDisplayScale(renderFix ? renderFixScale : 128);
+            // Scales only matter when the fix is active; when off, force CKObject back
+            // to 128/128 so getModel() short-circuits even if scales are non-default.
+            ckObject.setWidthScale(renderFix ? renderFixWidth : 128);
+            ckObject.setHeightScale(renderFix ? renderFixHeight : 128);
         }
         if (renderFixCheckBox != null && renderFixCheckBox.isSelected() != renderFix)
         {
@@ -110,15 +111,25 @@ public class Character
     }
 
     /**
-     * Overrides Lombok's auto-generated setter so changing renderFixScale also pushes
-     * the new scale onto the live CKObject when the fix is currently active.
+     * Overrides Lombok's auto-generated setter so changing the horizontal scale also
+     * pushes it down to the live CKObject when the fix is currently active.
      */
-    public void setRenderFixScale(int renderFixScale)
+    public void setRenderFixWidth(int renderFixWidth)
     {
-        this.renderFixScale = renderFixScale;
+        this.renderFixWidth = renderFixWidth;
         if (ckObject != null && renderFix)
         {
-            ckObject.setDisplayScale(renderFixScale);
+            ckObject.setWidthScale(renderFixWidth);
+        }
+    }
+
+    /** @see #setRenderFixWidth(int) -- vertical companion. */
+    public void setRenderFixHeight(int renderFixHeight)
+    {
+        this.renderFixHeight = renderFixHeight;
+        if (ckObject != null && renderFix)
+        {
+            ckObject.setHeightScale(renderFixHeight);
         }
     }
 

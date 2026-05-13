@@ -39,14 +39,18 @@ public class CKObject extends RuneLiteObjectController
     private boolean renderFix;
 
     /**
-     * The display scale of this model in 1/128 units, as passed to ModelData.scale at
-     * construction. 128 means "no fix needed" (model already matches rigging). 300
-     * (Sol Heredit's cache value) means "shrink to 128 for animation, expand to 300
-     * for display". Captured by callers that build the model (the projectile loader,
-     * the spotanim loader, etc.) when they know the scale; defaults to 128 so the
-     * renderFix path is a no-op until a real scale is set.
+     * Horizontal display scale of this model in 1/128 units, as passed to
+     * {@code ModelData.scale} at construction (and as exposed by
+     * {@code NPCComposition.getWidthScale()}). 128 means "matches the rigging's
+     * canonical 1 tile = 128 units"; values like 300 (Sol Heredit) or 200 mean the
+     * cache shipped the model pre-scaled. The render-fix bracket uses
+     * {@code 128 / widthScale} as the pre-animation shrink factor on X and Z, then
+     * {@code widthScale / 128} as the post-animation expand factor.
      */
-    private int displayScale = 128;
+    private int widthScale = 128;
+
+    /** Vertical companion to {@link #widthScale}; matches NPCComposition.getHeightScale(). */
+    private int heightScale = 128;
 
     /** Canonical rigging scale baked into OSRS animation data (1/128 units = 1 tile). */
     private static final int RIGGING_SCALE = 128;
@@ -213,7 +217,9 @@ public class CKObject extends RuneLiteObjectController
     {
         boolean fix = renderFix
                 && baseModel != null
-                && displayScale != RIGGING_SCALE
+                && (widthScale != RIGGING_SCALE || heightScale != RIGGING_SCALE)
+                && widthScale > 0
+                && heightScale > 0
                 && (animationController != null || poseAnimationController != null);
 
         if (fix)
@@ -244,13 +250,14 @@ public class CKObject extends RuneLiteObjectController
     }
 
     /**
-     * Resets baseModel to its snapshotted original vertices, then uniformly scales it
-     * down so the mesh radii match the bones' canonical 128-scale distances when the
-     * animation pipeline runs against it. Mesh.scale(s) multiplies vertices by s/128,
-     * so we pass {@code (128 * RIGGING_SCALE) / displayScale} to get a factor of
-     * {@code RIGGING_SCALE / displayScale}. The reset step is critical: without it,
-     * Mesh.scale's int truncation compounds ~0.7%/frame at 300:128 and baseModel
-     * would drift far from its original size after a few seconds of playback.
+     * Resets baseModel to its snapshotted vertices, then scales it per-axis so each
+     * dimension matches the bones' canonical 128-scale distances when the animation
+     * pipeline runs against it. Mesh.scale(x, y, z) multiplies vertex i by
+     * {@code (x/128, y/128, z/128)}, so passing {@code 128 * 128 / widthScale} (etc.)
+     * achieves a factor of {@code 128 / widthScale}. The reset step is critical:
+     * Mesh.scale's int truncation compounds ~0.7%/frame at 300:128, so without
+     * restoring from snapshot baseModel would drift far from its original size
+     * within a few seconds of playback.
      */
     private void shrinkBaseModelForAnimation()
     {
@@ -273,26 +280,22 @@ public class CKObject extends RuneLiteObjectController
             System.arraycopy(baseVerticesSnapshot[1], 0, vy, 0, vy.length);
             System.arraycopy(baseVerticesSnapshot[2], 0, vz, 0, vz.length);
         }
-        if (displayScale <= 0)
-        {
-            return;
-        }
-        int s = Math.max(1, (128 * RIGGING_SCALE) / displayScale);
-        baseModel.scale(s, s, s);
+        int sx = Math.max(1, (128 * RIGGING_SCALE) / widthScale);
+        int sy = Math.max(1, (128 * RIGGING_SCALE) / heightScale);
+        int sz = sx; // Z mirrors X by OSRS convention (NPCComposition has no z-axis scale).
+        baseModel.scale(sx, sy, sz);
     }
 
     /**
      * Inverse of {@link #shrinkBaseModelForAnimation}: scales the just-animated mesh by
-     * {@code displayScale / RIGGING_SCALE} so the rendered size matches the user's
-     * intended model size while the animation was computed at the rigging-correct
-     * smaller scale. Mesh.scale(s) multiplies by s/128, so passing {@code displayScale}
-     * gives a factor of {@code displayScale / 128} -- exactly the inverse of the
-     * shrink, because the model's "natural" display scale is also normalized against
-     * the 128 reference.
+     * {@code widthScale / 128} on X/Z and {@code heightScale / 128} on Y, restoring the
+     * model to its display size while preserving the animation that was just computed
+     * at the rigging-correct smaller scale. Mesh.scale(s) multiplies by s/128, so
+     * passing {@code widthScale} directly gives the right factor.
      */
     private void expandAnimatedModel(Model animated)
     {
-        animated.scale(displayScale, displayScale, displayScale);
+        animated.scale(widthScale, heightScale, widthScale);
     }
 
     public boolean isFinished()
