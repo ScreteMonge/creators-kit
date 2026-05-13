@@ -139,16 +139,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private Character cameraLockedCharacter;
 
 	/**
-	 * Offset between the camera focal point and the locked Character's world position
-	 * captured at engage-time. Re-applied each tick so the user's chosen viewing
-	 * distance and angle relative to the Character is preserved as the Character
-	 * moves -- same behaviour as the default game camera following the local player.
-	 */
-	private double cameraLockOffsetX;
-	private double cameraLockOffsetY;
-	private double cameraLockOffsetZ;
-
-	/**
 	 * Captured camera mode at lock engage-time so the camera restores to whatever it
 	 * was in (0 = normal, 1 = free) when the lock disengages. Without this the user
 	 * would be stuck in free-camera mode after unlocking.
@@ -242,15 +232,12 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		final Character finalTarget = target;
 		clientThread.invokeLater(() ->
 		{
-			// Switch camera mode and capture the offset on the SAME client-thread tick
+			// Switch camera mode and publish the lock on the SAME client-thread tick
 			// so we never publish a "locked" state in which the renderer would observe
 			// (cameraLockedCharacter != null) AND (cameraMode != 1) -- that combination
 			// caused setCameraFocalPointZ to throw IllegalArgumentException on every
 			// ClientTick (50/s) until the JVM heap filled with logged stack traces.
 			client.setCameraMode(1);
-			cameraLockOffsetX = client.getCameraFocalPointX() - ck.getX();
-			cameraLockOffsetY = client.getCameraFocalPointY() - ck.getY();
-			cameraLockOffsetZ = client.getCameraFocalPointZ() - ck.getZ();
 			cameraLockedCharacter = finalTarget;
 			if (finalTarget.getCameraLockCheckBox() != null
 					&& !finalTarget.getCameraLockCheckBox().isSelected())
@@ -290,12 +277,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 		try
 		{
-			// Apply the captured offset to the Character's CURRENT position so the
-			// camera glides with them through movement keyframes, animation drift,
-			// and the SHIFT+WASD/Q/E sub-tile offsets.
-			client.setCameraFocalPointX(ck.getX() + cameraLockOffsetX);
-			client.setCameraFocalPointY(ck.getY() + cameraLockOffsetY);
-			client.setCameraFocalPointZ(ck.getZ() + cameraLockOffsetZ);
+			// Center the focal point on the Character's CURRENT position -- the same
+			// behaviour as the default game camera centering on the local player.
+			// Following the Character through movement keyframes, animation drift,
+			// and SHIFT+WASD/Q/E sub-tile offsets falls out naturally because all of
+			// those mutate ck.getX/Y/Z which we read fresh every tick.
+			client.setCameraFocalPointX(ck.getX());
+			client.setCameraFocalPointY(ck.getY());
+			client.setCameraFocalPointZ(ck.getZ());
 		}
 		catch (IllegalArgumentException ex)
 		{
