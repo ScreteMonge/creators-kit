@@ -1040,6 +1040,13 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		previewObject.setAnimationFrame(AnimationType.ACTIVE, ckObject.getAnimationFrame(AnimationType.ACTIVE), random, false,true);
 		previewObject.setLocation(lp, client.getTopLevelWorldView().getPlane());
 		previewObject.setRadius(ckObject.getRadius());
+		// Mirror the source Character's render-fix state onto the preview so the
+		// ghost shown at the hovered tile uses the same bracket-scaled animation
+		// as the real Character will once placed. Without this, Sol Heredit's
+		// preview animates broken-looking even when his real CKObject doesn't.
+		previewObject.setRenderFix(ckObject.isRenderFix());
+		previewObject.setWidthScale(ckObject.getWidthScale());
+		previewObject.setHeightScale(ckObject.getHeightScale());
 		previewObject.setActive(true);
 	}
 
