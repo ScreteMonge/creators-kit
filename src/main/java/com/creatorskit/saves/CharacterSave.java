@@ -37,4 +37,14 @@ public class CharacterSave
     private SpotAnimKeyFrame[][] spotanimKeyFrames;
     private HitsplatKeyFrame[][] hitsplatKeyFrames;
     private KeyFrameType[] summary;
+    /**
+     * Added 2.2.x. Null in pre-2.2 saves — Gson defaults missing fields, the load path
+     * treats null as "no projectile keyframes" so old saves load without migration.
+     */
+    private ProjectileKeyFrame[] projectileKeyFrames;
+    /**
+     * Added 2.2.x. Per-Character toggle for the post-animation render-fix pass. Gson
+     * defaults missing boolean fields to false, so old saves preserve default rendering.
+     */
+    private boolean renderFix;
 }

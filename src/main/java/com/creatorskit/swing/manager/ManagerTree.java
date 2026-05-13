@@ -885,6 +885,25 @@ public class ManagerTree extends JTree
                 toolBox.getTimeSheetPanel().getSummarySheet().showSummaryPopup(this, character, x, y));
         popup.add(keyframes);
 
+        // Render Fix toggle. Checked state reflects whichever Character was right-clicked;
+        // applies to the full selection so it's easy to fix-or-un-fix a whole folder at once.
+        JCheckBoxMenuItem renderFix = new JCheckBoxMenuItem("Render Fix (re-center animated mesh)");
+        renderFix.setSelected(character.isRenderFix());
+        renderFix.setToolTipText("<html>Post-processes the animated model each frame to re-center"
+                + " its vertices around the live centroid.<br>Fixes the \"parts drift apart during"
+                + " animation\" artifact some cache models<br>exhibit when their merged-model origin"
+                + " sits far from their visible mass.<br>Toggleable per-Character because well-behaved"
+                + " models don't need it.</html>");
+        renderFix.addActionListener(e ->
+        {
+            boolean enabled = renderFix.isSelected();
+            for (Character c : selectionManager.getSelected())
+            {
+                c.setRenderFix(enabled);
+            }
+        });
+        popup.add(renderFix);
+
         popup.show(this, x, y);
     }
 }

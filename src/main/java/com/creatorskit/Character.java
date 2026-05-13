@@ -61,6 +61,34 @@ public class Character
     /** One CKObject per active projectile-target instance; lazily allocated by the Programmer. */
     private final java.util.List<CKObject> projectileObjects = new java.util.ArrayList<>();
     private int targetOrientation;
+    /**
+     * When true, this Character's main CKObject runs its model through a post-animation
+     * render-fix pass instead of the default RuneLite render path. The fix re-centers
+     * the animated mesh around its geometric centroid each frame, which corrects the
+     * "parts drift apart during animation" artifact some cache models exhibit because
+     * their merged-model origin is far from their visible mass. Off by default since
+     * well-behaved models render fine without it; toggleable per-Character because the
+     * fix is unnecessary (and can subtly alter pivot for some models) when not needed.
+     *
+     * <p>Use {@link #setRenderFix(boolean)} (overridden below) to flip the toggle so
+     * the flag is mirrored onto the live CKObject -- otherwise the change wouldn't be
+     * picked up by the renderer until the CKObject was rebuilt.
+     */
+    private boolean renderFix;
+
+    /**
+     * Overrides Lombok's auto-generated setter so toggling renderFix on the Character
+     * also updates the live CKObject's flag. Without this the renderer would keep using
+     * the old rendering path until the CKObject was somehow rebuilt.
+     */
+    public void setRenderFix(boolean renderFix)
+    {
+        this.renderFix = renderFix;
+        if (ckObject != null)
+        {
+            ckObject.setRenderFix(renderFix);
+        }
+    }
 
     @Override
     public String toString()
@@ -638,6 +666,28 @@ public class Character
         for (int i = 0; i < keyFrames.length; i++)
         {
             keyFrame[i] = (MovementKeyFrame) keyFrames[i];
+        }
+
+        if (Arrays.stream(keyFrame).allMatch(Objects::isNull))
+        {
+            return null;
+        }
+
+        return keyFrame;
+    }
+
+    public ProjectileKeyFrame[] getProjectileKeyFrames()
+    {
+        KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.PROJECTILE);
+        if (keyFrames == null)
+        {
+            return null;
+        }
+
+        ProjectileKeyFrame[] keyFrame = new ProjectileKeyFrame[keyFrames.length];
+        for (int i = 0; i < keyFrames.length; i++)
+        {
+            keyFrame[i] = (ProjectileKeyFrame) keyFrames[i];
         }
 
         if (Arrays.stream(keyFrame).allMatch(Objects::isNull))

@@ -514,7 +514,8 @@ public class CreatorsPanel extends PluginPanel
                 new CKObject(client),
                 null,
                 null,
-                0);
+                0,
+                false);
 
         textField.addActionListener(e -> onNameTextFieldChanged(character));
 
@@ -1935,7 +1936,9 @@ public class CreatorsPanel extends PluginPanel
                 character.getHealthKeyFrames(),
                 spotAnimKeyFrames,
                 hitsplatKeyFrames,
-                character.getSummary());
+                character.getSummary(),
+                character.getProjectileKeyFrames(),
+                character.isRenderFix());
     }
 
     public void openLoadSetupDialog()
@@ -2289,6 +2292,14 @@ public class CreatorsPanel extends PluginPanel
                 frames[KeyFrameType.getIndex(KeyFrameType.HITSPLAT_4)] = hitsplatKeyFrames[3];
             }
 
+            // Null in pre-2.2 saves (field didn't exist) -- Gson defaults to null for
+            // missing object arrays. Empty array also valid for a Character that had no
+            // projectile keyframes at save time.
+            if (save.getProjectileKeyFrames() != null)
+            {
+                frames[KeyFrameType.getIndex(KeyFrameType.PROJECTILE)] = save.getProjectileKeyFrames();
+            }
+
             KeyFrameType[] summary;
             if (save.getSummary() == null)
             {
@@ -2319,6 +2330,8 @@ public class CreatorsPanel extends PluginPanel
                     save.isInInstance(),
                     false,
                     false);
+
+            character.setRenderFix(save.isRenderFix());
 
             addPanel(parentPanel, character, node, false, false);
         }

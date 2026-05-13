@@ -23,6 +23,16 @@ public class CKObject extends RuneLiteObjectController
     private CKAnimationController animationController;
     private CKAnimationController poseAnimationController;
 
+    /**
+     * When true, getModel() post-processes the animated mesh each frame by re-centering
+     * its vertices around the live centroid. Fixes "parts drift apart during animation"
+     * on cache models whose merged-model origin sits far from their visible mass --
+     * animation rotates vertices around the model origin, so off-center sub-parts sweep
+     * around in wide arcs and tear the rigging. Toggleable per-Character because well-
+     * behaved models don't need (and can subtly drift under) the extra centering pass.
+     */
+    private boolean renderFix;
+
     public CKObject(Client client)
     {
         this.client = client;
@@ -171,18 +181,70 @@ public class CKObject extends RuneLiteObjectController
     @Override
     public Model getModel()
     {
+        Model model;
         if (animationController != null)
         {
-            return animationController.animate(this.baseModel, this.poseAnimationController);
+            model = animationController.animate(this.baseModel, this.poseAnimationController);
         }
         else if (poseAnimationController != null)
         {
-            return poseAnimationController.animate(this.baseModel);
+            model = poseAnimationController.animate(this.baseModel);
         }
         else
         {
-            return baseModel;
+            model = baseModel;
         }
+
+        if (!renderFix || model == null)
+        {
+            return model;
+        }
+        return applyRenderFix(model);
+    }
+
+    /**
+     * Re-centers the animated mesh around its live (X, Y, Z) centroid, then recomputes
+     * its bounding cylinder. Done AFTER animation so bone-vertex associations stay
+     * intact -- pre-animation vertex mutation breaks the rigging at non-zero animation
+     * frames the same way pre-rotating projectile vertices broke their rigging at
+     * non-zero pitch.
+     */
+    private static Model applyRenderFix(Model model)
+    {
+        float[] verticesX = model.getVerticesX();
+        float[] verticesY = model.getVerticesY();
+        float[] verticesZ = model.getVerticesZ();
+        if (verticesX == null || verticesY == null || verticesZ == null
+                || verticesX.length == 0
+                || verticesX.length != verticesY.length
+                || verticesX.length != verticesZ.length)
+        {
+            return model;
+        }
+
+        double sumX = 0;
+        double sumY = 0;
+        double sumZ = 0;
+        int n = verticesX.length;
+        for (int i = 0; i < n; i++)
+        {
+            sumX += verticesX[i];
+            sumY += verticesY[i];
+            sumZ += verticesZ[i];
+        }
+        float cx = (float) (sumX / n);
+        float cy = (float) (sumY / n);
+        float cz = (float) (sumZ / n);
+
+        for (int i = 0; i < n; i++)
+        {
+            verticesX[i] -= cx;
+            verticesY[i] -= cy;
+            verticesZ[i] -= cz;
+        }
+
+        model.calculateBoundsCylinder();
+        return model;
     }
 
     public boolean isFinished()
