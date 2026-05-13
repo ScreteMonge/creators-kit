@@ -239,14 +239,19 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			cameraLockPreviousMode = client.getCameraMode();
 		}
 
-		cameraLockedCharacter = target;
 		final Character finalTarget = target;
 		clientThread.invokeLater(() ->
 		{
+			// Switch camera mode and capture the offset on the SAME client-thread tick
+			// so we never publish a "locked" state in which the renderer would observe
+			// (cameraLockedCharacter != null) AND (cameraMode != 1) -- that combination
+			// caused setCameraFocalPointZ to throw IllegalArgumentException on every
+			// ClientTick (50/s) until the JVM heap filled with logged stack traces.
 			client.setCameraMode(1);
 			cameraLockOffsetX = client.getCameraFocalPointX() - ck.getX();
 			cameraLockOffsetY = client.getCameraFocalPointY() - ck.getY();
 			cameraLockOffsetZ = client.getCameraFocalPointZ() - ck.getZ();
+			cameraLockedCharacter = finalTarget;
 			if (finalTarget.getCameraLockCheckBox() != null
 					&& !finalTarget.getCameraLockCheckBox().isSelected())
 			{
@@ -262,6 +267,15 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		{
 			return;
 		}
+		// Defensive: setCameraFocalPointX/Y/Z requires free-camera mode (1) and throws
+		// IllegalArgumentException otherwise. If the mode has been flipped from under
+		// us (another plugin, a cutscene, or the user toggling Detached Camera back to
+		// Oculus Orb), drop the lock cleanly rather than spam exceptions every tick.
+		if (client.getCameraMode() != 1)
+		{
+			setCameraLockedCharacter(null);
+			return;
+		}
 		CKObject ck = cameraLockedCharacter.getCkObject();
 		if (ck == null)
 		{
@@ -270,12 +284,20 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			setCameraLockedCharacter(null);
 			return;
 		}
-		// Apply the captured offset to the Character's CURRENT position so the camera
-		// glides with them through movement keyframes, animation drift, and the
-		// SHIFT+WASD/Q/E sub-tile offsets.
-		client.setCameraFocalPointX(ck.getX() + cameraLockOffsetX);
-		client.setCameraFocalPointY(ck.getY() + cameraLockOffsetY);
-		client.setCameraFocalPointZ(ck.getZ() + cameraLockOffsetZ);
+		try
+		{
+			// Apply the captured offset to the Character's CURRENT position so the
+			// camera glides with them through movement keyframes, animation drift,
+			// and the SHIFT+WASD/Q/E sub-tile offsets.
+			client.setCameraFocalPointX(ck.getX() + cameraLockOffsetX);
+			client.setCameraFocalPointY(ck.getY() + cameraLockOffsetY);
+			client.setCameraFocalPointZ(ck.getZ() + cameraLockOffsetZ);
+		}
+		catch (IllegalArgumentException ex)
+		{
+			// Camera mode flipped during this tick -- back out and don't spam.
+			setCameraLockedCharacter(null);
+		}
 	}
 	private CKObject transmog;
 	private CKObject previewObject;
