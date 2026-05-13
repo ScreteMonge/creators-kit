@@ -277,20 +277,43 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 		try
 		{
-			// Center the focal point on the Character's CURRENT position -- the same
-			// behaviour as the default game camera centering on the local player.
-			// Following the Character through movement keyframes, animation drift,
-			// and SHIFT+WASD/Q/E sub-tile offsets falls out naturally because all of
-			// those mutate ck.getX/Y/Z which we read fresh every tick.
-			client.setCameraFocalPointX(ck.getX());
-			client.setCameraFocalPointY(ck.getY());
-			client.setCameraFocalPointZ(ck.getZ());
+			// Exponential decay easing: each tick the focal point closes a fixed
+			// fraction of the remaining distance to the Character. Gives natural
+			// ease-out (faster when far, slower when close) and ease-in on engage
+			// (camera accelerates smoothly from wherever it was when locked). At
+			// factor 0.15 the camera reaches ~95% of the target within one game
+			// tick (~30 client ticks), matching vanilla's "responsive but not
+			// snappy" feel. Configurable so users can dial in faster or slower.
+			double easing = clamp01(config.cameraLockEasing());
+			double targetX = ck.getX();
+			double targetY = ck.getY();
+			double targetZ = ck.getZ();
+			double cx = client.getCameraFocalPointX();
+			double cy = client.getCameraFocalPointY();
+			double cz = client.getCameraFocalPointZ();
+			client.setCameraFocalPointX(cx + (targetX - cx) * easing);
+			client.setCameraFocalPointY(cy + (targetY - cy) * easing);
+			client.setCameraFocalPointZ(cz + (targetZ - cz) * easing);
 		}
 		catch (IllegalArgumentException ex)
 		{
 			// Camera mode flipped during this tick -- back out and don't spam.
 			setCameraLockedCharacter(null);
 		}
+	}
+
+	/**
+	 * Clamp to (0, 1]. A non-positive easing factor would freeze the camera entirely,
+	 * a factor &gt; 1 would overshoot the target -- both useless for the lock. Default
+	 * is enforced separately by the config's {@code default} value.
+	 */
+	private static double clamp01(double v)
+	{
+		if (v <= 0.0)
+		{
+			return 0.01;
+		}
+		return v > 1.0 ? 1.0 : v;
 	}
 	private CKObject transmog;
 	private CKObject previewObject;
