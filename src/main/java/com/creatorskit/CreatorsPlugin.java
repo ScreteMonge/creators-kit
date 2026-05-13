@@ -1040,6 +1040,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		previewObject.setAnimationFrame(AnimationType.ACTIVE, ckObject.getAnimationFrame(AnimationType.ACTIVE), random, false,true);
 		previewObject.setLocation(lp, client.getTopLevelWorldView().getPlane());
 		previewObject.setRadius(ckObject.getRadius());
+		// Mirror render-fix state onto the preview so the ghost runs through the same
+		// bracket-scaled animation pipeline as the placed Character. Now safe to do
+		// (was previously reverted) because baseModel is restored to its original
+		// vertices after each getModel() call -- the two objects can share the same
+		// Model reference without leaking shrunken vertices between them.
+		previewObject.setRenderFix(ckObject.isRenderFix());
+		previewObject.setWidthScale(ckObject.getWidthScale());
+		previewObject.setHeightScale(ckObject.getHeightScale());
 		previewObject.setActive(true);
 	}
 
