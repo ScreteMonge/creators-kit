@@ -339,6 +339,12 @@ public class CreatorsPanel extends PluginPanel
         spawnCheckBox.setToolTipText("Toggle the Object on or off");
         spawnCheckBox.setFocusable(false);
 
+        JCheckBox renderFixCheckBox = new JCheckBox();
+        renderFixCheckBox.setText("Render fix");
+        renderFixCheckBox.setToolTipText("<html>Post-processes the animated model each frame.<br>"
+                + "Toggle this on for cache models whose animations look broken under default rendering.</html>");
+        renderFixCheckBox.setFocusable(false);
+
         JButton colourButton = new JButton();
         colourButton.setFont(FontManager.getRunescapeFont());
         colourButton.setText("Recolour");
@@ -438,6 +444,9 @@ public class CreatorsPanel extends PluginPanel
             objectPanel.add(spawnCheckBox, c);
 
             c.gridy++;
+            objectPanel.add(renderFixCheckBox, c);
+
+            c.gridy++;
             objectPanel.add(colourButton, c);
 
             c.gridy++;
@@ -504,6 +513,7 @@ public class CreatorsPanel extends PluginPanel
                 textField,
                 modelComboBox,
                 spawnCheckBox,
+                renderFixCheckBox,
                 modelButton,
                 null,
                 modelSpinner,
@@ -565,6 +575,11 @@ public class CreatorsPanel extends PluginPanel
             character.toggleActive(clientThread);
             propagateActive(character, character.isActive());
         });
+
+        // Mirror the checkbox into the Character's renderFix flag. The setter pushes the
+        // value down to the live CKObject so the renderer picks it up immediately on the
+        // next frame -- no rebuild needed.
+        renderFixCheckBox.addActionListener(e -> character.setRenderFix(renderFixCheckBox.isSelected()));
 
         character.setColourButton(colourButton);
         colourButton.addActionListener(e -> showColorPickerFor(character, colourButton));

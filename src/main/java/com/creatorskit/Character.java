@@ -48,6 +48,8 @@ public class Character
     private JTextField nameField;
     private JComboBox<CustomModel> comboBox;
     private JCheckBox spawnCheckBox;
+    /** Side-panel checkbox mirroring {@link #renderFix}; lives next to spawnCheckBox. */
+    private JCheckBox renderFixCheckBox;
     private JButton modelButton;
     private JButton colourButton;
     private JSpinner modelSpinner;
@@ -78,8 +80,9 @@ public class Character
 
     /**
      * Overrides Lombok's auto-generated setter so toggling renderFix on the Character
-     * also updates the live CKObject's flag. Without this the renderer would keep using
-     * the old rendering path until the CKObject was somehow rebuilt.
+     * also (a) updates the live CKObject's flag, so the renderer immediately picks up
+     * the change, and (b) syncs the side-panel checkbox so programmatic toggles (e.g.
+     * loading a save) visibly reflect on the UI without an extra refresh path.
      */
     public void setRenderFix(boolean renderFix)
     {
@@ -87,6 +90,10 @@ public class Character
         if (ckObject != null)
         {
             ckObject.setRenderFix(renderFix);
+        }
+        if (renderFixCheckBox != null && renderFixCheckBox.isSelected() != renderFix)
+        {
+            renderFixCheckBox.setSelected(renderFix);
         }
     }
 

@@ -203,46 +203,23 @@ public class CKObject extends RuneLiteObjectController
     }
 
     /**
-     * Re-centers the animated mesh around its live (X, Y, Z) centroid, then recomputes
-     * its bounding cylinder. Done AFTER animation so bone-vertex associations stay
-     * intact -- pre-animation vertex mutation breaks the rigging at non-zero animation
-     * frames the same way pre-rotating projectile vertices broke their rigging at
-     * non-zero pitch.
+     * Render-fix post-processing hook. Runs AFTER the animation pipeline, so any vertex
+     * mutation here doesn't break the bone-vertex correspondence that animation relies
+     * on (the same lesson that drove the projectile pitch fix).
+     *
+     * <p>Currently a no-op placeholder: the first attempt -- re-centering vertices on
+     * their (X, Y, Z) centroid -- only shifted models visually (drag-character-into-the-
+     * ground side effect) without actually correcting the "parts drift apart during
+     * animation" artifact users observe on some cache models. The right transform here
+     * still needs investigation -- could be a corrective scale, a specific axis-flip, or
+     * something else entirely depending on what's actually wrong with those models.
+     *
+     * <p>{@code model.calculateBoundsCylinder()} is called as a defensive default since
+     * stale bounds occasionally cause culling-related rendering artifacts and the call
+     * is harmless on already-correct bounds.
      */
     private static Model applyRenderFix(Model model)
     {
-        float[] verticesX = model.getVerticesX();
-        float[] verticesY = model.getVerticesY();
-        float[] verticesZ = model.getVerticesZ();
-        if (verticesX == null || verticesY == null || verticesZ == null
-                || verticesX.length == 0
-                || verticesX.length != verticesY.length
-                || verticesX.length != verticesZ.length)
-        {
-            return model;
-        }
-
-        double sumX = 0;
-        double sumY = 0;
-        double sumZ = 0;
-        int n = verticesX.length;
-        for (int i = 0; i < n; i++)
-        {
-            sumX += verticesX[i];
-            sumY += verticesY[i];
-            sumZ += verticesZ[i];
-        }
-        float cx = (float) (sumX / n);
-        float cy = (float) (sumY / n);
-        float cz = (float) (sumZ / n);
-
-        for (int i = 0; i < n; i++)
-        {
-            verticesX[i] -= cx;
-            verticesY[i] -= cy;
-            verticesZ[i] -= cz;
-        }
-
         model.calculateBoundsCylinder();
         return model;
     }
