@@ -241,9 +241,21 @@ public class CKObject extends RuneLiteObjectController
             model = baseModel;
         }
 
-        if (fix && model != null)
+        if (fix)
         {
-            expandAnimatedModel(model);
+            // Restore baseModel BEFORE expanding the animated output. The animated
+            // model is a fresh copy from applyTransformations, so expanding it doesn't
+            // depend on baseModel anymore -- but baseModel needs to be back to its
+            // original size before this method returns. Otherwise anything else that
+            // shares the same Model instance (e.g. the Ctrl-hover preview, which
+            // points at the same CustomModel.getModel() reference) reads the shrunken
+            // state between frames and renders at the rigging size instead of the
+            // intended display size.
+            restoreBaseModelToSnapshot();
+            if (model != null)
+            {
+                expandAnimatedModel(model);
+            }
         }
 
         return model;
@@ -296,6 +308,33 @@ public class CKObject extends RuneLiteObjectController
     private void expandAnimatedModel(Model animated)
     {
         animated.scale(widthScale, heightScale, widthScale);
+    }
+
+    /**
+     * Copies the snapshotted vertices back into baseModel without rescaling. Called
+     * after the animation pipeline runs so baseModel returns to its original display-
+     * scale state before this getModel() invocation returns -- otherwise other readers
+     * of the same Model instance (sharing via CustomModel.getModel()) would observe
+     * the shrunken vertices we left behind for the animate() call. Cheap: just three
+     * System.arraycopy operations on already-sized vertex arrays.
+     */
+    private void restoreBaseModelToSnapshot()
+    {
+        if (baseVerticesSnapshot == null || baseModel == null)
+        {
+            return;
+        }
+        float[] vx = baseModel.getVerticesX();
+        float[] vy = baseModel.getVerticesY();
+        float[] vz = baseModel.getVerticesZ();
+        if (vx == null || vy == null || vz == null
+                || vx.length != baseVerticesSnapshot[0].length)
+        {
+            return;
+        }
+        System.arraycopy(baseVerticesSnapshot[0], 0, vx, 0, vx.length);
+        System.arraycopy(baseVerticesSnapshot[1], 0, vy, 0, vy.length);
+        System.arraycopy(baseVerticesSnapshot[2], 0, vz, 0, vz.length);
     }
 
     public boolean isFinished()
