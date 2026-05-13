@@ -130,6 +130,31 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private final ArrayList<CustomModel> storedModels = new ArrayList<>();
 	private Character hoveredCharacter;
 
+	/**
+	 * Character the camera is currently locked onto, or null if no lock is engaged.
+	 * Only one Character can be locked at a time -- selecting a different one via
+	 * the manager-tree menu or a sidebar checkbox switches the lock to that one.
+	 * Cleared automatically if the locked Character's CKObject becomes stale.
+	 */
+	private Character cameraLockedCharacter;
+
+	/**
+	 * Offset between the camera focal point and the locked Character's world position
+	 * captured at engage-time. Re-applied each tick so the user's chosen viewing
+	 * distance and angle relative to the Character is preserved as the Character
+	 * moves -- same behaviour as the default game camera following the local player.
+	 */
+	private double cameraLockOffsetX;
+	private double cameraLockOffsetY;
+	private double cameraLockOffsetZ;
+
+	/**
+	 * Captured camera mode at lock engage-time so the camera restores to whatever it
+	 * was in (0 = normal, 1 = free) when the lock disengages. Without this the user
+	 * would be stuck in free-camera mode after unlocking.
+	 */
+	private int cameraLockPreviousMode = -1;
+
 	public Character getSelectedCharacter()
 	{
 		return selectionManager.getPrimary();
@@ -145,6 +170,112 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		{
 			selectionManager.select(selected);
 		}
+	}
+
+	/**
+	 * Returns the Character the camera is currently locked onto, or null if no lock
+	 * is engaged. UI components (manager-tree menu, sidebar checkbox) read this to
+	 * compute their checked state.
+	 */
+	public Character getCameraLockedCharacter()
+	{
+		return cameraLockedCharacter;
+	}
+
+	/**
+	 * Engages, switches, or releases the camera lock. Passing the currently-locked
+	 * Character releases it; passing a different Character switches the lock; passing
+	 * null also releases it.
+	 *
+	 * <p>Engaging captures the (camera focal point - Character position) offset and
+	 * switches the camera into free-camera mode (the mode that exposes
+	 * setCameraFocalPointX/Y/Z). The per-tick focal-point update in
+	 * {@link #onClientTickForCameraLock(ClientTick)} keeps the camera glued to the
+	 * Character through movement keyframes and sub-tile offsets. Disengaging restores
+	 * whatever camera mode was active before the lock so the user isn't stranded in
+	 * free-camera mode.
+	 *
+	 * <p>Also syncs the UI: the per-Character renderFix-style sidebar checkbox and
+	 * the manager-tree checkbox-menu-item for the newly-locked Character flip on,
+	 * and the previously-locked Character's UI flips off.
+	 */
+	public void setCameraLockedCharacter(Character target)
+	{
+		Character previous = cameraLockedCharacter;
+		if (previous == target)
+		{
+			target = null; // re-press releases
+		}
+
+		if (previous != null && previous != target && previous.getCameraLockCheckBox() != null
+				&& previous.getCameraLockCheckBox().isSelected())
+		{
+			previous.getCameraLockCheckBox().setSelected(false);
+		}
+
+		if (target == null)
+		{
+			cameraLockedCharacter = null;
+			if (cameraLockPreviousMode != -1)
+			{
+				int restore = cameraLockPreviousMode;
+				cameraLockPreviousMode = -1;
+				clientThread.invokeLater(() -> client.setCameraMode(restore));
+			}
+			return;
+		}
+
+		CKObject ck = target.getCkObject();
+		if (ck == null)
+		{
+			return; // Character has no CKObject yet (e.g. before scene load) -- bail silently.
+		}
+
+		// Capture restore-mode the FIRST time the lock engages this session; if the user
+		// switches from one Character to another, the previous mode is still whatever
+		// was captured initially, so the restore-on-release behaves consistently.
+		if (cameraLockPreviousMode == -1)
+		{
+			cameraLockPreviousMode = client.getCameraMode();
+		}
+
+		cameraLockedCharacter = target;
+		final Character finalTarget = target;
+		clientThread.invokeLater(() ->
+		{
+			client.setCameraMode(1);
+			cameraLockOffsetX = client.getCameraFocalPointX() - ck.getX();
+			cameraLockOffsetY = client.getCameraFocalPointY() - ck.getY();
+			cameraLockOffsetZ = client.getCameraFocalPointZ() - ck.getZ();
+			if (finalTarget.getCameraLockCheckBox() != null
+					&& !finalTarget.getCameraLockCheckBox().isSelected())
+			{
+				finalTarget.getCameraLockCheckBox().setSelected(true);
+			}
+		});
+	}
+
+	@Subscribe
+	public void onClientTickForCameraLock(ClientTick event)
+	{
+		if (cameraLockedCharacter == null)
+		{
+			return;
+		}
+		CKObject ck = cameraLockedCharacter.getCkObject();
+		if (ck == null)
+		{
+			// CKObject was rebuilt (render-fix toggle, model swap, etc.) -- drop the
+			// lock rather than chase a stale ref. UI checkboxes follow via the setter.
+			setCameraLockedCharacter(null);
+			return;
+		}
+		// Apply the captured offset to the Character's CURRENT position so the camera
+		// glides with them through movement keyframes, animation drift, and the
+		// SHIFT+WASD/Q/E sub-tile offsets.
+		client.setCameraFocalPointX(ck.getX() + cameraLockOffsetX);
+		client.setCameraFocalPointY(ck.getY() + cameraLockOffsetY);
+		client.setCameraFocalPointZ(ck.getZ() + cameraLockOffsetZ);
 	}
 	private CKObject transmog;
 	private CKObject previewObject;
@@ -1497,7 +1628,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 	};
 
-	private final HotkeyListener nudgeUpListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_R, InputEvent.SHIFT_DOWN_MASK))
+	// Q/E instead of R/F for the Z axis because the Detached Camera plugin reserves
+	// WASDRF for its own camera controls and SHIFT+R / SHIFT+F didn't fire reliably
+	// with that plugin enabled. Q sits on the home-row middle finger and E on the
+	// index, keeping the nudge cluster a short reach from the WASD X/Y keys.
+	private final HotkeyListener nudgeUpListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_Q, InputEvent.SHIFT_DOWN_MASK))
 	{
 		@Override
 		public void hotkeyPressed()
@@ -1506,7 +1641,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 	};
 
-	private final HotkeyListener nudgeDownListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_F, InputEvent.SHIFT_DOWN_MASK))
+	private final HotkeyListener nudgeDownListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_E, InputEvent.SHIFT_DOWN_MASK))
 	{
 		@Override
 		public void hotkeyPressed()

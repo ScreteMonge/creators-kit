@@ -345,6 +345,15 @@ public class CreatorsPanel extends PluginPanel
                 + "Toggle this on for cache models whose animations look broken under default rendering.</html>");
         renderFixCheckBox.setFocusable(false);
 
+        JCheckBox cameraLockCheckBox = new JCheckBox();
+        cameraLockCheckBox.setText("Camera lock");
+        cameraLockCheckBox.setToolTipText("<html>Locks the camera onto this Character so it follows them"
+                + "<br>through their movement keyframes, the same way the default"
+                + "<br>game camera follows the local player. Switches the camera into"
+                + "<br>free-camera mode while engaged; restores the previous mode on release."
+                + "<br>Only one Character can be locked at a time -- locking another auto-unlocks this one.</html>");
+        cameraLockCheckBox.setFocusable(false);
+
         JButton colourButton = new JButton();
         colourButton.setFont(FontManager.getRunescapeFont());
         colourButton.setText("Recolour");
@@ -447,6 +456,9 @@ public class CreatorsPanel extends PluginPanel
             objectPanel.add(renderFixCheckBox, c);
 
             c.gridy++;
+            objectPanel.add(cameraLockCheckBox, c);
+
+            c.gridy++;
             objectPanel.add(colourButton, c);
 
             c.gridy++;
@@ -514,6 +526,7 @@ public class CreatorsPanel extends PluginPanel
                 modelComboBox,
                 spawnCheckBox,
                 renderFixCheckBox,
+                cameraLockCheckBox,
                 modelButton,
                 null,
                 modelSpinner,
@@ -585,6 +598,11 @@ public class CreatorsPanel extends PluginPanel
         // value down to the live CKObject so the renderer picks it up immediately on the
         // next frame -- no rebuild needed.
         renderFixCheckBox.addActionListener(e -> character.setRenderFix(renderFixCheckBox.isSelected()));
+
+        // Camera lock toggles via the plugin so the mutual-exclusion (only one Character
+        // locked at a time) is centrally enforced and the manager-tree right-click menu
+        // for any other Character can see the current locked state.
+        cameraLockCheckBox.addActionListener(e -> plugin.setCameraLockedCharacter(character));
 
         character.setColourButton(colourButton);
         colourButton.addActionListener(e -> showColorPickerFor(character, colourButton));

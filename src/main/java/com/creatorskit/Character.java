@@ -50,6 +50,13 @@ public class Character
     private JCheckBox spawnCheckBox;
     /** Side-panel checkbox mirroring {@link #renderFix}; lives next to spawnCheckBox. */
     private JCheckBox renderFixCheckBox;
+    /**
+     * Side-panel checkbox for the per-Character camera lock. Mutually exclusive across
+     * Characters -- the plugin's setCameraLockedCharacter clears the previously-locked
+     * Character's checkbox before flipping this one on. Click-driven, and stays in
+     * sync with the manager-tree right-click toggle since both call into the plugin.
+     */
+    private JCheckBox cameraLockCheckBox;
     private JButton modelButton;
     private JButton colourButton;
     private JSpinner modelSpinner;
