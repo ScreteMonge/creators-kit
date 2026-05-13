@@ -145,6 +145,15 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	 */
 	private int cameraLockPreviousMode = -1;
 
+	/**
+	 * Captured Oculus Orb state at lock engage-time. Detached Camera plugin sets the
+	 * orb on; CK's lock needs free-camera mode and the two states conflict at the
+	 * engine level (the orb hijacks focal point updates), so the lock disables the orb
+	 * while engaged. Restored on release so re-enabling the lock followed by
+	 * disabling it leaves Detached Camera in the state it was in.
+	 */
+	private int cameraLockPreviousOculusOrbState = -1;
+
 	public Character getSelectedCharacter()
 	{
 		return selectionManager.getPrimary();
@@ -206,11 +215,23 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		if (target == null)
 		{
 			cameraLockedCharacter = null;
-			if (cameraLockPreviousMode != -1)
+			final int restoreMode = cameraLockPreviousMode;
+			final int restoreOrb = cameraLockPreviousOculusOrbState;
+			cameraLockPreviousMode = -1;
+			cameraLockPreviousOculusOrbState = -1;
+			if (restoreMode != -1 || restoreOrb != -1)
 			{
-				int restore = cameraLockPreviousMode;
-				cameraLockPreviousMode = -1;
-				clientThread.invokeLater(() -> client.setCameraMode(restore));
+				clientThread.invokeLater(() ->
+				{
+					if (restoreMode != -1)
+					{
+						client.setCameraMode(restoreMode);
+					}
+					if (restoreOrb != -1)
+					{
+						client.setOculusOrbState(restoreOrb);
+					}
+				});
 			}
 			return;
 		}
@@ -221,22 +242,28 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return; // Character has no CKObject yet (e.g. before scene load) -- bail silently.
 		}
 
-		// Capture restore-mode the FIRST time the lock engages this session; if the user
-		// switches from one Character to another, the previous mode is still whatever
-		// was captured initially, so the restore-on-release behaves consistently.
-		if (cameraLockPreviousMode == -1)
-		{
-			cameraLockPreviousMode = client.getCameraMode();
-		}
-
 		final Character finalTarget = target;
 		clientThread.invokeLater(() ->
 		{
-			// Switch camera mode and publish the lock on the SAME client-thread tick
-			// so we never publish a "locked" state in which the renderer would observe
-			// (cameraLockedCharacter != null) AND (cameraMode != 1) -- that combination
-			// caused setCameraFocalPointZ to throw IllegalArgumentException on every
-			// ClientTick (50/s) until the JVM heap filled with logged stack traces.
+			// Snapshot the pre-lock camera state on the client thread (the only place
+			// it's safe to query). Detached Camera plugin sets the orb on; our free-
+			// camera mode and the orb conflict at the engine level (the orb hijacks
+			// focal point updates), so we disable the orb while locked.
+			if (cameraLockPreviousMode == -1)
+			{
+				cameraLockPreviousMode = client.getCameraMode();
+			}
+			if (cameraLockPreviousOculusOrbState == -1)
+			{
+				cameraLockPreviousOculusOrbState = client.getOculusOrbState();
+			}
+
+			// Switch modes and publish the lock on the SAME client-thread tick so we
+			// never publish a "locked" state in which the renderer would observe
+			// (cameraLockedCharacter != null) AND (cameraMode != 1) -- that
+			// combination caused setCameraFocalPointZ to throw IllegalArgumentException
+			// on every ClientTick (50/s) until the JVM heap filled with stack traces.
+			client.setOculusOrbState(0);
 			client.setCameraMode(1);
 			cameraLockedCharacter = finalTarget;
 			if (finalTarget.getCameraLockCheckBox() != null

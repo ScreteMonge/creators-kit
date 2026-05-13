@@ -221,6 +221,20 @@ public class CreatorsPanel extends PluginPanel
         deselectButton.addActionListener(e -> selectionManager.clear());
         add(deselectButton, c);
 
+        // Global Unlock Camera button. Sits right under Deselect All so it's visible
+        // and one click away when the user wants to escape the lock without having to
+        // hunt down whichever Character has it in the manager tree. Delegates to the
+        // plugin (passing null releases via the same code path manual toggle uses).
+        c.gridwidth = 3;
+        c.gridx = 0;
+        c.gridy++;
+        JButton unlockCameraButton = new JButton("Unlock Camera");
+        unlockCameraButton.setFocusable(false);
+        unlockCameraButton.setToolTipText("Release the camera lock on whichever Character currently has it. "
+                + "Restores the camera mode and Oculus Orb state that were active before the lock engaged.");
+        unlockCameraButton.addActionListener(e -> plugin.setCameraLockedCharacter(null));
+        add(unlockCameraButton, c);
+
         // Live indicator of the Add-Program-Step speed; updated when the user holds
         // the hotkey and scrolls the mouse wheel.
         c.gridwidth = 3;
