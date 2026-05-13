@@ -24,14 +24,41 @@ public class CKObject extends RuneLiteObjectController
     private CKAnimationController poseAnimationController;
 
     /**
-     * When true, getModel() post-processes the animated mesh each frame by re-centering
-     * its vertices around the live centroid. Fixes "parts drift apart during animation"
-     * on cache models whose merged-model origin sits far from their visible mass --
-     * animation rotates vertices around the model origin, so off-center sub-parts sweep
-     * around in wide arcs and tear the rigging. Toggleable per-Character because well-
-     * behaved models don't need (and can subtly drift under) the extra centering pass.
+     * When true, getModel() bracket-scales the model around the animation call so the
+     * mesh is at the rigging's canonical 128 scale while animation runs, then scaled
+     * back up to its display size for rendering. Fixes the "warped / drifting parts"
+     * artifact on models whose cache resizeX/Y/Z pushes them above 128 (e.g. Sol
+     * Heredit at 300) -- bones are stored at the 128 rigging scale, so vertices at
+     * 300 swing in arcs ~2.3x the rigging's intended radius and the animation looks
+     * exaggerated / torn. Running the animation against a temporarily-shrunk mesh
+     * matches bone radii to vertex distances, then post-animation upscale restores
+     * the visual size. Toggleable per-Character because well-behaved models that
+     * already match the rigging don't need (and would round-trip lossily through)
+     * the bracket scale.
      */
     private boolean renderFix;
+
+    /**
+     * The display scale of this model in 1/128 units, as passed to ModelData.scale at
+     * construction. 128 means "no fix needed" (model already matches rigging). 300
+     * (Sol Heredit's cache value) means "shrink to 128 for animation, expand to 300
+     * for display". Captured by callers that build the model (the projectile loader,
+     * the spotanim loader, etc.) when they know the scale; defaults to 128 so the
+     * renderFix path is a no-op until a real scale is set.
+     */
+    private int displayScale = 128;
+
+    /** Canonical rigging scale baked into OSRS animation data (1/128 units = 1 tile). */
+    private static final int RIGGING_SCALE = 128;
+
+    /**
+     * Snapshot of baseModel's vertices captured when {@link #setModel(Model)} is called,
+     * so each frame's render-fix pass can start from a clean baseline instead of
+     * compounding scale operations across frames (Mesh.scale's int truncation
+     * accumulates 0.7%/frame at 300:128 -- after a few seconds baseModel would drift
+     * far from its original size). Null until renderFix actually engages.
+     */
+    private float[][] baseVerticesSnapshot;
 
     public CKObject(Client client)
     {
@@ -43,6 +70,9 @@ public class CKObject extends RuneLiteObjectController
     public void setModel(Model baseModel)
     {
         this.baseModel = baseModel;
+        // Invalidate the previous snapshot -- a new model needs a fresh baseline before
+        // the render-fix pass can shrink + restore it without compounding drift.
+        this.baseVerticesSnapshot = null;
     }
 
     @Override
@@ -181,6 +211,16 @@ public class CKObject extends RuneLiteObjectController
     @Override
     public Model getModel()
     {
+        boolean fix = renderFix
+                && baseModel != null
+                && displayScale != RIGGING_SCALE
+                && (animationController != null || poseAnimationController != null);
+
+        if (fix)
+        {
+            shrinkBaseModelForAnimation();
+        }
+
         Model model;
         if (animationController != null)
         {
@@ -195,33 +235,64 @@ public class CKObject extends RuneLiteObjectController
             model = baseModel;
         }
 
-        if (!renderFix || model == null)
+        if (fix && model != null)
         {
-            return model;
+            expandAnimatedModel(model);
         }
-        return applyRenderFix(model);
+
+        return model;
     }
 
     /**
-     * Render-fix post-processing hook. Runs AFTER the animation pipeline, so any vertex
-     * mutation here doesn't break the bone-vertex correspondence that animation relies
-     * on (the same lesson that drove the projectile pitch fix).
-     *
-     * <p>Currently a no-op placeholder: the first attempt -- re-centering vertices on
-     * their (X, Y, Z) centroid -- only shifted models visually (drag-character-into-the-
-     * ground side effect) without actually correcting the "parts drift apart during
-     * animation" artifact users observe on some cache models. The right transform here
-     * still needs investigation -- could be a corrective scale, a specific axis-flip, or
-     * something else entirely depending on what's actually wrong with those models.
-     *
-     * <p>{@code model.calculateBoundsCylinder()} is called as a defensive default since
-     * stale bounds occasionally cause culling-related rendering artifacts and the call
-     * is harmless on already-correct bounds.
+     * Resets baseModel to its snapshotted original vertices, then uniformly scales it
+     * down so the mesh radii match the bones' canonical 128-scale distances when the
+     * animation pipeline runs against it. Mesh.scale(s) multiplies vertices by s/128,
+     * so we pass {@code (128 * RIGGING_SCALE) / displayScale} to get a factor of
+     * {@code RIGGING_SCALE / displayScale}. The reset step is critical: without it,
+     * Mesh.scale's int truncation compounds ~0.7%/frame at 300:128 and baseModel
+     * would drift far from its original size after a few seconds of playback.
      */
-    private static Model applyRenderFix(Model model)
+    private void shrinkBaseModelForAnimation()
     {
-        model.calculateBoundsCylinder();
-        return model;
+        float[] vx = baseModel.getVerticesX();
+        float[] vy = baseModel.getVerticesY();
+        float[] vz = baseModel.getVerticesZ();
+        if (vx == null || vy == null || vz == null)
+        {
+            return;
+        }
+        if (baseVerticesSnapshot == null
+                || baseVerticesSnapshot[0].length != vx.length)
+        {
+            baseVerticesSnapshot = new float[][]{vx.clone(), vy.clone(), vz.clone()};
+        }
+        else
+        {
+            // Restore from snapshot so the next scale() starts from the original size.
+            System.arraycopy(baseVerticesSnapshot[0], 0, vx, 0, vx.length);
+            System.arraycopy(baseVerticesSnapshot[1], 0, vy, 0, vy.length);
+            System.arraycopy(baseVerticesSnapshot[2], 0, vz, 0, vz.length);
+        }
+        if (displayScale <= 0)
+        {
+            return;
+        }
+        int s = Math.max(1, (128 * RIGGING_SCALE) / displayScale);
+        baseModel.scale(s, s, s);
+    }
+
+    /**
+     * Inverse of {@link #shrinkBaseModelForAnimation}: scales the just-animated mesh by
+     * {@code displayScale / RIGGING_SCALE} so the rendered size matches the user's
+     * intended model size while the animation was computed at the rigging-correct
+     * smaller scale. Mesh.scale(s) multiplies by s/128, so passing {@code displayScale}
+     * gives a factor of {@code displayScale / 128} -- exactly the inverse of the
+     * shrink, because the model's "natural" display scale is also normalized against
+     * the 128 reference.
+     */
+    private void expandAnimatedModel(Model animated)
+    {
+        animated.scale(displayScale, displayScale, displayScale);
     }
 
     public boolean isFinished()

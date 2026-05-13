@@ -525,7 +525,8 @@ public class CreatorsPanel extends PluginPanel
                 null,
                 null,
                 0,
-                false);
+                false,
+                300);
 
         textField.addActionListener(e -> onNameTextFieldChanged(character));
 
@@ -1953,7 +1954,8 @@ public class CreatorsPanel extends PluginPanel
                 hitsplatKeyFrames,
                 character.getSummary(),
                 character.getProjectileKeyFrames(),
-                character.isRenderFix());
+                character.isRenderFix(),
+                character.getRenderFixScale());
     }
 
     public void openLoadSetupDialog()
@@ -2346,6 +2348,13 @@ public class CreatorsPanel extends PluginPanel
                     false,
                     false);
 
+            // Restore both the toggle and the scale. If renderFixScale wasn't in the
+            // save (pre-2.2 saves serialize it as 0), fall back to the in-class default
+            // so the field stays a usable value rather than producing a 0 / no-op scale.
+            if (save.getRenderFixScale() > 0)
+            {
+                character.setRenderFixScale(save.getRenderFixScale());
+            }
             character.setRenderFix(save.isRenderFix());
 
             addPanel(parentPanel, character, node, false, false);

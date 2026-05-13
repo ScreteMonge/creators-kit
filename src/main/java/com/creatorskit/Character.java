@@ -64,25 +64,34 @@ public class Character
     private final java.util.List<CKObject> projectileObjects = new java.util.ArrayList<>();
     private int targetOrientation;
     /**
-     * When true, this Character's main CKObject runs its model through a post-animation
-     * render-fix pass instead of the default RuneLite render path. The fix re-centers
-     * the animated mesh around its geometric centroid each frame, which corrects the
-     * "parts drift apart during animation" artifact some cache models exhibit because
-     * their merged-model origin is far from their visible mass. Off by default since
-     * well-behaved models render fine without it; toggleable per-Character because the
-     * fix is unnecessary (and can subtly alter pivot for some models) when not needed.
-     *
-     * <p>Use {@link #setRenderFix(boolean)} (overridden below) to flip the toggle so
-     * the flag is mirrored onto the live CKObject -- otherwise the change wouldn't be
-     * picked up by the renderer until the CKObject was rebuilt.
+     * When true, this Character's CKObject runs its model through a bracket-scaled
+     * animation pass: vertices are shrunk to the rigging's canonical 128 scale before
+     * the animation pipeline runs, then expanded back to {@link #renderFixScale} for
+     * rendering. Fixes the "warped / drifting animations" some newer cache models
+     * exhibit when their cache-resize value pushes vertex radii above 128 -- bones are
+     * stored at 128 scale, so vertex distances of e.g. 300 swing in arcs ~2.3x the
+     * rigging's intended radius. Off by default since well-behaved 128-scale models
+     * already match the rigging.
      */
     private boolean renderFix;
 
     /**
+     * The model's natural cache scale, in OSRS 1/128 units (128 = native rigging size,
+     * 300 = Sol Heredit and similar new bosses). Used as the inverse of the pre-animation
+     * shrink so the rendered size stays at the model's intended display size while the
+     * animation runs against a temporarily-128-scale mesh.
+     *
+     * <p>Default 300 matches the most common problematic case from user reports. If
+     * other problem models have different natural scales, expose this via UI later --
+     * for now keep it editable on the data model and persisted via CharacterSave.
+     */
+    private int renderFixScale = 300;
+
+    /**
      * Overrides Lombok's auto-generated setter so toggling renderFix on the Character
-     * also (a) updates the live CKObject's flag, so the renderer immediately picks up
-     * the change, and (b) syncs the side-panel checkbox so programmatic toggles (e.g.
-     * loading a save) visibly reflect on the UI without an extra refresh path.
+     * also (a) pushes the flag + scale to the live CKObject, so the renderer picks up
+     * the change next frame, and (b) syncs the side-panel checkbox so programmatic
+     * toggles (e.g. loading a save) visibly reflect on the UI without an extra refresh.
      */
     public void setRenderFix(boolean renderFix)
     {
@@ -90,10 +99,26 @@ public class Character
         if (ckObject != null)
         {
             ckObject.setRenderFix(renderFix);
+            // Display scale only matters when the fix is active; when off, keep
+            // CKObject at the no-op default so getModel() short-circuits.
+            ckObject.setDisplayScale(renderFix ? renderFixScale : 128);
         }
         if (renderFixCheckBox != null && renderFixCheckBox.isSelected() != renderFix)
         {
             renderFixCheckBox.setSelected(renderFix);
+        }
+    }
+
+    /**
+     * Overrides Lombok's auto-generated setter so changing renderFixScale also pushes
+     * the new scale onto the live CKObject when the fix is currently active.
+     */
+    public void setRenderFixScale(int renderFixScale)
+    {
+        this.renderFixScale = renderFixScale;
+        if (ckObject != null && renderFix)
+        {
+            ckObject.setDisplayScale(renderFixScale);
         }
     }
 

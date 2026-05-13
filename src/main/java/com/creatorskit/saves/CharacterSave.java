@@ -47,4 +47,11 @@ public class CharacterSave
      * defaults missing boolean fields to false, so old saves preserve default rendering.
      */
     private boolean renderFix;
+    /**
+     * Added 2.2.x. The model's natural cache scale (1/128 units) used as the post-
+     * animation expand factor in the render-fix bracket. Gson defaults missing ints to
+     * 0; the load path treats {@code <= 0} as "use the runtime default" so old saves
+     * keep working.
+     */
+    private int renderFixScale;
 }
