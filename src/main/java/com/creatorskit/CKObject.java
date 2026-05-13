@@ -64,6 +64,17 @@ public class CKObject extends RuneLiteObjectController
      */
     private float[][] baseVerticesSnapshot;
 
+    /**
+     * User-set sub-tile position offsets in scene units, applied after the tile-
+     * aligned base position in {@link #setLocation(LocalPoint, int)}. Driven by the
+     * Character's SHIFT+WASD/R/F nudge hotkeys; mirrored from Character.offsetX/Y/Z
+     * so the values stay in sync. Z is "user-positive = up"; subtracted when applied
+     * because OSRS render space treats negative z as up.
+     */
+    private int offsetX;
+    private int offsetY;
+    private int offsetZ;
+
     public CKObject(Client client)
     {
         this.client = client;
@@ -89,6 +100,26 @@ public class CKObject extends RuneLiteObjectController
 
         super.setLocation(point, level);
         setZ(Perspective.getTileHeight(client, point, level));
+
+        // Apply user-set sub-tile offsets AFTER the tile-aligned base position. Done
+        // here (in the central setLocation override) so the offsets follow the
+        // Character through every code path that re-positions it -- static placement,
+        // movement keyframes, animation transforms -- rather than detaching when one
+        // of those paths runs and silently overwrites x/y/z.
+        if (offsetX != 0)
+        {
+            setX(getX() + offsetX);
+        }
+        if (offsetY != 0)
+        {
+            setY(getY() + offsetY);
+        }
+        if (offsetZ != 0)
+        {
+            // OSRS render space has negative z = up; the user-facing offsetZ is
+            // "positive = up" for intuitive hotkey direction (R = up, F = down).
+            setZ(getZ() - offsetZ);
+        }
 
         /*
         boolean needReregister = isActive() && point.getWorldView() != getWorldView();

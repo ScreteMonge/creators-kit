@@ -527,7 +527,10 @@ public class CreatorsPanel extends PluginPanel
                 0,
                 false,
                 128,
-                128);
+                128,
+                0,
+                0,
+                0);
 
         textField.addActionListener(e -> onNameTextFieldChanged(character));
 
@@ -1957,7 +1960,10 @@ public class CreatorsPanel extends PluginPanel
                 character.getProjectileKeyFrames(),
                 character.isRenderFix(),
                 character.getRenderFixWidth(),
-                character.getRenderFixHeight());
+                character.getRenderFixHeight(),
+                character.getOffsetX(),
+                character.getOffsetY(),
+                character.getOffsetZ());
     }
 
     public void openLoadSetupDialog()
@@ -2362,6 +2368,13 @@ public class CreatorsPanel extends PluginPanel
                 character.setRenderFixHeight(save.getRenderFixHeight());
             }
             character.setRenderFix(save.isRenderFix());
+
+            // Restore sub-tile offsets. Zero is the no-offset default in both the
+            // save (Gson default for missing ints) and on the Character, so no
+            // additional guard is needed here.
+            character.setOffsetX(save.getOffsetX());
+            character.setOffsetY(save.getOffsetY());
+            character.setOffsetZ(save.getOffsetZ());
 
             addPanel(parentPanel, character, node, false, false);
         }

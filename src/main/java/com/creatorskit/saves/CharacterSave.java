@@ -55,4 +55,12 @@ public class CharacterSave
     private int renderFixWidth;
     /** Vertical companion to {@link #renderFixWidth}. */
     private int renderFixHeight;
+    /**
+     * Added 2.2.x. User-set sub-tile position offsets (scene units; +Z = up). Gson
+     * defaults missing ints to 0 which is exactly the no-offset case, so pre-2.2 saves
+     * load cleanly without a migration step.
+     */
+    private int offsetX;
+    private int offsetY;
+    private int offsetZ;
 }

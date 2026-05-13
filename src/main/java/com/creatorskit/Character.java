@@ -88,6 +88,23 @@ public class Character
     private int renderFixHeight = 128;
 
     /**
+     * User-set sub-tile position offsets applied on top of whatever tile-aligned
+     * position the Character would otherwise have. X/Y are scene-space (positive X =
+     * east, positive Y = north, same as LocalPoint). Z is conceptually "up", positive
+     * = higher; internally subtracted from CKObject's z when applied because OSRS
+     * render space treats negative z as up.
+     *
+     * <p>Driven by the SHIFT+WASD/R/F hotkeys for in-place nudging without going
+     * through the Model Anvil. Each press of {@link #nudgeOffset(int, int, int)}
+     * accumulates a delta of 5 units; the offset is applied per-frame via
+     * {@link CKObject#setLocation(LocalPoint, int)} so it follows the Character
+     * through movement keyframes and animations rather than detaching at any point.
+     */
+    private int offsetX;
+    private int offsetY;
+    private int offsetZ;
+
+    /**
      * Overrides Lombok's auto-generated setter so toggling renderFix on the Character
      * also (a) pushes the flag + per-axis scales to the live CKObject, so the renderer
      * picks up the change next frame, and (b) syncs the side-panel checkbox so
@@ -130,6 +147,62 @@ public class Character
         if (ckObject != null && renderFix)
         {
             ckObject.setHeightScale(renderFixHeight);
+        }
+    }
+
+    /**
+     * Overrides for the Lombok offset setters so changing offsets at runtime (e.g.
+     * during save load) also pushes the values down to the live CKObject. CKObject's
+     * own setLocation applies them per-frame, so the values stay in sync without
+     * any further triggering.
+     */
+    public void setOffsetX(int offsetX)
+    {
+        this.offsetX = offsetX;
+        if (ckObject != null)
+        {
+            ckObject.setOffsetX(offsetX);
+        }
+    }
+
+    public void setOffsetY(int offsetY)
+    {
+        this.offsetY = offsetY;
+        if (ckObject != null)
+        {
+            ckObject.setOffsetY(offsetY);
+        }
+    }
+
+    public void setOffsetZ(int offsetZ)
+    {
+        this.offsetZ = offsetZ;
+        if (ckObject != null)
+        {
+            ckObject.setOffsetZ(offsetZ);
+        }
+    }
+
+    /**
+     * Accumulates a delta into the user-set position offsets and immediately applies
+     * the same delta to the live CKObject's rendered position so the SHIFT+WASD/R/F
+     * hotkeys feel responsive (otherwise the user would have to wait for the next
+     * setLocation call to see the shift). Z is negated when applied to the CKObject
+     * because OSRS render space has -z = up while we expose +offsetZ = up.
+     */
+    public void nudgeOffset(int dx, int dy, int dz)
+    {
+        this.offsetX += dx;
+        this.offsetY += dy;
+        this.offsetZ += dz;
+        if (ckObject != null)
+        {
+            ckObject.setOffsetX(this.offsetX);
+            ckObject.setOffsetY(this.offsetY);
+            ckObject.setOffsetZ(this.offsetZ);
+            ckObject.setX(ckObject.getX() + dx);
+            ckObject.setY(ckObject.getY() + dy);
+            ckObject.setZ(ckObject.getZ() - dz);
         }
     }
 

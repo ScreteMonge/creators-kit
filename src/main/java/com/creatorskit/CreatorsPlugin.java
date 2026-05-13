@@ -220,6 +220,12 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.registerKeyListener(openListener);
 		keyManager.registerKeyListener(undoListener);
 		keyManager.registerKeyListener(redoListener);
+		keyManager.registerKeyListener(nudgeNorthListener);
+		keyManager.registerKeyListener(nudgeSouthListener);
+		keyManager.registerKeyListener(nudgeEastListener);
+		keyManager.registerKeyListener(nudgeWestListener);
+		keyManager.registerKeyListener(nudgeUpListener);
+		keyManager.registerKeyListener(nudgeDownListener);
 		mouseManager.registerMouseWheelListener(this::mouseWheelMoved);
 		mouseManager.registerMouseListener(this);
 
@@ -394,6 +400,12 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.unregisterKeyListener(openListener);
 		keyManager.unregisterKeyListener(undoListener);
 		keyManager.unregisterKeyListener(redoListener);
+		keyManager.unregisterKeyListener(nudgeNorthListener);
+		keyManager.unregisterKeyListener(nudgeSouthListener);
+		keyManager.unregisterKeyListener(nudgeEastListener);
+		keyManager.unregisterKeyListener(nudgeWestListener);
+		keyManager.unregisterKeyListener(nudgeUpListener);
+		keyManager.unregisterKeyListener(nudgeDownListener);
 		mouseManager.unregisterMouseWheelListener(this::mouseWheelMoved);
 		mouseManager.unregisterMouseListener(this);
 	}
@@ -1407,6 +1419,92 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		public void hotkeyPressed()
 		{
 			creatorsPanel.getToolBox().getTimeSheetPanel().redo();
+		}
+	};
+
+	/** Default per-press nudge distance in scene units (1 tile = 128 units, so 5 is sub-tile). */
+	private static final int NUDGE_STEP = 5;
+
+	/**
+	 * SHIFT + WASD/R/F nudge the currently-selected Character(s) by {@link #NUDGE_STEP}
+	 * scene units in the chosen direction. WASD are cardinal in scene space (W = north,
+	 * S = south, D = east, A = west); R/F are vertical (R = up, F = down). Operates on
+	 * every Character in the SelectionManager so a multi-selection nudges together.
+	 *
+	 * <p>Hotkeys are hardcoded rather than config-driven because they're a fixed gesture
+	 * tied to the WASD convention; promoting them to user-configurable keybinds later
+	 * is straightforward if needed.
+	 */
+	private void nudgeSelectedCharacters(int dx, int dy, int dz)
+	{
+		java.util.Collection<Character> targets = selectionManager.getSelected();
+		if (targets.isEmpty())
+		{
+			Character primary = getSelectedCharacter();
+			if (primary == null)
+			{
+				return;
+			}
+			primary.nudgeOffset(dx, dy, dz);
+			return;
+		}
+		for (Character c : targets)
+		{
+			c.nudgeOffset(dx, dy, dz);
+		}
+	}
+
+	private final HotkeyListener nudgeNorthListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_W, InputEvent.SHIFT_DOWN_MASK))
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			nudgeSelectedCharacters(0, NUDGE_STEP, 0);
+		}
+	};
+
+	private final HotkeyListener nudgeSouthListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_S, InputEvent.SHIFT_DOWN_MASK))
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			nudgeSelectedCharacters(0, -NUDGE_STEP, 0);
+		}
+	};
+
+	private final HotkeyListener nudgeEastListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_D, InputEvent.SHIFT_DOWN_MASK))
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			nudgeSelectedCharacters(NUDGE_STEP, 0, 0);
+		}
+	};
+
+	private final HotkeyListener nudgeWestListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_A, InputEvent.SHIFT_DOWN_MASK))
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			nudgeSelectedCharacters(-NUDGE_STEP, 0, 0);
+		}
+	};
+
+	private final HotkeyListener nudgeUpListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_R, InputEvent.SHIFT_DOWN_MASK))
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			nudgeSelectedCharacters(0, 0, NUDGE_STEP);
+		}
+	};
+
+	private final HotkeyListener nudgeDownListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_F, InputEvent.SHIFT_DOWN_MASK))
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			nudgeSelectedCharacters(0, 0, -NUDGE_STEP);
 		}
 	};
 
