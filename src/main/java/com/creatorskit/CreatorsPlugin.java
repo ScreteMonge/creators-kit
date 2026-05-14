@@ -288,6 +288,15 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			client.setOculusOrbState(0);
 			client.setCameraMode(1);
 
+			// Diagnostic: probe each axis independently with a known sentinel value
+			// and read all three back, so we can see whether (a) setCameraFocalPointY
+			// is routed to setOculusOrbFocalPointX in the mainline RL build (the
+			// devious-client copy-paste bug), (b) Z scale/sign requires conversion
+			// from Perspective tile-height units, and (c) values persist between
+			// independent setter calls. Runs once per lock engage; printed to chat
+			// so the user can share. Restores values before returning.
+			runCameraFocalDiagnostic(ck);
+
 			// Capture the offset AFTER the mode switch so we read the focal point in
 			// its post-switch state. See cameraLockOffsetX/Y/Z javadoc for why this
 			// is necessary instead of snapping focal = character.position.
@@ -360,6 +369,84 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		{
 			// Camera mode flipped during this tick -- back out and don't spam.
 			setCameraLockedCharacter(null);
+		}
+	}
+
+	/**
+	 * Probes setCameraFocalPointX/Y/Z with known sentinel values and prints the read-
+	 * back values to chat, so we can determine whether the mainline RuneLite mixin
+	 * has the same Y->X copy-paste bug that devious-client's CameraMixin does, and
+	 * whether the Z axis needs unit/sign conversion from Perspective.getTileHeight.
+	 *
+	 * <p>Test plan (all on the client thread, sequentially):
+	 * <ol>
+	 *   <li>Read initial X0/Y0/Z0 -- the pre-test state.</li>
+	 *   <li>setCameraFocalPointX(7777). Read back X1/Y1/Z1.
+	 *       <br>Expected: X1=7777, Y1=Y0, Z1=Z0. If Y1 or Z1 changed, side effects.</li>
+	 *   <li>setCameraFocalPointY(8888). Read back X2/Y2/Z2.
+	 *       <br>Expected: Y2=8888, X2=7777. If X2=8888, that's the Y->X bug.</li>
+	 *   <li>setCameraFocalPointZ(9999). Read back X3/Y3/Z3.
+	 *       <br>Expected: Z3=9999, X3 and Y3 unchanged.</li>
+	 *   <li>Compare ck.(x,y,z) for unit-scale reference.</li>
+	 *   <li>Restore X0/Y0/Z0 so the diagnostic doesn't leave the camera moved.</li>
+	 * </ol>
+	 *
+	 * <p>Output gets prefixed [CameraDiag] so the user can paste the chat back easily.
+	 */
+	private void runCameraFocalDiagnostic(CKObject ck)
+	{
+		try
+		{
+			double x0 = client.getCameraFocalPointX();
+			double y0 = client.getCameraFocalPointY();
+			double z0 = client.getCameraFocalPointZ();
+			sendChatMessage(String.format("[CameraDiag] ck=(%d,%d,%d) initial focal=(%.0f,%.0f,%.0f)",
+					ck.getX(), ck.getY(), ck.getZ(), x0, y0, z0));
+
+			client.setCameraFocalPointX(7777);
+			double x1 = client.getCameraFocalPointX();
+			double y1 = client.getCameraFocalPointY();
+			double z1 = client.getCameraFocalPointZ();
+			sendChatMessage(String.format("[CameraDiag] after setX(7777): (%.0f,%.0f,%.0f) %s",
+					x1, y1, z1,
+					(x1 == 7777 && y1 == y0 && z1 == z0) ? "OK" : "UNEXPECTED"));
+
+			client.setCameraFocalPointY(8888);
+			double x2 = client.getCameraFocalPointX();
+			double y2 = client.getCameraFocalPointY();
+			double z2 = client.getCameraFocalPointZ();
+			String yDiag;
+			if (y2 == 8888 && x2 == 7777)
+			{
+				yDiag = "OK (Y set correctly)";
+			}
+			else if (x2 == 8888)
+			{
+				yDiag = "Y->X BUG: setY routed to X";
+			}
+			else
+			{
+				yDiag = "UNEXPECTED";
+			}
+			sendChatMessage(String.format("[CameraDiag] after setY(8888): (%.0f,%.0f,%.0f) %s",
+					x2, y2, z2, yDiag));
+
+			client.setCameraFocalPointZ(9999);
+			double x3 = client.getCameraFocalPointX();
+			double y3 = client.getCameraFocalPointY();
+			double z3 = client.getCameraFocalPointZ();
+			String zDiag = (z3 == 9999) ? "Z set correctly" : "Z NOT set (z3=" + z3 + ")";
+			sendChatMessage(String.format("[CameraDiag] after setZ(9999): (%.0f,%.0f,%.0f) %s",
+					x3, y3, z3, zDiag));
+
+			// Restore so the camera doesn't visibly jump on engage.
+			client.setCameraFocalPointX(x0);
+			client.setCameraFocalPointY(y0);
+			client.setCameraFocalPointZ(z0);
+		}
+		catch (Throwable t)
+		{
+			sendChatMessage("[CameraDiag] threw: " + t.getClass().getSimpleName() + " " + t.getMessage());
 		}
 	}
 
