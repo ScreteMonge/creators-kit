@@ -861,18 +861,17 @@ public class TimeSheetPanel extends JPanel
                 return;
             }
 
-            // Place the first keyframe at max(currentTime, 1). Tick 0 conceptually
-            // represents the Character's starting state (saved position); the first
-            // actual movement should start at tick 1 at the earliest, so the user
-            // sees the program step land "on tick 1" instead of "at tick 0".
-            double placementTick = Math.max(currentTime, 1);
-            initializeMovementKeyFrame(selectedCharacter, placementTick, worldView.getPlane(), poh, path, false, stepSpeed, speedAwareTurnRate);
+            // Place the first keyframe at exactly the seeker's current tick. Tick 0
+            // is valid (the saved-position fallback above ensures the path has real
+            // movement even if the Character hasn't been drawn yet, so we never
+            // produce a 0-length placeholder here).
+            initializeMovementKeyFrame(selectedCharacter, currentTime, worldView.getPlane(), poh, path, false, stepSpeed, speedAwareTurnRate);
 
             // Auto-advance the seeker to the end of the keyframe we just placed so the
             // next add-step lands chained immediately after.
             double tilesMoved = Math.max(0, path.length - 1);
             double newDuration = tilesMoved / Math.max(0.0001, stepSpeed);
-            setCurrentTime(placementTick + newDuration, false);
+            setCurrentTime(currentTime + newDuration, false);
         }
         else
         {
