@@ -138,20 +138,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	 */
 	private Character cameraLockedCharacter;
 
-	/**
-	 * State for the motion-aware easeInOutSine tracker in updateCameraLock. We detect
-	 * when the Character starts and stops moving (by per-tick position delta) and
-	 * apply a sinusoidal acceleration ramp on motion-start, a sinusoidal deceleration
-	 * ramp on motion-stop. Between ramps the camera tracks the Character's render
-	 * position directly. easeFactor is the lerp gain currently in effect: 0 = camera
-	 * frozen, 1 = camera fully tracking each frame.
-	 */
-	private long cameraLockPhaseStartMs;
-	private double cameraLockEaseFactor;
-	private boolean cameraLockCharWasMoving;
-	private double cameraLockPrevCkX;
-	private double cameraLockPrevCkY;
-	private double cameraLockPrevCkZ;
 
 	/**
 	 * Captured camera mode at lock engage-time so the camera restores to whatever it
@@ -281,15 +267,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			client.setOculusOrbState(0);
 			client.setCameraMode(1);
 
-			// Reset motion-tracker state so the new lock starts in "idle" phase and
-			// accelerates from rest if the Character is currently moving, instead of
-			// inheriting easeFactor / motion state from a prior lock.
-			cameraLockEaseFactor = 0;
-			cameraLockCharWasMoving = false;
-			cameraLockPhaseStartMs = System.currentTimeMillis();
-			cameraLockPrevCkX = ck.getX();
-			cameraLockPrevCkY = ck.getY();
-			cameraLockPrevCkZ = ck.getZ();
 
 			cameraLockedCharacter = finalTarget;
 			if (finalTarget.getCameraLockCheckBox() != null
@@ -334,63 +311,29 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			// (eastWest, height, northSouth) while CKObject coords are (eastWest,
 			// northSouth, height). We swap Y/Z when feeding ck into the setters.
 			//
-			// Motion-aware easeInOutSine tracker:
-			//   1. Detect whether the Character is moving this tick by comparing
-			//      ck.getX/Y/Z to the previous tick's values. A small threshold
-			//      filters out subpixel animation noise (bobbing, breathing idle).
-			//   2. On the transition from idle->moving, record the phase start time
-			//      and let easeFactor ramp up via easeInOutSine over phaseDuration.
-			//      On moving->idle, ramp it back down via the inverse.
-			//   3. Each tick, lerp the focal point toward the Character's position
-			//      by easeFactor. At easeFactor=0 the camera is frozen; at 1 it
-			//      tracks every frame perfectly. The S-shaped easeFactor curve
-			//      produces sinusoidal acceleration on motion start and sinusoidal
-			//      deceleration on motion stop -- exactly easeInOutSine on velocity.
+			// Constant-fraction lag lerp -- emulates the way the OSRS player camera
+			// trails the player. Each client tick the focal point closes a fixed
+			// percentage of the remaining distance to the Character. During steady
+			// motion the camera maintains a constant trail distance (because the
+			// fraction closed each tick exactly balances the new distance the
+			// Character has opened); the trail visually reads as "easing" because
+			// the closer the camera gets to a stationary target the smaller each
+			// step becomes (natural ease-out).
 			//
-			// phaseDuration maps from the responsiveness percent: shorter at higher
-			// percent (snappier accel/decel), longer at lower percent (more eased).
-			double easingPercent = Math.max(1, Math.min(100, config.cameraLockEasing()));
-			double phaseDurationMs = (101.0 - easingPercent) * 12.0; // 12 ms .. 1200 ms
+			// Config "Camera lock responsiveness" maps directly to the lerp factor.
+			// Higher percent = larger fraction closed per tick = tighter follow with
+			// less trail. Lower percent = more trail.
+			double lerpFactor = Math.max(1, Math.min(100, config.cameraLockEasing())) / 100.0;
 
 			double targetX = ck.getX();
 			double targetY = ck.getZ(); // height
 			double targetZ = ck.getY(); // north-south
-
-			// Motion detection: position delta since previous tick. Threshold 0.5
-			// scene units = ~1/256 of a tile; conservative enough that idle anim
-			// jitter doesn't trip "moving" but real walking always does.
-			double dx = ck.getX() - cameraLockPrevCkX;
-			double dy = ck.getY() - cameraLockPrevCkY;
-			double dz = ck.getZ() - cameraLockPrevCkZ;
-			boolean charMoving = (dx * dx + dy * dy + dz * dz) > 0.25;
-			cameraLockPrevCkX = ck.getX();
-			cameraLockPrevCkY = ck.getY();
-			cameraLockPrevCkZ = ck.getZ();
-
-			long now = System.currentTimeMillis();
-			if (charMoving != cameraLockCharWasMoving)
-			{
-				// Phase change -- record the starting easeFactor so the curve picks
-				// up smoothly from whatever value we were at (avoids a hitch if the
-				// previous ramp hadn't finished when motion state flipped).
-				cameraLockPhaseStartMs = now;
-				cameraLockCharWasMoving = charMoving;
-			}
-
-			double phaseProgress = Math.min(1.0, (now - cameraLockPhaseStartMs) / phaseDurationMs);
-			double sineEased = (1.0 - Math.cos(Math.PI * phaseProgress)) / 2.0;
-			cameraLockEaseFactor = charMoving ? sineEased : (1.0 - sineEased);
-
-			// Lerp focal toward Character by easeFactor. During steady tracking
-			// (easeFactor=1) the camera matches the Character's interpolated render
-			// position frame-for-frame -- same behaviour as the default OSRS camera
-			// follow but applied to our Character instead of the local player.
 			double cx = client.getCameraFocalPointX();
 			double cy = client.getCameraFocalPointY();
 			double cz = client.getCameraFocalPointZ();
-			client.setCameraFocalPointX(cx + (targetX - cx) * cameraLockEaseFactor);
-			client.setCameraFocalPointY(cy + (targetY - cy) * cameraLockEaseFactor);
-			client.setCameraFocalPointZ(cz + (targetZ - cz) * cameraLockEaseFactor);
+			client.setCameraFocalPointX(cx + (targetX - cx) * lerpFactor);
+			client.setCameraFocalPointY(cy + (targetY - cy) * lerpFactor);
+			client.setCameraFocalPointZ(cz + (targetZ - cz) * lerpFactor);
 		}
 		catch (IllegalArgumentException ex)
 		{

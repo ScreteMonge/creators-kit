@@ -191,18 +191,18 @@ public interface CreatorsConfig extends Config
 	@ConfigItem(
 			keyName = "cameraLockEasing",
 			name = "Camera lock responsiveness (%)",
-			description = "How quickly the camera-lock accel / decel ramps complete when the Character starts or " +
-					"stops moving. Uses an easeInOutSine curve, so velocity ramps up sinusoidally on motion start " +
-					"and ramps down sinusoidally on motion stop -- between ramps the camera tracks the Character " +
-					"frame-for-frame. Range 1-100%; lower = longer ramps (more cinematic), higher = shorter ramps " +
-					"(snappier). Default 50% gives ~0.6s ramps which read clearly as eased without lagging behind.",
+			description = "What fraction of the remaining distance to the Character the camera closes each client " +
+					"tick (50 ticks / second). Mimics the OSRS player-camera lag: during steady motion the camera " +
+					"maintains a constant trail; when the Character stops, the camera catches up with natural " +
+					"ease-out because the step shrinks as the gap shrinks. Range 1-100%; lower = more lag / more " +
+					"cinematic, higher = tighter follow. Default 15% gives a subtle but visible trail.",
 			section = sceneSettings,
 			position = 16
 	)
 	@net.runelite.client.config.Range(min = 1, max = 100)
 	default int cameraLockEasing()
 	{
-		return 50;
+		return 15;
 	}
 
 	@ConfigSection(
