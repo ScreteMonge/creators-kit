@@ -139,15 +139,19 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private Character cameraLockedCharacter;
 
 	/**
-	 * Camera focal-point velocity per axis. Used by the critically-damped spring
-	 * ("SmoothDamp") in updateCameraLock so the camera accelerates smoothly when the
-	 * Character starts moving and decelerates smoothly when they stop -- ease-in AND
-	 * ease-out from a single integration step. Reset to 0 on every fresh lock engage
-	 * so the camera doesn't carry stale momentum from the previous tracked Character.
+	 * State for the motion-aware easeInOutSine tracker in updateCameraLock. We detect
+	 * when the Character starts and stops moving (by per-tick position delta) and
+	 * apply a sinusoidal acceleration ramp on motion-start, a sinusoidal deceleration
+	 * ramp on motion-stop. Between ramps the camera tracks the Character's render
+	 * position directly. easeFactor is the lerp gain currently in effect: 0 = camera
+	 * frozen, 1 = camera fully tracking each frame.
 	 */
-	private double cameraLockVelX;
-	private double cameraLockVelY;
-	private double cameraLockVelZ;
+	private long cameraLockPhaseStartMs;
+	private double cameraLockEaseFactor;
+	private boolean cameraLockCharWasMoving;
+	private double cameraLockPrevCkX;
+	private double cameraLockPrevCkY;
+	private double cameraLockPrevCkZ;
 
 	/**
 	 * Captured camera mode at lock engage-time so the camera restores to whatever it
@@ -277,12 +281,15 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			client.setOculusOrbState(0);
 			client.setCameraMode(1);
 
-			// Zero out spring velocity so the camera accelerates from rest into its
-			// new tracking target instead of inheriting velocity from a prior lock
-			// or a previous tracked Character.
-			cameraLockVelX = 0;
-			cameraLockVelY = 0;
-			cameraLockVelZ = 0;
+			// Reset motion-tracker state so the new lock starts in "idle" phase and
+			// accelerates from rest if the Character is currently moving, instead of
+			// inheriting easeFactor / motion state from a prior lock.
+			cameraLockEaseFactor = 0;
+			cameraLockCharWasMoving = false;
+			cameraLockPhaseStartMs = System.currentTimeMillis();
+			cameraLockPrevCkX = ck.getX();
+			cameraLockPrevCkY = ck.getY();
+			cameraLockPrevCkZ = ck.getZ();
 
 			cameraLockedCharacter = finalTarget;
 			if (finalTarget.getCameraLockCheckBox() != null
@@ -327,77 +334,69 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			// (eastWest, height, northSouth) while CKObject coords are (eastWest,
 			// northSouth, height). We swap Y/Z when feeding ck into the setters.
 			//
-			// Critically-damped spring ("SmoothDamp") instead of exponential lerp. A
-			// pure lerp only gives ease-out (decelerating into the target). A spring
-			// that tracks velocity gives ease-IN when motion starts (velocity ramps up
-			// from 0 as the character begins to walk) AND ease-out when motion ends
-			// (velocity smoothly drops back to 0 as the character stops). Critically
-			// damped means it reaches the target without overshooting or oscillating.
+			// Motion-aware easeInOutSine tracker:
+			//   1. Detect whether the Character is moving this tick by comparing
+			//      ck.getX/Y/Z to the previous tick's values. A small threshold
+			//      filters out subpixel animation noise (bobbing, breathing idle).
+			//   2. On the transition from idle->moving, record the phase start time
+			//      and let easeFactor ramp up via easeInOutSine over phaseDuration.
+			//      On moving->idle, ramp it back down via the inverse.
+			//   3. Each tick, lerp the focal point toward the Character's position
+			//      by easeFactor. At easeFactor=0 the camera is frozen; at 1 it
+			//      tracks every frame perfectly. The S-shaped easeFactor curve
+			//      produces sinusoidal acceleration on motion start and sinusoidal
+			//      deceleration on motion stop -- exactly easeInOutSine on velocity.
 			//
-			// smoothTime is "approximate time to reach the target". Config returns int
-			// percent (5-100); convert to smoothTime where higher percent = snappier:
-			//   5%  -> 1.0s  (very smooth, long ease)
-			//   50% -> 0.51s (responsive, default-ish)
-			//   100% -> 0.01s (near-snap)
+			// phaseDuration maps from the responsiveness percent: shorter at higher
+			// percent (snappier accel/decel), longer at lower percent (more eased).
 			double easingPercent = Math.max(1, Math.min(100, config.cameraLockEasing()));
-			double smoothTime = (101.0 - easingPercent) / 100.0;
-			double dt = Constants.CLIENT_TICK_LENGTH / 1000.0; // 0.02s per client tick
+			double phaseDurationMs = (101.0 - easingPercent) * 12.0; // 12 ms .. 1200 ms
 
 			double targetX = ck.getX();
 			double targetY = ck.getZ(); // height
 			double targetZ = ck.getY(); // north-south
 
-			double[] vx = {cameraLockVelX};
-			double[] vy = {cameraLockVelY};
-			double[] vz = {cameraLockVelZ};
-			double newX = smoothDamp(client.getCameraFocalPointX(), targetX, vx, smoothTime, dt);
-			double newY = smoothDamp(client.getCameraFocalPointY(), targetY, vy, smoothTime, dt);
-			double newZ = smoothDamp(client.getCameraFocalPointZ(), targetZ, vz, smoothTime, dt);
-			cameraLockVelX = vx[0];
-			cameraLockVelY = vy[0];
-			cameraLockVelZ = vz[0];
+			// Motion detection: position delta since previous tick. Threshold 0.5
+			// scene units = ~1/256 of a tile; conservative enough that idle anim
+			// jitter doesn't trip "moving" but real walking always does.
+			double dx = ck.getX() - cameraLockPrevCkX;
+			double dy = ck.getY() - cameraLockPrevCkY;
+			double dz = ck.getZ() - cameraLockPrevCkZ;
+			boolean charMoving = (dx * dx + dy * dy + dz * dz) > 0.25;
+			cameraLockPrevCkX = ck.getX();
+			cameraLockPrevCkY = ck.getY();
+			cameraLockPrevCkZ = ck.getZ();
 
-			client.setCameraFocalPointX(newX);
-			client.setCameraFocalPointY(newY);
-			client.setCameraFocalPointZ(newZ);
+			long now = System.currentTimeMillis();
+			if (charMoving != cameraLockCharWasMoving)
+			{
+				// Phase change -- record the starting easeFactor so the curve picks
+				// up smoothly from whatever value we were at (avoids a hitch if the
+				// previous ramp hadn't finished when motion state flipped).
+				cameraLockPhaseStartMs = now;
+				cameraLockCharWasMoving = charMoving;
+			}
+
+			double phaseProgress = Math.min(1.0, (now - cameraLockPhaseStartMs) / phaseDurationMs);
+			double sineEased = (1.0 - Math.cos(Math.PI * phaseProgress)) / 2.0;
+			cameraLockEaseFactor = charMoving ? sineEased : (1.0 - sineEased);
+
+			// Lerp focal toward Character by easeFactor. During steady tracking
+			// (easeFactor=1) the camera matches the Character's interpolated render
+			// position frame-for-frame -- same behaviour as the default OSRS camera
+			// follow but applied to our Character instead of the local player.
+			double cx = client.getCameraFocalPointX();
+			double cy = client.getCameraFocalPointY();
+			double cz = client.getCameraFocalPointZ();
+			client.setCameraFocalPointX(cx + (targetX - cx) * cameraLockEaseFactor);
+			client.setCameraFocalPointY(cy + (targetY - cy) * cameraLockEaseFactor);
+			client.setCameraFocalPointZ(cz + (targetZ - cz) * cameraLockEaseFactor);
 		}
 		catch (IllegalArgumentException ex)
 		{
 			// Camera mode flipped during this tick -- back out and don't spam.
 			setCameraLockedCharacter(null);
 		}
-	}
-
-	/**
-	 * Critically-damped spring step toward {@code target}. Returns the new position;
-	 * mutates the velocity in place via a single-element array (Java's lack of
-	 * out-params is the only reason this needs the awkward double[1] convention).
-	 *
-	 * <p>Formula is the classic Game-Programming-Gems / Unity SmoothDamp:
-	 * <pre>
-	 *   omega  = 2 / smoothTime
-	 *   x      = omega * deltaTime
-	 *   exp    = 1 / (1 + x + 0.48*x^2 + 0.235*x^3)   // 3rd-order pade approximation
-	 *   delta  = current - target
-	 *   temp   = (velocity + omega * delta) * deltaTime
-	 *   velocity_new = (velocity - omega * temp) * exp
-	 *   output       = target + (delta + temp) * exp
-	 * </pre>
-	 * Critical damping means it asymptotes to the target without overshoot or
-	 * oscillation; ease-in / ease-out emerge naturally because the velocity term
-	 * ramps from zero, peaks, and returns to zero.
-	 */
-	private static double smoothDamp(double current, double target, double[] velocity,
-			double smoothTime, double deltaTime)
-	{
-		smoothTime = Math.max(0.0001, smoothTime);
-		double omega = 2.0 / smoothTime;
-		double x = omega * deltaTime;
-		double exp = 1.0 / (1.0 + x + 0.48 * x * x + 0.235 * x * x * x);
-		double delta = current - target;
-		double temp = (velocity[0] + omega * delta) * deltaTime;
-		velocity[0] = (velocity[0] - omega * temp) * exp;
-		return target + (delta + temp) * exp;
 	}
 
 	private CKObject transmog;

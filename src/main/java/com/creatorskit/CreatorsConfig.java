@@ -191,10 +191,11 @@ public interface CreatorsConfig extends Config
 	@ConfigItem(
 			keyName = "cameraLockEasing",
 			name = "Camera lock responsiveness (%)",
-			description = "How quickly the camera-lock follow tracks the Character. Uses a critically-damped " +
-					"spring so motion eases in when the Character starts moving and eases out when they stop. " +
-					"Range 1-100%; lower = smoother / longer settle, higher = snappier. Default 50% gives " +
-					"~0.5s smoothTime which feels responsive but unmistakably eased. 100% is near-snap (no ease).",
+			description = "How quickly the camera-lock accel / decel ramps complete when the Character starts or " +
+					"stops moving. Uses an easeInOutSine curve, so velocity ramps up sinusoidally on motion start " +
+					"and ramps down sinusoidally on motion stop -- between ramps the camera tracks the Character " +
+					"frame-for-frame. Range 1-100%; lower = longer ramps (more cinematic), higher = shorter ramps " +
+					"(snappier). Default 50% gives ~0.6s ramps which read clearly as eased without lagging behind.",
 			section = sceneSettings,
 			position = 16
 	)
