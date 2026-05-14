@@ -82,6 +82,9 @@ public class AttributePanel extends JPanel
     public static final String HITSPLAT_3_CARD = "Hitsplat 3";
     public static final String HITSPLAT_4_CARD = "Hitsplat 4";
     public static final String PROJECTILE_CARD = "Projectile";
+    public static final String SHIELD_CARD = "Shield";
+    public static final String SPECIAL_CARD = "Special";
+    public static final String SCREEN_FADE_CARD = "Screen Fade";
     public static final String MIXED_TYPES_CARD = "MixedTypes";
 
     private final String NO_OBJECT_SELECTED = "[No Object Selected]";
@@ -107,6 +110,9 @@ public class AttributePanel extends JPanel
     private final HitsplatAttributes hitsplat3Attributes = new HitsplatAttributes();
     private final HitsplatAttributes hitsplat4Attributes = new HitsplatAttributes();
     private final ProjectileAttributes projectileAttributes = new ProjectileAttributes();
+    private final ShieldAttributes shieldAttributes = new ShieldAttributes();
+    private final SpecialAttributes specialAttributes = new SpecialAttributes();
+    private final ScreenFadeAttributes screenFadeAttributes = new ScreenFadeAttributes();
 
     private final Random random = new Random();
 
@@ -196,6 +202,9 @@ public class AttributePanel extends JPanel
         JPanel hitsplat3Card = new JPanel();
         JPanel hitsplat4Card = new JPanel();
         JPanel projectileCard = new JPanel();
+        JPanel shieldCard = new JPanel();
+        JPanel specialCard = new JPanel();
+        JPanel screenFadeCard = new JPanel();
         cardPanel.add(moveCard, MOVE_CARD);
         cardPanel.add(animCard, ANIM_CARD);
         cardPanel.add(oriCard, ORI_CARD);
@@ -211,6 +220,9 @@ public class AttributePanel extends JPanel
         cardPanel.add(hitsplat3Card, HITSPLAT_3_CARD);
         cardPanel.add(hitsplat4Card, HITSPLAT_4_CARD);
         cardPanel.add(projectileCard, PROJECTILE_CARD);
+        cardPanel.add(shieldCard, SHIELD_CARD);
+        cardPanel.add(specialCard, SPECIAL_CARD);
+        cardPanel.add(screenFadeCard, SCREEN_FADE_CARD);
 
         // Empty placeholder shown when the keyframe selection spans multiple types.
         // Using a CardLayout entry keeps the cardPanel at its normal height instead
@@ -235,6 +247,9 @@ public class AttributePanel extends JPanel
         setupHitsplatCard(hitsplat3Card, KeyFrameType.HITSPLAT_3);
         setupHitsplatCard(hitsplat4Card, KeyFrameType.HITSPLAT_4);
         setupProjectileCard(projectileCard);
+        setupBarCard(shieldCard, KeyFrameType.SHIELD);
+        setupBarCard(specialCard, KeyFrameType.SPECIAL);
+        setupScreenFadeCard(screenFadeCard);
 
         setupKeyListeners();
     }
@@ -396,6 +411,33 @@ public class AttributePanel extends JPanel
                         ((Number) projectileAttributes.getDurationTicks().getValue()).doubleValue(),
                         ((Number) projectileAttributes.getStartDelayTicks().getValue()).doubleValue(),
                         projectileAttributes.getFaceTrajectory().isSelected()
+                );
+            case SHIELD:
+                return new ShieldKeyFrame(
+                        tick,
+                        ((Number) shieldAttributes.getDuration().getValue()).doubleValue(),
+                        shieldAttributes.getRgb(),
+                        (int) shieldAttributes.getMaxValue().getValue(),
+                        (int) shieldAttributes.getCurrentValue().getValue()
+                );
+            case SPECIAL:
+                return new SpecialKeyFrame(
+                        tick,
+                        ((Number) specialAttributes.getDuration().getValue()).doubleValue(),
+                        specialAttributes.getRgb(),
+                        (int) specialAttributes.getMaxValue().getValue(),
+                        (int) specialAttributes.getCurrentValue().getValue()
+                );
+            case SCREEN_FADE:
+                return new ScreenFadeKeyFrame(
+                        tick,
+                        screenFadeAttributes.getRgb(),
+                        (int) screenFadeAttributes.getPeakAlpha().getValue(),
+                        (int) screenFadeAttributes.getRingRadius().getValue(),
+                        (int) screenFadeAttributes.getRingFeather().getValue(),
+                        ((Number) screenFadeAttributes.getFadeInTicks().getValue()).doubleValue(),
+                        ((Number) screenFadeAttributes.getHoldTicks().getValue()).doubleValue(),
+                        ((Number) screenFadeAttributes.getFadeOutTicks().getValue()).doubleValue()
                 );
         }
     }
@@ -2409,6 +2451,285 @@ public class AttributePanel extends JPanel
         card.add(new JLabel(""), c);
     }
 
+    /**
+     * Shared layout for the Shield and Special bar cards. They have identical
+     * fields (colour + duration + max + current) so a single method handles
+     * both -- the only difference is which attributes object backs the
+     * components.
+     */
+    private void setupBarCard(JPanel card, KeyFrameType type)
+    {
+        final boolean isShield = type == KeyFrameType.SHIELD;
+        final String typeName = isShield ? "Shield" : "Special";
+        final int defaultRgb = isShield ? ShieldAttributes.DEFAULT_RGB : SpecialAttributes.DEFAULT_RGB;
+
+        final JSpinner duration;
+        final JButton colour;
+        final JSpinner maxValue;
+        final JSpinner currentValue;
+        if (isShield)
+        {
+            duration = shieldAttributes.getDuration();
+            colour = shieldAttributes.getColour();
+            maxValue = shieldAttributes.getMaxValue();
+            currentValue = shieldAttributes.getCurrentValue();
+        }
+        else
+        {
+            duration = specialAttributes.getDuration();
+            colour = specialAttributes.getColour();
+            maxValue = specialAttributes.getMaxValue();
+            currentValue = specialAttributes.getCurrentValue();
+        }
+
+        card.setLayout(new GridBagLayout());
+        card.setBorder(new EmptyBorder(4, 4, 4, 4));
+        card.setFocusable(true);
+        addMouseFocusListener(card);
+
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(2, 2, 2, 2);
+
+        c.gridwidth = 4;
+        c.gridheight = 1;
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 0;
+        JPanel titlePanel = new JPanel();
+        titlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        card.add(titlePanel, c);
+
+        JLabel title = new JLabel(typeName + " Bar");
+        title.setHorizontalAlignment(SwingConstants.LEFT);
+        title.setFont(FontManager.getRunescapeBoldFont());
+        titlePanel.add(title);
+
+        JLabel help = new JLabel(new ImageIcon(HELP));
+        help.setBorder(new EmptyBorder(0, 4, 0, 4));
+        help.setToolTipText("<html>Doom-of-Mokhaiotl-style overhead " + typeName.toLowerCase() + " bar."
+                + "<br>Stacks above the HP bar (or replaces it when no HP bar is active)."
+                + "<br>The fill colour is independent of HP -- pick whatever you like.</html>");
+        titlePanel.add(help);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 1;
+        card.add(rightLabel("Duration: "), c);
+
+        c.gridx = 1;
+        c.gridy = 1;
+        duration.setToolTipText("How long the bar stays on screen (game ticks)");
+        duration.setModel(new SpinnerNumberModel(ShieldAttributes.DEFAULT_DURATION, 0, 1000000, 1));
+        card.add(duration, c);
+
+        c.gridx = 0;
+        c.gridy = 2;
+        card.add(rightLabel("Colour: "), c);
+
+        c.gridx = 1;
+        c.gridy = 2;
+        colour.setToolTipText("Click to pick the fill colour for this " + typeName.toLowerCase() + " bar");
+        colour.setFocusable(false);
+        colour.setPreferredSize(new Dimension(120, 26));
+        colour.setOpaque(true);
+        colour.setBackground(new Color(defaultRgb));
+        if (isShield)
+        {
+            shieldAttributes.setRgb(defaultRgb);
+        }
+        else
+        {
+            specialAttributes.setRgb(defaultRgb);
+        }
+        colour.addActionListener(e ->
+        {
+            int currentRgb = isShield ? shieldAttributes.getRgb() : specialAttributes.getRgb();
+            Color picked = JColorChooser.showDialog(this, typeName + " Bar Colour", new Color(currentRgb));
+            if (picked != null)
+            {
+                int newRgb = picked.getRGB() & 0xFFFFFF;
+                if (isShield)
+                {
+                    shieldAttributes.setRgb(newRgb);
+                }
+                else
+                {
+                    specialAttributes.setRgb(newRgb);
+                }
+                colour.setBackground(picked);
+                // Mark as dirty (red) so the user knows to hit Update.
+                Color dirty = isShield ? shieldAttributes.getRed() : specialAttributes.getRed();
+                colour.setBorder(BorderFactory.createLineBorder(dirty, 2));
+            }
+        });
+        card.add(colour, c);
+
+        c.gridx = 0;
+        c.gridy = 3;
+        card.add(rightLabel("Max " + typeName + ": "), c);
+
+        c.gridx = 1;
+        c.gridy = 3;
+        maxValue.setToolTipText("Maximum value the " + typeName.toLowerCase() + " bar can hold");
+        maxValue.setModel(new SpinnerNumberModel(ShieldAttributes.DEFAULT_MAX, 0, 99999, 1));
+        card.add(maxValue, c);
+
+        c.gridx = 0;
+        c.gridy = 4;
+        card.add(rightLabel("Current " + typeName + ": "), c);
+
+        c.gridx = 1;
+        c.gridy = 4;
+        currentValue.setToolTipText("Current value remaining; fill width = current / max");
+        currentValue.setModel(new SpinnerNumberModel(ShieldAttributes.DEFAULT_MAX, 0, 99999, 1));
+        card.add(currentValue, c);
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.weightx = 1;
+        c.weighty = 1;
+        c.gridx = 8;
+        c.gridy = 15;
+        card.add(new JLabel(""), c);
+    }
+
+    private void setupScreenFadeCard(JPanel card)
+    {
+        card.setLayout(new GridBagLayout());
+        card.setBorder(new EmptyBorder(4, 4, 4, 4));
+        card.setFocusable(true);
+        addMouseFocusListener(card);
+
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(2, 2, 2, 2);
+
+        c.gridwidth = 4;
+        c.gridheight = 1;
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 0;
+        JPanel titlePanel = new JPanel();
+        titlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        card.add(titlePanel, c);
+
+        JLabel title = new JLabel("Screen Fade");
+        title.setHorizontalAlignment(SwingConstants.LEFT);
+        title.setFont(FontManager.getRunescapeBoldFont());
+        titlePanel.add(title);
+
+        JLabel help = new JLabel(new ImageIcon(HELP));
+        help.setBorder(new EmptyBorder(0, 4, 0, 4));
+        help.setToolTipText("<html>Whisperer / Blackstone-Fragment style fullscreen tint with a circular cutout in the centre."
+                + "<br>The effect is GLOBAL -- it doesn't matter which Character owns this keyframe; the fade"
+                + "<br>covers the whole canvas. Park it on a 'scene controller' Character if you want it"
+                + "<br>somewhere easy to find.</html>");
+        titlePanel.add(help);
+
+        JButton colour = screenFadeAttributes.getColour();
+        JSpinner peakAlpha = screenFadeAttributes.getPeakAlpha();
+        JSpinner ringRadius = screenFadeAttributes.getRingRadius();
+        JSpinner ringFeather = screenFadeAttributes.getRingFeather();
+        JSpinner fadeInTicks = screenFadeAttributes.getFadeInTicks();
+        JSpinner holdTicks = screenFadeAttributes.getHoldTicks();
+        JSpinner fadeOutTicks = screenFadeAttributes.getFadeOutTicks();
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 1;
+        card.add(rightLabel("Colour: "), c);
+
+        c.gridx = 1;
+        c.gridy = 1;
+        colour.setToolTipText("Click to pick the tint colour. Default is Whisperer purple.");
+        colour.setFocusable(false);
+        colour.setPreferredSize(new Dimension(120, 26));
+        colour.setOpaque(true);
+        colour.setBackground(new Color(ScreenFadeKeyFrame.DEFAULT_RGB));
+        screenFadeAttributes.setRgb(ScreenFadeKeyFrame.DEFAULT_RGB);
+        colour.addActionListener(e ->
+        {
+            Color picked = JColorChooser.showDialog(this, "Screen Fade Colour", new Color(screenFadeAttributes.getRgb()));
+            if (picked != null)
+            {
+                int newRgb = picked.getRGB() & 0xFFFFFF;
+                screenFadeAttributes.setRgb(newRgb);
+                colour.setBackground(picked);
+                colour.setBorder(BorderFactory.createLineBorder(screenFadeAttributes.getRed(), 2));
+            }
+        });
+        card.add(colour, c);
+
+        c.gridx = 2;
+        c.gridy = 1;
+        card.add(rightLabel("Peak Alpha: "), c);
+
+        c.gridx = 3;
+        c.gridy = 1;
+        peakAlpha.setToolTipText("Peak opacity (0-255). Default 220.");
+        peakAlpha.setModel(new SpinnerNumberModel(ScreenFadeKeyFrame.DEFAULT_PEAK_ALPHA, 0, 255, 1));
+        card.add(peakAlpha, c);
+
+        c.gridx = 0;
+        c.gridy = 2;
+        card.add(rightLabel("Ring Radius: "), c);
+
+        c.gridx = 1;
+        c.gridy = 2;
+        ringRadius.setToolTipText("Centre cutout radius in screen pixels. Set to 0 for a uniform fade with no ring.");
+        ringRadius.setModel(new SpinnerNumberModel(ScreenFadeKeyFrame.DEFAULT_RING_RADIUS, 0, 4096, 5));
+        card.add(ringRadius, c);
+
+        c.gridx = 2;
+        c.gridy = 2;
+        card.add(rightLabel("Ring Feather: "), c);
+
+        c.gridx = 3;
+        c.gridy = 2;
+        ringFeather.setToolTipText("Soft-edge width of the ring boundary in screen pixels. 0 = hard edge.");
+        ringFeather.setModel(new SpinnerNumberModel(ScreenFadeKeyFrame.DEFAULT_RING_FEATHER, 0, 1024, 5));
+        card.add(ringFeather, c);
+
+        c.gridx = 0;
+        c.gridy = 3;
+        card.add(rightLabel("Fade In Ticks: "), c);
+
+        c.gridx = 1;
+        c.gridy = 3;
+        fadeInTicks.setToolTipText("Game ticks the fade takes to ramp from 0 to peak alpha");
+        fadeInTicks.setModel(new SpinnerNumberModel(ScreenFadeKeyFrame.DEFAULT_FADE_IN, 0, 1000, 0.1));
+        card.add(fadeInTicks, c);
+
+        c.gridx = 2;
+        c.gridy = 3;
+        card.add(rightLabel("Hold Ticks: "), c);
+
+        c.gridx = 3;
+        c.gridy = 3;
+        holdTicks.setToolTipText("Game ticks the fade holds at peak alpha before ramping down");
+        holdTicks.setModel(new SpinnerNumberModel(ScreenFadeKeyFrame.DEFAULT_HOLD, 0, 1000, 0.1));
+        card.add(holdTicks, c);
+
+        c.gridx = 0;
+        c.gridy = 4;
+        card.add(rightLabel("Fade Out Ticks: "), c);
+
+        c.gridx = 1;
+        c.gridy = 4;
+        fadeOutTicks.setToolTipText("Game ticks the fade takes to ramp from peak alpha back to 0");
+        fadeOutTicks.setModel(new SpinnerNumberModel(ScreenFadeKeyFrame.DEFAULT_FADE_OUT, 0, 1000, 0.1));
+        card.add(fadeOutTicks, c);
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.weightx = 1;
+        c.weighty = 1;
+        c.gridx = 8;
+        c.gridy = 15;
+        card.add(new JLabel(""), c);
+    }
+
     private JLabel rightLabel(String text)
     {
         JLabel label = new JLabel(text);
@@ -2466,6 +2787,15 @@ public class AttributePanel extends JPanel
                 break;
             case PROJECTILE_CARD:
                 type = KeyFrameType.PROJECTILE;
+                break;
+            case SHIELD_CARD:
+                type = KeyFrameType.SHIELD;
+                break;
+            case SPECIAL_CARD:
+                type = KeyFrameType.SPECIAL;
+                break;
+            case SCREEN_FADE_CARD:
+                type = KeyFrameType.SCREEN_FADE;
         }
 
         switchCards(type);
@@ -2933,6 +3263,18 @@ public class AttributePanel extends JPanel
             case PROJECTILE:
                 projectileAttributes.setAttributes(keyFrame);
                 projectileAttributes.setBackgroundColours(keyFrameState);
+                break;
+            case SHIELD:
+                shieldAttributes.setAttributes(keyFrame);
+                shieldAttributes.setBackgroundColours(keyFrameState);
+                break;
+            case SPECIAL:
+                specialAttributes.setAttributes(keyFrame);
+                specialAttributes.setBackgroundColours(keyFrameState);
+                break;
+            case SCREEN_FADE:
+                screenFadeAttributes.setAttributes(keyFrame);
+                screenFadeAttributes.setBackgroundColours(keyFrameState);
         }
     }
 
@@ -2985,6 +3327,15 @@ public class AttributePanel extends JPanel
                 break;
             case PROJECTILE:
                 projectileAttributes.resetAttributes(resetBackground);
+                break;
+            case SHIELD:
+                shieldAttributes.resetAttributes(resetBackground);
+                break;
+            case SPECIAL:
+                specialAttributes.resetAttributes(resetBackground);
+                break;
+            case SCREEN_FADE:
+                screenFadeAttributes.resetAttributes(resetBackground);
         }
     }
 

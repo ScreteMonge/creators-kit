@@ -182,6 +182,18 @@ public class AttributeSheet extends TimeSheet
                         // flight duration. Render the tail length to match.
                         drawTail(g, e, keyFrames, pkf.getStartDelayTicks() + pkf.getDurationTicks(), zoomFactor, pkf.getTick(), x, y, imageHeight);
                         break;
+                    case SHIELD:
+                        ShieldKeyFrame shkf = (ShieldKeyFrame) keyFrame;
+                        drawTail(g, e, keyFrames, shkf.getDuration(), zoomFactor, shkf.getTick(), x, y, imageHeight);
+                        break;
+                    case SPECIAL:
+                        SpecialKeyFrame spkf = (SpecialKeyFrame) keyFrame;
+                        drawTail(g, e, keyFrames, spkf.getDuration(), zoomFactor, spkf.getTick(), x, y, imageHeight);
+                        break;
+                    case SCREEN_FADE:
+                        ScreenFadeKeyFrame sfkf = (ScreenFadeKeyFrame) keyFrame;
+                        drawTail(g, e, keyFrames, sfkf.totalDurationTicks(), zoomFactor, sfkf.getTick(), x, y, imageHeight);
+                        break;
                     default:
                         break;
                 }
@@ -315,6 +327,18 @@ public class AttributeSheet extends TimeSheet
                     }
 
                     drawPreviewTail(g, x, y, imageHeight, duration, zoomFactor);
+                    break;
+                case SHIELD:
+                    ShieldKeyFrame shkf = (ShieldKeyFrame) keyFrame;
+                    drawPreviewTail(g, x, y, imageHeight, shkf.getDuration(), zoomFactor);
+                    break;
+                case SPECIAL:
+                    SpecialKeyFrame spkf = (SpecialKeyFrame) keyFrame;
+                    drawPreviewTail(g, x, y, imageHeight, spkf.getDuration(), zoomFactor);
+                    break;
+                case SCREEN_FADE:
+                    ScreenFadeKeyFrame sfkf = (ScreenFadeKeyFrame) keyFrame;
+                    drawPreviewTail(g, x, y, imageHeight, sfkf.totalDurationTicks(), zoomFactor);
                     break;
                 default:
                     break;

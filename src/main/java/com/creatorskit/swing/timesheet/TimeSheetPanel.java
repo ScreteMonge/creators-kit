@@ -1604,6 +1604,9 @@ public class TimeSheetPanel extends JPanel
         labels[13].setText(AttributePanel.HITSPLAT_3_CARD + LABEL_OFFSET);
         labels[14].setText(AttributePanel.HITSPLAT_4_CARD + LABEL_OFFSET);
         labels[15].setText(AttributePanel.PROJECTILE_CARD + LABEL_OFFSET);
+        labels[16].setText(AttributePanel.SHIELD_CARD + LABEL_OFFSET);
+        labels[17].setText(AttributePanel.SPECIAL_CARD + LABEL_OFFSET);
+        labels[18].setText(AttributePanel.SCREEN_FADE_CARD + LABEL_OFFSET);
     }
 
     private void setupScrollBar()

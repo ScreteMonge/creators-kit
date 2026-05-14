@@ -105,6 +105,22 @@ public class SummarySheet extends TimeSheet
                 hitsplat.addActionListener(e -> onKeyFrameTypePressed(finalI, hitsplatType));
                 menuItem.add(hitsplat);
             }
+
+            JMenuItem projectile = new JMenuItem(KeyFrameType.PROJECTILE.getName());
+            projectile.addActionListener(e -> onKeyFrameTypePressed(finalI, KeyFrameType.PROJECTILE));
+            menuItem.add(projectile);
+
+            JMenuItem shield = new JMenuItem(KeyFrameType.SHIELD.getName());
+            shield.addActionListener(e -> onKeyFrameTypePressed(finalI, KeyFrameType.SHIELD));
+            menuItem.add(shield);
+
+            JMenuItem special = new JMenuItem(KeyFrameType.SPECIAL.getName());
+            special.addActionListener(e -> onKeyFrameTypePressed(finalI, KeyFrameType.SPECIAL));
+            menuItem.add(special);
+
+            JMenuItem screenFade = new JMenuItem(KeyFrameType.SCREEN_FADE.getName());
+            screenFade.addActionListener(e -> onKeyFrameTypePressed(finalI, KeyFrameType.SCREEN_FADE));
+            menuItem.add(screenFade);
         }
     }
 
@@ -235,6 +251,18 @@ public class SummarySheet extends TimeSheet
                 case HEALTH:
                     HealthKeyFrame hkf = (HealthKeyFrame) keyFrame;
                     drawTail(g, e, keyFrames, hkf.getDuration(), zoomFactor, hkf.getTick(), x, y, xStringOffset, stringHeight);
+                    break;
+                case SHIELD:
+                    ShieldKeyFrame shkf = (ShieldKeyFrame) keyFrame;
+                    drawTail(g, e, keyFrames, shkf.getDuration(), zoomFactor, shkf.getTick(), x, y, xStringOffset, stringHeight);
+                    break;
+                case SPECIAL:
+                    SpecialKeyFrame spkf = (SpecialKeyFrame) keyFrame;
+                    drawTail(g, e, keyFrames, spkf.getDuration(), zoomFactor, spkf.getTick(), x, y, xStringOffset, stringHeight);
+                    break;
+                case SCREEN_FADE:
+                    ScreenFadeKeyFrame sfkf = (ScreenFadeKeyFrame) keyFrame;
+                    drawTail(g, e, keyFrames, sfkf.totalDurationTicks(), zoomFactor, sfkf.getTick(), x, y, xStringOffset, stringHeight);
                     break;
                 case HITSPLAT_1:
                 case HITSPLAT_2:
