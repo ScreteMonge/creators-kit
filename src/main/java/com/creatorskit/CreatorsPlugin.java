@@ -139,6 +139,17 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private Character cameraLockedCharacter;
 
 	/**
+	 * Camera focal-point velocity per axis. Used by the critically-damped spring
+	 * ("SmoothDamp") in updateCameraLock so the camera accelerates smoothly when the
+	 * Character starts moving and decelerates smoothly when they stop -- ease-in AND
+	 * ease-out from a single integration step. Reset to 0 on every fresh lock engage
+	 * so the camera doesn't carry stale momentum from the previous tracked Character.
+	 */
+	private double cameraLockVelX;
+	private double cameraLockVelY;
+	private double cameraLockVelZ;
+
+	/**
 	 * Captured camera mode at lock engage-time so the camera restores to whatever it
 	 * was in (0 = normal, 1 = free) when the lock disengages. Without this the user
 	 * would be stuck in free-camera mode after unlocking.
@@ -266,6 +277,13 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			client.setOculusOrbState(0);
 			client.setCameraMode(1);
 
+			// Zero out spring velocity so the camera accelerates from rest into its
+			// new tracking target instead of inheriting velocity from a prior lock
+			// or a previous tracked Character.
+			cameraLockVelX = 0;
+			cameraLockVelY = 0;
+			cameraLockVelZ = 0;
+
 			cameraLockedCharacter = finalTarget;
 			if (finalTarget.getCameraLockCheckBox() != null
 					&& !finalTarget.getCameraLockCheckBox().isSelected())
@@ -305,30 +323,43 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 		try
 		{
-			// Axis mapping (confirmed by the diagnostic): the camera focal point's
-			// coordinate system is NOT (sceneX, sceneY, sceneZ). It's actually:
-			//   focal.X = world east-west       <-- same axis as ck.X
-			//   focal.Y = world vertical height <-- same axis as ck.Z (Perspective tile height)
-			//   focal.Z = world north-south     <-- same axis as ck.Y
-			// So we have to swap Y/Z when feeding ck's coordinates into the setters.
-			// Without the swap, setCameraFocalPointY(ck.getY() ~ 6720) was being read
-			// as "camera height = 6720 above ground" -- way up in the sky, hence the
-			// "way far away" behaviour we kept hitting. The captured-offset workaround
-			// worked accidentally because the offset was capturing the axis mismatch
-			// as a numeric delta and re-applying it preserved the wrong mapping.
+			// Axis mapping (confirmed by the diagnostic): camera focal-point coords are
+			// (eastWest, height, northSouth) while CKObject coords are (eastWest,
+			// northSouth, height). We swap Y/Z when feeding ck into the setters.
 			//
-			// Easing: exponential decay toward the target. Natural ease-out + ease-in
-			// on engage. Config returns int percent (5-100); convert to lerp factor.
-			double easing = clamp01(config.cameraLockEasing() / 100.0);
+			// Critically-damped spring ("SmoothDamp") instead of exponential lerp. A
+			// pure lerp only gives ease-out (decelerating into the target). A spring
+			// that tracks velocity gives ease-IN when motion starts (velocity ramps up
+			// from 0 as the character begins to walk) AND ease-out when motion ends
+			// (velocity smoothly drops back to 0 as the character stops). Critically
+			// damped means it reaches the target without overshooting or oscillating.
+			//
+			// smoothTime is "approximate time to reach the target". Config returns int
+			// percent (5-100); convert to smoothTime where higher percent = snappier:
+			//   5%  -> 1.0s  (very smooth, long ease)
+			//   50% -> 0.51s (responsive, default-ish)
+			//   100% -> 0.01s (near-snap)
+			double easingPercent = Math.max(1, Math.min(100, config.cameraLockEasing()));
+			double smoothTime = (101.0 - easingPercent) / 100.0;
+			double dt = Constants.CLIENT_TICK_LENGTH / 1000.0; // 0.02s per client tick
+
 			double targetX = ck.getX();
 			double targetY = ck.getZ(); // height
 			double targetZ = ck.getY(); // north-south
-			double cx = client.getCameraFocalPointX();
-			double cy = client.getCameraFocalPointY();
-			double cz = client.getCameraFocalPointZ();
-			client.setCameraFocalPointX(cx + (targetX - cx) * easing);
-			client.setCameraFocalPointY(cy + (targetY - cy) * easing);
-			client.setCameraFocalPointZ(cz + (targetZ - cz) * easing);
+
+			double[] vx = {cameraLockVelX};
+			double[] vy = {cameraLockVelY};
+			double[] vz = {cameraLockVelZ};
+			double newX = smoothDamp(client.getCameraFocalPointX(), targetX, vx, smoothTime, dt);
+			double newY = smoothDamp(client.getCameraFocalPointY(), targetY, vy, smoothTime, dt);
+			double newZ = smoothDamp(client.getCameraFocalPointZ(), targetZ, vz, smoothTime, dt);
+			cameraLockVelX = vx[0];
+			cameraLockVelY = vy[0];
+			cameraLockVelZ = vz[0];
+
+			client.setCameraFocalPointX(newX);
+			client.setCameraFocalPointY(newY);
+			client.setCameraFocalPointZ(newZ);
 		}
 		catch (IllegalArgumentException ex)
 		{
@@ -338,18 +369,37 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	}
 
 	/**
-	 * Clamp to (0, 1]. A non-positive easing factor would freeze the camera entirely,
-	 * a factor &gt; 1 would overshoot the target -- both useless for the lock. Default
-	 * is enforced separately by the config's {@code default} value.
+	 * Critically-damped spring step toward {@code target}. Returns the new position;
+	 * mutates the velocity in place via a single-element array (Java's lack of
+	 * out-params is the only reason this needs the awkward double[1] convention).
+	 *
+	 * <p>Formula is the classic Game-Programming-Gems / Unity SmoothDamp:
+	 * <pre>
+	 *   omega  = 2 / smoothTime
+	 *   x      = omega * deltaTime
+	 *   exp    = 1 / (1 + x + 0.48*x^2 + 0.235*x^3)   // 3rd-order pade approximation
+	 *   delta  = current - target
+	 *   temp   = (velocity + omega * delta) * deltaTime
+	 *   velocity_new = (velocity - omega * temp) * exp
+	 *   output       = target + (delta + temp) * exp
+	 * </pre>
+	 * Critical damping means it asymptotes to the target without overshoot or
+	 * oscillation; ease-in / ease-out emerge naturally because the velocity term
+	 * ramps from zero, peaks, and returns to zero.
 	 */
-	private static double clamp01(double v)
+	private static double smoothDamp(double current, double target, double[] velocity,
+			double smoothTime, double deltaTime)
 	{
-		if (v <= 0.0)
-		{
-			return 0.01;
-		}
-		return v > 1.0 ? 1.0 : v;
+		smoothTime = Math.max(0.0001, smoothTime);
+		double omega = 2.0 / smoothTime;
+		double x = omega * deltaTime;
+		double exp = 1.0 / (1.0 + x + 0.48 * x * x + 0.235 * x * x * x);
+		double delta = current - target;
+		double temp = (velocity[0] + omega * delta) * deltaTime;
+		velocity[0] = (velocity[0] - omega * temp) * exp;
+		return target + (delta + temp) * exp;
 	}
+
 	private CKObject transmog;
 	private CKObject previewObject;
 	private Random random = new Random();
