@@ -63,4 +63,12 @@ public class CharacterSave
     private int offsetX;
     private int offsetY;
     private int offsetZ;
+    /**
+     * Added 2.3.x. Doom-of-Mokhaiotl-style secondary bars (Shield + Special) and the
+     * Whisperer-style screen fade. Each is null in pre-2.3 saves; the load path treats
+     * null as "no such keyframes" so old saves load cleanly without a migration step.
+     */
+    private ShieldKeyFrame[] shieldKeyFrames;
+    private SpecialKeyFrame[] specialKeyFrames;
+    private ScreenFadeKeyFrame[] screenFadeKeyFrames;
 }

@@ -975,6 +975,63 @@ public class Character
         return keyFrame;
     }
 
+    public ShieldKeyFrame[] getShieldKeyFrames()
+    {
+        KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.SHIELD);
+        if (keyFrames == null)
+        {
+            return null;
+        }
+        ShieldKeyFrame[] out = new ShieldKeyFrame[keyFrames.length];
+        for (int i = 0; i < keyFrames.length; i++)
+        {
+            out[i] = (ShieldKeyFrame) keyFrames[i];
+        }
+        if (Arrays.stream(out).allMatch(Objects::isNull))
+        {
+            return null;
+        }
+        return out;
+    }
+
+    public SpecialKeyFrame[] getSpecialKeyFrames()
+    {
+        KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.SPECIAL);
+        if (keyFrames == null)
+        {
+            return null;
+        }
+        SpecialKeyFrame[] out = new SpecialKeyFrame[keyFrames.length];
+        for (int i = 0; i < keyFrames.length; i++)
+        {
+            out[i] = (SpecialKeyFrame) keyFrames[i];
+        }
+        if (Arrays.stream(out).allMatch(Objects::isNull))
+        {
+            return null;
+        }
+        return out;
+    }
+
+    public ScreenFadeKeyFrame[] getScreenFadeKeyFrames()
+    {
+        KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.SCREEN_FADE);
+        if (keyFrames == null)
+        {
+            return null;
+        }
+        ScreenFadeKeyFrame[] out = new ScreenFadeKeyFrame[keyFrames.length];
+        for (int i = 0; i < keyFrames.length; i++)
+        {
+            out[i] = (ScreenFadeKeyFrame) keyFrames[i];
+        }
+        if (Arrays.stream(out).allMatch(Objects::isNull))
+        {
+            return null;
+        }
+        return out;
+    }
+
     public SpotAnimKeyFrame[] getSpotAnimKeyFrames(KeyFrameType spotAnimNumber)
     {
         KeyFrame[] keyFrames = getKeyFrames(spotAnimNumber);

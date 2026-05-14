@@ -132,6 +132,33 @@ public class KeyFrame
                         projKF.getDurationTicks(),
                         projKF.getStartDelayTicks(),
                         projKF.isFaceTrajectory());
+            case SHIELD:
+                ShieldKeyFrame shieldKF = (ShieldKeyFrame) keyFrame;
+                return new ShieldKeyFrame(
+                        tick,
+                        shieldKF.getDuration(),
+                        shieldKF.getRgb(),
+                        shieldKF.getMaxValue(),
+                        shieldKF.getCurrentValue());
+            case SPECIAL:
+                SpecialKeyFrame specialKF = (SpecialKeyFrame) keyFrame;
+                return new SpecialKeyFrame(
+                        tick,
+                        specialKF.getDuration(),
+                        specialKF.getRgb(),
+                        specialKF.getMaxValue(),
+                        specialKF.getCurrentValue());
+            case SCREEN_FADE:
+                ScreenFadeKeyFrame fadeKF = (ScreenFadeKeyFrame) keyFrame;
+                return new ScreenFadeKeyFrame(
+                        tick,
+                        fadeKF.getRgb(),
+                        fadeKF.getPeakAlpha(),
+                        fadeKF.getRingRadius(),
+                        fadeKF.getRingFeather(),
+                        fadeKF.getFadeInTicks(),
+                        fadeKF.getHoldTicks(),
+                        fadeKF.getFadeOutTicks());
         }
     }
 }

@@ -1999,7 +1999,10 @@ public class CreatorsPanel extends PluginPanel
                 character.getRenderFixHeight(),
                 character.getOffsetX(),
                 character.getOffsetY(),
-                character.getOffsetZ());
+                character.getOffsetZ(),
+                character.getShieldKeyFrames(),
+                character.getSpecialKeyFrames(),
+                character.getScreenFadeKeyFrames());
     }
 
     public void openLoadSetupDialog()
@@ -2359,6 +2362,21 @@ public class CreatorsPanel extends PluginPanel
             if (save.getProjectileKeyFrames() != null)
             {
                 frames[KeyFrameType.getIndex(KeyFrameType.PROJECTILE)] = save.getProjectileKeyFrames();
+            }
+
+            // Null in pre-2.3 saves -- same Gson-default behaviour for the three
+            // bar/fade keyframe types added in 2.3.
+            if (save.getShieldKeyFrames() != null)
+            {
+                frames[KeyFrameType.getIndex(KeyFrameType.SHIELD)] = save.getShieldKeyFrames();
+            }
+            if (save.getSpecialKeyFrames() != null)
+            {
+                frames[KeyFrameType.getIndex(KeyFrameType.SPECIAL)] = save.getSpecialKeyFrames();
+            }
+            if (save.getScreenFadeKeyFrames() != null)
+            {
+                frames[KeyFrameType.getIndex(KeyFrameType.SCREEN_FADE)] = save.getScreenFadeKeyFrames();
             }
 
             KeyFrameType[] summary;

@@ -22,7 +22,10 @@ public enum KeyFrameType
     HITSPLAT_2("Hitsplat 2","H2"),
     HITSPLAT_3("Hitsplat 3","H3"),
     HITSPLAT_4("Hitsplat 4","H4"),
-    PROJECTILE("Projectile","P");
+    PROJECTILE("Projectile","P"),
+    SHIELD("Shield","SH"),
+    SPECIAL("Special","SP"),
+    SCREEN_FADE("Screen Fade","SF");
 
     private final String name;
     private final String shortHand;
@@ -47,11 +50,16 @@ public enum KeyFrameType
             HITSPLAT_2,
             HITSPLAT_3,
             HITSPLAT_4,
-            PROJECTILE
+            PROJECTILE,
+            SHIELD,
+            SPECIAL,
+            SCREEN_FADE
     };
 
     public static final KeyFrameType[] HITSPLAT_TYPES = new KeyFrameType[]{KeyFrameType.HITSPLAT_1, KeyFrameType.HITSPLAT_2, KeyFrameType.HITSPLAT_3, KeyFrameType.HITSPLAT_4};
     public static final KeyFrameType[] SPOTANIM_TYPES = new KeyFrameType[]{KeyFrameType.SPOTANIM, KeyFrameType.SPOTANIM2};
+    /** Bar keyframes that share the overhead-bar rendering pipeline (HP / shield / special). */
+    public static final KeyFrameType[] BAR_TYPES = new KeyFrameType[]{KeyFrameType.HEALTH, KeyFrameType.SHIELD, KeyFrameType.SPECIAL};
 
     public static int getIndex(KeyFrameType type)
     {
@@ -88,6 +96,12 @@ public enum KeyFrameType
                 return 13;
             case PROJECTILE:
                 return 14;
+            case SHIELD:
+                return 15;
+            case SPECIAL:
+                return 16;
+            case SCREEN_FADE:
+                return 17;
         }
     }
 
@@ -126,12 +140,18 @@ public enum KeyFrameType
                 return HITSPLAT_4;
             case 14:
                 return PROJECTILE;
+            case 15:
+                return SHIELD;
+            case 16:
+                return SPECIAL;
+            case 17:
+                return SCREEN_FADE;
         }
     }
 
     public static int getTotalFrameTypes()
     {
-        return 15;
+        return 18;
     }
 
     public static KeyFrameType[] createDefaultSummary()
