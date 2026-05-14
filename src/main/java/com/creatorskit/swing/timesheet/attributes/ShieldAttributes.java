@@ -27,6 +27,8 @@ public class ShieldAttributes extends Attributes
     private final JButton colour = new JButton();
     private final JSpinner maxValue = new JSpinner();
     private final JSpinner currentValue = new JSpinner();
+    /** Stack position relative to HP/Special. Default 1 = middle slot. */
+    private final JSpinner order = new JSpinner();
 
     /**
      * Packed RGB of the currently-selected fill colour. Tracked separately from
@@ -58,6 +60,7 @@ public class ShieldAttributes extends Attributes
         setRgb(kf.getRgb());
         maxValue.setValue(kf.getMaxValue());
         currentValue.setValue(kf.getCurrentValue());
+        order.setValue(kf.getOrder());
     }
 
     @Override
@@ -70,6 +73,7 @@ public class ShieldAttributes extends Attributes
         colour.setBackground(new Color(rgb));
         maxValue.setBackground(color);
         currentValue.setBackground(color);
+        order.setBackground(color);
     }
 
     @Override
@@ -80,7 +84,8 @@ public class ShieldAttributes extends Attributes
                         duration,
                         colour,
                         maxValue,
-                        currentValue
+                        currentValue,
+                        order
                 };
     }
 
@@ -90,6 +95,7 @@ public class ShieldAttributes extends Attributes
         duration.addChangeListener(e -> duration.setBackground(getRed()));
         maxValue.addChangeListener(e -> maxValue.setBackground(getRed()));
         currentValue.addChangeListener(e -> currentValue.setBackground(getRed()));
+        order.addChangeListener(e -> order.setBackground(getRed()));
         // colour button is handled by the card setup since it needs the JColorChooser dialog.
     }
 
@@ -100,6 +106,7 @@ public class ShieldAttributes extends Attributes
         setRgb(DEFAULT_RGB);
         maxValue.setValue(DEFAULT_MAX);
         currentValue.setValue(DEFAULT_MAX);
+        order.setValue(ShieldKeyFrame.DEFAULT_ORDER);
         super.resetAttributes(resetBackground);
     }
 }

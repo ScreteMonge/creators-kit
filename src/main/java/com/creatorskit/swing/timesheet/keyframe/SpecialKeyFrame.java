@@ -14,18 +14,32 @@ import lombok.Setter;
 @Setter
 public class SpecialKeyFrame extends KeyFrame
 {
-    /** Colour of the filled portion, packed RGB. */
+    /** Default stack position. Special sits at the bottom by default. */
+    public static final int DEFAULT_ORDER = 2;
+
+    /** Colour of the filled portion, packed RGB. Depleted portion = same hue, darker. */
     private int rgb;
     private double duration;
     private int maxValue;
     private int currentValue;
+    /**
+     * Stack position relative to HP / Shield. Lower values draw higher on screen.
+     * See {@link HealthKeyFrame#order} for the shared convention.
+     */
+    private int order = DEFAULT_ORDER;
 
     public SpecialKeyFrame(double tick, double duration, int rgb, int maxValue, int currentValue)
+    {
+        this(tick, duration, rgb, maxValue, currentValue, DEFAULT_ORDER);
+    }
+
+    public SpecialKeyFrame(double tick, double duration, int rgb, int maxValue, int currentValue, int order)
     {
         super(KeyFrameType.SPECIAL, tick);
         this.duration = duration;
         this.rgb = rgb;
         this.maxValue = maxValue;
         this.currentValue = currentValue;
+        this.order = order;
     }
 }

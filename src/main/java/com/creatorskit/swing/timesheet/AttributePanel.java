@@ -349,7 +349,8 @@ public class AttributePanel extends JPanel
                         (double) healthAttributes.getDuration().getValue(),
                         (HealthbarSprite) healthAttributes.getHealthbarSprite().getSelectedItem(),
                         (int) healthAttributes.getMaxHealth().getValue(),
-                        (int) healthAttributes.getCurrentHealth().getValue()
+                        (int) healthAttributes.getCurrentHealth().getValue(),
+                        (int) healthAttributes.getOrder().getValue()
                 );
             case SPOTANIM:
             case SPOTANIM2:
@@ -418,7 +419,8 @@ public class AttributePanel extends JPanel
                         ((Number) shieldAttributes.getDuration().getValue()).doubleValue(),
                         shieldAttributes.getRgb(),
                         (int) shieldAttributes.getMaxValue().getValue(),
-                        (int) shieldAttributes.getCurrentValue().getValue()
+                        (int) shieldAttributes.getCurrentValue().getValue(),
+                        (int) shieldAttributes.getOrder().getValue()
                 );
             case SPECIAL:
                 return new SpecialKeyFrame(
@@ -426,7 +428,8 @@ public class AttributePanel extends JPanel
                         ((Number) specialAttributes.getDuration().getValue()).doubleValue(),
                         specialAttributes.getRgb(),
                         (int) specialAttributes.getMaxValue().getValue(),
-                        (int) specialAttributes.getCurrentValue().getValue()
+                        (int) specialAttributes.getCurrentValue().getValue(),
+                        (int) specialAttributes.getOrder().getValue()
                 );
             case SCREEN_FADE:
                 return new ScreenFadeKeyFrame(
@@ -1843,6 +1846,21 @@ public class AttributePanel extends JPanel
         card.add(currentHealth, c);
 
         c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 5;
+        JLabel orderLabel = new JLabel("Stack Order: ");
+        orderLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(orderLabel, c);
+
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.gridy = 5;
+        JSpinner orderSpinner = healthAttributes.getOrder();
+        orderSpinner.setToolTipText("Position in the HP/Shield/Special stack (0 = topmost, higher = lower). Default 0 keeps HP at the top.");
+        orderSpinner.setModel(new SpinnerNumberModel(HealthKeyFrame.DEFAULT_ORDER, 0, 9, 1));
+        card.add(orderSpinner, c);
+
+        c.gridwidth = 1;
         c.gridheight = 1;
         c.weightx = 1;
         c.weighty = 1;
@@ -2467,12 +2485,14 @@ public class AttributePanel extends JPanel
         final JButton colour;
         final JSpinner maxValue;
         final JSpinner currentValue;
+        final JSpinner orderSpinner;
         if (isShield)
         {
             duration = shieldAttributes.getDuration();
             colour = shieldAttributes.getColour();
             maxValue = shieldAttributes.getMaxValue();
             currentValue = shieldAttributes.getCurrentValue();
+            orderSpinner = shieldAttributes.getOrder();
         }
         else
         {
@@ -2480,6 +2500,7 @@ public class AttributePanel extends JPanel
             colour = specialAttributes.getColour();
             maxValue = specialAttributes.getMaxValue();
             currentValue = specialAttributes.getCurrentValue();
+            orderSpinner = specialAttributes.getOrder();
         }
 
         card.setLayout(new GridBagLayout());
@@ -2584,6 +2605,18 @@ public class AttributePanel extends JPanel
         currentValue.setToolTipText("Current value remaining; fill width = current / max");
         currentValue.setModel(new SpinnerNumberModel(ShieldAttributes.DEFAULT_MAX, 0, 99999, 1));
         card.add(currentValue, c);
+
+        c.gridx = 0;
+        c.gridy = 5;
+        card.add(rightLabel("Stack Order: "), c);
+
+        c.gridx = 1;
+        c.gridy = 5;
+        orderSpinner.setToolTipText("Position in the HP/Shield/Special stack (0 = topmost, higher = lower). "
+                + "Defaults: HP=0, Shield=1, Special=2.");
+        int defaultOrder = isShield ? ShieldKeyFrame.DEFAULT_ORDER : SpecialKeyFrame.DEFAULT_ORDER;
+        orderSpinner.setModel(new SpinnerNumberModel(defaultOrder, 0, 9, 1));
+        card.add(orderSpinner, c);
 
         c.gridwidth = 1;
         c.gridheight = 1;

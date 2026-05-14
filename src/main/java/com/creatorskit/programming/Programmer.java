@@ -1289,6 +1289,26 @@ public class Programmer
                 // so timeline scrubbing and pausing reflect the projectile's true position.
                 character.setCurrentKeyFrame(nextProjectile, KeyFrameType.PROJECTILE);
             }
+
+            // Shield / Special / ScreenFade — purely display-state keyframes (no scene
+            // mutation), so the only job here is to advance currentFrames so the
+            // overlays can see them. The original loop above missed these and so the
+            // overlays only lit up while scrubbing (which goes through the
+            // updateProgram path that iterates ALL_KEYFRAME_TYPES).
+            for (KeyFrameType barType : new KeyFrameType[]{KeyFrameType.SHIELD, KeyFrameType.SPECIAL, KeyFrameType.SCREEN_FADE})
+            {
+                KeyFrame currentBar = currentFrames[KeyFrameType.getIndex(barType)];
+                double lastBarTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
+                if (currentBar != null)
+                {
+                    lastBarTick = currentBar.getTick();
+                }
+                KeyFrame nextBar = character.findNextKeyFrame(barType, lastBarTick);
+                if (nextBar != null && nextBar.getTick() <= currentTime)
+                {
+                    character.setCurrentKeyFrame(nextBar, barType);
+                }
+            }
         }
     }
 

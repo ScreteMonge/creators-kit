@@ -20,23 +20,31 @@ import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 
 import javax.inject.Inject;
-import java.awt.AlphaComposite;
 import java.awt.Color;
-import java.awt.Composite;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Renders Doom-of-Mokhaiotl-style Shield / Special bars stacked above the HP
- * bar (or in HP's slot if no HP keyframe is active). The HP bar itself is
- * still rendered by {@link HealthOverlay}; this overlay only owns the two
- * extra bars so the existing HP rendering stays untouched.
+ * Renders the HP / Shield / Special overhead-bar stack. Consolidating all three
+ * bars in a single overlay (as opposed to one overlay per bar) lets us:
  *
- * <p>Drawn with Graphics2D rather than the sprite system because the user
- * picks the fill colour per-keyframe -- the sprite path would force one
- * colour per sprite.
+ * <ul>
+ *   <li>Honour each bar's user-set {@code order} field to decide stacking
+ *       independently per-keyframe.</li>
+ *   <li>Match every bar's width to the same auto-scaled value derived from
+ *       whichever bar has the largest {@code max}, so the stack stays
+ *       rectangular even when one bar dwarfs the others.</li>
+ *   <li>Apply text-bubble collision offset to the whole stack at once.</li>
+ * </ul>
+ *
+ * <p>HP keeps its existing sprite (red/green from {@link
+ * com.creatorskit.swing.timesheet.keyframe.settings.HealthbarSprite}). Shield
+ * and Special draw a custom-colour rectangle with a darker-shade depleted
+ * portion -- mirroring the in-game Doom-of-Mokhaiotl / OSRS extra-bar style
+ * (no black border, darker hue for the empty side).
  */
 public class BarOverlay extends Overlay
 {
@@ -44,17 +52,24 @@ public class BarOverlay extends Overlay
     private final CreatorsPlugin plugin;
     private final SpriteManager spriteManager;
 
-    /** Above-model offset before stacking starts. Matches HealthOverlay. */
+    /** Above-model offset before stacking starts. Matches the legacy HP placement. */
     private static final int MODEL_HEIGHT_BUFFER = 18;
     private static final int TEXT_BUFFER = -12;
 
-    /** Bar geometry. Tuned to match the standard HP-bar sprite (30x5). */
-    private static final int BAR_WIDTH = 30;
+    /** Minimum bar width. Bars grow above this with their max value. */
+    private static final int MIN_BAR_WIDTH = 30;
+    /** Hard cap so absurd max values don't fill the canvas. */
+    private static final int MAX_BAR_WIDTH = 240;
+    /**
+     * Pixels per unit-of-max used to auto-scale bar width. Tuned so a 99-max
+     * HP stays at the minimum width and a 1000-max boss bar lands around 170px.
+     */
+    private static final double PIXELS_PER_MAX = 0.17;
+
     private static final int BAR_HEIGHT = 5;
-    /** Vertical gap between stacked bars. */
     private static final int BAR_GAP = 1;
-    private static final Color BAR_BACKGROUND = new Color(0, 0, 0, 153);  // 60% alpha black
-    private static final Color BAR_BORDER = new Color(0, 0, 0, 220);
+    /** Brightness multiplier applied to the fill colour for the depleted portion. */
+    private static final float DEPLETED_BRIGHTNESS = 0.30f;
 
     @Inject
     private BarOverlay(Client client, CreatorsPlugin plugin, SpriteManager spriteManager)
@@ -84,13 +99,6 @@ public class BarOverlay extends Overlay
                 continue;
             }
 
-            ShieldKeyFrame shieldKeyFrame = activeShield(character, currentTick);
-            SpecialKeyFrame specialKeyFrame = activeSpecial(character, currentTick);
-            if (shieldKeyFrame == null && specialKeyFrame == null)
-            {
-                continue;
-            }
-
             CKObject ckObject = character.getCkObject();
             if (!ckObject.isActive())
             {
@@ -103,132 +111,176 @@ public class BarOverlay extends Overlay
                 continue;
             }
 
+            List<BarSpec> bars = collectActiveBars(character, currentTick);
+            if (bars.isEmpty())
+            {
+                continue;
+            }
+
             Model model = ckObject.getModel();
             if (model == null)
             {
                 continue;
             }
-
             model.calculateBoundsCylinder();
             int height = model.getModelHeight();
 
-            // Text shifts the entire stack up so the chat bubble doesn't overlap the bars.
-            int textBuffer = textCollisionOffset(character, currentTick);
+            // All bars on the same Character share width -- driven by the largest
+            // max so the stack stays rectangular.
+            int barWidth = computeBarWidth(bars);
+            int textOffset = textCollisionOffset(character, currentTick);
 
-            // Use a dummy bar sprite to anchor the position with the same logic
-            // HealthOverlay uses. The dummy is the size we want each bar to be.
-            BufferedImage anchor = new BufferedImage(BAR_WIDTH, BAR_HEIGHT, BufferedImage.TYPE_INT_ARGB);
+            // Sort by order ASC -- lowest order = topmost slot.
+            bars.sort((a, b) -> Integer.compare(a.order, b.order));
+
+            // Anchor the bottom of the stack at the legacy HP slot. Each bar's
+            // slot-from-bottom determines how many bar-heights it climbs.
+            BufferedImage anchor = new BufferedImage(barWidth, BAR_HEIGHT, BufferedImage.TYPE_INT_ARGB);
             Point base = Perspective.getCanvasImageLocation(client, lp, anchor, height + MODEL_HEIGHT_BUFFER);
             if (base == null)
             {
                 continue;
             }
+            int anchorX = base.getX() - 1;
+            int anchorY = base.getY() - 1 + textOffset;
 
-            // Determine stacking. HP (drawn elsewhere) is at the bottom slot.
-            // If HP is active, our bars stack ABOVE it. Otherwise our bars
-            // claim HP's slot so the user can show just a shield/special bar.
-            boolean hpActive = activeHealth(character, currentTick) != null;
-            int hpReservedRows = hpActive ? 1 : 0;
-
-            int x = base.getX() - 1;
-            int yHp = base.getY() - 1 + textBuffer;
-
-            // Special is the top bar; Shield is between HP and Special.
-            // Row 0 = HP slot, Row 1 = Shield, Row 2 = Special. When HP is
-            // inactive we collapse so Shield takes row 0 and Special row 1.
-            if (shieldKeyFrame != null)
+            int stack = bars.size();
+            for (int slot = 0; slot < stack; slot++)
             {
-                int row = hpReservedRows;
-                int y = yHp - row * (BAR_HEIGHT + BAR_GAP);
-                drawBar(graphics, x, y, shieldKeyFrame.getRgb(),
-                        shieldKeyFrame.getCurrentValue(),
-                        shieldKeyFrame.getMaxValue());
-            }
-
-            if (specialKeyFrame != null)
-            {
-                // Special sits above shield (or above HP if no shield).
-                int row = hpReservedRows + (shieldKeyFrame != null ? 1 : 0);
-                int y = yHp - row * (BAR_HEIGHT + BAR_GAP);
-                drawBar(graphics, x, y, specialKeyFrame.getRgb(),
-                        specialKeyFrame.getCurrentValue(),
-                        specialKeyFrame.getMaxValue());
+                BarSpec bar = bars.get(slot);
+                int slotFromBottom = stack - 1 - slot;
+                int y = anchorY - slotFromBottom * (BAR_HEIGHT + BAR_GAP);
+                renderBar(graphics, bar, anchorX, y, barWidth);
             }
         }
 
         return null;
     }
 
-    private void drawBar(Graphics2D g, int x, int y, int fillRgb, int current, int max)
+    /**
+     * Picks up the active HP / Shield / Special keyframes for one Character and
+     * returns them as a uniform list. "Active" = the seeker is inside the
+     * keyframe's duration window. Returns an empty list if none are active so
+     * the caller can short-circuit.
+     */
+    private List<BarSpec> collectActiveBars(Character character, double currentTick)
     {
-        // Translucent background so the bar reads as an overhead UI element.
-        Composite originalComposite = g.getComposite();
-        g.setComposite(AlphaComposite.SrcOver);
+        List<BarSpec> out = new ArrayList<>(3);
 
-        g.setColor(BAR_BACKGROUND);
-        g.fillRect(x, y, BAR_WIDTH, BAR_HEIGHT);
-
-        if (max > 0 && current > 0)
+        HealthKeyFrame hp = (HealthKeyFrame) character.getCurrentKeyFrame(KeyFrameType.HEALTH);
+        if (hp != null && currentTick >= hp.getTick() && currentTick <= hp.getTick() + hp.getDuration())
         {
-            double ratio = Math.min(1.0, (double) current / (double) max);
-            int fillWidth = (int) Math.round(ratio * BAR_WIDTH);
-            if (fillWidth == 0 && ratio > 0)
-            {
-                fillWidth = 1;
-            }
-            g.setColor(new Color(fillRgb));
-            g.fillRect(x, y, fillWidth, BAR_HEIGHT);
+            out.add(BarSpec.health(hp));
         }
 
-        g.setColor(BAR_BORDER);
-        g.drawRect(x, y, BAR_WIDTH - 1, BAR_HEIGHT - 1);
-        g.setComposite(originalComposite);
+        ShieldKeyFrame shield = (ShieldKeyFrame) character.getCurrentKeyFrame(KeyFrameType.SHIELD);
+        if (shield != null && currentTick >= shield.getTick() && currentTick <= shield.getTick() + shield.getDuration())
+        {
+            out.add(BarSpec.shield(shield));
+        }
+
+        SpecialKeyFrame special = (SpecialKeyFrame) character.getCurrentKeyFrame(KeyFrameType.SPECIAL);
+        if (special != null && currentTick >= special.getTick() && currentTick <= special.getTick() + special.getDuration())
+        {
+            out.add(BarSpec.special(special));
+        }
+
+        return out;
     }
 
-    /** HP / Shield / Special all share the same "active while within duration" rule. */
-    private HealthKeyFrame activeHealth(Character character, double currentTick)
+    private int computeBarWidth(List<BarSpec> bars)
     {
-        HealthKeyFrame kf = (HealthKeyFrame) character.getCurrentKeyFrame(KeyFrameType.HEALTH);
-        if (kf == null)
+        int maxOfMax = 1;
+        for (BarSpec bar : bars)
         {
-            return null;
+            maxOfMax = Math.max(maxOfMax, bar.max);
         }
-        if (currentTick > kf.getTick() + kf.getDuration())
-        {
-            return null;
-        }
-        return kf;
+        int scaled = (int) Math.round(maxOfMax * PIXELS_PER_MAX) + MIN_BAR_WIDTH;
+        return Math.max(MIN_BAR_WIDTH, Math.min(MAX_BAR_WIDTH, scaled));
     }
 
-    private ShieldKeyFrame activeShield(Character character, double currentTick)
+    private void renderBar(Graphics2D g, BarSpec bar, int x, int y, int width)
     {
-        ShieldKeyFrame kf = (ShieldKeyFrame) character.getCurrentKeyFrame(KeyFrameType.SHIELD);
-        if (kf == null)
+        if (bar.spriteHealth != null)
         {
-            return null;
+            renderSpriteHpBar(g, bar.spriteHealth, x, y, width);
+            return;
         }
-        if (currentTick > kf.getTick() + kf.getDuration())
-        {
-            return null;
-        }
-        return kf;
+        renderColouredBar(g, bar.rgb, bar.current, bar.max, x, y, width);
     }
 
-    private SpecialKeyFrame activeSpecial(Character character, double currentTick)
+    /**
+     * HP keeps its sprite-based look so saves built before the Shield/Special
+     * feature still render the same. Width is auto-scaled, so we slice the
+     * sprite to fit instead of forcing the sprite's native width.
+     */
+    private void renderSpriteHpBar(Graphics2D g, HealthKeyFrame hp, int x, int y, int width)
     {
-        SpecialKeyFrame kf = (SpecialKeyFrame) character.getCurrentKeyFrame(KeyFrameType.SPECIAL);
-        if (kf == null)
+        BufferedImage red = spriteManager.getSprite(hp.getHealthbarSprite().getBackgroundSpriteID(), 0);
+        BufferedImage green = spriteManager.getSprite(hp.getHealthbarSprite().getForegroundSpriteID(), 0);
+        if (red == null || green == null)
         {
-            return null;
+            // Sprite manager hasn't loaded yet -- fall back to the coloured-bar
+            // path with OSRS red/green hues so the bar is still visible.
+            renderColouredBar(g, 0x36FF36, hp.getCurrentHealth(), hp.getMaxHealth(), x, y, width);
+            return;
         }
-        if (currentTick > kf.getTick() + kf.getDuration())
+
+        // Draw the background (depleted/red) stretched to the auto-scaled width.
+        g.drawImage(red, x, y, width, red.getHeight(), null);
+
+        if (hp.getMaxHealth() <= 0 || hp.getCurrentHealth() <= 0)
         {
-            return null;
+            return;
         }
-        return kf;
+        double ratio = Math.min(1.0, (double) hp.getCurrentHealth() / (double) hp.getMaxHealth());
+        int fillWidth = (int) Math.round(ratio * width);
+        if (fillWidth <= 0 && ratio > 0)
+        {
+            fillWidth = 1;
+        }
+        if (fillWidth > 0)
+        {
+            // Source-side slice keeps the texture grain consistent with the
+            // background even after the auto-scaled stretch.
+            int srcW = (int) Math.round(ratio * green.getWidth());
+            if (srcW < 1) srcW = 1;
+            BufferedImage sub = green.getSubimage(0, 0, srcW, green.getHeight());
+            g.drawImage(sub, x, y, fillWidth, green.getHeight(), null);
+        }
     }
 
-    /** Mirror of HealthOverlay's text-collision offset so all bars stay aligned. */
+    /** Shield/Special style: solid fill, darker-shade background, no border. */
+    private void renderColouredBar(Graphics2D g, int rgb, int current, int max, int x, int y, int width)
+    {
+        Color fill = new Color(rgb);
+        Color depleted = darken(fill, DEPLETED_BRIGHTNESS);
+
+        g.setColor(depleted);
+        g.fillRect(x, y, width, BAR_HEIGHT);
+
+        if (max <= 0 || current <= 0)
+        {
+            return;
+        }
+        double ratio = Math.min(1.0, (double) current / (double) max);
+        int fillWidth = (int) Math.round(ratio * width);
+        if (fillWidth <= 0 && ratio > 0)
+        {
+            fillWidth = 1;
+        }
+        g.setColor(fill);
+        g.fillRect(x, y, fillWidth, BAR_HEIGHT);
+    }
+
+    /** Returns a darker shade of the colour via HSB brightness scaling. */
+    private static Color darken(Color c, float brightnessMultiplier)
+    {
+        float[] hsb = Color.RGBtoHSB(c.getRed(), c.getGreen(), c.getBlue(), null);
+        return Color.getHSBColor(hsb[0], hsb[1], hsb[2] * brightnessMultiplier);
+    }
+
+    /** Mirror of the legacy HealthOverlay's text-collision offset. */
     private int textCollisionOffset(Character character, double currentTick)
     {
         TextKeyFrame textKeyFrame = (TextKeyFrame) character.getCurrentKeyFrame(KeyFrameType.TEXT);
@@ -241,5 +293,44 @@ public class BarOverlay extends Overlay
             return 0;
         }
         return TEXT_BUFFER;
+    }
+
+    /**
+     * Uniform bar payload regardless of whether the source is HP (sprite render)
+     * or Shield/Special (colour render). {@code order} drives stack position;
+     * {@code max} drives shared-width auto-scaling.
+     */
+    private static final class BarSpec
+    {
+        final int order;
+        final int max;
+        final int current;
+        final int rgb;
+        /** Non-null only for HP, which uses the sprite renderer. */
+        final HealthKeyFrame spriteHealth;
+
+        private BarSpec(int order, int max, int current, int rgb, HealthKeyFrame spriteHealth)
+        {
+            this.order = order;
+            this.max = max;
+            this.current = current;
+            this.rgb = rgb;
+            this.spriteHealth = spriteHealth;
+        }
+
+        static BarSpec health(HealthKeyFrame kf)
+        {
+            return new BarSpec(kf.getOrder(), kf.getMaxHealth(), kf.getCurrentHealth(), 0, kf);
+        }
+
+        static BarSpec shield(ShieldKeyFrame kf)
+        {
+            return new BarSpec(kf.getOrder(), kf.getMaxValue(), kf.getCurrentValue(), kf.getRgb(), null);
+        }
+
+        static BarSpec special(SpecialKeyFrame kf)
+        {
+            return new BarSpec(kf.getOrder(), kf.getMaxValue(), kf.getCurrentValue(), kf.getRgb(), null);
+        }
     }
 }

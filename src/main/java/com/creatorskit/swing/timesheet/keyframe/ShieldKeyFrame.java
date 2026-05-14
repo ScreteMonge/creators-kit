@@ -14,18 +14,32 @@ import lombok.Setter;
 @Setter
 public class ShieldKeyFrame extends KeyFrame
 {
-    /** Colour of the filled portion, packed RGB. Background is rendered at 60% alpha grey. */
+    /** Default stack position. Shield sits below HP and above Special by default. */
+    public static final int DEFAULT_ORDER = 1;
+
+    /** Colour of the filled portion, packed RGB. Depleted portion = same hue, darker. */
     private int rgb;
     private double duration;
     private int maxValue;
     private int currentValue;
+    /**
+     * Stack position relative to HP / Special. Lower values draw higher on screen.
+     * See {@link HealthKeyFrame#order} for the shared convention.
+     */
+    private int order = DEFAULT_ORDER;
 
     public ShieldKeyFrame(double tick, double duration, int rgb, int maxValue, int currentValue)
+    {
+        this(tick, duration, rgb, maxValue, currentValue, DEFAULT_ORDER);
+    }
+
+    public ShieldKeyFrame(double tick, double duration, int rgb, int maxValue, int currentValue, int order)
     {
         super(KeyFrameType.SHIELD, tick);
         this.duration = duration;
         this.rgb = rgb;
         this.maxValue = maxValue;
         this.currentValue = currentValue;
+        this.order = order;
     }
 }

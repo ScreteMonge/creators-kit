@@ -97,7 +97,8 @@ public class KeyFrame
                         healthKF.getDuration(),
                         healthKF.getHealthbarSprite(),
                         healthKF.getMaxHealth(),
-                        healthKF.getCurrentHealth());
+                        healthKF.getCurrentHealth(),
+                        healthKF.getOrder());
             case SPOTANIM:
             case SPOTANIM2:
                 SpotAnimKeyFrame spotKF = (SpotAnimKeyFrame) keyFrame;
@@ -139,7 +140,8 @@ public class KeyFrame
                         shieldKF.getDuration(),
                         shieldKF.getRgb(),
                         shieldKF.getMaxValue(),
-                        shieldKF.getCurrentValue());
+                        shieldKF.getCurrentValue(),
+                        shieldKF.getOrder());
             case SPECIAL:
                 SpecialKeyFrame specialKF = (SpecialKeyFrame) keyFrame;
                 return new SpecialKeyFrame(
@@ -147,7 +149,8 @@ public class KeyFrame
                         specialKF.getDuration(),
                         specialKF.getRgb(),
                         specialKF.getMaxValue(),
-                        specialKF.getCurrentValue());
+                        specialKF.getCurrentValue(),
+                        specialKF.getOrder());
             case SCREEN_FADE:
                 ScreenFadeKeyFrame fadeKF = (ScreenFadeKeyFrame) keyFrame;
                 return new ScreenFadeKeyFrame(

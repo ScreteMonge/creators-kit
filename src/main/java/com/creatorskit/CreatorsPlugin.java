@@ -389,7 +389,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		clientToolbar.addNavigation(navigationButton);
 		overlayManager.add(overlay);
 		overlayManager.add(overheadOverlay);
-		overlayManager.add(healthOverlay);
+		// HealthOverlay deliberately not registered -- BarOverlay now renders the HP
+		// bar alongside Shield / Special so all three respect the per-keyframe
+		// order field and share the same auto-scaled width.
 		overlayManager.add(hitsplatOverlay);
 		overlayManager.add(textOverlay);
 		overlayManager.add(barOverlay);
@@ -572,7 +574,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		overlayManager.remove(overlay);
 		overlayManager.remove(textOverlay);
 		overlayManager.remove(overheadOverlay);
-		overlayManager.remove(healthOverlay);
+		// HealthOverlay is no longer registered -- BarOverlay handles HP. Keeping
+		// the no-op remove call would warn on shutdown.
 		overlayManager.remove(hitsplatOverlay);
 		overlayManager.remove(barOverlay);
 		overlayManager.remove(screenFadeOverlay);

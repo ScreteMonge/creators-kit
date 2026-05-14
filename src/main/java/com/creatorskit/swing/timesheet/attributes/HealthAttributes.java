@@ -2,9 +2,7 @@ package com.creatorskit.swing.timesheet.attributes;
 
 import com.creatorskit.swing.timesheet.keyframe.HealthKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrameState;
 import com.creatorskit.swing.timesheet.keyframe.settings.HealthbarSprite;
-import com.creatorskit.swing.timesheet.keyframe.settings.Toggle;
 import lombok.Getter;
 
 import javax.swing.*;
@@ -17,6 +15,8 @@ public class HealthAttributes extends Attributes
     private final JComboBox<HealthbarSprite> healthbarSprite = new JComboBox<>();
     private final JSpinner maxHealth = new JSpinner();
     private final JSpinner currentHealth = new JSpinner();
+    /** Stack position relative to Shield/Special. Default 0 = topmost. */
+    private final JSpinner order = new JSpinner();
 
     public HealthAttributes()
     {
@@ -31,6 +31,7 @@ public class HealthAttributes extends Attributes
         healthbarSprite.setSelectedItem(kf.getHealthbarSprite());
         maxHealth.setValue(kf.getMaxHealth());
         currentHealth.setValue(kf.getCurrentHealth());
+        order.setValue(kf.getOrder());
     }
 
     @Override
@@ -40,6 +41,7 @@ public class HealthAttributes extends Attributes
         healthbarSprite.setBackground(color);
         maxHealth.setBackground(color);
         currentHealth.setBackground(color);
+        order.setBackground(color);
     }
 
     @Override
@@ -50,7 +52,8 @@ public class HealthAttributes extends Attributes
                         duration,
                         healthbarSprite,
                         maxHealth,
-                        currentHealth
+                        currentHealth,
+                        order
                 };
     }
 
@@ -76,6 +79,11 @@ public class HealthAttributes extends Attributes
         {
             currentHealth.setBackground(getRed());
         });
+
+        order.addChangeListener(e ->
+        {
+            order.setBackground(getRed());
+        });
     }
 
     @Override
@@ -85,6 +93,7 @@ public class HealthAttributes extends Attributes
         healthbarSprite.setSelectedItem(HealthbarSprite.DEFAULT);
         maxHealth.setValue(99);
         currentHealth.setValue(99);
+        order.setValue(HealthKeyFrame.DEFAULT_ORDER);
         super.resetAttributes(resetBackground);
     }
 }

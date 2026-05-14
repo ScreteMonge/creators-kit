@@ -24,6 +24,8 @@ public class SpecialAttributes extends Attributes
     private final JButton colour = new JButton();
     private final JSpinner maxValue = new JSpinner();
     private final JSpinner currentValue = new JSpinner();
+    /** Stack position relative to HP/Shield. Default 2 = bottom slot. */
+    private final JSpinner order = new JSpinner();
 
     private int rgb = DEFAULT_RGB;
 
@@ -49,6 +51,7 @@ public class SpecialAttributes extends Attributes
         setRgb(kf.getRgb());
         maxValue.setValue(kf.getMaxValue());
         currentValue.setValue(kf.getCurrentValue());
+        order.setValue(kf.getOrder());
     }
 
     @Override
@@ -59,6 +62,7 @@ public class SpecialAttributes extends Attributes
         colour.setBackground(new Color(rgb));
         maxValue.setBackground(color);
         currentValue.setBackground(color);
+        order.setBackground(color);
     }
 
     @Override
@@ -69,7 +73,8 @@ public class SpecialAttributes extends Attributes
                         duration,
                         colour,
                         maxValue,
-                        currentValue
+                        currentValue,
+                        order
                 };
     }
 
@@ -79,6 +84,7 @@ public class SpecialAttributes extends Attributes
         duration.addChangeListener(e -> duration.setBackground(getRed()));
         maxValue.addChangeListener(e -> maxValue.setBackground(getRed()));
         currentValue.addChangeListener(e -> currentValue.setBackground(getRed()));
+        order.addChangeListener(e -> order.setBackground(getRed()));
     }
 
     @Override
@@ -88,6 +94,7 @@ public class SpecialAttributes extends Attributes
         setRgb(DEFAULT_RGB);
         maxValue.setValue(DEFAULT_MAX);
         currentValue.setValue(DEFAULT_MAX);
+        order.setValue(SpecialKeyFrame.DEFAULT_ORDER);
         super.resetAttributes(resetBackground);
     }
 }
