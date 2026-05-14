@@ -139,28 +139,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private Character cameraLockedCharacter;
 
 	/**
-	 * Captured (focalPoint - characterPosition) offset at lock engage-time.
-	 *
-	 * <p>Why we keep this instead of snapping focal = character.position: the OSRS
-	 * client API has no setter for camera POSITION, only the focal point. In normal
-	 * camera mode the engine auto-derives camera position from focal each frame; in
-	 * free-camera mode (which we have to use to expose setCameraFocalPointZ) it does
-	 * NOT. So setting focal = character.position teleports the look-AT point onto the
-	 * character but leaves the camera POSITION wherever the engine last put it --
-	 * typically near the local player from before the mode switch. Net effect: camera
-	 * stares at the character from across the map ("way far away" in user reports).
-	 *
-	 * <p>Re-applying the captured offset each tick means focal = character + offset.
-	 * As the character moves by ΔC, focal moves by ΔC; since the camera position is
-	 * frozen relative to focal in free-camera mode, the user's pre-engage framing is
-	 * preserved as the character moves. The trade-off is the lock can't dead-center
-	 * the character; the user has to frame them with the mouse before engaging.
-	 */
-	private double cameraLockOffsetX;
-	private double cameraLockOffsetY;
-	private double cameraLockOffsetZ;
-
-	/**
 	 * Captured camera mode at lock engage-time so the camera restores to whatever it
 	 * was in (0 = normal, 1 = free) when the lock disengages. Without this the user
 	 * would be stuck in free-camera mode after unlocking.
@@ -288,22 +266,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			client.setOculusOrbState(0);
 			client.setCameraMode(1);
 
-			// Diagnostic: probe each axis independently with a known sentinel value
-			// and read all three back, so we can see whether (a) setCameraFocalPointY
-			// is routed to setOculusOrbFocalPointX in the mainline RL build (the
-			// devious-client copy-paste bug), (b) Z scale/sign requires conversion
-			// from Perspective tile-height units, and (c) values persist between
-			// independent setter calls. Runs once per lock engage; printed to chat
-			// so the user can share. Restores values before returning.
-			runCameraFocalDiagnostic(ck);
-
-			// Capture the offset AFTER the mode switch so we read the focal point in
-			// its post-switch state. See cameraLockOffsetX/Y/Z javadoc for why this
-			// is necessary instead of snapping focal = character.position.
-			cameraLockOffsetX = client.getCameraFocalPointX() - ck.getX();
-			cameraLockOffsetY = client.getCameraFocalPointY() - ck.getY();
-			cameraLockOffsetZ = client.getCameraFocalPointZ() - ck.getZ();
-
 			cameraLockedCharacter = finalTarget;
 			if (finalTarget.getCameraLockCheckBox() != null
 					&& !finalTarget.getCameraLockCheckBox().isSelected())
@@ -343,21 +305,24 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 		try
 		{
-			// Target = Character position + captured engage-time offset. The offset
-			// preserves the user's pre-engage framing through Character movement:
-			// as ck moves by ΔC, focal moves by ΔC, and since the engine doesn't
-			// auto-update camera position from focal in free-camera mode the camera
-			// position stays put while the focal point glides along. The whole
-			// scene appears to scroll as the Character moves. See the offset field
-			// javadoc for why direct-set (focal = character.position) doesn't work.
+			// Axis mapping (confirmed by the diagnostic): the camera focal point's
+			// coordinate system is NOT (sceneX, sceneY, sceneZ). It's actually:
+			//   focal.X = world east-west       <-- same axis as ck.X
+			//   focal.Y = world vertical height <-- same axis as ck.Z (Perspective tile height)
+			//   focal.Z = world north-south     <-- same axis as ck.Y
+			// So we have to swap Y/Z when feeding ck's coordinates into the setters.
+			// Without the swap, setCameraFocalPointY(ck.getY() ~ 6720) was being read
+			// as "camera height = 6720 above ground" -- way up in the sky, hence the
+			// "way far away" behaviour we kept hitting. The captured-offset workaround
+			// worked accidentally because the offset was capturing the axis mismatch
+			// as a numeric delta and re-applying it preserved the wrong mapping.
 			//
-			// Easing: exponential decay toward the target. Natural ease-out, plus
-			// ease-in on engage (smooth acceleration from rest). Config returns
-			// int percent (5-100); convert to 0.05-1.0 lerp factor.
+			// Easing: exponential decay toward the target. Natural ease-out + ease-in
+			// on engage. Config returns int percent (5-100); convert to lerp factor.
 			double easing = clamp01(config.cameraLockEasing() / 100.0);
-			double targetX = ck.getX() + cameraLockOffsetX;
-			double targetY = ck.getY() + cameraLockOffsetY;
-			double targetZ = ck.getZ() + cameraLockOffsetZ;
+			double targetX = ck.getX();
+			double targetY = ck.getZ(); // height
+			double targetZ = ck.getY(); // north-south
 			double cx = client.getCameraFocalPointX();
 			double cy = client.getCameraFocalPointY();
 			double cz = client.getCameraFocalPointZ();
@@ -369,84 +334,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		{
 			// Camera mode flipped during this tick -- back out and don't spam.
 			setCameraLockedCharacter(null);
-		}
-	}
-
-	/**
-	 * Probes setCameraFocalPointX/Y/Z with known sentinel values and prints the read-
-	 * back values to chat, so we can determine whether the mainline RuneLite mixin
-	 * has the same Y->X copy-paste bug that devious-client's CameraMixin does, and
-	 * whether the Z axis needs unit/sign conversion from Perspective.getTileHeight.
-	 *
-	 * <p>Test plan (all on the client thread, sequentially):
-	 * <ol>
-	 *   <li>Read initial X0/Y0/Z0 -- the pre-test state.</li>
-	 *   <li>setCameraFocalPointX(7777). Read back X1/Y1/Z1.
-	 *       <br>Expected: X1=7777, Y1=Y0, Z1=Z0. If Y1 or Z1 changed, side effects.</li>
-	 *   <li>setCameraFocalPointY(8888). Read back X2/Y2/Z2.
-	 *       <br>Expected: Y2=8888, X2=7777. If X2=8888, that's the Y->X bug.</li>
-	 *   <li>setCameraFocalPointZ(9999). Read back X3/Y3/Z3.
-	 *       <br>Expected: Z3=9999, X3 and Y3 unchanged.</li>
-	 *   <li>Compare ck.(x,y,z) for unit-scale reference.</li>
-	 *   <li>Restore X0/Y0/Z0 so the diagnostic doesn't leave the camera moved.</li>
-	 * </ol>
-	 *
-	 * <p>Output gets prefixed [CameraDiag] so the user can paste the chat back easily.
-	 */
-	private void runCameraFocalDiagnostic(CKObject ck)
-	{
-		try
-		{
-			double x0 = client.getCameraFocalPointX();
-			double y0 = client.getCameraFocalPointY();
-			double z0 = client.getCameraFocalPointZ();
-			sendChatMessage(String.format("[CameraDiag] ck=(%d,%d,%d) initial focal=(%.0f,%.0f,%.0f)",
-					ck.getX(), ck.getY(), ck.getZ(), x0, y0, z0));
-
-			client.setCameraFocalPointX(7777);
-			double x1 = client.getCameraFocalPointX();
-			double y1 = client.getCameraFocalPointY();
-			double z1 = client.getCameraFocalPointZ();
-			sendChatMessage(String.format("[CameraDiag] after setX(7777): (%.0f,%.0f,%.0f) %s",
-					x1, y1, z1,
-					(x1 == 7777 && y1 == y0 && z1 == z0) ? "OK" : "UNEXPECTED"));
-
-			client.setCameraFocalPointY(8888);
-			double x2 = client.getCameraFocalPointX();
-			double y2 = client.getCameraFocalPointY();
-			double z2 = client.getCameraFocalPointZ();
-			String yDiag;
-			if (y2 == 8888 && x2 == 7777)
-			{
-				yDiag = "OK (Y set correctly)";
-			}
-			else if (x2 == 8888)
-			{
-				yDiag = "Y->X BUG: setY routed to X";
-			}
-			else
-			{
-				yDiag = "UNEXPECTED";
-			}
-			sendChatMessage(String.format("[CameraDiag] after setY(8888): (%.0f,%.0f,%.0f) %s",
-					x2, y2, z2, yDiag));
-
-			client.setCameraFocalPointZ(9999);
-			double x3 = client.getCameraFocalPointX();
-			double y3 = client.getCameraFocalPointY();
-			double z3 = client.getCameraFocalPointZ();
-			String zDiag = (z3 == 9999) ? "Z set correctly" : "Z NOT set (z3=" + z3 + ")";
-			sendChatMessage(String.format("[CameraDiag] after setZ(9999): (%.0f,%.0f,%.0f) %s",
-					x3, y3, z3, zDiag));
-
-			// Restore so the camera doesn't visibly jump on engage.
-			client.setCameraFocalPointX(x0);
-			client.setCameraFocalPointY(y0);
-			client.setCameraFocalPointZ(z0);
-		}
-		catch (Throwable t)
-		{
-			sendChatMessage("[CameraDiag] threw: " + t.getClass().getSimpleName() + " " + t.getMessage());
 		}
 	}
 
