@@ -1350,7 +1350,12 @@ public class Programmer
         }
 
         WorldView worldView = client.getTopLevelWorldView();
-        LocalPoint sourceLp = resolveCharacterLocalPoint(character, worldView);
+        // Snapshot the source position AT THE PROJECTILE'S FIRE TIME instead of the live
+        // source position. Otherwise a source character that walks while the projectile
+        // is in flight would drag the launch point along, "attaching" the projectile to
+        // the source. The target is still read live so entity-tracking projectiles
+        // (the OSRS default for e.g. spells) still home in on a moving target.
+        LocalPoint sourceLp = resolveCharacterPositionAt(character, worldView, startTime);
         if (sourceLp == null)
         {
             deactivateProjectileObjects(projObjs, 0);
@@ -1586,6 +1591,75 @@ public class Programmer
                 }
             });
         }
+    }
+
+    /**
+     * Returns the LocalPoint that {@code character} would occupy at {@code atTime}, by
+     * replaying the active MovementKeyFrame's path interpolation as if the timeline were
+     * paused at that exact moment.
+     *
+     * <p>Used so projectiles fire from the source's position AT THE TIME OF FIRING
+     * rather than the source's live position. Without this, a source character that
+     * walks during the projectile's flight would drag the projectile's origin along
+     * with it -- the projectile would visibly "shift" each frame instead of arcing
+     * cleanly from a fixed launch point. This snapshot keeps the source decoupled
+     * from the in-flight projectile.
+     *
+     * <p>Falls back to {@link #resolveCharacterLocalPoint} when no movement keyframe
+     * is active at {@code atTime} (the character is just standing on its saved point)
+     * or when the path's tile coordinates aren't in the current scene.
+     */
+    private LocalPoint resolveCharacterPositionAt(Character character, WorldView worldView, double atTime)
+    {
+        KeyFrame kf = character.findPreviousKeyFrame(KeyFrameType.MOVEMENT, atTime, true);
+        if (!(kf instanceof MovementKeyFrame))
+        {
+            return resolveCharacterLocalPoint(character, worldView);
+        }
+        MovementKeyFrame mkf = (MovementKeyFrame) kf;
+        if (mkf.getPlane() != worldView.getPlane())
+        {
+            return resolveCharacterLocalPoint(character, worldView);
+        }
+
+        int pathLength = mkf.getPath().length;
+        if (pathLength == 0)
+        {
+            return resolveCharacterLocalPoint(character, worldView);
+        }
+
+        double elapsedTicks = atTime - mkf.getTick();
+        if (elapsedTicks <= 0)
+        {
+            LocalPoint first = getLocation(worldView, mkf, 0);
+            return first != null ? first : resolveCharacterLocalPoint(character, worldView);
+        }
+
+        double stepsComplete = elapsedTicks * mkf.getSpeed();
+        int currentStep = (int) Math.floor(stepsComplete);
+
+        if (currentStep >= pathLength - 1)
+        {
+            LocalPoint last = getLocation(worldView, mkf, pathLength - 1);
+            return last != null ? last : resolveCharacterLocalPoint(character, worldView);
+        }
+
+        LocalPoint start = getLocation(worldView, mkf, currentStep);
+        LocalPoint destination = getLocation(worldView, mkf, currentStep + 1);
+        if (start == null || destination == null)
+        {
+            // Partial scene coverage -- pick whichever endpoint resolved or fall back.
+            LocalPoint fallback = start != null ? start : destination;
+            return fallback != null ? fallback : resolveCharacterLocalPoint(character, worldView);
+        }
+
+        // Same sub-tile interpolation getMovementComposition uses for live playback.
+        double percentComplete = stepsComplete - currentStep;
+        double subSteps = percentComplete * TILE_LENGTH;
+        double angle = Orientation.getAngleBetween(start, destination);
+        int x = start.getX() + (int) (subSteps * Orientation.orientationX(angle));
+        int y = start.getY() + (int) (subSteps * Orientation.orientationY(angle));
+        return new LocalPoint(x, y, worldView);
     }
 
     /**
