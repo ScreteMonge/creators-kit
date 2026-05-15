@@ -56,10 +56,10 @@ public class BarOverlay extends Overlay
     private static final int MODEL_HEIGHT_BUFFER = 18;
     private static final int TEXT_BUFFER = -12;
 
-    /** Minimum bar width. Bars grow above this with their max value. */
+    /** Minimum bar width. Each bar has its own min independent of the others. */
     private static final int MIN_BAR_WIDTH = 30;
     /** Hard cap so absurd max values don't fill the canvas. */
-    private static final int MAX_BAR_WIDTH = 240;
+    private static final int MAX_BAR_WIDTH = 204;
     /**
      * Pixels per unit-of-max used to auto-scale bar width. Tuned so a 99-max
      * HP stays at the minimum width and a 1000-max boss bar lands around 170px.
@@ -125,36 +125,48 @@ public class BarOverlay extends Overlay
             model.calculateBoundsCylinder();
             int height = model.getModelHeight();
 
-            // All bars on the same Character share width -- driven by the largest
-            // max so the stack stays rectangular.
-            int barWidth = computeBarWidth(bars);
             int textOffset = textCollisionOffset(character, currentTick);
 
             // Sort by order ASC -- lowest order = topmost slot.
             bars.sort((a, b) -> Integer.compare(a.order, b.order));
 
-            // Anchor the bottom of the stack at the legacy HP slot. Each bar's
-            // slot-from-bottom determines how many bar-heights it climbs.
-            BufferedImage anchor = new BufferedImage(barWidth, BAR_HEIGHT, BufferedImage.TYPE_INT_ARGB);
-            Point base = Perspective.getCanvasImageLocation(client, lp, anchor, height + MODEL_HEIGHT_BUFFER);
-            if (base == null)
-            {
-                continue;
-            }
-            int anchorX = base.getX() - 1;
-            int anchorY = base.getY() - 1 + textOffset;
-
+            // Each bar centres horizontally on the model with its OWN width, so a
+            // 99-HP bar can stay small even when a 5000-shield is alongside it.
+            // Y-stacking is shared so bars still slot cleanly above each other.
             int stack = bars.size();
             for (int slot = 0; slot < stack; slot++)
             {
                 BarSpec bar = bars.get(slot);
+                int barWidth = resolveWidth(bar);
+                BufferedImage anchor = new BufferedImage(barWidth, BAR_HEIGHT, BufferedImage.TYPE_INT_ARGB);
+                Point base = Perspective.getCanvasImageLocation(client, lp, anchor, height + MODEL_HEIGHT_BUFFER);
+                if (base == null)
+                {
+                    continue;
+                }
                 int slotFromBottom = stack - 1 - slot;
-                int y = anchorY - slotFromBottom * (BAR_HEIGHT + BAR_GAP);
-                renderBar(graphics, bar, anchorX, y, barWidth);
+                int x = base.getX() - 1;
+                int y = base.getY() - 1 + textOffset - slotFromBottom * (BAR_HEIGHT + BAR_GAP);
+                renderBar(graphics, bar, x, y, barWidth);
             }
         }
 
         return null;
+    }
+
+    /**
+     * Resolves a bar's pixel width: explicit override if set, else auto-scale
+     * from the bar's own max. Per-bar (not per-Character) so HP/Shield/Special
+     * are sized independently of each other.
+     */
+    private int resolveWidth(BarSpec bar)
+    {
+        if (bar.explicitWidth > 0)
+        {
+            return Math.max(MIN_BAR_WIDTH, Math.min(MAX_BAR_WIDTH, bar.explicitWidth));
+        }
+        int scaled = (int) Math.round(Math.max(0, bar.max) * PIXELS_PER_MAX) + MIN_BAR_WIDTH;
+        return Math.max(MIN_BAR_WIDTH, Math.min(MAX_BAR_WIDTH, scaled));
     }
 
     /**
@@ -186,17 +198,6 @@ public class BarOverlay extends Overlay
         }
 
         return out;
-    }
-
-    private int computeBarWidth(List<BarSpec> bars)
-    {
-        int maxOfMax = 1;
-        for (BarSpec bar : bars)
-        {
-            maxOfMax = Math.max(maxOfMax, bar.max);
-        }
-        int scaled = (int) Math.round(maxOfMax * PIXELS_PER_MAX) + MIN_BAR_WIDTH;
-        return Math.max(MIN_BAR_WIDTH, Math.min(MAX_BAR_WIDTH, scaled));
     }
 
     private void renderBar(Graphics2D g, BarSpec bar, int x, int y, int width)
@@ -298,7 +299,8 @@ public class BarOverlay extends Overlay
     /**
      * Uniform bar payload regardless of whether the source is HP (sprite render)
      * or Shield/Special (colour render). {@code order} drives stack position;
-     * {@code max} drives shared-width auto-scaling.
+     * {@code max} feeds the per-bar auto-scaled width unless {@code explicitWidth}
+     * is set, in which case the auto-scale is bypassed.
      */
     private static final class BarSpec
     {
@@ -306,31 +308,33 @@ public class BarOverlay extends Overlay
         final int max;
         final int current;
         final int rgb;
+        final int explicitWidth;
         /** Non-null only for HP, which uses the sprite renderer. */
         final HealthKeyFrame spriteHealth;
 
-        private BarSpec(int order, int max, int current, int rgb, HealthKeyFrame spriteHealth)
+        private BarSpec(int order, int max, int current, int rgb, int explicitWidth, HealthKeyFrame spriteHealth)
         {
             this.order = order;
             this.max = max;
             this.current = current;
             this.rgb = rgb;
+            this.explicitWidth = explicitWidth;
             this.spriteHealth = spriteHealth;
         }
 
         static BarSpec health(HealthKeyFrame kf)
         {
-            return new BarSpec(kf.getOrder(), kf.getMaxHealth(), kf.getCurrentHealth(), 0, kf);
+            return new BarSpec(kf.getOrder(), kf.getMaxHealth(), kf.getCurrentHealth(), 0, kf.getWidth(), kf);
         }
 
         static BarSpec shield(ShieldKeyFrame kf)
         {
-            return new BarSpec(kf.getOrder(), kf.getMaxValue(), kf.getCurrentValue(), kf.getRgb(), null);
+            return new BarSpec(kf.getOrder(), kf.getMaxValue(), kf.getCurrentValue(), kf.getRgb(), kf.getWidth(), null);
         }
 
         static BarSpec special(SpecialKeyFrame kf)
         {
-            return new BarSpec(kf.getOrder(), kf.getMaxValue(), kf.getCurrentValue(), kf.getRgb(), null);
+            return new BarSpec(kf.getOrder(), kf.getMaxValue(), kf.getCurrentValue(), kf.getRgb(), kf.getWidth(), null);
         }
     }
 }

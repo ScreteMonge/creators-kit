@@ -46,9 +46,14 @@ public class ScreenFadeOverlay extends Overlay
     @Inject
     private ScreenFadeOverlay(Client client, CreatorsPlugin plugin)
     {
-        // Render at the very top of the scene so HUD / minimap stay visible.
         setPosition(OverlayPosition.DYNAMIC);
-        setLayer(OverlayLayer.ABOVE_SCENE);
+        // UNDER_WIDGETS renders AFTER the 3D scene AND after the game's own
+        // overhead pass (HP bars, names) but BEFORE HUD widgets. ABOVE_SCENE
+        // would draw under the overheads -- the player model would be covered
+        // but their HP bar / name plate would still show through, ruining the
+        // Whisperer/Blackstone "everything goes dark" effect. UNDER_WIDGETS
+        // covers both while keeping chat/minimap/inventory visible.
+        setLayer(OverlayLayer.UNDER_WIDGETS);
         this.client = client;
         this.plugin = plugin;
     }

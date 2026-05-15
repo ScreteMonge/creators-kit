@@ -23,7 +23,12 @@ public class ScreenFadeKeyFrame extends KeyFrame
 {
     public static final int DEFAULT_RGB = 0x18002a;   // Whisperer-purple
     public static final int DEFAULT_PEAK_ALPHA = 220; // out of 255
-    public static final int DEFAULT_RING_RADIUS = 180;
+    /**
+     * Default centre cutout. 0 = uniform full-screen fade so the local player gets
+     * faded too. Bump this for the Whisperer-style "safe ring around the player"
+     * look (try ~180 with feather ~60).
+     */
+    public static final int DEFAULT_RING_RADIUS = 0;
     public static final int DEFAULT_RING_FEATHER = 60;
     public static final double DEFAULT_FADE_IN = 0.8;
     public static final double DEFAULT_HOLD = 1.5;

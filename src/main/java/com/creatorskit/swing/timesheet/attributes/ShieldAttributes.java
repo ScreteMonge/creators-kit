@@ -29,6 +29,8 @@ public class ShieldAttributes extends Attributes
     private final JSpinner currentValue = new JSpinner();
     /** Stack position relative to HP/Special. Default 1 = middle slot. */
     private final JSpinner order = new JSpinner();
+    /** Pixel-width override. 0 = auto-scale from maxValue. */
+    private final JSpinner width = new JSpinner();
 
     /**
      * Packed RGB of the currently-selected fill colour. Tracked separately from
@@ -61,6 +63,7 @@ public class ShieldAttributes extends Attributes
         maxValue.setValue(kf.getMaxValue());
         currentValue.setValue(kf.getCurrentValue());
         order.setValue(kf.getOrder());
+        width.setValue(kf.getWidth());
     }
 
     @Override
@@ -74,6 +77,7 @@ public class ShieldAttributes extends Attributes
         maxValue.setBackground(color);
         currentValue.setBackground(color);
         order.setBackground(color);
+        width.setBackground(color);
     }
 
     @Override
@@ -85,7 +89,8 @@ public class ShieldAttributes extends Attributes
                         colour,
                         maxValue,
                         currentValue,
-                        order
+                        order,
+                        width
                 };
     }
 
@@ -96,6 +101,7 @@ public class ShieldAttributes extends Attributes
         maxValue.addChangeListener(e -> maxValue.setBackground(getRed()));
         currentValue.addChangeListener(e -> currentValue.setBackground(getRed()));
         order.addChangeListener(e -> order.setBackground(getRed()));
+        width.addChangeListener(e -> width.setBackground(getRed()));
         // colour button is handled by the card setup since it needs the JColorChooser dialog.
     }
 
@@ -107,6 +113,7 @@ public class ShieldAttributes extends Attributes
         maxValue.setValue(DEFAULT_MAX);
         currentValue.setValue(DEFAULT_MAX);
         order.setValue(ShieldKeyFrame.DEFAULT_ORDER);
+        width.setValue(ShieldKeyFrame.AUTO_WIDTH);
         super.resetAttributes(resetBackground);
     }
 }

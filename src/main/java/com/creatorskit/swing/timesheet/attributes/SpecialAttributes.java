@@ -26,6 +26,8 @@ public class SpecialAttributes extends Attributes
     private final JSpinner currentValue = new JSpinner();
     /** Stack position relative to HP/Shield. Default 2 = bottom slot. */
     private final JSpinner order = new JSpinner();
+    /** Pixel-width override. 0 = auto-scale from maxValue. */
+    private final JSpinner width = new JSpinner();
 
     private int rgb = DEFAULT_RGB;
 
@@ -52,6 +54,7 @@ public class SpecialAttributes extends Attributes
         maxValue.setValue(kf.getMaxValue());
         currentValue.setValue(kf.getCurrentValue());
         order.setValue(kf.getOrder());
+        width.setValue(kf.getWidth());
     }
 
     @Override
@@ -63,6 +66,7 @@ public class SpecialAttributes extends Attributes
         maxValue.setBackground(color);
         currentValue.setBackground(color);
         order.setBackground(color);
+        width.setBackground(color);
     }
 
     @Override
@@ -74,7 +78,8 @@ public class SpecialAttributes extends Attributes
                         colour,
                         maxValue,
                         currentValue,
-                        order
+                        order,
+                        width
                 };
     }
 
@@ -85,6 +90,7 @@ public class SpecialAttributes extends Attributes
         maxValue.addChangeListener(e -> maxValue.setBackground(getRed()));
         currentValue.addChangeListener(e -> currentValue.setBackground(getRed()));
         order.addChangeListener(e -> order.setBackground(getRed()));
+        width.addChangeListener(e -> width.setBackground(getRed()));
     }
 
     @Override
@@ -95,6 +101,7 @@ public class SpecialAttributes extends Attributes
         maxValue.setValue(DEFAULT_MAX);
         currentValue.setValue(DEFAULT_MAX);
         order.setValue(SpecialKeyFrame.DEFAULT_ORDER);
+        width.setValue(SpecialKeyFrame.AUTO_WIDTH);
         super.resetAttributes(resetBackground);
     }
 }

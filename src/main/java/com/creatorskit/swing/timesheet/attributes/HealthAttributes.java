@@ -17,6 +17,8 @@ public class HealthAttributes extends Attributes
     private final JSpinner currentHealth = new JSpinner();
     /** Stack position relative to Shield/Special. Default 0 = topmost. */
     private final JSpinner order = new JSpinner();
+    /** Pixel-width override. 0 = auto-scale from maxHealth. */
+    private final JSpinner width = new JSpinner();
 
     public HealthAttributes()
     {
@@ -32,6 +34,7 @@ public class HealthAttributes extends Attributes
         maxHealth.setValue(kf.getMaxHealth());
         currentHealth.setValue(kf.getCurrentHealth());
         order.setValue(kf.getOrder());
+        width.setValue(kf.getWidth());
     }
 
     @Override
@@ -42,6 +45,7 @@ public class HealthAttributes extends Attributes
         maxHealth.setBackground(color);
         currentHealth.setBackground(color);
         order.setBackground(color);
+        width.setBackground(color);
     }
 
     @Override
@@ -53,7 +57,8 @@ public class HealthAttributes extends Attributes
                         healthbarSprite,
                         maxHealth,
                         currentHealth,
-                        order
+                        order,
+                        width
                 };
     }
 
@@ -84,6 +89,11 @@ public class HealthAttributes extends Attributes
         {
             order.setBackground(getRed());
         });
+
+        width.addChangeListener(e ->
+        {
+            width.setBackground(getRed());
+        });
     }
 
     @Override
@@ -94,6 +104,7 @@ public class HealthAttributes extends Attributes
         maxHealth.setValue(99);
         currentHealth.setValue(99);
         order.setValue(HealthKeyFrame.DEFAULT_ORDER);
+        width.setValue(HealthKeyFrame.AUTO_WIDTH);
         super.resetAttributes(resetBackground);
     }
 }

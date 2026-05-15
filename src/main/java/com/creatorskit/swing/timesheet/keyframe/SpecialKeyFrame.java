@@ -16,6 +16,8 @@ public class SpecialKeyFrame extends KeyFrame
 {
     /** Default stack position. Special sits at the bottom by default. */
     public static final int DEFAULT_ORDER = 2;
+    /** Sentinel for {@link #width}: 0 means "auto-scale from maxValue". */
+    public static final int AUTO_WIDTH = 0;
 
     /** Colour of the filled portion, packed RGB. Depleted portion = same hue, darker. */
     private int rgb;
@@ -27,13 +29,20 @@ public class SpecialKeyFrame extends KeyFrame
      * See {@link HealthKeyFrame#order} for the shared convention.
      */
     private int order = DEFAULT_ORDER;
+    /** Explicit pixel width override. {@link #AUTO_WIDTH} (0) = auto-scale from maxValue. */
+    private int width = AUTO_WIDTH;
 
     public SpecialKeyFrame(double tick, double duration, int rgb, int maxValue, int currentValue)
     {
-        this(tick, duration, rgb, maxValue, currentValue, DEFAULT_ORDER);
+        this(tick, duration, rgb, maxValue, currentValue, DEFAULT_ORDER, AUTO_WIDTH);
     }
 
     public SpecialKeyFrame(double tick, double duration, int rgb, int maxValue, int currentValue, int order)
+    {
+        this(tick, duration, rgb, maxValue, currentValue, order, AUTO_WIDTH);
+    }
+
+    public SpecialKeyFrame(double tick, double duration, int rgb, int maxValue, int currentValue, int order, int width)
     {
         super(KeyFrameType.SPECIAL, tick);
         this.duration = duration;
@@ -41,5 +50,6 @@ public class SpecialKeyFrame extends KeyFrame
         this.maxValue = maxValue;
         this.currentValue = currentValue;
         this.order = order;
+        this.width = width;
     }
 }

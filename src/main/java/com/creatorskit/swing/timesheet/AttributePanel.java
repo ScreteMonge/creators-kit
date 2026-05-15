@@ -350,7 +350,8 @@ public class AttributePanel extends JPanel
                         (HealthbarSprite) healthAttributes.getHealthbarSprite().getSelectedItem(),
                         (int) healthAttributes.getMaxHealth().getValue(),
                         (int) healthAttributes.getCurrentHealth().getValue(),
-                        (int) healthAttributes.getOrder().getValue()
+                        (int) healthAttributes.getOrder().getValue(),
+                        (int) healthAttributes.getWidth().getValue()
                 );
             case SPOTANIM:
             case SPOTANIM2:
@@ -420,7 +421,8 @@ public class AttributePanel extends JPanel
                         shieldAttributes.getRgb(),
                         (int) shieldAttributes.getMaxValue().getValue(),
                         (int) shieldAttributes.getCurrentValue().getValue(),
-                        (int) shieldAttributes.getOrder().getValue()
+                        (int) shieldAttributes.getOrder().getValue(),
+                        (int) shieldAttributes.getWidth().getValue()
                 );
             case SPECIAL:
                 return new SpecialKeyFrame(
@@ -429,7 +431,8 @@ public class AttributePanel extends JPanel
                         specialAttributes.getRgb(),
                         (int) specialAttributes.getMaxValue().getValue(),
                         (int) specialAttributes.getCurrentValue().getValue(),
-                        (int) specialAttributes.getOrder().getValue()
+                        (int) specialAttributes.getOrder().getValue(),
+                        (int) specialAttributes.getWidth().getValue()
                 );
             case SCREEN_FADE:
                 return new ScreenFadeKeyFrame(
@@ -1861,6 +1864,22 @@ public class AttributePanel extends JPanel
         card.add(orderSpinner, c);
 
         c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 6;
+        JLabel widthLabel = new JLabel("Width (0=auto): ");
+        widthLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(widthLabel, c);
+
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.gridy = 6;
+        JSpinner widthSpinner = healthAttributes.getWidth();
+        widthSpinner.setToolTipText("Override the bar's pixel width. 0 auto-scales from Max Health. "
+                + "Each bar has its own width -- HP / Shield / Special are sized independently.");
+        widthSpinner.setModel(new SpinnerNumberModel(HealthKeyFrame.AUTO_WIDTH, 0, 500, 1));
+        card.add(widthSpinner, c);
+
+        c.gridwidth = 1;
         c.gridheight = 1;
         c.weightx = 1;
         c.weighty = 1;
@@ -2486,6 +2505,7 @@ public class AttributePanel extends JPanel
         final JSpinner maxValue;
         final JSpinner currentValue;
         final JSpinner orderSpinner;
+        final JSpinner widthSpinner;
         if (isShield)
         {
             duration = shieldAttributes.getDuration();
@@ -2493,6 +2513,7 @@ public class AttributePanel extends JPanel
             maxValue = shieldAttributes.getMaxValue();
             currentValue = shieldAttributes.getCurrentValue();
             orderSpinner = shieldAttributes.getOrder();
+            widthSpinner = shieldAttributes.getWidth();
         }
         else
         {
@@ -2501,6 +2522,7 @@ public class AttributePanel extends JPanel
             maxValue = specialAttributes.getMaxValue();
             currentValue = specialAttributes.getCurrentValue();
             orderSpinner = specialAttributes.getOrder();
+            widthSpinner = specialAttributes.getWidth();
         }
 
         card.setLayout(new GridBagLayout());
@@ -2617,6 +2639,18 @@ public class AttributePanel extends JPanel
         int defaultOrder = isShield ? ShieldKeyFrame.DEFAULT_ORDER : SpecialKeyFrame.DEFAULT_ORDER;
         orderSpinner.setModel(new SpinnerNumberModel(defaultOrder, 0, 9, 1));
         card.add(orderSpinner, c);
+
+        c.gridx = 0;
+        c.gridy = 6;
+        card.add(rightLabel("Width (0=auto): "), c);
+
+        c.gridx = 1;
+        c.gridy = 6;
+        widthSpinner.setToolTipText("Override the bar's pixel width. 0 auto-scales from Max " + typeName
+                + ". Each bar (HP / Shield / Special) is sized independently.");
+        int defaultWidth = isShield ? ShieldKeyFrame.AUTO_WIDTH : SpecialKeyFrame.AUTO_WIDTH;
+        widthSpinner.setModel(new SpinnerNumberModel(defaultWidth, 0, 500, 1));
+        card.add(widthSpinner, c);
 
         c.gridwidth = 1;
         c.gridheight = 1;
