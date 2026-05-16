@@ -1708,11 +1708,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 	};
 
-	// Q/E instead of R/F for the Z axis because the Detached Camera plugin reserves
-	// WASDRF for its own camera controls and SHIFT+R / SHIFT+F didn't fire reliably
-	// with that plugin enabled. Q sits on the home-row middle finger and E on the
-	// index, keeping the nudge cluster a short reach from the WASD X/Y keys.
-	private final HotkeyListener nudgeUpListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_Q, InputEvent.SHIFT_DOWN_MASK))
+	// R/F for the vertical axis -- matches the WASDRF cluster most 3D nudge tools
+	// use. (We previously routed this to Q/E to avoid a clash with the Detached
+	// Camera plugin's WASDRF camera controls; switched back per user request.)
+	private final HotkeyListener nudgeUpListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_R, InputEvent.SHIFT_DOWN_MASK))
 	{
 		@Override
 		public void hotkeyPressed()
@@ -1721,7 +1720,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 	};
 
-	private final HotkeyListener nudgeDownListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_E, InputEvent.SHIFT_DOWN_MASK))
+	private final HotkeyListener nudgeDownListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_F, InputEvent.SHIFT_DOWN_MASK))
 	{
 		@Override
 		public void hotkeyPressed()
