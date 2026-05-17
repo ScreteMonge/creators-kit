@@ -22,11 +22,11 @@ import lombok.Setter;
 public class ScreenShakeKeyFrame extends KeyFrame
 {
     /** Subtle default -- reads as a vibration. Bump for big slams. */
-    public static final int DEFAULT_AMPLITUDE_HORIZONTAL = 8;
-    public static final int DEFAULT_AMPLITUDE_VERTICAL = 5;
+    public static final int DEFAULT_AMPLITUDE_HORIZONTAL = 4;
+    public static final int DEFAULT_AMPLITUDE_VERTICAL = 4;
     /** Base oscillation rate in cycles per game tick. Higher = faster vibration. */
-    public static final double DEFAULT_FREQUENCY = 8.0;
-    public static final double DEFAULT_DURATION = 2.0;
+    public static final double DEFAULT_FREQUENCY = 25.0;
+    public static final double DEFAULT_DURATION = 4.0;
 
     /** Peak horizontal (screen left/right) displacement, scene units (1 tile = 128). */
     private int amplitudeHorizontal;
