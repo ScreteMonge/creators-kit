@@ -391,11 +391,21 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	}
 
 	/**
-	 * Computes the current frame's shake offset (sin curve * envelope) and applies
-	 * it to the focal point. Caches the offset for the next tick's
-	 * {@link #undoPreviousScreenShake}. Silent no-op when the camera isn't in
-	 * free-camera mode (setCameraFocalPoint throws otherwise) or no shake
-	 * keyframe is active.
+	 * Computes the current frame's shake offset (multi-octave noise, camera-relative)
+	 * and adds it to the focal point. Caches the offset so the next tick's
+	 * {@link #undoPreviousScreenShake} can wind it back before the camera-lock
+	 * lerp runs (otherwise the lerp would smooth the jitter into a slow drift).
+	 *
+	 * <p>Silent no-op when the camera isn't in free-camera mode (setCameraFocalPoint
+	 * throws otherwise) or no shake keyframe is active. The shake is camera-
+	 * relative: "horizontal" amplitude always reads as screen left/right regardless
+	 * of the camera's yaw, "vertical" as screen up/down. Achieved by rotating the
+	 * world-space horizontal offset by the camera yaw so it lands on the camera's
+	 * right-vector.
+	 *
+	 * <p>The noise is a 3-octave sum (base + 2.7x + 4.1x with phase offsets) -- a
+	 * cheap deterministic approximation of Perlin noise that scrubbing and pausing
+	 * sample correctly (no per-tick randomness).
 	 */
 	private void applyCurrentScreenShake()
 	{
@@ -409,21 +419,41 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 		}
 		double t = getCurrentTick() - active.getTick();
-		if (t < 0 || t > active.totalDurationTicks())
+		if (t < 0 || t > active.getDurationTicks())
 		{
 			return;
 		}
-		double envelope = computeShakeEnvelope(active, t);
-		if (envelope <= 0)
-		{
-			return;
-		}
-		// Phase-shift each axis so the shake doesn't trace a perfect line/circle --
-		// gives the chaotic feel of an in-game slam rather than a clean oscillation.
-		double angle = 2 * Math.PI * active.getFrequency() * t;
-		double ox = active.getAmplitudeX() * envelope * Math.sin(angle);
-		double oy = active.getAmplitudeY() * envelope * Math.sin(angle + Math.PI / 2);
-		double oz = active.getAmplitudeZ() * envelope * Math.sin(angle + Math.PI / 3);
+
+		// Multi-octave noise (cheap fake-Perlin): base sine + two harmonics at
+		// non-integer multiples with offset phases. The result is chaotic enough
+		// to read as vibration rather than a clean oscillation, but stays
+		// deterministic so pause / scrub / rewind sample the same value at the
+		// same tick.
+		double phaseH = 2 * Math.PI * active.getFrequency() * t;
+		double phaseV = phaseH + 1.7; // arbitrary phase offset so V doesn't track H
+
+		double noiseH = 0.55 * Math.sin(phaseH)
+				+ 0.30 * Math.sin(phaseH * 2.7 + 1.3)
+				+ 0.15 * Math.sin(phaseH * 4.1 + 2.9);
+		double noiseV = 0.55 * Math.sin(phaseV)
+				+ 0.30 * Math.sin(phaseV * 2.3 + 0.5)
+				+ 0.15 * Math.sin(phaseV * 3.7 + 2.1);
+
+		// Camera-relative horizontal: rotate by yaw so horizontalAmp always reads
+		// as screen left/right. OSRS yaw is in JAU (2048 units = full circle).
+		// cos/sin of yaw give the camera's right-vector projected onto the horizontal
+		// (X/Z focal-point) plane.
+		double yawRadians = client.getCameraYaw() * (2 * Math.PI / 2048.0);
+		double rightCos = Math.cos(yawRadians);
+		double rightSin = Math.sin(yawRadians);
+
+		double horizontalMagnitude = active.getAmplitudeHorizontal() * noiseH;
+		double ox = horizontalMagnitude * rightCos;
+		double oz = horizontalMagnitude * rightSin;
+		// Vertical maps directly to focal-point Y (height) -- screen-vertical
+		// matches world-vertical closely enough at typical OSRS camera pitches.
+		double oy = active.getAmplitudeVertical() * noiseV;
+
 		try
 		{
 			client.setCameraFocalPointX(client.getCameraFocalPointX() + ox);
@@ -441,7 +471,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 	/**
 	 * Iterates every Character's current SCREEN_SHAKE keyframe and returns the
-	 * most-recently-started one that's still inside its envelope. Mirrors
+	 * most-recently-started one that's still inside its duration window. Mirrors
 	 * {@code ScreenFadeOverlay.findActiveFade}: lets multiple "scene controller"
 	 * Characters define shakes, latest-started wins deterministically.
 	 */
@@ -462,7 +492,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame sk =
 					(com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame) kf;
 			double elapsed = currentTick - sk.getTick();
-			if (elapsed < 0 || elapsed > sk.totalDurationTicks())
+			if (elapsed < 0 || elapsed > sk.getDurationTicks())
 			{
 				continue;
 			}
@@ -473,23 +503,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			}
 		}
 		return best;
-	}
-
-	private double computeShakeEnvelope(com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame kf, double t)
-	{
-		double fadeIn = kf.getFadeInTicks();
-		double hold = kf.getHoldTicks();
-		double fadeOut = kf.getFadeOutTicks();
-		if (t < fadeIn)
-		{
-			return fadeIn <= 0 ? 1.0 : t / fadeIn;
-		}
-		if (t < fadeIn + hold)
-		{
-			return 1.0;
-		}
-		double outProgress = (t - fadeIn - hold) / Math.max(0.0001, fadeOut);
-		return Math.max(0.0, 1.0 - outProgress);
 	}
 
 	private CKObject transmog;

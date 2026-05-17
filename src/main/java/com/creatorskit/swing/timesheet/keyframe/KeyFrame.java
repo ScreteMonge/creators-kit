@@ -169,13 +169,10 @@ public class KeyFrame
                 ScreenShakeKeyFrame shakeKF = (ScreenShakeKeyFrame) keyFrame;
                 return new ScreenShakeKeyFrame(
                         tick,
-                        shakeKF.getAmplitudeX(),
-                        shakeKF.getAmplitudeY(),
-                        shakeKF.getAmplitudeZ(),
+                        shakeKF.getAmplitudeHorizontal(),
+                        shakeKF.getAmplitudeVertical(),
                         shakeKF.getFrequency(),
-                        shakeKF.getFadeInTicks(),
-                        shakeKF.getHoldTicks(),
-                        shakeKF.getFadeOutTicks());
+                        shakeKF.getDurationTicks());
         }
     }
 }

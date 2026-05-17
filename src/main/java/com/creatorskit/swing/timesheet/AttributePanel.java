@@ -453,13 +453,10 @@ public class AttributePanel extends JPanel
             case SCREEN_SHAKE:
                 return new ScreenShakeKeyFrame(
                         tick,
-                        (int) screenShakeAttributes.getAmplitudeX().getValue(),
-                        (int) screenShakeAttributes.getAmplitudeY().getValue(),
-                        (int) screenShakeAttributes.getAmplitudeZ().getValue(),
+                        (int) screenShakeAttributes.getAmplitudeHorizontal().getValue(),
+                        (int) screenShakeAttributes.getAmplitudeVertical().getValue(),
                         ((Number) screenShakeAttributes.getFrequency().getValue()).doubleValue(),
-                        ((Number) screenShakeAttributes.getFadeInTicks().getValue()).doubleValue(),
-                        ((Number) screenShakeAttributes.getHoldTicks().getValue()).doubleValue(),
-                        ((Number) screenShakeAttributes.getFadeOutTicks().getValue()).doubleValue()
+                        ((Number) screenShakeAttributes.getDurationTicks().getValue()).doubleValue()
                 );
         }
     }
@@ -2840,95 +2837,66 @@ public class AttributePanel extends JPanel
 
         JLabel help = new JLabel(new ImageIcon(HELP));
         help.setBorder(new EmptyBorder(0, 4, 0, 4));
-        help.setToolTipText("<html>Sol-Heredit-style global camera shake. Jitters the camera focal point"
-                + "<br>with a fade-in / hold / fade-out envelope -- same shape as Screen Fade."
+        help.setToolTipText("<html>Global camera shake -- mirrors the in-game vibration during boss attacks"
+                + "<br>like ToA Wardens. Camera-relative: horizontal amplitude is always screen"
+                + "<br>left/right regardless of yaw, vertical is always screen up/down."
                 + "<br>"
-                + "<br>The shake is GLOBAL (covers the canvas regardless of which Character owns"
-                + "<br>the keyframe) and requires free-camera mode (mode 1). Composes with the"
-                + "<br>camera-lock feature -- if a character is locked, the shake is added on top."
+                + "<br>The shake is driven by multi-octave noise (sum of 3 sin waves at different"
+                + "<br>frequencies and phases) for a chaotic feel, not a uniform sine. Snaps in at"
+                + "<br>the keyframe tick and snaps out when the duration elapses -- no fade."
                 + "<br>"
-                + "<br>Amplitudes are in scene units (1 tile = 128). X/Y/Z map to OSRS focal-point"
-                + "<br>axes: X = east-west, Y = height (vertical), Z = north-south.</html>");
+                + "<br>Requires free-camera mode (mode 1). Silently no-ops outside mode 1. If you're"
+                + "<br>using the camera-lock feature, lock keeps the focal point on the character"
+                + "<br>and shake adds the jitter on top -- both work together.</html>");
         titlePanel.add(help);
 
-        JSpinner amplitudeX = screenShakeAttributes.getAmplitudeX();
-        JSpinner amplitudeY = screenShakeAttributes.getAmplitudeY();
-        JSpinner amplitudeZ = screenShakeAttributes.getAmplitudeZ();
+        JSpinner amplitudeHorizontal = screenShakeAttributes.getAmplitudeHorizontal();
+        JSpinner amplitudeVertical = screenShakeAttributes.getAmplitudeVertical();
         JSpinner frequency = screenShakeAttributes.getFrequency();
-        JSpinner fadeInTicks = screenShakeAttributes.getFadeInTicks();
-        JSpinner holdTicks = screenShakeAttributes.getHoldTicks();
-        JSpinner fadeOutTicks = screenShakeAttributes.getFadeOutTicks();
+        JSpinner durationTicks = screenShakeAttributes.getDurationTicks();
 
         c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 1;
-        card.add(rightLabel("Amp X (E/W): "), c);
+        card.add(rightLabel("Horizontal Amp: "), c);
 
         c.gridx = 1;
         c.gridy = 1;
-        amplitudeX.setToolTipText("East-west jitter amplitude in scene units. 0 disables this axis.");
-        amplitudeX.setModel(new SpinnerNumberModel(ScreenShakeKeyFrame.DEFAULT_AMPLITUDE_X, 0, 1024, 1));
-        card.add(amplitudeX, c);
+        amplitudeHorizontal.setToolTipText("Peak screen-horizontal jitter in scene units (1 tile = 128). "
+                + "Small (5-15) reads as a vibration; large (50+) as a slam.");
+        amplitudeHorizontal.setModel(new SpinnerNumberModel(ScreenShakeKeyFrame.DEFAULT_AMPLITUDE_HORIZONTAL, 0, 1024, 1));
+        card.add(amplitudeHorizontal, c);
 
         c.gridx = 2;
         c.gridy = 1;
-        card.add(rightLabel("Amp Y (vert): "), c);
+        card.add(rightLabel("Vertical Amp: "), c);
 
         c.gridx = 3;
         c.gridy = 1;
-        amplitudeY.setToolTipText("Vertical jitter amplitude in scene units. 0 disables this axis.");
-        amplitudeY.setModel(new SpinnerNumberModel(ScreenShakeKeyFrame.DEFAULT_AMPLITUDE_Y, 0, 1024, 1));
-        card.add(amplitudeY, c);
+        amplitudeVertical.setToolTipText("Peak screen-vertical jitter in scene units. Set to 0 for purely horizontal shake.");
+        amplitudeVertical.setModel(new SpinnerNumberModel(ScreenShakeKeyFrame.DEFAULT_AMPLITUDE_VERTICAL, 0, 1024, 1));
+        card.add(amplitudeVertical, c);
 
         c.gridx = 0;
-        c.gridy = 2;
-        card.add(rightLabel("Amp Z (N/S): "), c);
-
-        c.gridx = 1;
-        c.gridy = 2;
-        amplitudeZ.setToolTipText("North-south jitter amplitude in scene units. 0 disables this axis.");
-        amplitudeZ.setModel(new SpinnerNumberModel(ScreenShakeKeyFrame.DEFAULT_AMPLITUDE_Z, 0, 1024, 1));
-        card.add(amplitudeZ, c);
-
-        c.gridx = 2;
         c.gridy = 2;
         card.add(rightLabel("Frequency: "), c);
 
-        c.gridx = 3;
+        c.gridx = 1;
         c.gridy = 2;
-        frequency.setToolTipText("Oscillation cycles per game tick. Higher = faster jitter.");
-        frequency.setModel(new SpinnerNumberModel(ScreenShakeKeyFrame.DEFAULT_FREQUENCY, 0.1, 50, 0.1));
+        frequency.setToolTipText("Base oscillation rate in cycles per game tick. Higher = tighter vibration; "
+                + "lower = looser sway. Two harmonics ride on top so the result isn't a clean sine.");
+        frequency.setModel(new SpinnerNumberModel(ScreenShakeKeyFrame.DEFAULT_FREQUENCY, 0.5, 50, 0.5));
         card.add(frequency, c);
 
-        c.gridx = 0;
-        c.gridy = 3;
-        card.add(rightLabel("Fade In Ticks: "), c);
-
-        c.gridx = 1;
-        c.gridy = 3;
-        fadeInTicks.setToolTipText("Game ticks the shake takes to ramp from 0 to peak amplitude");
-        fadeInTicks.setModel(new SpinnerNumberModel(ScreenShakeKeyFrame.DEFAULT_FADE_IN, 0, 1000, 0.1));
-        card.add(fadeInTicks, c);
-
         c.gridx = 2;
-        c.gridy = 3;
-        card.add(rightLabel("Hold Ticks: "), c);
+        c.gridy = 2;
+        card.add(rightLabel("Duration: "), c);
 
         c.gridx = 3;
-        c.gridy = 3;
-        holdTicks.setToolTipText("Game ticks the shake holds at peak amplitude before ramping down");
-        holdTicks.setModel(new SpinnerNumberModel(ScreenShakeKeyFrame.DEFAULT_HOLD, 0, 1000, 0.1));
-        card.add(holdTicks, c);
-
-        c.gridx = 0;
-        c.gridy = 4;
-        card.add(rightLabel("Fade Out Ticks: "), c);
-
-        c.gridx = 1;
-        c.gridy = 4;
-        fadeOutTicks.setToolTipText("Game ticks the shake takes to ramp from peak amplitude back to 0");
-        fadeOutTicks.setModel(new SpinnerNumberModel(ScreenShakeKeyFrame.DEFAULT_FADE_OUT, 0, 1000, 0.1));
-        card.add(fadeOutTicks, c);
+        c.gridy = 2;
+        durationTicks.setToolTipText("How long the shake runs in game ticks. Starts and stops instantly -- no fade.");
+        durationTicks.setModel(new SpinnerNumberModel(ScreenShakeKeyFrame.DEFAULT_DURATION, 0.1, 1000, 0.1));
+        card.add(durationTicks, c);
 
         c.gridwidth = 1;
         c.gridheight = 1;

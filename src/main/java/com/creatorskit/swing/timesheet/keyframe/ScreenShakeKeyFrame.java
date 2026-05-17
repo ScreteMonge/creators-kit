@@ -4,68 +4,46 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * Global camera shake -- mirrors the in-game effect bosses like Sol Heredit
- * trigger during heavy slams. OSRS exposes only an on/off toggle for built-in
- * shakes ({@code Client.setCameraShakeDisabled}); to drive shakes from the
- * timeline we apply per-tick sin offsets to the camera focal point directly
- * (the same focal-point API the camera-lock feature uses).
+ * Global camera-shake keyframe. Drives the camera focal point with a chaotic
+ * multi-octave noise curve so the screen vibrates / shakes for the keyframe's
+ * lifetime. Camera-relative (horizontal jitter is always left/right on screen
+ * regardless of yaw) and instant on/off -- no fade envelope.
  *
- * <p>Lives on a Character so it has a timeline lane like every other keyframe,
- * but the rendered effect is GLOBAL -- the shake applies to the canvas-wide
- * camera regardless of which Character "owns" the keyframe. Park it on a
- * scene-controller Character if you want it easy to find. Multiple overlapping
- * shake keyframes are resolved by the manager picking the most-recently-
- * started one inside its envelope (same rule as ScreenFadeKeyFrame).
+ * <p>Lives on a Character so it occupies a timeline lane like every other
+ * keyframe, but the effect is GLOBAL (the whole canvas shakes regardless of
+ * which Character owns the keyframe). Multiple overlapping shake keyframes
+ * resolve to the most-recently-started one, same rule as ScreenFadeKeyFrame.
  *
  * <p>Requires the camera to be in free-camera mode (mode 1) -- without it the
- * focal-point setters throw. The manager silently skips application if the
- * mode is wrong rather than spamming exceptions.
+ * focal-point setters throw. The manager silently no-ops if mode != 1.
  */
 @Getter
 @Setter
 public class ScreenShakeKeyFrame extends KeyFrame
 {
-    public static final int DEFAULT_AMPLITUDE_X = 40;
-    public static final int DEFAULT_AMPLITUDE_Y = 25;
-    public static final int DEFAULT_AMPLITUDE_Z = 40;
-    /** Cycles per game tick. 3.0 = ~5 Hz at the OSRS 600ms tick rate. */
-    public static final double DEFAULT_FREQUENCY = 3.0;
-    public static final double DEFAULT_FADE_IN = 0.2;
-    public static final double DEFAULT_HOLD = 1.0;
-    public static final double DEFAULT_FADE_OUT = 0.6;
+    /** Subtle default -- reads as a vibration. Bump for big slams. */
+    public static final int DEFAULT_AMPLITUDE_HORIZONTAL = 8;
+    public static final int DEFAULT_AMPLITUDE_VERTICAL = 5;
+    /** Base oscillation rate in cycles per game tick. Higher = faster vibration. */
+    public static final double DEFAULT_FREQUENCY = 8.0;
+    public static final double DEFAULT_DURATION = 2.0;
 
-    /** Peak displacement on each axis, in scene units (1 tile = 128). */
-    private int amplitudeX;
-    /** Y in OSRS focal-point coords is HEIGHT -- vertical jitter. */
-    private int amplitudeY;
-    /** Z in OSRS focal-point coords is the second horizontal axis. */
-    private int amplitudeZ;
-    /** Oscillation frequency in cycles per game tick. */
+    /** Peak horizontal (screen left/right) displacement, scene units (1 tile = 128). */
+    private int amplitudeHorizontal;
+    /** Peak vertical (screen up/down) displacement, scene units. */
+    private int amplitudeVertical;
+    /** Base frequency of the noise curve in cycles per game tick. */
     private double frequency;
-    /** Game ticks to ramp amplitude from 0 to its peak. */
-    private double fadeInTicks;
-    /** Game ticks to hold at peak amplitude. */
-    private double holdTicks;
-    /** Game ticks to ramp amplitude from peak back to 0. */
-    private double fadeOutTicks;
+    /** How long the shake lasts in game ticks. Starts and stops instantly -- no fade. */
+    private double durationTicks;
 
-    public ScreenShakeKeyFrame(double tick, int amplitudeX, int amplitudeY, int amplitudeZ,
-                               double frequency, double fadeInTicks, double holdTicks,
-                               double fadeOutTicks)
+    public ScreenShakeKeyFrame(double tick, int amplitudeHorizontal, int amplitudeVertical,
+                               double frequency, double durationTicks)
     {
         super(KeyFrameType.SCREEN_SHAKE, tick);
-        this.amplitudeX = amplitudeX;
-        this.amplitudeY = amplitudeY;
-        this.amplitudeZ = amplitudeZ;
+        this.amplitudeHorizontal = amplitudeHorizontal;
+        this.amplitudeVertical = amplitudeVertical;
         this.frequency = frequency;
-        this.fadeInTicks = fadeInTicks;
-        this.holdTicks = holdTicks;
-        this.fadeOutTicks = fadeOutTicks;
-    }
-
-    /** Total animation length in game ticks. */
-    public double totalDurationTicks()
-    {
-        return fadeInTicks + holdTicks + fadeOutTicks;
+        this.durationTicks = durationTicks;
     }
 }

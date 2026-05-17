@@ -270,7 +270,7 @@ public class SummarySheet extends TimeSheet
                     break;
                 case SCREEN_SHAKE:
                     ScreenShakeKeyFrame sskf = (ScreenShakeKeyFrame) keyFrame;
-                    drawTail(g, e, keyFrames, sskf.totalDurationTicks(), zoomFactor, sskf.getTick(), x, y, xStringOffset, stringHeight);
+                    drawTail(g, e, keyFrames, sskf.getDurationTicks(), zoomFactor, sskf.getTick(), x, y, xStringOffset, stringHeight);
                     break;
                 case HITSPLAT_1:
                 case HITSPLAT_2:
