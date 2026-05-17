@@ -589,6 +589,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.registerKeyListener(nudgeWestListener);
 		keyManager.registerKeyListener(nudgeUpListener);
 		keyManager.registerKeyListener(nudgeDownListener);
+		keyManager.registerKeyListener(scaleUpListener);
+		keyManager.registerKeyListener(scaleDownListener);
 		mouseManager.registerMouseWheelListener(this::mouseWheelMoved);
 		mouseManager.registerMouseListener(this);
 
@@ -772,6 +774,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.unregisterKeyListener(nudgeWestListener);
 		keyManager.unregisterKeyListener(nudgeUpListener);
 		keyManager.unregisterKeyListener(nudgeDownListener);
+		keyManager.unregisterKeyListener(scaleUpListener);
+		keyManager.unregisterKeyListener(scaleDownListener);
 		mouseManager.unregisterMouseWheelListener(this::mouseWheelMoved);
 		mouseManager.unregisterMouseListener(this);
 	}
@@ -1920,6 +1924,33 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 	};
 
+	/**
+	 * ALT + = and ALT + - keyboard equivalents of ALT + Scroll for scaling.
+	 * Same compounding math as the wheel handler -- one press = one notch.
+	 * Useful when the wheel modifier is being eaten by a different plugin /
+	 * mouse driver or the user just prefers the keyboard. VK_EQUALS is the
+	 * "+" key without requiring SHIFT, and VK_MINUS is the dedicated "-".
+	 */
+	private final HotkeyListener scaleUpListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_EQUALS, InputEvent.ALT_DOWN_MASK))
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			double stepPct = Math.max(1, Math.min(50, config.scaleStepPercent())) / 100.0;
+			scaleSelectedCharacters(1.0 + stepPct);
+		}
+	};
+
+	private final HotkeyListener scaleDownListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_MINUS, InputEvent.ALT_DOWN_MASK))
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			double stepPct = Math.max(1, Math.min(50, config.scaleStepPercent())) / 100.0;
+			scaleSelectedCharacters(1.0 / (1.0 + stepPct));
+		}
+	};
+
 	public MouseWheelEvent mouseWheelMoved(MouseWheelEvent event)
 	{
 		// While the Add Program Step hotkey is held, scrolling adjusts the speed used
@@ -1945,13 +1976,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		// down = smaller. Compounding by (1 + step) up vs / (1 + step) down so a
 		// matched up/down pair cancels exactly -- additive deltas drift over time.
 		//
-		// The middle-button check is required: AWT mirrors BUTTON2_DOWN_MASK into
-		// ALT_DOWN_MASK for X11 backward compat, so isAltDown() returns true any
-		// time the scroll-wheel button is held -- not just when ALT is held. Without
-		// the explicit BUTTON2 exclusion, middle-click + scroll would silently fire
-		// the scale path.
-		boolean middleHeld = (event.getModifiersEx() & java.awt.event.InputEvent.BUTTON2_DOWN_MASK) != 0;
-		if (event.isAltDown() && !middleHeld)
+		// Detect ALT via client.isKeyPressed(KC_ALT) instead of event.isAltDown().
+		// MouseWheelEvent's modifiersEx had two quirks that made isAltDown()
+		// unreliable here: (a) on some setups middle-click + scroll set the ALT
+		// bit even with ALT not held, which used to silently fire the scale path;
+		// (b) the workaround for (a) -- excluding BUTTON2_DOWN_MASK -- also
+		// blocked real ALT + scroll on setups where the mouse driver always
+		// reported the middle-button bit. The keyboard-state probe avoids both.
+		if (client.isKeyPressed(KeyCode.KC_ALT))
 		{
 			int rotation = event.getWheelRotation();
 			if (rotation == 0)
