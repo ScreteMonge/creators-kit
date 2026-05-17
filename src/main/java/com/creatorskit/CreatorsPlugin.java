@@ -1427,7 +1427,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		// Mirror sub-tile offsets onto the preview BEFORE setLocation so the previewObject's
 		// own setLocation override picks them up and shifts the ghost off the tile center the
 		// same way the placed Character will be. Without this the preview sits at the raw tile
-		// position while the real Character is offset by whatever SHIFT+WASD/R/F set.
+		// position while the real Character is offset by whatever ALT+WASD/R/F set.
 		previewObject.setOffsetX(ckObject.getOffsetX());
 		previewObject.setOffsetY(ckObject.getOffsetY());
 		previewObject.setOffsetZ(ckObject.getOffsetZ());
@@ -1807,10 +1807,13 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private static final int NUDGE_STEP = 5;
 
 	/**
-	 * SHIFT + WASD/R/F nudge the currently-selected Character(s) by {@link #NUDGE_STEP}
+	 * ALT + WASD/R/F nudge the currently-selected Character(s) by {@link #NUDGE_STEP}
 	 * scene units in the chosen direction. WASD are cardinal in scene space (W = north,
 	 * S = south, D = east, A = west); R/F are vertical (R = up, F = down). Operates on
 	 * every Character in the SelectionManager so a multi-selection nudges together.
+	 *
+	 * <p>ALT was picked over SHIFT to avoid a clash with the Detached Camera plugin,
+	 * which uses SHIFT + WASDRF for slow camera movement.
 	 *
 	 * <p>Hotkeys are hardcoded rather than config-driven because they're a fixed gesture
 	 * tied to the WASD convention; promoting them to user-configurable keybinds later
@@ -1835,7 +1838,32 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 	}
 
-	private final HotkeyListener nudgeNorthListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_W, InputEvent.SHIFT_DOWN_MASK))
+	/**
+	 * ALT+Scroll companion to {@link #nudgeSelectedCharacters}: multiplies every
+	 * selected Character's extraScale by {@code factor}. Compounding multiplication
+	 * (not addition) so successive ups + downs return to the original size --
+	 * additive scale steps drift because (1+x)*(1-x) != 1.
+	 */
+	private void scaleSelectedCharacters(double factor)
+	{
+		java.util.Collection<Character> targets = selectionManager.getSelected();
+		if (targets.isEmpty())
+		{
+			Character primary = getSelectedCharacter();
+			if (primary == null)
+			{
+				return;
+			}
+			primary.scaleBy(factor);
+			return;
+		}
+		for (Character c : targets)
+		{
+			c.scaleBy(factor);
+		}
+	}
+
+	private final HotkeyListener nudgeNorthListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_W, InputEvent.ALT_DOWN_MASK))
 	{
 		@Override
 		public void hotkeyPressed()
@@ -1844,7 +1872,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 	};
 
-	private final HotkeyListener nudgeSouthListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_S, InputEvent.SHIFT_DOWN_MASK))
+	private final HotkeyListener nudgeSouthListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_S, InputEvent.ALT_DOWN_MASK))
 	{
 		@Override
 		public void hotkeyPressed()
@@ -1853,7 +1881,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 	};
 
-	private final HotkeyListener nudgeEastListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_D, InputEvent.SHIFT_DOWN_MASK))
+	private final HotkeyListener nudgeEastListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_D, InputEvent.ALT_DOWN_MASK))
 	{
 		@Override
 		public void hotkeyPressed()
@@ -1862,7 +1890,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 	};
 
-	private final HotkeyListener nudgeWestListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_A, InputEvent.SHIFT_DOWN_MASK))
+	private final HotkeyListener nudgeWestListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_A, InputEvent.ALT_DOWN_MASK))
 	{
 		@Override
 		public void hotkeyPressed()
@@ -1872,9 +1900,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	};
 
 	// R/F for the vertical axis -- matches the WASDRF cluster most 3D nudge tools
-	// use. (We previously routed this to Q/E to avoid a clash with the Detached
-	// Camera plugin's WASDRF camera controls; switched back per user request.)
-	private final HotkeyListener nudgeUpListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_R, InputEvent.SHIFT_DOWN_MASK))
+	// use. Nudge gestures are ALT + WASDRF (the SHIFT + WASDRF cluster collides
+	// with Detached Camera's slow-movement modifier).
+	private final HotkeyListener nudgeUpListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_R, InputEvent.ALT_DOWN_MASK))
 	{
 		@Override
 		public void hotkeyPressed()
@@ -1883,7 +1911,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 	};
 
-	private final HotkeyListener nudgeDownListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_F, InputEvent.SHIFT_DOWN_MASK))
+	private final HotkeyListener nudgeDownListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_F, InputEvent.ALT_DOWN_MASK))
 	{
 		@Override
 		public void hotkeyPressed()
@@ -1909,6 +1937,26 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 					creatorsPanel.updateStepSpeedLabel(currentStepSpeed);
 				}
 			}
+			event.consume();
+			return event;
+		}
+
+		// ALT + Scroll resizes the currently-selected Character(s). Up = bigger,
+		// down = smaller. Compounding by (1 + step) up vs / (1 + step) down so a
+		// matched up/down pair cancels exactly -- additive deltas drift over time.
+		if (event.isAltDown())
+		{
+			int rotation = event.getWheelRotation();
+			if (rotation == 0)
+			{
+				return event;
+			}
+			double stepPct = Math.max(1, Math.min(50, config.scaleStepPercent())) / 100.0;
+			// Each notch of rotation applies one multiply. Negative rotation = scroll up = grow.
+			double factor = rotation < 0
+					? Math.pow(1.0 + stepPct, -rotation)
+					: Math.pow(1.0 / (1.0 + stepPct), rotation);
+			scaleSelectedCharacters(factor);
 			event.consume();
 			return event;
 		}

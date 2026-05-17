@@ -189,6 +189,21 @@ public interface CreatorsConfig extends Config
 	}
 
 	@ConfigItem(
+			keyName = "scaleStepPercent",
+			name = "Model scale step (%)",
+			description = "How much each ALT+Scroll tick scales the selected Character(s). Compounding: every " +
+					"upscale multiplies by (1 + step/100), every downscale divides by the same. Default 10% gives " +
+					"about 10 ticks to double the size; lower for finer control, higher for big jumps.",
+			section = sceneSettings,
+			position = 17
+	)
+	@net.runelite.client.config.Range(min = 1, max = 50)
+	default int scaleStepPercent()
+	{
+		return 10;
+	}
+
+	@ConfigItem(
 			keyName = "cameraLockEasing",
 			name = "Camera lock responsiveness (%)",
 			description = "What fraction of the remaining distance to the Character the camera closes each client " +

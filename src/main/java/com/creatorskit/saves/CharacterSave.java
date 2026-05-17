@@ -76,4 +76,10 @@ public class CharacterSave
      * Gson defaults missing fields, load treats null as "no shake keyframes".
      */
     private ScreenShakeKeyFrame[] screenShakeKeyFrames;
+    /**
+     * Added 2.3.x. User-set uniform extra scale (ALT+Scroll). Pre-2.3 saves get
+     * Gson's default of 0.0 for missing doubles -- the load path treats {@code <= 0}
+     * as "use default 1.0" so old saves keep rendering at their original size.
+     */
+    private double extraScale;
 }

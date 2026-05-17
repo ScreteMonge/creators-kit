@@ -101,7 +101,7 @@ public class Character
      * = higher; internally subtracted from CKObject's z when applied because OSRS
      * render space treats negative z as up.
      *
-     * <p>Driven by the SHIFT+WASD/R/F hotkeys for in-place nudging without going
+     * <p>Driven by the ALT+WASD/R/F hotkeys for in-place nudging without going
      * through the Model Anvil. Each press of {@link #nudgeOffset(int, int, int)}
      * accumulates a delta of 5 units; the offset is applied per-frame via
      * {@link CKObject#setLocation(LocalPoint, int)} so it follows the Character
@@ -110,6 +110,14 @@ public class Character
     private int offsetX;
     private int offsetY;
     private int offsetZ;
+
+    /**
+     * User-controlled uniform scale multiplier applied on top of widthScale /
+     * heightScale, propagated to the live CKObject. 1.0 = no change. Driven by the
+     * ALT+Scroll hotkey. Saved + loaded via {@code CharacterSave#extraScale};
+     * pre-2.3 saves (and the Lombok no-args ctor path) default to 1.0.
+     */
+    private double extraScale = 1.0;
 
     /**
      * Overrides Lombok's auto-generated setter so toggling renderFix on the Character
@@ -191,8 +199,38 @@ public class Character
     }
 
     /**
+     * Overrides Lombok's auto-generated setter so the value reaches the live CKObject's
+     * getModel() bracket. Clamps to a sane range so a runaway scroll can't drive the
+     * model into a numerically broken size (Mesh.scale uses int factors -- huge scales
+     * overflow, sub-pixel scales collapse).
+     */
+    public void setExtraScale(double extraScale)
+    {
+        // Clamp matches Mesh.scale's safe range -- below 0.05 the int factor floors to
+        // zero and the model disappears; above 20 we hit perf cliffs and silly artefacts.
+        if (extraScale < 0.05) extraScale = 0.05;
+        if (extraScale > 20.0) extraScale = 20.0;
+        this.extraScale = extraScale;
+        if (ckObject != null)
+        {
+            ckObject.setExtraScale(extraScale);
+        }
+    }
+
+    /**
+     * Multiplies the current extraScale by {@code factor} and applies. Helper for the
+     * ALT+Scroll hotkey -- one scroll tick passes (1 + scaleStep) for upscale,
+     * (1 / (1 + scaleStep)) for downscale, giving symmetric / reversible scaling
+     * (3 ups then 3 downs returns to the original size).
+     */
+    public void scaleBy(double factor)
+    {
+        setExtraScale(extraScale * factor);
+    }
+
+    /**
      * Accumulates a delta into the user-set position offsets and immediately applies
-     * the same delta to the live CKObject's rendered position so the SHIFT+WASD/R/F
+     * the same delta to the live CKObject's rendered position so the ALT+WASD/R/F
      * hotkeys feel responsive (otherwise the user would have to wait for the next
      * setLocation call to see the shift). Z is negated when applied to the CKObject
      * because OSRS render space has -z = up while we expose +offsetZ = up.

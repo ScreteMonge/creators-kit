@@ -561,7 +561,8 @@ public class CreatorsPanel extends PluginPanel
                 128,
                 0,
                 0,
-                0);
+                0,
+                1.0);
 
         textField.addActionListener(e -> onNameTextFieldChanged(character));
 
@@ -2003,7 +2004,8 @@ public class CreatorsPanel extends PluginPanel
                 character.getShieldKeyFrames(),
                 character.getSpecialKeyFrames(),
                 character.getScreenFadeKeyFrames(),
-                character.getScreenShakeKeyFrames());
+                character.getScreenShakeKeyFrames(),
+                character.getExtraScale());
     }
 
     public void openLoadSetupDialog()
@@ -2434,6 +2436,11 @@ public class CreatorsPanel extends PluginPanel
             character.setOffsetX(save.getOffsetX());
             character.setOffsetY(save.getOffsetY());
             character.setOffsetZ(save.getOffsetZ());
+
+            // Pre-2.3 saves predate extraScale -- Gson defaults missing doubles to 0.0,
+            // so treat that as "no scaling set" and use the natural 1.0.
+            double savedExtraScale = save.getExtraScale();
+            character.setExtraScale(savedExtraScale > 0 ? savedExtraScale : 1.0);
 
             addPanel(parentPanel, character, node, false, false);
         }

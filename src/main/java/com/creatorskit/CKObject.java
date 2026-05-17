@@ -52,6 +52,16 @@ public class CKObject extends RuneLiteObjectController
     /** Vertical companion to {@link #widthScale}; matches NPCComposition.getHeightScale(). */
     private int heightScale = 128;
 
+    /**
+     * User-controlled uniform extra scale multiplier applied on top of widthScale /
+     * heightScale. 1.0 = no change. Driven by the ALT+Scroll hotkey; persists in
+     * {@code CharacterSave}. Multiplied into the render-fix bracket's post-animation
+     * expand step so animation still runs at the canonical rigging scale and only
+     * the final display size changes -- works whether or not the cache-shipped
+     * scales differ from 128.
+     */
+    private double extraScale = 1.0;
+
     /** Canonical rigging scale baked into OSRS animation data (1/128 units = 1 tile). */
     private static final int RIGGING_SCALE = 128;
 
@@ -67,7 +77,7 @@ public class CKObject extends RuneLiteObjectController
     /**
      * User-set sub-tile position offsets in scene units, applied after the tile-
      * aligned base position in {@link #setLocation(LocalPoint, int)}. Driven by the
-     * Character's SHIFT+WASD/R/F nudge hotkeys; mirrored from Character.offsetX/Y/Z
+     * Character's ALT+WASD/R/F nudge hotkeys; mirrored from Character.offsetX/Y/Z
      * so the values stay in sync. Z is "user-positive = up"; subtracted when applied
      * because OSRS render space treats negative z as up.
      */
@@ -246,12 +256,19 @@ public class CKObject extends RuneLiteObjectController
     @Override
     public Model getModel()
     {
-        boolean fix = renderFix
-                && baseModel != null
-                && (widthScale != RIGGING_SCALE || heightScale != RIGGING_SCALE)
+        // Bracket engages whenever EITHER (a) renderFix is on AND the cache shipped a
+        // non-canonical scale (the original rigging-correction use-case) OR (b) the
+        // user has set a non-1.0 extraScale -- the bracket is also how we apply
+        // user up/down-scaling, since baking it into the post-animation expand step
+        // means animation still runs against the canonical rigging mesh.
+        boolean fix = baseModel != null
+                && (animationController != null || poseAnimationController != null)
                 && widthScale > 0
                 && heightScale > 0
-                && (animationController != null || poseAnimationController != null);
+                && (
+                    (renderFix && (widthScale != RIGGING_SCALE || heightScale != RIGGING_SCALE))
+                    || extraScale != 1.0
+                );
 
         if (fix)
         {
@@ -335,10 +352,16 @@ public class CKObject extends RuneLiteObjectController
      * model to its display size while preserving the animation that was just computed
      * at the rigging-correct smaller scale. Mesh.scale(s) multiplies by s/128, so
      * passing {@code widthScale} directly gives the right factor.
+     *
+     * <p>{@link #extraScale} is multiplied in here so user up/down-scaling composes
+     * cleanly with the rigging correction -- the rigging still ran at canonical 128,
+     * we just expand to (display * userScale) instead of plain display.
      */
     private void expandAnimatedModel(Model animated)
     {
-        animated.scale(widthScale, heightScale, widthScale);
+        int sx = Math.max(1, (int) Math.round(widthScale * extraScale));
+        int sy = Math.max(1, (int) Math.round(heightScale * extraScale));
+        animated.scale(sx, sy, sx);
     }
 
     /**
