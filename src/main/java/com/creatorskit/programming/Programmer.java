@@ -1099,6 +1099,15 @@ public class Programmer
                 if (nextMovement.getTick() <= currentTime)
                 {
                     character.setCurrentKeyFrame(nextMovement, KeyFrameType.MOVEMENT);
+                    // Reset currentStep before resetMovementKeyFrame so updateCharacter3D's
+                    // early-out (currentStep >= pathLength -> skip movement) doesn't read
+                    // a stale value left over from a previous playthrough. Without this
+                    // reset, rewinding past a keyframe then playing would leave the
+                    // keyframe's currentStep at pathLength; when the seeker re-crosses
+                    // the keyframe tick the early-out skipped the re-computation, so
+                    // movement only started when the user scrubbed EXACTLY onto the
+                    // keyframe (where register3DChanges resets currentStep to 0 itself).
+                    ((MovementKeyFrame) nextMovement).setCurrentStep(0);
                     character.resetMovementKeyFrame(client.getGameCycle(), currentTime);
                     // Intentionally skip register3DChanges here during playback. That
                     // helper calls transform3DStatic which uses OrientationAction.SET
