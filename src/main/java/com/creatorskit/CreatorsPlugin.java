@@ -1944,7 +1944,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		// ALT + Scroll resizes the currently-selected Character(s). Up = bigger,
 		// down = smaller. Compounding by (1 + step) up vs / (1 + step) down so a
 		// matched up/down pair cancels exactly -- additive deltas drift over time.
-		if (event.isAltDown())
+		//
+		// The middle-button check is required: AWT mirrors BUTTON2_DOWN_MASK into
+		// ALT_DOWN_MASK for X11 backward compat, so isAltDown() returns true any
+		// time the scroll-wheel button is held -- not just when ALT is held. Without
+		// the explicit BUTTON2 exclusion, middle-click + scroll would silently fire
+		// the scale path.
+		boolean middleHeld = (event.getModifiersEx() & java.awt.event.InputEvent.BUTTON2_DOWN_MASK) != 0;
+		if (event.isAltDown() && !middleHeld)
 		{
 			int rotation = event.getWheelRotation();
 			if (rotation == 0)
