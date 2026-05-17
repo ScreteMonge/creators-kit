@@ -956,7 +956,19 @@ public class TimeSheetPanel extends JPanel
     }
 
     /**
-     * Adds a new HealthKeyFrame based on the last HealthKeyFrame as if the HitsplatKeyFrame argument were applied
+     * Adds the requested HitsplatKeyFrame and one bar keyframe whose value drops by
+     * the hitsplat's damage. The bar is picked from the hitsplat's SPRITE:
+     *
+     * <ul>
+     *   <li>SHIELD / SHIELD_OTHER / SHIELD_MAX -> drains the Shield bar</li>
+     *   <li>POISE  / POISE_OTHER  / POISE_MAX  -> drains the Special bar</li>
+     *   <li>everything else -> drains the Health bar (legacy behaviour)</li>
+     * </ul>
+     *
+     * <p>For each bar type the previous keyframe of that bar is read as the source
+     * of truth for duration / colour-or-sprite / max / current. If no previous
+     * keyframe exists, falls back to the bar's natural defaults so the user gets
+     * a sensible starting state.
      */
     public void initializeHealthKeyFrame(KeyFrameType type)
     {
@@ -969,11 +981,44 @@ public class TimeSheetPanel extends JPanel
         addKeyFrameAction(new KeyFrame[]{hitsplatKeyFrame});
 
         HitsplatKeyFrame hitsKF = (HitsplatKeyFrame) hitsplatKeyFrame;
+        int damage = hitsKF.getDamage();
+        KeyFrame nextBar = pickBarKeyFrameForHitsplat(hitsKF.getSprite(), damage);
+        if (nextBar != null)
+        {
+            addKeyFrameAction(new KeyFrame[]{nextBar});
+        }
+    }
 
+    /**
+     * Reads the previous keyframe of the bar type targeted by the hitsplat sprite,
+     * subtracts the damage from its current value (clamped to 0), and returns a
+     * new keyframe at the seeker tick.
+     */
+    private KeyFrame pickBarKeyFrameForHitsplat(com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite sprite, int damage)
+    {
+        switch (sprite)
+        {
+            case SHIELD:
+            case SHIELD_OTHER:
+            case SHIELD_MAX:
+                return buildShieldDrainKeyFrame(damage);
+            case POISE:
+            case POISE_OTHER:
+            case POISE_MAX:
+                return buildSpecialDrainKeyFrame(damage);
+            default:
+                return buildHealthDrainKeyFrame(damage);
+        }
+    }
+
+    private KeyFrame buildHealthDrainKeyFrame(int damage)
+    {
         double duration;
         HealthbarSprite sprite;
         int maxHealth;
         int currentHealth;
+        int order;
+        int width;
 
         KeyFrame healthKeyFrame = selectedCharacter.findPreviousKeyFrame(KeyFrameType.HEALTH, currentTime, true);
         if (healthKeyFrame == null)
@@ -982,6 +1027,8 @@ public class TimeSheetPanel extends JPanel
             sprite = HealthbarSprite.DEFAULT;
             maxHealth = 99;
             currentHealth = 99;
+            order = HealthKeyFrame.DEFAULT_ORDER;
+            width = HealthKeyFrame.AUTO_WIDTH;
         }
         else
         {
@@ -990,24 +1037,98 @@ public class TimeSheetPanel extends JPanel
             sprite = healthKF.getHealthbarSprite();
             maxHealth = healthKF.getMaxHealth();
             currentHealth = healthKF.getCurrentHealth();
+            order = healthKF.getOrder();
+            width = healthKF.getWidth();
         }
 
-        int damage = hitsKF.getDamage();
-
-        int remaining = currentHealth - damage;
-        if (remaining < 0)
-        {
-            remaining = 0;
-        }
-
-        HealthKeyFrame nextKF = new HealthKeyFrame(
+        return new HealthKeyFrame(
                 currentTime,
                 duration,
                 sprite,
                 maxHealth,
-                remaining);
+                Math.max(0, currentHealth - damage),
+                order,
+                width);
+    }
 
-        addKeyFrameAction(new KeyFrame[]{nextKF});
+    private KeyFrame buildShieldDrainKeyFrame(int damage)
+    {
+        double duration;
+        int rgb;
+        int max;
+        int current;
+        int order;
+        int width;
+
+        KeyFrame prev = selectedCharacter.findPreviousKeyFrame(KeyFrameType.SHIELD, currentTime, true);
+        if (prev == null)
+        {
+            duration = com.creatorskit.swing.timesheet.attributes.ShieldAttributes.DEFAULT_DURATION;
+            rgb = com.creatorskit.swing.timesheet.attributes.ShieldAttributes.DEFAULT_RGB;
+            max = com.creatorskit.swing.timesheet.attributes.ShieldAttributes.DEFAULT_MAX;
+            current = max;
+            order = ShieldKeyFrame.DEFAULT_ORDER;
+            width = ShieldKeyFrame.AUTO_WIDTH;
+        }
+        else
+        {
+            ShieldKeyFrame shieldKF = (ShieldKeyFrame) prev;
+            duration = shieldKF.getDuration();
+            rgb = shieldKF.getRgb();
+            max = shieldKF.getMaxValue();
+            current = shieldKF.getCurrentValue();
+            order = shieldKF.getOrder();
+            width = shieldKF.getWidth();
+        }
+
+        return new ShieldKeyFrame(
+                currentTime,
+                duration,
+                rgb,
+                max,
+                Math.max(0, current - damage),
+                order,
+                width);
+    }
+
+    private KeyFrame buildSpecialDrainKeyFrame(int damage)
+    {
+        double duration;
+        int rgb;
+        int max;
+        int current;
+        int order;
+        int width;
+
+        KeyFrame prev = selectedCharacter.findPreviousKeyFrame(KeyFrameType.SPECIAL, currentTime, true);
+        if (prev == null)
+        {
+            duration = com.creatorskit.swing.timesheet.attributes.SpecialAttributes.DEFAULT_DURATION;
+            rgb = com.creatorskit.swing.timesheet.attributes.SpecialAttributes.DEFAULT_RGB;
+            max = com.creatorskit.swing.timesheet.attributes.SpecialAttributes.DEFAULT_MAX;
+            current = max;
+            order = SpecialKeyFrame.DEFAULT_ORDER;
+            width = SpecialKeyFrame.AUTO_WIDTH;
+        }
+        else
+        {
+            SpecialKeyFrame specialKF = (SpecialKeyFrame) prev;
+            duration = specialKF.getDuration();
+            rgb = specialKF.getRgb();
+            max = specialKF.getMaxValue();
+            current = specialKF.getCurrentValue();
+            order = specialKF.getOrder();
+            width = specialKF.getWidth();
+        }
+
+        return new SpecialKeyFrame(
+                currentTime,
+                duration,
+                rgb,
+                max,
+                Math.max(0, current - damage),
+                order,
+                width);
     }
 
     public void addAnimationKeyFrameFromCache(WeaponAnimData weaponAnim)

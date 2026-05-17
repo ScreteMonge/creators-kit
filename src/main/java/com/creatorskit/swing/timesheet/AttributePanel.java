@@ -401,7 +401,7 @@ public class AttributePanel extends JPanel
                 return new HitsplatKeyFrame(
                         tick,
                         keyFrameType,
-                        (int) attributes.getDuration().getValue(),
+                        ((Number) attributes.getDuration().getValue()).doubleValue(),
                         (HitsplatSprite) attributes.getSprite().getSelectedItem(),
                         (HitsplatVariant) attributes.getVariant().getSelectedItem(),
                         (int) attributes.getDamage().getValue()
@@ -2209,8 +2209,8 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 1;
         JSpinner duration = attributes.getDuration();
-        duration.setToolTipText("Set the duration, in game ticks, for how long the Hitsplat lasts. -1 sets it to default value, which is 5/3 ticks");
-        duration.setModel(new SpinnerNumberModel(-1, -1, 1000000, 1));
+        duration.setToolTipText("Set the duration, in game ticks, for how long the Hitsplat lasts. -1 sets it to default value, which is 5/3 ticks. Fractional values allowed (0.1 increments).");
+        duration.setModel(new SpinnerNumberModel(-1.0, -1.0, 1000000.0, 0.1));
         card.add(duration, c);
 
         c.gridx = 0;
@@ -2277,8 +2277,12 @@ public class AttributePanel extends JPanel
 
         c.gridx = 2;
         c.gridy = 4;
-        JButton keyFrameHealth = new JButton("Quick KeyFrame Hitsplat/Health");
-        keyFrameHealth.setToolTipText("Creates the Hitsplat KeyFrame and an appropriate Health KeyFrame as if this damage were applied");
+        JButton keyFrameHealth = new JButton("Quick KeyFrame Hitsplat/Bar");
+        keyFrameHealth.setToolTipText("<html>Creates the Hitsplat KeyFrame plus a matching bar KeyFrame with this damage subtracted."
+                + "<br>The bar is picked from the hitsplat sprite:"
+                + "<br>&nbsp;&nbsp;Shield / Shield Other / Shield Max &rarr; Shield bar"
+                + "<br>&nbsp;&nbsp;Poise / Poise Other / Poise Max &rarr; Special bar"
+                + "<br>&nbsp;&nbsp;everything else &rarr; Health bar</html>");
         keyFrameHealth.setBackground(ColorScheme.DARK_GRAY_COLOR);
         keyFrameHealth.addActionListener(e -> timeSheetPanel.initializeHealthKeyFrame(hitsplatType));
         card.add(keyFrameHealth, c);
