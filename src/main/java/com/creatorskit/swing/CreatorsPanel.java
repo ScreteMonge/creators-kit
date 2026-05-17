@@ -1038,6 +1038,19 @@ public class CreatorsPanel extends PluginPanel
                 {
                     sp2.setActive(false);
                 }
+
+                // Projectile CKObjects are lazily allocated per target inside
+                // Programmer.ensureProjectileSlot and stored on the Character.
+                // Without this loop they'd stay registered with the scene after
+                // the owning Character is gone, leaving an orphaned spinning
+                // model wherever the last projectile frame landed.
+                for (CKObject proj : c.getProjectileObjects())
+                {
+                    if (proj != null && proj.isActive())
+                    {
+                        proj.setActive(false);
+                    }
+                }
             });
             characters.remove(c);
             if (c == selectedCharacter)
