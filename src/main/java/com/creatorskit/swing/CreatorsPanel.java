@@ -942,6 +942,18 @@ public class CreatorsPanel extends PluginPanel
                     true,
                     setLocation);
 
+            // Copy the Alt-driven visual state: WASD/R/F sub-tile nudges and the
+            // Alt+Scroll uniform extra scale. The render-fix toggle + per-axis scales
+            // come along too, since they're locked to the underlying model rather
+            // than the keyframe data the createCharacter call already handles.
+            c.setRenderFixWidth(character.getRenderFixWidth());
+            c.setRenderFixHeight(character.getRenderFixHeight());
+            c.setRenderFix(character.isRenderFix());
+            c.setOffsetX(character.getOffsetX());
+            c.setOffsetY(character.getOffsetY());
+            c.setOffsetZ(character.getOffsetZ());
+            c.setExtraScale(character.getExtraScale());
+
             SwingUtilities.invokeLater(() -> addPanel(parentPanel, c, true, false));
         });
         thread.start();
