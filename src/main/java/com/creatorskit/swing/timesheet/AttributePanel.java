@@ -85,6 +85,7 @@ public class AttributePanel extends JPanel
     public static final String SHIELD_CARD = "Shield";
     public static final String SPECIAL_CARD = "Special";
     public static final String SCREEN_FADE_CARD = "Screen Fade";
+    public static final String SCREEN_SHAKE_CARD = "Screen Shake";
     public static final String MIXED_TYPES_CARD = "MixedTypes";
 
     private final String NO_OBJECT_SELECTED = "[No Object Selected]";
@@ -113,6 +114,7 @@ public class AttributePanel extends JPanel
     private final ShieldAttributes shieldAttributes = new ShieldAttributes();
     private final SpecialAttributes specialAttributes = new SpecialAttributes();
     private final ScreenFadeAttributes screenFadeAttributes = new ScreenFadeAttributes();
+    private final ScreenShakeAttributes screenShakeAttributes = new ScreenShakeAttributes();
 
     private final Random random = new Random();
 
@@ -223,6 +225,8 @@ public class AttributePanel extends JPanel
         cardPanel.add(shieldCard, SHIELD_CARD);
         cardPanel.add(specialCard, SPECIAL_CARD);
         cardPanel.add(screenFadeCard, SCREEN_FADE_CARD);
+        JPanel screenShakeCard = new JPanel();
+        cardPanel.add(screenShakeCard, SCREEN_SHAKE_CARD);
 
         // Empty placeholder shown when the keyframe selection spans multiple types.
         // Using a CardLayout entry keeps the cardPanel at its normal height instead
@@ -250,6 +254,7 @@ public class AttributePanel extends JPanel
         setupBarCard(shieldCard, KeyFrameType.SHIELD);
         setupBarCard(specialCard, KeyFrameType.SPECIAL);
         setupScreenFadeCard(screenFadeCard);
+        setupScreenShakeCard(screenShakeCard);
 
         setupKeyListeners();
     }
@@ -444,6 +449,17 @@ public class AttributePanel extends JPanel
                         ((Number) screenFadeAttributes.getFadeInTicks().getValue()).doubleValue(),
                         ((Number) screenFadeAttributes.getHoldTicks().getValue()).doubleValue(),
                         ((Number) screenFadeAttributes.getFadeOutTicks().getValue()).doubleValue()
+                );
+            case SCREEN_SHAKE:
+                return new ScreenShakeKeyFrame(
+                        tick,
+                        (int) screenShakeAttributes.getAmplitudeX().getValue(),
+                        (int) screenShakeAttributes.getAmplitudeY().getValue(),
+                        (int) screenShakeAttributes.getAmplitudeZ().getValue(),
+                        ((Number) screenShakeAttributes.getFrequency().getValue()).doubleValue(),
+                        ((Number) screenShakeAttributes.getFadeInTicks().getValue()).doubleValue(),
+                        ((Number) screenShakeAttributes.getHoldTicks().getValue()).doubleValue(),
+                        ((Number) screenShakeAttributes.getFadeOutTicks().getValue()).doubleValue()
                 );
         }
     }
@@ -2797,6 +2813,132 @@ public class AttributePanel extends JPanel
         card.add(new JLabel(""), c);
     }
 
+    private void setupScreenShakeCard(JPanel card)
+    {
+        card.setLayout(new GridBagLayout());
+        card.setBorder(new EmptyBorder(4, 4, 4, 4));
+        card.setFocusable(true);
+        addMouseFocusListener(card);
+
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(2, 2, 2, 2);
+
+        c.gridwidth = 4;
+        c.gridheight = 1;
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 0;
+        JPanel titlePanel = new JPanel();
+        titlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        card.add(titlePanel, c);
+
+        JLabel title = new JLabel("Screen Shake");
+        title.setHorizontalAlignment(SwingConstants.LEFT);
+        title.setFont(FontManager.getRunescapeBoldFont());
+        titlePanel.add(title);
+
+        JLabel help = new JLabel(new ImageIcon(HELP));
+        help.setBorder(new EmptyBorder(0, 4, 0, 4));
+        help.setToolTipText("<html>Sol-Heredit-style global camera shake. Jitters the camera focal point"
+                + "<br>with a fade-in / hold / fade-out envelope -- same shape as Screen Fade."
+                + "<br>"
+                + "<br>The shake is GLOBAL (covers the canvas regardless of which Character owns"
+                + "<br>the keyframe) and requires free-camera mode (mode 1). Composes with the"
+                + "<br>camera-lock feature -- if a character is locked, the shake is added on top."
+                + "<br>"
+                + "<br>Amplitudes are in scene units (1 tile = 128). X/Y/Z map to OSRS focal-point"
+                + "<br>axes: X = east-west, Y = height (vertical), Z = north-south.</html>");
+        titlePanel.add(help);
+
+        JSpinner amplitudeX = screenShakeAttributes.getAmplitudeX();
+        JSpinner amplitudeY = screenShakeAttributes.getAmplitudeY();
+        JSpinner amplitudeZ = screenShakeAttributes.getAmplitudeZ();
+        JSpinner frequency = screenShakeAttributes.getFrequency();
+        JSpinner fadeInTicks = screenShakeAttributes.getFadeInTicks();
+        JSpinner holdTicks = screenShakeAttributes.getHoldTicks();
+        JSpinner fadeOutTicks = screenShakeAttributes.getFadeOutTicks();
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 1;
+        card.add(rightLabel("Amp X (E/W): "), c);
+
+        c.gridx = 1;
+        c.gridy = 1;
+        amplitudeX.setToolTipText("East-west jitter amplitude in scene units. 0 disables this axis.");
+        amplitudeX.setModel(new SpinnerNumberModel(ScreenShakeKeyFrame.DEFAULT_AMPLITUDE_X, 0, 1024, 1));
+        card.add(amplitudeX, c);
+
+        c.gridx = 2;
+        c.gridy = 1;
+        card.add(rightLabel("Amp Y (vert): "), c);
+
+        c.gridx = 3;
+        c.gridy = 1;
+        amplitudeY.setToolTipText("Vertical jitter amplitude in scene units. 0 disables this axis.");
+        amplitudeY.setModel(new SpinnerNumberModel(ScreenShakeKeyFrame.DEFAULT_AMPLITUDE_Y, 0, 1024, 1));
+        card.add(amplitudeY, c);
+
+        c.gridx = 0;
+        c.gridy = 2;
+        card.add(rightLabel("Amp Z (N/S): "), c);
+
+        c.gridx = 1;
+        c.gridy = 2;
+        amplitudeZ.setToolTipText("North-south jitter amplitude in scene units. 0 disables this axis.");
+        amplitudeZ.setModel(new SpinnerNumberModel(ScreenShakeKeyFrame.DEFAULT_AMPLITUDE_Z, 0, 1024, 1));
+        card.add(amplitudeZ, c);
+
+        c.gridx = 2;
+        c.gridy = 2;
+        card.add(rightLabel("Frequency: "), c);
+
+        c.gridx = 3;
+        c.gridy = 2;
+        frequency.setToolTipText("Oscillation cycles per game tick. Higher = faster jitter.");
+        frequency.setModel(new SpinnerNumberModel(ScreenShakeKeyFrame.DEFAULT_FREQUENCY, 0.1, 50, 0.1));
+        card.add(frequency, c);
+
+        c.gridx = 0;
+        c.gridy = 3;
+        card.add(rightLabel("Fade In Ticks: "), c);
+
+        c.gridx = 1;
+        c.gridy = 3;
+        fadeInTicks.setToolTipText("Game ticks the shake takes to ramp from 0 to peak amplitude");
+        fadeInTicks.setModel(new SpinnerNumberModel(ScreenShakeKeyFrame.DEFAULT_FADE_IN, 0, 1000, 0.1));
+        card.add(fadeInTicks, c);
+
+        c.gridx = 2;
+        c.gridy = 3;
+        card.add(rightLabel("Hold Ticks: "), c);
+
+        c.gridx = 3;
+        c.gridy = 3;
+        holdTicks.setToolTipText("Game ticks the shake holds at peak amplitude before ramping down");
+        holdTicks.setModel(new SpinnerNumberModel(ScreenShakeKeyFrame.DEFAULT_HOLD, 0, 1000, 0.1));
+        card.add(holdTicks, c);
+
+        c.gridx = 0;
+        c.gridy = 4;
+        card.add(rightLabel("Fade Out Ticks: "), c);
+
+        c.gridx = 1;
+        c.gridy = 4;
+        fadeOutTicks.setToolTipText("Game ticks the shake takes to ramp from peak amplitude back to 0");
+        fadeOutTicks.setModel(new SpinnerNumberModel(ScreenShakeKeyFrame.DEFAULT_FADE_OUT, 0, 1000, 0.1));
+        card.add(fadeOutTicks, c);
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.weightx = 1;
+        c.weighty = 1;
+        c.gridx = 8;
+        c.gridy = 15;
+        card.add(new JLabel(""), c);
+    }
+
     private JLabel rightLabel(String text)
     {
         JLabel label = new JLabel(text);
@@ -2863,6 +3005,9 @@ public class AttributePanel extends JPanel
                 break;
             case SCREEN_FADE_CARD:
                 type = KeyFrameType.SCREEN_FADE;
+                break;
+            case SCREEN_SHAKE_CARD:
+                type = KeyFrameType.SCREEN_SHAKE;
         }
 
         switchCards(type);
@@ -3342,6 +3487,10 @@ public class AttributePanel extends JPanel
             case SCREEN_FADE:
                 screenFadeAttributes.setAttributes(keyFrame);
                 screenFadeAttributes.setBackgroundColours(keyFrameState);
+                break;
+            case SCREEN_SHAKE:
+                screenShakeAttributes.setAttributes(keyFrame);
+                screenShakeAttributes.setBackgroundColours(keyFrameState);
         }
     }
 
@@ -3403,6 +3552,9 @@ public class AttributePanel extends JPanel
                 break;
             case SCREEN_FADE:
                 screenFadeAttributes.resetAttributes(resetBackground);
+                break;
+            case SCREEN_SHAKE:
+                screenShakeAttributes.resetAttributes(resetBackground);
         }
     }
 

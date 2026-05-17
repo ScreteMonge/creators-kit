@@ -121,6 +121,10 @@ public class SummarySheet extends TimeSheet
             JMenuItem screenFade = new JMenuItem(KeyFrameType.SCREEN_FADE.getName());
             screenFade.addActionListener(e -> onKeyFrameTypePressed(finalI, KeyFrameType.SCREEN_FADE));
             menuItem.add(screenFade);
+
+            JMenuItem screenShake = new JMenuItem(KeyFrameType.SCREEN_SHAKE.getName());
+            screenShake.addActionListener(e -> onKeyFrameTypePressed(finalI, KeyFrameType.SCREEN_SHAKE));
+            menuItem.add(screenShake);
         }
     }
 
@@ -263,6 +267,10 @@ public class SummarySheet extends TimeSheet
                 case SCREEN_FADE:
                     ScreenFadeKeyFrame sfkf = (ScreenFadeKeyFrame) keyFrame;
                     drawTail(g, e, keyFrames, sfkf.totalDurationTicks(), zoomFactor, sfkf.getTick(), x, y, xStringOffset, stringHeight);
+                    break;
+                case SCREEN_SHAKE:
+                    ScreenShakeKeyFrame sskf = (ScreenShakeKeyFrame) keyFrame;
+                    drawTail(g, e, keyFrames, sskf.totalDurationTicks(), zoomFactor, sskf.getTick(), x, y, xStringOffset, stringHeight);
                     break;
                 case HITSPLAT_1:
                 case HITSPLAT_2:

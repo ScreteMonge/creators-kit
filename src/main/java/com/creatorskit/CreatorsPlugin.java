@@ -348,6 +348,150 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 	}
 
+	/**
+	 * Previous tick's screen-shake offset, stored so {@link #undoPreviousScreenShake}
+	 * can subtract it from the focal point before the camera lock runs. Three
+	 * doubles instead of a small array to avoid the per-tick allocation churn.
+	 */
+	private double prevShakeOffsetX = 0;
+	private double prevShakeOffsetY = 0;
+	private double prevShakeOffsetZ = 0;
+
+	/**
+	 * Subtracts last tick's screen-shake offset from the focal point. Restores the
+	 * "true" focal so the camera-lock lerp doesn't chase the shaken position --
+	 * otherwise the lock would smooth out the jitter into a slow drift toward
+	 * the average shake position.
+	 */
+	private void undoPreviousScreenShake()
+	{
+		if (prevShakeOffsetX == 0 && prevShakeOffsetY == 0 && prevShakeOffsetZ == 0)
+		{
+			return;
+		}
+		if (client.getCameraMode() != 1)
+		{
+			prevShakeOffsetX = prevShakeOffsetY = prevShakeOffsetZ = 0;
+			return;
+		}
+		try
+		{
+			client.setCameraFocalPointX(client.getCameraFocalPointX() - prevShakeOffsetX);
+			client.setCameraFocalPointY(client.getCameraFocalPointY() - prevShakeOffsetY);
+			client.setCameraFocalPointZ(client.getCameraFocalPointZ() - prevShakeOffsetZ);
+		}
+		catch (IllegalArgumentException ignored)
+		{
+			// Mode flipped between checks; nothing to undo.
+		}
+		finally
+		{
+			prevShakeOffsetX = prevShakeOffsetY = prevShakeOffsetZ = 0;
+		}
+	}
+
+	/**
+	 * Computes the current frame's shake offset (sin curve * envelope) and applies
+	 * it to the focal point. Caches the offset for the next tick's
+	 * {@link #undoPreviousScreenShake}. Silent no-op when the camera isn't in
+	 * free-camera mode (setCameraFocalPoint throws otherwise) or no shake
+	 * keyframe is active.
+	 */
+	private void applyCurrentScreenShake()
+	{
+		if (client.getCameraMode() != 1)
+		{
+			return;
+		}
+		com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame active = findActiveScreenShake();
+		if (active == null)
+		{
+			return;
+		}
+		double t = getCurrentTick() - active.getTick();
+		if (t < 0 || t > active.totalDurationTicks())
+		{
+			return;
+		}
+		double envelope = computeShakeEnvelope(active, t);
+		if (envelope <= 0)
+		{
+			return;
+		}
+		// Phase-shift each axis so the shake doesn't trace a perfect line/circle --
+		// gives the chaotic feel of an in-game slam rather than a clean oscillation.
+		double angle = 2 * Math.PI * active.getFrequency() * t;
+		double ox = active.getAmplitudeX() * envelope * Math.sin(angle);
+		double oy = active.getAmplitudeY() * envelope * Math.sin(angle + Math.PI / 2);
+		double oz = active.getAmplitudeZ() * envelope * Math.sin(angle + Math.PI / 3);
+		try
+		{
+			client.setCameraFocalPointX(client.getCameraFocalPointX() + ox);
+			client.setCameraFocalPointY(client.getCameraFocalPointY() + oy);
+			client.setCameraFocalPointZ(client.getCameraFocalPointZ() + oz);
+			prevShakeOffsetX = ox;
+			prevShakeOffsetY = oy;
+			prevShakeOffsetZ = oz;
+		}
+		catch (IllegalArgumentException ignored)
+		{
+			prevShakeOffsetX = prevShakeOffsetY = prevShakeOffsetZ = 0;
+		}
+	}
+
+	/**
+	 * Iterates every Character's current SCREEN_SHAKE keyframe and returns the
+	 * most-recently-started one that's still inside its envelope. Mirrors
+	 * {@code ScreenFadeOverlay.findActiveFade}: lets multiple "scene controller"
+	 * Characters define shakes, latest-started wins deterministically.
+	 */
+	private com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame findActiveScreenShake()
+	{
+		double currentTick = getCurrentTick();
+		com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame best = null;
+		double bestStart = Double.NEGATIVE_INFINITY;
+		for (int i = 0; i < characters.size(); i++)
+		{
+			Character c = characters.get(i);
+			com.creatorskit.swing.timesheet.keyframe.KeyFrame kf =
+					c.getCurrentKeyFrame(com.creatorskit.swing.timesheet.keyframe.KeyFrameType.SCREEN_SHAKE);
+			if (!(kf instanceof com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame))
+			{
+				continue;
+			}
+			com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame sk =
+					(com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame) kf;
+			double elapsed = currentTick - sk.getTick();
+			if (elapsed < 0 || elapsed > sk.totalDurationTicks())
+			{
+				continue;
+			}
+			if (sk.getTick() > bestStart)
+			{
+				bestStart = sk.getTick();
+				best = sk;
+			}
+		}
+		return best;
+	}
+
+	private double computeShakeEnvelope(com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame kf, double t)
+	{
+		double fadeIn = kf.getFadeInTicks();
+		double hold = kf.getHoldTicks();
+		double fadeOut = kf.getFadeOutTicks();
+		if (t < fadeIn)
+		{
+			return fadeIn <= 0 ? 1.0 : t / fadeIn;
+		}
+		if (t < fadeIn + hold)
+		{
+			return 1.0;
+		}
+		double outProgress = (t - fadeIn - hold) / Math.max(0.0001, fadeOut);
+		return Math.max(0.0, 1.0 - outProgress);
+	}
+
 	private CKObject transmog;
 	private CKObject previewObject;
 	private Random random = new Random();
@@ -671,7 +815,13 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		updatePreviewObject(client.getTopLevelWorldView().getSelectedSceneTile());
 
+		// Order: undo previous tick's shake -> camera lock (operates on un-shaken
+		// focal so its lerp target is stable) -> apply new shake on top. Keeps
+		// the two effects orthogonal: lock follows the character smoothly,
+		// shake adds jitter without polluting the lock's lerp.
+		undoPreviousScreenShake();
 		updateCameraLock();
+		applyCurrentScreenShake();
 
 		if (addProgramStep)
 		{

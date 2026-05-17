@@ -71,4 +71,9 @@ public class CharacterSave
     private ShieldKeyFrame[] shieldKeyFrames;
     private SpecialKeyFrame[] specialKeyFrames;
     private ScreenFadeKeyFrame[] screenFadeKeyFrames;
+    /**
+     * Added 2.3.x. Sol-Heredit-style global camera shake. Null in pre-2.3 saves --
+     * Gson defaults missing fields, load treats null as "no shake keyframes".
+     */
+    private ScreenShakeKeyFrame[] screenShakeKeyFrames;
 }

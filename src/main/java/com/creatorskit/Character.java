@@ -1032,6 +1032,25 @@ public class Character
         return out;
     }
 
+    public ScreenShakeKeyFrame[] getScreenShakeKeyFrames()
+    {
+        KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.SCREEN_SHAKE);
+        if (keyFrames == null)
+        {
+            return null;
+        }
+        ScreenShakeKeyFrame[] out = new ScreenShakeKeyFrame[keyFrames.length];
+        for (int i = 0; i < keyFrames.length; i++)
+        {
+            out[i] = (ScreenShakeKeyFrame) keyFrames[i];
+        }
+        if (Arrays.stream(out).allMatch(Objects::isNull))
+        {
+            return null;
+        }
+        return out;
+    }
+
     public SpotAnimKeyFrame[] getSpotAnimKeyFrames(KeyFrameType spotAnimNumber)
     {
         KeyFrame[] keyFrames = getKeyFrames(spotAnimNumber);

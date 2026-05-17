@@ -25,7 +25,8 @@ public enum KeyFrameType
     PROJECTILE("Projectile","P"),
     SHIELD("Shield","SH"),
     SPECIAL("Special","SP"),
-    SCREEN_FADE("Screen Fade","SF");
+    SCREEN_FADE("Screen Fade","SF"),
+    SCREEN_SHAKE("Screen Shake","SK");
 
     private final String name;
     private final String shortHand;
@@ -53,7 +54,8 @@ public enum KeyFrameType
             PROJECTILE,
             SHIELD,
             SPECIAL,
-            SCREEN_FADE
+            SCREEN_FADE,
+            SCREEN_SHAKE
     };
 
     public static final KeyFrameType[] HITSPLAT_TYPES = new KeyFrameType[]{KeyFrameType.HITSPLAT_1, KeyFrameType.HITSPLAT_2, KeyFrameType.HITSPLAT_3, KeyFrameType.HITSPLAT_4};
@@ -102,6 +104,8 @@ public enum KeyFrameType
                 return 16;
             case SCREEN_FADE:
                 return 17;
+            case SCREEN_SHAKE:
+                return 18;
         }
     }
 
@@ -146,12 +150,14 @@ public enum KeyFrameType
                 return SPECIAL;
             case 17:
                 return SCREEN_FADE;
+            case 18:
+                return SCREEN_SHAKE;
         }
     }
 
     public static int getTotalFrameTypes()
     {
-        return 18;
+        return 19;
     }
 
     public static KeyFrameType[] createDefaultSummary()
