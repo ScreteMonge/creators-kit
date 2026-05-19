@@ -106,9 +106,28 @@ public class CKObject extends RuneLiteObjectController
     public void setModel(Model baseModel)
     {
         this.baseModel = baseModel;
-        // Invalidate the previous snapshot -- a new model needs a fresh baseline before
-        // the render-fix pass can shrink + restore it without compounding drift.
-        this.baseVerticesSnapshot = null;
+        // Capture the pristine baseline EAGERLY (instead of lazily on the next
+        // getModel call). Multi-select with a shared CustomModel hands the same
+        // Model instance to every ckObject's setModel in a tight loop -- a lazy
+        // snapshot would let an interleaved render mutate baseModel between
+        // setModel calls, so the second / third ckObject captures a corrupted
+        // baseline. Each scrub then compounds the corruption since the snapshot
+        // is re-invalidated and recaptured from the mutated state. Capturing now
+        // pins down the clean vertices before any other path can touch them.
+        if (baseModel == null)
+        {
+            this.baseVerticesSnapshot = null;
+            return;
+        }
+        float[] vx = baseModel.getVerticesX();
+        float[] vy = baseModel.getVerticesY();
+        float[] vz = baseModel.getVerticesZ();
+        if (vx == null || vy == null || vz == null)
+        {
+            this.baseVerticesSnapshot = null;
+            return;
+        }
+        this.baseVerticesSnapshot = new float[][]{vx.clone(), vy.clone(), vz.clone()};
     }
 
     @Override
@@ -379,18 +398,21 @@ public class CKObject extends RuneLiteObjectController
         {
             return;
         }
+        // Snapshot is captured eagerly in setModel now -- if it's missing here it
+        // means baseModel was swapped out from under us by something that bypassed
+        // setModel (shouldn't happen). Skip rather than capturing the current state,
+        // which might be mid-mutation from another ckObject sharing the same Model
+        // reference (the original lazy-capture was the source of the multi-select
+        // upscale-on-scrub compounding bug).
         if (baseVerticesSnapshot == null
                 || baseVerticesSnapshot[0].length != vx.length)
         {
-            baseVerticesSnapshot = new float[][]{vx.clone(), vy.clone(), vz.clone()};
+            return;
         }
-        else
-        {
-            // Restore from snapshot so the next scale() starts from the original size.
-            System.arraycopy(baseVerticesSnapshot[0], 0, vx, 0, vx.length);
-            System.arraycopy(baseVerticesSnapshot[1], 0, vy, 0, vy.length);
-            System.arraycopy(baseVerticesSnapshot[2], 0, vz, 0, vz.length);
-        }
+        // Restore from snapshot so the next scale() starts from the original size.
+        System.arraycopy(baseVerticesSnapshot[0], 0, vx, 0, vx.length);
+        System.arraycopy(baseVerticesSnapshot[1], 0, vy, 0, vy.length);
+        System.arraycopy(baseVerticesSnapshot[2], 0, vz, 0, vz.length);
         int sx = Math.max(1, (128 * RIGGING_SCALE) / widthScale);
         int sy = Math.max(1, (128 * RIGGING_SCALE) / heightScale);
         int sz = sx; // Z mirrors X by OSRS convention (NPCComposition has no z-axis scale).
