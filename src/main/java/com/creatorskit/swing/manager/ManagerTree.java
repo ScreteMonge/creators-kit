@@ -841,14 +841,18 @@ public class ManagerTree extends JTree
         }
 
         DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+        Object user = node.getUserObject();
 
-        if (!(node.getUserObject() instanceof Character))
+        if (user instanceof Character)
         {
+            showCharacterContextMenu((Character) user, x, y);
             return;
         }
 
-        Character character = (Character) node.getUserObject();
-        showCharacterContextMenu(character, x, y);
+        if (user instanceof Folder)
+        {
+            showFolderContextMenu(node, (Folder) user, x, y);
+        }
     }
 
     /**
@@ -897,6 +901,116 @@ public class ManagerTree extends JTree
         popup.add(cameraLock);
 
         popup.show(this, x, y);
+    }
+
+    /**
+     * Right-click context menu for a Folder node. Currently just exposes the
+     * "Select N random Characters..." action, which picks N direct child
+     * Characters at random (no recursion into subfolders) and replaces the
+     * current selection with them. Useful for sampling a subset out of a large
+     * folder when fanning out keyframes -- pick the folder, choose N, then
+     * any subsequent add / paste / Update applies to those N via
+     * resolveSelectionTargets.
+     */
+    private void showFolderContextMenu(DefaultMutableTreeNode folderNode, Folder folder, int x, int y)
+    {
+        java.util.List<Character> directChildren = new ArrayList<>();
+        Enumeration<TreeNode> children = folderNode.children();
+        while (children.hasMoreElements())
+        {
+            DefaultMutableTreeNode child = (DefaultMutableTreeNode) children.nextElement();
+            if (child.getUserObject() instanceof Character)
+            {
+                directChildren.add((Character) child.getUserObject());
+            }
+        }
+
+        JPopupMenu popup = new JPopupMenu();
+
+        JLabel title = new JLabel(folder.getName() + "  (" + directChildren.size() + " direct)");
+        title.setFont(net.runelite.client.ui.FontManager.getRunescapeBoldFont());
+        title.setBorder(new javax.swing.border.EmptyBorder(2, 6, 2, 6));
+        popup.add(title);
+        popup.addSeparator();
+
+        JMenuItem randomSelect = new JMenuItem("Select N random Characters...");
+        randomSelect.setToolTipText("<html>Replace current selection with N randomly-picked direct children<br>"
+                + "of this folder (subfolders ignored). Useful for sampling a subset<br>"
+                + "before fanning out a keyframe edit.</html>");
+        if (directChildren.isEmpty())
+        {
+            randomSelect.setEnabled(false);
+        }
+        else
+        {
+            randomSelect.addActionListener(e -> promptAndRandomSelect(directChildren));
+        }
+        popup.add(randomSelect);
+
+        popup.show(this, x, y);
+    }
+
+    /**
+     * Pops up a small input dialog asking how many Characters to pick, then
+     * replaces the SelectionManager with that many random entries from
+     * {@code pool}. Clamps the requested count to the pool size and rejects
+     * non-positive / non-numeric input silently (dialog stays cancelable).
+     */
+    private void promptAndRandomSelect(java.util.List<Character> pool)
+    {
+        if (pool.isEmpty())
+        {
+            return;
+        }
+
+        String input = (String) JOptionPane.showInputDialog(
+                this,
+                "How many Characters to randomly select?\n(folder has " + pool.size() + ")",
+                "Random select",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                null,
+                Integer.toString(Math.min(5, pool.size())));
+
+        if (input == null)
+        {
+            return; // cancelled
+        }
+
+        int n;
+        try
+        {
+            n = Integer.parseInt(input.trim());
+        }
+        catch (NumberFormatException ex)
+        {
+            return;
+        }
+
+        if (n <= 0)
+        {
+            return;
+        }
+        if (n > pool.size())
+        {
+            n = pool.size();
+        }
+
+        // Fisher-Yates shuffle on a local copy, then take the first n. Avoids
+        // the Collections.shuffle-then-sublist allocation churn and gives an
+        // unbiased uniform sample. Random is freshly seeded per call so two
+        // consecutive picks on the same folder produce different subsets.
+        java.util.List<Character> shuffled = new ArrayList<>(pool);
+        java.util.Random rng = new java.util.Random();
+        for (int i = shuffled.size() - 1; i > 0; i--)
+        {
+            int j = rng.nextInt(i + 1);
+            Character tmp = shuffled.get(i);
+            shuffled.set(i, shuffled.get(j));
+            shuffled.set(j, tmp);
+        }
+        selectionManager.selectAll(shuffled.subList(0, n));
+        syncTreeFromSelection();
     }
 }
 
