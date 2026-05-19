@@ -456,27 +456,22 @@ public class TimeSheetPanel extends JPanel
     {
         KeyFrameType type = attributePanel.getSelectedKeyFramePage();
 
-        // Build the target list: every currently-selected keyframe of the panel's type.
-        // If no matching selection, fall back to the legacy single-keyframe behavior
-        // (the keyframe of `type` previous to the current playhead on the primary).
-        java.util.List<KeyFrame> targets = new java.util.ArrayList<>();
-        java.util.List<Character> owners = new java.util.ArrayList<>();
+        // Step 1: figure out which ticks to apply the update at. Pulled from the
+        // marquee (selectedKeyFrames) filtered by the panel's current type, then
+        // deduped -- multiple marqueed KFs at the same tick should only trigger
+        // one update per (type, tick) pair.
+        java.util.LinkedHashSet<Double> ticks = new java.util.LinkedHashSet<>();
         for (KeyFrame kf : selectedKeyFrames)
         {
             if (kf == null || kf.getKeyFrameType() != type)
             {
                 continue;
             }
-            Character owner = findKeyFrameOwner(kf);
-            if (owner == null)
-            {
-                continue;
-            }
-            targets.add(kf);
-            owners.add(owner);
+            ticks.add(kf.getTick());
         }
 
-        if (targets.isEmpty())
+        // Fallback: no marquee match -> previous KF of type on primary at seeker.
+        if (ticks.isEmpty())
         {
             if (selectedCharacter == null)
             {
@@ -487,9 +482,10 @@ public class TimeSheetPanel extends JPanel
             {
                 return;
             }
-            targets.add(keyFrame);
-            owners.add(selectedCharacter);
+            ticks.add(keyFrame.getTick());
         }
+
+        java.util.Collection<Character> chars = resolveSelectionTargets();
 
         KeyFrameAction[] kfa = new KeyFrameAction[0];
         // Map old keyframe ref -> new replacement, so we can re-point selectedKeyFrames
@@ -498,32 +494,43 @@ public class TimeSheetPanel extends JPanel
         // the card with the pre-edit values — visible as the card "snapping back" right
         // after Update is clicked when the seeker isn't on the edited keyframe.
         java.util.IdentityHashMap<KeyFrame, KeyFrame> replacements = new java.util.IdentityHashMap<>();
-        for (int i = 0; i < targets.size(); i++)
+
+        // Step 2: for each unique (type, tick), apply the card values to every
+        // selected Character's matching KF. Each Character's MOVEMENT path /
+        // plane / poh stays its own (per-character world geometry) so only
+        // card-edited fields like speed / turn rate change.
+        for (double tick : ticks)
         {
-            KeyFrame oldKeyFrame = targets.get(i);
-            Character owner = owners.get(i);
-
-            KeyFrame newKf = attributePanel.createKeyFrame(type, oldKeyFrame.getTick());
-            if (newKf == null)
+            for (Character owner : chars)
             {
-                continue;
-            }
+                KeyFrame oldKeyFrame = owner.findKeyFrame(type, tick);
+                if (oldKeyFrame == null)
+                {
+                    continue;
+                }
 
-            if (type == KeyFrameType.MOVEMENT)
-            {
-                MovementKeyFrame oldKF = (MovementKeyFrame) oldKeyFrame;
-                MovementKeyFrame newKF = (MovementKeyFrame) newKf;
-                newKF.setPlane(oldKF.getPlane());
-                newKF.setPoh(oldKF.isPoh());
-                newKF.setPath(oldKF.getPath());
-                newKF.setCurrentStep(0);
-                newKF.setStepClientTick(0);
-            }
+                KeyFrame newKf = attributePanel.createKeyFrame(type, tick);
+                if (newKf == null)
+                {
+                    continue;
+                }
 
-            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(newKf, owner, KeyFrameCharacterActionType.ADD));
-            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(oldKeyFrame, owner, KeyFrameCharacterActionType.REMOVE));
-            addKeyFrame(owner, newKf);
-            replacements.put(oldKeyFrame, newKf);
+                if (type == KeyFrameType.MOVEMENT)
+                {
+                    MovementKeyFrame oldKF = (MovementKeyFrame) oldKeyFrame;
+                    MovementKeyFrame newKF = (MovementKeyFrame) newKf;
+                    newKF.setPlane(oldKF.getPlane());
+                    newKF.setPoh(oldKF.isPoh());
+                    newKF.setPath(oldKF.getPath());
+                    newKF.setCurrentStep(0);
+                    newKF.setStepClientTick(0);
+                }
+
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(newKf, owner, KeyFrameCharacterActionType.ADD));
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(oldKeyFrame, owner, KeyFrameCharacterActionType.REMOVE));
+                addKeyFrame(owner, newKf);
+                replacements.put(oldKeyFrame, newKf);
+            }
         }
 
         if (kfa.length > 0)
@@ -1025,46 +1032,87 @@ public class TimeSheetPanel extends JPanel
      */
     public void initializeHealthKeyFrame(KeyFrameType type)
     {
-        if (selectedCharacter == null)
+        java.util.Collection<Character> targets = resolveSelectionTargets();
+        if (targets.isEmpty())
         {
             return;
         }
 
-        KeyFrame hitsplatKeyFrame = attributePanel.createKeyFrame(type, currentTime);
-        addKeyFrameAction(new KeyFrame[]{hitsplatKeyFrame});
-
-        HitsplatKeyFrame hitsKF = (HitsplatKeyFrame) hitsplatKeyFrame;
-        int damage = hitsKF.getDamage();
-        KeyFrame nextBar = pickBarKeyFrameForHitsplat(hitsKF.getSprite(), damage);
-        if (nextBar != null)
+        // Build the hitsplat template once from the card's current values. Per-
+        // Character we clone the template so each owner has its own KeyFrame
+        // instance (state-bearing keyframes can't safely be shared). The bar
+        // drain is computed per-Character against THAT character's previous bar
+        // keyframe so each one's "remaining" value reflects their own state.
+        KeyFrame hitsplatTemplate = attributePanel.createKeyFrame(type, currentTime);
+        if (hitsplatTemplate == null)
         {
-            addKeyFrameAction(new KeyFrame[]{nextBar});
+            return;
         }
+        HitsplatKeyFrame template = (HitsplatKeyFrame) hitsplatTemplate;
+        com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite sprite = template.getSprite();
+        int damage = template.getDamage();
+
+        KeyFrameAction[] kfa = new KeyFrameAction[0];
+        boolean primaryProcessed = false;
+        for (Character c : targets)
+        {
+            // Primary keeps the template instance so any caller holding the
+            // returned reference still sees its object; secondary characters
+            // get clones.
+            boolean isPrimary = !primaryProcessed && c == selectedCharacter;
+            KeyFrame hits = isPrimary
+                    ? hitsplatTemplate
+                    : KeyFrame.createCopy(hitsplatTemplate, hitsplatTemplate.getTick());
+            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(hits, c, KeyFrameCharacterActionType.ADD));
+            KeyFrame replacedHits = addKeyFrame(c, hits);
+            if (replacedHits != null)
+            {
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replacedHits, c, KeyFrameCharacterActionType.REMOVE));
+            }
+
+            KeyFrame bar = pickBarKeyFrameForHitsplat(c, sprite, damage);
+            if (bar != null)
+            {
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(bar, c, KeyFrameCharacterActionType.ADD));
+                KeyFrame replacedBar = addKeyFrame(c, bar);
+                if (replacedBar != null)
+                {
+                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replacedBar, c, KeyFrameCharacterActionType.REMOVE));
+                }
+            }
+            if (isPrimary)
+            {
+                primaryProcessed = true;
+            }
+        }
+        addKeyFrameActions(kfa);
     }
 
     /**
-     * Reads the previous keyframe of the bar type targeted by the hitsplat sprite,
-     * subtracts the damage from its current value (clamped to 0), and returns a
-     * new keyframe at the seeker tick.
+     * Reads the previous keyframe of the bar type targeted by the hitsplat sprite
+     * on the given Character, subtracts the damage from its current value
+     * (clamped to 0), and returns a new keyframe at the seeker tick. Each Character
+     * is looked up independently so multi-select bar drains reflect each owner's
+     * own state.
      */
-    private KeyFrame pickBarKeyFrameForHitsplat(com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite sprite, int damage)
+    private KeyFrame pickBarKeyFrameForHitsplat(Character character, com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite sprite, int damage)
     {
         switch (sprite)
         {
             case SHIELD:
             case SHIELD_OTHER:
             case SHIELD_MAX:
-                return buildShieldDrainKeyFrame(damage);
+                return buildShieldDrainKeyFrame(character, damage);
             case POISE:
             case POISE_OTHER:
             case POISE_MAX:
-                return buildSpecialDrainKeyFrame(damage);
+                return buildSpecialDrainKeyFrame(character, damage);
             default:
-                return buildHealthDrainKeyFrame(damage);
+                return buildHealthDrainKeyFrame(character, damage);
         }
     }
 
-    private KeyFrame buildHealthDrainKeyFrame(int damage)
+    private KeyFrame buildHealthDrainKeyFrame(Character character, int damage)
     {
         double duration;
         HealthbarSprite sprite;
@@ -1073,7 +1121,7 @@ public class TimeSheetPanel extends JPanel
         int order;
         int width;
 
-        KeyFrame healthKeyFrame = selectedCharacter.findPreviousKeyFrame(KeyFrameType.HEALTH, currentTime, true);
+        KeyFrame healthKeyFrame = character.findPreviousKeyFrame(KeyFrameType.HEALTH, currentTime, true);
         if (healthKeyFrame == null)
         {
             duration = 3.0;
@@ -1104,7 +1152,7 @@ public class TimeSheetPanel extends JPanel
                 width);
     }
 
-    private KeyFrame buildShieldDrainKeyFrame(int damage)
+    private KeyFrame buildShieldDrainKeyFrame(Character character, int damage)
     {
         double duration;
         int rgb;
@@ -1113,7 +1161,7 @@ public class TimeSheetPanel extends JPanel
         int order;
         int width;
 
-        KeyFrame prev = selectedCharacter.findPreviousKeyFrame(KeyFrameType.SHIELD, currentTime, true);
+        KeyFrame prev = character.findPreviousKeyFrame(KeyFrameType.SHIELD, currentTime, true);
         if (prev == null)
         {
             duration = com.creatorskit.swing.timesheet.attributes.ShieldAttributes.DEFAULT_DURATION;
@@ -1144,7 +1192,7 @@ public class TimeSheetPanel extends JPanel
                 width);
     }
 
-    private KeyFrame buildSpecialDrainKeyFrame(int damage)
+    private KeyFrame buildSpecialDrainKeyFrame(Character character, int damage)
     {
         double duration;
         int rgb;
@@ -1153,7 +1201,7 @@ public class TimeSheetPanel extends JPanel
         int order;
         int width;
 
-        KeyFrame prev = selectedCharacter.findPreviousKeyFrame(KeyFrameType.SPECIAL, currentTime, true);
+        KeyFrame prev = character.findPreviousKeyFrame(KeyFrameType.SPECIAL, currentTime, true);
         if (prev == null)
         {
             duration = com.creatorskit.swing.timesheet.attributes.SpecialAttributes.DEFAULT_DURATION;
@@ -1258,43 +1306,75 @@ public class TimeSheetPanel extends JPanel
 
     public void duplicateHitsplatKeyFrame(KeyFrameType previousType, KeyFrameType targetType)
     {
-        KeyFrame kf = selectedCharacter.findPreviousKeyFrame(previousType, currentTime, true);
-        if (kf == null)
+        // Multi-select aware: each Character independently picks its own latest
+        // source-slot hitsplat (sprite / variant / damage can differ across
+        // characters), and that gets cloned into the target slot. Characters with
+        // no source-slot hitsplat are silently skipped.
+        java.util.Collection<Character> targets = resolveSelectionTargets();
+        if (targets.isEmpty())
         {
             return;
         }
 
-        HitsplatKeyFrame keyFrame = (HitsplatKeyFrame) kf;
-
-        HitsplatKeyFrame hkf = new HitsplatKeyFrame(
-                keyFrame.getTick(),
-                targetType,
-                keyFrame.getDuration(),
-                keyFrame.getSprite(),
-                keyFrame.getVariant(),
-                keyFrame.getDamage());
-
-        addKeyFrameAction(new KeyFrame[]{hkf});
+        KeyFrameAction[] kfa = new KeyFrameAction[0];
+        for (Character c : targets)
+        {
+            KeyFrame kf = c.findPreviousKeyFrame(previousType, currentTime, true);
+            if (kf == null)
+            {
+                continue;
+            }
+            HitsplatKeyFrame src = (HitsplatKeyFrame) kf;
+            HitsplatKeyFrame hkf = new HitsplatKeyFrame(
+                    src.getTick(),
+                    targetType,
+                    src.getDuration(),
+                    src.getSprite(),
+                    src.getVariant(),
+                    src.getDamage());
+            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(hkf, c, KeyFrameCharacterActionType.ADD));
+            KeyFrame replaced = addKeyFrame(c, hkf);
+            if (replaced != null)
+            {
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replaced, c, KeyFrameCharacterActionType.REMOVE));
+            }
+        }
+        addKeyFrameActions(kfa);
     }
 
     public void duplicateSpotanimKeyFrame(KeyFrameType previousType, KeyFrameType targetType)
     {
-        KeyFrame kf = selectedCharacter.findPreviousKeyFrame(previousType, currentTime, true);
-        if (kf == null)
+        // Same shape as duplicateHitsplatKeyFrame -- per-Character source lookup
+        // so each Character keeps its own spotanim id / loop / height in the clone.
+        java.util.Collection<Character> targets = resolveSelectionTargets();
+        if (targets.isEmpty())
         {
             return;
         }
 
-        SpotAnimKeyFrame keyFrame = (SpotAnimKeyFrame) kf;
-
-        SpotAnimKeyFrame spkf = new SpotAnimKeyFrame(
-                keyFrame.getTick(),
-                targetType,
-                keyFrame.getSpotAnimId(),
-                keyFrame.isLoop(),
-                keyFrame.getHeight());
-
-        addKeyFrameAction(new KeyFrame[]{spkf});
+        KeyFrameAction[] kfa = new KeyFrameAction[0];
+        for (Character c : targets)
+        {
+            KeyFrame kf = c.findPreviousKeyFrame(previousType, currentTime, true);
+            if (kf == null)
+            {
+                continue;
+            }
+            SpotAnimKeyFrame src = (SpotAnimKeyFrame) kf;
+            SpotAnimKeyFrame spkf = new SpotAnimKeyFrame(
+                    src.getTick(),
+                    targetType,
+                    src.getSpotAnimId(),
+                    src.isLoop(),
+                    src.getHeight());
+            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(spkf, c, KeyFrameCharacterActionType.ADD));
+            KeyFrame replaced = addKeyFrame(c, spkf);
+            if (replaced != null)
+            {
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replaced, c, KeyFrameCharacterActionType.REMOVE));
+            }
+        }
+        addKeyFrameActions(kfa);
     }
 
     /**
@@ -1971,16 +2051,47 @@ public class TimeSheetPanel extends JPanel
 
     public void onDeleteKeyPressed()
     {
-        if (selectedCharacter == null)
+        if (selectedKeyFrames == null || selectedKeyFrames.length == 0)
         {
             return;
         }
 
-        KeyFrameAction[] kfa = new KeyFrameAction[0];
-        for (KeyFrame keyFrame : selectedKeyFrames)
+        java.util.Collection<Character> targets = resolveSelectionTargets();
+        if (targets.isEmpty())
         {
-            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
-            removeKeyFrame(selectedCharacter, keyFrame);
+            return;
+        }
+
+        // Marquee can contain multiple KFs at the same (type, tick) across owners --
+        // dedupe so we only iterate each unique (type, tick) once. For each unique
+        // pair, walk every selected Character and remove their KF at that position.
+        // Mirrors paste's fan-out shape: best-effort apply per Character, silently
+        // skip Characters that don't have a matching KF.
+        java.util.Set<String> processed = new java.util.HashSet<>();
+        KeyFrameAction[] kfa = new KeyFrameAction[0];
+        for (KeyFrame markedKf : selectedKeyFrames)
+        {
+            if (markedKf == null)
+            {
+                continue;
+            }
+            KeyFrameType type = markedKf.getKeyFrameType();
+            double tick = markedKf.getTick();
+            String dedupeKey = type.name() + "@" + tick;
+            if (!processed.add(dedupeKey))
+            {
+                continue;
+            }
+            for (Character c : targets)
+            {
+                KeyFrame kf = c.findKeyFrame(type, tick);
+                if (kf == null)
+                {
+                    continue;
+                }
+                removeKeyFrame(c, kf);
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(kf, c, KeyFrameCharacterActionType.REMOVE));
+            }
         }
 
         addKeyFrameActions(kfa);

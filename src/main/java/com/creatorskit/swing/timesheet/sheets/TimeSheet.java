@@ -587,8 +587,6 @@ public class TimeSheet extends JPanel
                                 owner = selectedCharacter;
                             }
                             owners[i] = owner;
-                            timeSheetPanel.removeKeyFrame(owner, keyFrame);
-                            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrame, owner, KeyFrameCharacterActionType.REMOVE));
                         }
 
                         double mouseX = Math.max(0, Math.min(mousePosition.getX(), getWidth()));
@@ -611,20 +609,72 @@ public class TimeSheet extends JPanel
                             }
                         }
 
+                        // Multi-select fan-out: if more than one Character is selected via
+                        // the manager / folder, every Character also gets its KFs at the
+                        // same (type, originalTick) shifted by the same delta. The marquee
+                        // owner(s) plus every other selected Character go through the same
+                        // remove + re-add loop so the batch becomes one undo step.
+                        com.creatorskit.selection.SelectionManager mgr = getTimeSheetPanel().getSelectionManager();
+                        java.util.List<Character> fanOut = (mgr != null && mgr.size() > 1)
+                                ? new java.util.ArrayList<>(mgr.getSelected())
+                                : java.util.Collections.emptyList();
+
                         KeyFrame[] copies = new KeyFrame[keyFrames.length];
+                        java.util.Set<String> processedFanout = new java.util.HashSet<>();
                         for (int i = 0; i < keyFrames.length; i++)
                         {
                             KeyFrame keyFrame = keyFrames[i];
                             Character owner = owners[i];
-                            KeyFrame copy = KeyFrame.createCopy(keyFrame, round(timelineUnits, keyFrame.getTick() + change));
+
+                            // Primary marquee owner: remove + re-add at new tick. The new
+                            // copy goes into the post-drag selection so the marquee follows
+                            // the dragged KF(s).
+                            double newTick = round(timelineUnits, keyFrame.getTick() + change);
+                            timeSheetPanel.removeKeyFrame(owner, keyFrame);
+                            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrame, owner, KeyFrameCharacterActionType.REMOVE));
+
+                            KeyFrame copy = KeyFrame.createCopy(keyFrame, newTick);
                             copies[i] = copy;
                             KeyFrame keyFrameToReplace = timeSheetPanel.addKeyFrame(owner, copy);
                             if (keyFrameToReplace != null)
                             {
                                 kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, owner, KeyFrameCharacterActionType.REMOVE));
                             }
-
                             kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(copy, owner, KeyFrameCharacterActionType.ADD));
+
+                            // Fan-out: same (type, originalTick) moved on every other
+                            // selected Character. Dedupe so multiple marqueed KFs at the
+                            // same (type, originalTick) don't double-process the same
+                            // Character. Owner skipped here (already handled above).
+                            KeyFrameType type = keyFrame.getKeyFrameType();
+                            double originalTick = keyFrame.getTick();
+                            String dedupeKey = type.name() + "@" + originalTick;
+                            if (!processedFanout.add(dedupeKey))
+                            {
+                                continue;
+                            }
+                            for (Character c : fanOut)
+                            {
+                                if (c == owner)
+                                {
+                                    continue;
+                                }
+                                KeyFrame found = c.findKeyFrame(type, originalTick);
+                                if (found == null)
+                                {
+                                    continue;
+                                }
+                                timeSheetPanel.removeKeyFrame(c, found);
+                                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(found, c, KeyFrameCharacterActionType.REMOVE));
+
+                                KeyFrame fanCopy = KeyFrame.createCopy(found, newTick);
+                                KeyFrame fanReplaced = timeSheetPanel.addKeyFrame(c, fanCopy);
+                                if (fanReplaced != null)
+                                {
+                                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(fanReplaced, c, KeyFrameCharacterActionType.REMOVE));
+                                }
+                                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(fanCopy, c, KeyFrameCharacterActionType.ADD));
+                            }
                         }
 
                         setSelectedKeyFrames(copies);
