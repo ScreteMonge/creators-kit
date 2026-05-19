@@ -9,6 +9,8 @@ public class AnimationKeyFrame extends KeyFrame
 {
     /** Multiplier on the animation frame-advance rate. 1.0 = native speed. */
     public static final double DEFAULT_SPEED = 1.0;
+    /** Sentinel for {@link #lastFrame}: 0 means "play through the last frame of the animation". */
+    public static final int LAST_FRAME_DISABLED = 0;
 
     private boolean stall;
     private int active;
@@ -32,13 +34,31 @@ public class AnimationKeyFrame extends KeyFrame
      * "no value set" and uses {@link #DEFAULT_SPEED}.
      */
     private double speed = DEFAULT_SPEED;
+    /**
+     * Added 2.3.x. Upper bound of the playback range. {@link #LAST_FRAME_DISABLED}
+     * (0, Gson's default) means "use the animation's natural last frame". When
+     * set together with {@link #startFrame} defines [startFrame, lastFrame] as the
+     * play range -- looping wraps back to startFrame instead of frame 0.
+     */
+    private int lastFrame = LAST_FRAME_DISABLED;
+    /**
+     * Added 2.3.x. Number of client ticks to dwell on the last frame before
+     * looping back. Only meaningful when {@link #loop} is on. Defaults to 0
+     * (no pause). Pre-2.3 saves get Gson's 0 which matches the no-pause default.
+     */
+    private int pauseTicks = 0;
 
     public AnimationKeyFrame(double tick, boolean stall, int active, int startFrame, boolean loop, boolean freeze, int idle, int walk, int run, int walk180, int walkRight, int walkLeft, int idleRight, int idleLeft)
     {
-        this(tick, stall, active, startFrame, loop, freeze, idle, walk, run, walk180, walkRight, walkLeft, idleRight, idleLeft, DEFAULT_SPEED);
+        this(tick, stall, active, startFrame, loop, freeze, idle, walk, run, walk180, walkRight, walkLeft, idleRight, idleLeft, DEFAULT_SPEED, LAST_FRAME_DISABLED, 0);
     }
 
     public AnimationKeyFrame(double tick, boolean stall, int active, int startFrame, boolean loop, boolean freeze, int idle, int walk, int run, int walk180, int walkRight, int walkLeft, int idleRight, int idleLeft, double speed)
+    {
+        this(tick, stall, active, startFrame, loop, freeze, idle, walk, run, walk180, walkRight, walkLeft, idleRight, idleLeft, speed, LAST_FRAME_DISABLED, 0);
+    }
+
+    public AnimationKeyFrame(double tick, boolean stall, int active, int startFrame, boolean loop, boolean freeze, int idle, int walk, int run, int walk180, int walkRight, int walkLeft, int idleRight, int idleLeft, double speed, int lastFrame, int pauseTicks)
     {
         super(KeyFrameType.ANIMATION, tick);
         this.stall = stall;
@@ -55,5 +75,7 @@ public class AnimationKeyFrame extends KeyFrame
         this.idleRight = idleRight;
         this.idleLeft = idleLeft;
         this.speed = speed;
+        this.lastFrame = lastFrame;
+        this.pauseTicks = pauseTicks;
     }
 }

@@ -1882,9 +1882,10 @@ public class Programmer
         KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.ANIMATION);
         if (kf == null)
         {
-            // No keyframe active -- reset the multiplier so a previously-active
-            // keyframe's speed doesn't leak into the spinner-driven defaults.
+            // No keyframe active -- reset the multiplier and range so a previously-
+            // active keyframe's settings don't leak into the spinner-driven defaults.
             ckObject.setAnimationSpeed(1.0);
+            ckObject.setAnimationRange(0, 0, 0);
             ckObject.setHasAnimKeyFrame(false);
             int animId = (int) character.getAnimationSpinner().getValue();
             int animFrame = (int) character.getAnimationFrameSpinner().getValue();
@@ -1910,7 +1911,13 @@ public class Programmer
         double animSpeed = keyFrame.getSpeed();
         if (animSpeed <= 0) animSpeed = 1.0;
         ckObject.setAnimationSpeed(animSpeed);
-        setActiveAnimationFrame(ckObject, keyFrame.getActive(), timeSheetPanel.getCurrentTime(), keyFrame.getTick(), keyFrame.getStartFrame(), keyFrame.isLoop(), keyFrame.isFreeze(), false, animSpeed);
+        // lastFrame + pauseTicks are honoured during both scrub (via getAnimFrame's
+        // range-mode overload) and playback (via CKAnimationController's range fields).
+        // 0/0 keeps legacy semantics (full animation, no pause).
+        int lastFrame = keyFrame.getLastFrame();
+        int pauseTicks = keyFrame.getPauseTicks();
+        ckObject.setAnimationRange(keyFrame.getStartFrame(), lastFrame, pauseTicks);
+        setActiveAnimationFrame(ckObject, keyFrame.getActive(), timeSheetPanel.getCurrentTime(), keyFrame.getTick(), keyFrame.getStartFrame(), keyFrame.isLoop(), keyFrame.isFreeze(), false, animSpeed, lastFrame, pauseTicks);
     }
 
     private void registerModelChanges(Character character)
@@ -2068,6 +2075,11 @@ public class Programmer
 
     public void setActiveAnimationFrame(CKObject ckObject, int animId, double currentTime, double startTime, int startFrame, boolean loop, boolean freeze, boolean despawnOnFinished, double animSpeed)
     {
+        setActiveAnimationFrame(ckObject, animId, currentTime, startTime, startFrame, loop, freeze, despawnOnFinished, animSpeed, 0, 0);
+    }
+
+    public void setActiveAnimationFrame(CKObject ckObject, int animId, double currentTime, double startTime, int startFrame, boolean loop, boolean freeze, boolean despawnOnFinished, double animSpeed, int lastFrame, int pauseTicks)
+    {
         if (animId == -1)
         {
             clientThread.invoke(() ->
@@ -2088,26 +2100,31 @@ public class Programmer
             clientThread.invoke(() ->
             {
                 Animation animation = client.loadAnimation(animId);
-                setActiveAnimationFrame(ckObject, animation, currentTime, startTime, startFrame, loop, freeze, despawnOnFinished, animSpeed);
+                setActiveAnimationFrame(ckObject, animation, currentTime, startTime, startFrame, loop, freeze, despawnOnFinished, animSpeed, lastFrame, pauseTicks);
             });
             return;
         }
 
         clientThread.invoke(() ->
         {
-            setActiveAnimationFrame(ckObject, active, currentTime, startTime, startFrame, loop, freeze, despawnOnFinished, animSpeed);
+            setActiveAnimationFrame(ckObject, active, currentTime, startTime, startFrame, loop, freeze, despawnOnFinished, animSpeed, lastFrame, pauseTicks);
         });
     }
 
     /** Back-compat shim. */
     public void setActiveAnimationFrame(CKObject ckObject, Animation animation, double currentTime, double startTime, int startFrame, boolean loop, boolean freeze, boolean despawnOnFinished)
     {
-        setActiveAnimationFrame(ckObject, animation, currentTime, startTime, startFrame, loop, freeze, despawnOnFinished, 1.0);
+        setActiveAnimationFrame(ckObject, animation, currentTime, startTime, startFrame, loop, freeze, despawnOnFinished, 1.0, 0, 0);
     }
 
     public void setActiveAnimationFrame(CKObject ckObject, Animation animation, double currentTime, double startTime, int startFrame, boolean loop, boolean freeze, boolean despawnOnFinished, double animSpeed)
     {
-        int[] animFrame = getAnimFrame(animation, currentTime, startTime, startFrame, loop, animSpeed);
+        setActiveAnimationFrame(ckObject, animation, currentTime, startTime, startFrame, loop, freeze, despawnOnFinished, animSpeed, 0, 0);
+    }
+
+    public void setActiveAnimationFrame(CKObject ckObject, Animation animation, double currentTime, double startTime, int startFrame, boolean loop, boolean freeze, boolean despawnOnFinished, double animSpeed, int lastFrame, int pauseTicks)
+    {
+        int[] animFrame = getAnimFrame(animation, currentTime, startTime, startFrame, loop, animSpeed, lastFrame, pauseTicks);
         int frame = animFrame[0];
         int tick = animFrame[1];
 
@@ -2176,6 +2193,24 @@ public class Programmer
     private int[] getAnimFrame(Animation animation, double currentTime, double startTime, int startFrame, boolean loop)
     {
         return getAnimFrame(animation, currentTime, startTime, startFrame, loop, 1.0);
+    }
+
+    /**
+     * Routing shim. Falls through to the legacy 6-arg implementation when the user
+     * hasn't set lastFrame or pauseTicks (preserves the original loop-to-frame-0
+     * semantics for old saves and for non-keyframe call sites like spotanims).
+     * When either is set, switches to the range-based implementation in
+     * {@link #getAnimFrameWithRange} where loop wraps back to {@code startFrame}
+     * (not 0) and the last frame can dwell for {@code pauseTicks} client ticks
+     * before each loop.
+     */
+    private int[] getAnimFrame(Animation animation, double currentTime, double startTime, int startFrame, boolean loop, double animSpeed, int lastFrame, int pauseTicks)
+    {
+        if (lastFrame <= 0 && pauseTicks <= 0)
+        {
+            return getAnimFrame(animation, currentTime, startTime, startFrame, loop, animSpeed);
+        }
+        return getAnimFrameWithRange(animation, currentTime, startTime, startFrame, loop, animSpeed, lastFrame, pauseTicks);
     }
 
     /**
@@ -2283,6 +2318,97 @@ public class Programmer
             framesPassed += frameLength;
         }
 
+        return new int[]{-1, 0};
+    }
+
+    /**
+     * Range-based animation frame computation. Plays only frames
+     * {@code [startFrame, lastFrame]} of the animation; when looping, wraps back
+     * to {@code startFrame} (not 0) and optionally dwells on the last frame for
+     * {@code pauseTicks} client ticks before each loop.
+     *
+     * <p>Maya animations don't have per-frame lengths (frame index == elapsed
+     * tick) so we fall back to the legacy maya path; lastFrame / pauseTicks are
+     * silently ignored there.
+     */
+    private int[] getAnimFrameWithRange(Animation animation, double currentTime, double startTime, int startFrame, boolean loop, double animSpeed, int lastFrame, int pauseTicks)
+    {
+        if (animation.isMayaAnim())
+        {
+            // Maya path: range / pause not supported (no frame-length array).
+            return getAnimFrame(animation, currentTime, startTime, startFrame, loop, animSpeed);
+        }
+
+        double gameTicksPassed = currentTime - startTime;
+        int clientTicksPassed = (int) (gameTicksPassed * 30 * animSpeed);
+
+        int[] frameLengths = animation.getFrameLengths();
+        int totalFrames = frameLengths.length;
+        if (totalFrames == 0)
+        {
+            return new int[]{-1, 0};
+        }
+
+        // lastFrame == 0 (or out of range) means "use the natural last frame".
+        int effectiveLast = (lastFrame > 0 && lastFrame < totalFrames) ? lastFrame : totalFrames - 1;
+        int effectiveFirst = Math.max(0, Math.min(startFrame, effectiveLast));
+
+        int rangeDuration = 0;
+        for (int i = effectiveFirst; i <= effectiveLast; i++)
+        {
+            rangeDuration += frameLengths[i];
+        }
+        int safePause = Math.max(0, pauseTicks);
+
+        if (loop)
+        {
+            int loopLength = rangeDuration + safePause;
+            if (loopLength <= 0)
+            {
+                loopLength = 1;
+            }
+            int timeIntoLoop = clientTicksPassed % loopLength;
+            if (timeIntoLoop < 0)
+            {
+                timeIntoLoop += loopLength;
+            }
+            if (timeIntoLoop >= rangeDuration)
+            {
+                // Pause phase -- dwell on the last frame for safePause ticks.
+                return new int[]{effectiveLast, timeIntoLoop - rangeDuration};
+            }
+            int accumulated = 0;
+            for (int i = effectiveFirst; i <= effectiveLast; i++)
+            {
+                int frameLength = frameLengths[i];
+                if (accumulated + frameLength > timeIntoLoop)
+                {
+                    return new int[]{i, timeIntoLoop - accumulated};
+                }
+                accumulated += frameLength;
+            }
+            return new int[]{effectiveLast, 0};
+        }
+
+        // Non-loop: play the range once, then signal end.
+        if (clientTicksPassed >= rangeDuration)
+        {
+            return new int[]{-1, 0};
+        }
+        if (clientTicksPassed < 0)
+        {
+            clientTicksPassed = 0;
+        }
+        int accumulated = 0;
+        for (int i = effectiveFirst; i <= effectiveLast; i++)
+        {
+            int frameLength = frameLengths[i];
+            if (accumulated + frameLength > clientTicksPassed)
+            {
+                return new int[]{i, clientTicksPassed - accumulated};
+            }
+            accumulated += frameLength;
+        }
         return new int[]{-1, 0};
     }
 }

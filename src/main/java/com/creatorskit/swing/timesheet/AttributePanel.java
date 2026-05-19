@@ -312,7 +312,9 @@ public class AttributePanel extends JPanel
                         (int) animAttributes.getWalkLeft().getValue(),
                         (int) animAttributes.getIdleRight().getValue(),
                         (int) animAttributes.getIdleLeft().getValue(),
-                        ((Number) animAttributes.getSpeed().getValue()).doubleValue()
+                        ((Number) animAttributes.getSpeed().getValue()).doubleValue(),
+                        (int) animAttributes.getLastFrame().getValue(),
+                        (int) animAttributes.getPauseTicks().getValue()
                 );
             case ORIENTATION:
                 return new OrientationKeyFrame(
@@ -604,6 +606,34 @@ public class AttributePanel extends JPanel
         JButton randomize = new JButton("Random");
         randomize.setToolTipText("Sets a random starting frame between 0 to the maximum number of frames for the animation that is currently playing");
         card.add(randomize, c);
+
+        c.gridx = 0;
+        c.gridy = 2;
+        JLabel lastFrameLabel = new JLabel("Last Frame: ");
+        lastFrameLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(lastFrameLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 2;
+        JSpinner lastFrame = animAttributes.getLastFrame();
+        lastFrame.setToolTipText("Upper bound of the play range. 0 (default) = use the animation's natural last frame. "
+                + "When set, the animation plays frames [1st Frame, Last Frame] and -- if Loop is on -- wraps back to 1st Frame.");
+        lastFrame.setModel(new SpinnerNumberModel(AnimationKeyFrame.LAST_FRAME_DISABLED, 0, 99999, 1));
+        lastFrame.setPreferredSize(spinnerSize);
+        card.add(lastFrame, c);
+
+        c.gridx = 4;
+        c.gridy = 2;
+        JLabel pauseTicksLabel = new JLabel("Pause Ticks: ");
+        pauseTicksLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(pauseTicksLabel, c);
+
+        c.gridx = 5;
+        c.gridy = 2;
+        JSpinner pauseTicks = animAttributes.getPauseTicks();
+        pauseTicks.setToolTipText("When Loop is on, hold the last frame this many client ticks before looping back to 1st Frame. 0 = no pause.");
+        pauseTicks.setModel(new SpinnerNumberModel(0, 0, 99999, 1));
+        card.add(pauseTicks, c);
 
         /*
         c.gridx = 0;

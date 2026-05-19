@@ -174,6 +174,28 @@ public class CKObject extends RuneLiteObjectController
         }
     }
 
+    /**
+     * Pushes the per-keyframe play-range overrides into the Active animation
+     * controller (only -- pose plays naturally regardless of range). Resets the
+     * range playback clock so the first tick after the activation lands on
+     * {@code firstFrame}.
+     *
+     * <p>Called from Programmer.registerActiveAnimationChanges whenever the
+     * active AnimationKeyFrame changes, and called with 0/0/0 from the no-
+     * keyframe branch so a previously-active range doesn't leak into the
+     * spinner-driven default playback.
+     */
+    public void setAnimationRange(int firstFrame, int lastFrame, int pauseTicks)
+    {
+        if (animationController != null)
+        {
+            animationController.setFirstFrameOverride(firstFrame);
+            animationController.setLastFrameOverride(lastFrame);
+            animationController.setPauseTicks(pauseTicks);
+            animationController.resetRangeClock();
+        }
+    }
+
     public void setupAnimController(AnimationType type, Animation animation)
     {
         if (type == AnimationType.ACTIVE)

@@ -28,6 +28,10 @@ public class AnimAttributes extends Attributes
     private final JSpinner idleLeft = new JSpinner();
     /** Animation speed multiplier. 1.0 = native. Spinner is 0.05 increments, range 0.25..4.0. */
     private final JSpinner speed = new JSpinner();
+    /** Upper bound of the play range. 0 = use the animation's natural last frame. */
+    private final JSpinner lastFrame = new JSpinner();
+    /** Ticks to dwell on the last frame before looping. Only meaningful with loop on. */
+    private final JSpinner pauseTicks = new JSpinner();
 
     public AnimAttributes()
     {
@@ -62,6 +66,8 @@ public class AnimAttributes extends Attributes
         idleLeft.setValue(kf.getIdleLeft());
         double sp = kf.getSpeed();
         speed.setValue(sp > 0 ? sp : AnimationKeyFrame.DEFAULT_SPEED);
+        lastFrame.setValue(kf.getLastFrame());
+        pauseTicks.setValue(kf.getPauseTicks());
     }
 
     @Override
@@ -81,6 +87,8 @@ public class AnimAttributes extends Attributes
         idleRight.setBackground(color);
         idleLeft.setBackground(color);
         speed.setBackground(color);
+        lastFrame.setBackground(color);
+        pauseTicks.setBackground(color);
     }
 
     @Override
@@ -101,7 +109,9 @@ public class AnimAttributes extends Attributes
                         walkLeft,
                         idleRight,
                         idleLeft,
-                        speed
+                        speed,
+                        lastFrame,
+                        pauseTicks
                 };
     }
 
@@ -177,6 +187,16 @@ public class AnimAttributes extends Attributes
         {
             speed.setBackground(getRed());
         });
+
+        lastFrame.addChangeListener(e ->
+        {
+            lastFrame.setBackground(getRed());
+        });
+
+        pauseTicks.addChangeListener(e ->
+        {
+            pauseTicks.setBackground(getRed());
+        });
     }
 
     @Override
@@ -196,6 +216,8 @@ public class AnimAttributes extends Attributes
         idleRight.setValue(-1);
         idleLeft.setValue(-1);
         speed.setValue(AnimationKeyFrame.DEFAULT_SPEED);
+        lastFrame.setValue(AnimationKeyFrame.LAST_FRAME_DISABLED);
+        pauseTicks.setValue(0);
         super.resetAttributes(resetBackground);
     }
 }
