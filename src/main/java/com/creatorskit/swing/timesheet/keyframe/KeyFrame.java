@@ -54,7 +54,8 @@ public class KeyFrame
                         animKF.getWalkRight(),
                         animKF.getWalkLeft(),
                         animKF.getIdleRight(),
-                        animKF.getIdleLeft());
+                        animKF.getIdleLeft(),
+                        animKF.getSpeed());
             case ORIENTATION:
                 OrientationKeyFrame oriKF = (OrientationKeyFrame) keyFrame;
                 return new OrientationKeyFrame(

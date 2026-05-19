@@ -719,7 +719,9 @@ public class Programmer
 
                 if (!playing)
                 {
-                    setPoseAnimationFrame(ckObject, timeSheetPanel.getCurrentTime(), keyFrame.getTick(), finalRandomizeStartFrame, finalPoseStartFrame);
+                    double poseAnimSpeed = keyFrame.getSpeed();
+                    if (poseAnimSpeed <= 0) poseAnimSpeed = 1.0;
+                    setPoseAnimationFrame(ckObject, timeSheetPanel.getCurrentTime(), keyFrame.getTick(), finalRandomizeStartFrame, finalPoseStartFrame, poseAnimSpeed);
                 }
             }
         });
@@ -1880,6 +1882,9 @@ public class Programmer
         KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.ANIMATION);
         if (kf == null)
         {
+            // No keyframe active -- reset the multiplier so a previously-active
+            // keyframe's speed doesn't leak into the spinner-driven defaults.
+            ckObject.setAnimationSpeed(1.0);
             ckObject.setHasAnimKeyFrame(false);
             int animId = (int) character.getAnimationSpinner().getValue();
             int animFrame = (int) character.getAnimationFrameSpinner().getValue();
@@ -1899,7 +1904,13 @@ public class Programmer
         }
 
         AnimationKeyFrame keyFrame = (AnimationKeyFrame) kf;
-        setActiveAnimationFrame(ckObject, keyFrame.getActive(), timeSheetPanel.getCurrentTime(), keyFrame.getTick(), keyFrame.getStartFrame(), keyFrame.isLoop(), keyFrame.isFreeze(), false);
+        // Speed drives both the scrub-time frame computation (via setActiveAnimationFrame
+        // -> getAnimFrame) AND the per-tick playback advance (via ckObject.tick reading
+        // animationSpeed). Pre-2.3 saves serialize speed as 0; treat <= 0 as "use 1.0".
+        double animSpeed = keyFrame.getSpeed();
+        if (animSpeed <= 0) animSpeed = 1.0;
+        ckObject.setAnimationSpeed(animSpeed);
+        setActiveAnimationFrame(ckObject, keyFrame.getActive(), timeSheetPanel.getCurrentTime(), keyFrame.getTick(), keyFrame.getStartFrame(), keyFrame.isLoop(), keyFrame.isFreeze(), false, animSpeed);
     }
 
     private void registerModelChanges(Character character)
@@ -2049,7 +2060,13 @@ public class Programmer
         }
     }
 
+    /** Back-compat shim -- spotanim / projectile path that doesn't carry a user-set speed. */
     public void setActiveAnimationFrame(CKObject ckObject, int animId, double currentTime, double startTime, int startFrame, boolean loop, boolean freeze, boolean despawnOnFinished)
+    {
+        setActiveAnimationFrame(ckObject, animId, currentTime, startTime, startFrame, loop, freeze, despawnOnFinished, 1.0);
+    }
+
+    public void setActiveAnimationFrame(CKObject ckObject, int animId, double currentTime, double startTime, int startFrame, boolean loop, boolean freeze, boolean despawnOnFinished, double animSpeed)
     {
         if (animId == -1)
         {
@@ -2071,20 +2088,26 @@ public class Programmer
             clientThread.invoke(() ->
             {
                 Animation animation = client.loadAnimation(animId);
-                setActiveAnimationFrame(ckObject, animation, currentTime, startTime, startFrame, loop, freeze, despawnOnFinished);
+                setActiveAnimationFrame(ckObject, animation, currentTime, startTime, startFrame, loop, freeze, despawnOnFinished, animSpeed);
             });
             return;
         }
 
         clientThread.invoke(() ->
         {
-            setActiveAnimationFrame(ckObject, active, currentTime, startTime, startFrame, loop, freeze, despawnOnFinished);
+            setActiveAnimationFrame(ckObject, active, currentTime, startTime, startFrame, loop, freeze, despawnOnFinished, animSpeed);
         });
     }
 
+    /** Back-compat shim. */
     public void setActiveAnimationFrame(CKObject ckObject, Animation animation, double currentTime, double startTime, int startFrame, boolean loop, boolean freeze, boolean despawnOnFinished)
     {
-        int[] animFrame = getAnimFrame(animation, currentTime, startTime, startFrame, loop);
+        setActiveAnimationFrame(ckObject, animation, currentTime, startTime, startFrame, loop, freeze, despawnOnFinished, 1.0);
+    }
+
+    public void setActiveAnimationFrame(CKObject ckObject, Animation animation, double currentTime, double startTime, int startFrame, boolean loop, boolean freeze, boolean despawnOnFinished, double animSpeed)
+    {
+        int[] animFrame = getAnimFrame(animation, currentTime, startTime, startFrame, loop, animSpeed);
         int frame = animFrame[0];
         int tick = animFrame[1];
 
@@ -2116,14 +2139,20 @@ public class Programmer
         }
     }
 
+    /** Back-compat shim. */
     public void setPoseAnimationFrame(CKObject ckObject, double currentTime, double startTime, boolean randomizeStartFrame, int startFrame)
+    {
+        setPoseAnimationFrame(ckObject, currentTime, startTime, randomizeStartFrame, startFrame, 1.0);
+    }
+
+    public void setPoseAnimationFrame(CKObject ckObject, double currentTime, double startTime, boolean randomizeStartFrame, int startFrame, double animSpeed)
     {
         Animation[] animations = ckObject.getAnimations();
 
         Animation pose = animations[1];
         if (pose != null && pose.getId() != -1)
         {
-            int[] animFrame = getAnimFrame(pose, currentTime, startTime, startFrame, true);
+            int[] animFrame = getAnimFrame(pose, currentTime, startTime, startFrame, true, animSpeed);
             if (animFrame[0] != -1)
             {
                 clientThread.invoke(() ->
@@ -2146,8 +2175,19 @@ public class Programmer
      */
     private int[] getAnimFrame(Animation animation, double currentTime, double startTime, int startFrame, boolean loop)
     {
+        return getAnimFrame(animation, currentTime, startTime, startFrame, loop, 1.0);
+    }
+
+    /**
+     * Same as the 5-arg overload but with a multiplier on the elapsed-tick count so
+     * animations can run faster or slower than native. {@code animSpeed} of 1.0
+     * gives identical output to the legacy overload; 2.0 advances frames twice as
+     * fast, 0.5 half as fast. Driven by AnimationKeyFrame.speed.
+     */
+    private int[] getAnimFrame(Animation animation, double currentTime, double startTime, int startFrame, boolean loop, double animSpeed)
+    {
         double gameTicksPassed = currentTime - startTime;
-        int clientTicksPassed = (int) (gameTicksPassed * 30);
+        int clientTicksPassed = (int) (gameTicksPassed * 30 * animSpeed);
 
         if (animation.isMayaAnim())
         {

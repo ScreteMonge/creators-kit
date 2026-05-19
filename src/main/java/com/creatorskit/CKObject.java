@@ -62,6 +62,17 @@ public class CKObject extends RuneLiteObjectController
      */
     private double extraScale = 1.0;
 
+    /**
+     * Animation playback-rate multiplier. 1.0 = native. Set by Programmer when an
+     * AnimationKeyFrame activates (so different keyframes can run at different
+     * speeds). Drives the fractional accumulator in {@link #tick} so even
+     * sub-integer speeds (e.g. 0.5) advance correctly over multiple frames
+     * instead of rounding to zero and freezing.
+     */
+    private double animationSpeed = 1.0;
+    /** Fractional carryover for sub-integer animationSpeed scaling. */
+    private double animationTickAccumulator = 0;
+
     /** Canonical rigging scale baked into OSRS animation data (1/128 units = 1 tile). */
     private static final int RIGGING_SCALE = 128;
 
@@ -248,8 +259,26 @@ public class CKObject extends RuneLiteObjectController
 
         if (!freeze)
         {
-            animationController.tick(ticksSinceLastFrame);
-            poseAnimationController.tick(ticksSinceLastFrame);
+            // animationSpeed scales the tick count so animations can run faster /
+            // slower than native. Accumulator captures the fractional remainder so
+            // sub-integer speeds (e.g. 0.5) don't floor-to-zero and freeze the
+            // animation -- with speed=0.5 we tick by 0 then 1 then 0 then 1 etc.
+            int scaledTicks;
+            if (animationSpeed == 1.0)
+            {
+                scaledTicks = ticksSinceLastFrame;
+            }
+            else
+            {
+                animationTickAccumulator += ticksSinceLastFrame * animationSpeed;
+                scaledTicks = (int) animationTickAccumulator;
+                animationTickAccumulator -= scaledTicks;
+            }
+            if (scaledTicks > 0)
+            {
+                animationController.tick(scaledTicks);
+                poseAnimationController.tick(scaledTicks);
+            }
         }
     }
 

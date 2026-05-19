@@ -26,6 +26,8 @@ public class AnimAttributes extends Attributes
     private final JSpinner walkLeft = new JSpinner();
     private final JSpinner idleRight = new JSpinner();
     private final JSpinner idleLeft = new JSpinner();
+    /** Animation speed multiplier. 1.0 = native. Spinner is 0.05 increments, range 0.25..4.0. */
+    private final JSpinner speed = new JSpinner();
 
     public AnimAttributes()
     {
@@ -58,6 +60,8 @@ public class AnimAttributes extends Attributes
         walkLeft.setValue(kf.getWalkLeft());
         idleRight.setValue(kf.getIdleRight());
         idleLeft.setValue(kf.getIdleLeft());
+        double sp = kf.getSpeed();
+        speed.setValue(sp > 0 ? sp : AnimationKeyFrame.DEFAULT_SPEED);
     }
 
     @Override
@@ -76,6 +80,7 @@ public class AnimAttributes extends Attributes
         walkLeft.setBackground(color);
         idleRight.setBackground(color);
         idleLeft.setBackground(color);
+        speed.setBackground(color);
     }
 
     @Override
@@ -95,7 +100,8 @@ public class AnimAttributes extends Attributes
                         walkRight,
                         walkLeft,
                         idleRight,
-                        idleLeft
+                        idleLeft,
+                        speed
                 };
     }
 
@@ -166,6 +172,11 @@ public class AnimAttributes extends Attributes
         {
             idleLeft.setBackground(getRed());
         });
+
+        speed.addChangeListener(e ->
+        {
+            speed.setBackground(getRed());
+        });
     }
 
     @Override
@@ -184,6 +195,7 @@ public class AnimAttributes extends Attributes
         walkLeft.setValue(-1);
         idleRight.setValue(-1);
         idleLeft.setValue(-1);
+        speed.setValue(AnimationKeyFrame.DEFAULT_SPEED);
         super.resetAttributes(resetBackground);
     }
 }

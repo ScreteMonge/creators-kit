@@ -311,7 +311,8 @@ public class AttributePanel extends JPanel
                         (int) animAttributes.getWalkRight().getValue(),
                         (int) animAttributes.getWalkLeft().getValue(),
                         (int) animAttributes.getIdleRight().getValue(),
-                        (int) animAttributes.getIdleLeft().getValue()
+                        (int) animAttributes.getIdleLeft().getValue(),
+                        ((Number) animAttributes.getSpeed().getValue()).doubleValue()
                 );
             case ORIENTATION:
                 return new OrientationKeyFrame(
@@ -672,6 +673,20 @@ public class AttributePanel extends JPanel
         freeze.addItem(Toggle.DISABLE);
         freeze.addItem(Toggle.ENABLE);
         card.add(freeze, c);
+
+        c.gridwidth = 1;
+        c.gridx = 4;
+        c.gridy = 1;
+        JLabel speedLabel = new JLabel("Speed: ");
+        speedLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(speedLabel, c);
+
+        c.gridx = 5;
+        c.gridy = 1;
+        JSpinner animSpeed = animAttributes.getSpeed();
+        animSpeed.setToolTipText("Animation playback-rate multiplier. 1.0 = native speed, 2.0 = double speed, 0.5 = half speed. Range 0.25..4.0, 0.05 increments. Applies to both the Active and Pose animations on this keyframe.");
+        animSpeed.setModel(new SpinnerNumberModel(AnimationKeyFrame.DEFAULT_SPEED, 0.25, 4.0, 0.05));
+        card.add(animSpeed, c);
 
         c.gridwidth = 4;
         c.gridx = 0;
