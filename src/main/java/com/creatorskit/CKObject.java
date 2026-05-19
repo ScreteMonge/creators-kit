@@ -106,28 +106,32 @@ public class CKObject extends RuneLiteObjectController
     public void setModel(Model baseModel)
     {
         this.baseModel = baseModel;
-        // Capture the pristine baseline EAGERLY (instead of lazily on the next
-        // getModel call). Multi-select with a shared CustomModel hands the same
-        // Model instance to every ckObject's setModel in a tight loop -- a lazy
-        // snapshot would let an interleaved render mutate baseModel between
-        // setModel calls, so the second / third ckObject captures a corrupted
-        // baseline. Each scrub then compounds the corruption since the snapshot
-        // is re-invalidated and recaptured from the mutated state. Capturing now
-        // pins down the clean vertices before any other path can touch them.
         if (baseModel == null)
         {
             this.baseVerticesSnapshot = null;
             return;
         }
-        float[] vx = baseModel.getVerticesX();
-        float[] vy = baseModel.getVerticesY();
-        float[] vz = baseModel.getVerticesZ();
-        if (vx == null || vy == null || vz == null)
+        // Synchronize on baseModel itself so other ckObjects sharing this same
+        // Model reference (e.g. multi-selected Characters all pointing at the
+        // same CustomModel.getModel()) can't have their render-fix bracket
+        // running mid-mutation on baseModel.vertices while we snapshot here.
+        // Without this, EDT setModel could clone the shrunken vertices that the
+        // render thread is in the middle of using -- the snapshot would then
+        // capture the shrunken state, and subsequent brackets restore-from-
+        // snapshot would re-shrink before scaling again, compounding the
+        // distortion every time Update / scrub fires setModel.
+        synchronized (baseModel)
         {
-            this.baseVerticesSnapshot = null;
-            return;
+            float[] vx = baseModel.getVerticesX();
+            float[] vy = baseModel.getVerticesY();
+            float[] vz = baseModel.getVerticesZ();
+            if (vx == null || vy == null || vz == null)
+            {
+                this.baseVerticesSnapshot = null;
+                return;
+            }
+            this.baseVerticesSnapshot = new float[][]{vx.clone(), vy.clone(), vz.clone()};
         }
-        this.baseVerticesSnapshot = new float[][]{vx.clone(), vy.clone(), vz.clone()};
     }
 
     @Override
@@ -340,27 +344,41 @@ public class CKObject extends RuneLiteObjectController
                     || extraScale != 1.0
                 );
 
-        if (fix)
+        if (!fix)
+        {
+            // Fast path: no shrink/restore needed, no mutation of shared baseModel.
+            if (animationController != null)
+            {
+                return animationController.animate(this.baseModel, this.poseAnimationController);
+            }
+            if (poseAnimationController != null)
+            {
+                return poseAnimationController.animate(this.baseModel);
+            }
+            return baseModel;
+        }
+
+        // Synchronize the entire bracket on baseModel so another ckObject sharing
+        // this Model reference can't snapshot or render while baseModel is mid-
+        // shrink. Without this lock, multi-selected Characters with the same
+        // CustomModel would race: one ckObject's bracket leaves baseModel in the
+        // shrunken state for a few cpu cycles, and the other ckObject's setModel
+        // (EDT) or getModel (render) catches that shrunken state -- the snapshot
+        // then captures a shrunken baseline, the next bracket restore-from-
+        // snapshot re-shrinks, and the expand step compounds the distortion
+        // every time Update / scrub fires setModel.
+        synchronized (baseModel)
         {
             shrinkBaseModelForAnimation();
-        }
-
-        Model model;
-        if (animationController != null)
-        {
-            model = animationController.animate(this.baseModel, this.poseAnimationController);
-        }
-        else if (poseAnimationController != null)
-        {
-            model = poseAnimationController.animate(this.baseModel);
-        }
-        else
-        {
-            model = baseModel;
-        }
-
-        if (fix)
-        {
+            Model model;
+            if (animationController != null)
+            {
+                model = animationController.animate(this.baseModel, this.poseAnimationController);
+            }
+            else
+            {
+                model = poseAnimationController.animate(this.baseModel);
+            }
             // Restore baseModel BEFORE expanding the animated output. The animated
             // model is a fresh copy from applyTransformations, so expanding it doesn't
             // depend on baseModel anymore -- but baseModel needs to be back to its
@@ -370,13 +388,12 @@ public class CKObject extends RuneLiteObjectController
             // state between frames and renders at the rigging size instead of the
             // intended display size.
             restoreBaseModelToSnapshot();
-            if (model != null)
+            if (model != null && model != baseModel)
             {
                 expandAnimatedModel(model);
             }
+            return model;
         }
-
-        return model;
     }
 
     /**
