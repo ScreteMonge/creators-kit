@@ -1,6 +1,8 @@
 .gradle
 build
-.idea/
+.idea/*
+!.idea/runConfigurations/
+!.idea/runConfigurations/**
 .project
 .settings/
 .classpath
