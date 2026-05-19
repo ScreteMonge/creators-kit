@@ -371,21 +371,74 @@ public class TimeSheetPanel extends JPanel
             return;
         }
 
-       removeKeyFrameAction(keyFrame);
+        // REMOVE branch: expand across multi-selection. The primary's keyframe was
+        // already located above; iterate the rest of the selection and remove each
+        // one's keyframe of the same type at the seeker tick. The primary's
+        // removal happens through the same loop so the action history records
+        // every removal as one batched undo step.
+        java.util.Collection<Character> targets = resolveSelectionTargets();
+        KeyFrameAction[] kfa = new KeyFrameAction[0];
+        for (Character c : targets)
+        {
+            KeyFrame kf = c.findKeyFrame(type, currentTick);
+            if (kf == null)
+            {
+                continue;
+            }
+            removeKeyFrame(c, kf);
+            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(kf, c, KeyFrameCharacterActionType.REMOVE));
+        }
+        addKeyFrameActions(kfa);
+    }
+
+    /**
+     * Resolves the set of Characters that a keyframe-add / paste / remove action
+     * should apply to. Returns every Character in {@link #selectionManager}'s
+     * selection when more than one is selected (e.g. after clicking a folder),
+     * else falls back to the single {@link #selectedCharacter} for the legacy
+     * one-character-at-a-time path.
+     */
+    private java.util.Collection<Character> resolveSelectionTargets()
+    {
+        if (selectionManager != null && selectionManager.size() > 1)
+        {
+            return new java.util.ArrayList<>(selectionManager.getSelected());
+        }
+        if (selectedCharacter == null)
+        {
+            return java.util.Collections.emptyList();
+        }
+        return java.util.Collections.singletonList(selectedCharacter);
     }
 
     public void addKeyFrameAction(KeyFrame[] keyFrames)
     {
-        KeyFrameAction[] kfa = new KeyFrameAction[0];
-
-        for (KeyFrame keyFrame : keyFrames)
+        java.util.Collection<Character> targets = resolveSelectionTargets();
+        if (targets.isEmpty())
         {
-            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.ADD));
+            return;
+        }
 
-            KeyFrame keyFrameToReplace = addKeyFrame(selectedCharacter, keyFrame);
-            if (keyFrameToReplace != null)
+        KeyFrameAction[] kfa = new KeyFrameAction[0];
+        for (Character c : targets)
+        {
+            // The primary keeps the original KeyFrame instance so callsites that
+            // expect identity-preserving behaviour (e.g. paste's selectedKeyFrames
+            // re-selection) still see "their" object. Secondary selections get a
+            // clone -- two Characters can't share a single state-bearing keyframe
+            // (MovementKeyFrame.currentStep, AnimationKeyFrame transient fields,
+            // etc.) without their playback corrupting each other.
+            boolean isPrimary = (c == selectedCharacter);
+            for (KeyFrame template : keyFrames)
             {
-                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
+                KeyFrame perChar = isPrimary ? template : KeyFrame.createCopy(template, template.getTick());
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(perChar, c, KeyFrameCharacterActionType.ADD));
+
+                KeyFrame keyFrameToReplace = addKeyFrame(c, perChar);
+                if (keyFrameToReplace != null)
+                {
+                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, c, KeyFrameCharacterActionType.REMOVE));
+                }
             }
         }
 
@@ -1790,7 +1843,8 @@ public class TimeSheetPanel extends JPanel
 
     public void pasteKeyFrames()
     {
-        if (selectedCharacter == null)
+        java.util.Collection<Character> targets = resolveSelectionTargets();
+        if (targets.isEmpty())
         {
             return;
         }
@@ -1809,20 +1863,33 @@ public class TimeSheetPanel extends JPanel
             }
         }
 
+        // selectedKeyFrames tracks the user's *active selection* in the timeline
+        // (used by the marquee, Update button, etc.). Only the primary's new
+        // pastes belong there -- secondary characters' copies still get added to
+        // their owners' keyframe lists but aren't re-selected, otherwise the
+        // selection would be a confusing mix across characters after a multi-paste.
         selectedKeyFrames = new KeyFrame[0];
         KeyFrameAction[] kfa = new KeyFrameAction[0];
-        for (KeyFrame keyFrame : copiedKeyFrames)
+        for (Character c : targets)
         {
-            double newTime = round(keyFrame.getTick() - firstTick + currentTime);
-            KeyFrame copy = KeyFrame.createCopy(keyFrame, newTime);
-            selectedKeyFrames = ArrayUtils.add(selectedKeyFrames, copy);
-
-            KeyFrame keyFrameToReplace = addKeyFrame(selectedCharacter, copy);
-            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(copy, selectedCharacter, KeyFrameCharacterActionType.ADD));
-
-            if (keyFrameToReplace != null)
+            boolean isPrimary = (c == selectedCharacter);
+            for (KeyFrame keyFrame : copiedKeyFrames)
             {
-                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
+                double newTime = round(keyFrame.getTick() - firstTick + currentTime);
+                KeyFrame copy = KeyFrame.createCopy(keyFrame, newTime);
+
+                if (isPrimary)
+                {
+                    selectedKeyFrames = ArrayUtils.add(selectedKeyFrames, copy);
+                }
+
+                KeyFrame keyFrameToReplace = addKeyFrame(c, copy);
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(copy, c, KeyFrameCharacterActionType.ADD));
+
+                if (keyFrameToReplace != null)
+                {
+                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, c, KeyFrameCharacterActionType.REMOVE));
+                }
             }
         }
 
