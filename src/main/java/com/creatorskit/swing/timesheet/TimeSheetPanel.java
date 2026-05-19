@@ -1891,29 +1891,18 @@ public class TimeSheetPanel extends JPanel
 
     private void setupTimeTreeListener()
     {
-        managerTree.addTreeSelectionListener(e ->
-        {
-            TreePath treePath = e.getPath();
-            if (treePath == null)
-            {
-                return;
-            }
-
-            DefaultMutableTreeNode node = (DefaultMutableTreeNode) treePath.getLastPathComponent();
-            Object o = node.getUserObject();
-            if (o == null)
-            {
-                return;
-            }
-
-            if (o instanceof Character)
-            {
-                setSelectedCharacter((Character) o);
-                return;
-            }
-
-            setSelectedCharacter(null);
-        });
+        // Route selection changes through SelectionManager rather than the raw tree
+        // event. TreeSelectionEvent.getPath() returns one path from a multi-path
+        // change set without telling us whether it was added or removed -- so on
+        // a single-character click that *replaces* a folder multi-select, getPath()
+        // could be a path being deselected (the folder or one of its descendants),
+        // leaving selectedCharacter pointing at the wrong Character and forcing
+        // the user to click again to "fix" it. SelectionManager is the single
+        // source of truth and is reliably updated from ManagerTree's own listener
+        // via getSelectionPaths(). Subscribing here means selectedCharacter always
+        // matches the primary, so the AttributePanel + timeline refresh in one
+        // click and resolveSelectionTargets() never sees a stale multi-select.
+        selectionManager.addListener(mgr -> setSelectedCharacter(mgr.getPrimary()));
     }
 
     public void copyKeyFrames()
