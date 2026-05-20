@@ -2443,49 +2443,57 @@ public class TimeSheetPanel extends JPanel
                         "Scatter blocked", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            placements.put(owner, new double[]{minTick, slots});
+            placements.put(owner, new double[]{minTick, slots, duration});
         }
 
         // Phase 1: PLAN every Character's anchors using greedy collision-aware
-        // selection. We don't mutate any Character yet -- if any Character runs
-        // out of valid anchors mid-plan we refuse the whole op with a clean
-        // message instead of committing partial scatter that the user would
-        // have to undo manually. Collision = any two copies of the same
-        // Character would place a keyframe on the same tick. Cross-Character
-        // collisions are ignored (different objects, different timelines, no
-        // visual conflict).
+        // selection. We treat each copy as an interval [anchor, anchor + D]
+        // where D is the widest spread between the earliest and latest keyframe
+        // of this Character's selection (regardless of keyframe type). Two
+        // copies "collide" if their intervals overlap at all -- i.e. their
+        // anchors are within D of each other. Tick-equality-only checking
+        // (the previous attempt) misses this: blocks with sparse keyframes
+        // like {tick 1, tick 6} (D=5) could be placed at anchors 0 and 3 with
+        // no tick collision, yet the rain effects [0..5] and [3..8] visibly
+        // overlap on the tile.
+        //
+        // No mutation in this phase -- if any Character runs out of valid
+        // anchors mid-plan we refuse the whole op so the user gets a clean
+        // error instead of partial scatter to undo manually. Cross-Character
+        // collisions are still ignored (different objects, different timelines,
+        // no visual conflict).
         final java.util.Random rng = new java.util.Random();
         java.util.Map<Character, double[]> plannedAnchors = new java.util.LinkedHashMap<>();
 
         for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> entry : byOwner.entrySet())
         {
             Character owner = entry.getKey();
-            java.util.List<KeyFrame> originalBlock = entry.getValue();
             double[] p = placements.get(owner);
-            double blockMin = p[0];
             int totalSlots = (int) p[1];
+            double blockDuration = p[2];
 
-            java.util.Set<Double> placedTicks = new java.util.HashSet<>();
             double[] anchors = new double[copies];
 
             for (int c = 0; c < copies; c++)
             {
-                // Enumerate every slot index, keep only those whose placement
-                // wouldn't collide with any already-placed tick for this owner.
-                // Already-picked slots are filtered naturally because their
-                // keyframes are already in placedTicks. O(slots * blockSize)
-                // per copy; for rain-scale (N=10, slots=200, block=2) this is
-                // ~4000 ops per Character which is well under perceptible.
+                // Enumerate every step-aligned anchor, keep only those whose
+                // interval [anchor, anchor + D] doesn't overlap any previously
+                // chosen interval. Two intervals overlap iff their anchor
+                // difference is <= D (they share at least one tick). With
+                // step=S, the smallest gap on the grid that exceeds D is the
+                // first multiple of S strictly greater than D.
                 java.util.List<Integer> validSlots = new ArrayList<>();
                 for (int s = 0; s < totalSlots; s++)
                 {
-                    double anchor = fFrom + s * step;
-                    double delta = anchor - blockMin;
+                    double candidate = fFrom + s * step;
                     boolean ok = true;
-                    for (KeyFrame kf : originalBlock)
+                    for (int prior = 0; prior < c; prior++)
                     {
-                        double newTick = round(kf.getTick() + delta);
-                        if (placedTicks.contains(newTick)) { ok = false; break; }
+                        if (Math.abs(candidate - anchors[prior]) <= blockDuration)
+                        {
+                            ok = false;
+                            break;
+                        }
                     }
                     if (ok) validSlots.add(s);
                 }
@@ -2493,22 +2501,13 @@ public class TimeSheetPanel extends JPanel
                 if (validSlots.isEmpty())
                 {
                     JOptionPane.showMessageDialog(this,
-                            "Cannot scatter " + copies + " collision-free copies for Character '" + owner.getName() + "': only " + c + " fit without overlap. Widen the [from, to] range, reduce copies, or shrink the selection block.",
+                            "Cannot scatter " + copies + " non-overlapping copies for Character '" + owner.getName() + "': only " + c + " fit (block duration " + blockDuration + " in range " + (fTo - fFrom) + " ticks). Widen the [from, to] range, reduce copies, or shrink the selection block.",
                             "Scatter blocked", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
 
                 int pickedSlot = validSlots.get(rng.nextInt(validSlots.size()));
-                double anchor = fFrom + pickedSlot * step;
-                anchors[c] = anchor;
-
-                // Record this copy's keyframes in placedTicks so subsequent
-                // copies' collision checks see them.
-                double delta = anchor - blockMin;
-                for (KeyFrame kf : originalBlock)
-                {
-                    placedTicks.add(round(kf.getTick() + delta));
-                }
+                anchors[c] = fFrom + pickedSlot * step;
             }
             plannedAnchors.put(owner, anchors);
         }
