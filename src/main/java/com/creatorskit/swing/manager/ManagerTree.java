@@ -879,6 +879,11 @@ public class ManagerTree extends JTree
         popup.add(title);
         popup.addSeparator();
 
+        JMenuItem rename = new JMenuItem("Rename...");
+        rename.setToolTipText("Edit this Character's display name.");
+        rename.addActionListener(e -> promptRenameCharacter(character));
+        popup.add(rename);
+
         JMenuItem recolour = new JMenuItem("Recolour...");
         recolour.addActionListener(e ->
                 plugin.getCreatorsPanel().showColorPickerAt(this, x, y, character));
@@ -901,6 +906,48 @@ public class ManagerTree extends JTree
         popup.add(cameraLock);
 
         popup.show(this, x, y);
+    }
+
+    /**
+     * Pops a small input dialog prefilled with the Character's current name,
+     * then routes the entered value through the same path the sidebar name
+     * textfield uses ({@code onNameTextFieldChanged}) so the tree node label,
+     * AttributePanel header, and sidebar input all refresh consistently. Null
+     * dialog return = user cancelled; empty/whitespace input is rejected so a
+     * fat-fingered Enter doesn't wipe the name.
+     */
+    private void promptRenameCharacter(Character character)
+    {
+        if (character == null) return;
+        String current = character.getName();
+        String entered = (String) JOptionPane.showInputDialog(
+                this,
+                "New name for this Character:",
+                "Rename",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                null,
+                current);
+
+        if (entered == null) return; // cancelled
+        String trimmed = entered.trim();
+        if (trimmed.isEmpty()) return;
+        if (trimmed.equals(current)) return; // no-op
+
+        javax.swing.JTextField nameField = character.getNameField();
+        if (nameField == null)
+        {
+            // No sidebar textfield (e.g. Character displayed only in manager
+            // tree): set the model directly and nudge dependent UI manually.
+            character.setName(trimmed);
+            treeModel.nodeChanged(character.getLinkedManagerNode());
+            toolBox.getTimeSheetPanel().getAttributePanel().updateObjectLabel(character);
+            return;
+        }
+        // Going through the textfield path lets CreatorsPanel run its existing
+        // cleanString / setName / tree-node / AttributePanel refresh chain.
+        nameField.setText(trimmed);
+        plugin.getCreatorsPanel().onNameTextFieldChanged(character);
     }
 
     /**
