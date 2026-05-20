@@ -951,6 +951,53 @@ public class ManagerTree extends JTree
     }
 
     /**
+     * Menu-driven entry point (Tools > Random > Random Select) into the same
+     * flow as the folder right-click. Uses the first currently-selected folder
+     * as the pool. If no folder is selected, shows a one-line warning and
+     * returns -- the user just needs to click a folder in the tree first.
+     */
+    public void selectRandomFromActiveFolder()
+    {
+        if (selectedFolders == null || selectedFolders.length == 0)
+        {
+            JOptionPane.showMessageDialog(this,
+                    "Click a folder in the Manager Tree first.",
+                    "Random Select",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        Folder folder = selectedFolders[0];
+        DefaultMutableTreeNode folderNode = folder.getLinkedManagerNode();
+        if (folderNode == null)
+        {
+            return;
+        }
+
+        java.util.List<Character> directChildren = new ArrayList<>();
+        Enumeration<TreeNode> children = folderNode.children();
+        while (children.hasMoreElements())
+        {
+            DefaultMutableTreeNode child = (DefaultMutableTreeNode) children.nextElement();
+            if (child.getUserObject() instanceof Character)
+            {
+                directChildren.add((Character) child.getUserObject());
+            }
+        }
+
+        if (directChildren.isEmpty())
+        {
+            JOptionPane.showMessageDialog(this,
+                    "Folder '" + folder.getName() + "' has no direct Characters.",
+                    "Random Select",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        promptAndRandomSelect(directChildren);
+    }
+
+    /**
      * Pops up a small input dialog asking how many Characters to pick, then
      * replaces the SelectionManager with that many random entries from
      * {@code pool}. Clamps the requested count to the pool size and rejects

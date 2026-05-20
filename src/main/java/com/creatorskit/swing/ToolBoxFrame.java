@@ -339,6 +339,36 @@ public class ToolBoxFrame extends JFrame
         skipLeft.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, InputEvent.CTRL_DOWN_MASK));
         timeSheet.add(skipLeft);
 
+        // Tools menu -- batch operations on the current multi-selection. Grouped by
+        // submenu (Random for now) so this can grow without crowding the top bar.
+        // Lambdas defer access to timeSheetPanel / managerPanel until click time
+        // because setupMenuBar runs before those fields are initialised.
+        JMenu tools = new JMenu("Tools");
+        jMenuBar.add(tools);
+
+        JMenu random = new JMenu("Random");
+        tools.add(random);
+
+        JMenuItem randomSelect = new JMenuItem("Random Select...");
+        randomSelect.setToolTipText("<html>Replace selection with N randomly-picked direct children of<br>"
+                + "the currently-selected folder. Click a folder in the Manager Tree first.</html>");
+        randomSelect.addActionListener(e -> managerPanel.getManagerTree().selectRandomFromActiveFolder());
+        random.add(randomSelect);
+
+        JMenuItem jitter = new JMenuItem("Jitter keyframe ticks...");
+        jitter.setToolTipText("<html>For every selected Character, shift each keyframe of the chosen<br>"
+                + "type by a uniform random delta in [-max, +max]. Useful for de-syncing<br>"
+                + "identical setups -- e.g. rain raindrops sharing the same spawn tick.</html>");
+        jitter.addActionListener(e -> timeSheetPanel.showJitterDialog());
+        random.add(jitter);
+
+        JMenuItem scatter = new JMenuItem("Scatter keyframe ticks...");
+        scatter.setToolTipText("<html>For every selected Character, SET each keyframe of the chosen<br>"
+                + "type to a uniform random tick in [from, to]. Useful for distributing<br>"
+                + "events across a time window without anchoring to existing ticks.</html>");
+        scatter.addActionListener(e -> timeSheetPanel.showScatterDialog());
+        random.add(scatter);
+
         JMenu resources = new JMenu("Resources");
         jMenuBar.add(resources);
 

@@ -2236,4 +2236,154 @@ public class TimeSheetPanel extends JPanel
         int scale = (int) Math.pow(10, 1);
         return (double) Math.round(value * scale) / scale;
     }
+
+    /**
+     * Tools > Random > Jitter. Pops a dialog asking for a keyframe type + a
+     * max ± delta, then for every currently-selected Character iterates every
+     * keyframe of that type and shifts its tick by a uniform random value in
+     * [-maxDelta, +maxDelta]. Each shift is wrapped in REMOVE+ADD KeyFrameActions
+     * so the whole batch is one undo step. Use case: emulating rain -- a folder
+     * full of raindrop Characters all sharing the same spawn tick will fall as
+     * a flat sheet; jittering their spawn ticks by ±5 makes them feel like rain.
+     */
+    public void showJitterDialog()
+    {
+        java.util.Collection<Character> targets = resolveSelectionTargets();
+        if (targets.isEmpty())
+        {
+            JOptionPane.showMessageDialog(this, "No Characters selected. Select Characters first.", "Jitter", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        JComboBox<KeyFrameType> typeCombo = new JComboBox<>(KeyFrameType.values());
+        typeCombo.setSelectedItem(KeyFrameType.SPAWN);
+        JSpinner deltaSpinner = new JSpinner(new SpinnerNumberModel(5.0, 0.1, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.5));
+
+        JPanel panel = new JPanel(new GridLayout(0, 2, 6, 6));
+        panel.add(new JLabel("Keyframe type:"));
+        panel.add(typeCombo);
+        panel.add(new JLabel("Max delta (± ticks):"));
+        panel.add(deltaSpinner);
+
+        int result = JOptionPane.showConfirmDialog(this, panel, "Jitter keyframe ticks (" + targets.size() + " Characters)", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result != JOptionPane.OK_OPTION) return;
+
+        final KeyFrameType type = (KeyFrameType) typeCombo.getSelectedItem();
+        final double maxDelta = ((Number) deltaSpinner.getValue()).doubleValue();
+        if (maxDelta <= 0) return;
+
+        final java.util.Random rng = new java.util.Random();
+        applyTickTransform(targets, type, kf ->
+        {
+            double delta = (rng.nextDouble() * 2.0 - 1.0) * maxDelta;
+            double newTick = kf.getTick() + delta;
+            if (newTick < 0) newTick = 0;
+            if (newTick > ABSOLUTE_MAX_SEQUENCE_LENGTH) newTick = ABSOLUTE_MAX_SEQUENCE_LENGTH;
+            return round(newTick);
+        });
+    }
+
+    /**
+     * Tools > Random > Scatter. Same dialog shape as Jitter but SETs each
+     * matching keyframe's tick to a uniform random value in [from, to] instead
+     * of nudging it by a delta. Use case: scattering an event (e.g. hitsplats,
+     * crowd reactions) across a time window without any anchor to a pre-existing
+     * tick -- "spread these N events somewhere between tick 10 and tick 40".
+     */
+    public void showScatterDialog()
+    {
+        java.util.Collection<Character> targets = resolveSelectionTargets();
+        if (targets.isEmpty())
+        {
+            JOptionPane.showMessageDialog(this, "No Characters selected. Select Characters first.", "Scatter", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        JComboBox<KeyFrameType> typeCombo = new JComboBox<>(KeyFrameType.values());
+        typeCombo.setSelectedItem(KeyFrameType.SPAWN);
+        JSpinner fromSpinner = new JSpinner(new SpinnerNumberModel(0.0, 0.0, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.5));
+        JSpinner toSpinner = new JSpinner(new SpinnerNumberModel(20.0, 0.0, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.5));
+
+        JPanel panel = new JPanel(new GridLayout(0, 2, 6, 6));
+        panel.add(new JLabel("Keyframe type:"));
+        panel.add(typeCombo);
+        panel.add(new JLabel("From tick:"));
+        panel.add(fromSpinner);
+        panel.add(new JLabel("To tick:"));
+        panel.add(toSpinner);
+
+        int result = JOptionPane.showConfirmDialog(this, panel, "Scatter keyframe ticks (" + targets.size() + " Characters)", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result != JOptionPane.OK_OPTION) return;
+
+        final KeyFrameType type = (KeyFrameType) typeCombo.getSelectedItem();
+        double from = ((Number) fromSpinner.getValue()).doubleValue();
+        double to = ((Number) toSpinner.getValue()).doubleValue();
+        if (to < from) { double tmp = from; from = to; to = tmp; }
+        final double fFrom = from;
+        final double fRange = to - from;
+
+        final java.util.Random rng = new java.util.Random();
+        applyTickTransform(targets, type, kf ->
+        {
+            double newTick = fRange <= 0 ? fFrom : (fFrom + rng.nextDouble() * fRange);
+            return round(newTick);
+        });
+    }
+
+    /**
+     * Iterates every selected Character's keyframes of {@code type} and replaces
+     * each one (in-place via remove + add) with a clone whose tick is computed
+     * by {@code newTickFn}. The whole batch is grouped into one undo step, and
+     * the renderer + UI refresh happens exactly once at the end -- per-character
+     * addKeyFrame would call updateProgram N times and rebuild the AttributePanel
+     * for each, which thrashes badly at the rain-scale Character counts this
+     * tool is built for.
+     */
+    private void applyTickTransform(java.util.Collection<Character> targets, KeyFrameType type, java.util.function.Function<KeyFrame, Double> newTickFn)
+    {
+        KeyFrameAction[] kfa = new KeyFrameAction[0];
+        int changed = 0;
+
+        for (Character owner : targets)
+        {
+            KeyFrame[] kfs = owner.getKeyFrames(type);
+            if (kfs == null || kfs.length == 0) continue;
+
+            // Snapshot the array since remove/add will mutate it underneath us.
+            KeyFrame[] snapshot = kfs.clone();
+            for (KeyFrame kf : snapshot)
+            {
+                if (kf == null) continue;
+                double newTick = newTickFn.apply(kf);
+                if (newTick == kf.getTick()) continue;
+
+                KeyFrame replacement = KeyFrame.createCopy(kf, newTick);
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(kf, owner, KeyFrameCharacterActionType.REMOVE));
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replacement, owner, KeyFrameCharacterActionType.ADD));
+
+                owner.removeKeyFrame(kf);
+                owner.addKeyFrame(replacement, currentTime);
+                changed++;
+            }
+        }
+
+        if (changed == 0)
+        {
+            return;
+        }
+        addKeyFrameActions(kfa);
+
+        // Single refresh sweep at the end. updatePrograms walks every Character
+        // and re-runs the renderer pipeline so the timeline + 3D state catch up
+        // to the new keyframe ticks without N individual updateProgram calls.
+        if (client != null && client.getGameState() == GameState.LOGGED_IN)
+        {
+            toolBox.getProgrammer().updatePrograms(currentTime);
+        }
+        attributePanel.setKeyFramedIcon(true);
+        if (selectedCharacter != null)
+        {
+            attributePanel.resetAttributes(selectedCharacter, currentTime);
+        }
+    }
 }
