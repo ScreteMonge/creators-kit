@@ -2238,13 +2238,18 @@ public class TimeSheetPanel extends JPanel
     }
 
     /**
-     * Tools > Random > Jitter. Pops a dialog asking for a keyframe type + a
-     * max ± delta, then for every currently-selected Character iterates every
-     * keyframe of that type and shifts its tick by a uniform random value in
-     * [-maxDelta, +maxDelta]. Each shift is wrapped in REMOVE+ADD KeyFrameActions
+     * Tools > Random > Jitter. Pops a dialog asking for a keyframe type, a max
+     * ± delta, and a step size; then for every currently-selected Character
+     * iterates every keyframe of that type and shifts its tick by a random
+     * multiple of step in [-max, +max]. Step size matters because OSRS ticks
+     * are naturally integer-valued -- a sub-step like 0.3 produces ticks that
+     * don't line up with the game's clock and feel "off". Default step is 1.0;
+     * drop to 0.5 / 0.25 for finer effects, or push higher (e.g. 5) for big
+     * staggered groupings. Each shift is wrapped in REMOVE+ADD KeyFrameActions
      * so the whole batch is one undo step. Use case: emulating rain -- a folder
      * full of raindrop Characters all sharing the same spawn tick will fall as
-     * a flat sheet; jittering their spawn ticks by ±5 makes them feel like rain.
+     * a flat sheet; jittering their spawn ticks by ±5 in steps of 1 gives a
+     * natural rainfall.
      */
     public void showJitterDialog()
     {
@@ -2258,25 +2263,35 @@ public class TimeSheetPanel extends JPanel
         JComboBox<KeyFrameType> typeCombo = new JComboBox<>(KeyFrameType.values());
         typeCombo.setSelectedItem(KeyFrameType.SPAWN);
         JSpinner deltaSpinner = new JSpinner(new SpinnerNumberModel(5.0, 0.1, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.5));
+        JSpinner stepSpinner = new JSpinner(new SpinnerNumberModel(1.0, 0.1, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.1));
 
         JPanel panel = new JPanel(new GridLayout(0, 2, 6, 6));
         panel.add(new JLabel("Keyframe type:"));
         panel.add(typeCombo);
         panel.add(new JLabel("Max delta (± ticks):"));
         panel.add(deltaSpinner);
+        panel.add(new JLabel("Step size (ticks):"));
+        panel.add(stepSpinner);
 
         int result = JOptionPane.showConfirmDialog(this, panel, "Jitter keyframe ticks (" + targets.size() + " Characters)", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (result != JOptionPane.OK_OPTION) return;
 
         final KeyFrameType type = (KeyFrameType) typeCombo.getSelectedItem();
         final double maxDelta = ((Number) deltaSpinner.getValue()).doubleValue();
-        if (maxDelta <= 0) return;
+        final double step = ((Number) stepSpinner.getValue()).doubleValue();
+        if (maxDelta <= 0 || step <= 0) return;
 
+        // Number of step-sized buckets that fit either side of zero. Pick a
+        // random integer in [-buckets, +buckets] then multiply by step -- this
+        // guarantees the delta is an exact multiple of the chosen step. Without
+        // this the user would get ticks like 12.3 even after asking for step=1.
+        final int buckets = (int) Math.floor(maxDelta / step);
+        if (buckets <= 0) return;
         final java.util.Random rng = new java.util.Random();
         applyTickTransform(targets, type, kf ->
         {
-            double delta = (rng.nextDouble() * 2.0 - 1.0) * maxDelta;
-            double newTick = kf.getTick() + delta;
+            int n = rng.nextInt(2 * buckets + 1) - buckets; // uniform in [-buckets, +buckets]
+            double newTick = kf.getTick() + n * step;
             if (newTick < 0) newTick = 0;
             if (newTick > ABSOLUTE_MAX_SEQUENCE_LENGTH) newTick = ABSOLUTE_MAX_SEQUENCE_LENGTH;
             return round(newTick);
@@ -2284,11 +2299,12 @@ public class TimeSheetPanel extends JPanel
     }
 
     /**
-     * Tools > Random > Scatter. Same dialog shape as Jitter but SETs each
-     * matching keyframe's tick to a uniform random value in [from, to] instead
-     * of nudging it by a delta. Use case: scattering an event (e.g. hitsplats,
-     * crowd reactions) across a time window without any anchor to a pre-existing
-     * tick -- "spread these N events somewhere between tick 10 and tick 40".
+     * Tools > Random > Scatter. Same dialog shape as Jitter (now with step) but
+     * SETs each matching keyframe's tick to a step-aligned random value in
+     * [from, to] instead of nudging it by a delta. Anchoring picks to the step
+     * grid keeps the tick values clean -- e.g. step=1 in [0, 20] gives integer
+     * ticks 0..20 only, not 12.7. Use case: scattering an event (hitsplats,
+     * crowd reactions) across a time window with predictable granularity.
      */
     public void showScatterDialog()
     {
@@ -2303,6 +2319,7 @@ public class TimeSheetPanel extends JPanel
         typeCombo.setSelectedItem(KeyFrameType.SPAWN);
         JSpinner fromSpinner = new JSpinner(new SpinnerNumberModel(0.0, 0.0, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.5));
         JSpinner toSpinner = new JSpinner(new SpinnerNumberModel(20.0, 0.0, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.5));
+        JSpinner stepSpinner = new JSpinner(new SpinnerNumberModel(1.0, 0.1, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.1));
 
         JPanel panel = new JPanel(new GridLayout(0, 2, 6, 6));
         panel.add(new JLabel("Keyframe type:"));
@@ -2311,6 +2328,8 @@ public class TimeSheetPanel extends JPanel
         panel.add(fromSpinner);
         panel.add(new JLabel("To tick:"));
         panel.add(toSpinner);
+        panel.add(new JLabel("Step size (ticks):"));
+        panel.add(stepSpinner);
 
         int result = JOptionPane.showConfirmDialog(this, panel, "Scatter keyframe ticks (" + targets.size() + " Characters)", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (result != JOptionPane.OK_OPTION) return;
@@ -2319,13 +2338,18 @@ public class TimeSheetPanel extends JPanel
         double from = ((Number) fromSpinner.getValue()).doubleValue();
         double to = ((Number) toSpinner.getValue()).doubleValue();
         if (to < from) { double tmp = from; from = to; to = tmp; }
-        final double fFrom = from;
-        final double fRange = to - from;
+        final double step = ((Number) stepSpinner.getValue()).doubleValue();
+        if (step <= 0) return;
 
+        // Number of step-sized slots that fit in [from, to] inclusive. Pick a
+        // random slot index, then tick = from + index * step. If the range is
+        // smaller than a single step, just pin everything to from.
+        final double fFrom = from;
+        final int slots = (int) Math.floor((to - from) / step) + 1;
         final java.util.Random rng = new java.util.Random();
         applyTickTransform(targets, type, kf ->
         {
-            double newTick = fRange <= 0 ? fFrom : (fFrom + rng.nextDouble() * fRange);
+            double newTick = slots <= 1 ? fFrom : (fFrom + rng.nextInt(slots) * step);
             return round(newTick);
         });
     }
