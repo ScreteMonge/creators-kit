@@ -3148,6 +3148,14 @@ public class AttributePanel extends JPanel
         updateButton.setEnabled(!mixedTypes);
         resetButton.setEnabled(!mixedTypes);
         keyFramed.setEnabled(!mixedTypes);
+
+        // Keep the object label in sync with the marquee count -- updateObjectLabel
+        // reads timeSheetPanel.getSelectedKeyFrames() to compose the
+        // "X Keyframes across N Objects" string, so it needs to re-run whenever
+        // selectedKeyFrames changes (which is exactly when this method is called
+        // by TimeSheetPanel.setSelectedKeyFrames).
+        updateObjectLabel(timeSheetPanel.getSelectedCharacter());
+
         revalidate();
         repaint();
     }
@@ -3155,10 +3163,31 @@ public class AttributePanel extends JPanel
     public void updateObjectLabel(Character character)
     {
         int selectionSize = selectionManager == null ? 0 : selectionManager.size();
+        // Surface the marquee count too when multi-select is active. The Tools
+        // > Random ops (Jitter / Scatter) and the Update button all operate on
+        // the marquee, so the user wants to know "how many keyframes is this
+        // operation going to touch" at a glance, in addition to the Character
+        // count. Falls back to the plain "N Objects Selected" when there's no
+        // marquee (e.g. the user just folder-clicked to multi-select but
+        // hasn't marqueed any keyframes yet).
+        int keyFrameCount = 0;
+        if (timeSheetPanel != null)
+        {
+            KeyFrame[] selectedKfs = timeSheetPanel.getSelectedKeyFrames();
+            if (selectedKfs != null) keyFrameCount = selectedKfs.length;
+        }
+
         if (selectionSize > 1)
         {
             objectLabel.setForeground(ColorScheme.BRAND_ORANGE);
-            objectLabel.setText("[" + selectionSize + " Objects Selected]");
+            if (keyFrameCount > 0)
+            {
+                objectLabel.setText("[" + keyFrameCount + " Keyframes across " + selectionSize + " Objects Selected]");
+            }
+            else
+            {
+                objectLabel.setText("[" + selectionSize + " Objects Selected]");
+            }
             return;
         }
 
