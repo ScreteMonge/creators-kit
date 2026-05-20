@@ -135,32 +135,12 @@ public class Character
             // to 128/128 so getModel() short-circuits even if scales are non-default.
             ckObject.setWidthScale(renderFix ? renderFixWidth : 128);
             ckObject.setHeightScale(renderFix ? renderFixHeight : 128);
-            // DIAG: render-fix-after-load bug. Trace exactly which scales land on
-            // ckObject when load turns renderFix on, so we can confirm whether the
-            // root cause is (a) Character.renderFixWidth being 128 default because
-            // save serialized it that way, (b) some race wiping it later, or (c)
-            // ckObject getting the scales but the bracket still not engaging.
-            // Flip DEBUG_RENDER_FIX false to silence after we confirm the cause.
-            if (DEBUG_RENDER_FIX)
-            {
-                System.out.println("[Character.setRenderFix] name=" + name
-                        + " renderFix=" + renderFix
-                        + " char.renderFixWidth=" + renderFixWidth
-                        + " char.renderFixHeight=" + renderFixHeight
-                        + " -> ckObject.widthScale=" + ckObject.getWidthScale()
-                        + " heightScale=" + ckObject.getHeightScale()
-                        + " baseModel=" + (ckObject.getBaseModel() != null ? "present" : "null")
-                        + " animController=" + (ckObject.getAnimationController() != null ? "set" : "null"));
-            }
         }
         if (renderFixCheckBox != null && renderFixCheckBox.isSelected() != renderFix)
         {
             renderFixCheckBox.setSelected(renderFix);
         }
     }
-
-    /** Diagnostic toggle for the render-fix-after-load bug. Flip false to silence. */
-    private static final boolean DEBUG_RENDER_FIX = true;
 
     /**
      * Overrides Lombok's auto-generated setter so changing the horizontal scale also
