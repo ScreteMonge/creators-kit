@@ -2253,49 +2253,96 @@ public class TimeSheetPanel extends JPanel
      */
     public void showJitterDialog()
     {
-        java.util.Collection<Character> targets = resolveSelectionTargets();
-        if (targets.isEmpty())
+        if (selectedKeyFrames == null || selectedKeyFrames.length == 0)
         {
-            JOptionPane.showMessageDialog(this, "No Characters selected. Select Characters first.", "Jitter", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "No keyframes selected. Marquee or click keyframes first.", "Jitter", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        JComboBox<KeyFrameType> typeCombo = new JComboBox<>(KeyFrameType.values());
-        typeCombo.setSelectedItem(KeyFrameType.SPAWN);
+        java.util.Map<Character, java.util.List<KeyFrame>> byOwner = groupSelectedKeyFramesByOwner();
+        if (byOwner.isEmpty())
+        {
+            JOptionPane.showMessageDialog(this, "Couldn't resolve any owners for the selected keyframes.", "Jitter", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
         JSpinner deltaSpinner = new JSpinner(new SpinnerNumberModel(5.0, 0.1, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.5));
         JSpinner stepSpinner = new JSpinner(new SpinnerNumberModel(1.0, 0.1, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.1));
 
         JPanel panel = new JPanel(new GridLayout(0, 2, 6, 6));
-        panel.add(new JLabel("Keyframe type:"));
-        panel.add(typeCombo);
-        panel.add(new JLabel("Max delta (± ticks):"));
+        panel.add(new JLabel("Max delta (+/- ticks):"));
         panel.add(deltaSpinner);
         panel.add(new JLabel("Step size (ticks):"));
         panel.add(stepSpinner);
 
-        int result = JOptionPane.showConfirmDialog(this, panel, "Jitter keyframe ticks (" + targets.size() + " Characters)", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        int result = JOptionPane.showConfirmDialog(this, panel,
+                "Jitter " + selectedKeyFrames.length + " keyframes across " + byOwner.size() + " Characters",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (result != JOptionPane.OK_OPTION) return;
 
-        final KeyFrameType type = (KeyFrameType) typeCombo.getSelectedItem();
         final double maxDelta = ((Number) deltaSpinner.getValue()).doubleValue();
         final double step = ((Number) stepSpinner.getValue()).doubleValue();
         if (maxDelta <= 0 || step <= 0) return;
 
-        // Number of step-sized buckets that fit either side of zero. Pick a
-        // random integer in [-buckets, +buckets] then multiply by step -- this
-        // guarantees the delta is an exact multiple of the chosen step. Without
-        // this the user would get ticks like 12.3 even after asking for step=1.
-        final int buckets = (int) Math.floor(maxDelta / step);
-        if (buckets <= 0) return;
-        final java.util.Random rng = new java.util.Random();
-        applyTickTransform(targets, type, kf ->
+        // Pre-validate every Character. Allowed delta range per Character is
+        // [-min(selectedTick), MAX - max(selectedTick)] intersected with
+        // [-maxDelta, +maxDelta], discretised to step buckets. If any Character
+        // has no valid bucket, refuse the entire op -- partial work would leave
+        // mismatched state with no clean undo.
+        java.util.Map<Character, int[]> bucketRanges = new java.util.LinkedHashMap<>();
+        for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> entry : byOwner.entrySet())
         {
-            int n = rng.nextInt(2 * buckets + 1) - buckets; // uniform in [-buckets, +buckets]
-            double newTick = kf.getTick() + n * step;
-            if (newTick < 0) newTick = 0;
-            if (newTick > ABSOLUTE_MAX_SEQUENCE_LENGTH) newTick = ABSOLUTE_MAX_SEQUENCE_LENGTH;
-            return round(newTick);
-        });
+            Character owner = entry.getKey();
+            double minTick = Double.POSITIVE_INFINITY;
+            double maxTick = Double.NEGATIVE_INFINITY;
+            for (KeyFrame kf : entry.getValue())
+            {
+                if (kf.getTick() < minTick) minTick = kf.getTick();
+                if (kf.getTick() > maxTick) maxTick = kf.getTick();
+            }
+
+            double minAllowed = Math.max(-maxDelta, -minTick);
+            double maxAllowed = Math.min(maxDelta, ABSOLUTE_MAX_SEQUENCE_LENGTH - maxTick);
+            int minBucket = (int) Math.ceil(minAllowed / step);
+            int maxBucket = (int) Math.floor(maxAllowed / step);
+
+            if (minBucket > maxBucket)
+            {
+                JOptionPane.showMessageDialog(this,
+                        "Cannot jitter: Character '" + owner.getName() + "' has no valid step-aligned delta within [" + minAllowed + ", " + maxAllowed + "] for step " + step + ".",
+                        "Jitter blocked", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            bucketRanges.put(owner, new int[]{minBucket, maxBucket});
+        }
+
+        // All Characters validated. Apply: one rng draw per Character,
+        // broadcast the same delta to every selected keyframe of that Character.
+        final java.util.Random rng = new java.util.Random();
+        java.util.IdentityHashMap<KeyFrame, KeyFrame> replacements = new java.util.IdentityHashMap<>();
+        KeyFrameAction[] kfa = new KeyFrameAction[0];
+
+        for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> entry : byOwner.entrySet())
+        {
+            Character owner = entry.getKey();
+            int[] range = bucketRanges.get(owner);
+            int n = rng.nextInt(range[1] - range[0] + 1) + range[0];
+            double delta = n * step;
+            if (delta == 0.0) continue;
+
+            for (KeyFrame kf : entry.getValue())
+            {
+                double newTick = round(kf.getTick() + delta);
+                KeyFrame replacement = KeyFrame.createCopy(kf, newTick);
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(kf, owner, KeyFrameCharacterActionType.REMOVE));
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replacement, owner, KeyFrameCharacterActionType.ADD));
+                owner.removeKeyFrame(kf);
+                owner.addKeyFrame(replacement, currentTime);
+                replacements.put(kf, replacement);
+            }
+        }
+
+        finalizeTickTransform(kfa, replacements);
     }
 
     /**
@@ -2308,22 +2355,24 @@ public class TimeSheetPanel extends JPanel
      */
     public void showScatterDialog()
     {
-        java.util.Collection<Character> targets = resolveSelectionTargets();
-        if (targets.isEmpty())
+        if (selectedKeyFrames == null || selectedKeyFrames.length == 0)
         {
-            JOptionPane.showMessageDialog(this, "No Characters selected. Select Characters first.", "Scatter", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "No keyframes selected. Marquee or click keyframes first.", "Scatter", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        JComboBox<KeyFrameType> typeCombo = new JComboBox<>(KeyFrameType.values());
-        typeCombo.setSelectedItem(KeyFrameType.SPAWN);
+        java.util.Map<Character, java.util.List<KeyFrame>> byOwner = groupSelectedKeyFramesByOwner();
+        if (byOwner.isEmpty())
+        {
+            JOptionPane.showMessageDialog(this, "Couldn't resolve any owners for the selected keyframes.", "Scatter", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
         JSpinner fromSpinner = new JSpinner(new SpinnerNumberModel(0.0, 0.0, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.5));
         JSpinner toSpinner = new JSpinner(new SpinnerNumberModel(20.0, 0.0, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.5));
         JSpinner stepSpinner = new JSpinner(new SpinnerNumberModel(1.0, 0.1, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.1));
 
         JPanel panel = new JPanel(new GridLayout(0, 2, 6, 6));
-        panel.add(new JLabel("Keyframe type:"));
-        panel.add(typeCombo);
         panel.add(new JLabel("From tick:"));
         panel.add(fromSpinner);
         panel.add(new JLabel("To tick:"));
@@ -2331,71 +2380,130 @@ public class TimeSheetPanel extends JPanel
         panel.add(new JLabel("Step size (ticks):"));
         panel.add(stepSpinner);
 
-        int result = JOptionPane.showConfirmDialog(this, panel, "Scatter keyframe ticks (" + targets.size() + " Characters)", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        int result = JOptionPane.showConfirmDialog(this, panel,
+                "Scatter " + selectedKeyFrames.length + " keyframes across " + byOwner.size() + " Characters",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (result != JOptionPane.OK_OPTION) return;
 
-        final KeyFrameType type = (KeyFrameType) typeCombo.getSelectedItem();
         double from = ((Number) fromSpinner.getValue()).doubleValue();
         double to = ((Number) toSpinner.getValue()).doubleValue();
         if (to < from) { double tmp = from; from = to; to = tmp; }
         final double step = ((Number) stepSpinner.getValue()).doubleValue();
         if (step <= 0) return;
-
-        // Number of step-sized slots that fit in [from, to] inclusive. Pick a
-        // random slot index, then tick = from + index * step. If the range is
-        // smaller than a single step, just pin everything to from.
         final double fFrom = from;
-        final int slots = (int) Math.floor((to - from) / step) + 1;
-        final java.util.Random rng = new java.util.Random();
-        applyTickTransform(targets, type, kf ->
+        final double fTo = to;
+
+        // Pre-validate every Character. Each block must fit in [from, to] AND
+        // have at least one step-aligned anchor. Refuse the whole op on the
+        // first failure so the user can widen the range or shrink selection.
+        java.util.Map<Character, double[]> placements = new java.util.LinkedHashMap<>(); // owner -> {blockMinTick, slotCount}
+        for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> entry : byOwner.entrySet())
         {
-            double newTick = slots <= 1 ? fFrom : (fFrom + rng.nextInt(slots) * step);
-            return round(newTick);
-        });
-    }
-
-    /**
-     * Iterates every selected Character's keyframes of {@code type} and replaces
-     * each one (in-place via remove + add) with a clone whose tick is computed
-     * by {@code newTickFn}. The whole batch is grouped into one undo step, and
-     * the renderer + UI refresh happens exactly once at the end -- per-character
-     * addKeyFrame would call updateProgram N times and rebuild the AttributePanel
-     * for each, which thrashes badly at the rain-scale Character counts this
-     * tool is built for.
-     */
-    private void applyTickTransform(java.util.Collection<Character> targets, KeyFrameType type, java.util.function.Function<KeyFrame, Double> newTickFn)
-    {
-        KeyFrameAction[] kfa = new KeyFrameAction[0];
-        int changed = 0;
-
-        for (Character owner : targets)
-        {
-            KeyFrame[] kfs = owner.getKeyFrames(type);
-            if (kfs == null || kfs.length == 0) continue;
-
-            // Snapshot the array since remove/add will mutate it underneath us.
-            KeyFrame[] snapshot = kfs.clone();
-            for (KeyFrame kf : snapshot)
+            Character owner = entry.getKey();
+            double minTick = Double.POSITIVE_INFINITY;
+            double maxTick = Double.NEGATIVE_INFINITY;
+            for (KeyFrame kf : entry.getValue())
             {
-                if (kf == null) continue;
-                double newTick = newTickFn.apply(kf);
-                if (newTick == kf.getTick()) continue;
+                if (kf.getTick() < minTick) minTick = kf.getTick();
+                if (kf.getTick() > maxTick) maxTick = kf.getTick();
+            }
+            double duration = maxTick - minTick;
 
+            if (duration > (fTo - fFrom))
+            {
+                JOptionPane.showMessageDialog(this,
+                        "Cannot scatter: Character '" + owner.getName() + "' block spans " + duration + " ticks which is larger than the range " + (fTo - fFrom) + ".",
+                        "Scatter blocked", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            double anchorRange = fTo - fFrom - duration;
+            int slots = (int) Math.floor(anchorRange / step) + 1;
+            if (slots <= 0)
+            {
+                JOptionPane.showMessageDialog(this,
+                        "Cannot scatter: step size " + step + " too large for Character '" + owner.getName() + "' in range [" + fFrom + ", " + fTo + "].",
+                        "Scatter blocked", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            placements.put(owner, new double[]{minTick, slots});
+        }
+
+        // All validated. Per Character pick a random slot, compute the delta
+        // that translates the block to that anchor, broadcast to every selected
+        // keyframe of the owner.
+        final java.util.Random rng = new java.util.Random();
+        java.util.IdentityHashMap<KeyFrame, KeyFrame> replacements = new java.util.IdentityHashMap<>();
+        KeyFrameAction[] kfa = new KeyFrameAction[0];
+
+        for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> entry : byOwner.entrySet())
+        {
+            Character owner = entry.getKey();
+            double[] p = placements.get(owner);
+            double blockMin = p[0];
+            int slots = (int) p[1];
+            double newAnchor = fFrom + rng.nextInt(slots) * step;
+            double delta = newAnchor - blockMin;
+            if (delta == 0.0) continue;
+
+            for (KeyFrame kf : entry.getValue())
+            {
+                double newTick = round(kf.getTick() + delta);
                 KeyFrame replacement = KeyFrame.createCopy(kf, newTick);
                 kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(kf, owner, KeyFrameCharacterActionType.REMOVE));
                 kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replacement, owner, KeyFrameCharacterActionType.ADD));
-
                 owner.removeKeyFrame(kf);
                 owner.addKeyFrame(replacement, currentTime);
-                changed++;
+                replacements.put(kf, replacement);
             }
         }
 
-        if (changed == 0)
+        finalizeTickTransform(kfa, replacements);
+    }
+
+    /**
+     * Groups the marquee selection by owning Character. Skips keyframes whose
+     * owner can't be resolved (shouldn't normally happen since the marquee is
+     * built from visible Characters' keyframes, but defensive against stale
+     * refs from operations that already retargeted).
+     */
+    private java.util.Map<Character, java.util.List<KeyFrame>> groupSelectedKeyFramesByOwner()
+    {
+        java.util.Map<Character, java.util.List<KeyFrame>> grouped = new java.util.LinkedHashMap<>();
+        for (KeyFrame kf : selectedKeyFrames)
         {
-            return;
+            if (kf == null) continue;
+            Character owner = findKeyFrameOwner(kf);
+            if (owner == null) continue;
+            grouped.computeIfAbsent(owner, k -> new ArrayList<>()).add(kf);
         }
+        return grouped;
+    }
+
+    /**
+     * Common tail for Jitter / Scatter: registers the undo group, refreshes the
+     * renderer + AttributePanel exactly once, and re-points selectedKeyFrames at
+     * the replacement instances so the marquee still highlights what the user
+     * was just operating on (otherwise the old refs are gone from every
+     * Character's frame arrays after the remove/add round-trip, and a follow-up
+     * jitter / Update would operate on dead refs).
+     */
+    private void finalizeTickTransform(KeyFrameAction[] kfa, java.util.IdentityHashMap<KeyFrame, KeyFrame> replacements)
+    {
+        if (kfa.length == 0) return;
         addKeyFrameActions(kfa);
+
+        if (!replacements.isEmpty() && selectedKeyFrames.length > 0)
+        {
+            KeyFrame[] updated = selectedKeyFrames.clone();
+            boolean changed = false;
+            for (int i = 0; i < updated.length; i++)
+            {
+                KeyFrame r = replacements.get(updated[i]);
+                if (r != null) { updated[i] = r; changed = true; }
+            }
+            if (changed) setSelectedKeyFrames(updated);
+        }
 
         // Single refresh sweep at the end. updatePrograms walks every Character
         // and re-runs the renderer pipeline so the timeline + 3D state catch up
