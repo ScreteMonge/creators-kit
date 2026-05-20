@@ -111,9 +111,26 @@ public class ProjectileCKObject extends CKObject
         // Defensively restore baseModel to its rest pose now, before returning,
         // so anything reading baseModel between this getModel and the next
         // (e.g. a Ctrl-hover preview or an inspect) sees the unrotated mesh.
-        System.arraycopy(basePitchSnapshot[0], 0, vy, 0, vy.length);
-        System.arraycopy(basePitchSnapshot[1], 0, vz, 0, vz.length);
-        base.calculateBoundsCylinder();
+        //
+        // BUT skip the restore when the animation pipeline returned baseModel
+        // unchanged (animated == base). That happens whenever no skeletal
+        // transformation applies -- RuneLite's AnimationController.animate
+        // short-circuits to `return model` when both this and the pose
+        // controller have a null animation, which is the actual state for a
+        // freshly-loaded spotanim before its first tick OR for any animation
+        // frame whose rigging is identity. Restoring vy/vz in that case would
+        // wipe the pitch we just baked into baseModel BEFORE the engine reads
+        // the returned model -- and since `animated` is literally `base`, the
+        // user sees the projectile rendered at rest pose despite face-trajectory
+        // being on. Skipping the end-of-frame restore in this branch keeps the
+        // pitched vertices visible; the next frame's start-of-frame
+        // snapshot-restore-then-apply still resets cleanly, so no drift.
+        if (animated != base)
+        {
+            System.arraycopy(basePitchSnapshot[0], 0, vy, 0, vy.length);
+            System.arraycopy(basePitchSnapshot[1], 0, vz, 0, vz.length);
+            base.calculateBoundsCylinder();
+        }
 
         return animated;
     }
