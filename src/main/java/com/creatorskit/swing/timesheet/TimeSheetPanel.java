@@ -2446,22 +2446,16 @@ public class TimeSheetPanel extends JPanel
             placements.put(owner, new double[]{minTick, slots});
         }
 
-        // All validated. Per Character: remove the original block once, then add
-        // `copies` independent random-anchored copies of it. For copies=1 this
-        // is the original "move the block to a random place" behavior with one
-        // extra remove+add cycle (negligible). For copies>>1 (rain) each
-        // raindrop Character ends up with N independent spawn/anim bursts.
-        //
-        // Anchor collisions between two copies on the same Character are
-        // possible (independent rng draws from the same slot pool) and treated
-        // as the user's problem -- Character.addKeyFrame replaces a same-tick
-        // keyframe with the newer one, so a collision effectively reduces the
-        // copy count for that Character by one. Acceptable for rain (a missed
-        // drop here and there is invisible); if exact non-collision matters
-        // the user wants Replicate, not Scatter.
+        // Phase 1: PLAN every Character's anchors using greedy collision-aware
+        // selection. We don't mutate any Character yet -- if any Character runs
+        // out of valid anchors mid-plan we refuse the whole op with a clean
+        // message instead of committing partial scatter that the user would
+        // have to undo manually. Collision = any two copies of the same
+        // Character would place a keyframe on the same tick. Cross-Character
+        // collisions are ignored (different objects, different timelines, no
+        // visual conflict).
         final java.util.Random rng = new java.util.Random();
-        java.util.List<KeyFrame> newSelected = new ArrayList<>();
-        KeyFrameAction[] kfa = new KeyFrameAction[0];
+        java.util.Map<Character, double[]> plannedAnchors = new java.util.LinkedHashMap<>();
 
         for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> entry : byOwner.entrySet())
         {
@@ -2469,21 +2463,77 @@ public class TimeSheetPanel extends JPanel
             java.util.List<KeyFrame> originalBlock = entry.getValue();
             double[] p = placements.get(owner);
             double blockMin = p[0];
-            int slots = (int) p[1];
+            int totalSlots = (int) p[1];
 
-            // Remove the original block first. Saves us tracking which of the
-            // N new copies "is" the original; cleaner undo grouping.
+            java.util.Set<Double> placedTicks = new java.util.HashSet<>();
+            double[] anchors = new double[copies];
+
+            for (int c = 0; c < copies; c++)
+            {
+                // Enumerate every slot index, keep only those whose placement
+                // wouldn't collide with any already-placed tick for this owner.
+                // Already-picked slots are filtered naturally because their
+                // keyframes are already in placedTicks. O(slots * blockSize)
+                // per copy; for rain-scale (N=10, slots=200, block=2) this is
+                // ~4000 ops per Character which is well under perceptible.
+                java.util.List<Integer> validSlots = new ArrayList<>();
+                for (int s = 0; s < totalSlots; s++)
+                {
+                    double anchor = fFrom + s * step;
+                    double delta = anchor - blockMin;
+                    boolean ok = true;
+                    for (KeyFrame kf : originalBlock)
+                    {
+                        double newTick = round(kf.getTick() + delta);
+                        if (placedTicks.contains(newTick)) { ok = false; break; }
+                    }
+                    if (ok) validSlots.add(s);
+                }
+
+                if (validSlots.isEmpty())
+                {
+                    JOptionPane.showMessageDialog(this,
+                            "Cannot scatter " + copies + " collision-free copies for Character '" + owner.getName() + "': only " + c + " fit without overlap. Widen the [from, to] range, reduce copies, or shrink the selection block.",
+                            "Scatter blocked", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+
+                int pickedSlot = validSlots.get(rng.nextInt(validSlots.size()));
+                double anchor = fFrom + pickedSlot * step;
+                anchors[c] = anchor;
+
+                // Record this copy's keyframes in placedTicks so subsequent
+                // copies' collision checks see them.
+                double delta = anchor - blockMin;
+                for (KeyFrame kf : originalBlock)
+                {
+                    placedTicks.add(round(kf.getTick() + delta));
+                }
+            }
+            plannedAnchors.put(owner, anchors);
+        }
+
+        // Phase 2: COMMIT. Every Character planned successfully -- mutate now.
+        // Remove originals once, then add the N planned copies per owner.
+        KeyFrameAction[] kfa = new KeyFrameAction[0];
+        java.util.List<KeyFrame> newSelected = new ArrayList<>();
+
+        for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> entry : byOwner.entrySet())
+        {
+            Character owner = entry.getKey();
+            java.util.List<KeyFrame> originalBlock = entry.getValue();
+            double blockMin = placements.get(owner)[0];
+            double[] anchors = plannedAnchors.get(owner);
+
             for (KeyFrame kf : originalBlock)
             {
                 kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(kf, owner, KeyFrameCharacterActionType.REMOVE));
                 owner.removeKeyFrame(kf);
             }
 
-            // Generate `copies` independent placements.
-            for (int c = 0; c < copies; c++)
+            for (double anchor : anchors)
             {
-                double newAnchor = fFrom + rng.nextInt(slots) * step;
-                double delta = newAnchor - blockMin;
+                double delta = anchor - blockMin;
                 for (KeyFrame kf : originalBlock)
                 {
                     double newTick = round(kf.getTick() + delta);
