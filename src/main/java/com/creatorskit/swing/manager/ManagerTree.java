@@ -947,7 +947,69 @@ public class ManagerTree extends JTree
         }
         popup.add(randomSelect);
 
+        popup.addSeparator();
+
+        // Collapse / Expand operate on this folder + every descendant folder.
+        // Collapse closes the clicked folder so its children disappear from view
+        // (useful for huge folders the user just finished editing). Expand opens
+        // the clicked folder and every subfolder beneath it (useful when
+        // exploring a deeply-nested setup). Uses the JTree expand/collapse API
+        // directly so the visual state matches what right-click-then-arrow-keys
+        // would produce.
+        JMenuItem collapse = new JMenuItem("Collapse");
+        collapse.setToolTipText("Close this folder and every nested subfolder.");
+        collapse.addActionListener(e -> setFolderExpanded(folderNode, false));
+        popup.add(collapse);
+
+        JMenuItem expand = new JMenuItem("Expand");
+        expand.setToolTipText("Open this folder and every nested subfolder.");
+        expand.addActionListener(e -> setFolderExpanded(folderNode, true));
+        popup.add(expand);
+
         popup.show(this, x, y);
+    }
+
+    /**
+     * Recursively expand or collapse a folder subtree. JTree.expandPath /
+     * collapsePath only operate on the path itself, so we walk descendant
+     * folder nodes ourselves. For expand we traverse top-down (parent before
+     * children) so each child's path resolves; for collapse we traverse
+     * bottom-up so we don't try to collapse a child whose parent we already
+     * collapsed (no-op but cleaner).
+     */
+    private void setFolderExpanded(DefaultMutableTreeNode node, boolean expand)
+    {
+        if (node == null)
+        {
+            return;
+        }
+        TreePath path = new TreePath(node.getPath());
+        if (expand)
+        {
+            expandPath(path);
+            Enumeration<TreeNode> children = node.children();
+            while (children.hasMoreElements())
+            {
+                DefaultMutableTreeNode child = (DefaultMutableTreeNode) children.nextElement();
+                if (child.getUserObject() instanceof Folder)
+                {
+                    setFolderExpanded(child, true);
+                }
+            }
+        }
+        else
+        {
+            Enumeration<TreeNode> children = node.children();
+            while (children.hasMoreElements())
+            {
+                DefaultMutableTreeNode child = (DefaultMutableTreeNode) children.nextElement();
+                if (child.getUserObject() instanceof Folder)
+                {
+                    setFolderExpanded(child, false);
+                }
+            }
+            collapsePath(path);
+        }
     }
 
     /**

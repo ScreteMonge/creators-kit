@@ -928,9 +928,14 @@ public class TimeSheetPanel extends JPanel
             initializeMovementKeyFrame(selectedCharacter, currentTime, worldView.getPlane(), poh, path, false, stepSpeed, speedAwareTurnRate);
 
             // Auto-advance the seeker to the end of the keyframe we just placed so the
-            // next add-step lands chained immediately after.
+            // next add-step lands chained immediately after. Ceil the duration so the
+            // seeker lands on an integer tick that matches AttributeSheet's
+            // ceil()-rounded movement-bar width -- without this, fractional durations
+            // (e.g. 3 tiles at speed 2 = 1.5 ticks) put the seeker between integer
+            // ticks while the visual bar extends to the next integer, looking like
+            // a 0.5-tick overlap for whatever step the user adds next.
             double tilesMoved = Math.max(0, path.length - 1);
-            double newDuration = tilesMoved / Math.max(0.0001, stepSpeed);
+            double newDuration = Math.ceil(tilesMoved / Math.max(0.0001, stepSpeed));
             setCurrentTime(currentTime + newDuration, false);
         }
         else
@@ -953,8 +958,14 @@ public class TimeSheetPanel extends JPanel
             int[][] newPath = movementManager.addProgramStep(pathfindSeed, worldView, localPoint);
 
             // Schedule the new keyframe right after the previous one finishes.
-            // Walking (speed 1) puts the next keyframe 1 tick per tile after this one;
-            // running (speed 2) puts it 0.5 ticks per tile after.
+            // Ceil the duration to an integer tick: AttributeSheet draws the
+            // movement bar at ceil(steps/speed) wide when nothing follows, so
+            // a fractional duration like 1.5 (3 tiles at speed 2) gets visually
+            // rounded up to a 2-tick bar. Placing the next keyframe at the
+            // exact 1.5 then puts it under that bar -- the user sees a 0.5-tick
+            // overlap and has to drag the new step out by 1 tick. Snapping the
+            // chained tick to the same ceil() the renderer uses keeps them in
+            // sync at integer ticks.
             int prevTiles = previous.getPath().length;
             double prevDuration;
             if (prevTiles <= 1)
@@ -963,15 +974,17 @@ public class TimeSheetPanel extends JPanel
             }
             else
             {
-                prevDuration = (prevTiles - 1) / Math.max(0.0001, previous.getSpeed());
+                prevDuration = Math.ceil((prevTiles - 1) / Math.max(0.0001, previous.getSpeed()));
             }
             double newTick = previous.getTick() + prevDuration;
 
             initializeMovementKeyFrame(selectedCharacter, newTick, worldView.getPlane(), poh, newPath, false, stepSpeed, speedAwareTurnRate);
 
             // Auto-advance the seeker to the end of this just-placed keyframe.
+            // Same ceil reason as above -- keeps the seeker on an integer tick
+            // that lines up with the bar's drawn end.
             double tilesMoved = Math.max(0, newPath.length - 1);
-            double newDuration = tilesMoved / Math.max(0.0001, stepSpeed);
+            double newDuration = Math.ceil(tilesMoved / Math.max(0.0001, stepSpeed));
             setCurrentTime(newTick + newDuration, false);
         }
 
