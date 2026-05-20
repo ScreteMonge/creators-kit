@@ -2319,7 +2319,7 @@ public class TimeSheetPanel extends JPanel
         // All Characters validated. Apply: one rng draw per Character,
         // broadcast the same delta to every selected keyframe of that Character.
         final java.util.Random rng = new java.util.Random();
-        java.util.IdentityHashMap<KeyFrame, KeyFrame> replacements = new java.util.IdentityHashMap<>();
+        java.util.List<KeyFrame> newSelected = new ArrayList<>();
         KeyFrameAction[] kfa = new KeyFrameAction[0];
 
         for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> entry : byOwner.entrySet())
@@ -2328,7 +2328,15 @@ public class TimeSheetPanel extends JPanel
             int[] range = bucketRanges.get(owner);
             int n = rng.nextInt(range[1] - range[0] + 1) + range[0];
             double delta = n * step;
-            if (delta == 0.0) continue;
+
+            // delta=0 means this Character's keyframes don't move at all. Keep
+            // the originals selected so the marquee survives intact, no actions
+            // needed.
+            if (delta == 0.0)
+            {
+                newSelected.addAll(entry.getValue());
+                continue;
+            }
 
             for (KeyFrame kf : entry.getValue())
             {
@@ -2338,11 +2346,11 @@ public class TimeSheetPanel extends JPanel
                 kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replacement, owner, KeyFrameCharacterActionType.ADD));
                 owner.removeKeyFrame(kf);
                 owner.addKeyFrame(replacement, currentTime);
-                replacements.put(kf, replacement);
+                newSelected.add(replacement);
             }
         }
 
-        finalizeTickTransform(kfa, replacements);
+        finalizeTickTransform(kfa, newSelected.toArray(new KeyFrame[0]));
     }
 
     /**
@@ -2371,6 +2379,12 @@ public class TimeSheetPanel extends JPanel
         JSpinner fromSpinner = new JSpinner(new SpinnerNumberModel(0.0, 0.0, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.5));
         JSpinner toSpinner = new JSpinner(new SpinnerNumberModel(20.0, 0.0, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.5));
         JSpinner stepSpinner = new JSpinner(new SpinnerNumberModel(1.0, 0.1, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.1));
+        // Copies per Character: 1 = today's "move the block to a random place"
+        // behavior. >1 = replicate the block N times into the same Character at
+        // N independent random anchors. Built for rain: each raindrop Character
+        // gets N spawn+anim bursts across the storm. Overlaps are allowed and
+        // expected -- drops landing on the same tile in quick succession.
+        JSpinner copiesSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 1000, 1));
 
         JPanel panel = new JPanel(new GridLayout(0, 2, 6, 6));
         panel.add(new JLabel("From tick:"));
@@ -2379,6 +2393,8 @@ public class TimeSheetPanel extends JPanel
         panel.add(toSpinner);
         panel.add(new JLabel("Step size (ticks):"));
         panel.add(stepSpinner);
+        panel.add(new JLabel("Copies per Character:"));
+        panel.add(copiesSpinner);
 
         int result = JOptionPane.showConfirmDialog(this, panel,
                 "Scatter " + selectedKeyFrames.length + " keyframes across " + byOwner.size() + " Characters",
@@ -2389,7 +2405,8 @@ public class TimeSheetPanel extends JPanel
         double to = ((Number) toSpinner.getValue()).doubleValue();
         if (to < from) { double tmp = from; from = to; to = tmp; }
         final double step = ((Number) stepSpinner.getValue()).doubleValue();
-        if (step <= 0) return;
+        final int copies = ((Number) copiesSpinner.getValue()).intValue();
+        if (step <= 0 || copies <= 0) return;
         final double fFrom = from;
         final double fTo = to;
 
@@ -2429,36 +2446,56 @@ public class TimeSheetPanel extends JPanel
             placements.put(owner, new double[]{minTick, slots});
         }
 
-        // All validated. Per Character pick a random slot, compute the delta
-        // that translates the block to that anchor, broadcast to every selected
-        // keyframe of the owner.
+        // All validated. Per Character: remove the original block once, then add
+        // `copies` independent random-anchored copies of it. For copies=1 this
+        // is the original "move the block to a random place" behavior with one
+        // extra remove+add cycle (negligible). For copies>>1 (rain) each
+        // raindrop Character ends up with N independent spawn/anim bursts.
+        //
+        // Anchor collisions between two copies on the same Character are
+        // possible (independent rng draws from the same slot pool) and treated
+        // as the user's problem -- Character.addKeyFrame replaces a same-tick
+        // keyframe with the newer one, so a collision effectively reduces the
+        // copy count for that Character by one. Acceptable for rain (a missed
+        // drop here and there is invisible); if exact non-collision matters
+        // the user wants Replicate, not Scatter.
         final java.util.Random rng = new java.util.Random();
-        java.util.IdentityHashMap<KeyFrame, KeyFrame> replacements = new java.util.IdentityHashMap<>();
+        java.util.List<KeyFrame> newSelected = new ArrayList<>();
         KeyFrameAction[] kfa = new KeyFrameAction[0];
 
         for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> entry : byOwner.entrySet())
         {
             Character owner = entry.getKey();
+            java.util.List<KeyFrame> originalBlock = entry.getValue();
             double[] p = placements.get(owner);
             double blockMin = p[0];
             int slots = (int) p[1];
-            double newAnchor = fFrom + rng.nextInt(slots) * step;
-            double delta = newAnchor - blockMin;
-            if (delta == 0.0) continue;
 
-            for (KeyFrame kf : entry.getValue())
+            // Remove the original block first. Saves us tracking which of the
+            // N new copies "is" the original; cleaner undo grouping.
+            for (KeyFrame kf : originalBlock)
             {
-                double newTick = round(kf.getTick() + delta);
-                KeyFrame replacement = KeyFrame.createCopy(kf, newTick);
                 kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(kf, owner, KeyFrameCharacterActionType.REMOVE));
-                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replacement, owner, KeyFrameCharacterActionType.ADD));
                 owner.removeKeyFrame(kf);
-                owner.addKeyFrame(replacement, currentTime);
-                replacements.put(kf, replacement);
+            }
+
+            // Generate `copies` independent placements.
+            for (int c = 0; c < copies; c++)
+            {
+                double newAnchor = fFrom + rng.nextInt(slots) * step;
+                double delta = newAnchor - blockMin;
+                for (KeyFrame kf : originalBlock)
+                {
+                    double newTick = round(kf.getTick() + delta);
+                    KeyFrame replacement = KeyFrame.createCopy(kf, newTick);
+                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replacement, owner, KeyFrameCharacterActionType.ADD));
+                    owner.addKeyFrame(replacement, currentTime);
+                    newSelected.add(replacement);
+                }
             }
         }
 
-        finalizeTickTransform(kfa, replacements);
+        finalizeTickTransform(kfa, newSelected.toArray(new KeyFrame[0]));
     }
 
     /**
@@ -2481,28 +2518,26 @@ public class TimeSheetPanel extends JPanel
     }
 
     /**
-     * Common tail for Jitter / Scatter: registers the undo group, refreshes the
-     * renderer + AttributePanel exactly once, and re-points selectedKeyFrames at
-     * the replacement instances so the marquee still highlights what the user
-     * was just operating on (otherwise the old refs are gone from every
-     * Character's frame arrays after the remove/add round-trip, and a follow-up
-     * jitter / Update would operate on dead refs).
+     * Common tail for Jitter / Scatter: registers the undo group, points
+     * selectedKeyFrames at the post-op keyframes so the marquee still highlights
+     * what the user was just operating on, and refreshes the renderer +
+     * AttributePanel exactly once.
+     *
+     * <p>{@code newSelected} is the full post-op list of keyframes to highlight
+     * -- Jitter passes 1-to-1 replacements (same size as the old selection),
+     * Scatter with copies>1 passes N times as many (since each original block
+     * becomes N independent copies). Without this re-pointing, the old refs are
+     * gone from every Character's frame arrays after the remove/add round-trip
+     * and a follow-up op would operate on dead refs.
      */
-    private void finalizeTickTransform(KeyFrameAction[] kfa, java.util.IdentityHashMap<KeyFrame, KeyFrame> replacements)
+    private void finalizeTickTransform(KeyFrameAction[] kfa, KeyFrame[] newSelected)
     {
         if (kfa.length == 0) return;
         addKeyFrameActions(kfa);
 
-        if (!replacements.isEmpty() && selectedKeyFrames.length > 0)
+        if (newSelected != null)
         {
-            KeyFrame[] updated = selectedKeyFrames.clone();
-            boolean changed = false;
-            for (int i = 0; i < updated.length; i++)
-            {
-                KeyFrame r = replacements.get(updated[i]);
-                if (r != null) { updated[i] = r; changed = true; }
-            }
-            if (changed) setSelectedKeyFrames(updated);
+            setSelectedKeyFrames(newSelected);
         }
 
         // Single refresh sweep at the end. updatePrograms walks every Character
