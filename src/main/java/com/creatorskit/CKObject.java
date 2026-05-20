@@ -76,6 +76,11 @@ public class CKObject extends RuneLiteObjectController
     /** Canonical rigging scale baked into OSRS animation data (1/128 units = 1 tile). */
     private static final int RIGGING_SCALE = 128;
 
+    /** Diagnostic toggle for the render-fix-after-load bug. Flip false to silence. */
+    private static final boolean DEBUG_BRACKET_REJECT = true;
+    /** One-shot guard so we don't spam the log every frame for the same ckObject. */
+    private boolean loggedBracketReject = false;
+
     /**
      * Snapshot of baseModel's vertices captured when {@link #setModel(Model)} is called,
      * so each frame's render-fix pass can start from a clean baseline instead of
@@ -346,6 +351,23 @@ public class CKObject extends RuneLiteObjectController
 
         if (!fix)
         {
+            // DIAG: render-fix-after-load bug. If renderFix is on but fix evaluated
+            // to false, the bracket can't engage and the model renders warped --
+            // log once per ckObject so we can see exactly which input failed the
+            // condition (widthScale==128, heightScale==128, baseModel null, no
+            // animation controller, etc). Flip DEBUG_BRACKET_REJECT false to
+            // silence after we confirm the cause.
+            if (DEBUG_BRACKET_REJECT && renderFix && !loggedBracketReject)
+            {
+                loggedBracketReject = true;
+                System.out.println("[CKObject.getModel] bracket REJECTED despite renderFix=true"
+                        + " baseModel=" + (baseModel != null ? "present" : "null")
+                        + " animController=" + (animationController != null ? "set" : "null")
+                        + " poseController=" + (poseAnimationController != null ? "set" : "null")
+                        + " widthScale=" + widthScale
+                        + " heightScale=" + heightScale
+                        + " extraScale=" + extraScale);
+            }
             // Fast path: no shrink/restore needed, no mutation of shared baseModel.
             if (animationController != null)
             {
