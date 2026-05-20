@@ -2391,7 +2391,13 @@ public class TimeSheetPanel extends JPanel
 
         JSpinner fromSpinner = new JSpinner(new SpinnerNumberModel(0.0, 0.0, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.5));
         JSpinner toSpinner = new JSpinner(new SpinnerNumberModel(20.0, 0.0, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.5));
-        JSpinner stepSpinner = new JSpinner(new SpinnerNumberModel(1.0, 0.1, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.1));
+        // Step size is also a min..max range now. Each Character independently
+        // rolls a whole-tick step in [stepMin, stepMax] which then drives that
+        // Character's anchor grid. Default 1..1 matches the previous fixed
+        // step=1 UX; widen the range for varied per-Character cadence (e.g.
+        // step 1..3 = some raindrops on a tighter rhythm than others).
+        JSpinner stepMinSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 1000, 1));
+        JSpinner stepMaxSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 1000, 1));
         // Copies per Character is a min..max range -- each Character rolls
         // independently in that range. min == max behaves like a fixed count
         // (original single-spinner UX preserved when both set to the same
@@ -2406,8 +2412,10 @@ public class TimeSheetPanel extends JPanel
         panel.add(fromSpinner);
         panel.add(new JLabel("To tick:"));
         panel.add(toSpinner);
-        panel.add(new JLabel("Step size (ticks):"));
-        panel.add(stepSpinner);
+        panel.add(new JLabel("Step size (min):"));
+        panel.add(stepMinSpinner);
+        panel.add(new JLabel("Step size (max):"));
+        panel.add(stepMaxSpinner);
         panel.add(new JLabel("Copies per Character (min):"));
         panel.add(copiesMinSpinner);
         panel.add(new JLabel("Copies per Character (max):"));
@@ -2421,10 +2429,18 @@ public class TimeSheetPanel extends JPanel
         double from = ((Number) fromSpinner.getValue()).doubleValue();
         double to = ((Number) toSpinner.getValue()).doubleValue();
         if (to < from) { double tmp = from; from = to; to = tmp; }
-        final double step = ((Number) stepSpinner.getValue()).doubleValue();
+        int stepMinRaw = ((Number) stepMinSpinner.getValue()).intValue();
+        int stepMaxRaw = ((Number) stepMaxSpinner.getValue()).intValue();
         int copiesMinRaw = ((Number) copiesMinSpinner.getValue()).intValue();
         int copiesMaxRaw = ((Number) copiesMaxSpinner.getValue()).intValue();
-        if (step <= 0 || copiesMinRaw < 0 || copiesMaxRaw < 0) return;
+        if (stepMinRaw < 1 || stepMaxRaw < 1 || copiesMinRaw < 0 || copiesMaxRaw < 0) return;
+        if (stepMinRaw > stepMaxRaw)
+        {
+            JOptionPane.showMessageDialog(this,
+                    "Step size (min) must be less than or equal to Step size (max).",
+                    "Scatter blocked", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         if (copiesMinRaw > copiesMaxRaw)
         {
             JOptionPane.showMessageDialog(this,
@@ -2432,18 +2448,25 @@ public class TimeSheetPanel extends JPanel
                     "Scatter blocked", JOptionPane.WARNING_MESSAGE);
             return;
         }
+        final int stepMin = stepMinRaw;
+        final int stepMax = stepMaxRaw;
         final int copiesMin = copiesMinRaw;
         final int copiesMax = copiesMaxRaw;
         final double fFrom = from;
         final double fTo = to;
 
-        // Pre-validate every Character. Each block must fit in [from, to], have
-        // at least one step-aligned anchor, AND have room for copiesMax non-
-        // overlapping copies (the worst case of the random roll). Validating
-        // against max means any rolled N in [min, max] is guaranteed feasible
-        // -- no surprise mid-plan failures based on which N got rolled.
+        // Pre-validate every Character against the WORST case of the random
+        // roll: copiesMax copies at stepMax (largest step = fewest anchor
+        // slots = hardest to fit non-overlapping copies). theoreticalMax
+        // shrinks as step grows since the minimum anchor gap (duration + step)
+        // gets larger. If copiesMax <= theoreticalMax_at_stepMax, then any
+        // rolled (step, copies) pair where step <= stepMax and copies <=
+        // copiesMax is guaranteed feasible -- no surprise mid-plan failures.
         // Refuses the whole op on first failure with an actionable message.
-        java.util.Map<Character, double[]> placements = new java.util.LinkedHashMap<>(); // owner -> {blockMinTick, slotCount, duration}
+        // Slots are NOT stored in placements -- the planner re-derives them
+        // per-Character from the rolled step, so a "worst case at stepMax"
+        // computed here would be wrong for the lucky cases.
+        java.util.Map<Character, double[]> placements = new java.util.LinkedHashMap<>(); // owner -> {blockMinTick, duration}
         for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> entry : byOwner.entrySet())
         {
             Character owner = entry.getKey();
@@ -2456,8 +2479,8 @@ public class TimeSheetPanel extends JPanel
             }
             double duration = maxTick - minTick;
 
-            // If copiesMax == 0 we'll just delete originals -- skip the fit
-            // checks entirely since no copies are placed for any Character.
+            // copiesMax == 0 means every Character will just delete its
+            // originals. Skip fit checks entirely.
             if (copiesMax > 0)
             {
                 if (duration > (fTo - fFrom))
@@ -2468,37 +2491,22 @@ public class TimeSheetPanel extends JPanel
                     return;
                 }
 
+                // Theoretical max non-overlap copies at the WORST step: anchors
+                // must differ by > duration, minimum gap on the grid is
+                // (duration + stepMax). If copiesMax fits here, every rolled
+                // step in [stepMin, stepMax] gives even more slots and fits.
                 double anchorRange = fTo - fFrom - duration;
-                int slots = (int) Math.floor(anchorRange / step) + 1;
-                if (slots <= 0)
+                int theoreticalMaxAtStepMax = (int) Math.floor(anchorRange / (duration + stepMax)) + 1;
+                if (copiesMax > theoreticalMaxAtStepMax)
                 {
                     JOptionPane.showMessageDialog(this,
-                            "Cannot scatter: step size " + step + " too large for Character '" + owner.getName() + "' in range [" + fFrom + ", " + fTo + "].",
+                            "Cannot scatter: Character '" + owner.getName() + "' has room for at most " + theoreticalMaxAtStepMax + " non-overlapping copies at step " + stepMax + " (block duration " + duration + " in range " + (fTo - fFrom) + "). Reduce 'Copies (max)' to " + theoreticalMaxAtStepMax + " or below, reduce 'Step size (max)', widen the range, or shrink the selection block.",
                             "Scatter blocked", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
-
-                // Theoretical max non-overlapping copies: anchors must differ
-                // by > duration, so the minimum anchor gap is (duration + step)
-                // on the step grid. anchorRange / (duration + step) + 1 = the
-                // most copies that fit perfectly packed.
-                int theoreticalMax = (int) Math.floor(anchorRange / (duration + step)) + 1;
-                if (copiesMax > theoreticalMax)
-                {
-                    JOptionPane.showMessageDialog(this,
-                            "Cannot scatter: Character '" + owner.getName() + "' has room for at most " + theoreticalMax + " non-overlapping copies (block duration " + duration + " in range " + (fTo - fFrom) + ", step " + step + "). Reduce 'Copies (max)' to " + theoreticalMax + " or below, widen the range, or shrink the selection block.",
-                            "Scatter blocked", JOptionPane.WARNING_MESSAGE);
-                    return;
-                }
-
-                placements.put(owner, new double[]{minTick, slots, duration});
             }
-            else
-            {
-                // copiesMax == 0 path: still record minTick/duration so the
-                // commit phase has a uniform map shape, slots is unused.
-                placements.put(owner, new double[]{minTick, 0, duration});
-            }
+
+            placements.put(owner, new double[]{minTick, duration});
         }
 
         // Phase 1: PLAN every Character's anchors using greedy collision-aware
@@ -2524,13 +2532,20 @@ public class TimeSheetPanel extends JPanel
         {
             Character owner = entry.getKey();
             double[] p = placements.get(owner);
-            int totalSlots = (int) p[1];
-            double blockDuration = p[2];
+            double blockDuration = p[1];
 
-            // Roll this Character's copy count. min == max gives a fixed N.
+            // Roll this Character's copy count and step independently. min ==
+            // max in either gives a fixed value (matches the pre-randomisation
+            // UX). Step drives the anchor grid for this Character only --
+            // different Characters can use different steps, which is exactly
+            // the rain-rhythm variation we want.
             int rolledN = copiesMin == copiesMax
                     ? copiesMin
                     : copiesMin + rng.nextInt(copiesMax - copiesMin + 1);
+            int rolledStep = stepMin == stepMax
+                    ? stepMin
+                    : stepMin + rng.nextInt(stepMax - stepMin + 1);
+            final double charStep = rolledStep;
 
             // rolledN == 0 means delete this Character's selection without
             // adding anything. Plan an empty anchor array; commit phase will
@@ -2541,6 +2556,11 @@ public class TimeSheetPanel extends JPanel
                 continue;
             }
 
+            // Anchor slots for THIS Character's rolled step. Pre-validation
+            // checked stepMax fits copiesMax, so any rolled step gives at
+            // least as many slots and copiesMax always fits.
+            int totalSlots = (int) Math.floor((fTo - fFrom - blockDuration) / charStep) + 1;
+
             // Greedy random anchor selection: each iteration enumerates every
             // step-aligned anchor whose interval [anchor, anchor + D] doesn't
             // overlap any previously chosen interval. Greedy with random pick
@@ -2548,9 +2568,9 @@ public class TimeSheetPanel extends JPanel
             // remaining space so a later iteration can't fit even though a
             // valid arrangement exists), so retry up to MAX_RETRIES with fresh
             // RNG sequences before refusing. copiesMax was pre-validated to be
-            // <= theoretical max, so a valid arrangement always exists for any
-            // rolledN <= copiesMax -- the retries are just to escape unlucky
-            // random fragmentation.
+            // <= theoretical max at stepMax, so a valid arrangement always
+            // exists for any rolledN <= copiesMax with any step <= stepMax --
+            // the retries are just to escape unlucky random fragmentation.
             final int MAX_RETRIES = 20;
             double[] anchors = null;
             for (int attempt = 0; attempt < MAX_RETRIES && anchors == null; attempt++)
@@ -2562,7 +2582,7 @@ public class TimeSheetPanel extends JPanel
                     java.util.List<Integer> validSlots = new ArrayList<>();
                     for (int s = 0; s < totalSlots; s++)
                     {
-                        double candidate = fFrom + s * step;
+                        double candidate = fFrom + s * charStep;
                         boolean ok = true;
                         for (int prior = 0; prior < c; prior++)
                         {
@@ -2580,7 +2600,7 @@ public class TimeSheetPanel extends JPanel
                         break;
                     }
                     int pickedSlot = validSlots.get(rng.nextInt(validSlots.size()));
-                    trial[c] = fFrom + pickedSlot * step;
+                    trial[c] = fFrom + pickedSlot * charStep;
                 }
                 if (!failed) anchors = trial;
             }
@@ -2588,7 +2608,7 @@ public class TimeSheetPanel extends JPanel
             if (anchors == null)
             {
                 JOptionPane.showMessageDialog(this,
-                        "Cannot scatter " + rolledN + " non-overlapping copies for Character '" + owner.getName() + "' after " + MAX_RETRIES + " attempts (block duration " + blockDuration + " in range " + (fTo - fFrom) + " ticks). The space is tight enough that random anchor choices keep fragmenting it -- widen the [from, to] range or lower the copy max.",
+                        "Cannot scatter " + rolledN + " non-overlapping copies for Character '" + owner.getName() + "' at step " + rolledStep + " after " + MAX_RETRIES + " attempts (block duration " + blockDuration + " in range " + (fTo - fFrom) + " ticks). The space is tight enough that random anchor choices keep fragmenting it -- widen the [from, to] range, lower 'Step size (max)', or lower 'Copies (max)'.",
                         "Scatter blocked", JOptionPane.WARNING_MESSAGE);
                 return;
             }
