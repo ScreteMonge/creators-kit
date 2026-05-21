@@ -986,6 +986,28 @@ public class Programmer
         timeSheetPanel.setCurrentTime(time, true);
     }
 
+    /**
+     * Sub-tick-precision timeline time for renderers that need to update
+     * faster than the 0.1-per-3-client-ticks playback granularity. While
+     * playing this adds the in-progress fraction of the next 0.1 step to
+     * {@code currentTime} so per-{@link ClientTick} effects (e.g. the camera
+     * keyframe pump) advance at 50 Hz instead of stuttering every 60 ms.
+     * While paused / scrubbing, returns the raw {@code currentTime}.
+     */
+    public double getSmoothedCurrentTime()
+    {
+        double base = timeSheetPanel.getCurrentTime();
+        if (!playing)
+        {
+            return base;
+        }
+        // clientTickAtLastProgramTick is the count of client ticks since the
+        // last 0.1 advance (0..2). One client tick = CLIENT_TICK_LENGTH ms of a
+        // game tick, so its contribution in game-tick units is just the ratio.
+        return base + clientTickAtLastProgramTick
+                * Constants.CLIENT_TICK_LENGTH / (double) Constants.GAME_TICK_LENGTH;
+    }
+
     public void togglePlay()
     {
         togglePlay(!playing);

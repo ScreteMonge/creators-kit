@@ -543,7 +543,12 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	 */
 	public void applyCurrentCameraKeyframe()
 	{
-		double currentTick = getCurrentTick();
+		// Sub-tick precision during play so the camera interpolates at 50 Hz
+		// instead of stepping every 60 ms (the 0.1-per-3-client-ticks playback
+		// cadence). Falls back to the raw timeline tick when paused / scrubbing.
+		double currentTick = creatorsPanel != null
+				? creatorsPanel.getToolBox().getProgrammer().getSmoothedCurrentTime()
+				: getCurrentTick();
 		com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame[] all =
 				globalKeyFrames.getCameraKeyFramesSafe();
 		if (all.length == 0)
