@@ -33,12 +33,16 @@ import java.util.ArrayList;
  * a green/red HP bar below. Colours come from RuneLite's own OpponentInfoOverlay
  * so the keyframe-driven bar reads identically to engine-rendered ones.
  *
- * <p>Damage feedback is keyframe-driven and lookahead-style: if a future
- * BOSS_HEALTH keyframe on the same Character will lower HP, the chunk that's
- * about to disappear is overlaid as dark green and visually "deflates" toward
- * the future value as we approach that keyframe's tick. Pure linear interp
- * keeps scrubbing deterministic -- any visit to the same tick paints the
- * same pixels.
+ * <p>Damage animation: when the current keyframe has less HP than the
+ * previous BOSS_HEALTH keyframe on the same Character, the bright-green
+ * endpoint sweeps from the old HP down to the new HP over 1 game tick. A
+ * dark-green tail trails the sweep, visually "draining" the lost HP. The
+ * sweep is pure linear interp keyed on currentTick so scrubbing is
+ * deterministic -- any visit to the same tick paints the same pixels.
+ *
+ * <p>HitsplatKeyFrame edits drive most damage events: they auto-create or
+ * auto-update a matching Health keyframe on the same tick (handled in
+ * the keyframe-add path), which is what trips this animation.
  */
 public class BossHealthOverlay extends Overlay
 {
@@ -58,12 +62,12 @@ public class BossHealthOverlay extends Overlay
      */
     private static final int TOP_MARGIN = 80;
     /**
-     * Padding around the bar contents inside the brown frame. The user asked
-     * for "a little padding" to match the reference screenshot's chunky look;
-     * the frame now sits 6px outside the name strip + HP bar on every side
-     * (was 2-3px).
+     * Vertical padding inside the brown frame (above the name, below the bar).
+     * Reference shows ~2px of frame-only space; the bar fills the inner width
+     * edge-to-edge horizontally. Set small so the bar sits chunky against the
+     * frame instead of floating in a dark gap.
      */
-    private static final int PLATE_PAD = 6;
+    private static final int PLATE_PAD = 2;
     /** Brown frame around the HUD -- user-specified #3a352b. */
     private static final Color PLATE_BORDER = new Color(0x3a, 0x35, 0x2b);
     /** Inner plate fill behind the name strip. Slightly darker than the
@@ -73,19 +77,22 @@ public class BossHealthOverlay extends Overlay
     private static final Color HP_GREEN = new Color(0x7a, 0xbf, 0x43);
     /** Boss-HUD "missing HP" red (user-specified #a53714). */
     private static final Color HP_RED = new Color(0xa5, 0x37, 0x14);
-    /** Boss name text colour (user-specified #b39557). Less saturated than
-     *  the first cut's bright yellow -- matches the reference screenshot. */
+    /** Boss name text colour (user-specified #b39557). */
     private static final Color NAME_YELLOW = new Color(0xb3, 0x95, 0x57);
     /**
-     * Lookahead "this HP is about to be lost" overlay (user-specified
-     * #3f8c21). Drawn between the bright green (current HP) and the red
-     * (already-missing HP) when the NEXT BOSS_HEALTH keyframe on the same
-     * Character will lower HP. The chunk's width shrinks linearly as we
-     * approach the next keyframe so the bar visually "deflates" into the
-     * future value -- this is the "decreasing health animation" the user
-     * asked for.
+     * Dark green for the "draining" tail that trails behind the bright green
+     * during a damage animation (user-specified #3f8c21). Driven by the
+     * PREVIOUS BOSS_HEALTH keyframe: at the moment of damage the bright
+     * green is still at the old HP, then over {@link #DRAIN_DURATION_TICKS}
+     * sweeps down to the new HP, leaving this dark green tail. After the
+     * sweep the dark green is gone and the just-vacated area paints red.
      */
     private static final Color HP_DECAY_GREEN = new Color(0x3f, 0x8c, 0x21);
+    /**
+     * How long the bright-green sweep takes after a damage keyframe fires.
+     * Spec from the user: "always lasts 1 tick".
+     */
+    private static final double DRAIN_DURATION_TICKS = 1.0;
 
     @Inject
     private BossHealthOverlay(Client client, CreatorsPlugin plugin)
@@ -201,35 +208,45 @@ public class BossHealthOverlay extends Overlay
             graphics.fillRect(x, barY, greenW, BAR_HEIGHT);
         }
 
-        // Lookahead "decreasing health animation": if a NEXT BOSS_HEALTH
-        // keyframe on this Character will lower HP, animate the bright-green
-        // endpoint from currentHp toward that future HP over the time
-        // between the two keyframes. The chunk that's currently being lost
-        // (between the live endpoint and the current keyframe's static HP)
-        // is overlaid in dark green so the user reads it as "this HP is
-        // about to be gone" rather than as just-missing.
+        // Damage animation: when the PREVIOUS BOSS_HEALTH keyframe had more
+        // HP, sweep the bright-green endpoint from the old HP down to the
+        // new HP over DRAIN_DURATION_TICKS (1 tick). The chunk trailing
+        // behind the sweep is dark green -- visually "draining" the lost
+        // HP. After the sweep completes the chunk disappears, leaving the
+        // static bright green at currentHp and red on the rest of the bar.
         //
-        // At the next keyframe's tick, the dark-green chunk is at its full
-        // width (delta) and then the next paint -- now reading the next
-        // keyframe as current -- shows that range as red, so the visual
-        // transition is dark-green -> red on the same pixels.
-        HealthKeyFrame nextKf = findNextBossKeyFrame(bossChar, bossKf.getTick());
-        if (nextKf != null && nextKf.getCurrentHealth() < currentHp)
+        // Hitsplats auto-create/update the matching Health keyframe (handled
+        // elsewhere), so most damage-animation-rendering trigger paths
+        // originate from a HitsplatKeyFrame edit, not a manual Health KF.
+        HealthKeyFrame previous = findPreviousBossKeyFrame(bossChar, bossKf.getTick());
+        if (previous != null && previous.getCurrentHealth() > currentHp)
         {
-            int futureHp = Math.max(0, nextKf.getCurrentHealth());
-            int delta = currentHp - futureHp;
-            double durBetween = nextKf.getTick() - bossKf.getTick();
-            if (durBetween > 0)
+            int oldHp = Math.min(previous.getCurrentHealth(), maxHp);
+            int delta = oldHp - currentHp;
+            double elapsed = currentTick - bossKf.getTick();
+            if (elapsed >= 0 && elapsed < DRAIN_DURATION_TICKS)
             {
-                double progress = Math.max(0.0, Math.min(1.0,
-                        (currentTick - bossKf.getTick()) / durBetween));
-                double liveHp = currentHp - progress * delta;
-                int liveGreenW = (int) Math.round(liveHp / maxHp * BAR_WIDTH);
-                int decayW = Math.max(0, greenW - liveGreenW);
+                double progress = elapsed / DRAIN_DURATION_TICKS; // 0 -> 1
+                // Bright green endpoint sweeps from oldHp to newHp (=currentHp).
+                double sweptHp = oldHp - progress * delta;
+                int sweptW = (int) Math.round(sweptHp / maxHp * BAR_WIDTH);
+                // The bright green base layer was drawn at currentHp width
+                // (the post-damage value). Extend it back out to the swept
+                // endpoint so the bar visually starts at oldHp and shrinks.
+                if (sweptW > greenW)
+                {
+                    graphics.setColor(HP_GREEN);
+                    graphics.fillRect(x + greenW, barY, sweptW - greenW, BAR_HEIGHT);
+                }
+                // Dark green tail from the swept endpoint to oldHp's
+                // position -- the just-vacated portion that hasn't gone red
+                // yet. Width grows over the tick from 0 to delta.
+                int oldW = (int) Math.round((double) oldHp / maxHp * BAR_WIDTH);
+                int decayW = Math.max(0, oldW - sweptW);
                 if (decayW > 0)
                 {
                     graphics.setColor(HP_DECAY_GREEN);
-                    graphics.fillRect(x + liveGreenW, barY, decayW, BAR_HEIGHT);
+                    graphics.fillRect(x + sweptW, barY, decayW, BAR_HEIGHT);
                 }
             }
         }
@@ -254,12 +271,12 @@ public class BossHealthOverlay extends Overlay
     }
 
     /**
-     * Walks {@code character}'s HEALTH keyframe array and returns the earliest
-     * BOSS_HEALTH keyframe whose tick is strictly greater than {@code referenceTick}.
-     * Used by the lookahead "decreasing health animation" to source the future
-     * HP value the current bar is animating toward.
+     * Walks {@code character}'s HEALTH keyframe array and returns the latest
+     * BOSS_HEALTH keyframe whose tick is strictly less than {@code referenceTick}.
+     * Used by the damage animation to source the "old HP" the bright-green
+     * endpoint sweeps down from.
      */
-    private HealthKeyFrame findNextBossKeyFrame(Character character, double referenceTick)
+    private HealthKeyFrame findPreviousBossKeyFrame(Character character, double referenceTick)
     {
         KeyFrame[] frames = character.getKeyFrames(KeyFrameType.HEALTH);
         if (frames == null)
@@ -279,11 +296,11 @@ public class BossHealthOverlay extends Overlay
             {
                 continue;
             }
-            if (hkf.getTick() <= referenceTick)
+            if (hkf.getTick() >= referenceTick)
             {
                 continue;
             }
-            if (best == null || hkf.getTick() < best.getTick())
+            if (best == null || hkf.getTick() > best.getTick())
             {
                 best = hkf;
             }
