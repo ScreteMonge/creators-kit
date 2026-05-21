@@ -24,6 +24,15 @@ public class AttributeSheet extends TimeSheet
     private CreatorsConfig config;
     private AttributePanel attributePanel;
 
+    /**
+     * 30 fps repaint timer that drives the breathing-pulse alpha on selected
+     * keyframe icons. Cheaper than a global "always repaint" loop: only ticks
+     * when at least one keyframe is selected; sits idle otherwise.
+     */
+    private final javax.swing.Timer pulseTimer;
+    /** Period in ms for one full breathing cycle (dim -> bright -> dim). */
+    private static final int PULSE_PERIOD_MS = 1500;
+
     public AttributeSheet(ToolBoxFrame toolBox, CreatorsConfig config, ManagerTree tree, AttributePanel attributePanel)
     {
         super(toolBox, config, tree, attributePanel);
@@ -35,6 +44,32 @@ public class AttributeSheet extends TimeSheet
         setSelectedIndex(1);
         this.rowHeightOffset = 1;
         this.rowHeight = 24;
+
+        pulseTimer = new javax.swing.Timer(33, e -> {
+            // Only repaint when there's something to animate; otherwise a 30Hz
+            // repaint loop would chew CPU for no visual change. Timer stays
+            // running but the early-out keeps the per-tick cost down.
+            if (getTimeSheetPanel() != null
+                    && getTimeSheetPanel().getSelectedKeyFrames() != null
+                    && getTimeSheetPanel().getSelectedKeyFrames().length > 0)
+            {
+                repaint();
+            }
+        });
+        pulseTimer.start();
+    }
+
+    /**
+     * Returns the current breathing-pulse alpha in [0.55, 1.0] for the keyframe-
+     * selected highlight. A full {@link #PULSE_PERIOD_MS} cycle goes dim -> bright
+     * -> dim via a sine wave. Floor of 0.55 keeps the icon clearly readable
+     * even at the dim end.
+     */
+    private float pulseAlpha()
+    {
+        double t = (System.currentTimeMillis() % PULSE_PERIOD_MS) / (double) PULSE_PERIOD_MS;
+        double s = 0.5 + 0.5 * Math.sin(2 * Math.PI * t);
+        return (float) (0.55 + 0.45 * s);
     }
 
     @Override
@@ -207,7 +242,23 @@ public class AttributeSheet extends TimeSheet
                 }
 
 
-                g.drawImage(endImage, x - xImageOffset, y, null);
+                // Selected keyframes breathe between dim and bright as a
+                // higher-contrast cue than the static brighter icon alone.
+                // Animation runs at 30 fps via pulseTimer (only when something
+                // is selected). Non-selected icons render at full alpha as usual.
+                if (endImage == getKeyframeSelected() && g instanceof Graphics2D)
+                {
+                    Graphics2D g2 = (Graphics2D) g;
+                    java.awt.Composite prevComposite = g2.getComposite();
+                    g2.setComposite(java.awt.AlphaComposite.getInstance(
+                            java.awt.AlphaComposite.SRC_OVER, pulseAlpha()));
+                    g2.drawImage(endImage, x - xImageOffset, y, null);
+                    g2.setComposite(prevComposite);
+                }
+                else
+                {
+                    g.drawImage(endImage, x - xImageOffset, y, null);
+                }
 
                 if (multi && character.getColor() != null)
                 {
