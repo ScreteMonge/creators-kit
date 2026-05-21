@@ -122,12 +122,31 @@ public class ColourSwapPanel extends JPanel
         setAllModelColours.addActionListener(e -> setColoursEverything());
         comboPane.add(setAllModelColours);
 
+        // Preview row above the chooser: small colour swatch on the left, hex
+        // text field on the right. Two-way bound to the JColorChooser's
+        // selection model -- typing a hex code into the field updates the
+        // chooser (and every connected swatch), and picking a colour via any
+        // tab updates the field. Lives above the chooser instead of inside any
+        // specific tab so it's accessible from Swatches / HSV / HSL / RGB / CMYK
+        // alike, without depending on the internal layout of those panels.
         c.weightx = 0;
         c.gridx = 1;
         c.gridy = 0;
-        JPanel previewPanel = new JPanel();
-        previewPanel.setBackground(colourChooser.getColor());
-        add(previewPanel, c);
+        JPanel previewRow = new JPanel(new BorderLayout(4, 0));
+        previewRow.setBorder(new EmptyBorder(2, 4, 2, 4));
+
+        JPanel previewSwatch = new JPanel();
+        previewSwatch.setBackground(colourChooser.getColor());
+        previewSwatch.setPreferredSize(new Dimension(28, 28));
+        previewSwatch.setBorder(new LineBorder(java.awt.Color.BLACK, 1));
+
+        JTextField hexField = new JTextField(7);
+        hexField.setToolTipText("<html>Hex colour code. Accepts #RRGGBB, RRGGBB, #RGB, or RGB.<br>Press Enter or click away to apply.</html>");
+        hexField.setText(formatHex(colourChooser.getColor()));
+
+        previewRow.add(previewSwatch, BorderLayout.WEST);
+        previewRow.add(hexField, BorderLayout.CENTER);
+        add(previewRow, c);
 
         c.weightx = 0;
         c.gridx = 1;
@@ -136,16 +155,56 @@ public class ColourSwapPanel extends JPanel
         // rather than just the HSV panel the original implementation pinned to.
         // The Swatches tab (chooserPanels[0]) is what users naturally reach for
         // when picking from preset palettes; the HSV one was leftover from a
-        // smaller layout. Hiding the preview panel because the swatch-row to
-        // the left of the chooser already shows the current picker colour.
+        // smaller layout. Hiding the chooser's built-in preview panel because
+        // the previewRow above already shows the current picker colour AND has
+        // the bidirectional hex field.
         colourChooser.setPreviewPanel(new JPanel());
         colourChooser.setBorder(new LineBorder(colourChooser.getColor(), 2));
         colourChooser.getSelectionModel().addChangeListener(e ->
         {
-            colourChooser.setBorder(new LineBorder(colourChooser.getColor(), 2));
-            previewPanel.setBackground(colourChooser.getColor());
+            java.awt.Color picked = colourChooser.getColor();
+            colourChooser.setBorder(new LineBorder(picked, 2));
+            previewSwatch.setBackground(picked);
+            // Sync the hex field WITHOUT triggering its own listener -- if we
+            // re-set the text from a programmatic chooser change, the text
+            // didn't actually change as far as the user is concerned. The
+            // actionListener fires on user-typed Enter, so setText alone is
+            // safe (no actionPerformed dispatch). Skip if the field already
+            // matches to avoid losing the user's cursor position when they're
+            // mid-typing a different code.
+            String formatted = formatHex(picked);
+            if (!formatted.equalsIgnoreCase(hexField.getText().trim()))
+            {
+                hexField.setText(formatted);
+            }
         });
         add(colourChooser, c);
+
+        // Apply on Enter (action) AND on focus loss, so the user doesn't have
+        // to remember to press Enter if they click away.
+        Runnable applyHex = () ->
+        {
+            java.awt.Color parsed = parseHex(hexField.getText());
+            if (parsed != null && !parsed.equals(colourChooser.getColor()))
+            {
+                colourChooser.setColor(parsed);
+            }
+            else
+            {
+                // Invalid or unchanged -- snap the field text back to the
+                // canonical formatted form so the user sees what they have.
+                hexField.setText(formatHex(colourChooser.getColor()));
+            }
+        };
+        hexField.addActionListener(e -> applyHex.run());
+        hexField.addFocusListener(new java.awt.event.FocusAdapter()
+        {
+            @Override
+            public void focusLost(java.awt.event.FocusEvent e)
+            {
+                applyHex.run();
+            }
+        });
 
         c.weighty = 1;
         c.gridx = 1;
@@ -712,6 +771,53 @@ public class ColourSwapPanel extends JPanel
         currentComplexPanel.setColoursFrom(new short[0]);
         currentComplexPanel.setColoursTo(new short[0]);
         modelAnvil.updateRenderPanel();
+    }
+
+    /**
+     * Formats a Color as a canonical "#RRGGBB" string. Always uppercase, always
+     * 6 hex digits, leading '#'. Drops the alpha channel because the picker /
+     * Jagex colour pipeline doesn't carry alpha.
+     */
+    private static String formatHex(java.awt.Color c)
+    {
+        return String.format("#%06X", c.getRGB() & 0xFFFFFF);
+    }
+
+    /**
+     * Parses a user-entered hex code into a Color. Accepts:
+     *   - "#RRGGBB" or "RRGGBB" (6-digit form)
+     *   - "#RGB" or "RGB" (3-digit shorthand, each digit doubled: F0A -> FF00AA)
+     * Returns null for empty / malformed input rather than throwing -- caller
+     * snaps the field back to the canonical formatted form on null.
+     */
+    private static java.awt.Color parseHex(String input)
+    {
+        if (input == null) return null;
+        String s = input.trim();
+        if (s.startsWith("#")) s = s.substring(1);
+        try
+        {
+            if (s.length() == 6)
+            {
+                return new java.awt.Color(Integer.parseInt(s, 16));
+            }
+            if (s.length() == 3)
+            {
+                // #abc -> #aabbcc
+                StringBuilder sb = new StringBuilder(6);
+                for (int i = 0; i < 3; i++)
+                {
+                    char ch = s.charAt(i);
+                    sb.append(ch).append(ch);
+                }
+                return new java.awt.Color(Integer.parseInt(sb.toString(), 16));
+            }
+            return null;
+        }
+        catch (NumberFormatException ex)
+        {
+            return null;
+        }
     }
 
     public static Color colourFromShort(short s)
