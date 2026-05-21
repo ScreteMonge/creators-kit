@@ -93,6 +93,11 @@ public class AttributePanel extends JPanel
     private final String NO_OBJECT_SELECTED = "[No Object Selected]";
     private String activeCard = MOVE_CARD;
     private Font attributeFont = new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32);
+    /**
+     * Smaller font for the multi-select label so the "N Keyframes across M Objects"
+     * string fits two lines without overflowing the panel width.
+     */
+    private Font multiSelectFont = new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 18);
 
     private KeyFrameType hoveredKeyFrameType;
     private Component hoveredComponent;
@@ -3482,9 +3487,15 @@ public class AttributePanel extends JPanel
         if (selectionSize > 1)
         {
             objectLabel.setForeground(ColorScheme.BRAND_ORANGE);
+            // Use the smaller multi-select font + a <br> after "across" so the
+            // string doesn't blow past the panel width. Same JLabel; HTML mode
+            // gets engaged via the <html> wrapper, plain text takes the
+            // single-character path below.
+            objectLabel.setFont(multiSelectFont);
             if (keyFrameCount > 0)
             {
-                objectLabel.setText("[" + keyFrameCount + " Keyframes across " + selectionSize + " Objects Selected]");
+                objectLabel.setText("<html>[" + keyFrameCount + " Keyframes across<br>"
+                        + selectionSize + " Objects Selected]</html>");
             }
             else
             {
@@ -3496,11 +3507,13 @@ public class AttributePanel extends JPanel
         if (character == null)
         {
             objectLabel.setForeground(Color.WHITE);
+            objectLabel.setFont(attributeFont);
             objectLabel.setText(NO_OBJECT_SELECTED);
             return;
         }
 
         objectLabel.setForeground(ColorScheme.BRAND_ORANGE);
+        objectLabel.setFont(attributeFont);
         StringBuilder name = new StringBuilder(character.getName());
 
         FontMetrics metrics = objectLabel.getFontMetrics(attributeFont);
