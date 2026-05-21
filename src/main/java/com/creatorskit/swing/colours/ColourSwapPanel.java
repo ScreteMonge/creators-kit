@@ -558,11 +558,12 @@ public class ColourSwapPanel extends JPanel
         oldSwatch.addActionListener(e ->
         {
             colourChooser.setColor(colourFromShort(colourPanel.getOldColour()));
-            // Highlight by EFFECTIVE colour (= what actually renders on the
-            // model). If this row has a swap applied, that's the New colour;
-            // otherwise the Old colour. Keeps "click Old swatch" symmetric
-            // with "click face on model" -- both light up by what's visible.
-            highlightEffectiveColour(effectiveColour(colourPanel));
+            // Highlight by ORIGINAL colour (per-face origin). Lights up ONLY
+            // the faces that were originally this row's Old colour -- if
+            // multiple rows swap to the same New colour, this distinguishes
+            // them in the preview. Symmetric with model-click which also
+            // uses per-face origin via highlightByOriginalColour.
+            highlightByOriginalColour(colourPanel.getOldColour());
         });
         newSwatch.addActionListener(e ->
         {
@@ -1066,11 +1067,13 @@ public class ColourSwapPanel extends JPanel
         }
         if (match == null)
         {
+            // No row with that Old colour -- can happen if RenderPanel has no
+            // origin snapshot and falls back to current colour, or if the swap
+            // list got out-of-sync. Punt to effective-colour matching.
             highlightEffectiveColour(originalColour);
             return;
         }
 
-        short effective = effectiveColour(match);
         // Toggle off if the same row is clicked again. Compare by Old colour
         // since that's the per-row identity; effective could collide across rows.
         if (highlightedPanels.size() == 1 && highlightedPanels.get(0) == match)
@@ -1085,13 +1088,18 @@ public class ColourSwapPanel extends JPanel
         }
         highlightedPanels.clear();
 
-        highlightedColour = effective & 0xFFFF;
+        // Use the ORIGINAL colour as the highlight key so the RenderPanel tints
+        // only the faces that were ORIGINALLY this row's Old colour, not every
+        // face that visually looks like the row's effective colour. That's the
+        // per-face origin semantic the user asked for in both directions
+        // (model-click and swatch-click).
+        highlightedColour = originalColour & 0xFFFF;
         match.setBorder(HIGHLIGHTED_PANEL_BORDER);
         highlightedPanels.add(match);
 
         if (modelAnvil.getRenderPanel() != null)
         {
-            modelAnvil.getRenderPanel().setHighlightedColour(highlightedColour);
+            modelAnvil.getRenderPanel().setHighlightedOriginalColour(highlightedColour);
         }
 
         if (colourScrollPane != null)

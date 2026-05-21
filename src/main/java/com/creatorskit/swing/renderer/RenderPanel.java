@@ -50,6 +50,15 @@ public class RenderPanel extends JPanel
      */
     public static final int HIGHLIGHT_NONE = Integer.MIN_VALUE;
     private int highlightedColour = HIGHLIGHT_NONE;
+    /**
+     * When non-NONE, highlight faces whose ORIGINAL (pre-recolor) colour
+     * matches this value, rather than their current rendered colour. Enables
+     * per-face origin highlighting so a user clicking the Old swatch of row
+     * X->Y only lights up the faces that were ORIGINALLY X, not every face
+     * that currently renders as Y (other rules might also target Y). Takes
+     * precedence over highlightedColour when set.
+     */
+    private int highlightedOriginalColour = HIGHLIGHT_NONE;
 
     /**
      * Per-pixel face-index buffer written alongside the z-buffer during the
@@ -186,15 +195,33 @@ public class RenderPanel extends JPanel
 
     /**
      * Sets which Jagex colour is currently being "highlighted" -- the faces
-     * matching this colour render with {@link #HIGHLIGHT_TINT} instead of their
-     * normal shading, so the user can see at a glance which parts of the model
-     * use that colour. Pass {@link #HIGHLIGHT_NONE} to clear.
+     * whose CURRENT (post-swap) colour matches render with
+     * {@link #HIGHLIGHT_TINT} instead of their normal shading.
+     * Clears any active origin-colour highlight. Pass {@link #HIGHLIGHT_NONE}
+     * to clear.
      */
     public void setHighlightedColour(int colour)
     {
-        if (this.highlightedColour == colour) return;
+        boolean changed = this.highlightedColour != colour || this.highlightedOriginalColour != HIGHLIGHT_NONE;
         this.highlightedColour = colour;
-        repaint();
+        this.highlightedOriginalColour = HIGHLIGHT_NONE;
+        if (changed) repaint();
+    }
+
+    /**
+     * Sets which ORIGINAL (pre-swap) Jagex colour to highlight. Faces whose
+     * pre-recolor face colour matches render with {@link #HIGHLIGHT_TINT}.
+     * Requires the per-face origin snapshot populated by
+     * {@link #updateModel(ModelData, short[])} -- if no snapshot, falls back
+     * to no highlight (caller should use setHighlightedColour instead).
+     * Clears any active effective-colour highlight.
+     */
+    public void setHighlightedOriginalColour(int colour)
+    {
+        boolean changed = this.highlightedOriginalColour != colour || this.highlightedColour != HIGHLIGHT_NONE;
+        this.highlightedOriginalColour = colour;
+        this.highlightedColour = HIGHLIGHT_NONE;
+        if (changed) repaint();
     }
 
     @Override
@@ -381,15 +408,29 @@ public class RenderPanel extends JPanel
                         int zIndex = y * img.getWidth() + x;
                         if (zBuffer[zIndex] < depth)
                         {
-                            // Highlighted faces ignore the angleCos shading and
-                            // render in HIGHLIGHT_TINT so they pop out from
-                            // the rest of the model. Comparison uses the
-                            // packed Jagex colour (short) rather than the
-                            // unpacked Color to avoid float drift through HSL.
-                            Color rasterColor = (highlightedColour != HIGHLIGHT_NONE
-                                    && t.faceColour == (short) highlightedColour)
-                                    ? HIGHLIGHT_TINT
-                                    : getShade(t.color, angleCos);
+                            // Highlighted faces ignore angleCos shading and
+                            // render in HIGHLIGHT_TINT. Two highlight modes:
+                            // - effective: matches faces whose CURRENT colour
+                            //   equals highlightedColour (legacy / fallback).
+                            // - original: matches faces whose PRE-SWAP colour
+                            //   equals highlightedOriginalColour (per-face
+                            //   origin specificity -- only the faces actually
+                            //   contributing to a specific swap rule light up,
+                            //   not every face that visually looks the same).
+                            // Comparisons use packed shorts to avoid HSL drift.
+                            boolean hit;
+                            if (highlightedOriginalColour != HIGHLIGHT_NONE
+                                    && originalFaceColors != null
+                                    && t.faceIndex < originalFaceColors.length)
+                            {
+                                hit = originalFaceColors[t.faceIndex] == (short) highlightedOriginalColour;
+                            }
+                            else
+                            {
+                                hit = highlightedColour != HIGHLIGHT_NONE
+                                        && t.faceColour == (short) highlightedColour;
+                            }
+                            Color rasterColor = hit ? HIGHLIGHT_TINT : getShade(t.color, angleCos);
                             img.setRGB(x, y, rasterColor.getRGB());
                             zBuffer[zIndex] = depth;
                             localFaceIds[zIndex] = t.faceIndex;
