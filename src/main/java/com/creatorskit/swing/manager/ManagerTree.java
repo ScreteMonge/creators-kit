@@ -955,6 +955,34 @@ public class ManagerTree extends JTree
     }
 
     /**
+     * Folder analog of {@link #promptRenameCharacter}. Folders have no sidebar
+     * textfield to route through, so we set the model directly and ask the tree
+     * model to refresh the node label -- the renderer just re-reads
+     * Folder.toString() (= name) on the next paint.
+     */
+    private void promptRenameFolder(DefaultMutableTreeNode folderNode, Folder folder)
+    {
+        if (folder == null) return;
+        String current = folder.getName();
+        String entered = (String) JOptionPane.showInputDialog(
+                this,
+                "New name for this Folder:",
+                "Rename",
+                JOptionPane.PLAIN_MESSAGE,
+                null,
+                null,
+                current);
+
+        if (entered == null) return; // cancelled
+        String trimmed = entered.trim();
+        if (trimmed.isEmpty()) return;
+        if (trimmed.equals(current)) return; // no-op
+
+        folder.setName(trimmed);
+        treeModel.nodeChanged(folderNode);
+    }
+
+    /**
      * Right-click context menu for a Folder node. Currently just exposes the
      * "Select N random Characters..." action, which picks N direct child
      * Characters at random (no recursion into subfolders) and replaces the
@@ -982,6 +1010,13 @@ public class ManagerTree extends JTree
         title.setFont(net.runelite.client.ui.FontManager.getRunescapeBoldFont());
         title.setBorder(new javax.swing.border.EmptyBorder(2, 6, 2, 6));
         popup.add(title);
+        popup.addSeparator();
+
+        JMenuItem rename = new JMenuItem("Rename...");
+        rename.setToolTipText("Edit this folder's display name.");
+        rename.addActionListener(e -> promptRenameFolder(folderNode, folder));
+        popup.add(rename);
+
         popup.addSeparator();
 
         JMenuItem randomSelect = new JMenuItem("Select N random Characters...");
