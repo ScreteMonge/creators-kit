@@ -14,9 +14,7 @@ import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 
 import javax.inject.Inject;
-import java.awt.AlphaComposite;
 import java.awt.Color;
-import java.awt.Composite;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
@@ -38,10 +36,11 @@ import java.util.ArrayList;
  * <p>Damage animation: when the current keyframe has less HP than the
  * previous BOSS_HEALTH keyframe on the same Character, the bright green
  * snaps immediately to the new (lower) endpoint and a dark-green chunk
- * paints at FULL WIDTH over the just-lost range. The chunk's alpha then
- * fades from 1.0 to 0.0 over 1 game tick, revealing the red base beneath.
- * Pure linear alpha interp keyed on currentTick keeps scrubbing
- * deterministic -- any visit to the same tick paints the same pixels.
+ * paints at FULL WIDTH over the just-lost range. Over 1 game tick the
+ * chunk's right edge retreats toward its left edge (the bright green
+ * endpoint), shrinking the chunk right-to-left until it's gone --
+ * unrolled pixels reveal the red base. Pure linear width interp keyed
+ * on currentTick keeps scrubbing deterministic.
  *
  * <p>HitsplatKeyFrame edits drive most damage events: TimeSheetPanel auto-
  * creates / auto-updates the matching bar keyframe (Health / Shield /
@@ -214,11 +213,11 @@ public class BossHealthOverlay extends Overlay
 
         // Damage animation: when the previous BOSS_HEALTH keyframe had more
         // HP, the bright green is already at its new (lower) endpoint above.
-        // We overlay the just-lost chunk as dark green at FULL WIDTH and
-        // fade its alpha from 1.0 to 0.0 over 1 tick. Underneath it is the
-        // red base, so as the green chunk fades the user sees red bleed
-        // through -- "the green bar appears immediately in full width and
-        // fades away in 1 tick, leaving red in its place".
+        // We paint the just-lost chunk as dark green at FULL WIDTH, then
+        // retract its right edge toward its left edge over 1 game tick --
+        // the chunk shrinks right-to-left, the just-vacated pixels show the
+        // red base beneath. Left edge stays anchored at the bright green
+        // endpoint; right edge slides left until the chunk is gone.
         HealthKeyFrame previous = findPreviousBossKeyFrame(bossChar, bossKf.getTick());
         if (previous != null && previous.getCurrentHealth() > currentHp)
         {
@@ -226,17 +225,17 @@ public class BossHealthOverlay extends Overlay
             double elapsed = currentTick - bossKf.getTick();
             if (elapsed >= 0 && elapsed < DRAIN_DURATION_TICKS)
             {
-                float alpha = (float) Math.max(0.0, 1.0 - (elapsed / DRAIN_DURATION_TICKS));
-                int decayStart = greenW; // right after the bright green endpoint
+                double progress = elapsed / DRAIN_DURATION_TICKS; // 0 -> 1
+                int decayStart = greenW; // anchored left edge (bright green endpoint)
                 int decayEnd = (int) Math.round((double) oldHp / maxHp * BAR_WIDTH);
-                int decayW = Math.max(0, decayEnd - decayStart);
-                if (decayW > 0 && alpha > 0f)
+                int fullW = Math.max(0, decayEnd - decayStart);
+                // Width retreats linearly from fullW at progress=0 to 0 at
+                // progress=1. The unrolled bit on the right reveals red.
+                int decayW = (int) Math.round(fullW * (1.0 - progress));
+                if (decayW > 0)
                 {
-                    Composite oc = graphics.getComposite();
-                    graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
                     graphics.setColor(HP_DECAY_GREEN);
                     graphics.fillRect(x + decayStart, barY, decayW, BAR_HEIGHT);
-                    graphics.setComposite(oc);
                 }
             }
         }
