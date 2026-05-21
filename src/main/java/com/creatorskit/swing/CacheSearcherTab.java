@@ -61,36 +61,6 @@ public class CacheSearcherTab extends JPanel
     private final JPanel breakdownPanel = new JPanel();
     private RenderPanel renderPanel;
 
-    // ---- Animation Searcher preview state -----------------------------
-    /**
-     * The ModelData the preview's lit baseModel was derived from. Used as
-     * a cache key -- if the user picks a new NPC / Object / SpotAnim while
-     * a preview is running, this lets us notice the source changed and
-     * re-light. Compared by reference; ModelData identity is what the cache
-     * cares about, not deep equality.
-     */
-    private ModelData animPreviewSourceMD = null;
-    /**
-     * Cached lit Model used as the rest-pose input to
-     * {@link #animPreviewController}. Built from {@link #animPreviewSourceMD}
-     * via {@code ModelData.light()} on the client thread, kept across frames
-     * so successive timer ticks don't pay the relight cost. animate() returns
-     * a fresh Model for the current frame each tick without mutating this one.
-     */
-    private Model animPreviewBaseModel = null;
-    /**
-     * Independent animation controller used purely for the preview. Separate
-     * from any in-world Character / ckObject controller -- this exists just
-     * to drive the right-side render panel.
-     */
-    private com.creatorskit.programming.CKAnimationController animPreviewController = null;
-    /**
-     * Drives {@link #tickAnimationPreview}. Fires on the EDT, then thunks
-     * onto the client thread for the actual tick+animate call (RuneLite API
-     * requires client-thread access for animation ops).
-     */
-    private javax.swing.Timer animPreviewTimer = null;
-
     private final JFilterableTable npcTable = new JFilterableTable("NPCs");
     private final JFilterableTable objectTable = new JFilterableTable("Objects");
     private final JFilterableTable itemTable = new JFilterableTable("Items");
@@ -1245,13 +1215,20 @@ public class CacheSearcherTab extends JPanel
                     if (o instanceof AnimData)
                     {
                         AnimData data = (AnimData) o;
-                        // Preview animation in THIS panel only. The selected
-                        // Character's storedModel becomes the base mesh; an
-                        // independent CKAnimationController plays the anim
-                        // and we feed each frame's animate() result into the
-                        // RenderPanel. The in-world Character is untouched --
-                        // no spinner mutation, no ckObject state change.
-                        startAnimationPreview(data.getId());
+                        Character character = plugin.getSelectedCharacter();
+                        if (character != null)
+                        {
+                            int animId = data.getId();
+                            // Preview, don't apply: previous behaviour set the
+                            // spinner value which both committed the anim ID
+                            // to the Character's recorded state AND propagated
+                            // it across multi-selected Characters. Now we just
+                            // play the anim once on the primary selected
+                            // Character; the spinner stays put, so "Add
+                            // keyframe" later still uses the user's
+                            // intentional value.
+                            character.previewAnimation(clientThread, plugin.getClient(), plugin.getRandom(), animId);
+                        }
                     }
                 }
             }
@@ -1266,10 +1243,7 @@ public class CacheSearcherTab extends JPanel
 
         c.gridx = 0;
         c.gridy = 3;
-        JLabel instructionLabel = new JLabel("<html>Pick a model first via NPC / Object / SpotAnim / Projectile / Item,<br>"
-                + "then double-click any Animation here to preview it on that model.</html>");
-        instructionLabel.setToolTipText("The preview plays on whatever model is currently displayed in the right-side "
-                + "render panel. Nothing in the game world or your keyframes is touched -- this is audition-only.");
+        JLabel instructionLabel = new JLabel("Double click any Animation to preview it on the selected Object (without applying)");
         card.add(instructionLabel, c);
     }
 
@@ -1378,120 +1352,7 @@ public class CacheSearcherTab extends JPanel
         if (!cardName.equals(ANIM))
         {
             currentCard = cardName;
-            // Leaving the Animation Searcher: shut down the preview timer.
-            // Whatever the previous card was (NPC / Object / SpotAnim /
-            // Projectile / Item) already drove its own model into the panel,
-            // so we DON'T touch the panel here. The user's NPC click stays
-            // visible exactly as they left it.
-            stopAnimationPreview();
         }
-        // Entering ANIM: no-op. The panel keeps whatever model was last
-        // loaded by the other cards. Double-click an animation row to
-        // animate THAT model. This is the "pick the source via the other
-        // searchers, then audition anims" workflow.
-    }
-
-    /**
-     * Begin (or restart with a new anim id) the in-panel animation preview.
-     *
-     * <p>Source of the rest-pose mesh: whatever {@link ModelData} is
-     * currently sitting in {@link #renderPanel} (last loaded by an NPC /
-     * Object / SpotAnim / Projectile / Item double-click, or by the Model
-     * Anvil if it shares the panel). If the panel has no model loaded the
-     * preview can't start -- we surface a one-shot dialog telling the user
-     * to pick a source first.
-     *
-     * <p>{@code md.light()} is expensive; the lit Model is cached against
-     * the source ModelData reference so successive anim-row double-clicks
-     * against the same source don't re-light. Re-light only fires when the
-     * user picks a different source in another tab.
-     */
-    private void startAnimationPreview(int animId)
-    {
-        ModelData sourceMD = renderPanel.getModel();
-        if (sourceMD == null)
-        {
-            JOptionPane.showMessageDialog(this,
-                    "Pick a model first via NPC / Object / SpotAnim / Projectile / Item search,\n"
-                            + "then come back here and double-click an animation to play it on that model.",
-                    "No model loaded",
-                    JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-
-        // Snapshot the source ref so the client-thread lambda has a stable
-        // reading even if the user clicks a new NPC mid-light.
-        final ModelData source = sourceMD;
-        final boolean needRelight = animPreviewBaseModel == null || animPreviewSourceMD != source;
-
-        clientThread.invokeLater(() ->
-        {
-            if (needRelight)
-            {
-                animPreviewBaseModel = source.light();
-                animPreviewSourceMD = source;
-            }
-            if (animPreviewBaseModel == null) return;
-            // loop=true so the user can audition longer animations without
-            // re-double-clicking. They get a continuous looped preview until
-            // they pick a different anim or leave the Animation Searcher.
-            animPreviewController = new com.creatorskit.programming.CKAnimationController(
-                    plugin.getClient(), animId, true);
-        });
-        ensureAnimPreviewTimer();
-    }
-
-    /** Stops the preview timer + clears the controller. The lit baseModel +
-     *  source ref stay cached so the next double-click on the same source
-     *  doesn't have to re-light. */
-    private void stopAnimationPreview()
-    {
-        if (animPreviewTimer != null && animPreviewTimer.isRunning())
-        {
-            animPreviewTimer.stop();
-        }
-        animPreviewController = null;
-    }
-
-    private void ensureAnimPreviewTimer()
-    {
-        if (animPreviewTimer == null)
-        {
-            // 100ms => ~10fps. Slower than 60ms to keep the EDT paint queue
-            // from backing up on heavy NPC meshes (the software rasteriser
-            // is O(faces * pixels)) and to avoid the visual tearing that
-            // came from paint racing animate() at high cadence. Each fire
-            // ticks the controller by 5 client ticks (5*20ms = 100ms) so
-            // the playback rate roughly matches real game time.
-            animPreviewTimer = new javax.swing.Timer(100, e -> tickAnimationPreview());
-            animPreviewTimer.setRepeats(true);
-        }
-        if (!animPreviewTimer.isRunning())
-        {
-            animPreviewTimer.start();
-        }
-    }
-
-    private void tickAnimationPreview()
-    {
-        if (animPreviewController == null || animPreviewBaseModel == null)
-        {
-            return;
-        }
-        clientThread.invokeLater(() ->
-        {
-            com.creatorskit.programming.CKAnimationController ctrl = animPreviewController;
-            Model base = animPreviewBaseModel;
-            if (ctrl == null || base == null) return;
-            ctrl.tick(5);
-            Model animated = ctrl.animate(base);
-            if (animated != null)
-            {
-                // Hop back to the EDT for the panel update.
-                final Model frame = animated;
-                javax.swing.SwingUtilities.invokeLater(() -> renderPanel.updateAnimatedModel(frame));
-            }
-        });
     }
 
     private CustomModelType getCurrentTypeSelected()
