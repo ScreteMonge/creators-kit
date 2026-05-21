@@ -125,6 +125,10 @@ public class SummarySheet extends TimeSheet
             JMenuItem screenShake = new JMenuItem(KeyFrameType.SCREEN_SHAKE.getName());
             screenShake.addActionListener(e -> onKeyFrameTypePressed(finalI, KeyFrameType.SCREEN_SHAKE));
             menuItem.add(screenShake);
+
+            JMenuItem camera = new JMenuItem(KeyFrameType.CAMERA.getName());
+            camera.addActionListener(e -> onKeyFrameTypePressed(finalI, KeyFrameType.CAMERA));
+            menuItem.add(camera);
         }
     }
 
@@ -271,6 +275,10 @@ public class SummarySheet extends TimeSheet
                 case SCREEN_SHAKE:
                     ScreenShakeKeyFrame sskf = (ScreenShakeKeyFrame) keyFrame;
                     drawTail(g, e, keyFrames, sskf.getDurationTicks(), zoomFactor, sskf.getTick(), x, y, xStringOffset, stringHeight);
+                    break;
+                case CAMERA:
+                    CameraKeyFrame ckf = (CameraKeyFrame) keyFrame;
+                    drawTail(g, e, keyFrames, ckf.getDurationTicks(), zoomFactor, ckf.getTick(), x, y, xStringOffset, stringHeight);
                     break;
                 case HITSPLAT_1:
                 case HITSPLAT_2:

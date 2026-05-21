@@ -198,6 +198,10 @@ public class AttributeSheet extends TimeSheet
                         ScreenShakeKeyFrame sskf = (ScreenShakeKeyFrame) keyFrame;
                         drawTail(g, e, keyFrames, sskf.getDurationTicks(), zoomFactor, sskf.getTick(), x, y, imageHeight);
                         break;
+                    case CAMERA:
+                        CameraKeyFrame ckf = (CameraKeyFrame) keyFrame;
+                        drawTail(g, e, keyFrames, ckf.getDurationTicks(), zoomFactor, ckf.getTick(), x, y, imageHeight);
+                        break;
                     default:
                         break;
                 }
@@ -347,6 +351,10 @@ public class AttributeSheet extends TimeSheet
                 case SCREEN_SHAKE:
                     ScreenShakeKeyFrame sskf = (ScreenShakeKeyFrame) keyFrame;
                     drawPreviewTail(g, x, y, imageHeight, sskf.getDurationTicks(), zoomFactor);
+                    break;
+                case CAMERA:
+                    CameraKeyFrame ckf = (CameraKeyFrame) keyFrame;
+                    drawPreviewTail(g, x, y, imageHeight, ckf.getDurationTicks(), zoomFactor);
                     break;
                 default:
                     break;

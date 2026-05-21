@@ -506,6 +506,109 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		return best;
 	}
 
+	/**
+	 * Applies the currently-active CameraKeyFrame (if any) to the engine camera.
+	 * Mirrors mlgudi/keyframe-camera's Playback.tick: find the segment whose
+	 * window contains the current tick, interpolate from {@code from} to
+	 * {@code to} via the keyframe's easing curve, and push focal point + pitch
+	 * + yaw + zoom to the client.
+	 *
+	 * <p>Per-Character storage (like Screen Fade / Screen Shake -- Phase 2
+	 * will move all three to a central global store). Scans every Character's
+	 * current CAMERA keyframe, picks the most-recently-started one within its
+	 * window. The "to" keyframe must live on the same Character as "from"
+	 * (cross-character interpolation would be confusing and rarely useful).
+	 *
+	 * <p>Forces camera mode to 1 (free-camera) before touching the focal-point
+	 * setters -- those throw IllegalArgumentException otherwise. Won't fight
+	 * the camera-lock lerp because that bails when no cameraLockedCharacter
+	 * is set; users picking camera keyframes should not also hold a lock.
+	 */
+	private void applyCurrentCameraKeyframe()
+	{
+		if (characters.isEmpty())
+		{
+			return;
+		}
+
+		double currentTick = getCurrentTick();
+		Character bestOwner = null;
+		com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame best = null;
+		double bestStart = Double.NEGATIVE_INFINITY;
+
+		for (int i = 0; i < characters.size(); i++)
+		{
+			Character c = characters.get(i);
+			com.creatorskit.swing.timesheet.keyframe.KeyFrame kf =
+					c.getCurrentKeyFrame(com.creatorskit.swing.timesheet.keyframe.KeyFrameType.CAMERA);
+			if (!(kf instanceof com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame))
+			{
+				continue;
+			}
+			com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame ck =
+					(com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame) kf;
+			// Check window: from this keyframe until either next keyframe or
+			// duration runs out. Outside the window, release camera to user.
+			com.creatorskit.swing.timesheet.keyframe.KeyFrame nextKf =
+					c.findNextKeyFrame(com.creatorskit.swing.timesheet.keyframe.KeyFrameType.CAMERA, ck.getTick());
+			double endTick = nextKf != null
+					? nextKf.getTick()
+					: ck.getTick() + ck.getDurationTicks();
+			if (currentTick < ck.getTick() || currentTick > endTick)
+			{
+				continue;
+			}
+			if (ck.getTick() > bestStart)
+			{
+				bestStart = ck.getTick();
+				best = ck;
+				bestOwner = c;
+			}
+		}
+		if (best == null)
+		{
+			return;
+		}
+
+		com.creatorskit.swing.timesheet.keyframe.KeyFrame nextKf =
+				bestOwner.findNextKeyFrame(com.creatorskit.swing.timesheet.keyframe.KeyFrameType.CAMERA, best.getTick());
+		com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame interp;
+		if (nextKf instanceof com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame)
+		{
+			com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame next =
+					(com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame) nextKf;
+			double span = next.getTick() - best.getTick();
+			double t = span <= 0
+					? 1.0
+					: Math.max(0.0, Math.min(1.0, (currentTick - best.getTick()) / span));
+			interp = com.creatorskit.swing.timesheet.keyframe.CameraEase.interpolate(best, next, t);
+		}
+		else
+		{
+			interp = best; // No next -- hold current values until duration runs out.
+		}
+
+		if (client.getCameraMode() != 1)
+		{
+			client.setCameraMode(1);
+		}
+		try
+		{
+			client.setCameraFocalPointX(interp.getFocalX());
+			client.setCameraFocalPointY(interp.getFocalY());
+			client.setCameraFocalPointZ(interp.getFocalZ());
+			client.setCameraPitchTarget(
+					com.creatorskit.swing.timesheet.keyframe.CameraEase.radiansToJau(interp.getPitch()));
+			client.setCameraYawTarget(
+					com.creatorskit.swing.timesheet.keyframe.CameraEase.radiansToJau(interp.getYaw()) % 2047);
+			client.runScript(ScriptID.CAMERA_DO_ZOOM, interp.getScale(), interp.getScale());
+		}
+		catch (IllegalArgumentException ignored)
+		{
+			// Camera mode flipped under us between the check and the setters; bail.
+		}
+	}
+
 	private CKObject transmog;
 	private CKObject previewObject;
 	private Random random = new Random();
@@ -847,11 +950,13 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		updatePreviewObject(client.getTopLevelWorldView().getSelectedSceneTile());
 
 		// Order: undo previous tick's shake -> camera lock (operates on un-shaken
-		// focal so its lerp target is stable) -> apply new shake on top. Keeps
-		// the two effects orthogonal: lock follows the character smoothly,
-		// shake adds jitter without polluting the lock's lerp.
+		// focal so its lerp target is stable) -> camera keyframe (overrides lock
+		// when active; the keyframe directly drives the focal point) -> apply
+		// new shake on top. Keeps the effects orthogonal: lock/keyframe set the
+		// base camera, shake adds jitter without polluting either.
 		undoPreviousScreenShake();
 		updateCameraLock();
+		applyCurrentCameraKeyframe();
 		applyCurrentScreenShake();
 
 		if (addProgramStep)
