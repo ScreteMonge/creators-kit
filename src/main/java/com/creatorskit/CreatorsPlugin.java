@@ -534,8 +534,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	 * setters -- those throw IllegalArgumentException otherwise. Won't fight
 	 * the camera-lock lerp because that bails when no cameraLockedCharacter
 	 * is set; users picking camera keyframes should not also hold a lock.
+	 *
+	 * <p>Public so {@link com.creatorskit.swing.timesheet.TimeSheetPanel#setCurrentTime}
+	 * can call it the moment the timeline cursor moves -- otherwise during
+	 * playback we'd wait for the next {@code onClientTick} subscriber order
+	 * to fire, which the Programmer's time increment may have already
+	 * displaced (was the "scrub works, play doesn't" bug).
 	 */
-	private void applyCurrentCameraKeyframe()
+	public void applyCurrentCameraKeyframe()
 	{
 		double currentTick = getCurrentTick();
 		com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame[] all =

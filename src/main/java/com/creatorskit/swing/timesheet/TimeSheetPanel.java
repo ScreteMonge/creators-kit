@@ -1738,6 +1738,16 @@ public class TimeSheetPanel extends JPanel
             {
                 programmer.updatePrograms(tick);
             }
+            // Push the camera keyframe in the same call as the time change.
+            // Without this, applying the camera relies on onClientTick firing
+            // AFTER the Programmer's time increment -- but plugin.onClientTick
+            // registers first, so during play it reads the previous tick's
+            // currentTime and the camera lags / stays static. Calling here
+            // makes camera response symmetric with scrubbing.
+            if (plugin != null)
+            {
+                plugin.applyCurrentCameraKeyframe();
+            }
         }
 
         onCurrentTimeChanged(tick);
