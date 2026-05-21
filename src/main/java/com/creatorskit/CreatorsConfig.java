@@ -217,6 +217,21 @@ public interface CreatorsConfig extends Config
 	}
 
 	@ConfigItem(
+			keyName = "nudgeStep",
+			name = "Nudge step (scene units)",
+			description = "How many sub-tile scene units each ALT+WASD/R/F press shifts the selected Character(s). " +
+					"1 tile = 128 units, so the default 4 divides cleanly into a tile (32 presses per tile). " +
+					"Range 1-128; pick a divisor of 128 (1/2/4/8/16/32/64/128) to keep grid alignment.",
+			section = sceneSettings,
+			position = 18
+	)
+	@net.runelite.client.config.Range(min = 1, max = 128)
+	default int nudgeStep()
+	{
+		return 4;
+	}
+
+	@ConfigItem(
 			keyName = "cameraLockEasing",
 			name = "Camera lock responsiveness (%)",
 			description = "What fraction of the remaining distance to the Character the camera closes each client " +

@@ -2024,21 +2024,20 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 	};
 
-	/** Default per-press nudge distance in scene units (1 tile = 128 units, so 5 is sub-tile). */
-	private static final int NUDGE_STEP = 5;
-
 	/**
-	 * ALT + WASD/R/F nudge the currently-selected Character(s) by {@link #NUDGE_STEP}
-	 * scene units in the chosen direction. WASD are cardinal in scene space (W = north,
-	 * S = south, D = east, A = west); R/F are vertical (R = up, F = down). Operates on
-	 * every Character in the SelectionManager so a multi-selection nudges together.
+	 * ALT + WASD/R/F nudge the currently-selected Character(s) by
+	 * {@code config.nudgeStep()} scene units in the chosen direction. WASD are
+	 * cardinal in scene space (W = north, S = south, D = east, A = west); R/F
+	 * are vertical (R = up, F = down). Operates on every Character in the
+	 * SelectionManager so a multi-selection nudges together.
 	 *
 	 * <p>ALT was picked over SHIFT to avoid a clash with the Detached Camera plugin,
 	 * which uses SHIFT + WASDRF for slow camera movement.
 	 *
-	 * <p>Hotkeys are hardcoded rather than config-driven because they're a fixed gesture
-	 * tied to the WASD convention; promoting them to user-configurable keybinds later
-	 * is straightforward if needed.
+	 * <p>The step size is user-configurable (see {@code CreatorsConfig.nudgeStep})
+	 * but defaults to 4 -- a divisor of 128 so 32 presses cover exactly one tile.
+	 * Hotkeys themselves are still hardcoded; promoting them to user-configurable
+	 * keybinds later is straightforward if needed.
 	 */
 	private void nudgeSelectedCharacters(int dx, int dy, int dz)
 	{
@@ -2089,7 +2088,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			nudgeSelectedCharacters(0, NUDGE_STEP, 0);
+			int step = config.nudgeStep();
+			nudgeSelectedCharacters(0, step, 0);
 		}
 	};
 
@@ -2098,7 +2098,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			nudgeSelectedCharacters(0, -NUDGE_STEP, 0);
+			int step = config.nudgeStep();
+			nudgeSelectedCharacters(0, -step, 0);
 		}
 	};
 
@@ -2107,7 +2108,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			nudgeSelectedCharacters(NUDGE_STEP, 0, 0);
+			int step = config.nudgeStep();
+			nudgeSelectedCharacters(step, 0, 0);
 		}
 	};
 
@@ -2116,7 +2118,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			nudgeSelectedCharacters(-NUDGE_STEP, 0, 0);
+			int step = config.nudgeStep();
+			nudgeSelectedCharacters(-step, 0, 0);
 		}
 	};
 
@@ -2128,7 +2131,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			nudgeSelectedCharacters(0, 0, NUDGE_STEP);
+			int step = config.nudgeStep();
+			nudgeSelectedCharacters(0, 0, step);
 		}
 	};
 
@@ -2137,7 +2141,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			nudgeSelectedCharacters(0, 0, -NUDGE_STEP);
+			int step = config.nudgeStep();
+			nudgeSelectedCharacters(0, 0, -step);
 		}
 	};
 
