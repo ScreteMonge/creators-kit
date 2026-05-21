@@ -244,16 +244,17 @@ public class ColourSwapPanel extends JPanel
         this.colourScrollPane = scrollPane;
         add(scrollPane, c);
 
-        // Hook the model-preview click: clicking a face passes that face's
-        // RENDERED colour (post-swap, since ModelData.recolor is applied before
-        // render) into highlightEffectiveColour. That matches every row whose
-        // effective colour equals the clicked colour -- captures both the
-        // "no swap" case and any number of swap rules that target the same
-        // colour. RenderPanel is constructed before ColourSwapPanel during
-        // ModelAnvil setup so the field is non-null here.
+        // Hook the model-preview click: RenderPanel passes the clicked face's
+        // ORIGINAL (pre-swap) colour when the per-face origin snapshot is
+        // available, else falls back to the current colour. Route through
+        // highlightByOriginalColour so we can find the SPECIFIC swap row that
+        // caused this face's appearance (the multi-old -> same-new
+        // disambiguation case the user asked for). Old-swatch clicks in the
+        // list still go through highlightEffectiveColour since they already
+        // have a row in hand.
         if (modelAnvil.getRenderPanel() != null)
         {
-            modelAnvil.getRenderPanel().setOnFaceClicked(this::highlightEffectiveColour);
+            modelAnvil.getRenderPanel().setOnFaceClicked(this::highlightByOriginalColour);
         }
 
         JPanel swapPanel = new JPanel();
@@ -1033,6 +1034,71 @@ public class ColourSwapPanel extends JPanel
             onSwapperPressed(complexPanel);
 
         modelAnvil.updateRenderPanel();
+    }
+
+    /**
+     * Model-click entry point. Receives the clicked face's ORIGINAL (pre-swap)
+     * Jagex colour. Finds the SPECIFIC row whose Old colour matches -- there's
+     * exactly one such row per unique original since the list is built from
+     * the model's distinct pre-recolor face colours. That gives the user the
+     * exact swap rule for whichever face they clicked, even when several Old
+     * colours all swap to the same New colour (the multi-old -> same-new
+     * disambiguation case).
+     *
+     * <p>Model tint still uses the row's EFFECTIVE colour so the visible
+     * highlight on the model matches what the user sees (the swap target),
+     * not what the face used to be.
+     *
+     * <p>Falls back to {@link #highlightEffectiveColour} when no row matches
+     * (e.g. RenderPanel sent a current colour because no origin snapshot was
+     * available, or the list got out-of-sync with the model).
+     */
+    public void highlightByOriginalColour(short originalColour)
+    {
+        ColourPanel match = null;
+        for (ColourPanel cp : colourPanels)
+        {
+            if (cp.getOldColour() == originalColour)
+            {
+                match = cp;
+                break;
+            }
+        }
+        if (match == null)
+        {
+            highlightEffectiveColour(originalColour);
+            return;
+        }
+
+        short effective = effectiveColour(match);
+        // Toggle off if the same row is clicked again. Compare by Old colour
+        // since that's the per-row identity; effective could collide across rows.
+        if (highlightedPanels.size() == 1 && highlightedPanels.get(0) == match)
+        {
+            clearHighlight();
+            return;
+        }
+
+        for (ColourPanel prev : highlightedPanels)
+        {
+            prev.setBorder(UNHIGHLIGHTED_PANEL_BORDER);
+        }
+        highlightedPanels.clear();
+
+        highlightedColour = effective & 0xFFFF;
+        match.setBorder(HIGHLIGHTED_PANEL_BORDER);
+        highlightedPanels.add(match);
+
+        if (modelAnvil.getRenderPanel() != null)
+        {
+            modelAnvil.getRenderPanel().setHighlightedColour(highlightedColour);
+        }
+
+        if (colourScrollPane != null)
+        {
+            final ColourPanel target = match;
+            SwingUtilities.invokeLater(() -> target.scrollRectToVisible(new Rectangle(0, 0, target.getWidth(), target.getHeight())));
+        }
     }
 
     /**

@@ -104,9 +104,24 @@ public class RenderPanel extends JPanel
                 if (idx < 0 || idx >= faceIdBuffer.length) return;
                 int faceIdx = faceIdBuffer[idx];
                 if (faceIdx < 0) return;
-                short[] colours = model.getFaceColors();
-                if (colours == null || faceIdx >= colours.length) return;
-                onFaceClicked.accept(colours[faceIdx]);
+                // Report the ORIGINAL (pre-recolor) colour of the clicked face
+                // when we have the snapshot -- enables the swap-list highlight
+                // to find the SPECIFIC row that caused this face's colour, even
+                // if many Old rows swap to the same New colour. Falls back to
+                // the current (post-swap) face colour when no snapshot exists,
+                // matching the old single-colour behavior.
+                short colourToReport;
+                if (originalFaceColors != null && faceIdx < originalFaceColors.length)
+                {
+                    colourToReport = originalFaceColors[faceIdx];
+                }
+                else
+                {
+                    short[] colours = model.getFaceColors();
+                    if (colours == null || faceIdx >= colours.length) return;
+                    colourToReport = colours[faceIdx];
+                }
+                onFaceClicked.accept(colourToReport);
             }
         });
 
@@ -137,10 +152,27 @@ public class RenderPanel extends JPanel
         fovSlider.addChangeListener(e -> repaint());
     }
 
+    /**
+     * Pre-recolor snapshot of face colours, parallel to model.getFaceColors().
+     * Used by mouseClicked to report the ORIGINAL colour of a clicked face
+     * rather than its post-swap rendered colour -- lets the swap-list highlight
+     * find the SPECIFIC Old colour row that the face originated from, even when
+     * multiple Old colours all swap to the same New colour. Null when the
+     * caller can't supply the snapshot (older code path / merge mismatch); the
+     * click handler then falls back to current-colour reporting.
+     */
+    private short[] originalFaceColors;
+
     public void updateModel(ModelData md)
+    {
+        updateModel(md, null);
+    }
+
+    public void updateModel(ModelData md, short[] originalFaceColors)
     {
         modelExists = true;
         model = md;
+        this.originalFaceColors = originalFaceColors;
         repaint();
         revalidate();
     }

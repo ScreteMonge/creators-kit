@@ -398,14 +398,14 @@ public class ModelAnvil extends JPanel
 
         clientThread.invokeLater(() ->
         {
-            ModelData md = modelUtilities.createComplexModelData(detailedModels);
-            if (md == null)
+            com.creatorskit.models.ModelUtilities.ComplexModelResult r = modelUtilities.createComplexModelDataWithOriginals(detailedModels);
+            if (r == null || r.modelData == null)
             {
                 renderPanel.resetViewer();
             }
             else
             {
-                renderPanel.updateModel(md);
+                renderPanel.updateModel(r.modelData, r.originalFaceColors);
             }
         });
     }

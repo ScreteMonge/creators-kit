@@ -92,10 +92,45 @@ public class ModelUtilities
         return model;
     }
 
+    /**
+     * Result of {@link #createComplexModelDataWithOriginals}. {@code modelData} is
+     * the merged ModelData with all swaps applied. {@code originalFaceColors} is a
+     * parallel snapshot of the face colours BEFORE each sub-model's recolor ran,
+     * concatenated in mergeModels' input order so {@code originalFaceColors[i]}
+     * corresponds to {@code modelData.getFaceColors()[i]}. This lets click-pickers
+     * recover which Old colour each rendered face originated from -- the recolor
+     * call is destructive so the info would otherwise be lost.
+     */
+    public static final class ComplexModelResult
+    {
+        public final ModelData modelData;
+        public final short[] originalFaceColors;
+        public ComplexModelResult(ModelData modelData, short[] originalFaceColors)
+        {
+            this.modelData = modelData;
+            this.originalFaceColors = originalFaceColors;
+        }
+    }
+
+    /**
+     * Backwards-compatible overload: returns just the merged ModelData with all
+     * swaps baked in. Existing callers that don't need per-face origin info use
+     * this. The Anvil's RenderPanel uses the WithOriginals variant so click-picking
+     * can map a rendered face back to the specific Old colour it came from --
+     * crucial when multiple Old colours swap to the same New colour and the user
+     * needs to disambiguate which rule a given face belongs to.
+     */
     public ModelData createComplexModelData(DetailedModel[] detailedModels)
+    {
+        ComplexModelResult r = createComplexModelDataWithOriginals(detailedModels);
+        return r == null ? null : r.modelData;
+    }
+
+    public ComplexModelResult createComplexModelDataWithOriginals(DetailedModel[] detailedModels)
     {
         ModelData[] models = new ModelData[detailedModels.length];
         boolean[] facesToInvert = new boolean[0];
+        short[] mergedOriginals = new short[0];
 
         for (int e = 0; e < detailedModels.length; e++)
         {
@@ -156,6 +191,13 @@ public class ModelUtilities
                 detailedModel.setColoursTo(coloursTo);
             }
 
+            // Snapshot face colours BEFORE the destructive recolor below. After
+            // recolor runs we can no longer recover the originals from ModelData,
+            // and the merged model is what RenderPanel uses for rendering -- so
+            // per-face origin tracking has to capture this here per sub-model.
+            short[] originalFaceColors = modelData.getFaceColors().clone();
+            mergedOriginals = ArrayUtils.addAll(mergedOriginals, originalFaceColors);
+
             for (int i = 0; i < coloursTo.length; i++)
             {
                 modelData.recolor(coloursFrom[i], coloursTo[i]);
@@ -200,7 +242,19 @@ public class ModelUtilities
             }
         }
 
-        return modelData;
+        // Sanity check: mergeModels concatenates faces in input order in every
+        // OSRS engine version we've tested, so mergedOriginals.length should
+        // equal modelData.getFaceCount(). If a future engine update reorders
+        // faces this assert will catch it loudly during testing instead of
+        // silently giving wrong origin colours to click picks.
+        if (mergedOriginals.length != modelData.getFaceCount())
+        {
+            // Length mismatch -- bail with originals=null so the picker
+            // gracefully falls back to current-colour matching.
+            return new ComplexModelResult(modelData, null);
+        }
+
+        return new ComplexModelResult(modelData, mergedOriginals);
     }
 
     public void cacheToAnvil(CustomModelType type, int id, boolean all, int modelId)
