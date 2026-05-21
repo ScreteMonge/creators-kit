@@ -395,7 +395,50 @@ public class AttributePanel extends JPanel
         {
             return;
         }
-        timeSheetPanel.onUpdateButtonPressed();
+        // Mark that we're mid-auto-update so the inner addKeyFrame call's
+        // own resetAttributes doesn't fire and snap the spinners back to the
+        // pre-replacement marquee state for a frame. The outer
+        // setSelectedKeyFrames at the end of onUpdateButtonPressed runs its
+        // own resetAttributes with the freshly-replaced marquee, which is
+        // the one that should win.
+        inAutoUpdateBatch = true;
+        try
+        {
+            timeSheetPanel.onUpdateButtonPressed();
+        }
+        finally
+        {
+            inAutoUpdateBatch = false;
+        }
+        // Briefly flash the cardLabel green so the user gets a "saved"
+        // signal without having to watch a specific field. Quick fade-out
+        // via Swing Timer so the visual cue isn't intrusive.
+        flashCardLabelSaved();
+    }
+
+    /** Flag inspected by TimeSheetPanel.addKeyFrame to skip its inner resetAttributes when auto-update owns the batch. */
+    @Getter
+    private boolean inAutoUpdateBatch = false;
+
+    /**
+     * Brief green tint on the card title label so the user gets a "your edit
+     * landed" cue. Held for ~200ms then faded back to the normal foreground.
+     * Avoids per-field flashes which would be noisy across the many spinners
+     * an Animation card has.
+     */
+    private javax.swing.Timer flashRestoreTimer;
+    private void flashCardLabelSaved()
+    {
+        if (cardLabel == null) return;
+        Color originalFg = Color.WHITE;
+        cardLabel.setForeground(new Color(120, 220, 120));
+        if (flashRestoreTimer != null && flashRestoreTimer.isRunning())
+        {
+            flashRestoreTimer.stop();
+        }
+        flashRestoreTimer = new javax.swing.Timer(220, e -> cardLabel.setForeground(originalFg));
+        flashRestoreTimer.setRepeats(false);
+        flashRestoreTimer.start();
     }
 
     /**

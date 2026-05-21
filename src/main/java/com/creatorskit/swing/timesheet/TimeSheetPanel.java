@@ -1741,7 +1741,17 @@ public class TimeSheetPanel extends JPanel
 
         KeyFrame keyFrameToReplace = character.addKeyFrame(keyFrame, currentTime);
         attributePanel.setKeyFramedIcon(true);
-        attributePanel.resetAttributes(character, currentTime);
+        // Skip resetAttributes when an auto-update batch is in progress --
+        // it reads selectedKeyFrames (still pointing at the OLD keyframe at
+        // this moment in the batch) and snaps the spinners back to the old
+        // values, causing a visible flicker. The outer setSelectedKeyFrames
+        // at the bottom of onUpdateButtonPressed runs its own resetAttributes
+        // with the replacement-mapped marquee, so this intermediate one is
+        // redundant during auto-update.
+        if (!attributePanel.isInAutoUpdateBatch())
+        {
+            attributePanel.resetAttributes(character, currentTime);
+        }
         if (client.getGameState() == GameState.LOGGED_IN)
         {
             toolBox.getProgrammer().updateProgram(character, currentTime);
