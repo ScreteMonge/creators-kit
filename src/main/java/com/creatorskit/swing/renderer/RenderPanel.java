@@ -3,6 +3,8 @@ package com.creatorskit.swing.renderer;
 import com.creatorskit.swing.colours.ColourSwapPanel;
 import lombok.Getter;
 import lombok.Setter;
+import net.runelite.api.Mesh;
+import net.runelite.api.Model;
 import net.runelite.api.ModelData;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
@@ -18,6 +20,17 @@ public class RenderPanel extends JPanel
     @Getter
     @Setter
     private ModelData model;
+    /**
+     * When non-null, render this animated {@link Model} instead of {@link #model}.
+     * Used by the Animation Searcher preview path: a Swing Timer re-invokes
+     * {@link #updateAnimatedModel} every frame with the latest result of
+     * {@code AnimationController.animate(baseModel)}, so the panel reflects
+     * the moving pose. Face-click / colour-swap features are not supported in
+     * this mode -- they operate against the static {@link #model} ModelData,
+     * which has the cache-supplied face-colour shorts that the swap pipeline
+     * relies on.
+     */
+    private Model animatedModel;
     private boolean modelExists = false;
     private final JSlider fovSlider;
 
@@ -252,7 +265,23 @@ public class RenderPanel extends JPanel
     {
         modelExists = true;
         model = md;
+        animatedModel = null; // switching back to static mode -- drop any stale animated source
         this.originalFaceColors = originalFaceColors;
+        repaint();
+        revalidate();
+    }
+
+    /**
+     * Render an animated {@link Model} (vertex positions already morphed by
+     * the AnimationController) instead of the static {@link ModelData}. The
+     * Animation Searcher's preview timer calls this each frame with the result
+     * of {@code controller.animate(baseModel)} so the panel shows the moving
+     * pose. Pass {@code null} to clear and fall back to static rendering.
+     */
+    public void updateAnimatedModel(Model m)
+    {
+        modelExists = m != null;
+        animatedModel = m;
         repaint();
         revalidate();
     }
@@ -260,8 +289,30 @@ public class RenderPanel extends JPanel
     public void resetViewer()
     {
         modelExists = false;
+        animatedModel = null;
         repaint();
         revalidate();
+    }
+
+    /**
+     * Currently-active mesh source -- the animated Model if set, otherwise
+     * the static ModelData. Returns null when neither is set. Used by the
+     * paint pipeline so both modes share the same vertex/face access path.
+     */
+    private Mesh<?> activeMesh()
+    {
+        if (animatedModel != null) return animatedModel;
+        return model;
+    }
+
+    /**
+     * Face colour shorts for the active mesh. ModelData carries them as a
+     * dedicated field; Model exposes the cache shorts via getUnlitFaceColors().
+     */
+    private short[] activeFaceColors()
+    {
+        if (animatedModel != null) return animatedModel.getUnlitFaceColors();
+        return model != null ? model.getFaceColors() : null;
     }
 
     /**
@@ -302,7 +353,8 @@ public class RenderPanel extends JPanel
         g2.setColor(ColorScheme.DARKER_GRAY_COLOR);
         g2.fillRect(0, 0, getWidth(), getHeight());
 
-        if (model == null || !modelExists)
+        Mesh<?> meshSrc = activeMesh();
+        if (meshSrc == null || !modelExists)
         {
             g.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 16));
             g.setColor(ColorScheme.BRAND_ORANGE);
@@ -370,17 +422,17 @@ public class RenderPanel extends JPanel
             localFaceIds[q] = -1;
         }
 
-        short[] colours = model.getFaceColors();
-        int[] f1 = model.getFaceIndices1();
-        int[] f2 = model.getFaceIndices2();
-        int[] f3 = model.getFaceIndices3();
+        short[] colours = activeFaceColors();
+        int[] f1 = meshSrc.getFaceIndices1();
+        int[] f2 = meshSrc.getFaceIndices2();
+        int[] f3 = meshSrc.getFaceIndices3();
 
-        float[] mx = model.getVerticesX();
-        float[] my = model.getVerticesY();
-        float[] mz = model.getVerticesZ();
+        float[] mx = meshSrc.getVerticesX();
+        float[] my = meshSrc.getVerticesY();
+        float[] mz = meshSrc.getVerticesZ();
 
         ArrayList<Triangle> tris = new ArrayList<>();
-        for (int i = 0; i < model.getFaceCount(); i++)
+        for (int i = 0; i < meshSrc.getFaceCount(); i++)
         {
             int vert1 = f1[i];
             int vert2 = f2[i];

@@ -61,6 +61,34 @@ public class CacheSearcherTab extends JPanel
     private final JPanel breakdownPanel = new JPanel();
     private RenderPanel renderPanel;
 
+    // ---- Animation Searcher preview state -----------------------------
+    /**
+     * Character whose model is currently loaded into the preview panel for
+     * the Animation Searcher. Tracked so we can detect when the user has
+     * switched selection and re-load the panel.
+     */
+    private Character animPreviewCharacter = null;
+    /**
+     * Base Model used as the rest-pose input to {@link #animPreviewController}.
+     * Just a reference into the selected Character's storedModel; we never
+     * mutate it. {@code controller.animate(baseModel)} returns a fresh Model
+     * for the current frame each tick, which is what the RenderPanel renders.
+     */
+    private Model animPreviewBaseModel = null;
+    /**
+     * Independent animation controller used purely for the preview. Separate
+     * from the Character's ckObject controllers so the in-world Character
+     * doesn't see the previewed animation -- the user is auditioning, not
+     * applying.
+     */
+    private com.creatorskit.programming.CKAnimationController animPreviewController = null;
+    /**
+     * Drives {@link #tickAnimationPreview} at ~16fps. Fires on the EDT,
+     * which then thunks onto the client thread for the actual tick+animate
+     * call (RuneLite API requires client-thread access for animation ops).
+     */
+    private javax.swing.Timer animPreviewTimer = null;
+
     private final JFilterableTable npcTable = new JFilterableTable("NPCs");
     private final JFilterableTable objectTable = new JFilterableTable("Objects");
     private final JFilterableTable itemTable = new JFilterableTable("Items");
@@ -1215,20 +1243,13 @@ public class CacheSearcherTab extends JPanel
                     if (o instanceof AnimData)
                     {
                         AnimData data = (AnimData) o;
-                        Character character = plugin.getSelectedCharacter();
-                        if (character != null)
-                        {
-                            int animId = data.getId();
-                            // Preview, don't apply: previous behaviour set the
-                            // spinner value which both committed the anim ID
-                            // to the Character's recorded state AND propagated
-                            // it across multi-selected Characters. Now we just
-                            // play the anim once on the primary selected
-                            // Character; the spinner stays put, so "Add
-                            // keyframe" later still uses the user's
-                            // intentional value.
-                            character.previewAnimation(clientThread, plugin.getClient(), plugin.getRandom(), animId);
-                        }
+                        // Preview animation in THIS panel only. The selected
+                        // Character's storedModel becomes the base mesh; an
+                        // independent CKAnimationController plays the anim
+                        // and we feed each frame's animate() result into the
+                        // RenderPanel. The in-world Character is untouched --
+                        // no spinner mutation, no ckObject state change.
+                        startAnimationPreview(data.getId());
                     }
                 }
             }
@@ -1244,6 +1265,8 @@ public class CacheSearcherTab extends JPanel
         c.gridx = 0;
         c.gridy = 3;
         JLabel instructionLabel = new JLabel("Double click any Animation to preview it on the selected Object (without applying)");
+        instructionLabel.setToolTipText("Preview plays on the selected Object's model in the right-side render panel. "
+                + "The in-world Object is untouched, no keyframe is added, the animation spinner stays put.");
         card.add(instructionLabel, c);
     }
 
@@ -1352,7 +1375,136 @@ public class CacheSearcherTab extends JPanel
         if (!cardName.equals(ANIM))
         {
             currentCard = cardName;
+            // Leaving the Animation Searcher: shut down the preview timer so
+            // we don't burn CPU animating a panel the user isn't looking at.
+            // The static model in the renderPanel stays around for whatever
+            // the other card wants to display.
+            stopAnimationPreview();
         }
+        else
+        {
+            // Entering Animation Searcher: load the currently-selected
+            // Character's static model into the render panel as the rest
+            // pose. Subsequent double-clicks on anim rows will animate it.
+            refreshAnimPreviewBase(/*startTimerIfController=*/ false);
+        }
+    }
+
+    /**
+     * Refreshes {@link #animPreviewBaseModel} from the currently-selected
+     * Character and shows it (static) in the {@link #renderPanel}.
+     * No-op when no Character is selected or it has no stored model -- the
+     * panel just stays at its "No Model" placeholder.
+     *
+     * @param startTimerIfController if true and an active controller exists,
+     *                               restart the preview timer (used when the
+     *                               user re-selects a Character mid-preview).
+     */
+    private void refreshAnimPreviewBase(boolean startTimerIfController)
+    {
+        Character ch = plugin.getSelectedCharacter();
+        animPreviewCharacter = ch;
+        if (ch == null || ch.getStoredModel() == null || ch.getStoredModel().getModel() == null)
+        {
+            animPreviewBaseModel = null;
+            renderPanel.resetViewer();
+            return;
+        }
+        animPreviewBaseModel = ch.getStoredModel().getModel();
+        // Static display: feed the base Model directly. No controller running,
+        // so the panel shows the rest pose. Once the user double-clicks an
+        // anim, startAnimationPreview will swap in an animating Model.
+        renderPanel.updateAnimatedModel(animPreviewBaseModel);
+        if (startTimerIfController && animPreviewController != null)
+        {
+            ensureAnimPreviewTimer();
+        }
+    }
+
+    /**
+     * Begin (or restart with a new anim id) the in-panel animation preview.
+     * Independent of the in-world Character's animation state -- we own the
+     * controller, we own the per-frame animate() result, and the panel paints
+     * it. The Character's spinner, ckObject, and recorded keyframes are all
+     * untouched.
+     */
+    private void startAnimationPreview(int animId)
+    {
+        // Re-derive the base model in case the user has switched Characters
+        // since we last loaded one. Skips the static-display refresh path's
+        // resetViewer because we're about to animate -- the next timer tick
+        // will repopulate the panel.
+        if (animPreviewBaseModel == null || animPreviewCharacter != plugin.getSelectedCharacter())
+        {
+            refreshAnimPreviewBase(/*startTimerIfController=*/ false);
+        }
+        if (animPreviewBaseModel == null)
+        {
+            // No model to animate. The "No Model" placeholder stays visible;
+            // we just don't kick off the timer.
+            return;
+        }
+        clientThread.invokeLater(() ->
+        {
+            // loop=true so the user can audition longer animations without
+            // having to re-double-click. They get a continuous looped preview
+            // until they pick a different anim or leave the Animation Searcher.
+            animPreviewController = new com.creatorskit.programming.CKAnimationController(
+                    plugin.getClient(), animId, true);
+        });
+        ensureAnimPreviewTimer();
+    }
+
+    /** Stops the preview timer + clears the controller. The base Model stays
+     *  so a subsequent refreshAnimPreviewBase doesn't have to re-fetch it. */
+    private void stopAnimationPreview()
+    {
+        if (animPreviewTimer != null && animPreviewTimer.isRunning())
+        {
+            animPreviewTimer.stop();
+        }
+        animPreviewController = null;
+    }
+
+    private void ensureAnimPreviewTimer()
+    {
+        if (animPreviewTimer == null)
+        {
+            // 60ms => ~16 fps. Each fire ticks the controller by 3 client ticks
+            // (3 * 20ms = 60ms) so the in-panel anim plays at roughly real
+            // game-time speed. Higher fps would feel smoother but Swing
+            // Timers are coarse and the animate() call isn't free.
+            animPreviewTimer = new javax.swing.Timer(60, e -> tickAnimationPreview());
+            animPreviewTimer.setRepeats(true);
+        }
+        if (!animPreviewTimer.isRunning())
+        {
+            animPreviewTimer.start();
+        }
+    }
+
+    private void tickAnimationPreview()
+    {
+        if (animPreviewController == null || animPreviewBaseModel == null)
+        {
+            return;
+        }
+        clientThread.invokeLater(() ->
+        {
+            com.creatorskit.programming.CKAnimationController ctrl = animPreviewController;
+            Model base = animPreviewBaseModel;
+            if (ctrl == null || base == null) return;
+            ctrl.tick(3);
+            Model animated = ctrl.animate(base);
+            if (animated != null)
+            {
+                // Hop back to the EDT for the panel update. Swing component
+                // mutation must happen there even though we're driving the
+                // animation calc from the client thread.
+                final Model frame = animated;
+                javax.swing.SwingUtilities.invokeLater(() -> renderPanel.updateAnimatedModel(frame));
+            }
+        });
     }
 
     private CustomModelType getCurrentTypeSelected()
