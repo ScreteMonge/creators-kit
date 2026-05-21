@@ -160,12 +160,11 @@ public class TimeSheetPanel extends JPanel
 
     public void onAttributeSkipForward()
     {
-        if (selectedCharacter == null)
-        {
-            return;
-        }
-
-        KeyFrame keyFrame = selectedCharacter.findNextKeyFrame(currentTime);
+        // Fall back to the global stores when no Object is selected so the
+        // skip-next button still finds Camera / Fade / Shake keyframes.
+        KeyFrame keyFrame = selectedCharacter == null
+                ? findNextAnyGlobalKeyFrame(currentTime)
+                : selectedCharacter.findNextKeyFrame(currentTime);
         if (keyFrame == null)
         {
             return;
@@ -176,12 +175,9 @@ public class TimeSheetPanel extends JPanel
 
     public void onAttributeSkipPrevious()
     {
-        if (selectedCharacter == null)
-        {
-            return;
-        }
-
-        KeyFrame keyFrame = selectedCharacter.findPreviousKeyFrame(currentTime);
+        KeyFrame keyFrame = selectedCharacter == null
+                ? findPreviousAnyGlobalKeyFrame(currentTime)
+                : selectedCharacter.findPreviousKeyFrame(currentTime);
         if (keyFrame == null)
         {
             return;
@@ -502,12 +498,31 @@ public class TimeSheetPanel extends JPanel
     public void addKeyFrameAction(KeyFrame[] keyFrames)
     {
         java.util.Collection<Character> targets = resolveSelectionTargets();
+
+        KeyFrameAction[] kfa = new KeyFrameAction[0];
+
+        // No-Object branch: globals in the incoming batch still need a home.
+        // Add them to the central store and record the action history so undo
+        // works. Skip non-global types -- they need a Character owner.
         if (targets.isEmpty())
         {
+            for (KeyFrame template : keyFrames)
+            {
+                if (template == null || !isGlobalType(template.getKeyFrameType())) continue;
+                KeyFrame replaced = plugin.getGlobalKeyFrames().add(template);
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(template, null, KeyFrameCharacterActionType.ADD));
+                if (replaced != null)
+                {
+                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replaced, null, KeyFrameCharacterActionType.REMOVE));
+                }
+            }
+            if (kfa.length > 0)
+            {
+                addKeyFrameActions(kfa);
+            }
             return;
         }
 
-        KeyFrameAction[] kfa = new KeyFrameAction[0];
         for (Character c : targets)
         {
             // The primary keeps the original KeyFrame instance so callsites that
@@ -553,6 +568,84 @@ public class TimeSheetPanel extends JPanel
      * mirrors {@code Character.findKeyFrame(type, tick)} but reads from the
      * central store directly. Returns null if nothing sits on that tick.
      */
+    /**
+     * Closest global keyframe of {@code type} at or before {@code tick}, or
+     * null if none. Symmetric to Character.findPreviousKeyFrame(type, tick, true)
+     * but operates on the central store so the no-Character paths can fall
+     * back to a sensible "previous" reference.
+     */
+    private KeyFrame findPreviousGlobalKeyFrame(KeyFrameType type, double tick)
+    {
+        KeyFrame[] arr;
+        com.creatorskit.saves.GlobalKeyFrames store = plugin.getGlobalKeyFrames();
+        switch (type)
+        {
+            case CAMERA:       arr = store.getCameraKeyFramesSafe(); break;
+            case SCREEN_FADE:  arr = store.getScreenFadeKeyFramesSafe(); break;
+            case SCREEN_SHAKE: arr = store.getScreenShakeKeyFramesSafe(); break;
+            default:           return null;
+        }
+        KeyFrame best = null;
+        for (KeyFrame kf : arr)
+        {
+            if (kf == null || kf.getTick() > tick) continue;
+            if (best == null || kf.getTick() > best.getTick()) best = kf;
+        }
+        return best;
+    }
+
+    /**
+     * Closest global keyframe of {@code type} strictly after {@code tick}, or
+     * null if none.
+     */
+    private KeyFrame findNextGlobalKeyFrame(KeyFrameType type, double tick)
+    {
+        KeyFrame[] arr;
+        com.creatorskit.saves.GlobalKeyFrames store = plugin.getGlobalKeyFrames();
+        switch (type)
+        {
+            case CAMERA:       arr = store.getCameraKeyFramesSafe(); break;
+            case SCREEN_FADE:  arr = store.getScreenFadeKeyFramesSafe(); break;
+            case SCREEN_SHAKE: arr = store.getScreenShakeKeyFramesSafe(); break;
+            default:           return null;
+        }
+        KeyFrame best = null;
+        for (KeyFrame kf : arr)
+        {
+            if (kf == null || kf.getTick() <= tick) continue;
+            if (best == null || kf.getTick() < best.getTick()) best = kf;
+        }
+        return best;
+    }
+
+    /** Scans all 3 global stores and returns the previous keyframe of ANY global type. */
+    private KeyFrame findPreviousAnyGlobalKeyFrame(double tick)
+    {
+        KeyFrame best = null;
+        for (KeyFrameType type : new KeyFrameType[]{
+                KeyFrameType.CAMERA, KeyFrameType.SCREEN_FADE, KeyFrameType.SCREEN_SHAKE})
+        {
+            KeyFrame kf = findPreviousGlobalKeyFrame(type, tick);
+            if (kf == null) continue;
+            if (best == null || kf.getTick() > best.getTick()) best = kf;
+        }
+        return best;
+    }
+
+    /** Scans all 3 global stores and returns the next keyframe of ANY global type. */
+    private KeyFrame findNextAnyGlobalKeyFrame(double tick)
+    {
+        KeyFrame best = null;
+        for (KeyFrameType type : new KeyFrameType[]{
+                KeyFrameType.CAMERA, KeyFrameType.SCREEN_FADE, KeyFrameType.SCREEN_SHAKE})
+        {
+            KeyFrame kf = findNextGlobalKeyFrame(type, tick);
+            if (kf == null) continue;
+            if (best == null || kf.getTick() < best.getTick()) best = kf;
+        }
+        return best;
+    }
+
     private KeyFrame findGlobalKeyFrameAt(KeyFrameType type, double tick)
     {
         com.creatorskit.saves.GlobalKeyFrames store = plugin.getGlobalKeyFrames();
@@ -581,6 +674,7 @@ public class TimeSheetPanel extends JPanel
     public void onUpdateButtonPressed()
     {
         KeyFrameType type = attributePanel.getSelectedKeyFramePage();
+        boolean globalType = isGlobalType(type);
 
         // Step 1: figure out which ticks to apply the update at. Pulled from the
         // marquee (selectedKeyFrames) filtered by the panel's current type, then
@@ -596,19 +690,26 @@ public class TimeSheetPanel extends JPanel
             ticks.add(kf.getTick());
         }
 
-        // Fallback: no marquee match -> previous KF of type on primary at seeker.
+        // Fallback: no marquee match -> previous KF of type at the seeker.
+        // For globals we read from the central store so the update still
+        // applies even when no Object is selected; for per-Character types
+        // we still need a Character to source the previous keyframe from.
         if (ticks.isEmpty())
         {
-            if (selectedCharacter == null)
+            KeyFrame fallback = null;
+            if (globalType)
+            {
+                fallback = findPreviousGlobalKeyFrame(type, currentTime);
+            }
+            else if (selectedCharacter != null)
+            {
+                fallback = selectedCharacter.findPreviousKeyFrame(type, currentTime, true);
+            }
+            if (fallback == null)
             {
                 return;
             }
-            KeyFrame keyFrame = selectedCharacter.findPreviousKeyFrame(type, currentTime, true);
-            if (keyFrame == null)
-            {
-                return;
-            }
-            ticks.add(keyFrame.getTick());
+            ticks.add(fallback.getTick());
         }
 
         java.util.Collection<Character> chars = resolveSelectionTargets();
@@ -628,8 +729,25 @@ public class TimeSheetPanel extends JPanel
         //
         // Phase 2: global types (Camera / Fade / Shake) live in the central
         // store -- a single update per tick, not per-character (otherwise we'd
-        // write the same keyframe N times to the same store).
-        boolean globalType = isGlobalType(type);
+        // write the same keyframe N times to the same store). When no Object
+        // is selected, the per-Character loop wouldn't run at all and global
+        // edits would silently no-op; handle that path explicitly below.
+        if (globalType && chars.isEmpty())
+        {
+            for (double tick : ticks)
+            {
+                KeyFrame oldKf = findGlobalKeyFrameAt(type, tick);
+                if (oldKf == null) continue;
+                KeyFrame newKf = attributePanel.createKeyFrame(type, tick);
+                if (newKf == null) continue;
+                plugin.getGlobalKeyFrames().add(newKf); // overwrites at this tick
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(newKf, null, KeyFrameCharacterActionType.ADD));
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(oldKf, null, KeyFrameCharacterActionType.REMOVE));
+                replacements.put(oldKf, newKf);
+            }
+            // Skip the per-Character loop -- everything for this update is already done.
+            chars = java.util.Collections.emptyList();
+        }
         for (double tick : ticks)
         {
             for (Character owner : chars)
@@ -2230,13 +2348,44 @@ public class TimeSheetPanel extends JPanel
     public void pasteKeyFrames()
     {
         java.util.Collection<Character> targets = resolveSelectionTargets();
-        if (targets.isEmpty())
+
+        if (copiedKeyFrames == null || copiedKeyFrames.length == 0)
         {
             return;
         }
 
-        if (copiedKeyFrames == null || copiedKeyFrames.length == 0)
+        // No-Object branch: paste any global keyframes from the clipboard
+        // into the central store with their ticks re-anchored to the seeker
+        // (same shift math as the per-Character path below). Non-global
+        // entries in the clipboard are skipped because they need an owner.
+        if (targets.isEmpty())
         {
+            double firstTick = ABSOLUTE_MAX_SEQUENCE_LENGTH;
+            for (KeyFrame keyFrame : copiedKeyFrames)
+            {
+                if (keyFrame == null || !isGlobalType(keyFrame.getKeyFrameType())) continue;
+                if (keyFrame.getTick() < firstTick) firstTick = keyFrame.getTick();
+            }
+            KeyFrameAction[] kfa = new KeyFrameAction[0];
+            KeyFrame[] reselect = new KeyFrame[0];
+            for (KeyFrame keyFrame : copiedKeyFrames)
+            {
+                if (keyFrame == null || !isGlobalType(keyFrame.getKeyFrameType())) continue;
+                double newTime = round(keyFrame.getTick() - firstTick + currentTime);
+                KeyFrame copy = KeyFrame.createCopy(keyFrame, newTime);
+                KeyFrame replaced = plugin.getGlobalKeyFrames().add(copy);
+                reselect = ArrayUtils.add(reselect, copy);
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(copy, null, KeyFrameCharacterActionType.ADD));
+                if (replaced != null)
+                {
+                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replaced, null, KeyFrameCharacterActionType.REMOVE));
+                }
+            }
+            if (kfa.length > 0)
+            {
+                addKeyFrameActions(kfa);
+                setSelectedKeyFrames(reselect);
+            }
             return;
         }
 
@@ -2293,8 +2442,22 @@ public class TimeSheetPanel extends JPanel
             @Override
             public void actionPerformed(ActionEvent e)
             {
+                // No-Character branch: VK_I on a global page (Camera / Fade /
+                // Shake) routes through addKeyFrameAction, which now handles
+                // global types via the central store when targets are empty.
                 if (selectedCharacter == null)
                 {
+                    KeyFrameType page = attributePanel.getSelectedKeyFramePage();
+                    if (!isGlobalType(page)) return;
+                    if (!attributeSheet.getBounds().contains(MouseInfo.getPointerInfo().getLocation())) return;
+                    if (page == KeyFrameType.CAMERA)
+                    {
+                        attributePanel.captureLiveCameraIntoSpinners();
+                    }
+                    KeyFrame kf = attributePanel.createKeyFrame(currentTime);
+                    if (kf == null) return;
+                    addKeyFrameAction(new KeyFrame[]{kf});
+                    setSelectedKeyFrames(new KeyFrame[]{kf});
                     return;
                 }
 

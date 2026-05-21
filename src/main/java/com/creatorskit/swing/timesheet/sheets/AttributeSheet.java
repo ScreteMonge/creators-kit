@@ -444,10 +444,10 @@ public class AttributeSheet extends TimeSheet
     @Override
     public void drawPreviewKeyFrames(Graphics2D g)
     {
-        if (getSelectedCharacter() == null)
-        {
-            return;
-        }
+        // Don't gate on getSelectedCharacter() -- the marquee may hold only
+        // global keyframes and they should still show a drag-preview ghost
+        // even when no Object is selected. The per-keyframe draw inside
+        // iterates the marquee directly via getSelectedKeyFrames().
 
         if (!isKeyFrameClicked())
         {
