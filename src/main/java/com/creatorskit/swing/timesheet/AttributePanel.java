@@ -2570,17 +2570,11 @@ public class AttributePanel extends JPanel
         damage.setModel(new SpinnerNumberModel(0, -1, 999, 1));
         card.add(damage, c);
 
-        c.gridx = 2;
-        c.gridy = 4;
-        JButton keyFrameHealth = new JButton("Quick KeyFrame Hitsplat/Bar");
-        keyFrameHealth.setToolTipText("<html>Creates the Hitsplat KeyFrame plus a matching bar KeyFrame with this damage subtracted."
-                + "<br>The bar is picked from the hitsplat sprite:"
-                + "<br>&nbsp;&nbsp;Shield / Shield Other / Shield Max &rarr; Shield bar"
-                + "<br>&nbsp;&nbsp;Poise / Poise Other / Poise Max &rarr; Special bar"
-                + "<br>&nbsp;&nbsp;everything else &rarr; Health bar</html>");
-        keyFrameHealth.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        keyFrameHealth.addActionListener(e -> timeSheetPanel.initializeHealthKeyFrame(hitsplatType));
-        card.add(keyFrameHealth, c);
+        // The "Quick KeyFrame Hitsplat/Bar" button used to live at gridx=2 of
+        // gridy=4. Removed because adding / editing a hitsplat now auto-syncs
+        // the matching bar keyframe at the same tick (see TimeSheetPanel's
+        // syncHealthFromHitsplats path). The user explicitly asked for that
+        // button to go once the auto-sync covered its functionality.
 
         c.gridwidth = 1;
         c.gridheight = 1;

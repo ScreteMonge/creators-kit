@@ -14,7 +14,9 @@ import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 
 import javax.inject.Inject;
+import java.awt.AlphaComposite;
 import java.awt.Color;
+import java.awt.Composite;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
@@ -34,15 +36,17 @@ import java.util.ArrayList;
  * so the keyframe-driven bar reads identically to engine-rendered ones.
  *
  * <p>Damage animation: when the current keyframe has less HP than the
- * previous BOSS_HEALTH keyframe on the same Character, the bright-green
- * endpoint sweeps from the old HP down to the new HP over 1 game tick. A
- * dark-green tail trails the sweep, visually "draining" the lost HP. The
- * sweep is pure linear interp keyed on currentTick so scrubbing is
+ * previous BOSS_HEALTH keyframe on the same Character, the bright green
+ * snaps immediately to the new (lower) endpoint and a dark-green chunk
+ * paints at FULL WIDTH over the just-lost range. The chunk's alpha then
+ * fades from 1.0 to 0.0 over 1 game tick, revealing the red base beneath.
+ * Pure linear alpha interp keyed on currentTick keeps scrubbing
  * deterministic -- any visit to the same tick paints the same pixels.
  *
- * <p>HitsplatKeyFrame edits drive most damage events: they auto-create or
- * auto-update a matching Health keyframe on the same tick (handled in
- * the keyframe-add path), which is what trips this animation.
+ * <p>HitsplatKeyFrame edits drive most damage events: TimeSheetPanel auto-
+ * creates / auto-updates the matching bar keyframe (Health / Shield /
+ * Special depending on the hitsplat sprite) on the same tick, which is
+ * what trips this animation.
  */
 public class BossHealthOverlay extends Overlay
 {
@@ -208,45 +212,31 @@ public class BossHealthOverlay extends Overlay
             graphics.fillRect(x, barY, greenW, BAR_HEIGHT);
         }
 
-        // Damage animation: when the PREVIOUS BOSS_HEALTH keyframe had more
-        // HP, sweep the bright-green endpoint from the old HP down to the
-        // new HP over DRAIN_DURATION_TICKS (1 tick). The chunk trailing
-        // behind the sweep is dark green -- visually "draining" the lost
-        // HP. After the sweep completes the chunk disappears, leaving the
-        // static bright green at currentHp and red on the rest of the bar.
-        //
-        // Hitsplats auto-create/update the matching Health keyframe (handled
-        // elsewhere), so most damage-animation-rendering trigger paths
-        // originate from a HitsplatKeyFrame edit, not a manual Health KF.
+        // Damage animation: when the previous BOSS_HEALTH keyframe had more
+        // HP, the bright green is already at its new (lower) endpoint above.
+        // We overlay the just-lost chunk as dark green at FULL WIDTH and
+        // fade its alpha from 1.0 to 0.0 over 1 tick. Underneath it is the
+        // red base, so as the green chunk fades the user sees red bleed
+        // through -- "the green bar appears immediately in full width and
+        // fades away in 1 tick, leaving red in its place".
         HealthKeyFrame previous = findPreviousBossKeyFrame(bossChar, bossKf.getTick());
         if (previous != null && previous.getCurrentHealth() > currentHp)
         {
             int oldHp = Math.min(previous.getCurrentHealth(), maxHp);
-            int delta = oldHp - currentHp;
             double elapsed = currentTick - bossKf.getTick();
             if (elapsed >= 0 && elapsed < DRAIN_DURATION_TICKS)
             {
-                double progress = elapsed / DRAIN_DURATION_TICKS; // 0 -> 1
-                // Bright green endpoint sweeps from oldHp to newHp (=currentHp).
-                double sweptHp = oldHp - progress * delta;
-                int sweptW = (int) Math.round(sweptHp / maxHp * BAR_WIDTH);
-                // The bright green base layer was drawn at currentHp width
-                // (the post-damage value). Extend it back out to the swept
-                // endpoint so the bar visually starts at oldHp and shrinks.
-                if (sweptW > greenW)
+                float alpha = (float) Math.max(0.0, 1.0 - (elapsed / DRAIN_DURATION_TICKS));
+                int decayStart = greenW; // right after the bright green endpoint
+                int decayEnd = (int) Math.round((double) oldHp / maxHp * BAR_WIDTH);
+                int decayW = Math.max(0, decayEnd - decayStart);
+                if (decayW > 0 && alpha > 0f)
                 {
-                    graphics.setColor(HP_GREEN);
-                    graphics.fillRect(x + greenW, barY, sweptW - greenW, BAR_HEIGHT);
-                }
-                // Dark green tail from the swept endpoint to oldHp's
-                // position -- the just-vacated portion that hasn't gone red
-                // yet. Width grows over the tick from 0 to delta.
-                int oldW = (int) Math.round((double) oldHp / maxHp * BAR_WIDTH);
-                int decayW = Math.max(0, oldW - sweptW);
-                if (decayW > 0)
-                {
+                    Composite oc = graphics.getComposite();
+                    graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
                     graphics.setColor(HP_DECAY_GREEN);
-                    graphics.fillRect(x + sweptW, barY, decayW, BAR_HEIGHT);
+                    graphics.fillRect(x + decayStart, barY, decayW, BAR_HEIGHT);
+                    graphics.setComposite(oc);
                 }
             }
         }

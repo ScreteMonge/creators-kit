@@ -771,93 +771,94 @@ public class TimeSheetPanel extends JPanel
     }
 
     /**
-     * When a hitsplat is added or edited on a Character that already has
-     * Health keyframes, mirror the damage onto the Health timeline: at the
-     * hitsplat's tick, create or replace a Health keyframe whose
-     * {@code currentHealth} equals the most-recent prior Health keyframe's
-     * value minus the total hitsplat damage at that tick (summed across all
-     * four hitsplat slots -- a double-hit at the same tick subtracts both).
+     * Mirror hitsplat damage onto the matching bar keyframe. For every
+     * hitsplat in {@code keyFrames}, look up which bar type its sprite
+     * routes to (Shield / Special / Health -- see pickBarKeyFrameForHitsplat)
+     * and at that hitsplat's tick, replace the bar keyframe with one whose
+     * value is reduced by the hitsplat's damage.
      *
-     * <p>The "at least one Health keyframe" gate matches the user spec --
-     * a Character with no Health timeline at all shouldn't suddenly grow
-     * one from a hitsplat. Once the user has set up the bar, hitsplats
-     * drive it automatically.
+     * <p>Damage is summed per (Character, tick, barType) -- two hitsplats
+     * at the same tick that route to the same bar (e.g. a double-hit both
+     * with NORMAL sprites) subtract their combined damage. Hitsplats that
+     * route to DIFFERENT bars (e.g. one NORMAL + one SHIELD at the same
+     * tick) each drain their respective bar independently.
      *
-     * <p>Doesn't auto-remove a Health keyframe when a hitsplat is deleted;
-     * that's a destructive guess (the user might want the Health KF to
-     * survive standalone). Deletion is left manual on purpose.
+     * <p>Gate (per user spec): a Character with no prior keyframe of the
+     * mapped bar type is skipped. The auto-sync only mirrors onto bars the
+     * user has already opted into.
+     *
+     * <p>"Prior" means strictly less than the hitsplat tick -- a bar KF
+     * already at the same tick (from a previous sync) is excluded so
+     * re-running the sync re-derives from the pre-damage state instead of
+     * compounding.
+     *
+     * <p>Used by both add ({@link #addKeyFrameAction}) and edit
+     * ({@link #onUpdateButtonPressed}) so the user's auto-update spinner
+     * change to a hitsplat damage value also retargets the bar.
      */
     private KeyFrameAction[] syncHealthFromHitsplats(KeyFrameAction[] kfa, KeyFrame[] keyFrames, java.util.Collection<Character> targets)
     {
         if (keyFrames == null || targets.isEmpty()) return kfa;
 
-        // Dedupe (Character, tick) pairs so two hitsplats at the same tick
-        // (e.g. HITSPLAT_1 + HITSPLAT_2 for a double-hit) only sync once --
-        // the inner totalDamage loop already sums all four slots so a single
-        // sync covers them.
-        java.util.HashSet<String> processed = new java.util.HashSet<>();
+        // Aggregate damage per (Character, tick, barType).
+        java.util.LinkedHashMap<String, Integer> damageByKey = new java.util.LinkedHashMap<>();
+        java.util.HashMap<String, Character> charByKey = new java.util.HashMap<>();
+        java.util.HashMap<String, Double> tickByKey = new java.util.HashMap<>();
+        java.util.HashMap<String, com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite> spriteByKey = new java.util.HashMap<>();
 
         for (KeyFrame template : keyFrames)
         {
             if (!(template instanceof HitsplatKeyFrame)) continue;
-            double tick = template.getTick();
+            HitsplatKeyFrame hsTemplate = (HitsplatKeyFrame) template;
+            double tick = hsTemplate.getTick();
 
             for (Character c : targets)
             {
-                String pairKey = System.identityHashCode(c) + "@" + tick;
-                if (!processed.add(pairKey)) continue;
-
-                // Gate: skip Characters without any Health timeline.
-                KeyFrame[] healthFrames = c.getKeyFrames(KeyFrameType.HEALTH);
-                if (healthFrames == null || healthFrames.length == 0) continue;
-
-                // priorHp: latest Health keyframe with tick STRICTLY less
-                // than the hitsplat's tick. A Health KF already at the same
-                // tick (from a previous sync) is intentionally excluded so
-                // we re-derive from the pre-damage state instead of
-                // compounding the same damage repeatedly.
-                HealthKeyFrame priorHp = null;
-                for (KeyFrame hf : healthFrames)
-                {
-                    if (!(hf instanceof HealthKeyFrame)) continue;
-                    HealthKeyFrame h = (HealthKeyFrame) hf;
-                    if (h.getTick() >= tick) continue;
-                    if (priorHp == null || h.getTick() > priorHp.getTick()) priorHp = h;
-                }
-                if (priorHp == null) continue;
-
-                // Sum hitsplat damage across all four slots at this tick.
-                // Uses the CURRENT state of c (post-add), so the just-added
-                // hitsplat counts and any pre-existing same-tick hitsplats
-                // on other slots also count.
-                int totalDamage = 0;
+                // Sum across all four slots at this tick on this Character so
+                // a sprite-homogeneous double-hit (e.g. HITSPLAT_1 + HITSPLAT_2,
+                // both NORMAL) combines into one drain. Doing this once per
+                // (Character, tick) means we visit slots up to four times per
+                // iteration of the outer loop -- cheap enough.
                 for (KeyFrameType hsType : KeyFrameType.HITSPLAT_TYPES)
                 {
-                    KeyFrame hsKf = c.findKeyFrame(hsType, tick);
-                    if (hsKf instanceof HitsplatKeyFrame)
-                    {
-                        totalDamage += Math.max(0, ((HitsplatKeyFrame) hsKf).getDamage());
-                    }
+                    KeyFrame slotKf = c.findKeyFrame(hsType, tick);
+                    if (!(slotKf instanceof HitsplatKeyFrame)) continue;
+                    HitsplatKeyFrame hs = (HitsplatKeyFrame) slotKf;
+                    int dmg = Math.max(0, hs.getDamage());
+                    if (dmg <= 0) continue;
+                    String key = System.identityHashCode(c) + "@" + tick + "@" + hs.getSprite().name();
+                    damageByKey.merge(key, dmg, Integer::sum);
+                    charByKey.putIfAbsent(key, c);
+                    tickByKey.putIfAbsent(key, tick);
+                    spriteByKey.putIfAbsent(key, hs.getSprite());
                 }
-                if (totalDamage <= 0) continue;
+            }
+        }
 
-                int newHp = Math.max(0, priorHp.getCurrentHealth() - totalDamage);
-                HealthKeyFrame newHealth = new HealthKeyFrame(
-                        tick,
-                        priorHp.getDuration(),
-                        priorHp.getHealthbarSprite(),
-                        priorHp.getMaxHealth(),
-                        newHp,
-                        priorHp.getOrder(),
-                        priorHp.getWidth()
-                );
+        for (java.util.Map.Entry<String, Integer> entry : damageByKey.entrySet())
+        {
+            String key = entry.getKey();
+            int totalDamage = entry.getValue();
+            if (totalDamage <= 0) continue;
 
-                KeyFrame replaced = addKeyFrame(c, newHealth);
-                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(newHealth, c, KeyFrameCharacterActionType.ADD));
-                if (replaced != null && replaced != newHealth)
-                {
-                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replaced, c, KeyFrameCharacterActionType.REMOVE));
-                }
+            Character c = charByKey.get(key);
+            double tick = tickByKey.get(key);
+            com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite sprite = spriteByKey.get(key);
+
+            KeyFrame drain = pickBarKeyFrameForHitsplat(c, sprite, totalDamage, tick);
+            if (drain == null)
+            {
+                // Gate: no prior bar of the mapped type. Skip the sync for
+                // this (char, tick, barType) -- the user hasn't opted into
+                // that bar.
+                continue;
+            }
+
+            KeyFrame replaced = addKeyFrame(c, drain);
+            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(drain, c, KeyFrameCharacterActionType.ADD));
+            if (replaced != null && replaced != drain)
+            {
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replaced, c, KeyFrameCharacterActionType.REMOVE));
             }
         }
         return kfa;
@@ -1093,6 +1094,20 @@ public class TimeSheetPanel extends JPanel
                     // Already wrote through to the central store; one pass is enough.
                     break;
                 }
+            }
+        }
+
+        // Auto-sync hitsplat damage -> matching bar. If any of the edited
+        // keyframes are hitsplats, drain the bar at the same tick. Mirrors
+        // the same hook in addKeyFrameAction so add and edit both trigger
+        // it.
+        if (type == KeyFrameType.HITSPLAT_1 || type == KeyFrameType.HITSPLAT_2
+                || type == KeyFrameType.HITSPLAT_3 || type == KeyFrameType.HITSPLAT_4)
+        {
+            KeyFrame[] newHitsplats = replacements.values().toArray(new KeyFrame[0]);
+            if (newHitsplats.length > 0)
+            {
+                kfa = syncHealthFromHitsplats(kfa, newHitsplats, chars);
             }
         }
 
@@ -1592,220 +1607,90 @@ public class TimeSheetPanel extends JPanel
     }
 
     /**
-     * Adds the requested HitsplatKeyFrame and one bar keyframe whose value drops by
-     * the hitsplat's damage. The bar is picked from the hitsplat's SPRITE:
+     * Builds a drain keyframe for the bar type targeted by a hitsplat sprite,
+     * at the given tick, against the latest bar keyframe BEFORE that tick on
+     * the given Character. Used by the hitsplat -> bar auto-sync path in
+     * syncHealthFromHitsplats: the "Quick KeyFrame Hitsplat/Bar" button used
+     * to invoke a manual version of this; now every hitsplat add/edit runs
+     * through it automatically.
      *
+     * <p>Sprite -> bar mapping:
      * <ul>
      *   <li>SHIELD / SHIELD_OTHER / SHIELD_MAX -> drains the Shield bar</li>
      *   <li>POISE  / POISE_OTHER  / POISE_MAX  -> drains the Special bar</li>
-     *   <li>everything else -> drains the Health bar (legacy behaviour)</li>
+     *   <li>everything else -> drains the Health bar</li>
      * </ul>
      *
-     * <p>For each bar type the previous keyframe of that bar is read as the source
-     * of truth for duration / colour-or-sprite / max / current. If no previous
-     * keyframe exists, falls back to the bar's natural defaults so the user gets
-     * a sensible starting state.
+     * <p>Returns null if the target Character has no prior keyframe of the
+     * mapped bar type -- per spec, hitsplats only sync onto bars the user
+     * has already opted into.
      */
-    public void initializeHealthKeyFrame(KeyFrameType type)
-    {
-        java.util.Collection<Character> targets = resolveSelectionTargets();
-        if (targets.isEmpty())
-        {
-            return;
-        }
-
-        // Build the hitsplat template once from the card's current values. Per-
-        // Character we clone the template so each owner has its own KeyFrame
-        // instance (state-bearing keyframes can't safely be shared). The bar
-        // drain is computed per-Character against THAT character's previous bar
-        // keyframe so each one's "remaining" value reflects their own state.
-        KeyFrame hitsplatTemplate = attributePanel.createKeyFrame(type, currentTime);
-        if (hitsplatTemplate == null)
-        {
-            return;
-        }
-        HitsplatKeyFrame template = (HitsplatKeyFrame) hitsplatTemplate;
-        com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite sprite = template.getSprite();
-        int damage = template.getDamage();
-
-        KeyFrameAction[] kfa = new KeyFrameAction[0];
-        boolean primaryProcessed = false;
-        for (Character c : targets)
-        {
-            // Primary keeps the template instance so any caller holding the
-            // returned reference still sees its object; secondary characters
-            // get clones.
-            boolean isPrimary = !primaryProcessed && c == selectedCharacter;
-            KeyFrame hits = isPrimary
-                    ? hitsplatTemplate
-                    : KeyFrame.createCopy(hitsplatTemplate, hitsplatTemplate.getTick());
-            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(hits, c, KeyFrameCharacterActionType.ADD));
-            KeyFrame replacedHits = addKeyFrame(c, hits);
-            if (replacedHits != null)
-            {
-                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replacedHits, c, KeyFrameCharacterActionType.REMOVE));
-            }
-
-            KeyFrame bar = pickBarKeyFrameForHitsplat(c, sprite, damage);
-            if (bar != null)
-            {
-                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(bar, c, KeyFrameCharacterActionType.ADD));
-                KeyFrame replacedBar = addKeyFrame(c, bar);
-                if (replacedBar != null)
-                {
-                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replacedBar, c, KeyFrameCharacterActionType.REMOVE));
-                }
-            }
-            if (isPrimary)
-            {
-                primaryProcessed = true;
-            }
-        }
-        addKeyFrameActions(kfa);
-    }
-
-    /**
-     * Reads the previous keyframe of the bar type targeted by the hitsplat sprite
-     * on the given Character, subtracts the damage from its current value
-     * (clamped to 0), and returns a new keyframe at the seeker tick. Each Character
-     * is looked up independently so multi-select bar drains reflect each owner's
-     * own state.
-     */
-    private KeyFrame pickBarKeyFrameForHitsplat(Character character, com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite sprite, int damage)
+    private KeyFrame pickBarKeyFrameForHitsplat(Character character, com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite sprite, int damage, double tick)
     {
         switch (sprite)
         {
             case SHIELD:
             case SHIELD_OTHER:
             case SHIELD_MAX:
-                return buildShieldDrainKeyFrame(character, damage);
+                return buildShieldDrainKeyFrame(character, damage, tick);
             case POISE:
             case POISE_OTHER:
             case POISE_MAX:
-                return buildSpecialDrainKeyFrame(character, damage);
+                return buildSpecialDrainKeyFrame(character, damage, tick);
             default:
-                return buildHealthDrainKeyFrame(character, damage);
+                return buildHealthDrainKeyFrame(character, damage, tick);
         }
     }
 
-    private KeyFrame buildHealthDrainKeyFrame(Character character, int damage)
+    /**
+     * Sources duration / sprite / max / order / width from the latest Health
+     * keyframe strictly before {@code tick}; returns a new Health keyframe at
+     * {@code tick} with {@code currentHealth} reduced by {@code damage}.
+     * Returns null if no prior Health keyframe exists (gate the user wants).
+     */
+    private KeyFrame buildHealthDrainKeyFrame(Character character, int damage, double tick)
     {
-        double duration;
-        HealthbarSprite sprite;
-        int maxHealth;
-        int currentHealth;
-        int order;
-        int width;
-
-        KeyFrame healthKeyFrame = character.findPreviousKeyFrame(KeyFrameType.HEALTH, currentTime, true);
-        if (healthKeyFrame == null)
-        {
-            duration = 3.0;
-            sprite = HealthbarSprite.DEFAULT;
-            maxHealth = 99;
-            currentHealth = 99;
-            order = HealthKeyFrame.DEFAULT_ORDER;
-            width = HealthKeyFrame.AUTO_WIDTH;
-        }
-        else
-        {
-            HealthKeyFrame healthKF = (HealthKeyFrame) healthKeyFrame;
-            duration = healthKF.getDuration();
-            sprite = healthKF.getHealthbarSprite();
-            maxHealth = healthKF.getMaxHealth();
-            currentHealth = healthKF.getCurrentHealth();
-            order = healthKF.getOrder();
-            width = healthKF.getWidth();
-        }
-
+        KeyFrame prev = character.findPreviousKeyFrame(KeyFrameType.HEALTH, tick, false);
+        if (!(prev instanceof HealthKeyFrame)) return null;
+        HealthKeyFrame healthKF = (HealthKeyFrame) prev;
         return new HealthKeyFrame(
-                currentTime,
-                duration,
-                sprite,
-                maxHealth,
-                Math.max(0, currentHealth - damage),
-                order,
-                width);
+                tick,
+                healthKF.getDuration(),
+                healthKF.getHealthbarSprite(),
+                healthKF.getMaxHealth(),
+                Math.max(0, healthKF.getCurrentHealth() - damage),
+                healthKF.getOrder(),
+                healthKF.getWidth());
     }
 
-    private KeyFrame buildShieldDrainKeyFrame(Character character, int damage)
+    private KeyFrame buildShieldDrainKeyFrame(Character character, int damage, double tick)
     {
-        double duration;
-        int rgb;
-        int max;
-        int current;
-        int order;
-        int width;
-
-        KeyFrame prev = character.findPreviousKeyFrame(KeyFrameType.SHIELD, currentTime, true);
-        if (prev == null)
-        {
-            duration = com.creatorskit.swing.timesheet.attributes.ShieldAttributes.DEFAULT_DURATION;
-            rgb = com.creatorskit.swing.timesheet.attributes.ShieldAttributes.DEFAULT_RGB;
-            max = com.creatorskit.swing.timesheet.attributes.ShieldAttributes.DEFAULT_MAX;
-            current = max;
-            order = ShieldKeyFrame.DEFAULT_ORDER;
-            width = ShieldKeyFrame.AUTO_WIDTH;
-        }
-        else
-        {
-            ShieldKeyFrame shieldKF = (ShieldKeyFrame) prev;
-            duration = shieldKF.getDuration();
-            rgb = shieldKF.getRgb();
-            max = shieldKF.getMaxValue();
-            current = shieldKF.getCurrentValue();
-            order = shieldKF.getOrder();
-            width = shieldKF.getWidth();
-        }
-
+        KeyFrame prev = character.findPreviousKeyFrame(KeyFrameType.SHIELD, tick, false);
+        if (!(prev instanceof ShieldKeyFrame)) return null;
+        ShieldKeyFrame shieldKF = (ShieldKeyFrame) prev;
         return new ShieldKeyFrame(
-                currentTime,
-                duration,
-                rgb,
-                max,
-                Math.max(0, current - damage),
-                order,
-                width);
+                tick,
+                shieldKF.getDuration(),
+                shieldKF.getRgb(),
+                shieldKF.getMaxValue(),
+                Math.max(0, shieldKF.getCurrentValue() - damage),
+                shieldKF.getOrder(),
+                shieldKF.getWidth());
     }
 
-    private KeyFrame buildSpecialDrainKeyFrame(Character character, int damage)
+    private KeyFrame buildSpecialDrainKeyFrame(Character character, int damage, double tick)
     {
-        double duration;
-        int rgb;
-        int max;
-        int current;
-        int order;
-        int width;
-
-        KeyFrame prev = character.findPreviousKeyFrame(KeyFrameType.SPECIAL, currentTime, true);
-        if (prev == null)
-        {
-            duration = com.creatorskit.swing.timesheet.attributes.SpecialAttributes.DEFAULT_DURATION;
-            rgb = com.creatorskit.swing.timesheet.attributes.SpecialAttributes.DEFAULT_RGB;
-            max = com.creatorskit.swing.timesheet.attributes.SpecialAttributes.DEFAULT_MAX;
-            current = max;
-            order = SpecialKeyFrame.DEFAULT_ORDER;
-            width = SpecialKeyFrame.AUTO_WIDTH;
-        }
-        else
-        {
-            SpecialKeyFrame specialKF = (SpecialKeyFrame) prev;
-            duration = specialKF.getDuration();
-            rgb = specialKF.getRgb();
-            max = specialKF.getMaxValue();
-            current = specialKF.getCurrentValue();
-            order = specialKF.getOrder();
-            width = specialKF.getWidth();
-        }
-
+        KeyFrame prev = character.findPreviousKeyFrame(KeyFrameType.SPECIAL, tick, false);
+        if (!(prev instanceof SpecialKeyFrame)) return null;
+        SpecialKeyFrame specialKF = (SpecialKeyFrame) prev;
         return new SpecialKeyFrame(
-                currentTime,
-                duration,
-                rgb,
-                max,
-                Math.max(0, current - damage),
-                order,
-                width);
+                tick,
+                specialKF.getDuration(),
+                specialKF.getRgb(),
+                specialKF.getMaxValue(),
+                Math.max(0, specialKF.getCurrentValue() - damage),
+                specialKF.getOrder(),
+                specialKF.getWidth());
     }
 
     public void addAnimationKeyFrameFromCache(WeaponAnimData weaponAnim)
