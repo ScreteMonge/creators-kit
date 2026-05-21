@@ -76,6 +76,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private CreatorsConfig config;
 
 	@Inject
+	@Getter
 	private ConfigManager configManager;
 
 	@Inject

@@ -2466,6 +2466,7 @@ public class CreatorsPanel extends PluginPanel
                     Reader reader = Files.newBufferedReader(selectedFile.toPath());
                     SetupSave saveFile = plugin.getGson().fromJson(reader, SetupSave.class);
                     File finalSelectedFile = selectedFile;
+                    rememberLastSetupPath(finalSelectedFile);
                     clientThread.invokeLater(() -> loadSetup(finalSelectedFile, saveFile));
                     reader.close();
                     LocalTime time = LocalTime.now();
@@ -2479,12 +2480,31 @@ public class CreatorsPanel extends PluginPanel
         });
     }
 
+    /**
+     * Persists the path of the most recently-loaded setup to the creatorssuite
+     * config group so File > Load last setup can one-click reload it across
+     * sessions. Best-effort -- if persistence fails (rare; config manager not
+     * ready), the menu item just stays disabled until the next successful load.
+     */
+    private void rememberLastSetupPath(File file)
+    {
+        if (file == null || plugin.getConfigManager() == null) return;
+        try
+        {
+            plugin.getConfigManager().setConfiguration("creatorssuite", "lastSetupPath", file.getAbsolutePath());
+        }
+        catch (Exception ignored)
+        {
+        }
+    }
+
     public void loadSetup(File file)
     {
         try
         {
             Reader reader = Files.newBufferedReader(file.toPath());
             SetupSave saveFile = plugin.getGson().fromJson(reader, SetupSave.class);
+            rememberLastSetupPath(file);
             clientThread.invokeLater(() -> loadSetup(file, saveFile));
             reader.close();
             LocalTime time = LocalTime.now();

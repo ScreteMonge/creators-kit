@@ -246,6 +246,53 @@ public class ToolBoxFrame extends JFrame
         load.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_DOWN_MASK));
         file.add(load);
 
+        // "Load last setup" -- one-click reload of whichever setup the user
+        // most recently loaded via the file dialog. Label is regenerated on
+        // every menu-open so it stays in sync with whatever the user just
+        // loaded ("Load last setup... (foo.json)" or "Load last setup..."
+        // disabled when no path has been remembered). Path is persisted in
+        // the creatorssuite config group via CreatorsPanel.loadSetup so it
+        // survives client restarts.
+        JMenuItem loadLast = new JMenuItem("Load last setup...");
+        loadLast.addActionListener(e ->
+        {
+            String path = configManager.getConfiguration("creatorssuite", "lastSetupPath");
+            if (path == null || path.isEmpty())
+            {
+                plugin.sendChatMessage("No setup has been loaded yet this session.");
+                return;
+            }
+            java.io.File f = new java.io.File(path);
+            if (!f.exists())
+            {
+                plugin.sendChatMessage("Last setup file no longer exists: " + path);
+                return;
+            }
+            plugin.getCreatorsPanel().loadSetup(f);
+        });
+        file.add(loadLast);
+
+        file.addMenuListener(new javax.swing.event.MenuListener()
+        {
+            @Override
+            public void menuSelected(javax.swing.event.MenuEvent e)
+            {
+                String path = configManager.getConfiguration("creatorssuite", "lastSetupPath");
+                if (path == null || path.isEmpty())
+                {
+                    loadLast.setText("Load last setup...");
+                    loadLast.setEnabled(false);
+                    return;
+                }
+                java.io.File f = new java.io.File(path);
+                loadLast.setText("Load last setup... (" + f.getName() + ")");
+                loadLast.setEnabled(f.exists());
+            }
+
+            @Override public void menuDeselected(javax.swing.event.MenuEvent e) {}
+            @Override public void menuCanceled(javax.swing.event.MenuEvent e) {}
+        });
+
         JMenu timeSheet = new JMenu("Timeline");
         jMenuBar.add(timeSheet);
 
