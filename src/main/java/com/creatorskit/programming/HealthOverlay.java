@@ -6,6 +6,7 @@ import com.creatorskit.CKObject;
 import com.creatorskit.swing.timesheet.keyframe.HealthKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import com.creatorskit.swing.timesheet.keyframe.TextKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.settings.HealthbarSprite;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.Model;
@@ -66,6 +67,13 @@ public class HealthOverlay extends Overlay
 
             HealthKeyFrame healthKeyFrame = (HealthKeyFrame) character.getCurrentKeyFrame(KeyFrameType.HEALTH);
             if (healthKeyFrame == null)
+            {
+                continue;
+            }
+            // BOSS_HEALTH is drawn by BossHealthOverlay as a pinned top-of-screen
+            // bar, not as an overhead sprite -- skip here so we don't double-render
+            // (the boss bar plus an empty/black overhead bar at the character).
+            if (healthKeyFrame.getHealthbarSprite() == HealthbarSprite.BOSS_HEALTH)
             {
                 continue;
             }

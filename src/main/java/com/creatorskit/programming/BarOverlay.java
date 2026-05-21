@@ -182,7 +182,13 @@ public class BarOverlay extends Overlay
         HealthKeyFrame hp = (HealthKeyFrame) character.getCurrentKeyFrame(KeyFrameType.HEALTH);
         if (hp != null && currentTick >= hp.getTick() && currentTick <= hp.getTick() + hp.getDuration())
         {
-            out.add(BarSpec.health(hp));
+            // BOSS_HEALTH is rendered by BossHealthOverlay as a pinned top-of-
+            // screen bar -- skip the per-character overhead bar so we don't
+            // double-render the same HP value in two places.
+            if (hp.getHealthbarSprite() != com.creatorskit.swing.timesheet.keyframe.settings.HealthbarSprite.BOSS_HEALTH)
+            {
+                out.add(BarSpec.health(hp));
+            }
         }
 
         ShieldKeyFrame shield = (ShieldKeyFrame) character.getCurrentKeyFrame(KeyFrameType.SHIELD);

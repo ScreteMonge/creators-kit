@@ -107,6 +107,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private ScreenFadeOverlay screenFadeOverlay;
 
 	@Inject
+	private BossHealthOverlay bossHealthOverlay;
+
+	@Inject
 	private KeyManager keyManager;
 
 	@Inject
@@ -668,6 +671,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		overlayManager.add(textOverlay);
 		overlayManager.add(barOverlay);
 		overlayManager.add(screenFadeOverlay);
+		overlayManager.add(bossHealthOverlay);
 
 		keyManager.registerKeyListener(pasteAtCursorListener);
 		keyManager.registerKeyListener(overlayKeyListener);
@@ -854,6 +858,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		overlayManager.remove(hitsplatOverlay);
 		overlayManager.remove(barOverlay);
 		overlayManager.remove(screenFadeOverlay);
+		overlayManager.remove(bossHealthOverlay);
 
 		keyManager.unregisterKeyListener(overlayKeyListener);
 		keyManager.unregisterKeyListener(oculusOrbListener);

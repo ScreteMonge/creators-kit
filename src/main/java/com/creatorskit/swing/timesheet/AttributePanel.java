@@ -1994,6 +1994,7 @@ public class AttributePanel extends JPanel
         healthbarSprite.setToolTipText("Set the sprite for the healthbar to show");
         healthbarSprite.setFocusable(false);
         healthbarSprite.addItem(HealthbarSprite.DEFAULT);
+        healthbarSprite.addItem(HealthbarSprite.BOSS_HEALTH);
         card.add(healthbarSprite, c);
 
         c.gridwidth = 1;
