@@ -120,8 +120,12 @@ public class ColourSwapPanel extends JPanel
         c.weightx = 0;
         c.gridx = 1;
         c.gridy = 1;
-        AbstractColorChooserPanel[] chooserPanels = {colourChooser.getChooserPanels()[1]};
-        colourChooser.setChooserPanels(chooserPanels);
+        // Use the FULL JColorChooser (default tabs: Swatches, HSV, HSL, RGB, CMYK)
+        // rather than just the HSV panel the original implementation pinned to.
+        // The Swatches tab (chooserPanels[0]) is what users naturally reach for
+        // when picking from preset palettes; the HSV one was leftover from a
+        // smaller layout. Hiding the preview panel because the swatch-row to
+        // the left of the chooser already shows the current picker colour.
         colourChooser.setPreviewPanel(new JPanel());
         colourChooser.setBorder(new LineBorder(colourChooser.getColor(), 2));
         colourChooser.getSelectionModel().addChangeListener(e ->
@@ -332,6 +336,17 @@ public class ColourSwapPanel extends JPanel
                     colourList = ArrayUtils.add(colourList, s);
             }
 
+            // Sort by HSL (hue first, then saturation, then luminance) so similar
+            // colours land next to each other in the list. The original order was
+            // raw cache-face order, which is essentially random visually.
+            Short[] sorted = new Short[colourList.length];
+            for (int i = 0; i < colourList.length; i++) sorted[i] = colourList[i];
+            Arrays.sort(sorted, java.util.Comparator
+                    .comparingInt((Short s) -> JagexColor.unpackHue(s))
+                    .thenComparingInt(s -> JagexColor.unpackSaturation(s))
+                    .thenComparingInt(s -> JagexColor.unpackLuminance(s)));
+            for (int i = 0; i < sorted.length; i++) colourList[i] = sorted[i];
+
             for (short colour : colourList)
             {
                 if (colourMap.containsKey(colour))
@@ -388,52 +403,49 @@ public class ColourSwapPanel extends JPanel
         currentComplexPanel = null;
     }
 
+    /**
+     * Square size for the compact old/new colour swatches. Small enough to keep
+     * the list dense even when the model has 30+ unique colours; large enough to
+     * be a comfortable click target. Black border is drawn 1px wide so the
+     * swatches don't blur into each other or into a dark background.
+     */
+    private static final Dimension SWATCH_SIZE = new Dimension(28, 28);
+    private static final java.awt.Color SWATCH_BORDER = java.awt.Color.BLACK;
+
     private ColourPanel createColourPanel(short oldColour, short newColour, boolean isColourSet)
     {
-        JLabel oldColourLabel = new JLabel("" + oldColour, SwingConstants.CENTER);
-        oldColourLabel.setFont(FontManager.getRunescapeSmallFont());
-        oldColourLabel.setBorder(new LineBorder(colourFromShort(oldColour), 10));
-        oldColourLabel.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        // "Old" swatch -- click loads that colour into the picker. Used as the
+        // visual anchor for finding which entry in the list corresponds to a
+        // given face colour on the model.
+        JButton oldSwatch = makeSwatch(colourFromShort(oldColour));
+        oldSwatch.setToolTipText("Original colour. Click to load this colour into the picker.");
 
-        JButton newColourButton = new JButton("" + (isColourSet ? newColour : "Set"));
-        newColourButton.setToolTipText("Swap this Old colour to the colour currently selected in the Colour Picker");
-        newColourButton.setFont(FontManager.getRunescapeSmallFont());
-        newColourButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        if (isColourSet)
-            newColourButton.setBorder(new LineBorder(colourFromShort(newColour), 10));
+        // "New" swatch -- click applies the picker's current colour (or unsets
+        // if already set). When unset, displays the old colour (since no swap
+        // is active), but with a dashed border so the user can still tell.
+        JButton newSwatch = makeSwatch(colourFromShort(isColourSet ? newColour : oldColour));
+        newSwatch.setToolTipText("Replacement colour. Click to apply the picker colour, click again to clear.");
+        applyNewSwatchBorder(newSwatch, isColourSet);
 
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setLayout(new GridLayout(0, 1, 0, 1));
+        // Hidden carry-along to preserve the existing setColour / unsetColour
+        // contract -- those methods still call colourPanel.getNewColourButton()
+        // and read its border to derive state. Keeping the field non-null lets
+        // us reuse all the swap-management methods unchanged.
+        JSpinner unusedSpinner = new JSpinner();
 
-        JButton findButton = new JButton("Find");
-        findButton.setToolTipText("Find the current New colour swap in the colour picker");
-        buttonPanel.add(findButton);
+        ColourPanel colourPanel = new ColourPanel(isColourSet, oldColour, newColour, null, newSwatch, unusedSpinner);
+        colourPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 6, 2));
+        colourPanel.setBorder(new EmptyBorder(2, 4, 2, 4));
+        colourPanel.add(oldSwatch);
+        // Tiny arrow label between the swatches makes the "old -> new" reading
+        // obvious without taking up much room.
+        JLabel arrow = new JLabel("→"); // →
+        arrow.setForeground(java.awt.Color.LIGHT_GRAY);
+        colourPanel.add(arrow);
+        colourPanel.add(newSwatch);
 
-        JSpinner spinner = new JSpinner(new SpinnerNumberModel(0, -32768, 32767, 1));
-        spinner.setToolTipText("Apply an exact Jagex colour as it is stored in the cache");
-        buttonPanel.add(spinner);
-
-        ColourPanel colourPanel = new ColourPanel(isColourSet, oldColour, newColour, oldColourLabel, newColourButton, spinner);
-        colourPanel.setLayout(new GridLayout(1, 0, 1, 1));
-        colourPanel.add(oldColourLabel);
-        colourPanel.add(newColourButton);
-        colourPanel.add(buttonPanel);
-
-        spinner.addChangeListener(e ->
-        {
-            short colourToAdd = (short) ((int) spinner.getValue());
-            if (colourPanel.isColourSet())
-            {
-                replaceColour(colourPanel, colourToAdd);
-                replaceColourSwap(colourPanel.getOldColour(), colourToAdd);
-                return;
-            }
-
-            setColour(colourPanel, colourToAdd);
-            addColourSwap(colourPanel.getOldColour(), colourToAdd);
-        });
-        findButton.addActionListener(e -> colourChooser.setColor(colourFromShort(colourPanel.getNewColour())));
-        newColourButton.addActionListener(e ->
+        oldSwatch.addActionListener(e -> colourChooser.setColor(colourFromShort(colourPanel.getOldColour())));
+        newSwatch.addActionListener(e ->
         {
             if (colourPanel.isColourSet())
             {
@@ -441,7 +453,6 @@ public class ColourSwapPanel extends JPanel
                 removeColourSwap(colourPanel.getOldColour());
                 return;
             }
-
             setColour(colourPanel, colourChooser.getColor());
             addColourSwap(colourPanel.getOldColour(), colourPanel.getNewColour());
         });
@@ -449,6 +460,43 @@ public class ColourSwapPanel extends JPanel
         colourHolder.add(colourPanel);
         colourPanels = ArrayUtils.add(colourPanels, colourPanel);
         return colourPanel;
+    }
+
+    /**
+     * Builds a flat coloured square button suitable for use as a swatch.
+     * Borderless apart from a thin black line so the colour bleeds to the edge.
+     */
+    private JButton makeSwatch(java.awt.Color fill)
+    {
+        JButton b = new JButton();
+        b.setPreferredSize(SWATCH_SIZE);
+        b.setMinimumSize(SWATCH_SIZE);
+        b.setMaximumSize(SWATCH_SIZE);
+        b.setBackground(fill);
+        b.setOpaque(true);
+        b.setBorderPainted(true);
+        b.setBorder(new LineBorder(SWATCH_BORDER, 1));
+        b.setFocusable(false);
+        b.setContentAreaFilled(true);
+        return b;
+    }
+
+    /**
+     * Switches the "new" swatch border between "swap active" (solid black) and
+     * "swap inactive" (dashed light grey) so the user can tell from a glance
+     * whether a row currently has a colour override applied, even though the
+     * swatch fill is the old colour in both states.
+     */
+    private void applyNewSwatchBorder(JButton newSwatch, boolean isColourSet)
+    {
+        if (isColourSet)
+        {
+            newSwatch.setBorder(new LineBorder(SWATCH_BORDER, 1));
+        }
+        else
+        {
+            newSwatch.setBorder(BorderFactory.createDashedBorder(java.awt.Color.LIGHT_GRAY, 1f, 2f, 2f, false));
+        }
     }
 
     private void setAllColoursHere()
@@ -531,27 +579,29 @@ public class ColourSwapPanel extends JPanel
 
     private void setColour(ColourPanel colourPanel, short colour)
     {
-        JButton newColourButton = colourPanel.getNewColourButton();
-        newColourButton.setText("" + colour);
-        newColourButton.setBorder(new LineBorder(colourFromShort(colour), 10));
+        JButton newSwatch = colourPanel.getNewColourButton();
+        newSwatch.setBackground(colourFromShort(colour));
+        applyNewSwatchBorder(newSwatch, true);
         colourPanel.setNewColour(colour);
         colourPanel.setColourSet(true);
     }
 
     private void unsetColour(ColourPanel colourPanel)
     {
-        JButton newColourButton = colourPanel.getNewColourButton();
-        newColourButton.setText("Set");
-        newColourButton.setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 2));
+        JButton newSwatch = colourPanel.getNewColourButton();
+        // Reverts the swatch fill back to the old colour to mirror "no swap
+        // applied"; the dashed border tells the user it's the inactive state.
+        newSwatch.setBackground(colourFromShort(colourPanel.getOldColour()));
+        applyNewSwatchBorder(newSwatch, false);
         colourPanel.setNewColour(colourPanel.getOldColour());
         colourPanel.setColourSet(false);
     }
 
     private void replaceColour(ColourPanel colourPanel, short newColourTo)
     {
-        JButton newColourButton = colourPanel.getNewColourButton();
-        newColourButton.setText("" + newColourTo);
-        newColourButton.setBorder(new LineBorder(colourFromShort(newColourTo), 10));
+        JButton newSwatch = colourPanel.getNewColourButton();
+        newSwatch.setBackground(colourFromShort(newColourTo));
+        applyNewSwatchBorder(newSwatch, true);
         colourPanel.setNewColour(newColourTo);
     }
 
