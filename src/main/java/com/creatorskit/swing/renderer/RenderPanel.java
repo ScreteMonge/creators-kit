@@ -90,6 +90,11 @@ public class RenderPanel extends JPanel
     {
         this.fovSlider = fovSlider;
 
+        // Allow keyboard focus so the WASDRF pan/zoom keys fire when the user
+        // clicks into the preview. Tab traversal stays disabled because the
+        // panel isn't part of a form -- focus is grabbed on mouseEntered
+        // instead so the user doesn't have to click first.
+        setFocusable(true);
         addMouseListener(new MouseAdapter()
         {
             @Override
@@ -98,6 +103,18 @@ public class RenderPanel extends JPanel
                 Point p = e.getLocationOnScreen();
                 mouseX = p.getX();
                 mouseY = p.getY();
+                // Click into preview = grab keyboard focus so subsequent WASDRF
+                // keys are routed to our KeyListener (Swing's default focus
+                // policy needs an explicit request from inside the panel).
+                requestFocusInWindow();
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e)
+            {
+                // Hover-focus so the user can fly through WASDRF without
+                // clicking first. Standard for 3D viewport panels.
+                requestFocusInWindow();
             }
 
             @Override
@@ -143,8 +160,24 @@ public class RenderPanel extends JPanel
                 double dx = p.getX() - mouseX;
                 double dy = p.getY() - mouseY;
 
-                heading = heading + dx;
-                pitch = pitch - dy;
+                // Middle-button drag pans the camera in screen space (moves the
+                // model laterally + vertically relative to the viewport without
+                // rotating it). Left-button keeps the original rotate behavior.
+                // SwingUtilities.isMiddleMouseButton reads the active modifier
+                // mask on the event rather than the original press button, so
+                // mid-drag button switches register correctly.
+                if (javax.swing.SwingUtilities.isMiddleMouseButton(e))
+                {
+                    // dy is negated so dragging UP moves the model UP (matches
+                    // the visual expectation). x positive moves right.
+                    x = x - dx;
+                    y = y - dy;
+                }
+                else
+                {
+                    heading = heading + dx;
+                    pitch = pitch - dy;
+                }
 
                 mouseX = (int) p.getX();
                 mouseY = (int) p.getY();
@@ -156,6 +189,44 @@ public class RenderPanel extends JPanel
         {
             z = Math.max(z + ZOOM_FACTOR * e.getWheelRotation(), MIN_CAMERA_DISTANCE);
             repaint();
+        });
+
+        // WASDRF camera pan + zoom. Requires keyboard focus on the panel --
+        // requestFocusInWindow is called on mouseEntered / mousePressed so the
+        // user can fly through these without an explicit click first.
+        //   A / D = pan left / right (x-axis)
+        //   W / S = pan up / down (y-axis, sign matches drag-pan)
+        //   R / F = zoom in / out (z-axis, clamped to MIN_CAMERA_DISTANCE)
+        // Step is the same units as drag-pan deltas so a tap matches roughly
+        // one mouse-move's worth of motion.
+        addKeyListener(new java.awt.event.KeyAdapter()
+        {
+            @Override
+            public void keyPressed(java.awt.event.KeyEvent e)
+            {
+                final double KEY_PAN_STEP = 15.0;
+                final double KEY_ZOOM_STEP = ZOOM_FACTOR;
+                boolean handled = true;
+                switch (e.getKeyCode())
+                {
+                    case java.awt.event.KeyEvent.VK_A: x -= KEY_PAN_STEP; break;
+                    case java.awt.event.KeyEvent.VK_D: x += KEY_PAN_STEP; break;
+                    case java.awt.event.KeyEvent.VK_W: y -= KEY_PAN_STEP; break;
+                    case java.awt.event.KeyEvent.VK_S: y += KEY_PAN_STEP; break;
+                    case java.awt.event.KeyEvent.VK_R:
+                        z = Math.max(z - KEY_ZOOM_STEP, MIN_CAMERA_DISTANCE);
+                        break;
+                    case java.awt.event.KeyEvent.VK_F:
+                        z = z + KEY_ZOOM_STEP;
+                        break;
+                    default: handled = false;
+                }
+                if (handled)
+                {
+                    repaint();
+                    e.consume();
+                }
+            }
         });
 
         fovSlider.addChangeListener(e -> repaint());
