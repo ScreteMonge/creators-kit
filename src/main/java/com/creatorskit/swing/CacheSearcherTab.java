@@ -63,29 +63,31 @@ public class CacheSearcherTab extends JPanel
 
     // ---- Animation Searcher preview state -----------------------------
     /**
-     * Character whose model is currently loaded into the preview panel for
-     * the Animation Searcher. Tracked so we can detect when the user has
-     * switched selection and re-load the panel.
+     * The ModelData the preview's lit baseModel was derived from. Used as
+     * a cache key -- if the user picks a new NPC / Object / SpotAnim while
+     * a preview is running, this lets us notice the source changed and
+     * re-light. Compared by reference; ModelData identity is what the cache
+     * cares about, not deep equality.
      */
-    private Character animPreviewCharacter = null;
+    private ModelData animPreviewSourceMD = null;
     /**
-     * Base Model used as the rest-pose input to {@link #animPreviewController}.
-     * Just a reference into the selected Character's storedModel; we never
-     * mutate it. {@code controller.animate(baseModel)} returns a fresh Model
-     * for the current frame each tick, which is what the RenderPanel renders.
+     * Cached lit Model used as the rest-pose input to
+     * {@link #animPreviewController}. Built from {@link #animPreviewSourceMD}
+     * via {@code ModelData.light()} on the client thread, kept across frames
+     * so successive timer ticks don't pay the relight cost. animate() returns
+     * a fresh Model for the current frame each tick without mutating this one.
      */
     private Model animPreviewBaseModel = null;
     /**
      * Independent animation controller used purely for the preview. Separate
-     * from the Character's ckObject controllers so the in-world Character
-     * doesn't see the previewed animation -- the user is auditioning, not
-     * applying.
+     * from any in-world Character / ckObject controller -- this exists just
+     * to drive the right-side render panel.
      */
     private com.creatorskit.programming.CKAnimationController animPreviewController = null;
     /**
-     * Drives {@link #tickAnimationPreview} at ~16fps. Fires on the EDT,
-     * which then thunks onto the client thread for the actual tick+animate
-     * call (RuneLite API requires client-thread access for animation ops).
+     * Drives {@link #tickAnimationPreview}. Fires on the EDT, then thunks
+     * onto the client thread for the actual tick+animate call (RuneLite API
+     * requires client-thread access for animation ops).
      */
     private javax.swing.Timer animPreviewTimer = null;
 
@@ -1264,9 +1266,10 @@ public class CacheSearcherTab extends JPanel
 
         c.gridx = 0;
         c.gridy = 3;
-        JLabel instructionLabel = new JLabel("Double click any Animation to preview it on the selected Object (without applying)");
-        instructionLabel.setToolTipText("Preview plays on the selected Object's model in the right-side render panel. "
-                + "The in-world Object is untouched, no keyframe is added, the animation spinner stays put.");
+        JLabel instructionLabel = new JLabel("<html>Pick a model first via NPC / Object / SpotAnim / Projectile / Item,<br>"
+                + "then double-click any Animation here to preview it on that model.</html>");
+        instructionLabel.setToolTipText("The preview plays on whatever model is currently displayed in the right-side "
+                + "render panel. Nothing in the game world or your keyframes is touched -- this is audition-only.");
         card.add(instructionLabel, c);
     }
 
@@ -1375,88 +1378,72 @@ public class CacheSearcherTab extends JPanel
         if (!cardName.equals(ANIM))
         {
             currentCard = cardName;
-            // Leaving the Animation Searcher: shut down the preview timer so
-            // we don't burn CPU animating a panel the user isn't looking at.
-            // The static model in the renderPanel stays around for whatever
-            // the other card wants to display.
+            // Leaving the Animation Searcher: shut down the preview timer.
+            // Whatever the previous card was (NPC / Object / SpotAnim /
+            // Projectile / Item) already drove its own model into the panel,
+            // so we DON'T touch the panel here. The user's NPC click stays
+            // visible exactly as they left it.
             stopAnimationPreview();
         }
-        else
-        {
-            // Entering Animation Searcher: load the currently-selected
-            // Character's static model into the render panel as the rest
-            // pose. Subsequent double-clicks on anim rows will animate it.
-            refreshAnimPreviewBase(/*startTimerIfController=*/ false);
-        }
-    }
-
-    /**
-     * Refreshes {@link #animPreviewBaseModel} from the currently-selected
-     * Character and shows it (static) in the {@link #renderPanel}.
-     * No-op when no Character is selected or it has no stored model -- the
-     * panel just stays at its "No Model" placeholder.
-     *
-     * @param startTimerIfController if true and an active controller exists,
-     *                               restart the preview timer (used when the
-     *                               user re-selects a Character mid-preview).
-     */
-    private void refreshAnimPreviewBase(boolean startTimerIfController)
-    {
-        Character ch = plugin.getSelectedCharacter();
-        animPreviewCharacter = ch;
-        if (ch == null || ch.getStoredModel() == null || ch.getStoredModel().getModel() == null)
-        {
-            animPreviewBaseModel = null;
-            renderPanel.resetViewer();
-            return;
-        }
-        animPreviewBaseModel = ch.getStoredModel().getModel();
-        // Static display: feed the base Model directly. No controller running,
-        // so the panel shows the rest pose. Once the user double-clicks an
-        // anim, startAnimationPreview will swap in an animating Model.
-        renderPanel.updateAnimatedModel(animPreviewBaseModel);
-        if (startTimerIfController && animPreviewController != null)
-        {
-            ensureAnimPreviewTimer();
-        }
+        // Entering ANIM: no-op. The panel keeps whatever model was last
+        // loaded by the other cards. Double-click an animation row to
+        // animate THAT model. This is the "pick the source via the other
+        // searchers, then audition anims" workflow.
     }
 
     /**
      * Begin (or restart with a new anim id) the in-panel animation preview.
-     * Independent of the in-world Character's animation state -- we own the
-     * controller, we own the per-frame animate() result, and the panel paints
-     * it. The Character's spinner, ckObject, and recorded keyframes are all
-     * untouched.
+     *
+     * <p>Source of the rest-pose mesh: whatever {@link ModelData} is
+     * currently sitting in {@link #renderPanel} (last loaded by an NPC /
+     * Object / SpotAnim / Projectile / Item double-click, or by the Model
+     * Anvil if it shares the panel). If the panel has no model loaded the
+     * preview can't start -- we surface a one-shot dialog telling the user
+     * to pick a source first.
+     *
+     * <p>{@code md.light()} is expensive; the lit Model is cached against
+     * the source ModelData reference so successive anim-row double-clicks
+     * against the same source don't re-light. Re-light only fires when the
+     * user picks a different source in another tab.
      */
     private void startAnimationPreview(int animId)
     {
-        // Re-derive the base model in case the user has switched Characters
-        // since we last loaded one. Skips the static-display refresh path's
-        // resetViewer because we're about to animate -- the next timer tick
-        // will repopulate the panel.
-        if (animPreviewBaseModel == null || animPreviewCharacter != plugin.getSelectedCharacter())
+        ModelData sourceMD = renderPanel.getModel();
+        if (sourceMD == null)
         {
-            refreshAnimPreviewBase(/*startTimerIfController=*/ false);
-        }
-        if (animPreviewBaseModel == null)
-        {
-            // No model to animate. The "No Model" placeholder stays visible;
-            // we just don't kick off the timer.
+            JOptionPane.showMessageDialog(this,
+                    "Pick a model first via NPC / Object / SpotAnim / Projectile / Item search,\n"
+                            + "then come back here and double-click an animation to play it on that model.",
+                    "No model loaded",
+                    JOptionPane.INFORMATION_MESSAGE);
             return;
         }
+
+        // Snapshot the source ref so the client-thread lambda has a stable
+        // reading even if the user clicks a new NPC mid-light.
+        final ModelData source = sourceMD;
+        final boolean needRelight = animPreviewBaseModel == null || animPreviewSourceMD != source;
+
         clientThread.invokeLater(() ->
         {
+            if (needRelight)
+            {
+                animPreviewBaseModel = source.light();
+                animPreviewSourceMD = source;
+            }
+            if (animPreviewBaseModel == null) return;
             // loop=true so the user can audition longer animations without
-            // having to re-double-click. They get a continuous looped preview
-            // until they pick a different anim or leave the Animation Searcher.
+            // re-double-clicking. They get a continuous looped preview until
+            // they pick a different anim or leave the Animation Searcher.
             animPreviewController = new com.creatorskit.programming.CKAnimationController(
                     plugin.getClient(), animId, true);
         });
         ensureAnimPreviewTimer();
     }
 
-    /** Stops the preview timer + clears the controller. The base Model stays
-     *  so a subsequent refreshAnimPreviewBase doesn't have to re-fetch it. */
+    /** Stops the preview timer + clears the controller. The lit baseModel +
+     *  source ref stay cached so the next double-click on the same source
+     *  doesn't have to re-light. */
     private void stopAnimationPreview()
     {
         if (animPreviewTimer != null && animPreviewTimer.isRunning())
@@ -1470,11 +1457,13 @@ public class CacheSearcherTab extends JPanel
     {
         if (animPreviewTimer == null)
         {
-            // 60ms => ~16 fps. Each fire ticks the controller by 3 client ticks
-            // (3 * 20ms = 60ms) so the in-panel anim plays at roughly real
-            // game-time speed. Higher fps would feel smoother but Swing
-            // Timers are coarse and the animate() call isn't free.
-            animPreviewTimer = new javax.swing.Timer(60, e -> tickAnimationPreview());
+            // 100ms => ~10fps. Slower than 60ms to keep the EDT paint queue
+            // from backing up on heavy NPC meshes (the software rasteriser
+            // is O(faces * pixels)) and to avoid the visual tearing that
+            // came from paint racing animate() at high cadence. Each fire
+            // ticks the controller by 5 client ticks (5*20ms = 100ms) so
+            // the playback rate roughly matches real game time.
+            animPreviewTimer = new javax.swing.Timer(100, e -> tickAnimationPreview());
             animPreviewTimer.setRepeats(true);
         }
         if (!animPreviewTimer.isRunning())
@@ -1494,13 +1483,11 @@ public class CacheSearcherTab extends JPanel
             com.creatorskit.programming.CKAnimationController ctrl = animPreviewController;
             Model base = animPreviewBaseModel;
             if (ctrl == null || base == null) return;
-            ctrl.tick(3);
+            ctrl.tick(5);
             Model animated = ctrl.animate(base);
             if (animated != null)
             {
-                // Hop back to the EDT for the panel update. Swing component
-                // mutation must happen there even though we're driving the
-                // animation calc from the client thread.
+                // Hop back to the EDT for the panel update.
                 final Model frame = animated;
                 javax.swing.SwingUtilities.invokeLater(() -> renderPanel.updateAnimatedModel(frame));
             }
