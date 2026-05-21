@@ -54,6 +54,17 @@ public class TimeSheet extends JPanel
     public final int TEXT_HEIGHT_OFFSET = 5;
     private int indexBuffers = 1;
 
+    /**
+     * How many *real* property rows the timeline has (set by TimeSheetPanel
+     * from the keyframe-type list it builds the labels from). drawBackground
+     * iterates much further than this for the alternating row colors, but
+     * the edge-fade overlay only fires when actual content is cropped --
+     * i.e. when {@code (contentRowCount+1) * rowHeight > vScroll + viewport}
+     * for the bottom edge, or {@code vScroll > 0} for the top.
+     * +1 accounts for the row-0 header reserved for the time indicator chip.
+     */
+    private int contentRowCount = 0;
+
     private final Color background1 = new Color(40, 40, 40);
     private final Color background2 = new Color(42, 42, 42);
 
@@ -159,11 +170,61 @@ public class TimeSheet extends JPanel
         drawRectangleSelect(g2);
         drawKeyFrames(g2);
         drawPreviewKeyFrames(g2);
+        // Fade is drawn AFTER keyframes (so they dim into the edge) but
+        // BEFORE the text header / time indicator (so those stay crisp on
+        // top of the fade). It's the visual cue that content is cropped --
+        // pairs with the now-visible scrollbar in the labels column.
+        drawCropFade(g2);
         drawTextHeader(g2);
         drawTimeIndicator(g2);
         drawPreviewTimeIndicator(g2);
         revalidate();
         repaint();
+    }
+
+    /**
+     * Vertical gradients at the top/bottom of the body that signal "there
+     * are property rows cropped here." Only fires when there really is
+     * something off-screen in that direction. fadeHeight matches the row
+     * height so the gradient is exactly one row tall -- subtle enough to
+     * not obscure interactions in the visible edge rows, obvious enough
+     * the user notices.
+     */
+    private void drawCropFade(Graphics2D g)
+    {
+        if (contentRowCount <= 0)
+        {
+            return;
+        }
+
+        int h = getHeight();
+        int v = getVScroll();
+        int fadeHeight = Math.min(rowHeight, 18);
+        // Don't overlap the header row (y=0..rowHeight) which carries the
+        // time indicator chip / tick numbers; start the top fade below it.
+        int topFadeY = rowHeight + rowHeightOffset;
+        int contentBottom = (contentRowCount + 1) * rowHeight + rowHeightOffset;
+
+        if (v > 0)
+        {
+            Paint old = g.getPaint();
+            g.setPaint(new GradientPaint(
+                    0, topFadeY, new Color(0, 0, 0, 170),
+                    0, topFadeY + fadeHeight, new Color(0, 0, 0, 0)));
+            g.fillRect(0, topFadeY, getWidth(), fadeHeight);
+            g.setPaint(old);
+        }
+
+        if (v + h < contentBottom)
+        {
+            int bottomFadeStart = h - fadeHeight;
+            Paint old = g.getPaint();
+            g.setPaint(new GradientPaint(
+                    0, bottomFadeStart, new Color(0, 0, 0, 0),
+                    0, h, new Color(0, 0, 0, 170)));
+            g.fillRect(0, bottomFadeStart, getWidth(), fadeHeight);
+            g.setPaint(old);
+        }
     }
 
     /**

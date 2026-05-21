@@ -2268,7 +2268,11 @@ public class TimeSheetPanel extends JPanel
         scrollPane.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         scrollPane.setPreferredSize(new Dimension(100, 150));
         scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
+        // AS_NEEDED so the user actually sees the scrollbar when rows are
+        // cropped. Used to be NEVER + InvisibleScrollBar -- the model still
+        // drove vScroll but there was no visual cue, which is exactly the
+        // "properties cropped silently" UX problem we're fixing now.
+        scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
 
         MouseWheelListener[] mouseWheelListeners = scrollPane.getMouseWheelListeners();
         for (int i = 0; i < mouseWheelListeners.length; i++)
@@ -2276,9 +2280,13 @@ public class TimeSheetPanel extends JPanel
             scrollPane.removeMouseWheelListener(mouseWheelListeners[i]);
         }
 
-        InvisibleScrollBar scrollBar = new InvisibleScrollBar();
+        JScrollBar scrollBar = new JScrollBar(JScrollBar.VERTICAL);
         scrollBar.addAdjustmentListener(e -> bodySheet.onVerticalScrollEvent(e.getValue()));
         scrollPane.setVerticalScrollBar(scrollBar);
+        // Body needs to know how many real rows live in the column so it can
+        // draw the bottom edge-fade indicator at the right time (only when
+        // there is actually content scrolled below the viewport).
+        bodySheet.setContentRowCount(types.length);
 
         scrollPane.addMouseWheelListener(new MouseAdapter()
         {
@@ -2771,15 +2779,20 @@ public class TimeSheetPanel extends JPanel
         c.gridy = 2;
         add(attributePanel, c);
 
+        // gridy=4 hosts the property labels (left) + timeline body (right).
+        // weighty>0 here lets the user grow the window vertically and have
+        // the timeline rows expand to show more properties before cropping.
+        // Without this, the row was pinned at the labelScrollPane's prefSize
+        // (150px), which only fit ~5 of 17 local rows.
         c.gridheight = 1;
         c.weightx = 0;
-        c.weighty = 0;
+        c.weighty = 1;
         c.gridx = 1;
         c.gridy = 4;
         add(labelCards, c);
 
         c.weightx = 8;
-        c.weighty = 0;
+        c.weighty = 1;
         c.gridx = 2;
         c.gridy = 4;
         add(sheetCards, c);
