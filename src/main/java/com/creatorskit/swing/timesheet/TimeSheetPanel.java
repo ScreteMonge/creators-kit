@@ -1872,10 +1872,13 @@ public class TimeSheetPanel extends JPanel
         if (attributePanel != null)
         {
             attributePanel.refreshKeyFrameSelectionState();
-            if (selectedCharacter != null)
-            {
-                attributePanel.resetAttributes(selectedCharacter, currentTime);
-            }
+            // Always refresh attributes, even when no Character is selected --
+            // global keyframes have a no-Character path in resetAttributesInner
+            // that populates the card from the central store. Skipping the
+            // call when selectedCharacter is null was leaving the card in the
+            // state from switchCards' earlier (stale-marquee) reset, which
+            // showed default / empty values for the just-marqueed keyframe.
+            attributePanel.resetAttributes(selectedCharacter, currentTime);
         }
     }
 
