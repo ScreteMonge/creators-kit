@@ -39,6 +39,7 @@ public class ModelAnvil extends JPanel
     private final JPanel rightPanel = new JPanel();
     private final JPanel leftPanel = new JPanel();
     private final JPanel lightPanel = new JPanel();
+    @Getter
     private RenderPanel renderPanel;
 
     private final BufferedImage DUPLICATE = ImageUtil.loadImageResource(getClass(), "/Duplicate.png");

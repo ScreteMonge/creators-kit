@@ -43,6 +43,40 @@ public class RenderPanel extends JPanel
     private double mouseX = 0;
     private double mouseY = 0;
 
+    /**
+     * Sentinel for "no colour selected for highlight". JagexColor packed shorts
+     * span the full short range, so any value outside that range works -- we use
+     * int instead of short so the sentinel doesn't collide with a real colour.
+     */
+    public static final int HIGHLIGHT_NONE = Integer.MIN_VALUE;
+    private int highlightedColour = HIGHLIGHT_NONE;
+
+    /**
+     * Per-pixel face-index buffer written alongside the z-buffer during the
+     * rasterise pass. When the user clicks the panel we look up the face index
+     * at the click point in O(1) and report its colour via {@link #onFaceClicked}.
+     * Allocated lazily inside paintComponent so it always matches the current
+     * viewport size.
+     */
+    private int[] faceIdBuffer;
+    private int faceIdBufferWidth;
+
+    /**
+     * Listener for click-to-pick-colour. Invoked with the Jagex colour short of
+     * whichever face the user left-clicked. Drags don't fire this -- only true
+     * clicks (press + release without movement) per Swing's MouseListener
+     * contract, so existing camera-rotate-on-drag stays intact.
+     */
+    @Setter
+    private java.util.function.Consumer<Short> onFaceClicked;
+
+    /**
+     * Highlight tint applied to faces whose colour matches {@link #highlightedColour}.
+     * Picked to contrast with most model palettes -- orange is the plugin's
+     * accent colour and rarely clashes with NPC / item models.
+     */
+    private static final Color HIGHLIGHT_TINT = new Color(255, 152, 31);
+
     public RenderPanel(JSlider fovSlider)
     {
         this.fovSlider = fovSlider;
@@ -55,6 +89,24 @@ public class RenderPanel extends JPanel
                 Point p = e.getLocationOnScreen();
                 mouseX = p.getX();
                 mouseY = p.getY();
+            }
+
+            @Override
+            public void mouseClicked(MouseEvent e)
+            {
+                // mouseClicked only fires on press + release without movement,
+                // so dragging to rotate the camera doesn't trigger picking.
+                if (faceIdBuffer == null || model == null || onFaceClicked == null) return;
+                int x = e.getX();
+                int y = e.getY();
+                if (x < 0 || y < 0 || x >= faceIdBufferWidth) return;
+                int idx = y * faceIdBufferWidth + x;
+                if (idx < 0 || idx >= faceIdBuffer.length) return;
+                int faceIdx = faceIdBuffer[idx];
+                if (faceIdx < 0) return;
+                short[] colours = model.getFaceColors();
+                if (colours == null || faceIdx >= colours.length) return;
+                onFaceClicked.accept(colours[faceIdx]);
             }
         });
 
@@ -98,6 +150,19 @@ public class RenderPanel extends JPanel
         modelExists = false;
         repaint();
         revalidate();
+    }
+
+    /**
+     * Sets which Jagex colour is currently being "highlighted" -- the faces
+     * matching this colour render with {@link #HIGHLIGHT_TINT} instead of their
+     * normal shading, so the user can see at a glance which parts of the model
+     * use that colour. Pass {@link #HIGHLIGHT_NONE} to clear.
+     */
+    public void setHighlightedColour(int colour)
+    {
+        if (this.highlightedColour == colour) return;
+        this.highlightedColour = colour;
+        repaint();
     }
 
     @Override
@@ -163,9 +228,16 @@ public class RenderPanel extends JPanel
 
         double[] zBuffer = new double[img.getWidth() * img.getHeight()];
 
+        // Parallel face-index buffer: stores the index of whichever face is
+        // visible at each pixel, mirroring the z-buffer updates. Click-picking
+        // reads this in O(1). -1 = no face (background). Allocated fresh each
+        // frame so resizing the panel doesn't leave stale dimensions.
+        int[] localFaceIds = new int[img.getWidth() * img.getHeight()];
+
         for (int q = 0; q < zBuffer.length; q++)
         {
             zBuffer[q] = Double.NEGATIVE_INFINITY;
+            localFaceIds[q] = -1;
         }
 
         short[] colours = model.getFaceColors();
@@ -202,7 +274,9 @@ public class RenderPanel extends JPanel
                     new Vertex(v1x, v1y, v1z, 1),
                     new Vertex(v2x, v2y, v2z, 1),
                     new Vertex(v3x, v3y, v3z, 1),
-                    color
+                    color,
+                    i,
+                    colours[i]
             ));
         }
 
@@ -275,14 +349,31 @@ public class RenderPanel extends JPanel
                         int zIndex = y * img.getWidth() + x;
                         if (zBuffer[zIndex] < depth)
                         {
-                            img.setRGB(x, y, getShade(t.color, angleCos).getRGB());
+                            // Highlighted faces ignore the angleCos shading and
+                            // render in HIGHLIGHT_TINT so they pop out from
+                            // the rest of the model. Comparison uses the
+                            // packed Jagex colour (short) rather than the
+                            // unpacked Color to avoid float drift through HSL.
+                            Color rasterColor = (highlightedColour != HIGHLIGHT_NONE
+                                    && t.faceColour == (short) highlightedColour)
+                                    ? HIGHLIGHT_TINT
+                                    : getShade(t.color, angleCos);
+                            img.setRGB(x, y, rasterColor.getRGB());
                             zBuffer[zIndex] = depth;
+                            localFaceIds[zIndex] = t.faceIndex;
                         }
                     }
                 }
             }
 
         }
+
+        // Publish the face-id buffer so mouseClicked can read it. Storing the
+        // width separately because img.getWidth() depends on a still-valid
+        // reference, while the buffer outlives the BufferedImage (it's only
+        // freed when paintComponent re-allocates next frame).
+        this.faceIdBuffer = localFaceIds;
+        this.faceIdBufferWidth = img.getWidth();
 
         g2.drawImage(img, 0, 0, null);
     }
@@ -375,13 +466,19 @@ class Triangle
     Vertex v2;
     Vertex v3;
     Color color;
+    /** Original face index in the source ModelData -- written to the face-id buffer for click-picking. */
+    int faceIndex;
+    /** Original packed-Jagex colour of this face -- used to compare against the highlight target. */
+    short faceColour;
 
-    Triangle (Vertex v1, Vertex v2, Vertex v3, Color color)
+    Triangle (Vertex v1, Vertex v2, Vertex v3, Color color, int faceIndex, short faceColour)
     {
         this.v1 = v1;
         this.v2 = v2;
         this.v3 = v3;
         this.color = color;
+        this.faceIndex = faceIndex;
+        this.faceColour = faceColour;
     }
 }
 
