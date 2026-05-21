@@ -592,7 +592,13 @@ public class TimeSheet extends JPanel
 
                 if (keyFrameClicked)
                 {
-                    if (mousePosition.distance(mousePointOnPressed) < 1)
+                    // Anti-drag deadzone: small mouse drift between press and
+                    // release counts as a click (select-only) instead of a
+                    // drag. 1px was too tight -- the user could trigger an
+                    // accidental drag by trembling on the press. 5px gives
+                    // breathing room while still letting an intentional drag
+                    // engage promptly.
+                    if (mousePosition.distance(mousePointOnPressed) < 5)
                     {
                         updateSelectedKeyFrameOnRelease(mousePosition, e.isShiftDown());
                     }

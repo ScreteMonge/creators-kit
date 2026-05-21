@@ -182,13 +182,12 @@ public class AttributePanel extends JPanel
         cardLabel.setText(MOVE_CARD);
         add(cardLabel, c);
 
+        // Update button removed -- auto-update on field change is the default
+        // now, so explicit Update is redundant. updateButton field stays for
+        // any callsite that still references it but it's never added to the
+        // layout. Reset is kept for the "wipe spinner values to defaults"
+        // workflow which auto-update doesn't replace.
         c.gridx = 2;
-        c.gridy = 0;
-        updateButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        updateButton.addActionListener(e -> timeSheetPanel.onUpdateButtonPressed());
-        add(updateButton, c);
-
-        c.gridx = 3;
         c.gridy = 0;
         resetButton.setIcon(new ImageIcon(RESET));
         resetButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -196,12 +195,13 @@ public class AttributePanel extends JPanel
         resetButton.addActionListener(e -> setAttributesEmpty(false));
         add(resetButton, c);
 
-        c.gridx = 4;
+        c.gridx = 3;
         c.gridy = 0;
         keyFramed.setIcon(keyframeEmptyImage);
         keyFramed.setPreferredSize(new Dimension(32, 32));
         keyFramed.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        keyFramed.addActionListener(e -> timeSheetPanel.onKeyFrameIconPressedEvent());
+        keyFramed.setToolTipText("Add keyframe at the current tick. Use Delete to remove.");
+        keyFramed.addActionListener(e -> timeSheetPanel.onAddKeyFrameButtonPressed());
         add(keyFramed, c);
 
         c.gridwidth = 5;

@@ -375,6 +375,62 @@ public class TimeSheetPanel extends JPanel
         onKeyFrameIconPressedEvent(currentTime, attributePanel.getSelectedKeyFramePage());
     }
 
+    /**
+     * Add-only handler for the "+" button. Always adds (or replaces) a
+     * keyframe at the current tick; never removes. Removal is on Delete only
+     * so the user can't accidentally wipe a keyframe by double-clicking the
+     * add button.
+     */
+    public void onAddKeyFrameButtonPressed()
+    {
+        onAddKeyFrameButtonPressed(currentTime, attributePanel.getSelectedKeyFramePage());
+    }
+
+    public void onAddKeyFrameButtonPressed(double currentTick, KeyFrameType type)
+    {
+        boolean globalType = isGlobalType(type);
+
+        // No-Character + global branch: write directly to the central store.
+        if (selectedCharacter == null)
+        {
+            if (!globalType) return;
+            if (type == KeyFrameType.CAMERA)
+            {
+                attributePanel.captureLiveCameraIntoSpinners();
+            }
+            KeyFrame kf = attributePanel.createKeyFrame(type, currentTick);
+            if (kf == null) return;
+            KeyFrame replaced = plugin.getGlobalKeyFrames().add(kf);
+            KeyFrameAction[] kfa = new KeyFrameAction[]{
+                    new KeyFrameCharacterAction(kf, null, KeyFrameCharacterActionType.ADD)
+            };
+            if (replaced != null)
+            {
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replaced, null, KeyFrameCharacterActionType.REMOVE));
+            }
+            addKeyFrameActions(kfa);
+            setSelectedKeyFrames(new KeyFrame[]{kf});
+            attributePanel.setKeyFramedIcon(true);
+            return;
+        }
+
+        // With-Character branch: same path as the legacy add side of
+        // onKeyFrameIconPressedEvent, minus the toggle-remove branch.
+        if (type == KeyFrameType.CAMERA)
+        {
+            attributePanel.captureLiveCameraIntoSpinners();
+        }
+        KeyFrame kf = attributePanel.createKeyFrame(type, currentTick);
+        if (kf == null) return;
+
+        KeyFrame[] keyFrames = new KeyFrame[]{kf};
+        if (type == KeyFrameType.SPAWN && currentTick > 0)
+        {
+            keyFrames = checkDespawnKeyFrameAt0(kf, keyFrames, currentTick);
+        }
+        addKeyFrameAction(keyFrames);
+    }
+
     public void onKeyFrameIconPressedEvent(double currentTick, KeyFrameType type)
     {
         // No-Character branch for global types -- the user can author
@@ -2068,7 +2124,10 @@ public class TimeSheetPanel extends JPanel
                         return;
                     }
 
-                    scrollAttributePanel(e.getWheelRotation());
+                    // Wheel jumps 2 properties per notch -- one-at-a-time felt
+                    // slow given there are 17 local rows. Arrow keys keep the
+                    // one-row step for precise navigation.
+                    scrollAttributePanel(e.getWheelRotation() * 2);
                     return;
                 }
 
@@ -2223,7 +2282,7 @@ public class TimeSheetPanel extends JPanel
                 }
                 if (e.isShiftDown() && !e.isControlDown() && !e.isAltDown())
                 {
-                    scrollAttributePanel(e.getWheelRotation());
+                    scrollAttributePanel(e.getWheelRotation() * 2);
                     return;
                 }
                 scrollBar.setValue(scrollBar.getValue() + e.getWheelRotation() * 15);
@@ -2621,7 +2680,7 @@ public class TimeSheetPanel extends JPanel
                         return;
                     }
 
-                    scrollAttributePanel(e.getWheelRotation());
+                    scrollAttributePanel(e.getWheelRotation() * 2);
                 }
             }
         });
