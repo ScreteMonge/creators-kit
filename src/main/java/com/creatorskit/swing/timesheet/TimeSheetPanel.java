@@ -116,6 +116,17 @@ public class TimeSheetPanel extends JPanel
     private boolean globalRowsOnlyMode = false;
     /** Captured during setupLabels so toggling visibility can call revalidate(). */
     private JPanel labelPanelRef;
+    /**
+     * User's manual choice of which view to render when at least one Object is
+     * selected. {@code true} = pin to the 3-row global view; {@code false} =
+     * show the full per-Character row list. Driven by the toggle button that
+     * sits where the spacer header used to be in the labels column. Falls
+     * back to "global" whenever the selection drops to zero Objects -- the
+     * button itself disables in that case but the rendered mode follows.
+     */
+    private boolean userPrefersGlobalView = false;
+    /** Toggle button shown in the labels column above the first property row. */
+    private JButton viewToggleButton;
 
     private final int UNDO_LIMIT = 15;
     private int undoStack = 0;
@@ -1738,17 +1749,50 @@ public class TimeSheetPanel extends JPanel
     }
 
     /**
-     * Single source of truth for the globals-only collapse state. Collapses
-     * the timeline rows iff there is no Character selected -- once a Character
-     * is picked, the per-character rows expand even before any keyframes are
-     * marqueed. Selecting global keyframes alone (with no Character context)
-     * doesn't expand the rows since there's nothing per-character to look at.
+     * Single source of truth for the globals-only collapse state. Honors the
+     * explicit toggle button: if any Object is selected, the user's last
+     * choice wins; otherwise the view is locked to global. Pair-updates the
+     * button's label + enabled state so the UI matches the rendered mode.
      */
     private void refreshGlobalRowsOnlyMode()
     {
-        boolean noCharacter = selectedCharacter == null
+        boolean noObject = selectedCharacter == null
                 && (selectionManager == null || selectionManager.size() == 0);
-        setGlobalRowsOnlyMode(noCharacter);
+        boolean targetMode = noObject || userPrefersGlobalView;
+        setGlobalRowsOnlyMode(targetMode);
+        refreshViewToggleButton(noObject, targetMode);
+    }
+
+    /**
+     * Click handler for the labels-column toggle button. No-op when no Object
+     * is selected -- the spec calls for the button to be greyed out in that
+     * state, but defending here is cheaper than relying on the disabled paint.
+     */
+    private void onViewToggleClicked()
+    {
+        boolean noObject = selectedCharacter == null
+                && (selectionManager == null || selectionManager.size() == 0);
+        if (noObject) return;
+        userPrefersGlobalView = !userPrefersGlobalView;
+        refreshGlobalRowsOnlyMode();
+    }
+
+    /**
+     * Repaints the toggle button label + enabled state to match the current
+     * effective mode. Button text describes the action that a click will
+     * perform ("Manage local" while showing global rows, vice versa) so the
+     * user can guess what's about to happen.
+     */
+    private void refreshViewToggleButton(boolean noObject, boolean globalMode)
+    {
+        if (viewToggleButton == null) return;
+        viewToggleButton.setEnabled(!noObject);
+        viewToggleButton.setText(globalMode ? "Manage local" : "Manage global");
+        viewToggleButton.setToolTipText(noObject
+                ? "<html>Locked to global view -- select an Object to enable<br>per-Character rows.</html>"
+                : (globalMode
+                    ? "Switch to the per-Object property rows for the current selection."
+                    : "Switch to the global property rows (Camera / Screen Fade / Screen Shake)."));
     }
 
     /**
@@ -2039,68 +2083,89 @@ public class TimeSheetPanel extends JPanel
         });
 
         labels = new JLabel[KeyFrameType.getTotalFrameTypes() + 1];
-        for (int i = 0; i < KeyFrameType.getTotalFrameTypes() + 1; i++)
+        // labels[0] is the spacer header slot above the first property row.
+        // We add a toggle button here that flips between local and global views
+        // when at least one Object is selected -- explicit replacement for the
+        // earlier auto-collapse heuristic so multi-select edits don't quietly
+        // drag the user between modes.
+        viewToggleButton = new JButton();
+        viewToggleButton.setFocusable(false);
+        viewToggleButton.setBorder(null);
+        viewToggleButton.setMargin(new java.awt.Insets(0, 4, 0, 4));
+        viewToggleButton.setPreferredSize(new Dimension(100, 24));
+        viewToggleButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
+        viewToggleButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        viewToggleButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        viewToggleButton.setForeground(Color.WHITE);
+        viewToggleButton.addActionListener(e -> onViewToggleClicked());
+        // labels[0] still exists in the array for the existing index math (every
+        // type label sits at labels[i+1]) -- just point it at a dummy JLabel
+        // that's never added to the layout so the array shape stays valid.
+        labels[0] = new JLabel();
+        labelPanel.add(viewToggleButton);
+
+        for (int i = 1; i < KeyFrameType.getTotalFrameTypes() + 1; i++)
         {
             JLabel label = new JLabel();
             label.setFocusable(true);
             label.setHorizontalAlignment(SwingConstants.RIGHT);
             label.setOpaque(true);
             label.setPreferredSize(new Dimension(100, 24));
-            // BoxLayout respects max size -- without this the label would stretch
-            // vertically to fill any leftover space when few labels are visible.
             label.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
             label.setAlignmentX(Component.LEFT_ALIGNMENT);
             label.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
-            // Skip the empty label
             if (i == 1)
             {
                 label.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
             }
 
-            if (i != 0)
+            label.addMouseListener(new MouseAdapter()
             {
-                label.addMouseListener(new MouseAdapter()
+                @Override
+                public void mousePressed(MouseEvent e)
                 {
-                    @Override
-                    public void mousePressed(MouseEvent e)
-                    {
-                        super.mousePressed(e);
-                        attributePanel.switchCards(label.getText().replaceAll(LABEL_OFFSET, ""));
-                        label.requestFocusInWindow();
-                    }
-                });
+                    super.mousePressed(e);
+                    attributePanel.switchCards(label.getText().replaceAll(LABEL_OFFSET, ""));
+                    label.requestFocusInWindow();
+                }
+            });
 
-                label.addKeyListener(new KeyAdapter()
+            label.addKeyListener(new KeyAdapter()
+            {
+                @Override
+                public void keyReleased(KeyEvent e)
                 {
-                    @Override
-                    public void keyReleased(KeyEvent e)
+                    if (e.getKeyCode() == KeyEvent.VK_DOWN)
                     {
-                        if (e.getKeyCode() == KeyEvent.VK_DOWN)
-                        {
-                            scrollAttributePanel(1);
-                        }
-
-                        if (e.getKeyCode() == KeyEvent.VK_UP)
-                        {
-                            scrollAttributePanel(-1);
-                        }
+                        scrollAttributePanel(1);
                     }
-                });
-            }
+
+                    if (e.getKeyCode() == KeyEvent.VK_UP)
+                    {
+                        scrollAttributePanel(-1);
+                    }
+                }
+            });
 
             labels[i] = label;
             labelPanel.add(label);
         }
 
         // Labels are positioned in alphabetical order via
-        // ALL_KEYFRAME_TYPES_ALPHABETICAL. labels[0] stays an empty header,
-        // labels[1..N] follow the alphabetical array. The label text uses each
-        // type's getName() so click → switchCards finds the right card.
+        // ALL_KEYFRAME_TYPES_ALPHABETICAL. labels[0] is unused (replaced by the
+        // viewToggleButton above); labels[1..N] follow the alphabetical array.
+        // The label text uses each type's getName() so click → switchCards
+        // finds the right card.
         for (int i = 0; i < KeyFrameType.ALL_KEYFRAME_TYPES_ALPHABETICAL.length; i++)
         {
             labels[i + 1].setText(KeyFrameType.ALL_KEYFRAME_TYPES_ALPHABETICAL[i].getName() + LABEL_OFFSET);
         }
+
+        // Initial pass to bake the right button text + globals-only state.
+        // No selection yet at construction time, so this lands on "Manage local"
+        // disabled / globals-visible mode.
+        refreshGlobalRowsOnlyMode();
     }
 
     private void setupScrollBar()
