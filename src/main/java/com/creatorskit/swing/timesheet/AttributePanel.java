@@ -88,6 +88,7 @@ public class AttributePanel extends JPanel
     public static final String SCREEN_SHAKE_CARD = "Screen Shake";
     public static final String CAMERA_CARD = "Camera";
     public static final String MIXED_TYPES_CARD = "MixedTypes";
+    public static final String NO_SELECTION_CARD = "NoSelection";
 
     private final String NO_OBJECT_SELECTED = "[No Object Selected]";
     private String activeCard = MOVE_CARD;
@@ -96,6 +97,19 @@ public class AttributePanel extends JPanel
     private KeyFrameType hoveredKeyFrameType;
     private Component hoveredComponent;
     private KeyFrameType selectedKeyFramePage = KeyFrameType.MOVEMENT;
+
+    /**
+     * Reentrant guard for auto-update. When > 0 the field-change listeners are
+     * suppressed because the panel itself just pushed values into the spinners
+     * via setAttributes (e.g. after a selection change). Without this guard
+     * every programmatic setValue would echo back as "user edit" and either
+     * loop or rewrite the freshly-loaded keyframe with its own values.
+     *
+     * <p>Int counter rather than boolean so nested guard pushes (e.g. a
+     * setAttributes call inside another setAttributes path) don't clear the
+     * suppression on the inner finally before the outer one is done.
+     */
+    private int suppressAutoUpdateDepth = 0;
 
     private final MovementAttributes movementAttributes = new MovementAttributes();
     private final AnimAttributes animAttributes = new AnimAttributes();
@@ -239,6 +253,20 @@ public class AttributePanel extends JPanel
         mixedTypesCard.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         cardPanel.add(mixedTypesCard, MIXED_TYPES_CARD);
 
+        // Placeholder shown when no keyframe is selected. The card editor is hidden
+        // because there's nothing to mutate -- auto-update fires per spinner change,
+        // and the previous behaviour (silently rewriting the seeker-adjacent keyframe
+        // when the user typed values without a selection) was the main source of
+        // the "I lost all my edits" UX complaints.
+        JPanel noSelectionCard = new JPanel();
+        noSelectionCard.setLayout(new GridBagLayout());
+        noSelectionCard.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        JLabel noSelectionLabel = new JLabel("Select a keyframe to edit");
+        noSelectionLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        noSelectionLabel.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+        noSelectionCard.add(noSelectionLabel);
+        cardPanel.add(noSelectionCard, NO_SELECTION_CARD);
+
         setupMoveCard(moveCard);
         setupAnimCard(animCard);
         setupOriCard(oriCard);
@@ -261,7 +289,79 @@ public class AttributePanel extends JPanel
         setupScreenShakeCard(screenShakeCard);
         setupCameraCard(cameraCard);
 
+        // Wire up auto-update on every Attributes instance. Each card's setupXxxCard
+        // already attached the "set red on change" listeners for the dirty-state
+        // visual; this adds a parallel listener that commits the change to the
+        // selected keyframe immediately, replacing the old click-Update-or-lose-it
+        // flow. Done AFTER setupXxxCard so the initial SpinnerNumberModel installs
+        // don't fire as "user edits".
+        com.creatorskit.swing.timesheet.attributes.Attributes[] allAttributes = {
+                movementAttributes, animAttributes, oriAttributes, spawnAttributes,
+                modelAttributes, textAttributes, overheadAttributes, healthAttributes,
+                spotAnimAttributes, spotAnim2Attributes,
+                hitsplat1Attributes, hitsplat2Attributes, hitsplat3Attributes, hitsplat4Attributes,
+                projectileAttributes, shieldAttributes, specialAttributes,
+                screenFadeAttributes, screenShakeAttributes, cameraAttributes
+        };
+        for (com.creatorskit.swing.timesheet.attributes.Attributes attrs : allAttributes)
+        {
+            wireAutoUpdate(attrs);
+        }
+
         setupKeyListeners();
+    }
+
+    /**
+     * Walks every component in {@code attrs}' card and attaches a "user edited"
+     * listener that calls {@link #fireAutoUpdate()}. Skips {@link JButton}s
+     * because their own action handlers do the right thing already (e.g. the
+     * Camera card's Capture button reads the live camera, not the spinner state).
+     * Text fields are skipped too because their per-keystroke fire rate would
+     * spam the undo stack -- text edits still need the manual Update button.
+     */
+    private void wireAutoUpdate(com.creatorskit.swing.timesheet.attributes.Attributes attrs)
+    {
+        for (JComponent c : attrs.getAllComponents())
+        {
+            if (c instanceof JSpinner)
+            {
+                ((JSpinner) c).addChangeListener(e -> fireAutoUpdate());
+            }
+            else if (c instanceof JComboBox)
+            {
+                ((JComboBox<?>) c).addActionListener(e -> fireAutoUpdate());
+            }
+            else if (c instanceof JCheckBox)
+            {
+                ((JCheckBox) c).addActionListener(e -> fireAutoUpdate());
+            }
+            // JButton / JTextField / JTextArea intentionally not wired -- see method javadoc.
+        }
+    }
+
+    /**
+     * Commits the current card values onto the selected keyframe(s). No-op when
+     * the panel itself just pushed values in (the guard counter is non-zero) or
+     * when there's no keyframe of the current type selected -- the seeker-fallback
+     * in {@link TimeSheetPanel#onUpdateButtonPressed()} would silently rewrite
+     * the keyframe under the playhead, which is exactly the surprise the new
+     * UX is trying to remove.
+     */
+    private void fireAutoUpdate()
+    {
+        if (suppressAutoUpdateDepth > 0)
+        {
+            return;
+        }
+        if (timeSheetPanel == null)
+        {
+            return;
+        }
+        if (findSelectedKeyFrameOfCurrentType() == null)
+        {
+            return;
+        }
+        timeSheetPanel.onUpdateButtonPressed();
     }
 
     /**
@@ -3217,8 +3317,6 @@ public class AttributePanel extends JPanel
         selectedKeyFramePage = type;
         String cardName = selectedKeyFramePage.getName();
         activeCard = cardName;
-        CardLayout cl = (CardLayout)(cardPanel.getLayout());
-        cl.show(cardPanel, cardName);
         cardLabel.setText(cardName);
 
         JLabel[] labels = timeSheetPanel.getLabels();
@@ -3245,12 +3343,17 @@ public class AttributePanel extends JPanel
         {
             setKeyFramedIcon(false);
             resetAttributes(null, currentTick);
+            // Re-evaluate placeholder vs card visibility after the type change.
+            // resetAttributes does the spinner-load but only refreshKeyFrameSelectionState
+            // routes the CardLayout to the right card (active vs NO_SELECTION_CARD).
+            refreshKeyFrameSelectionState();
             return;
         }
 
         KeyFrame keyFrame = character.findKeyFrame(selectedKeyFramePage, currentTick);
         setKeyFramedIcon(keyFrame != null);
         resetAttributes(character, currentTick);
+        refreshKeyFrameSelectionState();
     }
 
     public void setSelectedCharacter(Character character)
@@ -3262,12 +3365,14 @@ public class AttributePanel extends JPanel
         {
             setKeyFramedIcon(false);
             resetAttributes(null, tick);
+            refreshKeyFrameSelectionState();
             return;
         }
 
         KeyFrame keyFrame = character.findKeyFrame(selectedKeyFramePage, tick);
         setKeyFramedIcon(keyFrame != null);
         resetAttributes(character, tick);
+        refreshKeyFrameSelectionState();
     }
 
     /**
@@ -3315,6 +3420,12 @@ public class AttributePanel extends JPanel
             }
         }
         boolean mixedTypes = types.size() > 1;
+        // No keyframe of the current card's type is selected -- show the placeholder
+        // so the user can't enter values that would silently rewrite the previous-at-
+        // seeker keyframe via the auto-update path. The "+" keyframe icon button
+        // stays enabled so adding a new keyframe at the seeker still works.
+        boolean noSelectionForCurrentType = !mixedTypes
+                && findSelectedKeyFrameOfCurrentType() == null;
 
         CardLayout cl = (CardLayout) cardPanel.getLayout();
         if (mixedTypes)
@@ -3322,13 +3433,22 @@ public class AttributePanel extends JPanel
             cl.show(cardPanel, MIXED_TYPES_CARD);
             cardLabel.setText("Mixed types");
         }
+        else if (noSelectionForCurrentType)
+        {
+            cl.show(cardPanel, NO_SELECTION_CARD);
+            cardLabel.setText(activeCard);
+        }
         else
         {
             cl.show(cardPanel, activeCard);
             cardLabel.setText(activeCard);
         }
-        updateButton.setEnabled(!mixedTypes);
-        resetButton.setEnabled(!mixedTypes);
+        boolean editable = !mixedTypes && !noSelectionForCurrentType;
+        updateButton.setEnabled(editable);
+        resetButton.setEnabled(editable);
+        // The "+" / keyframe icon is a CREATE/REMOVE button -- still useful even
+        // when no keyframe is selected (creates one at the seeker). Only disable
+        // it for the genuinely-ambiguous mixed-types case.
         keyFramed.setEnabled(!mixedTypes);
 
         // Keep the object label in sync with the marquee count -- updateObjectLabel
@@ -3608,6 +3728,22 @@ public class AttributePanel extends JPanel
 
     public void resetAttributes(Character character, double tick)
     {
+        // Suppress auto-update for the whole load path -- every spinner.setValue
+        // below would otherwise echo back through fireAutoUpdate and either loop
+        // or rewrite the freshly-loaded keyframe with its own (just-loaded) values.
+        suppressAutoUpdateDepth++;
+        try
+        {
+            resetAttributesInner(character, tick);
+        }
+        finally
+        {
+            suppressAutoUpdateDepth--;
+        }
+    }
+
+    private void resetAttributesInner(Character character, double tick)
+    {
         if (character == null)
         {
             setAttributesEmpty(true);
@@ -3727,6 +3863,19 @@ public class AttributePanel extends JPanel
     }
 
     public void setAttributesEmpty(boolean resetBackground)
+    {
+        suppressAutoUpdateDepth++;
+        try
+        {
+            setAttributesEmptyInner(resetBackground);
+        }
+        finally
+        {
+            suppressAutoUpdateDepth--;
+        }
+    }
+
+    private void setAttributesEmptyInner(boolean resetBackground)
     {
         switch (selectedKeyFramePage)
         {
