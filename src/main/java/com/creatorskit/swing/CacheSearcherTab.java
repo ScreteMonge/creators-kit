@@ -1219,7 +1219,15 @@ public class CacheSearcherTab extends JPanel
                         if (character != null)
                         {
                             int animId = data.getId();
-                            character.getAnimationSpinner().setValue(animId);
+                            // Preview, don't apply: previous behaviour set the
+                            // spinner value which both committed the anim ID
+                            // to the Character's recorded state AND propagated
+                            // it across multi-selected Characters. Now we just
+                            // play the anim once on the primary selected
+                            // Character; the spinner stays put, so "Add
+                            // keyframe" later still uses the user's
+                            // intentional value.
+                            character.previewAnimation(clientThread, plugin.getClient(), plugin.getRandom(), animId);
                         }
                     }
                 }
@@ -1235,7 +1243,7 @@ public class CacheSearcherTab extends JPanel
 
         c.gridx = 0;
         c.gridy = 3;
-        JLabel instructionLabel = new JLabel("Double click any Animation to set it to the currently selected Object");
+        JLabel instructionLabel = new JLabel("Double click any Animation to preview it on the selected Object (without applying)");
         card.add(instructionLabel, c);
     }
 

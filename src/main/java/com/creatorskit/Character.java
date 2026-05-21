@@ -379,6 +379,34 @@ public class Character
         clientThread.invokeLater(() -> setAnimation(client, random, type, animId, animFrame, randomizeStartFrame, allowPause));
     }
 
+    /**
+     * Plays {@code animId} on this Character's active animation slot ONCE,
+     * without touching {@link #animationSpinner}. Used by the Cache Searcher
+     * Animation Searcher double-click handler so users can audition an
+     * animation visually without committing it to the Character's recorded
+     * state. The default on-finished handler resets to anim -1 when the play
+     * completes, so the Character ends up visually idle -- the next timeline
+     * scrub / play tick / explicit "Add keyframe" cleanly re-derives the
+     * correct state from the (unchanged) spinner + keyframe data.
+     *
+     * <p>Crucially: NO {@code propagateSpinner} call, NO spinner.setValue.
+     * Multi-select Characters keep their own animations.
+     */
+    public void previewAnimation(ClientThread clientThread, Client client, Random random, int animId)
+    {
+        clientThread.invokeLater(() -> {
+            Animation animation = client.loadAnimation(animId);
+            ckObject.setAnimation(AnimationType.ACTIVE, animation);
+            ckObject.setAnimationFrame(AnimationType.ACTIVE, 0, random, false, false);
+            ckObject.setPlaying(true);
+            // loop=false is the whole point -- the default onFinished handler
+            // in CKObject.setOnFinished() will reset animation to -1 when the
+            // cycle ends, so preview is truly transient.
+            ckObject.setLoop(false);
+            ckObject.setHasAnimKeyFrame(false);
+        });
+    }
+
     public void setAnimation(Client client, Random random, AnimationType type, int animId, int animFrame, boolean randomizeStartFrame, boolean allowPause)
     {
         Animation animation = client.loadAnimation(animId);
