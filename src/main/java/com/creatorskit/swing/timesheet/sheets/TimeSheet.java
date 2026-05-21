@@ -166,6 +166,21 @@ public class TimeSheet extends JPanel
         repaint();
     }
 
+    /**
+     * Zeros every transient flag that tracks an in-progress mouse interaction.
+     * Used as belt-and-suspenders cleanup at every mouseReleased return path
+     * (and as a defensive sweep at end) so a previous bad release can't leave
+     * the next press riding on stale state. Symptom of leaving these stuck:
+     * rectangle-select box stays visible, or "clicking outside" continues
+     * dragging keyframes because keyFrameClicked is still true.
+     */
+    private void clearTransientDragFlags()
+    {
+        keyFrameClicked = false;
+        allowRectangleSelect = false;
+        timeIndicatorPressed = false;
+    }
+
     private void drawRectangleSelect(Graphics2D g)
     {
         if (!allowRectangleSelect)
@@ -508,6 +523,10 @@ public class TimeSheet extends JPanel
                     return;
                 }
 
+                // Reset any stale transient flags from a previous bad release.
+                // Set fresh state below based on where this press lands.
+                clearTransientDragFlags();
+
                 if (mousePosition.getY() < rowHeight)
                 {
                     timeIndicatorPressed = true;
@@ -540,11 +559,15 @@ public class TimeSheet extends JPanel
                 if (e.getButton() == MouseEvent.BUTTON3)
                 {
                     onMouseButton3Pressed(mousePosition);
+                    // Right-click never starts a drag, but clear transient
+                    // state anyway in case a stray left-press left flags on.
+                    clearTransientDragFlags();
                     return;
                 }
 
                 if (e.getButton() != MouseEvent.BUTTON1)
                 {
+                    clearTransientDragFlags();
                     return;
                 }
 
@@ -554,7 +577,11 @@ public class TimeSheet extends JPanel
                 {
                     double time = getTimeIndicatorPosition();
                     setCurrentTime(time, false);
-                    timeIndicatorPressed = false;
+                    // Belt-and-suspenders cleanup of every transient drag flag.
+                    // Otherwise a timeIndicatorPressed release could leave a
+                    // previous in-body press's keyFrameClicked / allowRectangleSelect
+                    // stuck true and the next click would resume that interaction.
+                    clearTransientDragFlags();
                     return;
                 }
 
@@ -694,6 +721,14 @@ public class TimeSheet extends JPanel
                     checkRectangleForKeyFrames(mousePosition, e.isShiftDown());
                     allowRectangleSelect = false;
                 }
+
+                // Final defensive sweep: any leftover transient flags after
+                // every branch above is consumed get explicitly zeroed so the
+                // next press starts from a clean state. Was the root of the
+                // "marquee box stays / clicking outside still drags" bug --
+                // certain release paths (e.g. mouse released outside canvas)
+                // skipped one or another cleanup site.
+                clearTransientDragFlags();
             }
         });
 
