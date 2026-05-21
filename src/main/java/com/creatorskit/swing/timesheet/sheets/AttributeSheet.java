@@ -46,7 +46,10 @@ public class AttributeSheet extends TimeSheet
      * Returns the row index where {@code type} should be drawn given the
      * current mode, or -1 if the type is hidden. In expanded mode this is the
      * type's alphabetical position (rows are ordered by getName()); in
-     * collapsed mode only the three globals are placed at rows 0-2.
+     * collapsed mode the globals are placed in the same alphabetical order
+     * they sit in among the visible labels -- Camera (C), Screen Fade (S),
+     * Screen Shake (S). Mismatching this with the label order is what made
+     * the highlight land on the wrong row in collapsed view.
      */
     private int displayRowIndex(KeyFrameType type)
     {
@@ -56,9 +59,9 @@ public class AttributeSheet extends TimeSheet
         }
         switch (type)
         {
-            case SCREEN_FADE:  return 0;
-            case SCREEN_SHAKE: return 1;
-            case CAMERA:       return 2;
+            case CAMERA:       return 0;
+            case SCREEN_FADE:  return 1;
+            case SCREEN_SHAKE: return 2;
             default:           return -1;
         }
     }

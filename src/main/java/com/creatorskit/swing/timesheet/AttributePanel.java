@@ -3783,8 +3783,39 @@ public class AttributePanel extends JPanel
 
     private void resetAttributesInner(Character character, double tick)
     {
+        // No-Character path: only continue if a global keyframe is currently
+        // selected. Globals live in the central store and don't need a
+        // Character to look up; everything else falls back to the empty card.
         if (character == null)
         {
+            KeyFrame selectedGlobal = findSelectedKeyFrameOfCurrentType();
+            boolean isGlobal = selectedKeyFramePage == KeyFrameType.CAMERA
+                    || selectedKeyFramePage == KeyFrameType.SCREEN_FADE
+                    || selectedKeyFramePage == KeyFrameType.SCREEN_SHAKE;
+            if (selectedGlobal != null && isGlobal)
+            {
+                setKeyFramedIcon(true);
+                KeyFrameState s = tick == selectedGlobal.getTick()
+                        ? KeyFrameState.ON_KEYFRAME
+                        : KeyFrameState.OFF_KEYFRAME;
+                switch (selectedKeyFramePage)
+                {
+                    case CAMERA:
+                        cameraAttributes.setAttributes(selectedGlobal);
+                        cameraAttributes.setBackgroundColours(s);
+                        break;
+                    case SCREEN_FADE:
+                        screenFadeAttributes.setAttributes(selectedGlobal);
+                        screenFadeAttributes.setBackgroundColours(s);
+                        break;
+                    case SCREEN_SHAKE:
+                        screenShakeAttributes.setAttributes(selectedGlobal);
+                        screenShakeAttributes.setBackgroundColours(s);
+                        break;
+                    default: break;
+                }
+                return;
+            }
             setAttributesEmpty(true);
             return;
         }

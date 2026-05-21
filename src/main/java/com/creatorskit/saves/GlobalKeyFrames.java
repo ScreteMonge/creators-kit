@@ -1,10 +1,13 @@
 package com.creatorskit.saves;
 
 import com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import com.creatorskit.swing.timesheet.keyframe.ScreenFadeKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame;
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.commons.lang3.ArrayUtils;
 
 /**
  * Top-level storage for the three global keyframe types -- Camera, Screen Fade,
@@ -49,5 +52,121 @@ public class GlobalKeyFrames
     public ScreenShakeKeyFrame[] getScreenShakeKeyFramesSafe()
     {
         return screenShakeKeyFrames == null ? new ScreenShakeKeyFrame[0] : screenShakeKeyFrames;
+    }
+
+    /**
+     * Inserts {@code kf} into the appropriate array, replacing any existing
+     * keyframe at the same tick. Returns the replaced keyframe so the caller
+     * can record it on the undo stack, or null if nothing was displaced.
+     *
+     * <p>Used by the TimeSheetPanel when the user adds a global keyframe with
+     * no Character selected -- the central store becomes the direct write
+     * target instead of routing through Character.addKeyFrame.
+     */
+    public KeyFrame add(KeyFrame kf)
+    {
+        if (kf == null) return null;
+        switch (kf.getKeyFrameType())
+        {
+            case CAMERA:
+            {
+                CameraKeyFrame[] existing = getCameraKeyFramesSafe();
+                CameraKeyFrame replaced = (CameraKeyFrame) findAtTick(existing, kf.getTick());
+                cameraKeyFrames = insertSorted(existing, (CameraKeyFrame) kf, new CameraKeyFrame[0]);
+                return replaced;
+            }
+            case SCREEN_FADE:
+            {
+                ScreenFadeKeyFrame[] existing = getScreenFadeKeyFramesSafe();
+                ScreenFadeKeyFrame replaced = (ScreenFadeKeyFrame) findAtTick(existing, kf.getTick());
+                screenFadeKeyFrames = insertSorted(existing, (ScreenFadeKeyFrame) kf, new ScreenFadeKeyFrame[0]);
+                return replaced;
+            }
+            case SCREEN_SHAKE:
+            {
+                ScreenShakeKeyFrame[] existing = getScreenShakeKeyFramesSafe();
+                ScreenShakeKeyFrame replaced = (ScreenShakeKeyFrame) findAtTick(existing, kf.getTick());
+                screenShakeKeyFrames = insertSorted(existing, (ScreenShakeKeyFrame) kf, new ScreenShakeKeyFrame[0]);
+                return replaced;
+            }
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Removes a specific keyframe instance from the appropriate array.
+     * No-op if the keyframe isn't in the store.
+     */
+    public void remove(KeyFrame kf)
+    {
+        if (kf == null) return;
+        switch (kf.getKeyFrameType())
+        {
+            case CAMERA:
+                cameraKeyFrames = ArrayUtils.removeElement(getCameraKeyFramesSafe(), kf);
+                break;
+            case SCREEN_FADE:
+                screenFadeKeyFrames = ArrayUtils.removeElement(getScreenFadeKeyFramesSafe(), kf);
+                break;
+            case SCREEN_SHAKE:
+                screenShakeKeyFrames = ArrayUtils.removeElement(getScreenShakeKeyFramesSafe(), kf);
+                break;
+            default:
+                break;
+        }
+    }
+
+    /** Scan helper: returns the existing keyframe whose tick matches, or null. */
+    private static KeyFrame findAtTick(KeyFrame[] arr, double tick)
+    {
+        if (arr == null) return null;
+        for (KeyFrame k : arr)
+        {
+            if (k != null && k.getTick() == tick) return k;
+        }
+        return null;
+    }
+
+    /**
+     * Inserts {@code kf} into {@code existing} sorted by tick. If a keyframe
+     * already sits at the same tick, that slot is overwritten so each (type,
+     * tick) pair stays unique -- matches Character.addKeyFrame semantics.
+     * The {@code zeroLengthMarker} is only used to recover the component
+     * type when {@code existing} is null/empty.
+     */
+    @SuppressWarnings("unchecked")
+    private static <T extends KeyFrame> T[] insertSorted(T[] existing, T kf, T[] zeroLengthMarker)
+    {
+        if (existing == null || existing.length == 0)
+        {
+            T[] out = (T[]) java.lang.reflect.Array.newInstance(
+                    zeroLengthMarker.getClass().getComponentType(), 1);
+            out[0] = kf;
+            return out;
+        }
+        int sameTickIdx = -1;
+        int insertIdx = existing.length;
+        for (int i = 0; i < existing.length; i++)
+        {
+            if (existing[i] == null) continue;
+            if (existing[i].getTick() == kf.getTick())
+            {
+                sameTickIdx = i;
+                break;
+            }
+            if (existing[i].getTick() > kf.getTick())
+            {
+                insertIdx = i;
+                break;
+            }
+        }
+        if (sameTickIdx >= 0)
+        {
+            T[] out = existing.clone();
+            out[sameTickIdx] = kf;
+            return out;
+        }
+        return ArrayUtils.insert(insertIdx, existing, kf);
     }
 }

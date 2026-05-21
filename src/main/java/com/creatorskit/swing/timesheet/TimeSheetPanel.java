@@ -358,8 +358,49 @@ public class TimeSheetPanel extends JPanel
 
     public void onKeyFrameIconPressedEvent(double currentTick, KeyFrameType type)
     {
+        // No-Character branch for global types -- the user can author
+        // Camera/Fade/Shake keyframes before any Object exists. Goes through
+        // the GlobalKeyFrames central store directly and queues an undoable
+        // action with a null Character ref (addKeyFrame/removeKeyFrame route
+        // null-Character globals to the store).
         if (selectedCharacter == null)
         {
+            if (!isGlobalType(type))
+            {
+                return;
+            }
+            KeyFrame existing = findGlobalKeyFrameAt(type, currentTick);
+            if (existing == null)
+            {
+                if (type == KeyFrameType.CAMERA)
+                {
+                    attributePanel.captureLiveCameraIntoSpinners();
+                }
+                KeyFrame kf = attributePanel.createKeyFrame(type, currentTick);
+                if (kf == null) return;
+                KeyFrame replaced = plugin.getGlobalKeyFrames().add(kf);
+                KeyFrameAction[] kfa = new KeyFrameAction[]{
+                        new KeyFrameCharacterAction(kf, null, KeyFrameCharacterActionType.ADD)
+                };
+                if (replaced != null)
+                {
+                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replaced, null, KeyFrameCharacterActionType.REMOVE));
+                }
+                addKeyFrameActions(kfa);
+                // Auto-select the new keyframe so the card opens for editing
+                // immediately -- otherwise the no-Character branch leaves the
+                // panel in NO_SELECTION_CARD until the user clicks the icon.
+                setSelectedKeyFrames(new KeyFrame[]{kf});
+                attributePanel.setKeyFramedIcon(true);
+                return;
+            }
+            plugin.getGlobalKeyFrames().remove(existing);
+            addKeyFrameActions(new KeyFrameAction[]{
+                    new KeyFrameCharacterAction(existing, null, KeyFrameCharacterActionType.REMOVE)
+            });
+            // Drop the deleted kf from the marquee so the card collapses back
+            // to the placeholder instead of editing a now-orphan reference.
+            setSelectedKeyFrames(new KeyFrame[0]);
             return;
         }
 
@@ -493,6 +534,30 @@ public class TimeSheetPanel extends JPanel
         return type == KeyFrameType.CAMERA
                 || type == KeyFrameType.SCREEN_FADE
                 || type == KeyFrameType.SCREEN_SHAKE;
+    }
+
+    /**
+     * Looks up an existing global keyframe of {@code type} at exactly {@code tick}.
+     * Used by the no-Character "+" path to decide between add and remove --
+     * mirrors {@code Character.findKeyFrame(type, tick)} but reads from the
+     * central store directly. Returns null if nothing sits on that tick.
+     */
+    private KeyFrame findGlobalKeyFrameAt(KeyFrameType type, double tick)
+    {
+        com.creatorskit.saves.GlobalKeyFrames store = plugin.getGlobalKeyFrames();
+        KeyFrame[] arr;
+        switch (type)
+        {
+            case CAMERA:       arr = store.getCameraKeyFramesSafe(); break;
+            case SCREEN_FADE:  arr = store.getScreenFadeKeyFramesSafe(); break;
+            case SCREEN_SHAKE: arr = store.getScreenShakeKeyFramesSafe(); break;
+            default:           return null;
+        }
+        for (KeyFrame kf : arr)
+        {
+            if (kf != null && kf.getTick() == tick) return kf;
+        }
+        return null;
     }
 
     public void removeKeyFrameAction(KeyFrame keyFrame)
@@ -1461,6 +1526,19 @@ public class TimeSheetPanel extends JPanel
     {
         if (character == null)
         {
+            // Phase 2 follow-up: globals live in the central store and don't
+            // need a Character owner. Allow the no-Character branch to write
+            // directly so the user can author Camera/Fade/Shake keyframes
+            // before any Object exists in the scene.
+            if (keyFrame != null && isGlobalType(keyFrame.getKeyFrameType()))
+            {
+                KeyFrame replaced = plugin.getGlobalKeyFrames().add(keyFrame);
+                attributePanel.setKeyFramedIcon(true);
+                // No selectedCharacter to drive resetAttributes, but a refresh
+                // is still needed so the panel reflects the newly-added kf.
+                attributePanel.refreshKeyFrameSelectionState();
+                return replaced;
+            }
             return null;
         }
 
@@ -1482,6 +1560,17 @@ public class TimeSheetPanel extends JPanel
      */
     public void removeKeyFrame(Character character, KeyFrame keyFrame)
     {
+        if (character == null)
+        {
+            // Symmetric to addKeyFrame -- globals can be undone (REMOVE-on-undo)
+            // even when no Character owns the deletion.
+            if (keyFrame != null && isGlobalType(keyFrame.getKeyFrameType()))
+            {
+                plugin.getGlobalKeyFrames().remove(keyFrame);
+                attributePanel.refreshKeyFrameSelectionState();
+            }
+            return;
+        }
         character.removeKeyFrame(keyFrame);
         attributePanel.resetAttributes(character, currentTime);
         if (client.getGameState() == GameState.LOGGED_IN)
@@ -1650,19 +1739,16 @@ public class TimeSheetPanel extends JPanel
 
     /**
      * Single source of truth for the globals-only collapse state. Collapses
-     * the timeline rows iff there is BOTH no Character selected AND no
-     * keyframes marqueed -- once the user has a Character context the
-     * non-global rows must be visible so they can see/edit the character's
-     * data. Without this check, picking a Character after a Deselect would
-     * leave the rows collapsed forever (the regression flagged in the bug
-     * report).
+     * the timeline rows iff there is no Character selected -- once a Character
+     * is picked, the per-character rows expand even before any keyframes are
+     * marqueed. Selecting global keyframes alone (with no Character context)
+     * doesn't expand the rows since there's nothing per-character to look at.
      */
     private void refreshGlobalRowsOnlyMode()
     {
         boolean noCharacter = selectedCharacter == null
                 && (selectionManager == null || selectionManager.size() == 0);
-        boolean noKeyFrames = selectedKeyFrames == null || selectedKeyFrames.length == 0;
-        setGlobalRowsOnlyMode(noCharacter && noKeyFrames);
+        setGlobalRowsOnlyMode(noCharacter);
     }
 
     /**
