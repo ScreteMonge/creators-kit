@@ -54,17 +54,39 @@ public class ColourSwapPanel extends JPanel
     @Setter
     private short[][] copiedColoursTextures = new short[4][0];
 
-    /** Currently-highlighted Old colour, or HIGHLIGHT_NONE. Mirrored to RenderPanel.setHighlightedColour. */
+    /**
+     * Currently-highlighted EFFECTIVE colour (post-swap, i.e. what actually
+     * renders on the model), or HIGHLIGHT_NONE. Mirrored to RenderPanel.
+     * Compare against {@code effectiveColour(panel)} for row matching, NOT
+     * against panel.getOldColour() -- the model has the recolor swaps baked
+     * in via ModelData.recolor before rendering, so RenderPanel sees and
+     * reports post-swap colours.
+     */
     private static final int HIGHLIGHT_NONE = Integer.MIN_VALUE;
     private int highlightedColour = HIGHLIGHT_NONE;
-    /** ColourPanel matching the currently-highlighted colour, for border restoration. */
-    private ColourPanel highlightedPanel;
+    /**
+     * Every ColourPanel whose effective colour matches the highlight target.
+     * Multiple rows can match when several Old colours all swap to the same
+     * New colour -- we highlight all of them so the user sees every rule that
+     * contributes to the rendered colour they clicked.
+     */
+    private final java.util.List<ColourPanel> highlightedPanels = new ArrayList<>();
     private final javax.swing.border.Border HIGHLIGHTED_PANEL_BORDER = BorderFactory.createCompoundBorder(
             new LineBorder(net.runelite.client.ui.ColorScheme.BRAND_ORANGE, 2),
             new EmptyBorder(0, 2, 0, 2));
     private final javax.swing.border.Border UNHIGHLIGHTED_PANEL_BORDER = new EmptyBorder(2, 4, 2, 4);
     /** Held so we can scrollRectToVisible on the matching panel when a face is picked. */
     private JScrollPane colourScrollPane;
+
+    /**
+     * Returns what would actually render on the model for this swap row:
+     * the New colour if a swap is currently set, otherwise the Old colour
+     * (which still renders because no swap means no override).
+     */
+    private static short effectiveColour(ColourPanel cp)
+    {
+        return cp.isColourSet() ? cp.getNewColour() : cp.getOldColour();
+    }
 
     @Inject
     public ColourSwapPanel(Client client, ClientThread clientThread, ArrayList<ComplexPanel> complexPanels, ModelAnvil modelAnvil)
@@ -222,15 +244,16 @@ public class ColourSwapPanel extends JPanel
         this.colourScrollPane = scrollPane;
         add(scrollPane, c);
 
-        // Hook the model-preview click: clicking a face calls highlightOldColour
-        // with that face's Jagex colour, which scrolls / outlines the matching
-        // ColourPanel and tints the model so all faces of that colour stand out.
-        // Deferred behind invokeLater because RenderPanel is constructed before
-        // ColourSwapPanel during ModelAnvil setup -- the field is non-null here
-        // but the addMouseListener hook is wired right away regardless.
+        // Hook the model-preview click: clicking a face passes that face's
+        // RENDERED colour (post-swap, since ModelData.recolor is applied before
+        // render) into highlightEffectiveColour. That matches every row whose
+        // effective colour equals the clicked colour -- captures both the
+        // "no swap" case and any number of swap rules that target the same
+        // colour. RenderPanel is constructed before ColourSwapPanel during
+        // ModelAnvil setup so the field is non-null here.
         if (modelAnvil.getRenderPanel() != null)
         {
-            modelAnvil.getRenderPanel().setOnFaceClicked(this::highlightOldColour);
+            modelAnvil.getRenderPanel().setOnFaceClicked(this::highlightEffectiveColour);
         }
 
         JPanel swapPanel = new JPanel();
@@ -534,10 +557,11 @@ public class ColourSwapPanel extends JPanel
         oldSwatch.addActionListener(e ->
         {
             colourChooser.setColor(colourFromShort(colourPanel.getOldColour()));
-            // Also drive the highlight when the user clicks the Old swatch in
-            // the list -- keeps the two entry points (model click + swatch
-            // click) symmetric so either always lights up both surfaces.
-            highlightOldColour(colourPanel.getOldColour());
+            // Highlight by EFFECTIVE colour (= what actually renders on the
+            // model). If this row has a swap applied, that's the New colour;
+            // otherwise the Old colour. Keeps "click Old swatch" symmetric
+            // with "click face on model" -- both light up by what's visible.
+            highlightEffectiveColour(effectiveColour(colourPanel));
         });
         newSwatch.addActionListener(e ->
         {
@@ -1013,82 +1037,85 @@ public class ColourSwapPanel extends JPanel
 
     /**
      * Drives the "this colour is selected" surface in two places at once:
-     * (1) tells the RenderPanel to tint every face of this colour so the user
-     * can see exactly which parts of the model use it; (2) outlines the
-     * matching ColourPanel row in BRAND_ORANGE and scrolls it into view so the
-     * user can edit / unset the swap without hunting through the list. Clicking
-     * the same Old colour twice clears the highlight (toggle off).
+     * (1) tells the RenderPanel to tint every face whose RENDERED colour
+     * matches the target so the user can see exactly which parts of the model
+     * use it; (2) outlines every ColourPanel row whose effective colour
+     * matches and scrolls the first one into view.
+     *
+     * <p>The {@code target} is an EFFECTIVE colour (the post-swap colour the
+     * model actually renders). It must match what RenderPanel sees: ModelData
+     * has the swaps baked in via {@code modelData.recolor()} in
+     * ModelUtilities.createComplexModelData, so RenderPanel reads post-swap
+     * face colours via {@code model.getFaceColors()}.
+     *
+     * <p>Multiple rows can match a single target when several Old colours all
+     * swap to the same New colour -- highlighting them all surfaces every
+     * contributing swap rule so the user can disambiguate / edit without
+     * guessing. Clicking the same effective colour twice clears the highlight
+     * (toggle off).
      */
-    public void highlightOldColour(short oldColour)
+    public void highlightEffectiveColour(short target)
     {
-        // Toggle off if the user clicks the same swatch / face again.
-        if (highlightedColour == (oldColour & 0xFFFF))
+        // Toggle off if the user clicks the same effective colour again.
+        if (highlightedColour == (target & 0xFFFF))
         {
             clearHighlight();
             return;
         }
 
-        if (highlightedPanel != null)
+        // Clear previous row outlines so re-highlighting to a different colour
+        // doesn't leave stale borders on the rows that matched last time.
+        for (ColourPanel prev : highlightedPanels)
         {
-            highlightedPanel.setBorder(UNHIGHLIGHTED_PANEL_BORDER);
-            highlightedPanel = null;
+            prev.setBorder(UNHIGHLIGHTED_PANEL_BORDER);
         }
+        highlightedPanels.clear();
 
-        ColourPanel match = null;
+        highlightedColour = target & 0xFFFF;
+
+        // Outline every row whose effective colour equals the target. Captures
+        // the "many Old colours -> same New colour" case: all those rows
+        // contribute to the target colour appearing on the model, so all light
+        // up at once.
+        ColourPanel firstMatch = null;
         for (ColourPanel cp : colourPanels)
         {
-            if (cp.getOldColour() == oldColour)
+            if (effectiveColour(cp) == target)
             {
-                match = cp;
-                break;
+                cp.setBorder(HIGHLIGHTED_PANEL_BORDER);
+                highlightedPanels.add(cp);
+                if (firstMatch == null) firstMatch = cp;
             }
         }
-
-        if (match == null)
-        {
-            // Face the user clicked has a colour that isn't in our list. Can
-            // happen if the model's face-colour set drifted from what we
-            // populated. Tint the model anyway so the user gets visual feedback.
-            highlightedColour = oldColour & 0xFFFF;
-            if (modelAnvil.getRenderPanel() != null)
-            {
-                modelAnvil.getRenderPanel().setHighlightedColour(highlightedColour);
-            }
-            return;
-        }
-
-        highlightedColour = oldColour & 0xFFFF;
-        highlightedPanel = match;
-        match.setBorder(HIGHLIGHTED_PANEL_BORDER);
 
         if (modelAnvil.getRenderPanel() != null)
         {
             modelAnvil.getRenderPanel().setHighlightedColour(highlightedColour);
         }
 
-        // Scroll the matching row into view inside the JScrollPane that wraps
-        // the swap list. invokeLater because the panel may have just been
-        // re-laid-out and the rectangle needs the layout manager to settle.
-        if (colourScrollPane != null)
+        // Scroll the first matching row into view. invokeLater because the
+        // panel may have just been re-laid-out and the rectangle needs the
+        // layout manager to settle.
+        if (firstMatch != null && colourScrollPane != null)
         {
-            final ColourPanel target = match;
-            SwingUtilities.invokeLater(() -> target.scrollRectToVisible(new Rectangle(0, 0, target.getWidth(), target.getHeight())));
+            final ColourPanel target0 = firstMatch;
+            SwingUtilities.invokeLater(() -> target0.scrollRectToVisible(new Rectangle(0, 0, target0.getWidth(), target0.getHeight())));
         }
     }
 
     /**
      * Clears the current highlight surface in both places (model tint + row
-     * outline). Called when the user clicks the same colour twice, when the
+     * outlines). Called when the user clicks the same colour twice, when the
      * model is swapped, or when the swapper is unset.
      */
     public void clearHighlight()
     {
         highlightedColour = HIGHLIGHT_NONE;
-        if (highlightedPanel != null)
+        for (ColourPanel prev : highlightedPanels)
         {
-            highlightedPanel.setBorder(UNHIGHLIGHTED_PANEL_BORDER);
-            highlightedPanel = null;
+            prev.setBorder(UNHIGHLIGHTED_PANEL_BORDER);
         }
+        highlightedPanels.clear();
         if (modelAnvil.getRenderPanel() != null)
         {
             modelAnvil.getRenderPanel().setHighlightedColour(com.creatorskit.swing.renderer.RenderPanel.HIGHLIGHT_NONE);
