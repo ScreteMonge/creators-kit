@@ -86,6 +86,7 @@ public class AttributePanel extends JPanel
     public static final String SPECIAL_CARD = "Special";
     public static final String SCREEN_FADE_CARD = "Screen Fade";
     public static final String SCREEN_SHAKE_CARD = "Screen Shake";
+    public static final String CAMERA_CARD = "Camera";
     public static final String MIXED_TYPES_CARD = "MixedTypes";
 
     private final String NO_OBJECT_SELECTED = "[No Object Selected]";
@@ -115,6 +116,7 @@ public class AttributePanel extends JPanel
     private final SpecialAttributes specialAttributes = new SpecialAttributes();
     private final ScreenFadeAttributes screenFadeAttributes = new ScreenFadeAttributes();
     private final ScreenShakeAttributes screenShakeAttributes = new ScreenShakeAttributes();
+    private final com.creatorskit.swing.timesheet.attributes.CameraAttributes cameraAttributes = new com.creatorskit.swing.timesheet.attributes.CameraAttributes();
 
     private final Random random = new Random();
 
@@ -227,6 +229,8 @@ public class AttributePanel extends JPanel
         cardPanel.add(screenFadeCard, SCREEN_FADE_CARD);
         JPanel screenShakeCard = new JPanel();
         cardPanel.add(screenShakeCard, SCREEN_SHAKE_CARD);
+        JPanel cameraCard = new JPanel();
+        cardPanel.add(cameraCard, CAMERA_CARD);
 
         // Empty placeholder shown when the keyframe selection spans multiple types.
         // Using a CardLayout entry keeps the cardPanel at its normal height instead
@@ -255,6 +259,7 @@ public class AttributePanel extends JPanel
         setupBarCard(specialCard, KeyFrameType.SPECIAL);
         setupScreenFadeCard(screenFadeCard);
         setupScreenShakeCard(screenShakeCard);
+        setupCameraCard(cameraCard);
 
         setupKeyListeners();
     }
@@ -460,6 +465,18 @@ public class AttributePanel extends JPanel
                         (int) screenShakeAttributes.getAmplitudeVertical().getValue(),
                         ((Number) screenShakeAttributes.getFrequency().getValue()).doubleValue(),
                         ((Number) screenShakeAttributes.getDurationTicks().getValue()).doubleValue()
+                );
+            case CAMERA:
+                return new com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame(
+                        tick,
+                        ((Number) cameraAttributes.getFocalX().getValue()).doubleValue(),
+                        ((Number) cameraAttributes.getFocalY().getValue()).doubleValue(),
+                        ((Number) cameraAttributes.getFocalZ().getValue()).doubleValue(),
+                        Math.toRadians(((Number) cameraAttributes.getPitchDeg().getValue()).doubleValue()),
+                        Math.toRadians(((Number) cameraAttributes.getYawDeg().getValue()).doubleValue()),
+                        ((Number) cameraAttributes.getScale().getValue()).intValue(),
+                        (com.creatorskit.swing.timesheet.keyframe.CameraEaseType) cameraAttributes.getEase().getSelectedItem(),
+                        ((Number) cameraAttributes.getDurationTicks().getValue()).doubleValue()
                 );
         }
     }
@@ -2956,6 +2973,168 @@ public class AttributePanel extends JPanel
         card.add(new JLabel(""), c);
     }
 
+    /**
+     * Camera keyframe card. Ports the field set from mlgudi/keyframe-camera --
+     * focal point (X/Y/Z in 1/128 scene units), pitch + yaw (DEGREES in the UI,
+     * radians internally), engine zoom scale, easing curve, and duration to
+     * the next keyframe. "Capture from camera" reads the live free-cam state
+     * and writes it into the spinners so the user can fly to a shot and snap
+     * the keyframe into place rather than typing numbers.
+     */
+    private void setupCameraCard(JPanel card)
+    {
+        card.setLayout(new GridBagLayout());
+        card.setBorder(new EmptyBorder(4, 4, 4, 4));
+        card.setFocusable(true);
+        addMouseFocusListener(card);
+
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(2, 2, 2, 2);
+
+        c.gridwidth = 4;
+        c.gridheight = 1;
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 0;
+        JPanel titlePanel = new JPanel();
+        titlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        card.add(titlePanel, c);
+
+        JLabel title = new JLabel("Camera");
+        title.setHorizontalAlignment(SwingConstants.LEFT);
+        title.setFont(FontManager.getRunescapeBoldFont());
+        titlePanel.add(title);
+
+        JLabel help = new JLabel(new ImageIcon(HELP));
+        help.setBorder(new EmptyBorder(0, 4, 0, 4));
+        help.setToolTipText("<html>Global free-cam keyframe (ported from mlgudi/keyframe-camera)."
+                + "<br>Focal point + pitch/yaw + zoom captured at this tick; the renderer"
+                + "<br>interpolates between consecutive camera keyframes using the chosen ease."
+                + "<br>"
+                + "<br>Requires free-camera mode -- the renderer flips into mode 1 automatically"
+                + "<br>when a camera keyframe is active and back when there are none."
+                + "<br>"
+                + "<br>Capture from camera reads the current OSRS camera state and writes it"
+                + "<br>into the fields. Pan around with the in-game free-cam controls until the"
+                + "<br>shot looks right, then capture.</html>");
+        titlePanel.add(help);
+
+        JSpinner focalX = cameraAttributes.getFocalX();
+        JSpinner focalY = cameraAttributes.getFocalY();
+        JSpinner focalZ = cameraAttributes.getFocalZ();
+        JSpinner pitchDeg = cameraAttributes.getPitchDeg();
+        JSpinner yawDeg = cameraAttributes.getYawDeg();
+        JSpinner scale = cameraAttributes.getScale();
+        JSpinner durationTicks = cameraAttributes.getDurationTicks();
+        JComboBox<com.creatorskit.swing.timesheet.keyframe.CameraEaseType> ease = cameraAttributes.getEase();
+        JButton capture = cameraAttributes.getCapture();
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 1;
+        card.add(rightLabel("Focal X: "), c);
+
+        c.gridx = 1;
+        c.gridy = 1;
+        focalX.setToolTipText("Camera focal point X in 1/128 scene units. Capture from camera to fill.");
+        focalX.setModel(new SpinnerNumberModel(com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame.DEFAULT_FOCAL_X, -1000000d, 1000000d, 1d));
+        card.add(focalX, c);
+
+        c.gridx = 2;
+        c.gridy = 1;
+        card.add(rightLabel("Focal Y: "), c);
+
+        c.gridx = 3;
+        c.gridy = 1;
+        focalY.setToolTipText("Camera focal point Y (vertical). Capture from camera to fill.");
+        focalY.setModel(new SpinnerNumberModel(com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame.DEFAULT_FOCAL_Y, -1000000d, 1000000d, 1d));
+        card.add(focalY, c);
+
+        c.gridx = 0;
+        c.gridy = 2;
+        card.add(rightLabel("Focal Z: "), c);
+
+        c.gridx = 1;
+        c.gridy = 2;
+        focalZ.setToolTipText("Camera focal point Z in 1/128 scene units. Capture from camera to fill.");
+        focalZ.setModel(new SpinnerNumberModel(com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame.DEFAULT_FOCAL_Z, -1000000d, 1000000d, 1d));
+        card.add(focalZ, c);
+
+        c.gridx = 2;
+        c.gridy = 2;
+        card.add(rightLabel("Zoom: "), c);
+
+        c.gridx = 3;
+        c.gridy = 2;
+        scale.setToolTipText("Engine zoom scale (CAMERA_ZOOM_FIXED_VIEWPORT). Higher = closer.");
+        scale.setModel(new SpinnerNumberModel(com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame.DEFAULT_SCALE, 100, 1024, 16));
+        card.add(scale, c);
+
+        c.gridx = 0;
+        c.gridy = 3;
+        card.add(rightLabel("Pitch (deg): "), c);
+
+        c.gridx = 1;
+        c.gridy = 3;
+        pitchDeg.setToolTipText("Camera pitch in degrees. 0 = looking horizontally; positive = looking down.");
+        pitchDeg.setModel(new SpinnerNumberModel(0d, -180d, 180d, 1d));
+        card.add(pitchDeg, c);
+
+        c.gridx = 2;
+        c.gridy = 3;
+        card.add(rightLabel("Yaw (deg): "), c);
+
+        c.gridx = 3;
+        c.gridy = 3;
+        yawDeg.setToolTipText("Camera yaw in degrees. 0 = facing north.");
+        yawDeg.setModel(new SpinnerNumberModel(0d, -360d, 720d, 1d));
+        card.add(yawDeg, c);
+
+        c.gridx = 0;
+        c.gridy = 4;
+        card.add(rightLabel("Duration: "), c);
+
+        c.gridx = 1;
+        c.gridy = 4;
+        durationTicks.setToolTipText("Ticks from this keyframe to the next. Only matters as a bar-width hint when no next keyframe exists yet -- when one does, the actual interpolation duration is (next.tick - this.tick).");
+        durationTicks.setModel(new SpinnerNumberModel(com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame.DEFAULT_DURATION, 0.1, 1000d, 0.1));
+        card.add(durationTicks, c);
+
+        c.gridx = 2;
+        c.gridy = 4;
+        card.add(rightLabel("Ease: "), c);
+
+        c.gridx = 3;
+        c.gridy = 4;
+        ease.setToolTipText("Easing curve from this keyframe to the next.");
+        card.add(ease, c);
+
+        c.gridx = 0;
+        c.gridy = 5;
+        c.gridwidth = 4;
+        capture.setToolTipText("Snap the current OSRS free-cam state into the spinners above.");
+        capture.addActionListener(e ->
+        {
+            if (client == null) return;
+            focalX.setValue(client.getCameraFocalPointX());
+            focalY.setValue(client.getCameraFocalPointY());
+            focalZ.setValue(client.getCameraFocalPointZ());
+            pitchDeg.setValue(Math.toDegrees(client.getCameraFpPitch()));
+            yawDeg.setValue(Math.toDegrees(client.getCameraFpYaw()));
+            scale.setValue(client.getVarcIntValue(net.runelite.api.VarClientInt.CAMERA_ZOOM_FIXED_VIEWPORT));
+        });
+        card.add(capture, c);
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.weightx = 1;
+        c.weighty = 1;
+        c.gridx = 8;
+        c.gridy = 15;
+        card.add(new JLabel(""), c);
+    }
+
     private JLabel rightLabel(String text)
     {
         JLabel label = new JLabel(text);
@@ -3025,6 +3204,9 @@ public class AttributePanel extends JPanel
                 break;
             case SCREEN_SHAKE_CARD:
                 type = KeyFrameType.SCREEN_SHAKE;
+                break;
+            case CAMERA_CARD:
+                type = KeyFrameType.CAMERA;
         }
 
         switchCards(type);
@@ -3537,6 +3719,10 @@ public class AttributePanel extends JPanel
             case SCREEN_SHAKE:
                 screenShakeAttributes.setAttributes(keyFrame);
                 screenShakeAttributes.setBackgroundColours(keyFrameState);
+                break;
+            case CAMERA:
+                cameraAttributes.setAttributes(keyFrame);
+                cameraAttributes.setBackgroundColours(keyFrameState);
         }
     }
 
@@ -3601,6 +3787,9 @@ public class AttributePanel extends JPanel
                 break;
             case SCREEN_SHAKE:
                 screenShakeAttributes.resetAttributes(resetBackground);
+                break;
+            case CAMERA:
+                cameraAttributes.resetAttributes(resetBackground);
         }
     }
 
