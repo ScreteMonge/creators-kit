@@ -31,6 +31,22 @@ public class SpecialKeyFrame extends KeyFrame
     private int order = DEFAULT_ORDER;
     /** Explicit pixel width override. {@link #AUTO_WIDTH} (0) = auto-scale from maxValue. */
     private int width = AUTO_WIDTH;
+    /** Created by the hitsplat -> bar auto-sync; cleaned up on move-away.
+     *  See HealthKeyFrame#autoSynced for the full contract. */
+    private boolean autoSynced = false;
+    /** Inverted store of the "Sync hitsplats" toggle, default-false (= sync ON)
+     *  so pre-existing saves load with sync enabled. See HealthKeyFrame. */
+    private boolean syncHitsplatsDisabled = false;
+
+    public boolean isSyncHitsplats()
+    {
+        return !syncHitsplatsDisabled;
+    }
+
+    public void setSyncHitsplats(boolean syncHitsplats)
+    {
+        this.syncHitsplatsDisabled = !syncHitsplats;
+    }
 
     public SpecialKeyFrame(double tick, double duration, int rgb, int maxValue, int currentValue)
     {

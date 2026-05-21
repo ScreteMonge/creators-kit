@@ -589,7 +589,8 @@ public class AttributePanel extends JPanel
                         (OverheadSprite) overheadAttributes.getPrayerSprite().getSelectedItem()
                 );
             case HEALTH:
-                return new HealthKeyFrame(
+            {
+                HealthKeyFrame healthKf = new HealthKeyFrame(
                         tick,
                         (double) healthAttributes.getDuration().getValue(),
                         (HealthbarSprite) healthAttributes.getHealthbarSprite().getSelectedItem(),
@@ -598,6 +599,14 @@ public class AttributePanel extends JPanel
                         (int) healthAttributes.getOrder().getValue(),
                         (int) healthAttributes.getWidth().getValue()
                 );
+                // "Sync hitsplats" toggle from the card. Defaults true on the
+                // checkbox so add-new keeps the prior behaviour; user can
+                // uncheck per Health KF to opt out of the hitsplat -> Health
+                // auto-sync. Card-driven create defaults autoSynced=false
+                // (the new keyframe is user-authored, not sync-owned).
+                healthKf.setSyncHitsplats(healthAttributes.getSyncHitsplats().isSelected());
+                return healthKf;
+            }
             case SPOTANIM:
             case SPOTANIM2:
                 SpotAnimAttributes spAttributes;
@@ -2186,6 +2195,23 @@ public class AttributePanel extends JPanel
                 + "Each bar has its own width -- HP / Shield / Special are sized independently.");
         widthSpinner.setModel(new SpinnerNumberModel(HealthKeyFrame.AUTO_WIDTH, 0, 500, 1));
         card.add(widthSpinner, c);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 7;
+        JLabel syncHitsplatsLabel = new JLabel("Sync hitsplats: ");
+        syncHitsplatsLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(syncHitsplatsLabel, c);
+
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.gridy = 7;
+        JCheckBox syncHitsplatsCheck = healthAttributes.getSyncHitsplats();
+        syncHitsplatsCheck.setToolTipText("<html>When ON (default), hitsplats whose sprite routes to the Health bar<br>"
+                + "automatically create a follow-up Health keyframe at the same tick<br>"
+                + "with their damage subtracted. Turn OFF to lock this Health bar<br>"
+                + "against incoming hitsplats so the bar stays at its declared value.</html>");
+        card.add(syncHitsplatsCheck, c);
 
         c.gridwidth = 1;
         c.gridheight = 1;

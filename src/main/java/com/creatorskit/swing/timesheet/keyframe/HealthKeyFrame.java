@@ -30,6 +30,36 @@ public class HealthKeyFrame extends KeyFrame
      * so pre-2.3 saves keep the auto-scaling behaviour they already had.
      */
     private int width = AUTO_WIDTH;
+    /**
+     * True when this keyframe was created by the hitsplat -> bar auto-sync
+     * (see TimeSheetPanel.applyHitsplatSyncAt). The sync owns autoSynced
+     * keyframes -- if all hitsplats at this tick are removed / moved away,
+     * the cleanup pass removes any bar KFs left here that still have this
+     * flag set. User-created keyframes default false (Gson fills missing
+     * booleans with false) so they survive cleanup. Editing an autoSynced
+     * keyframe via the card resets it to false -- promoting it to manual.
+     */
+    private boolean autoSynced = false;
+    /**
+     * INVERTED flag for the "Sync hitsplats" toggle. Stored as
+     * disable-flag so the Gson default of {@code false} (for missing fields
+     * on pre-existing saves) maps to the user-visible default of "Sync
+     * hitsplats: ON". Read via {@link #isSyncHitsplats()} which returns
+     * {@code !syncHitsplatsDisabled}.
+     */
+    private boolean syncHitsplatsDisabled = false;
+
+    /** UI-facing convenience: "Sync hitsplats" checkbox state. True = on. */
+    public boolean isSyncHitsplats()
+    {
+        return !syncHitsplatsDisabled;
+    }
+
+    /** UI-facing convenience: writes the checkbox state. True = on. */
+    public void setSyncHitsplats(boolean syncHitsplats)
+    {
+        this.syncHitsplatsDisabled = !syncHitsplats;
+    }
 
     public HealthKeyFrame(double tick, double duration,
                           HealthbarSprite healthbarSprite,

@@ -1565,7 +1565,8 @@ public class TimeSheetPanel extends JPanel
         KeyFrame prev = character.findPreviousKeyFrame(KeyFrameType.HEALTH, tick, false);
         if (!(prev instanceof HealthKeyFrame)) return null;
         HealthKeyFrame healthKF = (HealthKeyFrame) prev;
-        return new HealthKeyFrame(
+        if (!healthKF.isSyncHitsplats()) return null; // user opted out on prior bar
+        HealthKeyFrame drain = new HealthKeyFrame(
                 tick,
                 remainingDuration(healthKF.getTick(), healthKF.getDuration(), tick),
                 healthKF.getHealthbarSprite(),
@@ -1573,6 +1574,11 @@ public class TimeSheetPanel extends JPanel
                 Math.max(0, healthKF.getCurrentHealth() - damage),
                 healthKF.getOrder(),
                 healthKF.getWidth());
+        // Inherit the toggle so the drain keyframe itself keeps the same
+        // opt-in state -- subsequent hitsplats at later ticks chain off
+        // this one and need to see the same toggle value.
+        drain.setSyncHitsplats(healthKF.isSyncHitsplats());
+        return drain;
     }
 
     private KeyFrame buildShieldDrainKeyFrame(Character character, int damage, double tick)
@@ -1580,7 +1586,8 @@ public class TimeSheetPanel extends JPanel
         KeyFrame prev = character.findPreviousKeyFrame(KeyFrameType.SHIELD, tick, false);
         if (!(prev instanceof ShieldKeyFrame)) return null;
         ShieldKeyFrame shieldKF = (ShieldKeyFrame) prev;
-        return new ShieldKeyFrame(
+        if (!shieldKF.isSyncHitsplats()) return null;
+        ShieldKeyFrame drain = new ShieldKeyFrame(
                 tick,
                 remainingDuration(shieldKF.getTick(), shieldKF.getDuration(), tick),
                 shieldKF.getRgb(),
@@ -1588,6 +1595,8 @@ public class TimeSheetPanel extends JPanel
                 Math.max(0, shieldKF.getCurrentValue() - damage),
                 shieldKF.getOrder(),
                 shieldKF.getWidth());
+        drain.setSyncHitsplats(shieldKF.isSyncHitsplats());
+        return drain;
     }
 
     private KeyFrame buildSpecialDrainKeyFrame(Character character, int damage, double tick)
@@ -1595,7 +1604,8 @@ public class TimeSheetPanel extends JPanel
         KeyFrame prev = character.findPreviousKeyFrame(KeyFrameType.SPECIAL, tick, false);
         if (!(prev instanceof SpecialKeyFrame)) return null;
         SpecialKeyFrame specialKF = (SpecialKeyFrame) prev;
-        return new SpecialKeyFrame(
+        if (!specialKF.isSyncHitsplats()) return null;
+        SpecialKeyFrame drain = new SpecialKeyFrame(
                 tick,
                 remainingDuration(specialKF.getTick(), specialKF.getDuration(), tick),
                 specialKF.getRgb(),
@@ -1603,6 +1613,8 @@ public class TimeSheetPanel extends JPanel
                 Math.max(0, specialKF.getCurrentValue() - damage),
                 specialKF.getOrder(),
                 specialKF.getWidth());
+        drain.setSyncHitsplats(specialKF.isSyncHitsplats());
+        return drain;
     }
 
     /**
@@ -1947,10 +1959,18 @@ public class TimeSheetPanel extends JPanel
 
     /**
      * Resync hook fired by {@link #maybeExpandWithHitsplatSync} at one
-     * (Character, tick) pair: enumerate the four hitsplat slots, sum damage
-     * per sprite, and for each unique sprite produce a bar drain at that
-     * tick. Returns the action array with any new ADD / REMOVE actions
-     * appended. Pure no-op when no hitsplats sit at (c, tick) anymore.
+     * (Character, tick) pair. Two branches:
+     *
+     * <p>1. Hitsplats present at (c, tick): for each sprite group, build a
+     * bar drain (honouring the prior bar's "Sync hitsplats" toggle) and
+     * replace the bar KF at this tick -- unless the existing bar KF there
+     * was created by the user (autoSynced=false), in which case we leave
+     * it alone (the user owns it).
+     *
+     * <p>2. No hitsplats at (c, tick) anymore (move-away / delete): walk
+     * the three bar types and remove any keyframe at this tick whose
+     * autoSynced flag is true. User-created keyframes (autoSynced=false)
+     * survive cleanup.
      */
     private KeyFrameAction[] applyHitsplatSyncAt(KeyFrameAction[] kfa, Character c, double tick)
     {
@@ -1967,12 +1987,43 @@ public class TimeSheetPanel extends JPanel
             if (dmg <= 0) continue;
             damageBySprite.merge(hs.getSprite(), dmg, Integer::sum);
         }
-        if (damageBySprite.isEmpty()) return kfa; // no hitsplats here anymore
+
+        if (damageBySprite.isEmpty())
+        {
+            // Cleanup branch: tick has no hitsplats anymore. Remove
+            // autoSynced bar KFs here so the bar reverts to its prior
+            // (un-damaged) state. Manual bar KFs are left alone.
+            for (KeyFrameType barType : new KeyFrameType[]{KeyFrameType.HEALTH, KeyFrameType.SHIELD, KeyFrameType.SPECIAL})
+            {
+                KeyFrame existing = c.findKeyFrame(barType, tick);
+                if (existing == null) continue;
+                if (!isAutoSynced(existing)) continue;
+                c.removeKeyFrame(existing);
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(existing, c, KeyFrameCharacterActionType.REMOVE));
+            }
+            return kfa;
+        }
 
         for (java.util.Map.Entry<com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite, Integer> e : damageBySprite.entrySet())
         {
+            // Determine the target bar type for this sprite so we can do the
+            // manual-KF check BEFORE building the drain (cheaper, and lets
+            // us preserve the user's manual edit even when a hitsplat sits
+            // at the same tick).
+            KeyFrameType targetBarType = barTypeForSprite(e.getKey());
+            KeyFrame existing = c.findKeyFrame(targetBarType, tick);
+            if (existing != null && !isAutoSynced(existing))
+            {
+                // User owns this bar KF (created or edited manually) -- leave
+                // it alone. They explicitly want whatever value they set,
+                // even with a hitsplat present at the same tick.
+                continue;
+            }
+
             KeyFrame drain = pickBarKeyFrameForHitsplat(c, e.getKey(), e.getValue(), tick);
-            if (drain == null) continue; // no prior bar of mapped type -> skip per gate
+            if (drain == null) continue; // no prior bar / toggle off
+
+            markAutoSynced(drain);
 
             KeyFrame replaced = addKeyFrame(c, drain);
             kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(drain, c, KeyFrameCharacterActionType.ADD));
@@ -1982,6 +2033,43 @@ public class TimeSheetPanel extends JPanel
             }
         }
         return kfa;
+    }
+
+    /** True if {@code kf} carries an {@code autoSynced=true} flag. Used so
+     *  the sync can leave user-created bar KFs alone while still owning the
+     *  ones it created. */
+    private static boolean isAutoSynced(KeyFrame kf)
+    {
+        if (kf instanceof HealthKeyFrame) return ((HealthKeyFrame) kf).isAutoSynced();
+        if (kf instanceof ShieldKeyFrame) return ((ShieldKeyFrame) kf).isAutoSynced();
+        if (kf instanceof SpecialKeyFrame) return ((SpecialKeyFrame) kf).isAutoSynced();
+        return false;
+    }
+
+    /** Stamps {@code kf} with {@code autoSynced=true} so a later sync pass
+     *  can recognise it as sync-owned. */
+    private static void markAutoSynced(KeyFrame kf)
+    {
+        if (kf instanceof HealthKeyFrame) ((HealthKeyFrame) kf).setAutoSynced(true);
+        else if (kf instanceof ShieldKeyFrame) ((ShieldKeyFrame) kf).setAutoSynced(true);
+        else if (kf instanceof SpecialKeyFrame) ((SpecialKeyFrame) kf).setAutoSynced(true);
+    }
+
+    private static KeyFrameType barTypeForSprite(com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite sprite)
+    {
+        switch (sprite)
+        {
+            case SHIELD:
+            case SHIELD_OTHER:
+            case SHIELD_MAX:
+                return KeyFrameType.SHIELD;
+            case POISE:
+            case POISE_OTHER:
+            case POISE_MAX:
+                return KeyFrameType.SPECIAL;
+            default:
+                return KeyFrameType.HEALTH;
+        }
     }
 
     private static boolean isHitsplatType(KeyFrameType type)

@@ -19,6 +19,13 @@ public class HealthAttributes extends Attributes
     private final JSpinner order = new JSpinner();
     /** Pixel-width override. 0 = auto-scale from maxHealth. */
     private final JSpinner width = new JSpinner();
+    /**
+     * "Sync hitsplats" toggle. Defaults to ON. Drives whether hitsplats at
+     * later ticks auto-create a follow-up Health keyframe via the
+     * hitsplat -> bar sync pipeline. Stored on the keyframe so each bar
+     * keyframe can opt in/out independently.
+     */
+    private final JCheckBox syncHitsplats = new JCheckBox("", true);
 
     public HealthAttributes()
     {
@@ -35,6 +42,7 @@ public class HealthAttributes extends Attributes
         currentHealth.setValue(kf.getCurrentHealth());
         order.setValue(kf.getOrder());
         width.setValue(kf.getWidth());
+        syncHitsplats.setSelected(kf.isSyncHitsplats());
     }
 
     @Override
@@ -46,6 +54,7 @@ public class HealthAttributes extends Attributes
         currentHealth.setBackground(color);
         order.setBackground(color);
         width.setBackground(color);
+        syncHitsplats.setBackground(color);
     }
 
     @Override
@@ -58,7 +67,8 @@ public class HealthAttributes extends Attributes
                         maxHealth,
                         currentHealth,
                         order,
-                        width
+                        width,
+                        syncHitsplats
                 };
     }
 
@@ -94,6 +104,8 @@ public class HealthAttributes extends Attributes
         {
             width.setBackground(getRed());
         });
+
+        syncHitsplats.addActionListener(e -> syncHitsplats.setBackground(getRed()));
     }
 
     @Override
@@ -105,6 +117,7 @@ public class HealthAttributes extends Attributes
         currentHealth.setValue(99);
         order.setValue(HealthKeyFrame.DEFAULT_ORDER);
         width.setValue(HealthKeyFrame.AUTO_WIDTH);
+        syncHitsplats.setSelected(true);
         super.resetAttributes(resetBackground);
     }
 }

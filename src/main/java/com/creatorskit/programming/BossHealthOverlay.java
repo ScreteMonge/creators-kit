@@ -92,10 +92,18 @@ public class BossHealthOverlay extends Overlay
      */
     private static final Color HP_DECAY_GREEN = new Color(0x3f, 0x8c, 0x21);
     /**
-     * How long the bright-green sweep takes after a damage keyframe fires.
-     * Spec from the user: "always lasts 1 tick".
+     * Total time the dark-green damage chunk is on screen after a damage
+     * keyframe fires. Made up of a {@link #DRAIN_HOLD_TICKS} hold phase at
+     * full width followed by a drain phase that retracts the right edge to
+     * zero -- so total = hold + drain.
      */
     private static final double DRAIN_DURATION_TICKS = 1.0;
+    /**
+     * Hold phase: how long the chunk sits at full width before the right
+     * edge starts retreating. User asked for "~0.5 ticks" of hold so the
+     * eye registers the chunk before it animates away.
+     */
+    private static final double DRAIN_HOLD_TICKS = 0.5;
 
     @Inject
     private BossHealthOverlay(Client client, CreatorsPlugin plugin)
@@ -213,11 +221,10 @@ public class BossHealthOverlay extends Overlay
 
         // Damage animation: when the previous BOSS_HEALTH keyframe had more
         // HP, the bright green is already at its new (lower) endpoint above.
-        // We paint the just-lost chunk as dark green at FULL WIDTH, then
-        // retract its right edge toward its left edge over 1 game tick --
-        // the chunk shrinks right-to-left, the just-vacated pixels show the
-        // red base beneath. Left edge stays anchored at the bright green
-        // endpoint; right edge slides left until the chunk is gone.
+        // We paint the just-lost chunk as dark green at FULL WIDTH for
+        // DRAIN_HOLD_TICKS, then retract its right edge to zero over the
+        // remaining (DRAIN_DURATION - DRAIN_HOLD) ticks. Left edge stays
+        // anchored at the bright green endpoint; right edge slides left.
         HealthKeyFrame previous = findPreviousBossKeyFrame(bossChar, bossKf.getTick());
         if (previous != null && previous.getCurrentHealth() > currentHp)
         {
@@ -225,13 +232,18 @@ public class BossHealthOverlay extends Overlay
             double elapsed = currentTick - bossKf.getTick();
             if (elapsed >= 0 && elapsed < DRAIN_DURATION_TICKS)
             {
-                double progress = elapsed / DRAIN_DURATION_TICKS; // 0 -> 1
                 int decayStart = greenW; // anchored left edge (bright green endpoint)
                 int decayEnd = (int) Math.round((double) oldHp / maxHp * BAR_WIDTH);
                 int fullW = Math.max(0, decayEnd - decayStart);
-                // Width retreats linearly from fullW at progress=0 to 0 at
-                // progress=1. The unrolled bit on the right reveals red.
-                int decayW = (int) Math.round(fullW * (1.0 - progress));
+                // Hold phase keeps width = fullW; drain phase linearly retracts
+                // to 0 over the remaining window. drainSpan must be > 0 (else
+                // fall back to "always full while in window" -- the constants
+                // both being equal would be a misconfig but shouldn't crash).
+                double drainSpan = DRAIN_DURATION_TICKS - DRAIN_HOLD_TICKS;
+                double drainProgress = drainSpan > 0
+                        ? Math.max(0.0, (elapsed - DRAIN_HOLD_TICKS) / drainSpan)
+                        : 0.0;
+                int decayW = (int) Math.round(fullW * (1.0 - drainProgress));
                 if (decayW > 0)
                 {
                     graphics.setColor(HP_DECAY_GREEN);
