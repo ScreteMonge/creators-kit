@@ -33,6 +33,35 @@ public class AttributeSheet extends TimeSheet
     /** Period in ms for one full breathing cycle (dim -> bright -> dim). */
     private static final int PULSE_PERIOD_MS = 1500;
 
+    /**
+     * When true the sheet only draws the 3 global rows (Camera / Fade / Shake)
+     * and collapses them to the top of the sheet. Mirrors the label-collapse
+     * in {@link TimeSheetPanel}. Flipped by {@link TimeSheetPanel#setGlobalRowsOnlyMode(boolean)}.
+     */
+    @Setter
+    private boolean globalRowsOnlyMode = false;
+
+    /**
+     * Returns the row index where {@code type} should be drawn given the
+     * current mode, or -1 if the type is hidden. Used everywhere a draw method
+     * computed {@code rowHeight * KeyFrameType.getIndex(type)} so the same code
+     * path works in both expanded and collapsed modes.
+     */
+    private int displayRowIndex(KeyFrameType type)
+    {
+        if (!globalRowsOnlyMode)
+        {
+            return KeyFrameType.getIndex(type);
+        }
+        switch (type)
+        {
+            case SCREEN_FADE:  return 0;
+            case SCREEN_SHAKE: return 1;
+            case CAMERA:       return 2;
+            default:           return -1;
+        }
+    }
+
     public AttributeSheet(ToolBoxFrame toolBox, CreatorsConfig config, ManagerTree tree, AttributePanel attributePanel)
     {
         super(toolBox, config, tree, attributePanel);
@@ -93,8 +122,27 @@ public class AttributeSheet extends TimeSheet
     @Override
     public void drawHighlight(Graphics g)
     {
+        // In globals-only mode the static selectedIndex (a label-array index)
+        // doesn't map to a row position anymore -- a SCREEN_FADE selection
+        // would be drawn at row 17 (its KeyFrameType index) which is below the
+        // collapsed sheet. Re-derive from the active card's type so the
+        // highlight always lands under its visible row.
+        int row;
+        if (globalRowsOnlyMode && attributePanel != null)
+        {
+            int dr = displayRowIndex(attributePanel.getSelectedKeyFramePage());
+            if (dr < 0)
+            {
+                return; // Selected card isn't a global -- no row to highlight in this mode.
+            }
+            row = dr + 1; // +1 for labels[0] empty header equivalence.
+        }
+        else
+        {
+            row = getSelectedIndex() + getIndexBuffers();
+        }
         g.setColor(Color.DARK_GRAY);
-        g.fillRect(0, (getSelectedIndex() + getIndexBuffers()) * rowHeight + rowHeightOffset - getVScroll(), this.getWidth(), rowHeight);
+        g.fillRect(0, row * rowHeight + rowHeightOffset - getVScroll(), this.getWidth(), rowHeight);
     }
 
     @Override
@@ -138,6 +186,15 @@ public class AttributeSheet extends TimeSheet
                 continue;
             }
 
+            // Skip rows that the current mode hides (i.e. non-globals when
+            // globalRowsOnlyMode is on). Drawing them would put icons under
+            // a hidden label which is just visual noise.
+            int displayRow = displayRowIndex(type);
+            if (displayRow < 0)
+            {
+                continue;
+            }
+
             for (int e = 0; e < keyFrames.length; e++)
             {
                 KeyFrame keyFrame = keyFrames[e];
@@ -150,7 +207,7 @@ public class AttributeSheet extends TimeSheet
                 }
 
                 int x = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor);
-                int y = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
+                int y = rowHeightOffset + rowHeight + rowHeight * displayRow - getVScroll() - yImageOffset;
 
                 Color tailColor = g.getColor();
                 if (multi && character.getColor() != null)
@@ -344,11 +401,16 @@ public class AttributeSheet extends TimeSheet
         for (int e = 0; e < selectedKeyFrames.length; e++)
         {
             KeyFrame keyFrame = selectedKeyFrames[e];
-            int i = KeyFrameType.getIndex(keyFrame.getKeyFrameType());
-            KeyFrameType type = KeyFrameType.getKeyFrameType(i);
+            KeyFrameType type = keyFrame.getKeyFrameType();
+            int displayRow = displayRowIndex(type);
+            if (displayRow < 0)
+            {
+                // Type is hidden in the current collapse mode -- nothing to drag onto.
+                continue;
+            }
 
             int x = (int) ((keyFrame.getTick() + getHScroll() + change) * zoomFactor);
-            int y = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
+            int y = rowHeightOffset + rowHeight + rowHeight * displayRow - getVScroll() - yImageOffset;
 
             switch (type)
             {
@@ -476,12 +538,18 @@ public class AttributeSheet extends TimeSheet
                     continue;
                 }
 
+                int displayRow = displayRowIndex(KeyFrameType.getKeyFrameType(i));
+                if (displayRow < 0)
+                {
+                    continue;
+                }
+
                 for (int e = 0; e < keyFrames.length; e++)
                 {
                     KeyFrame keyFrame = keyFrames[e];
                     int x1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
                     int x2 = x1 + image.getWidth();
-                    int y1 = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
+                    int y1 = rowHeightOffset + rowHeight + rowHeight * displayRow - getVScroll() - yImageOffset;
                     int y2 = y1 + image.getHeight();
 
                     if (point.getX() >= x1 && point.getX() <= x2)
@@ -529,12 +597,18 @@ public class AttributeSheet extends TimeSheet
                     continue;
                 }
 
+                int displayRow = displayRowIndex(KeyFrameType.getKeyFrameType(i));
+                if (displayRow < 0)
+                {
+                    continue;
+                }
+
                 for (int e = 0; e < keyFrames.length; e++)
                 {
                     KeyFrame keyFrame = keyFrames[e];
                     int x1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
                     int x2 = x1 + image.getWidth();
-                    int y1 = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
+                    int y1 = rowHeightOffset + rowHeight + rowHeight * displayRow - getVScroll() - yImageOffset;
                     int y2 = y1 + image.getHeight();
 
                     if (point.getX() >= x1 && point.getX() <= x2
@@ -681,6 +755,12 @@ public class AttributeSheet extends TimeSheet
                     continue;
                 }
 
+                int displayRow = displayRowIndex(KeyFrameType.getKeyFrameType(i));
+                if (displayRow < 0)
+                {
+                    continue;
+                }
+
                 for (int e = 0; e < keyFrames.length; e++)
                 {
                     KeyFrame keyFrame = keyFrames[e];
@@ -701,7 +781,7 @@ public class AttributeSheet extends TimeSheet
                     }
 
                     int kx1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
-                    int ky1 = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
+                    int ky1 = rowHeightOffset + rowHeight + rowHeight * displayRow - getVScroll() - yImageOffset;
 
                     Rectangle2D frameRect = new Rectangle(kx1, ky1, image.getWidth(), image.getHeight());
 

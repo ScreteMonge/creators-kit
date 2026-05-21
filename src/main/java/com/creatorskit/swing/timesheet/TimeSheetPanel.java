@@ -106,6 +106,17 @@ public class TimeSheetPanel extends JPanel
     private KeyFrame[] copiedKeyFrames = new KeyFrame[0];
     private KeyFrameAction[][] keyFrameActions = new KeyFrameAction[0][];
 
+    /**
+     * When true the attribute sheet hides every non-global row and the label
+     * column collapses to just the 3 global rows (Camera / Fade / Shake).
+     * Flipped automatically by {@link #setSelectedKeyFrames(KeyFrame[])} based
+     * on whether any keyframes are selected -- the UX intent is "if you can't
+     * mutate per-character data right now, don't bother rendering it."
+     */
+    private boolean globalRowsOnlyMode = false;
+    /** Captured during setupLabels so toggling visibility can call revalidate(). */
+    private JPanel labelPanelRef;
+
     private final int UNDO_LIMIT = 15;
     private int undoStack = 0;
 
@@ -1571,6 +1582,11 @@ public class TimeSheetPanel extends JPanel
     public void setSelectedKeyFrames(KeyFrame[] keyFrames)
     {
         this.selectedKeyFrames = keyFrames;
+        // Toggle the globals-only collapse off the new selection state: empty
+        // selection collapses the timeline to the 3 global rows, any selection
+        // expands it back to all rows. Mirrors the AttributePanel placeholder
+        // behavior so sheet + card are in lockstep.
+        setGlobalRowsOnlyMode(keyFrames == null || keyFrames.length == 0);
         if (attributePanel != null)
         {
             attributePanel.refreshKeyFrameSelectionState();
@@ -1578,6 +1594,54 @@ public class TimeSheetPanel extends JPanel
             {
                 attributePanel.resetAttributes(selectedCharacter, currentTime);
             }
+        }
+    }
+
+    /**
+     * Toggles globals-only mode: hides every non-global row's label and tells
+     * the {@link AttributeSheet} to skip non-global rows when computing draw
+     * positions. The 3 global rows (Screen Fade / Screen Shake / Camera)
+     * collapse to the top of the sheet so the user sees a compact 3-row view
+     * when nothing else is selected.
+     */
+    public void setGlobalRowsOnlyMode(boolean collapse)
+    {
+        if (this.globalRowsOnlyMode == collapse)
+        {
+            return;
+        }
+        this.globalRowsOnlyMode = collapse;
+
+        // Toggle visibility on the non-global labels. labels[0] (the empty
+        // header) and labels[18..20] (the globals) stay visible in both modes.
+        if (labels != null && labels.length > 0)
+        {
+            for (int i = 0; i < labels.length; i++)
+            {
+                if (labels[i] == null)
+                {
+                    continue;
+                }
+                KeyFrameType type = (i >= 1 && i - 1 < KeyFrameType.ALL_KEYFRAME_TYPES.length)
+                        ? KeyFrameType.ALL_KEYFRAME_TYPES[i - 1]
+                        : null;
+                boolean isGlobalRow = type == KeyFrameType.SCREEN_FADE
+                        || type == KeyFrameType.SCREEN_SHAKE
+                        || type == KeyFrameType.CAMERA;
+                // Always show the spacer header at i=0; otherwise only show
+                // global rows in collapse mode.
+                labels[i].setVisible(i == 0 || !collapse || isGlobalRow);
+            }
+            if (labelPanelRef != null)
+            {
+                labelPanelRef.revalidate();
+                labelPanelRef.repaint();
+            }
+        }
+
+        if (attributeSheet != null)
+        {
+            attributeSheet.setGlobalRowsOnlyMode(collapse);
         }
     }
 
@@ -1754,8 +1818,13 @@ public class TimeSheetPanel extends JPanel
     {
         JPanel labelPanel = new JPanel();
         labelPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        labelPanel.setLayout(new GridLayout(0, 1, 0, 0));
+        // BoxLayout (not GridLayout) so labels collapse out of layout when
+        // setVisible(false) is called -- GridLayout always reserves a cell per
+        // component regardless of visibility, which would leave dead space when
+        // we hide non-global rows in globals-only mode.
+        labelPanel.setLayout(new BoxLayout(labelPanel, BoxLayout.Y_AXIS));
         labelPanel.setFocusable(true);
+        this.labelPanelRef = labelPanel;
 
         labelScrollPane.setViewportView(labelPanel);
         labelScrollPane.setBorder(new EmptyBorder(1, 0, 1, 0));
@@ -1813,6 +1882,10 @@ public class TimeSheetPanel extends JPanel
             label.setHorizontalAlignment(SwingConstants.RIGHT);
             label.setOpaque(true);
             label.setPreferredSize(new Dimension(100, 24));
+            // BoxLayout respects max size -- without this the label would stretch
+            // vertically to fill any leftover space when few labels are visible.
+            label.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
+            label.setAlignmentX(Component.LEFT_ALIGNMENT);
             label.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
             // Skip the empty label
