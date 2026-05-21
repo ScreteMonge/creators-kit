@@ -143,6 +143,70 @@ public class TimeSheetPanel extends JPanel
     private final int UNDO_LIMIT = 15;
     private int undoStack = 0;
 
+    /**
+     * A-B loop markers. When {@link #bLoopTick} is non-null, playback loops:
+     * crossing B holds the timeline at B for one game tick (avoids the load
+     * spike from immediately re-seeding everything) then jumps to A. If A is
+     * null it defaults to tick 0 -- the user can set just B and get a "loop
+     * from start" experience. B may never be < 0 (enforced in
+     * {@link #setBLoopTick}). Both null = no loop, normal playback.
+     *
+     * <p>State lives here on the panel (not the Programmer) because the
+     * timeline body renders the markers and the right-click + Tools menu
+     * mutates them; the Programmer just reads bLoopTick / aLoopTick during
+     * play.
+     */
+    // @Setter(NONE) here disables the class-level @Setter for these fields
+    // so the validating wrappers below (setALoopTick / setBLoopTick / clearABLoop)
+    // are the only mutation path. Anyone trying to bypass would still have to
+    // write to the field directly.
+    @Getter @lombok.Setter(lombok.AccessLevel.NONE) private Double aLoopTick = null;
+    @Getter @lombok.Setter(lombok.AccessLevel.NONE) private Double bLoopTick = null;
+
+    /**
+     * Replaces the A marker tick. Pass {@code null} to remove the marker. A
+     * has no >= 0 constraint (the spec only constrains B), but it must not
+     * exceed B if B is currently set -- otherwise the loop window is
+     * negative-width. We clamp A to B in that case rather than reject, since
+     * "set A here" feels more responsive than a silent no-op.
+     */
+    public void setALoopTick(Double tick)
+    {
+        if (tick != null && bLoopTick != null && tick > bLoopTick)
+        {
+            tick = bLoopTick;
+        }
+        this.aLoopTick = tick;
+        repaint();
+    }
+
+    /**
+     * Replaces the B marker tick. Pass {@code null} to remove the marker.
+     * B may never be < 0 (clamped to 0). If A is set, B must be >= A
+     * (clamped to A) so the loop window stays non-negative.
+     */
+    public void setBLoopTick(Double tick)
+    {
+        if (tick != null && tick < 0)
+        {
+            tick = 0.0;
+        }
+        if (tick != null && aLoopTick != null && tick < aLoopTick)
+        {
+            tick = aLoopTick;
+        }
+        this.bLoopTick = tick;
+        repaint();
+    }
+
+    /** Removes both markers; playback returns to non-looping. */
+    public void clearABLoop()
+    {
+        this.aLoopTick = null;
+        this.bLoopTick = null;
+        repaint();
+    }
+
     @Inject
     public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, CreatorsConfig config, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, MovementManager movementManager, com.creatorskit.selection.SelectionManager selectionManager)
     {

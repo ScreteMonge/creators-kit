@@ -178,8 +178,101 @@ public class TimeSheet extends JPanel
         drawTextHeader(g2);
         drawTimeIndicator(g2);
         drawPreviewTimeIndicator(g2);
+        // A-B markers AFTER the time indicator so the marker chip overlays
+        // when they coincide -- the X close box must be hit-testable, and
+        // the markers are static config the user shouldn't lose visibility
+        // of behind a moving playhead.
+        drawABMarkers(g2);
         revalidate();
         repaint();
+    }
+
+    /**
+     * Last-drawn screen rectangles for the A/B marker X close buttons --
+     * updated by {@link #drawABMarkers} each paint and consulted by
+     * {@link #mousePressed} so a click on the X removes the marker rather
+     * than falling through to the time-indicator-press path. Nulled when
+     * the corresponding marker isn't set, so a stale rectangle from a
+     * previous paint can't take a click.
+     */
+    private Rectangle aMarkerXHit = null;
+    private Rectangle bMarkerXHit = null;
+
+    private void drawABMarkers(Graphics2D g)
+    {
+        TimeSheetPanel tsp = getTimeSheetPanel();
+        aMarkerXHit = null;
+        bMarkerXHit = null;
+        if (tsp == null) return;
+        Double a = tsp.getALoopTick();
+        Double b = tsp.getBLoopTick();
+        if (a != null) drawSingleMarker(g, a, "A", new Color(220, 60, 50), true);
+        if (b != null) drawSingleMarker(g, b, "B", new Color(60, 110, 230), false);
+    }
+
+    private void drawSingleMarker(Graphics2D g, double tick, String label, Color color, boolean isA)
+    {
+        double x = (tick + hScroll) * getWidth() / zoom;
+
+        // Translucent vertical line so background context still reads through.
+        Color line = new Color(color.getRed(), color.getGreen(), color.getBlue(), 180);
+        g.setColor(line);
+        g.setStroke(new BasicStroke(2));
+        g.drawLine((int) x, 0, (int) x, getHeight());
+        g.setStroke(new BasicStroke(1));
+
+        // Chip at top: letter on the left, X close on the right.
+        int chipWidth = 30;
+        int chipX = (int) (x - chipWidth / 2.0);
+        int chipY = 0;
+        g.setColor(color);
+        g.fillRoundRect(chipX, chipY, chipWidth, rowHeight, 8, 8);
+
+        g.setColor(Color.WHITE);
+        Font old = g.getFont();
+        g.setFont(new Font(old.getName(), Font.BOLD, 12));
+        FontMetrics fm = g.getFontMetrics();
+        int letterY = (rowHeight + fm.getAscent()) / 2 - 2;
+        g.drawString(label, chipX + 5, letterY);
+        g.setFont(old);
+
+        // X close: an X drawn inside a small hit-rect at the right of the chip.
+        int xBoxW = 12;
+        int xBoxH = Math.min(rowHeight - 4, 16);
+        int xBoxX = chipX + chipWidth - xBoxW - 1;
+        int xBoxY = (rowHeight - xBoxH) / 2;
+        g.setColor(new Color(255, 255, 255, 220));
+        g.setStroke(new BasicStroke(1.5f));
+        int pad = 3;
+        g.drawLine(xBoxX + pad, xBoxY + pad, xBoxX + xBoxW - pad, xBoxY + xBoxH - pad);
+        g.drawLine(xBoxX + xBoxW - pad, xBoxY + pad, xBoxX + pad, xBoxY + xBoxH - pad);
+        g.setStroke(new BasicStroke(1));
+
+        Rectangle hit = new Rectangle(xBoxX, xBoxY, xBoxW, xBoxH);
+        if (isA) aMarkerXHit = hit; else bMarkerXHit = hit;
+    }
+
+    /**
+     * Returns true if {@code p} hit one of the marker X close boxes and the
+     * appropriate marker was cleared. Called from {@link #setMouseListeners}
+     * before the time-indicator-press path so a click on the X doesn't
+     * scrub the playhead.
+     */
+    private boolean handleABMarkerClick(Point p)
+    {
+        TimeSheetPanel tsp = getTimeSheetPanel();
+        if (tsp == null) return false;
+        if (aMarkerXHit != null && aMarkerXHit.contains(p))
+        {
+            tsp.setALoopTick(null);
+            return true;
+        }
+        if (bMarkerXHit != null && bMarkerXHit.contains(p))
+        {
+            tsp.setBLoopTick(null);
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -587,6 +680,14 @@ public class TimeSheet extends JPanel
                 // Reset any stale transient flags from a previous bad release.
                 // Set fresh state below based on where this press lands.
                 clearTransientDragFlags();
+
+                // A/B marker X close-box click is the highest priority hit-
+                // test: it overlaps the header row where the time indicator
+                // press would otherwise fire, so check it first.
+                if (handleABMarkerClick(mousePosition))
+                {
+                    return;
+                }
 
                 if (mousePosition.getY() < rowHeight)
                 {

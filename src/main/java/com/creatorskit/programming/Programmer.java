@@ -33,6 +33,18 @@ public class Programmer
     private final ModelUtilities modelUtilities;
 
     private int clientTickAtLastProgramTick = 0;
+
+    /**
+     * Countdown of ClientTicks remaining in the "hold at B" pause before
+     * jumping back to A. Set to GAME_TICK_LENGTH / CLIENT_TICK_LENGTH * 1
+     * (one whole game tick = 30 client ticks at default rates) when the
+     * timeline crosses B. While > 0 we suppress incrementSubTime so the
+     * playhead stays parked. When it hits 0 we jump to A (or 0 if A is
+     * unset) and resume. The 1-tick beat exists to avoid the load spike
+     * from re-seeding spotanims / projectiles / movement at the exact
+     * frame we wrap around.
+     */
+    private int abLoopPauseClientTicksRemaining = 0;
     private final int GOLDEN_CHIN = 29757;
     private final int TILE_LENGTH = 128;
     private final int TILE_DIAGONAL = 181; //Math.sqrt(Math.pow(128, 2) + Math.pow(128, 2))
@@ -71,11 +83,50 @@ public class Programmer
 
         if (playing)
         {
+            // A-B loop: when the previous tick crossed B we parked the
+            // playhead and started this countdown. Burn through it without
+            // advancing time; the 3D world keeps rendering at the held
+            // tick so the user sees the held frame instead of a freeze.
+            if (abLoopPauseClientTicksRemaining > 0)
+            {
+                abLoopPauseClientTicksRemaining--;
+                lastClientTickRealtimeMs = System.currentTimeMillis();
+                updateCharacter3D();
+                if (abLoopPauseClientTicksRemaining == 0)
+                {
+                    Double a = timeSheetPanel.getALoopTick();
+                    // A unset => jump to tick 0 (per spec: "only adding one
+                    // marker will treat tick 0 as A"). B is guaranteed
+                    // non-null here -- we only entered the pause because B
+                    // existed.
+                    double jumpTo = a != null ? a : 0.0;
+                    timeSheetPanel.setCurrentTime(jumpTo, true);
+                    clientTickAtLastProgramTick = 0;
+                }
+                return;
+            }
+
             clientTickAtLastProgramTick++;
             if (clientTickAtLastProgramTick >= 3)
             {
                 clientTickAtLastProgramTick = 0;
                 incrementSubTime();
+
+                // After advancing, check the B fence. We do it here (rather
+                // than in incrementSubTime) so the user-driven scrub path
+                // doesn't accidentally trip the loop pause. The increment
+                // step is 0.1, so a >= compare lands cleanly on B once the
+                // timeline catches up.
+                Double b = timeSheetPanel.getBLoopTick();
+                if (b != null && timeSheetPanel.getCurrentTime() >= b)
+                {
+                    // Snap to B so the held frame is exactly at the marker.
+                    timeSheetPanel.setCurrentTime(b, true);
+                    // 1 game tick worth of ClientTicks = 30 at default rates.
+                    // The pause beat avoids load spikes from re-seeding the
+                    // whole scene at the wrap instant.
+                    abLoopPauseClientTicksRemaining = 30;
+                }
             }
             // Stamp the wall-clock for sub-ClientTick interpolation in
             // getSmoothedCurrentTime. Without this stamp, frames between
@@ -1073,6 +1124,9 @@ public class Programmer
         // Reset the wall-clock stamp so a subsequent play doesn't add stale
         // pause-duration into the smoothed-time interpolation.
         lastClientTickRealtimeMs = 0L;
+        // Clear any in-flight A-B loop pause so resuming playback doesn't
+        // burn the held-at-B beat that the user already interrupted.
+        abLoopPauseClientTicksRemaining = 0;
         ArrayList<Character> characters = plugin.getCharacters();
         for (int i = 0; i < characters.size(); i++)
         {

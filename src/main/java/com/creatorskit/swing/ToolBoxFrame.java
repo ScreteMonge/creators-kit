@@ -447,6 +447,32 @@ public class ToolBoxFrame extends JFrame
         rippleDelete.addActionListener(e -> timeSheetPanel.showRippleDeleteDialog(0.0, 0.0, null));
         tools.add(rippleDelete);
 
+        // A-B Loop submenu -- vertical markers on the timeline that loop
+        // playback between them. The markers can also be removed via X
+        // buttons drawn on the marker chips themselves (Premiere-style).
+        JMenu abLoop = new JMenu("A-B Loop");
+        abLoop.setToolTipText("<html>Loop playback between two markers. Red A = loop start,<br>"
+                + "blue B = loop end. Only B set => A defaults to tick 0.<br>"
+                + "Playback pauses for 1 game tick at B before jumping to A<br>"
+                + "to avoid load spikes from re-seeding everything at once.<br>"
+                + "Markers can be removed by clicking the X on each marker chip<br>"
+                + "or by clearing both from this menu.</html>");
+        tools.add(abLoop);
+
+        JMenuItem setA = new JMenuItem("Set A marker at current tick");
+        setA.addActionListener(e -> timeSheetPanel.setALoopTick(timeSheetPanel.getCurrentTime()));
+        abLoop.add(setA);
+
+        JMenuItem setB = new JMenuItem("Set B marker at current tick");
+        setB.addActionListener(e -> timeSheetPanel.setBLoopTick(timeSheetPanel.getCurrentTime()));
+        abLoop.add(setB);
+
+        abLoop.addSeparator();
+
+        JMenuItem clearAB = new JMenuItem("Clear A-B Loop");
+        clearAB.addActionListener(e -> timeSheetPanel.clearABLoop());
+        abLoop.add(clearAB);
+
         JMenu resources = new JMenu("Resources");
         jMenuBar.add(resources);
 
