@@ -761,7 +761,106 @@ public class TimeSheetPanel extends JPanel
             }
         }
 
+        // Auto-sync: if any of the just-added keyframes are hitsplats, drive
+        // the matching Health keyframe on the same tick. Appends to the same
+        // kfa array so the sync lives in the same undo batch as the user's
+        // original add. See syncHealthFromHitsplats for the rules.
+        kfa = syncHealthFromHitsplats(kfa, keyFrames, targets);
+
         addKeyFrameActions(kfa);
+    }
+
+    /**
+     * When a hitsplat is added or edited on a Character that already has
+     * Health keyframes, mirror the damage onto the Health timeline: at the
+     * hitsplat's tick, create or replace a Health keyframe whose
+     * {@code currentHealth} equals the most-recent prior Health keyframe's
+     * value minus the total hitsplat damage at that tick (summed across all
+     * four hitsplat slots -- a double-hit at the same tick subtracts both).
+     *
+     * <p>The "at least one Health keyframe" gate matches the user spec --
+     * a Character with no Health timeline at all shouldn't suddenly grow
+     * one from a hitsplat. Once the user has set up the bar, hitsplats
+     * drive it automatically.
+     *
+     * <p>Doesn't auto-remove a Health keyframe when a hitsplat is deleted;
+     * that's a destructive guess (the user might want the Health KF to
+     * survive standalone). Deletion is left manual on purpose.
+     */
+    private KeyFrameAction[] syncHealthFromHitsplats(KeyFrameAction[] kfa, KeyFrame[] keyFrames, java.util.Collection<Character> targets)
+    {
+        if (keyFrames == null || targets.isEmpty()) return kfa;
+
+        // Dedupe (Character, tick) pairs so two hitsplats at the same tick
+        // (e.g. HITSPLAT_1 + HITSPLAT_2 for a double-hit) only sync once --
+        // the inner totalDamage loop already sums all four slots so a single
+        // sync covers them.
+        java.util.HashSet<String> processed = new java.util.HashSet<>();
+
+        for (KeyFrame template : keyFrames)
+        {
+            if (!(template instanceof HitsplatKeyFrame)) continue;
+            double tick = template.getTick();
+
+            for (Character c : targets)
+            {
+                String pairKey = System.identityHashCode(c) + "@" + tick;
+                if (!processed.add(pairKey)) continue;
+
+                // Gate: skip Characters without any Health timeline.
+                KeyFrame[] healthFrames = c.getKeyFrames(KeyFrameType.HEALTH);
+                if (healthFrames == null || healthFrames.length == 0) continue;
+
+                // priorHp: latest Health keyframe with tick STRICTLY less
+                // than the hitsplat's tick. A Health KF already at the same
+                // tick (from a previous sync) is intentionally excluded so
+                // we re-derive from the pre-damage state instead of
+                // compounding the same damage repeatedly.
+                HealthKeyFrame priorHp = null;
+                for (KeyFrame hf : healthFrames)
+                {
+                    if (!(hf instanceof HealthKeyFrame)) continue;
+                    HealthKeyFrame h = (HealthKeyFrame) hf;
+                    if (h.getTick() >= tick) continue;
+                    if (priorHp == null || h.getTick() > priorHp.getTick()) priorHp = h;
+                }
+                if (priorHp == null) continue;
+
+                // Sum hitsplat damage across all four slots at this tick.
+                // Uses the CURRENT state of c (post-add), so the just-added
+                // hitsplat counts and any pre-existing same-tick hitsplats
+                // on other slots also count.
+                int totalDamage = 0;
+                for (KeyFrameType hsType : KeyFrameType.HITSPLAT_TYPES)
+                {
+                    KeyFrame hsKf = c.findKeyFrame(hsType, tick);
+                    if (hsKf instanceof HitsplatKeyFrame)
+                    {
+                        totalDamage += Math.max(0, ((HitsplatKeyFrame) hsKf).getDamage());
+                    }
+                }
+                if (totalDamage <= 0) continue;
+
+                int newHp = Math.max(0, priorHp.getCurrentHealth() - totalDamage);
+                HealthKeyFrame newHealth = new HealthKeyFrame(
+                        tick,
+                        priorHp.getDuration(),
+                        priorHp.getHealthbarSprite(),
+                        priorHp.getMaxHealth(),
+                        newHp,
+                        priorHp.getOrder(),
+                        priorHp.getWidth()
+                );
+
+                KeyFrame replaced = addKeyFrame(c, newHealth);
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(newHealth, c, KeyFrameCharacterActionType.ADD));
+                if (replaced != null && replaced != newHealth)
+                {
+                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replaced, c, KeyFrameCharacterActionType.REMOVE));
+                }
+            }
+        }
+        return kfa;
     }
 
     private static boolean isGlobalType(KeyFrameType type)
