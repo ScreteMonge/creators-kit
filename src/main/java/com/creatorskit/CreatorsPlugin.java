@@ -434,7 +434,12 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		{
 			return;
 		}
-		double t = getCurrentTick() - active.getTick();
+		// Use the same wall-clock-smoothed time as the camera apply so shake
+		// jitter updates per render frame instead of stepping every ClientTick.
+		double currentTick = creatorsPanel != null
+				? creatorsPanel.getToolBox().getProgrammer().getSmoothedCurrentTime()
+				: getCurrentTick();
+		double t = currentTick - active.getTick();
 		if (t < 0 || t > active.getDurationTicks())
 		{
 			return;
@@ -1047,7 +1052,15 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		{
 			return;
 		}
+		// Full camera-frame cycle every rendered frame so screen shake stays
+		// in sync with the camera keyframe. Order matches onClientTick:
+		// undoPrev recovers the base focal point, applyCamera overwrites it
+		// (when active), applyShake re-adds this frame's shake offset. When
+		// camera is released, undoPrev gives us back the user's focal and
+		// shake layers on top of that.
+		undoPreviousScreenShake();
 		applyCurrentCameraKeyframe();
+		applyCurrentScreenShake();
 	}
 
 	@Subscribe
