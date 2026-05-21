@@ -144,6 +144,15 @@ public class TimeSheetPanel extends JPanel
     private int undoStack = 0;
 
     /**
+     * Guard against re-entrant hitsplat -> bar sync inside
+     * {@link #addKeyFrameActions(KeyFrameAction[])}. The sync mutates
+     * Characters via addKeyFrame and folds new actions into the same undo
+     * batch; without the guard those new actions would trigger another sync
+     * pass and recurse forever.
+     */
+    private boolean inHitsplatSyncRecursionGuard = false;
+
+    /**
      * A-B loop markers. When {@link #bLoopTick} is non-null, playback loops:
      * crossing B holds the timeline at B for one game tick (avoids the load
      * spike from immediately re-seeding everything) then jumps to A. If A is
@@ -761,108 +770,15 @@ public class TimeSheetPanel extends JPanel
             }
         }
 
-        // Auto-sync: if any of the just-added keyframes are hitsplats, drive
-        // the matching Health keyframe on the same tick. Appends to the same
-        // kfa array so the sync lives in the same undo batch as the user's
-        // original add. See syncHealthFromHitsplats for the rules.
-        kfa = syncHealthFromHitsplats(kfa, keyFrames, targets);
-
+        // Hitsplat-driven bar resync happens centrally in addKeyFrameActions
+        // now, so every code path (this one, onUpdateButtonPressed, drag-
+        // release, delete) gets the same treatment. No call needed here.
         addKeyFrameActions(kfa);
     }
 
-    /**
-     * Mirror hitsplat damage onto the matching bar keyframe. For every
-     * hitsplat in {@code keyFrames}, look up which bar type its sprite
-     * routes to (Shield / Special / Health -- see pickBarKeyFrameForHitsplat)
-     * and at that hitsplat's tick, replace the bar keyframe with one whose
-     * value is reduced by the hitsplat's damage.
-     *
-     * <p>Damage is summed per (Character, tick, barType) -- two hitsplats
-     * at the same tick that route to the same bar (e.g. a double-hit both
-     * with NORMAL sprites) subtract their combined damage. Hitsplats that
-     * route to DIFFERENT bars (e.g. one NORMAL + one SHIELD at the same
-     * tick) each drain their respective bar independently.
-     *
-     * <p>Gate (per user spec): a Character with no prior keyframe of the
-     * mapped bar type is skipped. The auto-sync only mirrors onto bars the
-     * user has already opted into.
-     *
-     * <p>"Prior" means strictly less than the hitsplat tick -- a bar KF
-     * already at the same tick (from a previous sync) is excluded so
-     * re-running the sync re-derives from the pre-damage state instead of
-     * compounding.
-     *
-     * <p>Used by both add ({@link #addKeyFrameAction}) and edit
-     * ({@link #onUpdateButtonPressed}) so the user's auto-update spinner
-     * change to a hitsplat damage value also retargets the bar.
-     */
-    private KeyFrameAction[] syncHealthFromHitsplats(KeyFrameAction[] kfa, KeyFrame[] keyFrames, java.util.Collection<Character> targets)
-    {
-        if (keyFrames == null || targets.isEmpty()) return kfa;
-
-        // Aggregate damage per (Character, tick, barType).
-        java.util.LinkedHashMap<String, Integer> damageByKey = new java.util.LinkedHashMap<>();
-        java.util.HashMap<String, Character> charByKey = new java.util.HashMap<>();
-        java.util.HashMap<String, Double> tickByKey = new java.util.HashMap<>();
-        java.util.HashMap<String, com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite> spriteByKey = new java.util.HashMap<>();
-
-        for (KeyFrame template : keyFrames)
-        {
-            if (!(template instanceof HitsplatKeyFrame)) continue;
-            HitsplatKeyFrame hsTemplate = (HitsplatKeyFrame) template;
-            double tick = hsTemplate.getTick();
-
-            for (Character c : targets)
-            {
-                // Sum across all four slots at this tick on this Character so
-                // a sprite-homogeneous double-hit (e.g. HITSPLAT_1 + HITSPLAT_2,
-                // both NORMAL) combines into one drain. Doing this once per
-                // (Character, tick) means we visit slots up to four times per
-                // iteration of the outer loop -- cheap enough.
-                for (KeyFrameType hsType : KeyFrameType.HITSPLAT_TYPES)
-                {
-                    KeyFrame slotKf = c.findKeyFrame(hsType, tick);
-                    if (!(slotKf instanceof HitsplatKeyFrame)) continue;
-                    HitsplatKeyFrame hs = (HitsplatKeyFrame) slotKf;
-                    int dmg = Math.max(0, hs.getDamage());
-                    if (dmg <= 0) continue;
-                    String key = System.identityHashCode(c) + "@" + tick + "@" + hs.getSprite().name();
-                    damageByKey.merge(key, dmg, Integer::sum);
-                    charByKey.putIfAbsent(key, c);
-                    tickByKey.putIfAbsent(key, tick);
-                    spriteByKey.putIfAbsent(key, hs.getSprite());
-                }
-            }
-        }
-
-        for (java.util.Map.Entry<String, Integer> entry : damageByKey.entrySet())
-        {
-            String key = entry.getKey();
-            int totalDamage = entry.getValue();
-            if (totalDamage <= 0) continue;
-
-            Character c = charByKey.get(key);
-            double tick = tickByKey.get(key);
-            com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite sprite = spriteByKey.get(key);
-
-            KeyFrame drain = pickBarKeyFrameForHitsplat(c, sprite, totalDamage, tick);
-            if (drain == null)
-            {
-                // Gate: no prior bar of the mapped type. Skip the sync for
-                // this (char, tick, barType) -- the user hasn't opted into
-                // that bar.
-                continue;
-            }
-
-            KeyFrame replaced = addKeyFrame(c, drain);
-            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(drain, c, KeyFrameCharacterActionType.ADD));
-            if (replaced != null && replaced != drain)
-            {
-                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replaced, c, KeyFrameCharacterActionType.REMOVE));
-            }
-        }
-        return kfa;
-    }
+    // (syncHealthFromHitsplats removed; replaced by the universal
+    // maybeExpandWithHitsplatSync / applyHitsplatSyncAt hook in
+    // addKeyFrameActions, which catches every commit path.)
 
     private static boolean isGlobalType(KeyFrameType type)
     {
@@ -1097,20 +1013,9 @@ public class TimeSheetPanel extends JPanel
             }
         }
 
-        // Auto-sync hitsplat damage -> matching bar. If any of the edited
-        // keyframes are hitsplats, drain the bar at the same tick. Mirrors
-        // the same hook in addKeyFrameAction so add and edit both trigger
-        // it.
-        if (type == KeyFrameType.HITSPLAT_1 || type == KeyFrameType.HITSPLAT_2
-                || type == KeyFrameType.HITSPLAT_3 || type == KeyFrameType.HITSPLAT_4)
-        {
-            KeyFrame[] newHitsplats = replacements.values().toArray(new KeyFrame[0]);
-            if (newHitsplats.length > 0)
-            {
-                kfa = syncHealthFromHitsplats(kfa, newHitsplats, chars);
-            }
-        }
-
+        // Hitsplat-driven bar resync is now centralised in addKeyFrameActions
+        // so it runs for every commit path (add / edit / drag / delete).
+        // No call needed here.
         if (kfa.length > 0)
         {
             addKeyFrameActions(kfa);
@@ -1643,10 +1548,17 @@ public class TimeSheetPanel extends JPanel
     }
 
     /**
-     * Sources duration / sprite / max / order / width from the latest Health
-     * keyframe strictly before {@code tick}; returns a new Health keyframe at
-     * {@code tick} with {@code currentHealth} reduced by {@code damage}.
-     * Returns null if no prior Health keyframe exists (gate the user wants).
+     * Sources sprite / max / order / width from the latest Health keyframe
+     * strictly before {@code tick}; returns a new Health keyframe at
+     * {@code tick} with {@code currentHealth} reduced by {@code damage} and
+     * a duration set to the REMAINING lifespan of the prior keyframe
+     * ({@code prior.tick + prior.duration - tick}). When the hitsplat lands
+     * inside the prior's window the new KF picks up exactly where the
+     * original would have ended -- a 5-tick Health bar hit at +2 produces a
+     * 3-tick follow-up. Falls back to the prior's full duration if the
+     * remaining is non-positive (hitsplat past the prior's end), so the new
+     * KF stays visible. Returns null if no prior Health keyframe exists
+     * (sync gate).
      */
     private KeyFrame buildHealthDrainKeyFrame(Character character, int damage, double tick)
     {
@@ -1655,7 +1567,7 @@ public class TimeSheetPanel extends JPanel
         HealthKeyFrame healthKF = (HealthKeyFrame) prev;
         return new HealthKeyFrame(
                 tick,
-                healthKF.getDuration(),
+                remainingDuration(healthKF.getTick(), healthKF.getDuration(), tick),
                 healthKF.getHealthbarSprite(),
                 healthKF.getMaxHealth(),
                 Math.max(0, healthKF.getCurrentHealth() - damage),
@@ -1670,7 +1582,7 @@ public class TimeSheetPanel extends JPanel
         ShieldKeyFrame shieldKF = (ShieldKeyFrame) prev;
         return new ShieldKeyFrame(
                 tick,
-                shieldKF.getDuration(),
+                remainingDuration(shieldKF.getTick(), shieldKF.getDuration(), tick),
                 shieldKF.getRgb(),
                 shieldKF.getMaxValue(),
                 Math.max(0, shieldKF.getCurrentValue() - damage),
@@ -1685,12 +1597,25 @@ public class TimeSheetPanel extends JPanel
         SpecialKeyFrame specialKF = (SpecialKeyFrame) prev;
         return new SpecialKeyFrame(
                 tick,
-                specialKF.getDuration(),
+                remainingDuration(specialKF.getTick(), specialKF.getDuration(), tick),
                 specialKF.getRgb(),
                 specialKF.getMaxValue(),
                 Math.max(0, specialKF.getCurrentValue() - damage),
                 specialKF.getOrder(),
                 specialKF.getWidth());
+    }
+
+    /**
+     * Returns the time remaining in the prior keyframe's lifespan at the
+     * moment {@code newTick} fires: {@code priorTick + priorDuration - newTick}.
+     * Clamped to a positive value -- if the hitsplat lands past the prior's
+     * declared end we fall back to the prior's full duration so the new
+     * keyframe stays visible instead of having zero / negative lifespan.
+     */
+    private static double remainingDuration(double priorTick, double priorDuration, double newTick)
+    {
+        double remaining = (priorTick + priorDuration) - newTick;
+        return remaining > 0 ? remaining : priorDuration;
     }
 
     public void addAnimationKeyFrameFromCache(WeaponAnimData weaponAnim)
@@ -1929,6 +1854,16 @@ public class TimeSheetPanel extends JPanel
 
     public void addKeyFrameActions(KeyFrameAction[] actions)
     {
+        // Universal hitsplat -> bar sync hook. Every keyframe-mutation code
+        // path (add / edit / drag / delete) commits through this method, so
+        // hooking here means hitsplat changes drive the matching bar drain
+        // no matter how the user made the change. Recursion guard so the
+        // sync's own actions don't trigger another sync pass.
+        if (!inHitsplatSyncRecursionGuard)
+        {
+            actions = maybeExpandWithHitsplatSync(actions);
+        }
+
         if (keyFrameActions.length == UNDO_LIMIT)
         {
             keyFrameActions = ArrayUtils.remove(keyFrameActions, 0);
@@ -1944,6 +1879,117 @@ public class TimeSheetPanel extends JPanel
 
         keyFrameActions = ArrayUtils.add(keyFrameActions, actions);
         undoStack = keyFrameActions.length - 1;
+    }
+
+    /**
+     * Scans the incoming action batch for hitsplat-related (ADD / REMOVE /
+     * move) keyframe changes. For each unique (Character, tick) touched by a
+     * hitsplat action, re-derives the matching bar drain from the current
+     * state of the Character and folds the resulting actions into the same
+     * batch so the whole change is one undo step.
+     *
+     * <p>"Current state" = post-mutation: the caller has already applied the
+     * incoming actions to Characters before calling addKeyFrameActions, so
+     * looking up hitsplats at (c, tick) now sees the user's just-finished
+     * edit / move. Moves show up as two actions (REMOVE old tick + ADD new
+     * tick); both ticks get resync'd, so the bar drain follows the hitsplat
+     * to its new home.
+     *
+     * <p>Conservative deletion policy: when a (c, tick) pair has no
+     * hitsplats left, we don't touch existing bar KFs at that tick -- the
+     * user might want them to survive standalone. They can clean up
+     * orphans manually.
+     */
+    private KeyFrameAction[] maybeExpandWithHitsplatSync(KeyFrameAction[] actions)
+    {
+        if (actions == null || actions.length == 0) return actions;
+
+        // Dedupe (Character, tick) pairs across the incoming hitsplat actions.
+        java.util.LinkedHashMap<String, Character> charByKey = new java.util.LinkedHashMap<>();
+        java.util.LinkedHashMap<String, Double> tickByKey = new java.util.LinkedHashMap<>();
+        for (KeyFrameAction a : actions)
+        {
+            if (!(a instanceof KeyFrameCharacterAction)) continue;
+            KeyFrameCharacterAction kfca = (KeyFrameCharacterAction) a;
+            KeyFrame kf = kfca.getKeyFrame();
+            if (kf == null) continue;
+            if (!isHitsplatType(kf.getKeyFrameType())) continue;
+            Character c = kfca.getCharacter();
+            if (c == null) continue;
+            String key = System.identityHashCode(c) + "@" + kf.getTick();
+            charByKey.putIfAbsent(key, c);
+            tickByKey.putIfAbsent(key, kf.getTick());
+        }
+        if (charByKey.isEmpty()) return actions;
+
+        inHitsplatSyncRecursionGuard = true;
+        try
+        {
+            KeyFrameAction[] syncActions = new KeyFrameAction[0];
+            for (String key : charByKey.keySet())
+            {
+                syncActions = applyHitsplatSyncAt(syncActions, charByKey.get(key), tickByKey.get(key));
+            }
+            if (syncActions.length == 0) return actions;
+            // Concat: original actions first, sync follow-ups after. Undo
+            // replays the whole batch atomically so order within the batch
+            // is purely cosmetic for the history view.
+            KeyFrameAction[] merged = new KeyFrameAction[actions.length + syncActions.length];
+            System.arraycopy(actions, 0, merged, 0, actions.length);
+            System.arraycopy(syncActions, 0, merged, actions.length, syncActions.length);
+            return merged;
+        }
+        finally
+        {
+            inHitsplatSyncRecursionGuard = false;
+        }
+    }
+
+    /**
+     * Resync hook fired by {@link #maybeExpandWithHitsplatSync} at one
+     * (Character, tick) pair: enumerate the four hitsplat slots, sum damage
+     * per sprite, and for each unique sprite produce a bar drain at that
+     * tick. Returns the action array with any new ADD / REMOVE actions
+     * appended. Pure no-op when no hitsplats sit at (c, tick) anymore.
+     */
+    private KeyFrameAction[] applyHitsplatSyncAt(KeyFrameAction[] kfa, Character c, double tick)
+    {
+        // Aggregate damage per sprite at this (Character, tick). Each unique
+        // sprite -> its own bar drain via pickBarKeyFrameForHitsplat.
+        java.util.LinkedHashMap<com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite, Integer> damageBySprite =
+                new java.util.LinkedHashMap<>();
+        for (KeyFrameType hsType : KeyFrameType.HITSPLAT_TYPES)
+        {
+            KeyFrame hsKf = c.findKeyFrame(hsType, tick);
+            if (!(hsKf instanceof HitsplatKeyFrame)) continue;
+            HitsplatKeyFrame hs = (HitsplatKeyFrame) hsKf;
+            int dmg = Math.max(0, hs.getDamage());
+            if (dmg <= 0) continue;
+            damageBySprite.merge(hs.getSprite(), dmg, Integer::sum);
+        }
+        if (damageBySprite.isEmpty()) return kfa; // no hitsplats here anymore
+
+        for (java.util.Map.Entry<com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite, Integer> e : damageBySprite.entrySet())
+        {
+            KeyFrame drain = pickBarKeyFrameForHitsplat(c, e.getKey(), e.getValue(), tick);
+            if (drain == null) continue; // no prior bar of mapped type -> skip per gate
+
+            KeyFrame replaced = addKeyFrame(c, drain);
+            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(drain, c, KeyFrameCharacterActionType.ADD));
+            if (replaced != null && replaced != drain)
+            {
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replaced, c, KeyFrameCharacterActionType.REMOVE));
+            }
+        }
+        return kfa;
+    }
+
+    private static boolean isHitsplatType(KeyFrameType type)
+    {
+        return type == KeyFrameType.HITSPLAT_1
+                || type == KeyFrameType.HITSPLAT_2
+                || type == KeyFrameType.HITSPLAT_3
+                || type == KeyFrameType.HITSPLAT_4;
     }
 
     public void removeKeyFrameActions(Character character)
