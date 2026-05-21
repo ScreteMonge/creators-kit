@@ -327,7 +327,16 @@ public class ManagerTree extends JTree
                 removeFolderNode(node);
             }
 
-            getCellEditor().cancelCellEditing();
+            // JTree.getCellEditor() returns null when reorder/inline-rename mode
+            // is off (the common case). Without the null guard this lambda NPEs
+            // after every Delete -- the rest of the tree-mutation work
+            // succeeded so the error message wasn't obviously fatal, but it
+            // bubbled up and short-circuited any downstream listeners.
+            javax.swing.tree.TreeCellEditor editor = getCellEditor();
+            if (editor != null)
+            {
+                editor.cancelCellEditing();
+            }
         });
         thread.start();
     }

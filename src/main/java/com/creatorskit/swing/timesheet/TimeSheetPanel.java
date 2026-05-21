@@ -1609,6 +1609,11 @@ public class TimeSheetPanel extends JPanel
         attributeSheet.setSelectedCharacter(character);
         attributePanel.setSelectedCharacter(character);
         attributePanel.resetAttributes(character, currentTime);
+        // Selecting a Character should reveal its non-global rows even if the
+        // user hasn't marqueed any keyframes yet -- otherwise the timeline
+        // stays stuck in the 3-rows-only collapsed view from a prior empty
+        // selection. Recompute the collapse rule with the new character state.
+        refreshGlobalRowsOnlyMode();
     }
 
     /**
@@ -1620,11 +1625,7 @@ public class TimeSheetPanel extends JPanel
     public void setSelectedKeyFrames(KeyFrame[] keyFrames)
     {
         this.selectedKeyFrames = keyFrames;
-        // Toggle the globals-only collapse off the new selection state: empty
-        // selection collapses the timeline to the 3 global rows, any selection
-        // expands it back to all rows. Mirrors the AttributePanel placeholder
-        // behavior so sheet + card are in lockstep.
-        setGlobalRowsOnlyMode(keyFrames == null || keyFrames.length == 0);
+        refreshGlobalRowsOnlyMode();
         if (attributePanel != null)
         {
             attributePanel.refreshKeyFrameSelectionState();
@@ -1633,6 +1634,23 @@ public class TimeSheetPanel extends JPanel
                 attributePanel.resetAttributes(selectedCharacter, currentTime);
             }
         }
+    }
+
+    /**
+     * Single source of truth for the globals-only collapse state. Collapses
+     * the timeline rows iff there is BOTH no Character selected AND no
+     * keyframes marqueed -- once the user has a Character context the
+     * non-global rows must be visible so they can see/edit the character's
+     * data. Without this check, picking a Character after a Deselect would
+     * leave the rows collapsed forever (the regression flagged in the bug
+     * report).
+     */
+    private void refreshGlobalRowsOnlyMode()
+    {
+        boolean noCharacter = selectedCharacter == null
+                && (selectionManager == null || selectionManager.size() == 0);
+        boolean noKeyFrames = selectedKeyFrames == null || selectedKeyFrames.length == 0;
+        setGlobalRowsOnlyMode(noCharacter && noKeyFrames);
     }
 
     /**
