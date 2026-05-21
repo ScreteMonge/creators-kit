@@ -566,14 +566,18 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			{
 				continue;
 			}
-			// Check window: from this keyframe until either the next keyframe
-			// (in the central store) or this keyframe's duration runs out.
-			// Outside the window, release camera to user.
+			// Window starts at this keyframe's tick. If there's a next keyframe
+			// we interpolate up to its tick; if there's no next we HOLD at this
+			// keyframe's values indefinitely (the user releases via the orb
+			// hotkey or by adding another camera keyframe). durationTicks is
+			// kept on the keyframe for save-format compat but no longer drives
+			// the active window.
+			if (currentTick < ck.getTick())
+			{
+				continue;
+			}
 			com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame nextCk = findNextCameraKf(all, ck.getTick());
-			double endTick = nextCk != null
-					? nextCk.getTick()
-					: ck.getTick() + ck.getDurationTicks();
-			if (currentTick < ck.getTick() || currentTick > endTick)
+			if (nextCk != null && currentTick > nextCk.getTick())
 			{
 				continue;
 			}
@@ -987,6 +991,28 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				setLocation(character, false, false, character.isActive() ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, LocationOption.TO_CURRENT_TICK);
 			}
 		}
+	}
+
+	/**
+	 * Re-applies the camera keyframe just before every rendered frame. Fires
+	 * at the renderer's frequency (60Hz+ at 60fps, higher with higher fps)
+	 * which is faster than the 50Hz ClientTick the Programmer drives time
+	 * advance with. The smoothed time only steps once per ClientTick so the
+	 * apply itself is idempotent between client ticks -- but pushing the
+	 * pitch/yaw targets every render frame lets the engine's own ease re-
+	 * compute toward them every frame, which smooths the visible motion.
+	 *
+	 * <p>Inspired by mlgudi/keyframe-camera, which uses BeforeRender for the
+	 * same reason -- ClientTick alone produces visible stutter on fast pans.
+	 */
+	@Subscribe
+	public void onBeforeRender(BeforeRender event)
+	{
+		if (client.getGameState() != GameState.LOGGED_IN)
+		{
+			return;
+		}
+		applyCurrentCameraKeyframe();
 	}
 
 	@Subscribe

@@ -277,8 +277,15 @@ public class SummarySheet extends TimeSheet
                     drawTail(g, e, keyFrames, sskf.getDurationTicks(), zoomFactor, sskf.getTick(), x, y, xStringOffset, stringHeight);
                     break;
                 case CAMERA:
-                    CameraKeyFrame ckf = (CameraKeyFrame) keyFrame;
-                    drawTail(g, e, keyFrames, ckf.getDurationTicks(), zoomFactor, ckf.getTick(), x, y, xStringOffset, stringHeight);
+                    // Camera tail length is implicit from next.tick - this.tick
+                    // post-Option-1 redesign. The drawTail helper already caps
+                    // to that span when a next keyframe exists, so a large
+                    // sentinel works fine; pass tick + 999 to mean "as far as
+                    // the next keyframe allows."
+                    if (e + 1 < keyFrames.length)
+                    {
+                        drawTail(g, e, keyFrames, 999d, zoomFactor, keyFrame.getTick(), x, y, xStringOffset, stringHeight);
+                    }
                     break;
                 case HITSPLAT_1:
                 case HITSPLAT_2:

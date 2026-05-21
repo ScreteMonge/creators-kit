@@ -150,8 +150,15 @@ public class GlobalAttributeSheet extends TimeSheet
                     drawTail(g, e, keyFrames, sskf.getDurationTicks(), zoomFactor, sskf.getTick(), x, y, imageHeight);
                     break;
                 case CAMERA:
-                    CameraKeyFrame ckf = (CameraKeyFrame) keyFrame;
-                    drawTail(g, e, keyFrames, ckf.getDurationTicks(), zoomFactor, ckf.getTick(), x, y, imageHeight);
+                    // Tail spans from this keyframe to the next; no duration
+                    // field anymore, the segment length is implicit. The last
+                    // keyframe gets no tail since it holds indefinitely.
+                    if (e + 1 < keyFrames.length)
+                    {
+                        double span = keyFrames[e + 1].getTick() - keyFrame.getTick();
+                        int pathLength = (int) (span * zoomFactor);
+                        g.drawLine(x, y + imageHeight / 2, x + pathLength - 1, y + imageHeight / 2);
+                    }
                     break;
                 default: break;
             }
@@ -234,7 +241,10 @@ public class GlobalAttributeSheet extends TimeSheet
                     drawPreviewTail(g, x, y, imageHeight, ((ScreenShakeKeyFrame) keyFrame).getDurationTicks(), zoomFactor);
                     break;
                 case CAMERA:
-                    drawPreviewTail(g, x, y, imageHeight, ((CameraKeyFrame) keyFrame).getDurationTicks(), zoomFactor);
+                    // Duration field is gone for Camera kfs -- preview tail
+                    // length isn't meaningful here either (the actual segment
+                    // is to the next kf, but the dragged copy could land
+                    // anywhere). Skip the tail entirely.
                     break;
                 default: break;
             }

@@ -3226,21 +3226,19 @@ public class AttributePanel extends JPanel
         yawDeg.setModel(new SpinnerNumberModel(0d, -360d, 720d, 1d));
         card.add(yawDeg, c);
 
-        c.gridx = 0;
-        c.gridy = 4;
-        card.add(rightLabel("Duration: "), c);
-
-        c.gridx = 1;
-        c.gridy = 4;
-        durationTicks.setToolTipText("Ticks from this keyframe to the next. Only matters as a bar-width hint when no next keyframe exists yet -- when one does, the actual interpolation duration is (next.tick - this.tick).");
+        // Duration intentionally omitted from the card. Segment length is now
+        // implicit from (next.tick - this.tick) and the last keyframe holds its
+        // values indefinitely. The spinner instance still exists on
+        // CameraAttributes for the auto-update wiring + save format, but the
+        // field is not displayed -- still backed by DEFAULT_DURATION so old
+        // saves round-trip cleanly.
         durationTicks.setModel(new SpinnerNumberModel(com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame.DEFAULT_DURATION, 0.1, 1000d, 0.1));
-        card.add(durationTicks, c);
 
-        c.gridx = 2;
+        c.gridx = 0;
         c.gridy = 4;
         card.add(rightLabel("Ease: "), c);
 
-        c.gridx = 3;
+        c.gridx = 1;
         c.gridy = 4;
         ease.setToolTipText("Easing curve from this keyframe to the next.");
         card.add(ease, c);
