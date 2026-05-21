@@ -1574,6 +1574,24 @@ public class CreatorsPanel extends PluginPanel
         KeyFrameType[] summary = source.getSummary();
         KeyFrameType[] summaryCopy = summary == null ? null : new KeyFrameType[]{summary[0], summary[1], summary[2]};
 
+        // CAUTION: the last two args ('transplant' and 'setHoveredLocation' per
+        // the createCharacter signature) are silently SWAPPED on the way to
+        // plugin.setupRLObject -- createCharacter line 727 calls
+        // setupRLObject(character, transplant, setHoveredLocation) but
+        // setupRLObject's signature is (character, setHoveredTile, transplant).
+        // Passing (true, false) here would arrive as
+        // (setHoveredTile=true, transplant=false), which makes setLocationWorld
+        // take the TO_HOVERED_TILE branch and overwrite every copy's position
+        // to the user's cursor -- visible as every fill copy stacked on the
+        // user's hovered tile. The earlier rounds of Fill Rectangle fixes
+        // missed this because the symptom (stacking) looked identical to a
+        // shared-LocalPoint bug.
+        //
+        // We want setHoveredTile=false (don't use cursor) and transplant=true
+        // (relocate any movement keyframes to the target tile so the copy
+        // stays at its tile instead of wandering along the source's path).
+        // To achieve that through the swap, pass (transplant=false,
+        // setHoveredLocation=true).
         Character copy = createCharacter(
                 parentPanel,
                 name,
@@ -1592,8 +1610,8 @@ public class CreatorsPanel extends PluginPanel
                 targetLocal,
                 plane,
                 inPOH,
-                true,
-                false);
+                /* createCharacter's 'transplant' (becomes setHoveredTile) */ false,
+                /* createCharacter's 'setHoveredLocation' (becomes transplant) */ true);
 
         // Copy visual state, same as onDuplicatePressed.
         copy.setRenderFixWidth(source.getRenderFixWidth());
