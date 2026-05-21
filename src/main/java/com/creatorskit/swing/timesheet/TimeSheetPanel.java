@@ -2295,7 +2295,13 @@ public class TimeSheetPanel extends JPanel
                     scrollAttributePanel(e.getWheelRotation() * 2);
                     return;
                 }
-                scrollBar.setValue(scrollBar.getValue() + e.getWheelRotation() * 15);
+                // Plain wheel: discrete 2-row jumps. The previous 15-px step
+                // produced sub-row scrolling (rowHeight = 24) which is what
+                // the user described as "scrolling linearly with much
+                // smaller scroll steps." Using the body sheet's rowHeight
+                // keeps the math row-aligned even if the row size changes.
+                scrollBar.setValue(scrollBar.getValue()
+                        + e.getWheelRotation() * bodySheet.getRowHeight() * 2);
             }
         });
 

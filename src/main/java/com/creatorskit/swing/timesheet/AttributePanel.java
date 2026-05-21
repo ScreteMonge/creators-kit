@@ -359,18 +359,92 @@ public class AttributePanel extends JPanel
         {
             if (c instanceof JSpinner)
             {
-                ((JSpinner) c).addChangeListener(e -> fireAutoUpdate());
+                ((JSpinner) c).addChangeListener(e -> {
+                    flagFieldEdited(c);
+                    fireAutoUpdate();
+                });
             }
             else if (c instanceof JComboBox)
             {
-                ((JComboBox<?>) c).addActionListener(e -> fireAutoUpdate());
+                ((JComboBox<?>) c).addActionListener(e -> {
+                    flagFieldEdited(c);
+                    fireAutoUpdate();
+                });
             }
             else if (c instanceof JCheckBox)
             {
-                ((JCheckBox) c).addActionListener(e -> fireAutoUpdate());
+                ((JCheckBox) c).addActionListener(e -> {
+                    flagFieldEdited(c);
+                    fireAutoUpdate();
+                });
             }
             // JButton / JTextField / JTextArea intentionally not wired -- see method javadoc.
         }
+    }
+
+    // Per-field edit-feedback ---------------------------------------------
+    // When a user-driven edit fires (suppressAutoUpdateDepth == 0), the
+    // touched field's background flashes green and decays back to gray over
+    // ~700ms via the shared fieldFadeTimer. Replaces the old yellow/green
+    // ON_KEYFRAME / OFF_KEYFRAME background semantic with a single
+    // "did my edit land?" cue.
+    private static final Color FIELD_BASE = net.runelite.client.ui.ColorScheme.DARKER_GRAY_COLOR;
+    private static final Color FIELD_FLASH = new Color(60, 180, 70);
+    private static final int FIELD_FADE_MS = 700;
+    private final java.util.Map<JComponent, Long> recentlyEditedFields = new java.util.WeakHashMap<>();
+    private javax.swing.Timer fieldFadeTimer;
+
+    private void flagFieldEdited(JComponent c)
+    {
+        // Suppress while the panel itself is pushing values via setAttributes
+        // -- otherwise loading a keyframe would flash every field, which is
+        // visually noisy and meaningless.
+        if (suppressAutoUpdateDepth > 0) return;
+        recentlyEditedFields.put(c, System.currentTimeMillis());
+        c.setBackground(FIELD_FLASH);
+        ensureFieldFadeTimer();
+    }
+
+    private void ensureFieldFadeTimer()
+    {
+        if (fieldFadeTimer != null) return;
+        fieldFadeTimer = new javax.swing.Timer(33, e -> {
+            long now = System.currentTimeMillis();
+            java.util.Iterator<java.util.Map.Entry<JComponent, Long>> it = recentlyEditedFields.entrySet().iterator();
+            while (it.hasNext())
+            {
+                java.util.Map.Entry<JComponent, Long> entry = it.next();
+                JComponent c = entry.getKey();
+                long elapsed = now - entry.getValue();
+                if (elapsed >= FIELD_FADE_MS)
+                {
+                    c.setBackground(FIELD_BASE);
+                    it.remove();
+                }
+                else
+                {
+                    float t = elapsed / (float) FIELD_FADE_MS;
+                    c.setBackground(lerpColor(FIELD_FLASH, FIELD_BASE, t));
+                }
+            }
+            if (recentlyEditedFields.isEmpty())
+            {
+                // Idle: stop the timer so we're not repainting every 33ms for nothing.
+                fieldFadeTimer.stop();
+                fieldFadeTimer = null;
+            }
+        });
+        fieldFadeTimer.start();
+    }
+
+    private static Color lerpColor(Color a, Color b, float t)
+    {
+        int r = (int) (a.getRed()   + (b.getRed()   - a.getRed())   * t);
+        int g = (int) (a.getGreen() + (b.getGreen() - a.getGreen()) * t);
+        int bl = (int) (a.getBlue()  + (b.getBlue()  - a.getBlue())  * t);
+        return new Color(Math.max(0, Math.min(255, r)),
+                Math.max(0, Math.min(255, g)),
+                Math.max(0, Math.min(255, bl)));
     }
 
     /**
@@ -410,36 +484,17 @@ public class AttributePanel extends JPanel
         {
             inAutoUpdateBatch = false;
         }
-        // Briefly flash the cardLabel green so the user gets a "saved"
-        // signal without having to watch a specific field. Quick fade-out
-        // via Swing Timer so the visual cue isn't intrusive.
-        flashCardLabelSaved();
+        // Per-field flash (flagFieldEdited above) replaces the card-label
+        // flash -- the field-level cue is more specific and the header
+        // flash on top would be visual noise.
     }
 
     /** Flag inspected by TimeSheetPanel.addKeyFrame to skip its inner resetAttributes when auto-update owns the batch. */
     @Getter
     private boolean inAutoUpdateBatch = false;
 
-    /**
-     * Brief green tint on the card title label so the user gets a "your edit
-     * landed" cue. Held for ~200ms then faded back to the normal foreground.
-     * Avoids per-field flashes which would be noisy across the many spinners
-     * an Animation card has.
-     */
-    private javax.swing.Timer flashRestoreTimer;
-    private void flashCardLabelSaved()
-    {
-        if (cardLabel == null) return;
-        Color originalFg = Color.WHITE;
-        cardLabel.setForeground(new Color(120, 220, 120));
-        if (flashRestoreTimer != null && flashRestoreTimer.isRunning())
-        {
-            flashRestoreTimer.stop();
-        }
-        flashRestoreTimer = new javax.swing.Timer(220, e -> cardLabel.setForeground(originalFg));
-        flashRestoreTimer.setRepeats(false);
-        flashRestoreTimer.start();
-    }
+    // flashCardLabelSaved was removed once flagFieldEdited started flashing
+    // each touched field individually -- the header-level cue was redundant.
 
     /**
      * Create a keyframe out of the current AttributePanel settings, based on which card is currently being shown

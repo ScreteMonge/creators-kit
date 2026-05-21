@@ -826,7 +826,12 @@ public class TimeSheet extends JPanel
                         return;
                     }
 
-                    getTimeSheetPanel().scrollAttributePanel(e.getWheelRotation());
+                    // 2-at-a-time matches the labels-column handler. Without
+                    // the * 2 the wheel only moved one row per notch even
+                    // though every other property-scroll path already
+                    // multiplied -- the user-perceived "linearly with much
+                    // smaller scroll steps" bug.
+                    getTimeSheetPanel().scrollAttributePanel(e.getWheelRotation() * 2);
                     return;
                 }
 
