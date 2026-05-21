@@ -2040,6 +2040,15 @@ public class Programmer
                     ckObject.setDrawFrontTilesFirst(true);
                     ckObject.setDespawnOnFinish(true);
                     ckObject.setHasAnimKeyFrame(true);
+                    // Inherit the parent Character's current sub-tile offset
+                    // and extraScale so a fresh spotanim drops in at the
+                    // already-nudged-and-scaled position rather than the base
+                    // tile centre. setOffsetX/Y/Z on the Character keeps live
+                    // spotanims in sync; this branch covers the first frame.
+                    ckObject.setOffsetX(character.getOffsetX());
+                    ckObject.setOffsetY(character.getOffsetY());
+                    ckObject.setOffsetZ(character.getOffsetZ());
+                    ckObject.setExtraScale(character.getExtraScale());
                     character.setSpotAnim(ckObject, keyFrameType);
                 }
                 else

@@ -178,6 +178,11 @@ public class Character
         {
             ckObject.setOffsetX(offsetX);
         }
+        // SpotAnims piggyback on the model's sub-tile offsets so projectile-style
+        // effects, beams and impact glows ride along with an ALT+WASD nudge
+        // instead of detaching to the tile-aligned base position.
+        if (spotAnim1 != null) spotAnim1.setOffsetX(offsetX);
+        if (spotAnim2 != null) spotAnim2.setOffsetX(offsetX);
     }
 
     public void setOffsetY(int offsetY)
@@ -187,6 +192,8 @@ public class Character
         {
             ckObject.setOffsetY(offsetY);
         }
+        if (spotAnim1 != null) spotAnim1.setOffsetY(offsetY);
+        if (spotAnim2 != null) spotAnim2.setOffsetY(offsetY);
     }
 
     public void setOffsetZ(int offsetZ)
@@ -196,6 +203,8 @@ public class Character
         {
             ckObject.setOffsetZ(offsetZ);
         }
+        if (spotAnim1 != null) spotAnim1.setOffsetZ(offsetZ);
+        if (spotAnim2 != null) spotAnim2.setOffsetZ(offsetZ);
     }
 
     /**
@@ -215,6 +224,10 @@ public class Character
         {
             ckObject.setExtraScale(extraScale);
         }
+        // Spotanims scale with the model so impact glows and projectile effects
+        // stay proportional when the user ALT+Scrolls the parent up/down.
+        if (spotAnim1 != null) spotAnim1.setExtraScale(extraScale);
+        if (spotAnim2 != null) spotAnim2.setExtraScale(extraScale);
     }
 
     /**
@@ -249,6 +262,22 @@ public class Character
             ckObject.setY(ckObject.getY() + dy);
             ckObject.setZ(ckObject.getZ() - dz);
         }
+        // Mirror the nudge live onto the spotanim CKObjects -- without this,
+        // hits / glows / cast effects detach from the model on every ALT+WASD
+        // press and the user has to re-fire the spotanim to resync.
+        nudgeSpotAnim(spotAnim1, dx, dy, dz);
+        nudgeSpotAnim(spotAnim2, dx, dy, dz);
+    }
+
+    private void nudgeSpotAnim(CKObject sa, int dx, int dy, int dz)
+    {
+        if (sa == null) return;
+        sa.setOffsetX(this.offsetX);
+        sa.setOffsetY(this.offsetY);
+        sa.setOffsetZ(this.offsetZ);
+        sa.setX(sa.getX() + dx);
+        sa.setY(sa.getY() + dy);
+        sa.setZ(sa.getZ() - dz);
     }
 
     @Override
