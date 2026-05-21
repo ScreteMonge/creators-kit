@@ -17,6 +17,13 @@ import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 
+/**
+ * Per-Character (local) timeline sheet. Shows the 17 LOCAL_KEYFRAME_TYPES_ALPHABETICAL
+ * rows for the currently-visible Characters. Globals (Camera / Screen Fade /
+ * Screen Shake) live in {@link GlobalAttributeSheet} -- the toggle button in
+ * the labels column switches between this sheet and that one, so each view
+ * stays scoped to a single concern.
+ */
 @Getter
 @Setter
 public class AttributeSheet extends TimeSheet
@@ -34,38 +41,6 @@ public class AttributeSheet extends TimeSheet
     /** Period in ms for one full breathing cycle (dim -> bright -> dim). */
     private static final int PULSE_PERIOD_MS = 1500;
 
-    /**
-     * When true the sheet only draws the 3 global rows (Camera / Fade / Shake)
-     * and collapses them to the top of the sheet. Mirrors the label-collapse
-     * in {@link TimeSheetPanel}. Flipped by {@link TimeSheetPanel#setGlobalRowsOnlyMode(boolean)}.
-     */
-    @Setter
-    private boolean globalRowsOnlyMode = false;
-
-    /**
-     * Returns the row index where {@code type} should be drawn given the
-     * current mode, or -1 if the type is hidden. In expanded mode this is the
-     * type's alphabetical position (rows are ordered by getName()); in
-     * collapsed mode the globals are placed in the same alphabetical order
-     * they sit in among the visible labels -- Camera (C), Screen Fade (S),
-     * Screen Shake (S). Mismatching this with the label order is what made
-     * the highlight land on the wrong row in collapsed view.
-     */
-    private int displayRowIndex(KeyFrameType type)
-    {
-        if (!globalRowsOnlyMode)
-        {
-            return KeyFrameType.getDisplayIndex(type);
-        }
-        switch (type)
-        {
-            case CAMERA:       return 0;
-            case SCREEN_FADE:  return 1;
-            case SCREEN_SHAKE: return 2;
-            default:           return -1;
-        }
-    }
-
     public AttributeSheet(ToolBoxFrame toolBox, CreatorsConfig config, ManagerTree tree, AttributePanel attributePanel)
     {
         super(toolBox, config, tree, attributePanel);
@@ -79,9 +54,6 @@ public class AttributeSheet extends TimeSheet
         this.rowHeight = 24;
 
         pulseTimer = new javax.swing.Timer(33, e -> {
-            // Only repaint when there's something to animate; otherwise a 30Hz
-            // repaint loop would chew CPU for no visual change. Timer stays
-            // running but the early-out keeps the per-tick cost down.
             if (getTimeSheetPanel() != null
                     && getTimeSheetPanel().getSelectedKeyFrames() != null
                     && getTimeSheetPanel().getSelectedKeyFrames().length > 0)
@@ -93,10 +65,20 @@ public class AttributeSheet extends TimeSheet
     }
 
     /**
-     * Returns the current breathing-pulse alpha in [0.55, 1.0] for the keyframe-
-     * selected highlight. A full {@link #PULSE_PERIOD_MS} cycle goes dim -> bright
-     * -> dim via a sine wave. Floor of 0.55 keeps the icon clearly readable
-     * even at the dim end.
+     * Returns the row index where {@code type} should be drawn, or -1 if
+     * {@code type} is a global (which belongs in the GlobalAttributeSheet
+     * instead). Rows are ordered by display name -- see
+     * {@link KeyFrameType#LOCAL_KEYFRAME_TYPES_ALPHABETICAL}.
+     */
+    private int displayRowIndex(KeyFrameType type)
+    {
+        return KeyFrameType.getLocalDisplayIndex(type);
+    }
+
+    /**
+     * Current breathing-pulse alpha in [0.55, 1.0] for the keyframe-selected
+     * highlight. Sine wave over {@link #PULSE_PERIOD_MS}, floored at 0.55 so
+     * icons stay readable at the dim end.
      */
     private float pulseAlpha()
     {
@@ -126,20 +108,19 @@ public class AttributeSheet extends TimeSheet
     @Override
     public void drawHighlight(Graphics g)
     {
-        // In globals-only mode the static selectedIndex (a label-array index)
-        // doesn't map to a row position anymore -- a SCREEN_FADE selection
-        // would be drawn at row 17 (its KeyFrameType index) which is below the
-        // collapsed sheet. Re-derive from the active card's type so the
-        // highlight always lands under its visible row.
+        // The highlight follows the active card. If the active card is a
+        // global (Camera / Fade / Shake), skip -- that card belongs to the
+        // GlobalAttributeSheet which paints its own highlight.
         int row;
-        if (globalRowsOnlyMode && attributePanel != null)
+        if (attributePanel != null)
         {
-            int dr = displayRowIndex(attributePanel.getSelectedKeyFramePage());
+            KeyFrameType selected = attributePanel.getSelectedKeyFramePage();
+            int dr = displayRowIndex(selected);
             if (dr < 0)
             {
-                return; // Selected card isn't a global -- no row to highlight in this mode.
+                return;
             }
-            row = dr + 1; // +1 for labels[0] empty header equivalence.
+            row = dr + 1; // +1 for the spacer header row at labels[0]
         }
         else
         {
@@ -153,6 +134,10 @@ public class AttributeSheet extends TimeSheet
     public void drawKeyFrames(Graphics g)
     {
         java.util.List<Character> visible = getVisibleCharacters();
+        if (visible.isEmpty())
+        {
+            return;
+        }
 
         g.setColor(new Color(219, 137, 0));
 
@@ -166,98 +151,6 @@ public class AttributeSheet extends TimeSheet
         for (Character character : visible)
         {
             drawCharacterKeyFrames(g, character, image, imageHeight, yImageOffset, xImageOffset, zoomFactor, multi);
-        }
-
-        // Globals (Camera / Fade / Shake) live in the central GlobalKeyFrames
-        // store rather than per-Character frames[][], so the per-character
-        // loop above will skip them. Draw them once total from the central
-        // store at the global row positions. Runs regardless of whether
-        // 'visible' is empty -- in no-Object-selected mode the globals are
-        // the ONLY things on the timeline, and an empty-list early-return
-        // would have hidden them.
-        drawGlobalKeyFrames(g, image, imageHeight, yImageOffset, xImageOffset, zoomFactor);
-    }
-
-    private void drawGlobalKeyFrames(Graphics g, BufferedImage image, int imageHeight, int yImageOffset, int xImageOffset, double zoomFactor)
-    {
-        TimeSheetPanel ts = getTimeSheetPanel();
-        if (ts == null || ts.getPlugin() == null)
-        {
-            return;
-        }
-        com.creatorskit.saves.GlobalKeyFrames store = ts.getPlugin().getGlobalKeyFrames();
-        if (store == null)
-        {
-            return;
-        }
-        drawGlobalRow(g, store.getCameraKeyFramesSafe(),
-                KeyFrameType.CAMERA, image, imageHeight, yImageOffset, xImageOffset, zoomFactor);
-        drawGlobalRow(g, store.getScreenFadeKeyFramesSafe(),
-                KeyFrameType.SCREEN_FADE, image, imageHeight, yImageOffset, xImageOffset, zoomFactor);
-        drawGlobalRow(g, store.getScreenShakeKeyFramesSafe(),
-                KeyFrameType.SCREEN_SHAKE, image, imageHeight, yImageOffset, xImageOffset, zoomFactor);
-    }
-
-    private void drawGlobalRow(Graphics g, KeyFrame[] keyFrames, KeyFrameType type, BufferedImage image, int imageHeight, int yImageOffset, int xImageOffset, double zoomFactor)
-    {
-        if (keyFrames == null || keyFrames.length == 0)
-        {
-            return;
-        }
-        int displayRow = displayRowIndex(type);
-        if (displayRow < 0)
-        {
-            return;
-        }
-
-        for (int e = 0; e < keyFrames.length; e++)
-        {
-            KeyFrame keyFrame = keyFrames[e];
-            BufferedImage endImage = image;
-            KeyFrame[] selectedKeyframes = getTimeSheetPanel().getSelectedKeyFrames();
-            if (Arrays.stream(selectedKeyframes).anyMatch(s -> s == keyFrame))
-            {
-                endImage = getKeyframeSelected();
-            }
-
-            int x = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor);
-            int y = rowHeightOffset + rowHeight + rowHeight * displayRow - getVScroll() - yImageOffset;
-
-            // Duration tails for the global types so the bar shows how long the
-            // effect lasts (matches drawCharacterKeyFrames' behaviour for the
-            // same types pre-Phase-2).
-            switch (type)
-            {
-                case SCREEN_FADE:
-                    ScreenFadeKeyFrame sfkf = (ScreenFadeKeyFrame) keyFrame;
-                    drawTail(g, e, keyFrames, sfkf.totalDurationTicks(), zoomFactor, sfkf.getTick(), x, y, imageHeight);
-                    break;
-                case SCREEN_SHAKE:
-                    ScreenShakeKeyFrame sskf = (ScreenShakeKeyFrame) keyFrame;
-                    drawTail(g, e, keyFrames, sskf.getDurationTicks(), zoomFactor, sskf.getTick(), x, y, imageHeight);
-                    break;
-                case CAMERA:
-                    CameraKeyFrame ckf = (CameraKeyFrame) keyFrame;
-                    drawTail(g, e, keyFrames, ckf.getDurationTicks(), zoomFactor, ckf.getTick(), x, y, imageHeight);
-                    break;
-                default: break;
-            }
-
-            // Pulsing-alpha for selected globals matches drawCharacterKeyFrames
-            // for per-character keyframes -- selection cue is the same in both.
-            if (endImage == getKeyframeSelected() && g instanceof Graphics2D)
-            {
-                Graphics2D g2 = (Graphics2D) g;
-                java.awt.Composite prevComposite = g2.getComposite();
-                g2.setComposite(java.awt.AlphaComposite.getInstance(
-                        java.awt.AlphaComposite.SRC_OVER, pulseAlpha()));
-                g2.drawImage(endImage, x - xImageOffset, y, null);
-                g2.setComposite(prevComposite);
-            }
-            else
-            {
-                g.drawImage(endImage, x - xImageOffset, y, null);
-            }
         }
     }
 
@@ -278,9 +171,7 @@ public class AttributeSheet extends TimeSheet
                 continue;
             }
 
-            // Skip rows that the current mode hides (i.e. non-globals when
-            // globalRowsOnlyMode is on). Drawing them would put icons under
-            // a hidden label which is just visual noise.
+            // Skip globals -- they're rendered exclusively by GlobalAttributeSheet.
             int displayRow = displayRowIndex(type);
             if (displayRow < 0)
             {
@@ -357,13 +248,10 @@ public class AttributeSheet extends TimeSheet
                         {
                             duration = HitsplatKeyFrame.DEFAULT_DURATION;
                         }
-
                         drawTail(g, e, keyFrames, duration, zoomFactor, hskf.getTick(), x, y, imageHeight);
                         break;
                     case PROJECTILE:
                         ProjectileKeyFrame pkf = (ProjectileKeyFrame) keyFrame;
-                        // Total visible duration of the projectile = optional start delay +
-                        // flight duration. Render the tail length to match.
                         drawTail(g, e, keyFrames, pkf.getStartDelayTicks() + pkf.getDurationTicks(), zoomFactor, pkf.getTick(), x, y, imageHeight);
                         break;
                     case SHIELD:
@@ -374,27 +262,11 @@ public class AttributeSheet extends TimeSheet
                         SpecialKeyFrame spkf = (SpecialKeyFrame) keyFrame;
                         drawTail(g, e, keyFrames, spkf.getDuration(), zoomFactor, spkf.getTick(), x, y, imageHeight);
                         break;
-                    case SCREEN_FADE:
-                        ScreenFadeKeyFrame sfkf = (ScreenFadeKeyFrame) keyFrame;
-                        drawTail(g, e, keyFrames, sfkf.totalDurationTicks(), zoomFactor, sfkf.getTick(), x, y, imageHeight);
-                        break;
-                    case SCREEN_SHAKE:
-                        ScreenShakeKeyFrame sskf = (ScreenShakeKeyFrame) keyFrame;
-                        drawTail(g, e, keyFrames, sskf.getDurationTicks(), zoomFactor, sskf.getTick(), x, y, imageHeight);
-                        break;
-                    case CAMERA:
-                        CameraKeyFrame ckf = (CameraKeyFrame) keyFrame;
-                        drawTail(g, e, keyFrames, ckf.getDurationTicks(), zoomFactor, ckf.getTick(), x, y, imageHeight);
-                        break;
                     default:
                         break;
                 }
 
 
-                // Selected keyframes breathe between dim and bright as a
-                // higher-contrast cue than the static brighter icon alone.
-                // Animation runs at 30 fps via pulseTimer (only when something
-                // is selected). Non-selected icons render at full alpha as usual.
                 if (endImage == getKeyframeSelected() && g instanceof Graphics2D)
                 {
                     Graphics2D g2 = (Graphics2D) g;
@@ -444,11 +316,6 @@ public class AttributeSheet extends TimeSheet
     @Override
     public void drawPreviewKeyFrames(Graphics2D g)
     {
-        // Don't gate on getSelectedCharacter() -- the marquee may hold only
-        // global keyframes and they should still show a drag-preview ghost
-        // even when no Object is selected. The per-keyframe draw inside
-        // iterates the marquee directly via getSelectedKeyFrames().
-
         if (!isKeyFrameClicked())
         {
             return;
@@ -461,7 +328,6 @@ public class AttributeSheet extends TimeSheet
         }
 
         TimelineUnits timelineUnits = config.timelineUnits();
-        double modeMultiplier = timelineUnits.getMultiplier();
 
         BufferedImage image = getKeyframeImage();
         int yImageOffset = (image.getHeight() - rowHeight) / 2;
@@ -497,8 +363,7 @@ public class AttributeSheet extends TimeSheet
             int displayRow = displayRowIndex(type);
             if (displayRow < 0)
             {
-                // Type is hidden in the current collapse mode -- nothing to drag onto.
-                continue;
+                continue; // Globals don't render here.
             }
 
             int x = (int) ((keyFrame.getTick() + getHScroll() + change) * zoomFactor);
@@ -538,7 +403,6 @@ public class AttributeSheet extends TimeSheet
                     {
                         duration = HitsplatKeyFrame.DEFAULT_DURATION;
                     }
-
                     drawPreviewTail(g, x, y, imageHeight, duration, zoomFactor);
                     break;
                 case SHIELD:
@@ -548,18 +412,6 @@ public class AttributeSheet extends TimeSheet
                 case SPECIAL:
                     SpecialKeyFrame spkf = (SpecialKeyFrame) keyFrame;
                     drawPreviewTail(g, x, y, imageHeight, spkf.getDuration(), zoomFactor);
-                    break;
-                case SCREEN_FADE:
-                    ScreenFadeKeyFrame sfkf = (ScreenFadeKeyFrame) keyFrame;
-                    drawPreviewTail(g, x, y, imageHeight, sfkf.totalDurationTicks(), zoomFactor);
-                    break;
-                case SCREEN_SHAKE:
-                    ScreenShakeKeyFrame sskf = (ScreenShakeKeyFrame) keyFrame;
-                    drawPreviewTail(g, x, y, imageHeight, sskf.getDurationTicks(), zoomFactor);
-                    break;
-                case CAMERA:
-                    CameraKeyFrame ckf = (CameraKeyFrame) keyFrame;
-                    drawPreviewTail(g, x, y, imageHeight, ckf.getDurationTicks(), zoomFactor);
                     break;
                 default:
                     break;
@@ -604,25 +456,16 @@ public class AttributeSheet extends TimeSheet
     @Override
     public KeyFrame[] getKeyFrameClicked(Point point)
     {
-        BufferedImage image = getKeyframeImage();
-        int yImageOffset = (image.getHeight() - rowHeight) / 2;
-        int xImageOffset = image.getWidth() / 2;
-        double zoomFactor = this.getWidth() / getZoom();
-
-        // Phase 2: hit-test the global keyframes from the central store first
-        // so they're clickable even when no Character is visible. Globals don't
-        // live in per-Character frames anymore.
-        KeyFrame globalHit = hitTestGlobalRows(point, image, xImageOffset, yImageOffset, zoomFactor);
-        if (globalHit != null)
-        {
-            return new KeyFrame[]{globalHit};
-        }
-
         java.util.List<Character> visible = getVisibleCharacters();
         if (visible.isEmpty())
         {
             return null;
         }
+
+        BufferedImage image = getKeyframeImage();
+        int yImageOffset = (image.getHeight() - rowHeight) / 2;
+        int xImageOffset = image.getWidth() / 2;
+        double zoomFactor = this.getWidth() / getZoom();
 
         for (Character c : visible)
         {
@@ -667,87 +510,20 @@ public class AttributeSheet extends TimeSheet
         return null;
     }
 
-    /**
-     * Hit-tests {@code point} against the three global-row arrays in the
-     * central GlobalKeyFrames store. Used by every click/drag handler in this
-     * sheet so global keyframes are selectable and draggable even when no
-     * Character is selected. Returns the first keyframe whose icon rect
-     * contains {@code point}, or null if none.
-     */
-    private KeyFrame hitTestGlobalRows(Point point, BufferedImage image, int xImageOffset, int yImageOffset, double zoomFactor)
-    {
-        TimeSheetPanel ts = getTimeSheetPanel();
-        if (ts == null || ts.getPlugin() == null)
-        {
-            return null;
-        }
-        com.creatorskit.saves.GlobalKeyFrames store = ts.getPlugin().getGlobalKeyFrames();
-        if (store == null)
-        {
-            return null;
-        }
-        KeyFrame hit = hitTestGlobalRow(point, image, xImageOffset, yImageOffset, zoomFactor,
-                store.getCameraKeyFramesSafe(), KeyFrameType.CAMERA);
-        if (hit != null) return hit;
-        hit = hitTestGlobalRow(point, image, xImageOffset, yImageOffset, zoomFactor,
-                store.getScreenFadeKeyFramesSafe(), KeyFrameType.SCREEN_FADE);
-        if (hit != null) return hit;
-        return hitTestGlobalRow(point, image, xImageOffset, yImageOffset, zoomFactor,
-                store.getScreenShakeKeyFramesSafe(), KeyFrameType.SCREEN_SHAKE);
-    }
-
-    private KeyFrame hitTestGlobalRow(Point point, BufferedImage image, int xImageOffset, int yImageOffset, double zoomFactor, KeyFrame[] keyFrames, KeyFrameType type)
-    {
-        if (keyFrames == null || keyFrames.length == 0)
-        {
-            return null;
-        }
-        int displayRow = displayRowIndex(type);
-        if (displayRow < 0)
-        {
-            return null;
-        }
-        int y1 = rowHeightOffset + rowHeight + rowHeight * displayRow - getVScroll() - yImageOffset;
-        int y2 = y1 + image.getHeight();
-        if (point.getY() < y1 || point.getY() > y2)
-        {
-            return null;
-        }
-        for (KeyFrame keyFrame : keyFrames)
-        {
-            int x1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
-            int x2 = x1 + image.getWidth();
-            if (point.getX() >= x1 && point.getX() <= x2)
-            {
-                return keyFrame;
-            }
-        }
-        return null;
-    }
-
     @Override
     public void updateSelectedKeyFrameOnRelease(Point point, boolean shiftKey)
     {
+        java.util.List<Character> visible = getVisibleCharacters();
+
         BufferedImage image = getKeyframeImage();
         int yImageOffset = (image.getHeight() - rowHeight) / 2;
         int xImageOffset = image.getWidth() / 2;
         double zoomFactor = this.getWidth() / getZoom();
 
-        // Phase 2: globals first -- they're outside the per-Character frames.
-        KeyFrame foundKeyFrame = hitTestGlobalRows(point, image, xImageOffset, yImageOffset, zoomFactor);
-
-        java.util.List<Character> visible = getVisibleCharacters();
-        if (foundKeyFrame == null && visible.isEmpty())
-        {
-            // Nothing global hit and no character to scan -- still want to
-            // clear the marquee on a non-shift miss, so fall through to the
-            // post-loop selection update rather than early-returning.
-        }
-
+        KeyFrame foundKeyFrame = null;
         outer:
         for (Character c : visible)
         {
-            if (foundKeyFrame != null) break;
             KeyFrame[][] frames = c.getFrames();
             if (frames == null)
             {
@@ -819,8 +595,10 @@ public class AttributeSheet extends TimeSheet
     public void checkRectangleForKeyFrames(Point point, boolean shiftKey)
     {
         java.util.List<Character> visible = getVisibleCharacters();
-        // Allow rect-select even with no visible characters -- globals are
-        // selectable on their own (the central store doesn't need a Character).
+        if (visible.isEmpty())
+        {
+            return;
+        }
 
         if (!isAllowRectangleSelect())
         {
@@ -955,66 +733,6 @@ public class AttributeSheet extends TimeSheet
             }
         }
 
-        // Phase 2: also rect-select globals from the central store. Same
-        // dedupe + rect-intersect logic as the per-character loop above.
-        foundKeyFrames = addRectangleHitGlobals(rectangle, image, xImageOffset, yImageOffset, zoomFactor, foundKeyFrames);
-
         setSelectedKeyFrames(foundKeyFrames);
-    }
-
-    private KeyFrame[] addRectangleHitGlobals(Rectangle2D rectangle, BufferedImage image, int xImageOffset, int yImageOffset, double zoomFactor, KeyFrame[] foundKeyFrames)
-    {
-        TimeSheetPanel ts = getTimeSheetPanel();
-        if (ts == null || ts.getPlugin() == null)
-        {
-            return foundKeyFrames;
-        }
-        com.creatorskit.saves.GlobalKeyFrames store = ts.getPlugin().getGlobalKeyFrames();
-        if (store == null)
-        {
-            return foundKeyFrames;
-        }
-        foundKeyFrames = addRectangleHitGlobalRow(rectangle, image, xImageOffset, yImageOffset, zoomFactor,
-                store.getCameraKeyFramesSafe(), KeyFrameType.CAMERA, foundKeyFrames);
-        foundKeyFrames = addRectangleHitGlobalRow(rectangle, image, xImageOffset, yImageOffset, zoomFactor,
-                store.getScreenFadeKeyFramesSafe(), KeyFrameType.SCREEN_FADE, foundKeyFrames);
-        foundKeyFrames = addRectangleHitGlobalRow(rectangle, image, xImageOffset, yImageOffset, zoomFactor,
-                store.getScreenShakeKeyFramesSafe(), KeyFrameType.SCREEN_SHAKE, foundKeyFrames);
-        return foundKeyFrames;
-    }
-
-    private KeyFrame[] addRectangleHitGlobalRow(Rectangle2D rectangle, BufferedImage image, int xImageOffset, int yImageOffset, double zoomFactor, KeyFrame[] keyFrames, KeyFrameType type, KeyFrame[] foundKeyFrames)
-    {
-        if (keyFrames == null || keyFrames.length == 0)
-        {
-            return foundKeyFrames;
-        }
-        int displayRow = displayRowIndex(type);
-        if (displayRow < 0)
-        {
-            return foundKeyFrames;
-        }
-        int ky1 = rowHeightOffset + rowHeight + rowHeight * displayRow - getVScroll() - yImageOffset;
-        for (KeyFrame keyFrame : keyFrames)
-        {
-            boolean alreadyContains = false;
-            for (KeyFrame kf : foundKeyFrames)
-            {
-                if (keyFrame == kf)
-                {
-                    alreadyContains = true;
-                    break;
-                }
-            }
-            if (alreadyContains) continue;
-
-            int kx1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
-            Rectangle2D frameRect = new Rectangle(kx1, ky1, image.getWidth(), image.getHeight());
-            if (rectangle.intersects(frameRect))
-            {
-                foundKeyFrames = ArrayUtils.add(foundKeyFrames, keyFrame);
-            }
-        }
-        return foundKeyFrames;
     }
 }

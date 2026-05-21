@@ -65,7 +65,8 @@ public enum KeyFrameType
      * {@link #getName()} alphabetically rather than the historical "movement
      * first" arrangement. Persistence (CharacterSave field names) is unchanged;
      * only the rendered row order shifts. Use {@link #getDisplayIndex(KeyFrameType)}
-     * to look up a type's position here.
+     * to look up a type's position here. Contains all 20 types -- kept for
+     * paths that iterate everything (e.g. CTRL+A, save/load summary).
      */
     public static final KeyFrameType[] ALL_KEYFRAME_TYPES_ALPHABETICAL = new KeyFrameType[]{
             ANIMATION,
@@ -91,9 +92,45 @@ public enum KeyFrameType
     };
 
     /**
-     * Position of {@code type} in the alphabetical display array, or -1 if not
-     * present. Use this for row-y calculations in the timeline sheet so types
-     * land under their alphabetical label.
+     * Per-Character (local) types in alphabetical display order. Drives the
+     * row layout of the main local AttributeSheet -- globals are excluded
+     * here because they live in their own dedicated view now.
+     */
+    public static final KeyFrameType[] LOCAL_KEYFRAME_TYPES_ALPHABETICAL = new KeyFrameType[]{
+            ANIMATION,
+            HEALTH,
+            HITSPLAT_1,
+            HITSPLAT_2,
+            HITSPLAT_3,
+            HITSPLAT_4,
+            MODEL,
+            MOVEMENT,
+            ORIENTATION,
+            OVERHEAD,
+            PROJECTILE,
+            SHIELD,
+            SPAWN,
+            SPECIAL,
+            SPOTANIM,
+            SPOTANIM2,
+            TEXT
+    };
+
+    /**
+     * Global types in alphabetical display order. Drives the row layout of
+     * the dedicated global AttributeSheet so the user can author and
+     * marquee Camera / Fade / Shake without contaminating per-Object data.
+     */
+    public static final KeyFrameType[] GLOBAL_KEYFRAME_TYPES_ALPHABETICAL = new KeyFrameType[]{
+            CAMERA,
+            SCREEN_FADE,
+            SCREEN_SHAKE
+    };
+
+    /**
+     * Position of {@code type} in {@link #ALL_KEYFRAME_TYPES_ALPHABETICAL},
+     * or -1 if not present. Kept for full-array callers; per-view UIs should
+     * prefer {@link #getLocalDisplayIndex} / {@link #getGlobalDisplayIndex}.
      */
     public static int getDisplayIndex(KeyFrameType type)
     {
@@ -105,6 +142,31 @@ public enum KeyFrameType
             }
         }
         return -1;
+    }
+
+    /** Position of {@code type} in the local-view row order, or -1 if it's a global. */
+    public static int getLocalDisplayIndex(KeyFrameType type)
+    {
+        for (int i = 0; i < LOCAL_KEYFRAME_TYPES_ALPHABETICAL.length; i++)
+        {
+            if (LOCAL_KEYFRAME_TYPES_ALPHABETICAL[i] == type) return i;
+        }
+        return -1;
+    }
+
+    /** Position of {@code type} in the global-view row order, or -1 if it's local. */
+    public static int getGlobalDisplayIndex(KeyFrameType type)
+    {
+        for (int i = 0; i < GLOBAL_KEYFRAME_TYPES_ALPHABETICAL.length; i++)
+        {
+            if (GLOBAL_KEYFRAME_TYPES_ALPHABETICAL[i] == type) return i;
+        }
+        return -1;
+    }
+
+    public static boolean isGlobal(KeyFrameType type)
+    {
+        return type == CAMERA || type == SCREEN_FADE || type == SCREEN_SHAKE;
     }
 
     public static final KeyFrameType[] HITSPLAT_TYPES = new KeyFrameType[]{KeyFrameType.HITSPLAT_1, KeyFrameType.HITSPLAT_2, KeyFrameType.HITSPLAT_3, KeyFrameType.HITSPLAT_4};

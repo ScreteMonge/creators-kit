@@ -13,6 +13,7 @@ import com.creatorskit.selection.SelectionManager;
 import com.creatorskit.swing.searchabletable.JFilterableTable;
 import com.creatorskit.swing.timesheet.attributes.*;
 import com.creatorskit.swing.timesheet.keyframe.*;
+import com.creatorskit.swing.timesheet.sheets.TimeSheet;
 import com.creatorskit.swing.timesheet.keyframe.settings.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -3344,22 +3345,26 @@ public class AttributePanel extends JPanel
         activeCard = cardName;
         cardLabel.setText(cardName);
 
-        JLabel[] labels = timeSheetPanel.getLabels();
-        JLabel selectedLabel;
-
-        // Labels live in alphabetical order (ALL_KEYFRAME_TYPES_ALPHABETICAL),
-        // not the storage order returned by getIndex(). Use the display index
-        // so the highlight lands on the matching label.
-        int displayIdx = KeyFrameType.getDisplayIndex(selectedKeyFramePage);
-        selectedLabel = (displayIdx >= 0 && displayIdx + 1 < labels.length)
+        // Pick the right labels column based on whether the requested type is
+        // local or global. Each column maintains its own alphabetical order
+        // so the row index must be looked up against the corresponding array.
+        boolean isGlobal = KeyFrameType.isGlobal(selectedKeyFramePage);
+        JLabel[] labels = isGlobal ? timeSheetPanel.getGlobalLabels() : timeSheetPanel.getLabels();
+        int displayIdx = isGlobal
+                ? KeyFrameType.getGlobalDisplayIndex(selectedKeyFramePage)
+                : KeyFrameType.getLocalDisplayIndex(selectedKeyFramePage);
+        JLabel selectedLabel = (displayIdx >= 0 && displayIdx + 1 < labels.length)
                 ? labels[displayIdx + 1]
                 : labels[1];
+        TimeSheet sheet = isGlobal
+                ? timeSheetPanel.getGlobalAttributeSheet()
+                : timeSheetPanel.getAttributeSheet();
         for (int f = 0; f < labels.length; f++)
         {
             JLabel label = labels[f];
             if (label == selectedLabel)
             {
-                timeSheetPanel.getAttributeSheet().setSelectedIndex(f);
+                if (sheet != null) sheet.setSelectedIndex(f);
                 label.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
             }
             else

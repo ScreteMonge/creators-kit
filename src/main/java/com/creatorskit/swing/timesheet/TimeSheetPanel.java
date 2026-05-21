@@ -63,6 +63,8 @@ public class TimeSheetPanel extends JPanel
     private final DataFinder dataFinder;
     private SummarySheet summarySheet;
     private AttributeSheet attributeSheet;
+    /** Dedicated sheet for Camera / Fade / Shake. Toggle button swaps it in/out of view. */
+    private com.creatorskit.swing.timesheet.sheets.GlobalAttributeSheet globalAttributeSheet;
     private TreeScrollPane treeScrollPane;
     private final ManagerTree managerTree;
     private MovementManager movementManager;
@@ -73,6 +75,14 @@ public class TimeSheetPanel extends JPanel
     private JScrollBar scrollBar;
     private AttributePanel attributePanel;
     private final JScrollPane labelScrollPane = new JScrollPane();
+    /** Scroll pane wrapping the global-view label column (3 type labels). */
+    private final JScrollPane globalLabelScrollPane = new JScrollPane();
+    /** CardLayout container at gridx 1 that swaps between the two label panels. */
+    private final JPanel labelCards = new JPanel(new CardLayout());
+    /** CardLayout container at gridx 2 that swaps between the two attribute sheets. */
+    private final JPanel sheetCards = new JPanel(new CardLayout());
+    private static final String VIEW_LOCAL = "local";
+    private static final String VIEW_GLOBAL = "global";
     private final JPanel controlPanel = new JPanel();
     private final JButton playButton = new JButton();
 
@@ -89,7 +99,8 @@ public class TimeSheetPanel extends JPanel
     private static final int ZOOM_MIN = 5;
 
     private final String LABEL_OFFSET = "  ";
-    private JLabel[] labels = new JLabel[0];
+    private JLabel[] labels = new JLabel[0]; // Local-view labels: labels[0] = spacer, labels[1..17] = type rows
+    private JLabel[] globalLabels = new JLabel[0]; // Global-view labels: globalLabels[0] = spacer, globalLabels[1..3] = type rows
 
     private double zoom = 50;
     private double hScroll = 0;
@@ -113,9 +124,8 @@ public class TimeSheetPanel extends JPanel
      * on whether any keyframes are selected -- the UX intent is "if you can't
      * mutate per-character data right now, don't bother rendering it."
      */
-    private boolean globalRowsOnlyMode = false;
-    /** Captured during setupLabels so toggling visibility can call revalidate(). */
-    private JPanel labelPanelRef;
+    // globalRowsOnlyMode / labelPanelRef were removed when the row-collapse
+    // logic was replaced with two dedicated TimeSheet instances + a CardLayout.
     /**
      * User's manual choice of which view to render when at least one Object is
      * selected. {@code true} = pin to the 3-row global view; {@code false} =
@@ -125,8 +135,10 @@ public class TimeSheetPanel extends JPanel
      * button itself disables in that case but the rendered mode follows.
      */
     private boolean userPrefersGlobalView = false;
-    /** Toggle button shown in the labels column above the first property row. */
+    /** Toggle button shown above the local label column. */
     private JButton viewToggleButton;
+    /** Mirror toggle button shown above the global label column (same handler). */
+    private JButton globalViewToggleButton;
 
     private final int UNDO_LIMIT = 15;
     private int undoStack = 0;
@@ -1837,6 +1849,7 @@ public class TimeSheetPanel extends JPanel
         selectedCharacter = character;
         summarySheet.setSelectedCharacter(character);
         attributeSheet.setSelectedCharacter(character);
+        if (globalAttributeSheet != null) globalAttributeSheet.setSelectedCharacter(character);
         attributePanel.setSelectedCharacter(character);
         attributePanel.resetAttributes(character, currentTime);
         // Selecting a Character should reveal its non-global rows even if the
@@ -1867,25 +1880,22 @@ public class TimeSheetPanel extends JPanel
     }
 
     /**
-     * Single source of truth for the globals-only collapse state. Honors the
-     * explicit toggle button: if any Object is selected, the user's last
-     * choice wins; otherwise the view is locked to global. Pair-updates the
-     * button's label + enabled state so the UI matches the rendered mode.
+     * Single source of truth for the active timeline view (local vs global).
+     * Honors the explicit toggle button: if any Object is selected, the
+     * user's last choice wins; otherwise the view is locked to global.
+     * Pair-updates the toggle button labels + the CardLayouts so the UI
+     * (labels column + sheet) match the chosen view.
      */
     private void refreshGlobalRowsOnlyMode()
     {
         boolean noObject = selectedCharacter == null
                 && (selectionManager == null || selectionManager.size() == 0);
-        boolean targetMode = noObject || userPrefersGlobalView;
-        setGlobalRowsOnlyMode(targetMode);
-        refreshViewToggleButton(noObject, targetMode);
+        boolean targetGlobal = noObject || userPrefersGlobalView;
+        showView(targetGlobal ? VIEW_GLOBAL : VIEW_LOCAL);
+        refreshViewToggleButtons(noObject, targetGlobal);
     }
 
-    /**
-     * Click handler for the labels-column toggle button. No-op when no Object
-     * is selected -- the spec calls for the button to be greyed out in that
-     * state, but defending here is cheaper than relying on the disabled paint.
-     */
+    /** Click handler for the toggle buttons. No-op when no Object is selected. */
     private void onViewToggleClicked()
     {
         boolean noObject = selectedCharacter == null
@@ -1896,68 +1906,40 @@ public class TimeSheetPanel extends JPanel
     }
 
     /**
-     * Repaints the toggle button label + enabled state to match the current
-     * effective mode. Button text describes the action that a click will
-     * perform ("Manage local" while showing global rows, vice versa) so the
-     * user can guess what's about to happen.
+     * Swaps the active card in both label and sheet CardLayouts at once.
+     * They must stay in lockstep -- showing the global sheet while the
+     * local labels are visible would put the rows under the wrong names.
      */
-    private void refreshViewToggleButton(boolean noObject, boolean globalMode)
+    private void showView(String view)
     {
-        if (viewToggleButton == null) return;
-        viewToggleButton.setEnabled(!noObject);
-        viewToggleButton.setText(globalMode ? "Manage local" : "Manage global");
-        viewToggleButton.setToolTipText(noObject
+        ((CardLayout) labelCards.getLayout()).show(labelCards, view);
+        ((CardLayout) sheetCards.getLayout()).show(sheetCards, view);
+        labelCards.revalidate();
+        labelCards.repaint();
+        sheetCards.revalidate();
+        sheetCards.repaint();
+    }
+
+    /** Updates both toggle buttons' text + enabled state to match the rendered view. */
+    private void refreshViewToggleButtons(boolean noObject, boolean globalMode)
+    {
+        String text = globalMode ? "Manage local" : "Manage global";
+        String tip = noObject
                 ? "<html>Locked to global view -- select an Object to enable<br>per-Character rows.</html>"
                 : (globalMode
                     ? "Switch to the per-Object property rows for the current selection."
-                    : "Switch to the global property rows (Camera / Screen Fade / Screen Shake)."));
-    }
-
-    /**
-     * Toggles globals-only mode: hides every non-global row's label and tells
-     * the {@link AttributeSheet} to skip non-global rows when computing draw
-     * positions. The 3 global rows (Screen Fade / Screen Shake / Camera)
-     * collapse to the top of the sheet so the user sees a compact 3-row view
-     * when nothing else is selected.
-     */
-    public void setGlobalRowsOnlyMode(boolean collapse)
-    {
-        if (this.globalRowsOnlyMode == collapse)
+                    : "Switch to the global property rows (Camera / Screen Fade / Screen Shake).");
+        if (viewToggleButton != null)
         {
-            return;
+            viewToggleButton.setEnabled(!noObject);
+            viewToggleButton.setText(text);
+            viewToggleButton.setToolTipText(tip);
         }
-        this.globalRowsOnlyMode = collapse;
-
-        // Toggle visibility on the non-global labels. labels[0] (the empty
-        // header) stays visible; labels[1..N] map to ALL_KEYFRAME_TYPES_ALPHABETICAL
-        // so the globals can land anywhere in the alphabetical order, not just
-        // at the bottom. Look up each label's type by its position in that array.
-        if (labels != null && labels.length > 0)
+        if (globalViewToggleButton != null)
         {
-            for (int i = 0; i < labels.length; i++)
-            {
-                if (labels[i] == null)
-                {
-                    continue;
-                }
-                KeyFrameType type = (i >= 1 && i - 1 < KeyFrameType.ALL_KEYFRAME_TYPES_ALPHABETICAL.length)
-                        ? KeyFrameType.ALL_KEYFRAME_TYPES_ALPHABETICAL[i - 1]
-                        : null;
-                boolean isGlobalRow = type == KeyFrameType.SCREEN_FADE
-                        || type == KeyFrameType.SCREEN_SHAKE
-                        || type == KeyFrameType.CAMERA;
-                labels[i].setVisible(i == 0 || !collapse || isGlobalRow);
-            }
-            if (labelPanelRef != null)
-            {
-                labelPanelRef.revalidate();
-                labelPanelRef.repaint();
-            }
-        }
-
-        if (attributeSheet != null)
-        {
-            attributeSheet.setGlobalRowsOnlyMode(collapse);
+            globalViewToggleButton.setEnabled(!noObject);
+            globalViewToggleButton.setText(text);
+            globalViewToggleButton.setToolTipText(tip);
         }
     }
 
@@ -1981,6 +1963,7 @@ public class TimeSheetPanel extends JPanel
         currentTime = tick;
         attributeSheet.setCurrentTime(currentTime);
         summarySheet.setCurrentTime(currentTime);
+        if (globalAttributeSheet != null) globalAttributeSheet.setCurrentTime(currentTime);
 
         triggerTimeSpinnerChange = false;
         timeSpinner.setValue(currentTime);
@@ -2022,6 +2005,11 @@ public class TimeSheetPanel extends JPanel
         summarySheet.setPreviewTime(tick);
         attributeSheet.setTimeIndicatorPressed(false);
         summarySheet.setTimeIndicatorPressed(false);
+        if (globalAttributeSheet != null)
+        {
+            globalAttributeSheet.setPreviewTime(tick);
+            globalAttributeSheet.setTimeIndicatorPressed(false);
+        }
 
         onCurrentTimeChanged(tick);
     }
@@ -2040,6 +2028,7 @@ public class TimeSheetPanel extends JPanel
     {
         attributeSheet.setPreviewTime(tick);
         summarySheet.setPreviewTime(tick);
+        if (globalAttributeSheet != null) globalAttributeSheet.setPreviewTime(tick);
     }
 
     private void setupTreeScrollPane()
@@ -2151,91 +2140,120 @@ public class TimeSheetPanel extends JPanel
         attributePanel = new AttributePanel(client, clientThread, config, this, dataFinder, selectionManager);
         summarySheet = new SummarySheet(toolBox, config, managerTree, attributePanel);
         attributeSheet = new AttributeSheet(toolBox, config, managerTree, attributePanel);
+        globalAttributeSheet = new com.creatorskit.swing.timesheet.sheets.GlobalAttributeSheet(toolBox, config, managerTree, attributePanel);
     }
 
     private void setupAttributeSheet()
     {
+        // Build TWO independent label columns -- one for the local view (17
+        // per-Character types), one for the global view (Camera / Fade /
+        // Shake). The viewToggleButton sits at the top of both columns so a
+        // toggle is reachable from either view. Each column is wrapped in
+        // its own scroll pane; the CardLayout in labelCards swaps which is
+        // visible based on userPrefersGlobalView.
+        labels = buildLabelColumn(labelScrollPane,
+                attributeSheet,
+                KeyFrameType.LOCAL_KEYFRAME_TYPES_ALPHABETICAL,
+                /*ownsToggleButton=*/ true);
+        globalLabels = buildLabelColumn(globalLabelScrollPane,
+                globalAttributeSheet,
+                KeyFrameType.GLOBAL_KEYFRAME_TYPES_ALPHABETICAL,
+                /*ownsToggleButton=*/ false);
+
+        // Wire the two CardLayouts so the toggle button (built inside the
+        // local column above) can swap both at once. Default to local view;
+        // refreshGlobalRowsOnlyMode below picks the right view based on
+        // selection state.
+        labelCards.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        labelCards.add(labelScrollPane, VIEW_LOCAL);
+        labelCards.add(globalLabelScrollPane, VIEW_GLOBAL);
+
+        sheetCards.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        sheetCards.add(attributeSheet, VIEW_LOCAL);
+        sheetCards.add(globalAttributeSheet, VIEW_GLOBAL);
+
+        refreshGlobalRowsOnlyMode();
+    }
+
+    /**
+     * Constructs one of the two label columns. Returns the populated label
+     * array indexed labels[0] = spacer header, labels[1..N] = type rows in
+     * the order given by {@code types}. The first column (local) also owns
+     * the shared viewToggleButton -- replaces its spacer header so the
+     * toggle is always at the top of that view. The global column gets a
+     * second toggle button instance (separate JButton, same handler) so the
+     * user can still toggle when only the global view is visible.
+     */
+    private JLabel[] buildLabelColumn(JScrollPane scrollPane, TimeSheet bodySheet, KeyFrameType[] types, boolean ownsToggleButton)
+    {
         JPanel labelPanel = new JPanel();
         labelPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        // BoxLayout (not GridLayout) so labels collapse out of layout when
-        // setVisible(false) is called -- GridLayout always reserves a cell per
-        // component regardless of visibility, which would leave dead space when
-        // we hide non-global rows in globals-only mode.
         labelPanel.setLayout(new BoxLayout(labelPanel, BoxLayout.Y_AXIS));
         labelPanel.setFocusable(true);
-        this.labelPanelRef = labelPanel;
 
-        labelScrollPane.setViewportView(labelPanel);
-        labelScrollPane.setBorder(new EmptyBorder(1, 0, 1, 0));
-        labelScrollPane.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        labelScrollPane.setPreferredSize(new Dimension(100, 150));
-        labelScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        labelScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
+        scrollPane.setViewportView(labelPanel);
+        scrollPane.setBorder(new EmptyBorder(1, 0, 1, 0));
+        scrollPane.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        scrollPane.setPreferredSize(new Dimension(100, 150));
+        scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
 
-        MouseWheelListener[] mouseWheelListeners = labelScrollPane.getMouseWheelListeners();
+        MouseWheelListener[] mouseWheelListeners = scrollPane.getMouseWheelListeners();
         for (int i = 0; i < mouseWheelListeners.length; i++)
         {
-            labelScrollPane.removeMouseWheelListener(mouseWheelListeners[i]);
+            scrollPane.removeMouseWheelListener(mouseWheelListeners[i]);
         }
 
-        InvisibleScrollBar labelScrollBar = new InvisibleScrollBar();
-        labelScrollBar.addAdjustmentListener(e -> attributeSheet.onVerticalScrollEvent(e.getValue()));
-        labelScrollPane.setVerticalScrollBar(labelScrollBar);
+        InvisibleScrollBar scrollBar = new InvisibleScrollBar();
+        scrollBar.addAdjustmentListener(e -> bodySheet.onVerticalScrollEvent(e.getValue()));
+        scrollPane.setVerticalScrollBar(scrollBar);
 
-        labelScrollPane.addMouseWheelListener(new MouseAdapter()
+        scrollPane.addMouseWheelListener(new MouseAdapter()
         {
             @Override
             public void mouseWheelMoved(MouseWheelEvent e)
             {
-                if (e.isControlDown())
+                if (e.isControlDown() && !e.isAltDown() && !e.isShiftDown())
                 {
-                    if (e.isAltDown() || e.isShiftDown())
-                    {
-                        return;
-                    }
-
                     managerTree.scrollSelectedIndex(e.getWheelRotation());
                     return;
                 }
-
-                if (e.isShiftDown())
+                if (e.isShiftDown() && !e.isControlDown() && !e.isAltDown())
                 {
-                    if (e.isControlDown() || e.isAltDown())
-                    {
-                        return;
-                    }
-
                     scrollAttributePanel(e.getWheelRotation());
                     return;
                 }
-
-                labelScrollBar.setValue(labelScrollBar.getValue() + e.getWheelRotation() * 15);
+                scrollBar.setValue(scrollBar.getValue() + e.getWheelRotation() * 15);
             }
         });
 
-        labels = new JLabel[KeyFrameType.getTotalFrameTypes() + 1];
-        // labels[0] is the spacer header slot above the first property row.
-        // We add a toggle button here that flips between local and global views
-        // when at least one Object is selected -- explicit replacement for the
-        // earlier auto-collapse heuristic so multi-select edits don't quietly
-        // drag the user between modes.
-        viewToggleButton = new JButton();
-        viewToggleButton.setFocusable(false);
-        viewToggleButton.setBorder(null);
-        viewToggleButton.setMargin(new java.awt.Insets(0, 4, 0, 4));
-        viewToggleButton.setPreferredSize(new Dimension(100, 24));
-        viewToggleButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
-        viewToggleButton.setAlignmentX(Component.LEFT_ALIGNMENT);
-        viewToggleButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        viewToggleButton.setForeground(Color.WHITE);
-        viewToggleButton.addActionListener(e -> onViewToggleClicked());
-        // labels[0] still exists in the array for the existing index math (every
-        // type label sits at labels[i+1]) -- just point it at a dummy JLabel
-        // that's never added to the layout so the array shape stays valid.
-        labels[0] = new JLabel();
-        labelPanel.add(viewToggleButton);
+        JButton toggle = new JButton();
+        toggle.setFocusable(false);
+        toggle.setBorder(null);
+        toggle.setMargin(new java.awt.Insets(0, 4, 0, 4));
+        toggle.setPreferredSize(new Dimension(100, 24));
+        toggle.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
+        toggle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        toggle.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        toggle.setForeground(Color.WHITE);
+        toggle.addActionListener(e -> onViewToggleClicked());
+        labelPanel.add(toggle);
+        if (ownsToggleButton)
+        {
+            // Keep a reference on the panel-level field so the refresh code can
+            // update its text. The other column's button mirrors it via the
+            // shared handler -- we just refresh both buttons together.
+            this.viewToggleButton = toggle;
+        }
+        else
+        {
+            this.globalViewToggleButton = toggle;
+        }
 
-        for (int i = 1; i < KeyFrameType.getTotalFrameTypes() + 1; i++)
+        JLabel[] result = new JLabel[types.length + 1];
+        result[0] = new JLabel(); // dummy for the +1 index alignment
+
+        for (int i = 0; i < types.length; i++)
         {
             JLabel label = new JLabel();
             label.setFocusable(true);
@@ -2244,12 +2262,8 @@ public class TimeSheetPanel extends JPanel
             label.setPreferredSize(new Dimension(100, 24));
             label.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
             label.setAlignmentX(Component.LEFT_ALIGNMENT);
-            label.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-
-            if (i == 1)
-            {
-                label.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
-            }
+            label.setBackground(i == 0 ? ColorScheme.MEDIUM_GRAY_COLOR : ColorScheme.DARKER_GRAY_COLOR);
+            label.setText(types[i].getName() + LABEL_OFFSET);
 
             label.addMouseListener(new MouseAdapter()
             {
@@ -2267,36 +2281,15 @@ public class TimeSheetPanel extends JPanel
                 @Override
                 public void keyReleased(KeyEvent e)
                 {
-                    if (e.getKeyCode() == KeyEvent.VK_DOWN)
-                    {
-                        scrollAttributePanel(1);
-                    }
-
-                    if (e.getKeyCode() == KeyEvent.VK_UP)
-                    {
-                        scrollAttributePanel(-1);
-                    }
+                    if (e.getKeyCode() == KeyEvent.VK_DOWN) scrollAttributePanel(1);
+                    if (e.getKeyCode() == KeyEvent.VK_UP) scrollAttributePanel(-1);
                 }
             });
 
-            labels[i] = label;
+            result[i + 1] = label;
             labelPanel.add(label);
         }
-
-        // Labels are positioned in alphabetical order via
-        // ALL_KEYFRAME_TYPES_ALPHABETICAL. labels[0] is unused (replaced by the
-        // viewToggleButton above); labels[1..N] follow the alphabetical array.
-        // The label text uses each type's getName() so click → switchCards
-        // finds the right card.
-        for (int i = 0; i < KeyFrameType.ALL_KEYFRAME_TYPES_ALPHABETICAL.length; i++)
-        {
-            labels[i + 1].setText(KeyFrameType.ALL_KEYFRAME_TYPES_ALPHABETICAL[i].getName() + LABEL_OFFSET);
-        }
-
-        // Initial pass to bake the right button text + globals-only state.
-        // No selection yet at construction time, so this lands on "Manage local"
-        // disabled / globals-visible mode.
-        refreshGlobalRowsOnlyMode();
+        return result;
     }
 
     private void setupScrollBar()
@@ -2705,13 +2698,13 @@ public class TimeSheetPanel extends JPanel
         c.weighty = 0;
         c.gridx = 1;
         c.gridy = 4;
-        add(labelScrollPane, c);
+        add(labelCards, c);
 
         c.weightx = 8;
         c.weighty = 0;
         c.gridx = 2;
         c.gridy = 4;
-        add(attributeSheet, c);
+        add(sheetCards, c);
     }
 
     private void updateSheets()
@@ -2720,6 +2713,11 @@ public class TimeSheetPanel extends JPanel
         summarySheet.setZoom(zoom);
         attributeSheet.setHScroll(hScroll);
         attributeSheet.setZoom(zoom);
+        if (globalAttributeSheet != null)
+        {
+            globalAttributeSheet.setHScroll(hScroll);
+            globalAttributeSheet.setZoom(zoom);
+        }
     }
 
     private void updateScrollBar()
