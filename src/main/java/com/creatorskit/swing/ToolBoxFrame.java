@@ -369,6 +369,22 @@ public class ToolBoxFrame extends JFrame
         scatter.addActionListener(e -> timeSheetPanel.showScatterDialog());
         random.add(scatter);
 
+        // Layout submenu -- deterministic spatial arrangement of Characters
+        // (sibling to Random's stochastic timing tools). First entry is Fill
+        // Rectangle; future entries (Fill Line, Mirror, Array, Distribute) will
+        // share this umbrella.
+        JMenu layout = new JMenu("Layout");
+        tools.add(layout);
+
+        JMenuItem fillRect = new JMenuItem("Fill Rectangle...");
+        fillRect.setToolTipText("<html>With exactly 2 Characters selected as opposite corners, fill the<br>"
+                + "rectangle between them with duplicates of those Characters on every<br>"
+                + "tile (alternating checkerboard by tile parity). Stride spinner lets<br>"
+                + "you skip tiles for sparse fills. Duplicates land in a new folder so<br>"
+                + "you can collapse / select / delete them as a group.</html>");
+        fillRect.addActionListener(e -> plugin.getCreatorsPanel().showFillRectangleDialog());
+        layout.add(fillRect);
+
         JMenu resources = new JMenu("Resources");
         jMenuBar.add(resources);
 

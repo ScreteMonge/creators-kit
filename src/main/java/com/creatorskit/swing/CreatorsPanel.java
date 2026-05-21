@@ -22,6 +22,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.Model;
+import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.RuneLite;
@@ -1294,6 +1295,236 @@ public class CreatorsPanel extends PluginPanel
     private void showColorPickerFor(Character character, JButton anchor)
     {
         showColorPickerAt(anchor, 0, anchor.getHeight(), character);
+    }
+
+    /**
+     * Tools &gt; Layout &gt; Fill Rectangle. With exactly 2 Characters selected as
+     * opposite corners on the same plane / instance, duplicates them across
+     * every tile in the bounding rectangle (alternating checkerboard by tile
+     * parity). All new Characters land in a fresh folder named "Fill: A &amp; B"
+     * so the user can collapse / select / delete them as a group.
+     *
+     * <p>Stride parameter lets the user skip tiles for sparse fills (every
+     * Nth tile in each direction). Stride=1 fills every tile; stride=2
+     * gives a quarter-density "every other" pattern, etc.
+     *
+     * <p>Use case: rain on a 10x10 area -- place a raindrop on the NW corner,
+     * a different (or identical) raindrop on the SE corner, select both, run
+     * Fill Rectangle. Now there's a raindrop on every tile in the area, all
+     * grouped in one folder ready for Tools &gt; Random &gt; Scatter.
+     */
+    public void showFillRectangleDialog()
+    {
+        java.util.Collection<Character> selected = selectionManager.getSelected();
+        if (selected.size() != 2)
+        {
+            JOptionPane.showMessageDialog(this,
+                    "Fill Rectangle requires exactly 2 Characters selected as opposite corners. Currently " + selected.size() + " selected.",
+                    "Fill Rectangle", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        java.util.Iterator<Character> it = selected.iterator();
+        Character cornerA = it.next();
+        Character cornerB = it.next();
+
+        // Both corners need to share the instance context -- you can't fill
+        // between a POH tile and an overworld tile, the coordinate systems don't
+        // line up. Same plane is required for the same reason (a Z-traversing
+        // fill would need a totally different semantic).
+        if (cornerA.isInPOH() != cornerB.isInPOH())
+        {
+            JOptionPane.showMessageDialog(this,
+                    "Both corner Characters must be in the same instance state (both inside POH/instance or both on the overworld).",
+                    "Fill Rectangle", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (cornerA.getInstancedPlane() != cornerB.getInstancedPlane())
+        {
+            JOptionPane.showMessageDialog(this,
+                    "Both corner Characters must be on the same plane.",
+                    "Fill Rectangle", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        boolean inPOH = cornerA.isInPOH();
+        int plane = cornerA.getInstancedPlane();
+
+        // Pull tile coordinates from whichever point applies for this context.
+        // Overworld uses WorldPoint (already in tile units). POH/instance uses
+        // LocalPoint (1/128 units, divide by 128 for tile grid).
+        int aTileX, aTileY, bTileX, bTileY;
+        if (inPOH)
+        {
+            LocalPoint a = cornerA.getInstancedPoint();
+            LocalPoint b = cornerB.getInstancedPoint();
+            if (a == null || b == null)
+            {
+                JOptionPane.showMessageDialog(this,
+                        "Couldn't read instance positions for one of the corners.",
+                        "Fill Rectangle", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            aTileX = a.getX() / 128;
+            aTileY = a.getY() / 128;
+            bTileX = b.getX() / 128;
+            bTileY = b.getY() / 128;
+        }
+        else
+        {
+            WorldPoint a = cornerA.getNonInstancedPoint();
+            WorldPoint b = cornerB.getNonInstancedPoint();
+            if (a == null || b == null)
+            {
+                JOptionPane.showMessageDialog(this,
+                        "Couldn't read world positions for one of the corners.",
+                        "Fill Rectangle", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            aTileX = a.getX();
+            aTileY = a.getY();
+            bTileX = b.getX();
+            bTileY = b.getY();
+        }
+
+        int minX = Math.min(aTileX, bTileX);
+        int maxX = Math.max(aTileX, bTileX);
+        int minY = Math.min(aTileY, bTileY);
+        int maxY = Math.max(aTileY, bTileY);
+        int width = maxX - minX + 1;
+        int height = maxY - minY + 1;
+        int totalTiles = width * height;
+
+        JSpinner strideSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 100, 1));
+        JPanel panel = new JPanel(new GridLayout(0, 2, 6, 6));
+        panel.add(new JLabel("Stride (tile spacing):"));
+        panel.add(strideSpinner);
+        panel.add(new JLabel("Rectangle size:"));
+        panel.add(new JLabel(width + " x " + height + " = " + totalTiles + " tiles"));
+
+        int result = JOptionPane.showConfirmDialog(this, panel,
+                "Fill Rectangle (" + cornerA.getName() + " & " + cornerB.getName() + ")",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result != JOptionPane.OK_OPTION) return;
+
+        final int stride = Math.max(1, ((Number) strideSpinner.getValue()).intValue());
+
+        // Create a destination folder so the user can manage the spawned copies
+        // as a group. Sibling of whichever panel cornerA lives in.
+        ParentPanel parentPanel = cornerA.getParentPanel();
+        ManagerTree managerTree = toolBox.getManagerPanel().getManagerTree();
+        DefaultMutableTreeNode parentFolderNode = managerTree.getParentFolderNode(parentPanel, false);
+        String folderName = "Fill: " + cornerA.getName() + " & " + cornerB.getName();
+        final DefaultMutableTreeNode fillFolderNode = managerTree.addFolderNode(parentFolderNode, folderName);
+
+        // Spawn copies on a background thread so the (potentially large) fill
+        // doesn't freeze the EDT. createCharacter does its own clientThread
+        // hops internally, so we just need to keep the iteration off the EDT.
+        final WorldView worldView = client != null ? client.getTopLevelWorldView() : null;
+        final int aTileXFinal = aTileX;
+        final int aTileYFinal = aTileY;
+        final int bTileXFinal = bTileX;
+        final int bTileYFinal = bTileY;
+        final int minXFinal = minX;
+        final int maxXFinal = maxX;
+        final int minYFinal = minY;
+        final int maxYFinal = maxY;
+        final boolean inPOHFinal = inPOH;
+        final int planeFinal = plane;
+        Thread thread = new Thread(() ->
+        {
+            int spawned = 0;
+            for (int dy = 0; minYFinal + dy <= maxYFinal; dy += stride)
+            {
+                for (int dx = 0; minXFinal + dx <= maxXFinal; dx += stride)
+                {
+                    int tx = minXFinal + dx;
+                    int ty = minYFinal + dy;
+
+                    // Skip the original corners -- they already exist; reusing
+                    // their tiles would create a duplicate on top of them.
+                    if ((tx == aTileXFinal && ty == aTileYFinal) || (tx == bTileXFinal && ty == bTileYFinal))
+                    {
+                        continue;
+                    }
+
+                    // Checkerboard alternation by stride-step parity so the
+                    // pattern is the same regardless of stride.
+                    int parity = ((dx / stride) + (dy / stride)) % 2;
+                    Character source = parity == 0 ? cornerA : cornerB;
+
+                    spawnFillCopy(source, tx, ty, planeFinal, inPOHFinal, worldView, fillFolderNode, parentPanel);
+                    spawned++;
+                }
+            }
+
+            final int totalSpawned = spawned;
+            SwingUtilities.invokeLater(() ->
+                    JOptionPane.showMessageDialog(this,
+                            "Filled " + totalSpawned + " tiles into folder '" + folderName + "'.",
+                            "Fill Rectangle", JOptionPane.INFORMATION_MESSAGE));
+        });
+        thread.start();
+    }
+
+    /**
+     * Duplicates {@code source} onto a target tile (POH-aware) and parents the
+     * new Character under {@code fillFolderNode}. Reuses createCharacter's full
+     * arg form so keyframes, render-fix state, offsets, and extraScale all
+     * carry over -- the only thing the fill overrides is the position.
+     */
+    private void spawnFillCopy(Character source, int targetTileX, int targetTileY, int plane, boolean inPOH,
+                               @Nullable WorldView worldView, DefaultMutableTreeNode fillFolderNode, ParentPanel parentPanel)
+    {
+        WorldPoint targetWorld;
+        LocalPoint targetLocal;
+        if (inPOH)
+        {
+            if (worldView == null) return;
+            // LocalPoint takes scene-units; tile-aligned center is tile*128.
+            targetLocal = new LocalPoint(targetTileX * 128, targetTileY * 128, worldView);
+            targetWorld = source.getNonInstancedPoint();
+        }
+        else
+        {
+            targetWorld = new WorldPoint(targetTileX, targetTileY, plane);
+            targetLocal = source.getInstancedPoint();
+        }
+
+        KeyFrameType[] summary = source.getSummary();
+        KeyFrameType[] summaryCopy = summary == null ? null : new KeyFrameType[]{summary[0], summary[1], summary[2]};
+
+        Character copy = createCharacter(
+                parentPanel,
+                source.getName() + " (fill)",
+                (int) source.getModelSpinner().getValue(),
+                (CustomModel) source.getComboBox().getSelectedItem(),
+                source.isCustomMode(),
+                (int) source.getOrientationSpinner().getValue(),
+                (int) source.getAnimationSpinner().getValue(),
+                (int) source.getAnimationFrameSpinner().getValue(),
+                (int) source.getRadiusSpinner().getValue(),
+                duplicateKeyFrames(source),
+                summaryCopy,
+                getRandomColor(),
+                source.isActive(),
+                targetWorld,
+                targetLocal,
+                plane,
+                inPOH,
+                true,
+                false);
+
+        // Copy visual state, same as onDuplicatePressed.
+        copy.setRenderFixWidth(source.getRenderFixWidth());
+        copy.setRenderFixHeight(source.getRenderFixHeight());
+        copy.setRenderFix(source.isRenderFix());
+        copy.setOffsetX(source.getOffsetX());
+        copy.setOffsetY(source.getOffsetY());
+        copy.setOffsetZ(source.getOffsetZ());
+        copy.setExtraScale(source.getExtraScale());
+
+        SwingUtilities.invokeLater(() -> addPanel(parentPanel, copy, fillFolderNode, false, false));
     }
 
     /**
