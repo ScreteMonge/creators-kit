@@ -30,6 +30,11 @@ import java.util.ArrayList;
  * Characters), the most-recently-started one wins -- matches the
  * {@link ScreenFadeOverlay}/screen-shake pattern.
  *
+ * <p>Styling matches the OSRS boss HP HUD widget (interface 303 /
+ * {@code InterfaceID.HpbarHud}): boss name text on top, dark grey plate, and
+ * a green/red HP bar below. Colours come from RuneLite's own OpponentInfoOverlay
+ * so the keyframe-driven bar reads identically to engine-rendered ones.
+ *
  * <p>The damage indicator is keyframe-driven: when the active boss keyframe's
  * {@code currentHealth} is lower than the previous BOSS_HEALTH keyframe's on
  * the same Character, a red bar appears spanning the lost-HP range and fades
@@ -42,9 +47,19 @@ public class BossHealthOverlay extends Overlay
     private final Client client;
     private final CreatorsPlugin plugin;
 
-    private static final int BAR_WIDTH = 380;
-    private static final int BAR_HEIGHT = 20;
-    private static final int TOP_MARGIN = 12;
+    /** Bar dimensions match the OSRS HpbarHud widget (~360px wide). */
+    private static final int BAR_WIDTH = 360;
+    private static final int BAR_HEIGHT = 18;
+    private static final int NAME_HEIGHT = 16;
+    private static final int TOP_MARGIN = 8;
+    /** Outer dark border that the engine paints around the boss HUD plate. */
+    private static final Color PLATE_BORDER = new Color(0, 0, 0);
+    /** Inner plate fill -- matches the HpbarHud widget's dark grey backing. */
+    private static final Color PLATE_FILL = new Color(35, 35, 35);
+    /** RuneLite's canonical "current HP" green from OpponentInfoOverlay. */
+    private static final Color HP_GREEN = new Color(0, 146, 54);
+    /** RuneLite's canonical "missing HP" red from OpponentInfoOverlay. */
+    private static final Color HP_RED = new Color(102, 15, 16);
     /** Damage indicator fades to zero over this many game ticks (~600ms each). */
     private static final double DAMAGE_FADE_TICKS = 4.0;
 
@@ -117,25 +132,45 @@ public class BossHealthOverlay extends Overlay
         int x = (canvasW - BAR_WIDTH) / 2;
         int y = TOP_MARGIN;
 
-        // Background plate with a 2px black border so the bar reads against
-        // bright sky / overworld backgrounds.
+        // Plate: dark grey backing with a 1px black border, sized to hold the
+        // boss-name strip + the HP bar. Matches the OSRS HpbarHud widget layout.
+        int plateW = BAR_WIDTH + 6;
+        int plateH = NAME_HEIGHT + BAR_HEIGHT + 6;
+        graphics.setColor(PLATE_BORDER);
+        graphics.fillRect(x - 3, y - 2, plateW, plateH);
+        graphics.setColor(PLATE_FILL);
+        graphics.fillRect(x - 2, y - 1, plateW - 2, plateH - 2);
+
+        // Boss name -- pulls from the owning Character so the user can label
+        // the bar by naming the Character that holds the keyframe.
+        graphics.setFont(FontManager.getRunescapeBoldFont());
+        FontMetrics nameFm = graphics.getFontMetrics();
+        String bossName = bossChar.getName() == null ? "" : bossChar.getName();
+        int nameX = x + (BAR_WIDTH - nameFm.stringWidth(bossName)) / 2;
+        int nameY = y + nameFm.getAscent() - 2;
         graphics.setColor(Color.BLACK);
-        graphics.fillRect(x - 2, y - 2, BAR_WIDTH + 4, BAR_HEIGHT + 4);
-        graphics.setColor(new Color(36, 36, 36));
-        graphics.fillRect(x, y, BAR_WIDTH, BAR_HEIGHT);
+        graphics.drawString(bossName, nameX + 1, nameY + 1);
+        graphics.setColor(Color.WHITE);
+        graphics.drawString(bossName, nameX, nameY);
+
+        // HP bar sits below the name strip. Red base (missing HP) -> green
+        // fill (current HP). Drawing red first then green over it mirrors how
+        // the engine layers the widget.
+        int barY = y + NAME_HEIGHT;
+        graphics.setColor(HP_RED);
+        graphics.fillRect(x, barY, BAR_WIDTH, BAR_HEIGHT);
 
         double ratio = (double) currentHp / (double) maxHp;
         int greenW = (int) Math.round(ratio * BAR_WIDTH);
         if (greenW > 0)
         {
-            graphics.setColor(new Color(70, 190, 70));
-            graphics.fillRect(x, y, greenW, BAR_HEIGHT);
+            graphics.setColor(HP_GREEN);
+            graphics.fillRect(x, barY, greenW, BAR_HEIGHT);
         }
 
-        // Damage indicator: find the previous BOSS_HEALTH keyframe on the same
-        // Character and, if HP dropped going into the active keyframe, paint
-        // a red bar from currentHP to previousHP, alpha-fading over the first
-        // DAMAGE_FADE_TICKS ticks after the active keyframe started.
+        // Damage indicator: bright pulse on the just-lost HP range that fades
+        // over DAMAGE_FADE_TICKS. Drawn ON TOP of the red base so the user can
+        // see the chunk that was lost distinctly from already-missing HP.
         HealthKeyFrame previous = findPreviousBossKeyFrame(bossChar, bossKf.getTick());
         if (previous != null && previous.getCurrentHealth() > currentHp)
         {
@@ -152,23 +187,21 @@ public class BossHealthOverlay extends Overlay
                 {
                     Composite oc = graphics.getComposite();
                     graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
-                    graphics.setColor(new Color(200, 50, 50));
-                    graphics.fillRect(x + redStart, y, redW, BAR_HEIGHT);
+                    graphics.setColor(new Color(220, 80, 80));
+                    graphics.fillRect(x + redStart, barY, redW, BAR_HEIGHT);
                     graphics.setComposite(oc);
                 }
             }
         }
 
-        // Centered "current / max" text. Uses the bold runescape font for
-        // readability against the green fill.
+        // "current / max" text centred inside the HP bar. Bold + shadowed so
+        // it stays readable on either the green or red half of the bar.
         graphics.setFont(FontManager.getRunescapeBoldFont());
         FontMetrics fm = graphics.getFontMetrics();
         String text = currentHp + " / " + maxHp;
         int textW = fm.stringWidth(text);
         int textX = x + (BAR_WIDTH - textW) / 2;
-        int textY = y + (BAR_HEIGHT + fm.getAscent()) / 2 - 2;
-        // Shadow first, then white text -- legibility hack matching the engine's
-        // own HP bar text style.
+        int textY = barY + (BAR_HEIGHT + fm.getAscent()) / 2 - 2;
         graphics.setColor(Color.BLACK);
         graphics.drawString(text, textX + 1, textY + 1);
         graphics.setColor(Color.WHITE);
