@@ -1564,6 +1564,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		previewObject.setRenderFix(ckObject.isRenderFix());
 		previewObject.setWidthScale(ckObject.getWidthScale());
 		previewObject.setHeightScale(ckObject.getHeightScale());
+		// ALT + Scroll / ALT + = / ALT + - drive extraScale on the live Character.
+		// Without mirroring it onto the preview, the ghost stays at the unscaled
+		// size and you can't see what the next paste will actually look like.
+		previewObject.setExtraScale(ckObject.getExtraScale());
 		previewObject.setActive(true);
 	}
 
