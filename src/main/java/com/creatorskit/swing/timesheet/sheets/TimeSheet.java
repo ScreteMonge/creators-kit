@@ -197,12 +197,33 @@ public class TimeSheet extends JPanel
      */
     private Rectangle aMarkerXHit = null;
     private Rectangle bMarkerXHit = null;
+    /**
+     * Last-drawn full chip rectangles for the A/B markers. The X close box
+     * sits inside this region, so the close check must happen first. Used by
+     * mousePressed to start a drag and by mouseDragged to keep dragging until
+     * release. Nulled when the corresponding marker isn't set so stale rects
+     * can't trap a click.
+     */
+    private Rectangle aMarkerChipHit = null;
+    private Rectangle bMarkerChipHit = null;
+    /**
+     * In-progress drag flags for the A/B markers. Set in mousePressed when
+     * the user grabs the chip; cleared on mouseReleased. While set, mouse-
+     * dragged events translate to setALoopTick / setBLoopTick at the
+     * current pointer x, snapped to the 0.1-tick grid. Cleared by
+     * clearTransientDragFlags so a stuck flag from a bad release can't
+     * latch the next click into a phantom drag.
+     */
+    private boolean draggingAMarker = false;
+    private boolean draggingBMarker = false;
 
     private void drawABMarkers(Graphics2D g)
     {
         TimeSheetPanel tsp = getTimeSheetPanel();
         aMarkerXHit = null;
         bMarkerXHit = null;
+        aMarkerChipHit = null;
+        bMarkerChipHit = null;
         if (tsp == null) return;
         Double a = tsp.getALoopTick();
         Double b = tsp.getBLoopTick();
@@ -250,6 +271,11 @@ public class TimeSheet extends JPanel
 
         Rectangle hit = new Rectangle(xBoxX, xBoxY, xBoxW, xBoxH);
         if (isA) aMarkerXHit = hit; else bMarkerXHit = hit;
+        // Full-chip rect: drag handle for moving the marker. mousePressed
+        // checks this AFTER the X close box (because the X sits inside the
+        // chip), so an X click never accidentally starts a drag.
+        Rectangle chipRect = new Rectangle(chipX, chipY, chipWidth, rowHeight);
+        if (isA) aMarkerChipHit = chipRect; else bMarkerChipHit = chipRect;
     }
 
     /**
@@ -333,6 +359,8 @@ public class TimeSheet extends JPanel
         keyFrameClicked = false;
         allowRectangleSelect = false;
         timeIndicatorPressed = false;
+        draggingAMarker = false;
+        draggingBMarker = false;
     }
 
     private void drawRectangleSelect(Graphics2D g)
@@ -689,6 +717,21 @@ public class TimeSheet extends JPanel
                     return;
                 }
 
+                // A/B chip drag start. The chip rect contains the X close
+                // box, so X must be tested above this point. Once a drag
+                // is engaged, mouseDragged keeps updating the marker tick
+                // and mouseReleased clears the flag.
+                if (aMarkerChipHit != null && aMarkerChipHit.contains(mousePosition))
+                {
+                    draggingAMarker = true;
+                    return;
+                }
+                if (bMarkerChipHit != null && bMarkerChipHit.contains(mousePosition))
+                {
+                    draggingBMarker = true;
+                    return;
+                }
+
                 if (mousePosition.getY() < rowHeight)
                 {
                     timeIndicatorPressed = true;
@@ -728,6 +771,15 @@ public class TimeSheet extends JPanel
                 }
 
                 if (e.getButton() != MouseEvent.BUTTON1)
+                {
+                    clearTransientDragFlags();
+                    return;
+                }
+
+                // A/B marker drag end. mouseDragged has been writing the
+                // tick continuously; release just clears the drag flag so
+                // subsequent clicks aren't interpreted as drags.
+                if (draggingAMarker || draggingBMarker)
                 {
                     clearTransientDragFlags();
                     return;
@@ -907,6 +959,25 @@ public class TimeSheet extends JPanel
             {
                 super.mouseDragged(e);
                 requestFocusInWindow();
+
+                // A/B marker drag: convert pointer x to a tick and push it
+                // through the validating setter (which clamps B>=0 and A<=B).
+                // Snap to 0.1 so the marker lands cleanly on the same grid the
+                // playback uses. mouseDragged fires even when the cursor
+                // leaves the panel, so the drag follows the pointer freely.
+                if (draggingAMarker || draggingBMarker)
+                {
+                    double tick = (double) e.getX() * getZoom() / getWidth() - getHScroll();
+                    double snapped = Math.round(tick * 10.0) / 10.0;
+                    TimeSheetPanel tsp = getTimeSheetPanel();
+                    if (tsp != null)
+                    {
+                        if (draggingAMarker) tsp.setALoopTick(snapped);
+                        else tsp.setBLoopTick(snapped);
+                    }
+                    return;
+                }
+
                 updatePreviewTime(getTimeIndicatorPosition());
             }
         });
