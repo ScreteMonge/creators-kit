@@ -1089,6 +1089,25 @@ public class Character
         return out;
     }
 
+    public CameraKeyFrame[] getCameraKeyFrames()
+    {
+        KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.CAMERA);
+        if (keyFrames == null)
+        {
+            return null;
+        }
+        CameraKeyFrame[] out = new CameraKeyFrame[keyFrames.length];
+        for (int i = 0; i < keyFrames.length; i++)
+        {
+            out[i] = (CameraKeyFrame) keyFrames[i];
+        }
+        if (Arrays.stream(out).allMatch(Objects::isNull))
+        {
+            return null;
+        }
+        return out;
+    }
+
     public SpotAnimKeyFrame[] getSpotAnimKeyFrames(KeyFrameType spotAnimNumber)
     {
         KeyFrame[] keyFrames = getKeyFrames(spotAnimNumber);

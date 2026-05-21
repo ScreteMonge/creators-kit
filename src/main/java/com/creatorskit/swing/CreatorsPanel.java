@@ -2412,7 +2412,8 @@ public class CreatorsPanel extends PluginPanel
                 character.getSpecialKeyFrames(),
                 character.getScreenFadeKeyFrames(),
                 character.getScreenShakeKeyFrames(),
-                character.getExtraScale());
+                character.getExtraScale(),
+                character.getCameraKeyFrames());
     }
 
     public void openLoadSetupDialog()
@@ -2824,6 +2825,10 @@ public class CreatorsPanel extends PluginPanel
             if (save.getScreenShakeKeyFrames() != null)
             {
                 frames[KeyFrameType.getIndex(KeyFrameType.SCREEN_SHAKE)] = save.getScreenShakeKeyFrames();
+            }
+            if (save.getCameraKeyFrames() != null)
+            {
+                frames[KeyFrameType.getIndex(KeyFrameType.CAMERA)] = save.getCameraKeyFrames();
             }
 
             KeyFrameType[] summary;

@@ -176,6 +176,18 @@ public class KeyFrame
                         shakeKF.getAmplitudeVertical(),
                         shakeKF.getFrequency(),
                         shakeKF.getDurationTicks());
+            case CAMERA:
+                CameraKeyFrame camKF = (CameraKeyFrame) keyFrame;
+                return new CameraKeyFrame(
+                        tick,
+                        camKF.getFocalX(),
+                        camKF.getFocalY(),
+                        camKF.getFocalZ(),
+                        camKF.getPitch(),
+                        camKF.getYaw(),
+                        camKF.getScale(),
+                        camKF.getEase(),
+                        camKF.getDurationTicks());
         }
     }
 }

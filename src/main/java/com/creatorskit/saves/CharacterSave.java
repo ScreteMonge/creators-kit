@@ -82,4 +82,12 @@ public class CharacterSave
      * as "use default 1.0" so old saves keep rendering at their original size.
      */
     private double extraScale;
+    /**
+     * Camera keyframes for the timeline-driven free-cam (mlgudi/keyframe-camera
+     * port). Null in saves predating this field; the load path treats null as
+     * "no camera keyframes" so old saves load cleanly. Stored on Character even
+     * though the effect is global (matches the Screen Fade / Shake pattern --
+     * Phase 2 refactor will move all three to a central global-keyframes store).
+     */
+    private CameraKeyFrame[] cameraKeyFrames;
 }
