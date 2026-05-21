@@ -1350,6 +1350,22 @@ public class CreatorsPanel extends PluginPanel
         boolean inPOH = cornerA.isInPOH();
         int plane = cornerA.getInstancedPlane();
 
+        // DIAG: log both corners' raw positions so we can see the input state
+        // when stacking happens. Remove after confirming the cause.
+        {
+            LocalPoint lpA = cornerA.getInstancedPoint();
+            LocalPoint lpB = cornerB.getInstancedPoint();
+            WorldPoint wpA = cornerA.getNonInstancedPoint();
+            WorldPoint wpB = cornerB.getNonInstancedPoint();
+            System.out.println("[FillRect.corners] inPOH=" + inPOH + " plane=" + plane);
+            System.out.println("  cornerA name=" + cornerA.getName()
+                    + " lp=" + (lpA != null ? "(x=" + lpA.getX() + ",y=" + lpA.getY() + ",sx=" + lpA.getSceneX() + ",sy=" + lpA.getSceneY() + ")" : "null")
+                    + " wp=" + (wpA != null ? "(" + wpA.getX() + "," + wpA.getY() + ",p" + wpA.getPlane() + ")" : "null"));
+            System.out.println("  cornerB name=" + cornerB.getName()
+                    + " lp=" + (lpB != null ? "(x=" + lpB.getX() + ",y=" + lpB.getY() + ",sx=" + lpB.getSceneX() + ",sy=" + lpB.getSceneY() + ")" : "null")
+                    + " wp=" + (wpB != null ? "(" + wpB.getX() + "," + wpB.getY() + ",p" + wpB.getPlane() + ")" : "null"));
+        }
+
         // Pull tile coordinates from whichever point applies for this context.
         // Overworld uses WorldPoint (already in tile units). POH/instance uses
         // LocalPoint (1/128 units, divide by 128 for tile grid).
@@ -1551,6 +1567,19 @@ public class CreatorsPanel extends PluginPanel
             // scene shifts to include it.
             targetLocal = worldView != null ? LocalPoint.fromWorld(worldView, targetWorld) : null;
         }
+
+        // DIAG: trace what positions we're computing per copy and what the
+        // resulting Character ends up reporting after setupRLObject runs.
+        // Tells us whether the stacking is in our position math (computed
+        // targetLocal/targetWorld identical), in the engine's instance
+        // template mapping (computed unique but resolved to same scene tile),
+        // or in the character's stored position after setLocation runs.
+        // Remove after we confirm the cause.
+        System.out.println("[FillRect.spawn] name=" + name
+                + " tx=" + targetTileX + " ty=" + targetTileY
+                + " inPOH=" + inPOH + " plane=" + plane
+                + " targetWorld=" + (targetWorld != null ? "(" + targetWorld.getX() + "," + targetWorld.getY() + ",p" + targetWorld.getPlane() + ")" : "null")
+                + " targetLocal=" + (targetLocal != null ? "(x=" + targetLocal.getX() + ",y=" + targetLocal.getY() + ",sx=" + targetLocal.getSceneX() + ",sy=" + targetLocal.getSceneY() + ")" : "null"));
 
         KeyFrameType[] summary = source.getSummary();
         KeyFrameType[] summaryCopy = summary == null ? null : new KeyFrameType[]{summary[0], summary[1], summary[2]};
