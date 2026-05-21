@@ -11,6 +11,8 @@ import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.lang3.ArrayUtils;
 
+import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
 import java.awt.*;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
@@ -419,5 +421,77 @@ public class GlobalAttributeSheet extends TimeSheet
             }
         }
         return foundKeyFrames;
+    }
+
+    /**
+     * Mirror of {@link AttributeSheet#onMouseButton3Pressed} for the global
+     * row stack. Same Premiere Pro-style context menu, but the gap search
+     * runs against the central GlobalKeyFrames store instead of per-Character
+     * frame matrices.
+     */
+    @Override
+    public void onMouseButton3Pressed(Point p)
+    {
+        if (getKeyFrameClicked(p) != null) return;
+
+        int displayRow = (int) Math.floor((p.getY() + getVScroll() - rowHeightOffset - rowHeight) / (double) rowHeight);
+        if (displayRow < 0 || displayRow >= KeyFrameType.GLOBAL_KEYFRAME_TYPES_ALPHABETICAL.length) return;
+        KeyFrameType type = KeyFrameType.GLOBAL_KEYFRAME_TYPES_ALPHABETICAL[displayRow];
+
+        double clickTick = (double) p.getX() * getZoom() / getWidth() - getHScroll();
+        double[] gap = findGapForRippleDelete(type, clickTick);
+        showRippleDeleteContextPopup(p, gap[0], gap[1], type);
+    }
+
+    private double[] findGapForRippleDelete(KeyFrameType type, double clickTick)
+    {
+        GlobalKeyFrames s = store();
+        KeyFrame[] arr;
+        if (s == null) arr = new KeyFrame[0];
+        else if (type == KeyFrameType.CAMERA) arr = s.getCameraKeyFramesSafe();
+        else if (type == KeyFrameType.SCREEN_FADE) arr = s.getScreenFadeKeyFramesSafe();
+        else if (type == KeyFrameType.SCREEN_SHAKE) arr = s.getScreenShakeKeyFramesSafe();
+        else arr = new KeyFrame[0];
+
+        double prevTick = Double.NEGATIVE_INFINITY;
+        double nextTick = Double.POSITIVE_INFINITY;
+        for (KeyFrame kf : arr)
+        {
+            if (kf == null) continue;
+            if (kf.getTick() <= clickTick && kf.getTick() > prevTick) prevTick = kf.getTick();
+            if (kf.getTick() > clickTick && kf.getTick() < nextTick) nextTick = kf.getTick();
+        }
+        double from = prevTick == Double.NEGATIVE_INFINITY ? 0 : prevTick + 1;
+        double to = nextTick == Double.POSITIVE_INFINITY ? clickTick : nextTick - 1;
+        if (to < from) to = from;
+        return new double[]{from, to};
+    }
+
+    private void showRippleDeleteContextPopup(Point p, double from, double to, KeyFrameType type)
+    {
+        TimeSheetPanel tsp = getTimeSheetPanel();
+        if (tsp == null) return;
+
+        JPopupMenu menu = new JPopupMenu();
+
+        JMenuItem oneItem = new JMenuItem(
+                String.format("Ripple delete gap on %s  [%.1f-%.1f]", type.getName(), from, to));
+        oneItem.addActionListener(e -> tsp.executeRippleDeleteInstant(from, to, type));
+        menu.add(oneItem);
+
+        // "All properties" from the global sheet includes per-Character locals
+        // too -- consistent with the Tools dialog meaning of "All".
+        JMenuItem allItem = new JMenuItem(
+                String.format("Ripple delete gap on all properties  [%.1f-%.1f]", from, to));
+        allItem.addActionListener(e -> tsp.executeRippleDeleteInstant(from, to, null));
+        menu.add(allItem);
+
+        menu.addSeparator();
+
+        JMenuItem dialogItem = new JMenuItem("Ripple Delete... (pick range / scope)");
+        dialogItem.addActionListener(e -> tsp.showRippleDeleteDialog(from, to, type));
+        menu.add(dialogItem);
+
+        menu.show(this, (int) p.getX(), (int) p.getY());
     }
 }

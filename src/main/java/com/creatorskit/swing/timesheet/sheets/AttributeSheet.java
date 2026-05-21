@@ -12,6 +12,8 @@ import lombok.Setter;
 import net.runelite.client.ui.FontManager;
 import org.apache.commons.lang3.ArrayUtils;
 
+import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
 import java.awt.*;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
@@ -734,5 +736,90 @@ public class AttributeSheet extends TimeSheet
         }
 
         setSelectedKeyFrames(foundKeyFrames);
+    }
+
+    /**
+     * Right-click on the body sheet shows a Premiere Pro-style ripple-delete
+     * context menu. Skipped if the click landed on an existing keyframe --
+     * that's an "edit this kf" context that belongs elsewhere. On empty
+     * space, we identify the property row and tick the user clicked into,
+     * walk the visible Characters' keyframes of that row to find the
+     * surrounding gap [prevKf+1, nextKf-1], and offer:
+     *   - instant ripple delete on JUST that property's gap,
+     *   - instant ripple delete on ALL properties for the same range,
+     *   - "Ripple Delete..." which opens the full dialog (pre-filled).
+     */
+    @Override
+    public void onMouseButton3Pressed(Point p)
+    {
+        if (getKeyFrameClicked(p) != null) return;
+
+        // Row math is the inverse of the y1 formula used by drawKeyFrames /
+        // getKeyFrameClicked: y1 = rowHeightOffset + rowHeight + rowHeight*dr - vScroll.
+        // The first data row sits one rowHeight below the header chip row.
+        int displayRow = (int) Math.floor((p.getY() + getVScroll() - rowHeightOffset - rowHeight) / (double) rowHeight);
+        if (displayRow < 0 || displayRow >= KeyFrameType.LOCAL_KEYFRAME_TYPES_ALPHABETICAL.length) return;
+        KeyFrameType type = KeyFrameType.LOCAL_KEYFRAME_TYPES_ALPHABETICAL[displayRow];
+
+        double clickTick = (double) p.getX() * getZoom() / getWidth() - getHScroll();
+        double[] gap = findGapForRippleDelete(type, clickTick);
+        showRippleDeleteContextPopup(p, gap[0], gap[1], type);
+    }
+
+    /**
+     * Returns {@code [from, to]} = the empty span surrounding {@code clickTick}
+     * on the given property row, derived from visible Characters' keyframes.
+     * If no keyframe sits to the LEFT, from=0. If no keyframe to the RIGHT,
+     * to=clickTick (delete a 0-width range, effectively nothing -- but the
+     * dialog still opens so the user can adjust).
+     */
+    private double[] findGapForRippleDelete(KeyFrameType type, double clickTick)
+    {
+        double prevTick = Double.NEGATIVE_INFINITY;
+        double nextTick = Double.POSITIVE_INFINITY;
+        int idx = KeyFrameType.getIndex(type);
+        for (Character c : getVisibleCharacters())
+        {
+            KeyFrame[][] frames = c.getFrames();
+            if (frames == null || idx >= frames.length) continue;
+            KeyFrame[] row = frames[idx];
+            if (row == null) continue;
+            for (KeyFrame kf : row)
+            {
+                if (kf == null) continue;
+                if (kf.getTick() <= clickTick && kf.getTick() > prevTick) prevTick = kf.getTick();
+                if (kf.getTick() > clickTick && kf.getTick() < nextTick) nextTick = kf.getTick();
+            }
+        }
+        double from = prevTick == Double.NEGATIVE_INFINITY ? 0 : prevTick + 1;
+        double to = nextTick == Double.POSITIVE_INFINITY ? clickTick : nextTick - 1;
+        if (to < from) to = from;
+        return new double[]{from, to};
+    }
+
+    private void showRippleDeleteContextPopup(Point p, double from, double to, KeyFrameType type)
+    {
+        TimeSheetPanel tsp = getTimeSheetPanel();
+        if (tsp == null) return;
+
+        JPopupMenu menu = new JPopupMenu();
+
+        JMenuItem oneItem = new JMenuItem(
+                String.format("Ripple delete gap on %s  [%.1f-%.1f]", type.getName(), from, to));
+        oneItem.addActionListener(e -> tsp.executeRippleDeleteInstant(from, to, type));
+        menu.add(oneItem);
+
+        JMenuItem allItem = new JMenuItem(
+                String.format("Ripple delete gap on all properties  [%.1f-%.1f]", from, to));
+        allItem.addActionListener(e -> tsp.executeRippleDeleteInstant(from, to, null));
+        menu.add(allItem);
+
+        menu.addSeparator();
+
+        JMenuItem dialogItem = new JMenuItem("Ripple Delete... (pick range / scope)");
+        dialogItem.addActionListener(e -> tsp.showRippleDeleteDialog(from, to, type));
+        menu.add(dialogItem);
+
+        menu.show(this, (int) p.getX(), (int) p.getY());
     }
 }

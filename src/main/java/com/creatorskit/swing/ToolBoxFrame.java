@@ -432,6 +432,21 @@ public class ToolBoxFrame extends JFrame
         fillRect.addActionListener(e -> plugin.getCreatorsPanel().showFillRectangleDialog());
         layout.add(fillRect);
 
+        // Ripple Delete lives directly on Tools (not under Random / Layout) --
+        // it's a destructive timeline editor, not a stochastic / spatial tool.
+        // Same op is also exposed as a right-click context menu on empty
+        // timeline space (Premiere Pro-style); this menu entry is the
+        // discoverable / scope-picking entry point.
+        JMenuItem rippleDelete = new JMenuItem("Ripple Delete keyframes...");
+        rippleDelete.setToolTipText("<html>Remove every keyframe in [from, to] for the chosen scope, then<br>"
+                + "shift everything after the deleted span back by (to - from + 1)<br>"
+                + "so the gap collapses. Scope picks one property or all. Targets<br>"
+                + "are the multi-selected Characters if any, else the primary.<br>"
+                + "Globals (Camera / Fade / Shake) can be targeted by picking<br>"
+                + "their name as the scope -- no Character needed.</html>");
+        rippleDelete.addActionListener(e -> timeSheetPanel.showRippleDeleteDialog(0.0, 0.0, null));
+        tools.add(rippleDelete);
+
         JMenu resources = new JMenu("Resources");
         jMenuBar.add(resources);
 

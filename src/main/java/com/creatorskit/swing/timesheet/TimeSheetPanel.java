@@ -3460,4 +3460,233 @@ public class TimeSheetPanel extends JPanel
             attributePanel.resetAttributes(selectedCharacter, currentTime);
         }
     }
+
+    // ----- Ripple Delete --------------------------------------------------
+
+    /**
+     * Tools > Ripple Delete keyframes...
+     *
+     * <p>Removes every keyframe whose tick is in [from, to] for the chosen
+     * scope, then shifts every keyframe whose tick > to back by
+     * {@code (to - from + 1)} ticks so the timeline collapses the deleted
+     * span. Like Premiere Pro ripple-delete on a gap.
+     *
+     * <p>Scope:
+     *   {@code null} = all properties (locals on every target Character +
+     *     the three globals from the central store)
+     *   a local {@code KeyFrameType} = that property only, on every target
+     *     Character; globals untouched.
+     *   a global {@code KeyFrameType} = that one global in the central
+     *     store only; per-Character locals untouched.
+     *
+     * <p>Targets follow {@link #resolveSelectionTargets()} so multi-select
+     * applies automatically. An empty target list is still valid for
+     * globals-only scopes (Camera/Fade/Shake have no Character).
+     *
+     * <p>{@code prefillFrom/prefillTo/prefillScope} are passed in by the
+     * right-click context menu so the dialog opens pre-filled with the
+     * gap the user clicked into. The Tools menu passes 0/0/null.
+     */
+    public void showRippleDeleteDialog(double prefillFrom, double prefillTo, KeyFrameType prefillScope)
+    {
+        java.util.Collection<Character> targets = resolveSelectionTargets();
+
+        JSpinner fromSpinner = new JSpinner(new SpinnerNumberModel(prefillFrom, 0.0, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.5));
+        JSpinner toSpinner = new JSpinner(new SpinnerNumberModel(prefillTo, 0.0, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.5));
+
+        final String ALL = "All properties";
+        DefaultComboBoxModel<String> scopeModel = new DefaultComboBoxModel<>();
+        scopeModel.addElement(ALL);
+        for (KeyFrameType type : KeyFrameType.LOCAL_KEYFRAME_TYPES_ALPHABETICAL)
+        {
+            scopeModel.addElement(type.getName());
+        }
+        for (KeyFrameType type : KeyFrameType.GLOBAL_KEYFRAME_TYPES_ALPHABETICAL)
+        {
+            scopeModel.addElement(type.getName());
+        }
+        JComboBox<String> scopeCombo = new JComboBox<>(scopeModel);
+        if (prefillScope != null)
+        {
+            scopeCombo.setSelectedItem(prefillScope.getName());
+        }
+
+        JPanel panel = new JPanel(new GridLayout(0, 2, 6, 6));
+        panel.add(new JLabel("From tick (inclusive):"));
+        panel.add(fromSpinner);
+        panel.add(new JLabel("To tick (inclusive):"));
+        panel.add(toSpinner);
+        panel.add(new JLabel("Scope:"));
+        panel.add(scopeCombo);
+
+        String targetDesc = targets.isEmpty()
+                ? "globals only (no Character selected)"
+                : (targets.size() == 1 ? "1 Character" : targets.size() + " Characters");
+        int result = JOptionPane.showConfirmDialog(this, panel,
+                "Ripple Delete -- " + targetDesc,
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result != JOptionPane.OK_OPTION) return;
+
+        double from = ((Number) fromSpinner.getValue()).doubleValue();
+        double to = ((Number) toSpinner.getValue()).doubleValue();
+        if (to < from) { double tmp = from; from = to; to = tmp; }
+        String scopeName = (String) scopeCombo.getSelectedItem();
+
+        KeyFrameType scopeType = null;
+        if (scopeName != null && !ALL.equals(scopeName))
+        {
+            for (KeyFrameType t : KeyFrameType.values())
+            {
+                if (t.getName().equals(scopeName))
+                {
+                    scopeType = t;
+                    break;
+                }
+            }
+        }
+
+        executeRippleDelete(targets, from, to, scopeType);
+    }
+
+    /**
+     * Direct, dialog-less ripple delete entry point used by the AttributeSheet
+     * right-click context menu (Premiere Pro-style: right-click the gap, pick
+     * a scope, done -- no dialog). Same logic as the dialog OK path.
+     */
+    public void executeRippleDeleteInstant(double from, double to, KeyFrameType scope)
+    {
+        if (to < from) { double tmp = from; from = to; to = tmp; }
+        executeRippleDelete(resolveSelectionTargets(), from, to, scope);
+    }
+
+    private void executeRippleDelete(java.util.Collection<Character> targets, double from, double to, KeyFrameType scope)
+    {
+        // collapse span = inclusive width of the deleted region. Keyframes at
+        // tick > to shift back by exactly this so a keyframe formerly at
+        // (to + 1) lands at (from), making the deletion seamless.
+        double removed = to - from + 1;
+        if (removed <= 0)
+        {
+            return;
+        }
+
+        KeyFrameAction[] kfa = new KeyFrameAction[0];
+
+        // --- LOCAL types: walk each Character's frame matrix.
+        for (Character owner : targets)
+        {
+            KeyFrame[][] frames = owner.getFrames();
+            if (frames == null) continue;
+
+            for (int i = 0; i < frames.length; i++)
+            {
+                KeyFrame[] row = frames[i];
+                if (row == null) continue;
+                KeyFrameType type = KeyFrameType.getKeyFrameType(i);
+                if (isGlobalType(type)) continue;            // globals handled below
+                if (scope != null && type != scope) continue; // restricted scope
+
+                // Snapshot before mutation -- owner.removeKeyFrame / addKeyFrame
+                // both rewrite the underlying row, which would skip / re-visit
+                // entries if we iterated the live array.
+                KeyFrame[] snapshot = row.clone();
+                for (KeyFrame kf : snapshot)
+                {
+                    if (kf == null) continue;
+                    if (kf.getTick() >= from && kf.getTick() <= to)
+                    {
+                        kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(kf, owner, KeyFrameCharacterActionType.REMOVE));
+                        owner.removeKeyFrame(kf);
+                    }
+                    else if (kf.getTick() > to)
+                    {
+                        double newTick = round(kf.getTick() - removed);
+                        KeyFrame replacement = KeyFrame.createCopy(kf, newTick);
+                        kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(kf, owner, KeyFrameCharacterActionType.REMOVE));
+                        kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replacement, owner, KeyFrameCharacterActionType.ADD));
+                        owner.removeKeyFrame(kf);
+                        owner.addKeyFrame(replacement, currentTime);
+                    }
+                }
+            }
+        }
+
+        // --- GLOBAL types: walk the central store. scope=null hits all 3.
+        com.creatorskit.saves.GlobalKeyFrames store = plugin.getGlobalKeyFrames();
+        if (store != null)
+        {
+            if (scope == null || scope == KeyFrameType.CAMERA)
+            {
+                kfa = rippleGlobalArray(store.getCameraKeyFramesSafe(), kfa, from, to, removed, store);
+            }
+            if (scope == null || scope == KeyFrameType.SCREEN_FADE)
+            {
+                kfa = rippleGlobalArray(store.getScreenFadeKeyFramesSafe(), kfa, from, to, removed, store);
+            }
+            if (scope == null || scope == KeyFrameType.SCREEN_SHAKE)
+            {
+                kfa = rippleGlobalArray(store.getScreenShakeKeyFramesSafe(), kfa, from, to, removed, store);
+            }
+        }
+
+        if (kfa.length == 0)
+        {
+            JOptionPane.showMessageDialog(this,
+                    "No keyframes in [" + from + ", " + to + "] for the chosen scope.",
+                    "Ripple Delete", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        addKeyFrameActions(kfa);
+        // The marquee may have held refs that got removed/replaced; clear it
+        // so we don't dangle pointers into the card placeholder state.
+        setSelectedKeyFrames(new KeyFrame[0]);
+        if (client != null && client.getGameState() == GameState.LOGGED_IN)
+        {
+            toolBox.getProgrammer().updatePrograms(currentTime);
+        }
+        attributePanel.setKeyFramedIcon(true);
+        if (selectedCharacter != null)
+        {
+            attributePanel.resetAttributes(selectedCharacter, currentTime);
+        }
+    }
+
+    /**
+     * Helper for the global-store side of ripple delete. Same delete-or-shift
+     * decision as the local branch but routed through GlobalKeyFrames.add/remove.
+     * Returns the updated action array so the caller can chain across multiple
+     * global type arrays without losing the running list.
+     */
+    private KeyFrameAction[] rippleGlobalArray(KeyFrame[] arr, KeyFrameAction[] kfa, double from, double to, double removed, com.creatorskit.saves.GlobalKeyFrames store)
+    {
+        if (arr == null) return kfa;
+        KeyFrame[] snapshot = arr.clone();
+        for (KeyFrame kf : snapshot)
+        {
+            if (kf == null) continue;
+            if (kf.getTick() >= from && kf.getTick() <= to)
+            {
+                store.remove(kf);
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(kf, null, KeyFrameCharacterActionType.REMOVE));
+            }
+            else if (kf.getTick() > to)
+            {
+                double newTick = round(kf.getTick() - removed);
+                KeyFrame replacement = KeyFrame.createCopy(kf, newTick);
+                store.remove(kf);
+                KeyFrame displaced = store.add(replacement);
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(kf, null, KeyFrameCharacterActionType.REMOVE));
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replacement, null, KeyFrameCharacterActionType.ADD));
+                if (displaced != null && displaced != kf)
+                {
+                    // store.add returned an already-present keyframe that we
+                    // overwrote (same tick). Record it as removed so undo
+                    // restores it.
+                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(displaced, null, KeyFrameCharacterActionType.REMOVE));
+                }
+            }
+        }
+        return kfa;
+    }
 }
