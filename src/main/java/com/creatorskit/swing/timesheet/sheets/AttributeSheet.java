@@ -44,15 +44,15 @@ public class AttributeSheet extends TimeSheet
 
     /**
      * Returns the row index where {@code type} should be drawn given the
-     * current mode, or -1 if the type is hidden. Used everywhere a draw method
-     * computed {@code rowHeight * KeyFrameType.getIndex(type)} so the same code
-     * path works in both expanded and collapsed modes.
+     * current mode, or -1 if the type is hidden. In expanded mode this is the
+     * type's alphabetical position (rows are ordered by getName()); in
+     * collapsed mode only the three globals are placed at rows 0-2.
      */
     private int displayRowIndex(KeyFrameType type)
     {
         if (!globalRowsOnlyMode)
         {
-            return KeyFrameType.getIndex(type);
+            return KeyFrameType.getDisplayIndex(type);
         }
         switch (type)
         {

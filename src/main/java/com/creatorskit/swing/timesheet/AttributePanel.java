@@ -3328,7 +3328,13 @@ public class AttributePanel extends JPanel
         JLabel[] labels = timeSheetPanel.getLabels();
         JLabel selectedLabel;
 
-        selectedLabel = labels[KeyFrameType.getIndex(selectedKeyFramePage) + 1];
+        // Labels live in alphabetical order (ALL_KEYFRAME_TYPES_ALPHABETICAL),
+        // not the storage order returned by getIndex(). Use the display index
+        // so the highlight lands on the matching label.
+        int displayIdx = KeyFrameType.getDisplayIndex(selectedKeyFramePage);
+        selectedLabel = (displayIdx >= 0 && displayIdx + 1 < labels.length)
+                ? labels[displayIdx + 1]
+                : labels[1];
         for (int f = 0; f < labels.length; f++)
         {
             JLabel label = labels[f];

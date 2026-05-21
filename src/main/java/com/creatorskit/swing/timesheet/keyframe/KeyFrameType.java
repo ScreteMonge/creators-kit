@@ -60,6 +60,53 @@ public enum KeyFrameType
             CAMERA
     };
 
+    /**
+     * Display-order array used by the timeline UI -- types are listed by
+     * {@link #getName()} alphabetically rather than the historical "movement
+     * first" arrangement. Persistence (CharacterSave field names) is unchanged;
+     * only the rendered row order shifts. Use {@link #getDisplayIndex(KeyFrameType)}
+     * to look up a type's position here.
+     */
+    public static final KeyFrameType[] ALL_KEYFRAME_TYPES_ALPHABETICAL = new KeyFrameType[]{
+            ANIMATION,
+            CAMERA,
+            HEALTH,
+            HITSPLAT_1,
+            HITSPLAT_2,
+            HITSPLAT_3,
+            HITSPLAT_4,
+            MODEL,
+            MOVEMENT,
+            ORIENTATION,
+            OVERHEAD,
+            PROJECTILE,
+            SCREEN_FADE,
+            SCREEN_SHAKE,
+            SHIELD,
+            SPAWN,
+            SPECIAL,
+            SPOTANIM,
+            SPOTANIM2,
+            TEXT
+    };
+
+    /**
+     * Position of {@code type} in the alphabetical display array, or -1 if not
+     * present. Use this for row-y calculations in the timeline sheet so types
+     * land under their alphabetical label.
+     */
+    public static int getDisplayIndex(KeyFrameType type)
+    {
+        for (int i = 0; i < ALL_KEYFRAME_TYPES_ALPHABETICAL.length; i++)
+        {
+            if (ALL_KEYFRAME_TYPES_ALPHABETICAL[i] == type)
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     public static final KeyFrameType[] HITSPLAT_TYPES = new KeyFrameType[]{KeyFrameType.HITSPLAT_1, KeyFrameType.HITSPLAT_2, KeyFrameType.HITSPLAT_3, KeyFrameType.HITSPLAT_4};
     public static final KeyFrameType[] SPOTANIM_TYPES = new KeyFrameType[]{KeyFrameType.SPOTANIM, KeyFrameType.SPOTANIM2};
     /** Bar keyframes that share the overhead-bar rendering pipeline (HP / shield / special). */

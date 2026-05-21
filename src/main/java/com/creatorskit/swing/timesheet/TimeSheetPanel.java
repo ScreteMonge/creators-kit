@@ -1669,7 +1669,9 @@ public class TimeSheetPanel extends JPanel
         this.globalRowsOnlyMode = collapse;
 
         // Toggle visibility on the non-global labels. labels[0] (the empty
-        // header) and labels[18..20] (the globals) stay visible in both modes.
+        // header) stays visible; labels[1..N] map to ALL_KEYFRAME_TYPES_ALPHABETICAL
+        // so the globals can land anywhere in the alphabetical order, not just
+        // at the bottom. Look up each label's type by its position in that array.
         if (labels != null && labels.length > 0)
         {
             for (int i = 0; i < labels.length; i++)
@@ -1678,14 +1680,12 @@ public class TimeSheetPanel extends JPanel
                 {
                     continue;
                 }
-                KeyFrameType type = (i >= 1 && i - 1 < KeyFrameType.ALL_KEYFRAME_TYPES.length)
-                        ? KeyFrameType.ALL_KEYFRAME_TYPES[i - 1]
+                KeyFrameType type = (i >= 1 && i - 1 < KeyFrameType.ALL_KEYFRAME_TYPES_ALPHABETICAL.length)
+                        ? KeyFrameType.ALL_KEYFRAME_TYPES_ALPHABETICAL[i - 1]
                         : null;
                 boolean isGlobalRow = type == KeyFrameType.SCREEN_FADE
                         || type == KeyFrameType.SCREEN_SHAKE
                         || type == KeyFrameType.CAMERA;
-                // Always show the spacer header at i=0; otherwise only show
-                // global rows in collapse mode.
                 labels[i].setVisible(i == 0 || !collapse || isGlobalRow);
             }
             if (labelPanelRef != null)
@@ -1985,26 +1985,14 @@ public class TimeSheetPanel extends JPanel
             labelPanel.add(label);
         }
 
-        labels[1].setText(AttributePanel.MOVE_CARD + LABEL_OFFSET);
-        labels[2].setText(AttributePanel.ANIM_CARD + LABEL_OFFSET);
-        labels[3].setText(AttributePanel.ORI_CARD + LABEL_OFFSET);
-        labels[4].setText(AttributePanel.SPAWN_CARD + LABEL_OFFSET);
-        labels[5].setText(AttributePanel.MODEL_CARD + LABEL_OFFSET);
-        labels[6].setText(AttributePanel.SPOTANIM_CARD + LABEL_OFFSET);
-        labels[7].setText(AttributePanel.SPOTANIM2_CARD + LABEL_OFFSET);
-        labels[8].setText(AttributePanel.TEXT_CARD + LABEL_OFFSET);
-        labels[9].setText(AttributePanel.OVER_CARD + LABEL_OFFSET);
-        labels[10].setText(AttributePanel.HEALTH_CARD + LABEL_OFFSET);
-        labels[11].setText(AttributePanel.HITSPLAT_1_CARD + LABEL_OFFSET);
-        labels[12].setText(AttributePanel.HITSPLAT_2_CARD + LABEL_OFFSET);
-        labels[13].setText(AttributePanel.HITSPLAT_3_CARD + LABEL_OFFSET);
-        labels[14].setText(AttributePanel.HITSPLAT_4_CARD + LABEL_OFFSET);
-        labels[15].setText(AttributePanel.PROJECTILE_CARD + LABEL_OFFSET);
-        labels[16].setText(AttributePanel.SHIELD_CARD + LABEL_OFFSET);
-        labels[17].setText(AttributePanel.SPECIAL_CARD + LABEL_OFFSET);
-        labels[18].setText(AttributePanel.SCREEN_FADE_CARD + LABEL_OFFSET);
-        labels[19].setText(AttributePanel.SCREEN_SHAKE_CARD + LABEL_OFFSET);
-        labels[20].setText(AttributePanel.CAMERA_CARD + LABEL_OFFSET);
+        // Labels are positioned in alphabetical order via
+        // ALL_KEYFRAME_TYPES_ALPHABETICAL. labels[0] stays an empty header,
+        // labels[1..N] follow the alphabetical array. The label text uses each
+        // type's getName() so click → switchCards finds the right card.
+        for (int i = 0; i < KeyFrameType.ALL_KEYFRAME_TYPES_ALPHABETICAL.length; i++)
+        {
+            labels[i + 1].setText(KeyFrameType.ALL_KEYFRAME_TYPES_ALPHABETICAL[i].getName() + LABEL_OFFSET);
+        }
     }
 
     private void setupScrollBar()
