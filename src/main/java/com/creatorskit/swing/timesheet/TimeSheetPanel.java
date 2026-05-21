@@ -1892,6 +1892,19 @@ public class TimeSheetPanel extends JPanel
             }
         }
 
+        // Defensive cleanup of the preview-time indicator state. If a drag
+        // press-and-release-outside-canvas left timeIndicatorPressed stuck
+        // true on either sheet, the secondary "preview" tick label would
+        // keep rendering at the stale press position even after the seeker
+        // had moved elsewhere (visible as the duplicate "0.6" + "5.6" labels
+        // in the bug report). Snapping previewTime onto the new currentTime
+        // collapses the two indicators visually; clearing the pressed flag
+        // makes sure subsequent renders skip the preview pass entirely.
+        attributeSheet.setPreviewTime(tick);
+        summarySheet.setPreviewTime(tick);
+        attributeSheet.setTimeIndicatorPressed(false);
+        summarySheet.setTimeIndicatorPressed(false);
+
         onCurrentTimeChanged(tick);
     }
 
@@ -2364,16 +2377,10 @@ public class TimeSheetPanel extends JPanel
         }
 
         java.util.Collection<Character> targets = resolveSelectionTargets();
-        if (targets.isEmpty())
-        {
-            return;
-        }
+        // Don't early-return on empty targets -- the marquee may hold global
+        // keyframes (Camera / Fade / Shake) which live in the central store
+        // and have no Character owner. Process them below regardless.
 
-        // Marquee can contain multiple KFs at the same (type, tick) across owners --
-        // dedupe so we only iterate each unique (type, tick) once. For each unique
-        // pair, walk every selected Character and remove their KF at that position.
-        // Mirrors paste's fan-out shape: best-effort apply per Character, silently
-        // skip Characters that don't have a matching KF.
         java.util.Set<String> processed = new java.util.HashSet<>();
         KeyFrameAction[] kfa = new KeyFrameAction[0];
         for (KeyFrame markedKf : selectedKeyFrames)
@@ -2389,6 +2396,22 @@ public class TimeSheetPanel extends JPanel
             {
                 continue;
             }
+
+            if (isGlobalType(type))
+            {
+                // Globals: one removal per (type, tick) regardless of how many
+                // Objects are selected -- the central store holds a single
+                // instance per tick. Skip the per-character fan-out below.
+                KeyFrame storeKf = findGlobalKeyFrameAt(type, tick);
+                if (storeKf != null)
+                {
+                    plugin.getGlobalKeyFrames().remove(storeKf);
+                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(storeKf, null, KeyFrameCharacterActionType.REMOVE));
+                }
+                continue;
+            }
+
+            // Per-Character types: fan out across every selected Object.
             for (Character c : targets)
             {
                 KeyFrame kf = c.findKeyFrame(type, tick);
@@ -2402,6 +2425,10 @@ public class TimeSheetPanel extends JPanel
         }
 
         addKeyFrameActions(kfa);
+        // Drop the freshly-deleted keyframes from the marquee so the card
+        // collapses back to its placeholder / no-selection state instead of
+        // editing dangling references.
+        setSelectedKeyFrames(new KeyFrame[0]);
     }
 
     public void skipListener(double modifier)
