@@ -366,6 +366,18 @@ public class TimeSheetPanel extends JPanel
         KeyFrame keyFrame = selectedCharacter.findKeyFrame(type, currentTick);
         if (keyFrame == null)
         {
+            // For a brand-new CAMERA keyframe, default the spinner values to
+            // the live OSRS camera state before createKeyFrame snapshots them.
+            // Without this the keyframe is built from the card defaults
+            // (0/0/0 focal, 0 pitch/yaw) which would teleport the camera to
+            // scene origin on playback -- almost never what the user wants
+            // when they hit "+". The Update path is unaffected since it only
+            // runs for existing keyframes.
+            if (type == KeyFrameType.CAMERA)
+            {
+                attributePanel.captureLiveCameraIntoSpinners();
+            }
+
             KeyFrame kf = attributePanel.createKeyFrame(type, currentTick);
             if (kf == null)
             {

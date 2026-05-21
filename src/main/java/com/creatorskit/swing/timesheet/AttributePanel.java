@@ -317,6 +317,34 @@ public class AttributePanel extends JPanel
     }
 
     /**
+     * Loads the live OSRS free-cam state (focal X/Y/Z, pitch, yaw, zoom) into
+     * the Camera card's spinners. Used both by the Capture button and by the
+     * "+" keyframe icon when adding a NEW camera keyframe -- the user almost
+     * always wants the new keyframe to start at the current view, not the
+     * 0/0/0 defaults that would teleport the camera to scene origin. The
+     * suppress-auto-update guard prevents the spinner setValue cascade from
+     * firing fireAutoUpdate while we're populating the fields.
+     */
+    public void captureLiveCameraIntoSpinners()
+    {
+        if (client == null) return;
+        suppressAutoUpdateDepth++;
+        try
+        {
+            cameraAttributes.getFocalX().setValue(client.getCameraFocalPointX());
+            cameraAttributes.getFocalY().setValue(client.getCameraFocalPointY());
+            cameraAttributes.getFocalZ().setValue(client.getCameraFocalPointZ());
+            cameraAttributes.getPitchDeg().setValue(Math.toDegrees(client.getCameraFpPitch()));
+            cameraAttributes.getYawDeg().setValue(Math.toDegrees(client.getCameraFpYaw()));
+            cameraAttributes.getScale().setValue(client.getVarcIntValue(net.runelite.api.VarClientInt.CAMERA_ZOOM_FIXED_VIEWPORT));
+        }
+        finally
+        {
+            suppressAutoUpdateDepth--;
+        }
+    }
+
+    /**
      * Walks every component in {@code attrs}' card and attaches a "user edited"
      * listener that calls {@link #fireAutoUpdate()}. Skips {@link JButton}s
      * because their own action handlers do the right thing already (e.g. the
@@ -3220,16 +3248,7 @@ public class AttributePanel extends JPanel
         c.gridy = 5;
         c.gridwidth = 4;
         capture.setToolTipText("Snap the current OSRS free-cam state into the spinners above.");
-        capture.addActionListener(e ->
-        {
-            if (client == null) return;
-            focalX.setValue(client.getCameraFocalPointX());
-            focalY.setValue(client.getCameraFocalPointY());
-            focalZ.setValue(client.getCameraFocalPointZ());
-            pitchDeg.setValue(Math.toDegrees(client.getCameraFpPitch()));
-            yawDeg.setValue(Math.toDegrees(client.getCameraFpYaw()));
-            scale.setValue(client.getVarcIntValue(net.runelite.api.VarClientInt.CAMERA_ZOOM_FIXED_VIEWPORT));
-        });
+        capture.addActionListener(e -> captureLiveCameraIntoSpinners());
         card.add(capture, c);
 
         c.gridwidth = 1;
