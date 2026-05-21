@@ -1409,13 +1409,24 @@ public class CreatorsPanel extends PluginPanel
 
         final int stride = Math.max(1, ((Number) strideSpinner.getValue()).intValue());
 
-        // Create a destination folder so the user can manage the spawned copies
-        // as a group. Sibling of whichever panel cornerA lives in.
+        // Find or create the destination folder. Reusing an existing folder of
+        // the same name (instead of always creating a new one) means running
+        // Fill Rectangle multiple times with the same two corners appends to
+        // one folder rather than littering the tree with duplicates.
         ParentPanel parentPanel = cornerA.getParentPanel();
         ManagerTree managerTree = toolBox.getManagerPanel().getManagerTree();
         DefaultMutableTreeNode parentFolderNode = managerTree.getParentFolderNode(parentPanel, false);
         String folderName = "Fill: " + cornerA.getName() + " & " + cornerB.getName();
-        final DefaultMutableTreeNode fillFolderNode = managerTree.addFolderNode(parentFolderNode, folderName);
+        final DefaultMutableTreeNode fillFolderNode = findOrCreateChildFolder(managerTree, parentFolderNode, folderName);
+
+        // Iterative naming: each spawned copy gets "<base> (N)" where base is
+        // the source name with any existing " (M)" suffix stripped. Counter is
+        // per-source so cornerA-templated copies and cornerB-templated copies
+        // get independent (1), (2), (3) sequences.
+        final String baseA = stripTrailingNumber(cornerA.getName());
+        final String baseB = stripTrailingNumber(cornerB.getName());
+        final int[] counterA = {1};
+        final int[] counterB = {1};
 
         // Spawn copies on a background thread so the (potentially large) fill
         // doesn't freeze the EDT. createCharacter does its own clientThread
@@ -1452,8 +1463,11 @@ public class CreatorsPanel extends PluginPanel
                     // pattern is the same regardless of stride.
                     int parity = ((dx / stride) + (dy / stride)) % 2;
                     Character source = parity == 0 ? cornerA : cornerB;
+                    String base = parity == 0 ? baseA : baseB;
+                    int n = parity == 0 ? counterA[0]++ : counterB[0]++;
+                    String name = base + " (" + n + ")";
 
-                    spawnFillCopy(source, tx, ty, planeFinal, inPOHFinal, worldView, fillFolderNode, parentPanel);
+                    spawnFillCopy(source, name, tx, ty, planeFinal, inPOHFinal, worldView, fillFolderNode, parentPanel);
                     spawned++;
                 }
             }
@@ -1468,12 +1482,54 @@ public class CreatorsPanel extends PluginPanel
     }
 
     /**
+     * Find an existing direct-child folder of {@code parent} with the given
+     * {@code name}, or create one if it doesn't exist. Used by Fill Rectangle
+     * so repeated fills with the same corners append to one folder.
+     */
+    private DefaultMutableTreeNode findOrCreateChildFolder(ManagerTree managerTree, DefaultMutableTreeNode parent, String name)
+    {
+        java.util.Enumeration<javax.swing.tree.TreeNode> children = parent.children();
+        while (children.hasMoreElements())
+        {
+            DefaultMutableTreeNode child = (DefaultMutableTreeNode) children.nextElement();
+            if (child.getUserObject() instanceof com.creatorskit.swing.manager.Folder)
+            {
+                com.creatorskit.swing.manager.Folder f = (com.creatorskit.swing.manager.Folder) child.getUserObject();
+                if (name.equals(f.getName()))
+                {
+                    return child;
+                }
+            }
+        }
+        return managerTree.addFolderNode(parent, name);
+    }
+
+    /**
+     * Strip a trailing " (N)" suffix from a name so we can re-attach a fresh
+     * incrementing counter. "Foo" stays "Foo"; "Foo (3)" becomes "Foo".
+     */
+    private static String stripTrailingNumber(String name)
+    {
+        if (name == null) return "";
+        return name.replaceFirst("\\s*\\(\\d+\\)\\s*$", "");
+    }
+
+    /**
      * Duplicates {@code source} onto a target tile (POH-aware) and parents the
      * new Character under {@code fillFolderNode}. Reuses createCharacter's full
      * arg form so keyframes, render-fix state, offsets, and extraScale all
-     * carry over -- the only thing the fill overrides is the position.
+     * carry over -- the only thing the fill overrides is the position and name.
+     *
+     * <p>Both targetWorld AND targetLocal are computed per-tile so that the
+     * downstream setLocation path resolves to the right tile regardless of
+     * whether the player is currently in an instance: setLocationWorld
+     * computes a LocalPoint from getNonInstancedPoint via LocalPoint.fromWorld,
+     * but setLocationPOH reads getInstancedPoint directly. If we shared the
+     * source's getInstancedPoint across copies (the previous version), every
+     * copy landed at the same tile when MovementManager.useLocalLocations
+     * returned true -- visible as "all copies stacked in the middle".
      */
-    private void spawnFillCopy(Character source, int targetTileX, int targetTileY, int plane, boolean inPOH,
+    private void spawnFillCopy(Character source, String name, int targetTileX, int targetTileY, int plane, boolean inPOH,
                                @Nullable WorldView worldView, DefaultMutableTreeNode fillFolderNode, ParentPanel parentPanel)
     {
         WorldPoint targetWorld;
@@ -1481,14 +1537,19 @@ public class CreatorsPanel extends PluginPanel
         if (inPOH)
         {
             if (worldView == null) return;
-            // LocalPoint takes scene-units; tile-aligned center is tile*128.
             targetLocal = new LocalPoint(targetTileX * 128, targetTileY * 128, worldView);
             targetWorld = source.getNonInstancedPoint();
         }
         else
         {
             targetWorld = new WorldPoint(targetTileX, targetTileY, plane);
-            targetLocal = source.getInstancedPoint();
+            // Compute per-tile LocalPoint so setLocationPOH would also place
+            // the copy at the right spot if the player is currently inside an
+            // instance even though the character's logical context is overworld.
+            // Returns null if the target tile is outside the loaded scene --
+            // that's OK, character will simply have setInScene(false) until the
+            // scene shifts to include it.
+            targetLocal = worldView != null ? LocalPoint.fromWorld(worldView, targetWorld) : null;
         }
 
         KeyFrameType[] summary = source.getSummary();
@@ -1496,7 +1557,7 @@ public class CreatorsPanel extends PluginPanel
 
         Character copy = createCharacter(
                 parentPanel,
-                source.getName() + " (fill)",
+                name,
                 (int) source.getModelSpinner().getValue(),
                 (CustomModel) source.getComboBox().getSelectedItem(),
                 source.isCustomMode(),
