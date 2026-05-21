@@ -207,6 +207,83 @@ public class TimeSheetPanel extends JPanel
         repaint();
     }
 
+    /**
+     * Bulk-toggle every keyframe of {@code type} into / out of the marquee
+     * selection. Triggered by CTRL+click on a property label; mirrors the
+     * manager-tree CTRL multi-select model (clicking an item that's already
+     * selected deselects it; clicking an unselected item adds it).
+     *
+     * <p>Source set:
+     *   <li>Local types -- every keyframe of {@code type} on every Character
+     *       in {@link #resolveSelectionTargets()}. Honors multi-select.
+     *   <li>Global types (Camera / Fade / Shake) -- every entry in the
+     *       central {@link com.creatorskit.saves.GlobalKeyFrames} store for
+     *       that type. No Character needed.
+     *
+     * <p>Toggle decision is "all-or-nothing": if every keyframe in the source
+     * set is currently selected, the call removes them; otherwise the call
+     * adds the missing ones. This matches a user mental model where the
+     * property label is a single "group" being toggled, even though under
+     * the hood it expands to many keyframes.
+     */
+    public void toggleSelectAllOfProperty(KeyFrameType type)
+    {
+        if (type == null) return;
+
+        java.util.ArrayList<KeyFrame> matching = new java.util.ArrayList<>();
+        if (isGlobalType(type))
+        {
+            com.creatorskit.saves.GlobalKeyFrames store = plugin.getGlobalKeyFrames();
+            if (store != null)
+            {
+                KeyFrame[] arr;
+                if (type == KeyFrameType.CAMERA) arr = store.getCameraKeyFramesSafe();
+                else if (type == KeyFrameType.SCREEN_FADE) arr = store.getScreenFadeKeyFramesSafe();
+                else if (type == KeyFrameType.SCREEN_SHAKE) arr = store.getScreenShakeKeyFramesSafe();
+                else arr = new KeyFrame[0];
+                for (KeyFrame kf : arr) if (kf != null) matching.add(kf);
+            }
+        }
+        else
+        {
+            java.util.Collection<Character> targets = resolveSelectionTargets();
+            int idx = KeyFrameType.getIndex(type);
+            for (Character c : targets)
+            {
+                KeyFrame[][] frames = c.getFrames();
+                if (frames == null || idx >= frames.length) continue;
+                KeyFrame[] row = frames[idx];
+                if (row == null) continue;
+                for (KeyFrame kf : row) if (kf != null) matching.add(kf);
+            }
+        }
+
+        if (matching.isEmpty()) return;
+
+        java.util.HashSet<KeyFrame> currentSet = new java.util.HashSet<>(java.util.Arrays.asList(selectedKeyFrames));
+        boolean allAlreadyInSelection = true;
+        for (KeyFrame kf : matching)
+        {
+            if (!currentSet.contains(kf)) { allAlreadyInSelection = false; break; }
+        }
+
+        if (allAlreadyInSelection)
+        {
+            java.util.HashSet<KeyFrame> toRemove = new java.util.HashSet<>(matching);
+            java.util.ArrayList<KeyFrame> filtered = new java.util.ArrayList<>();
+            for (KeyFrame kf : selectedKeyFrames)
+            {
+                if (!toRemove.contains(kf)) filtered.add(kf);
+            }
+            setSelectedKeyFrames(filtered.toArray(new KeyFrame[0]));
+        }
+        else
+        {
+            currentSet.addAll(matching);
+            setSelectedKeyFrames(currentSet.toArray(new KeyFrame[0]));
+        }
+    }
+
     @Inject
     public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, CreatorsConfig config, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, MovementManager movementManager, com.creatorskit.selection.SelectionManager selectionManager)
     {
@@ -2421,7 +2498,31 @@ public class TimeSheetPanel extends JPanel
                 public void mousePressed(MouseEvent e)
                 {
                     super.mousePressed(e);
-                    attributePanel.switchCards(label.getText().replaceAll(LABEL_OFFSET, ""));
+                    String name = label.getText().replaceAll(LABEL_OFFSET, "");
+                    if (e.isControlDown())
+                    {
+                        // CTRL+click on a property label: bulk-toggle every
+                        // keyframe of that property across selected Characters
+                        // (or globals from the central store). Mirrors the
+                        // manager tree CTRL multi-select model -- a click on
+                        // an already-fully-selected group deselects it; on a
+                        // partly / not selected group adds the missing ones.
+                        // Also switch the card so the user lands on the
+                        // attribute panel for the property they just acted on.
+                        KeyFrameType type = null;
+                        for (KeyFrameType t : KeyFrameType.values())
+                        {
+                            if (t.getName().equals(name)) { type = t; break; }
+                        }
+                        if (type != null)
+                        {
+                            toggleSelectAllOfProperty(type);
+                            attributePanel.switchCards(name);
+                        }
+                        label.requestFocusInWindow();
+                        return;
+                    }
+                    attributePanel.switchCards(name);
                     label.requestFocusInWindow();
                 }
             });
