@@ -404,6 +404,19 @@ public interface CreatorsConfig extends Config
 	}
 
 	@ConfigItem(
+			keyName = "pasteAtCursor",
+			name = "Paste at Cursor",
+			description = "Hotkey to paste a copy of the currently-selected Character at the hovered tile. " +
+					"Hold and drag the mouse to paint a copy at every new tile crossed.",
+			section = programmer,
+			position = 2
+	)
+	default Keybind pasteAtCursorHotkey()
+	{
+		return new Keybind(KeyEvent.VK_V, KeyEvent.CTRL_DOWN_MASK);
+	}
+
+	@ConfigItem(
 			keyName = "clearSteps",
 			name = "Clear Program Steps",
 			description = "Hotkey to clear all steps from the selected object's program",

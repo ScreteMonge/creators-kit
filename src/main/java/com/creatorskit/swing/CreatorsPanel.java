@@ -1534,6 +1534,59 @@ public class CreatorsPanel extends PluginPanel
     }
 
     /**
+     * Drops a duplicate of {@code source} onto an explicit overworld tile.
+     * Public entry point for the paste-at-cursor / paint-drag hotkey -- single
+     * call sites don't need the bookkeeping (folder, counter, summary) that
+     * Fill Rectangle bundles into spawnFillCopy, but the underlying placement
+     * + arg-swap workaround is identical. Names the copy "{source} (N)" with
+     * the next available index based on what already exists so paint-drag
+     * doesn't pile up duplicate "{source} (1)" entries.
+     *
+     * <p>Lands the copy under the source's panel root (no special folder) so
+     * the user can immediately see + drag it where existing duplicates live.
+     */
+    public void pasteCharacterAtTile(Character source, int tileX, int tileY, int plane, boolean inPOH, WorldView worldView)
+    {
+        if (source == null) return;
+        String name = stripTrailingNumber(source.getName()) + " (" + nextPasteCounter(source) + ")";
+        spawnFillCopy(source, name, tileX, tileY, plane, inPOH, worldView, null, source.getParentPanel());
+    }
+
+    /**
+     * Returns the next available "(N)" index for paste-at-cursor naming, based
+     * on existing Characters whose names already match the {base} (N) pattern.
+     * Cheap linear scan -- at the scale of "a few hundred Characters" it's well
+     * under a frame's worth of work even when called every mouse-move during
+     * paint-drag.
+     */
+    private int nextPasteCounter(Character source)
+    {
+        String base = stripTrailingNumber(source.getName());
+        int max = 0;
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile("\\((\\d+)\\)$");
+        for (Character c : plugin.getCharacters())
+        {
+            String n = c.getName();
+            if (n == null) continue;
+            String stripped = stripTrailingNumber(n);
+            if (!stripped.equals(base)) continue;
+            java.util.regex.Matcher m = p.matcher(n);
+            if (m.find())
+            {
+                try
+                {
+                    int v = Integer.parseInt(m.group(1));
+                    if (v > max) max = v;
+                }
+                catch (NumberFormatException ignored)
+                {
+                }
+            }
+        }
+        return max + 1;
+    }
+
+    /**
      * Duplicates {@code source} onto a target tile (POH-aware) and parents the
      * new Character under {@code fillFolderNode}. Reuses createCharacter's full
      * arg form so keyframes, render-fix state, offsets, and extraScale all

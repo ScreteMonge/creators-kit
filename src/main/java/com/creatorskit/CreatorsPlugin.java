@@ -525,6 +525,17 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private boolean addStepKeyHeld = false;
 	private boolean scrolledDuringStepHold = false;
 	private double currentStepSpeed = 1.0;
+
+	/**
+	 * Paint-mode state for the "paste at cursor" hotkey. While {@code paintHeld}
+	 * is true the plugin's mouseMoved hook drops a duplicate of the
+	 * currently-selected Character onto each NEW tile the cursor crosses --
+	 * {@code paintedTiles} dedupes so a single tile only gets one copy per
+	 * gesture even if the user wiggles the cursor over it multiple times.
+	 * Both are reset on hotkeyReleased.
+	 */
+	private boolean paintHeld = false;
+	private final java.util.Set<net.runelite.api.coords.WorldPoint> paintedTiles = new java.util.HashSet<>();
 	private java.util.concurrent.ScheduledExecutorService setupVersionExecutor;
 	private java.util.concurrent.ScheduledFuture<?> setupVersionTask;
 
@@ -554,6 +565,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		overlayManager.add(barOverlay);
 		overlayManager.add(screenFadeOverlay);
 
+		keyManager.registerKeyListener(pasteAtCursorListener);
 		keyManager.registerKeyListener(overlayKeyListener);
 		keyManager.registerKeyListener(oculusOrbListener);
 		keyManager.registerKeyListener(orbPreset1Listener);
@@ -776,6 +788,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.unregisterKeyListener(nudgeDownListener);
 		keyManager.unregisterKeyListener(scaleUpListener);
 		keyManager.unregisterKeyListener(scaleDownListener);
+		keyManager.unregisterKeyListener(pasteAtCursorListener);
 		mouseManager.unregisterMouseWheelListener(this::mouseWheelMoved);
 		mouseManager.unregisterMouseListener(this);
 	}
@@ -1631,6 +1644,63 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 	};
 
+	/**
+	 * Paste-at-cursor + paint-drag hotkey. Single press = paste a duplicate of
+	 * the selected Character at the cursor's hovered tile. Hold + drag = paint
+	 * a duplicate at every NEW tile the cursor crosses (mouseMoved drives the
+	 * paint loop; paintedTiles dedupes so single tiles only get one copy per
+	 * gesture). Both behaviours share the same path -- press always paints the
+	 * initial tile, drag just extends it.
+	 */
+	private final HotkeyListener pasteAtCursorListener = new HotkeyListener(() -> config.pasteAtCursorHotkey())
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			paintHeld = true;
+			paintedTiles.clear();
+			paintAtCurrentHoveredTile();
+		}
+
+		@Override
+		public void hotkeyReleased()
+		{
+			paintHeld = false;
+			paintedTiles.clear();
+		}
+	};
+
+	/**
+	 * Spawns a duplicate of {@link #getSelectedCharacter()} at the currently
+	 * hovered scene tile if one exists. Called from the paste hotkey's initial
+	 * press and from mouseMoved during paint-drag. Uses the explicit tile
+	 * WorldPoint captured at call time rather than letting the placement path
+	 * re-read getSelectedSceneTile inside a deferred clientThread invoke --
+	 * that would let cursor movement between the duplicate call and the
+	 * setLocation call cause copies to land at stale tiles, which during a
+	 * fast drag would visibly lag the cursor.
+	 */
+	private void paintAtCurrentHoveredTile()
+	{
+		Character source = getSelectedCharacter();
+		if (source == null) return;
+		WorldView worldView = client.getTopLevelWorldView();
+		if (worldView == null) return;
+		net.runelite.api.Tile tile = worldView.getSelectedSceneTile();
+		if (tile == null) return;
+		LocalPoint lp = tile.getLocalLocation();
+		if (lp == null || !lp.isInScene()) return;
+		WorldPoint wp = WorldPoint.fromLocalInstance(client, lp);
+		if (wp == null) return;
+		if (!paintedTiles.add(wp))
+		{
+			// Already painted this tile during the current gesture -- skip so
+			// a wiggle inside a single tile doesn't pile up copies.
+			return;
+		}
+		creatorsPanel.pasteCharacterAtTile(source, wp.getX(), wp.getY(), wp.getPlane(), false, worldView);
+	}
+
 	private void addProgramStep()
 	{
 		creatorsPanel.getToolBox().getTimeSheetPanel().onAddMovementKeyPressed();
@@ -2069,6 +2139,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	@Override
 	public MouseEvent mouseMoved(MouseEvent e)
 	{
+		// Paint-drag dispatch: while the paste hotkey is held, every cursor
+		// move calls into paintAtCurrentHoveredTile which spawns a copy at the
+		// hovered tile (deduped per gesture). Skipped when paintHeld is false
+		// so non-paint mouse motion has zero overhead.
+		if (paintHeld)
+		{
+			paintAtCurrentHoveredTile();
+		}
 		return e;
 	}
 
