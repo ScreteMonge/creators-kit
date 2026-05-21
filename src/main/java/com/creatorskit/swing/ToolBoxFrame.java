@@ -305,7 +305,13 @@ public class ToolBoxFrame extends JFrame
         reset.addActionListener(e ->
         {
             programmer.pause();
-            timeSheetPanel.setCurrentTime(0, false);
+            // With an A-B loop set, "reset" means rewind to A (the loop's
+            // start), not to tick 0. Mirrors the resetTimelineListener
+            // hotkey path in CreatorsPlugin -- both routes share the same
+            // semantics so the menu and the hotkey can't drift apart.
+            double rewindTo = timeSheetPanel.getALoopTick() != null
+                    ? timeSheetPanel.getALoopTick() : 0.0;
+            timeSheetPanel.setCurrentTime(rewindTo, false);
         });
         reset.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_R, InputEvent.CTRL_DOWN_MASK));
         timeSheet.add(reset);

@@ -101,6 +101,14 @@ public class Programmer
                     // existed.
                     double jumpTo = a != null ? a : 0.0;
                     timeSheetPanel.setCurrentTime(jumpTo, true);
+                    // setCurrentTime(.., true) only runs updateProgramsOnTick
+                    // which is the *incremental* path and assumes a tiny step
+                    // forward. A B-to-A jump is a big SCRUB and needs the full
+                    // updatePrograms reseed -- otherwise MovementKeyFrames keep
+                    // their post-B currentStep / clientTick anchors, Animation
+                    // KFs don't restart, Spawn doesn't re-fire, etc. Symptom
+                    // the user saw: "after 1 loop it's not playing correctly".
+                    updatePrograms(jumpTo);
                     clientTickAtLastProgramTick = 0;
                 }
                 return;

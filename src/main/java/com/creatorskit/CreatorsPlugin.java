@@ -2033,7 +2033,13 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		public void hotkeyPressed()
 		{
 			ToolBoxFrame toolBox = creatorsPanel.getToolBox();
-			toolBox.getTimeSheetPanel().setCurrentTime(0, false);
+			com.creatorskit.swing.timesheet.TimeSheetPanel ts = toolBox.getTimeSheetPanel();
+			// If the user has set an A-B loop, "reset" means rewind to the
+			// loop's start, not to tick 0. A alone => rewind to A; B alone
+			// (A null) => rewind to 0 (the implicit A per the AB-loop spec);
+			// neither set => rewind to 0 (original behaviour).
+			double rewindTo = ts.getALoopTick() != null ? ts.getALoopTick() : 0.0;
+			ts.setCurrentTime(rewindTo, false);
 		}
 	};
 
