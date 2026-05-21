@@ -42,6 +42,19 @@ public interface CreatorsConfig extends Config
 	}
 
 	@ConfigItem(
+			keyName = "collapseFoldersOnLoad",
+			name = "Collapse folders on load",
+			description = "When loading a Setup file, start with every folder in the Manager Tree collapsed. " +
+					"Useful for big scenes where you'd otherwise have to manually collapse dozens of folders.",
+			section = sceneSettings,
+			position = 5
+	)
+	default boolean collapseFoldersOnLoad()
+	{
+		return false;
+	}
+
+	@ConfigItem(
 			keyName = "toggleAutoSetup",
 			name = "Enable Auto-Setup",
 			description = "Automatically loads the saved Setup from the file path below" +

@@ -477,11 +477,8 @@ public class ManagerTree extends JTree
             if (!syncingFromSelectionManager)
             {
                 ArrayList<Character> selectedChars = new ArrayList<>();
-                ArrayList<TreePath> expandedPaths = new ArrayList<>();
-                boolean addedDescendants = false;
                 for (TreePath treePath : treePaths)
                 {
-                    expandedPaths.add(treePath);
                     Object component = treePath.getLastPathComponent();
                     if (!(component instanceof DefaultMutableTreeNode))
                     {
@@ -500,25 +497,17 @@ public class ManagerTree extends JTree
                     else if (user instanceof Folder)
                     {
                         // Folder selection = select every Character recursively under it
+                        // (drives selectionManager / keyframe fan-out), but DON'T
+                        // expand the folder visually. Previously the listener also
+                        // collected every descendant TreePath and called
+                        // setSelectionPaths() which has the side effect of expanding
+                        // each path -- folder click silently exploded the tree open.
+                        // The user can still expand manually via the disclosure
+                        // triangle or right-click > Expand.
                         getObjectPanelChildren(node, selectedChars);
-                        // Visually highlight every descendant subfolder + Character node too
-                        addedDescendants |= collectDescendantPaths(node, expandedPaths);
                     }
                 }
                 selectionManager.selectAll(selectedChars);
-
-                if (addedDescendants)
-                {
-                    syncingFromSelectionManager = true;
-                    try
-                    {
-                        setSelectionPaths(expandedPaths.toArray(new TreePath[0]));
-                    }
-                    finally
-                    {
-                        syncingFromSelectionManager = false;
-                    }
-                }
             }
 
             JPanel objectHolder = toolBox.getManagerPanel().getObjectHolder();
@@ -905,6 +894,21 @@ public class ManagerTree extends JTree
         cameraLock.addActionListener(e -> plugin.setCameraLockedCharacter(character));
         popup.add(cameraLock);
 
+        popup.addSeparator();
+
+        JMenuItem deselect = new JMenuItem("Deselect");
+        deselect.setToolTipText("Clear the current selection. Useful for stepping out of multi-select without picking another Character.");
+        deselect.addActionListener(e ->
+        {
+            selectionManager.clear();
+            // Drop the tree's own selection too so the row's blue background goes
+            // away alongside the SelectionManager state. Without this the JTree
+            // would still show the previous selection highlight even though our
+            // logical selection is empty.
+            clearSelection();
+        });
+        popup.add(deselect);
+
         popup.show(this, x, y);
     }
 
@@ -1014,6 +1018,17 @@ public class ManagerTree extends JTree
         popup.add(expand);
 
         popup.show(this, x, y);
+    }
+
+    /**
+     * Collapses every Folder node under the manager / side-panel roots. Used by
+     * the load path when the user has the collapse-on-load config toggle on so
+     * big scenes don't open with the whole hierarchy exploded.
+     */
+    public void collapseAllFolders()
+    {
+        setFolderExpanded(managerNode, false);
+        setFolderExpanded(sidePanelNode, false);
     }
 
     /**

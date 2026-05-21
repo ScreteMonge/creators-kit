@@ -2510,6 +2510,19 @@ public class CreatorsPanel extends PluginPanel
                 openFolderNodeSave(version, managerTree, rootNode, folderNodeSave, customModels);
                 toolBox.repaint();
                 toolBox.revalidate();
+
+                // Post-load housekeeping. (1) Clear the selection -- after a fresh
+                // load nothing should be highlighted so the user starts from a
+                // blank slate instead of inheriting whichever Character happened
+                // to be selected before. (2) If the user has the collapse-on-load
+                // config toggle on, walk the tree and collapse every folder so a
+                // big scene doesn't open with the whole hierarchy exploded.
+                selectionManager.clear();
+                managerTree.clearSelection();
+                if (config.collapseFoldersOnLoad())
+                {
+                    managerTree.collapseAllFolders();
+                }
             }
         });
 
