@@ -21,8 +21,8 @@ import lombok.Setter;
 @Setter
 public class ScreenFadeKeyFrame extends KeyFrame
 {
-    public static final int DEFAULT_RGB = 0x18002a;   // Whisperer-purple
-    public static final int DEFAULT_PEAK_ALPHA = 220; // out of 255
+    public static final int DEFAULT_RGB = 0x000000;   // Black -- most common fade colour
+    public static final int DEFAULT_PEAK_ALPHA = 255; // Fully opaque at the peak
     /**
      * Default centre cutout. 0 = uniform full-screen fade so the local player gets
      * faded too. Bump this for the Whisperer-style "safe ring around the player"
