@@ -153,10 +153,6 @@ public class AttributeSheet extends TimeSheet
     public void drawKeyFrames(Graphics g)
     {
         java.util.List<Character> visible = getVisibleCharacters();
-        if (visible.isEmpty())
-        {
-            return;
-        }
 
         g.setColor(new Color(219, 137, 0));
 
@@ -172,11 +168,13 @@ public class AttributeSheet extends TimeSheet
             drawCharacterKeyFrames(g, character, image, imageHeight, yImageOffset, xImageOffset, zoomFactor, multi);
         }
 
-        // Phase 2: globals (Camera / Fade / Shake) live in the central
-        // GlobalKeyFrames store rather than per-Character frames[][], so the
-        // per-character loop above will skip them. Draw them once total from
-        // the central store at the global row positions (computed via
-        // displayRowIndex so collapse mode places them at the top).
+        // Globals (Camera / Fade / Shake) live in the central GlobalKeyFrames
+        // store rather than per-Character frames[][], so the per-character
+        // loop above will skip them. Draw them once total from the central
+        // store at the global row positions. Runs regardless of whether
+        // 'visible' is empty -- in no-Object-selected mode the globals are
+        // the ONLY things on the timeline, and an empty-list early-return
+        // would have hidden them.
         drawGlobalKeyFrames(g, image, imageHeight, yImageOffset, xImageOffset, zoomFactor);
     }
 
