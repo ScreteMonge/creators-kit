@@ -556,6 +556,20 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 		}
 
+		// Release the camera when we're neither playing back nor scrubbing
+		// directly onto an existing camera keyframe. Without this, dragging
+		// the seeker across the timeline holds the camera locked through
+		// every interpolated value, robbing the user of manual control. The
+		// rule: camera is driven when playing (so the sequence plays out),
+		// or when the seeker is exactly on a camera keyframe's tick (so the
+		// user can preview that frame's shot). Anywhere else = user controls.
+		boolean playing = creatorsPanel != null
+				&& creatorsPanel.getToolBox().getProgrammer().isPlaying();
+		if (!playing && !isSeekerOnCameraKeyFrame(all, currentTick))
+		{
+			return;
+		}
+
 		com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame best = null;
 		double bestStart = Double.NEGATIVE_INFINITY;
 
@@ -626,6 +640,27 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		{
 			// Camera mode flipped under us between the check and the setters; bail.
 		}
+	}
+
+	/**
+	 * Whether {@code currentTick} sits exactly on a camera keyframe's tick.
+	 * Used by the camera apply to decide whether to drive the camera while
+	 * paused/scrubbing -- only on-frame previews count; anywhere else the
+	 * camera is released so the user can pan manually. Epsilon comparison
+	 * because ticks are doubles; CK rounds to 0.1 increments but precision
+	 * drift through arithmetic still warrants a tolerance.
+	 */
+	private boolean isSeekerOnCameraKeyFrame(
+			com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame[] all, double currentTick)
+	{
+		for (com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame ck : all)
+		{
+			if (ck != null && Math.abs(ck.getTick() - currentTick) < 0.001)
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
