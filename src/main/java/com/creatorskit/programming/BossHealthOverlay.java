@@ -51,7 +51,14 @@ public class BossHealthOverlay extends Overlay
     private static final int BAR_WIDTH = 360;
     private static final int BAR_HEIGHT = 18;
     private static final int NAME_HEIGHT = 16;
-    private static final int TOP_MARGIN = 8;
+    /**
+     * Vertical offset from the top of the canvas. Set high enough to clear
+     * the area where XP orbs would normally sit in OSRS (top-right corner,
+     * roughly y=0-70). Creator's Kit doesn't render XP orbs but the user
+     * wants the bar positioned consistently with the normal OSRS layout --
+     * top-centre, below the orbs band -- so cinematic captures look at home.
+     */
+    private static final int TOP_MARGIN = 80;
     /** Outer dark border that the engine paints around the boss HUD plate. */
     private static final Color PLATE_BORDER = new Color(0, 0, 0);
     /** Inner plate fill -- matches the HpbarHud widget's dark grey backing. */
@@ -60,6 +67,12 @@ public class BossHealthOverlay extends Overlay
     private static final Color HP_GREEN = new Color(0, 146, 54);
     /** RuneLite's canonical "missing HP" red from OpponentInfoOverlay. */
     private static final Color HP_RED = new Color(102, 15, 16);
+    /** OSRS HUD-style yellow used for boss name text on the engine's
+     *  HpbarHud widget. Was white in the first cut but the reference
+     *  screenshot (The Whisperer) clearly uses the engine yellow, so the
+     *  Creator's Kit bar needed to match for cinematic captures to read as
+     *  the real interface. */
+    private static final Color NAME_YELLOW = new Color(255, 176, 0);
     /** Damage indicator fades to zero over this many game ticks (~600ms each). */
     private static final double DAMAGE_FADE_TICKS = 4.0;
 
@@ -150,7 +163,7 @@ public class BossHealthOverlay extends Overlay
         int nameY = y + nameFm.getAscent() - 2;
         graphics.setColor(Color.BLACK);
         graphics.drawString(bossName, nameX + 1, nameY + 1);
-        graphics.setColor(Color.WHITE);
+        graphics.setColor(NAME_YELLOW);
         graphics.drawString(bossName, nameX, nameY);
 
         // HP bar sits below the name strip. Red base (missing HP) -> green
@@ -194,11 +207,14 @@ public class BossHealthOverlay extends Overlay
             }
         }
 
-        // "current / max" text centred inside the HP bar. Bold + shadowed so
-        // it stays readable on either the green or red half of the bar.
+        // "current / max (pct%)" text centred inside the HP bar. Bold +
+        // shadowed so it stays readable on either the green or red half
+        // of the bar. The percentage matches the engine's HpbarHud widget
+        // (one decimal place) so cinematic captures read as the real UI.
         graphics.setFont(FontManager.getRunescapeBoldFont());
         FontMetrics fm = graphics.getFontMetrics();
-        String text = currentHp + " / " + maxHp;
+        double pct = ratio * 100.0;
+        String text = String.format("%d / %d (%.1f%%)", currentHp, maxHp, pct);
         int textW = fm.stringWidth(text);
         int textX = x + (BAR_WIDTH - textW) / 2;
         int textY = barY + (BAR_HEIGHT + fm.getAscent()) / 2 - 2;
