@@ -2990,6 +2990,16 @@ public class TimeSheetPanel extends JPanel
         // not every tile should hit. Default 1..1 matches the previous default.
         JSpinner copiesMinSpinner = new JSpinner(new SpinnerNumberModel(1, 0, 1000, 1));
         JSpinner copiesMaxSpinner = new JSpinner(new SpinnerNumberModel(1, 0, 1000, 1));
+        // Per-step copy count is an ALTERNATE mode (max > 0 enables it). When
+        // active, the planner walks step ticks across [from, to] and for each
+        // tick rolls K in [perStepMin, perStepMax] -- K distinct Characters
+        // (without replacement, clamped to byOwner.size()) each get a copy of
+        // their block anchored at that step tick. Density per step varies
+        // independently from per-Character copy count. Use case: rain that
+        // gets denser on certain beats. Both = 0 (default) preserves the
+        // existing per-Character planning behaviour completely.
+        JSpinner perStepMinSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 1000, 1));
+        JSpinner perStepMaxSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 1000, 1));
 
         JPanel panel = new JPanel(new GridLayout(0, 2, 6, 6));
         panel.add(new JLabel("From tick:"));
@@ -3004,6 +3014,10 @@ public class TimeSheetPanel extends JPanel
         panel.add(copiesMinSpinner);
         panel.add(new JLabel("Copies per Character (max):"));
         panel.add(copiesMaxSpinner);
+        panel.add(new JLabel("Copies per step (min):"));
+        panel.add(perStepMinSpinner);
+        panel.add(new JLabel("Copies per step (max, 0 = off):"));
+        panel.add(perStepMaxSpinner);
 
         int result = JOptionPane.showConfirmDialog(this, panel,
                 "Scatter " + selectedKeyFrames.length + " keyframes across " + byOwner.size() + " Characters",
@@ -3017,7 +3031,10 @@ public class TimeSheetPanel extends JPanel
         int stepMaxRaw = ((Number) stepMaxSpinner.getValue()).intValue();
         int copiesMinRaw = ((Number) copiesMinSpinner.getValue()).intValue();
         int copiesMaxRaw = ((Number) copiesMaxSpinner.getValue()).intValue();
-        if (stepMinRaw < 1 || stepMaxRaw < 1 || copiesMinRaw < 0 || copiesMaxRaw < 0) return;
+        int perStepMinRaw = ((Number) perStepMinSpinner.getValue()).intValue();
+        int perStepMaxRaw = ((Number) perStepMaxSpinner.getValue()).intValue();
+        if (stepMinRaw < 1 || stepMaxRaw < 1 || copiesMinRaw < 0 || copiesMaxRaw < 0
+                || perStepMinRaw < 0 || perStepMaxRaw < 0) return;
         if (stepMinRaw > stepMaxRaw)
         {
             JOptionPane.showMessageDialog(this,
@@ -3032,12 +3049,33 @@ public class TimeSheetPanel extends JPanel
                     "Scatter blocked", JOptionPane.WARNING_MESSAGE);
             return;
         }
+        if (perStepMinRaw > perStepMaxRaw)
+        {
+            JOptionPane.showMessageDialog(this,
+                    "Copies per step (min) must be less than or equal to Copies per step (max).",
+                    "Scatter blocked", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         final int stepMin = stepMinRaw;
         final int stepMax = stepMaxRaw;
         final int copiesMin = copiesMinRaw;
         final int copiesMax = copiesMaxRaw;
+        final int perStepMin = perStepMinRaw;
+        final int perStepMax = perStepMaxRaw;
         final double fFrom = from;
         final double fTo = to;
+
+        // Branch to the per-step planner when the user enabled it (max > 0).
+        // That mode is structurally different -- the step grid is global, K
+        // copies fire per step tick drawn from random Characters (without
+        // replacement, clamped to source count) -- so it lives in its own
+        // method instead of trying to overload the per-Character feasibility
+        // logic. Per-Character mode below is unchanged.
+        if (perStepMax > 0)
+        {
+            scatterPerStep(byOwner, fFrom, fTo, stepMin, stepMax, perStepMin, perStepMax);
+            return;
+        }
 
         // Pre-validate every Character against the WORST case of the random
         // roll: copiesMax copies at stepMax (largest step = fewest anchor
@@ -3230,6 +3268,138 @@ public class TimeSheetPanel extends JPanel
                     newSelected.add(replacement);
                 }
             }
+        }
+
+        finalizeTickTransform(kfa, newSelected.toArray(new KeyFrame[0]));
+    }
+
+    /**
+     * Per-step mode of Scatter (active when "Copies per step (max)" > 0).
+     *
+     * <p>The step grid is GLOBAL here -- one step value rolled in [stepMin,
+     * stepMax] drives every Character. At each step tick T in [from, to]:
+     *   K = roll in [perStepMin, perStepMax], clamped to the count of
+     *       Characters whose block still fits within fTo at this tick.
+     *   K distinct Characters are picked (Fisher-Yates shuffle, first K) --
+     *   each gets ONE copy of their block anchored at T.
+     *
+     * <p>"Density per beat" is the use case: K varies independently per step
+     * so some beats fire more drops than others. Same-Character overlap
+     * across step ticks IS allowed (the block at T=0 and at T=3 with
+     * duration 5 will visually overlap in [3, 5]) -- per-step mode treats
+     * that as intentional rain-density behaviour, not a planning failure.
+     * Same-tick collisions for the same Character can't happen because the
+     * within-step Character pick is without replacement.
+     *
+     * <p>Originals are removed once per Character and replaced with the
+     * planned copies in a single undo group (via finalizeTickTransform).
+     */
+    private void scatterPerStep(java.util.Map<Character, java.util.List<KeyFrame>> byOwner,
+                                double fFrom, double fTo,
+                                int stepMin, int stepMax,
+                                int perStepMin, int perStepMax)
+    {
+        // Block template: minTick (anchor for "delta from anchor" math) +
+        // duration (max - min, used for feasibility filtering at each step).
+        java.util.LinkedHashMap<Character, double[]> templates = new java.util.LinkedHashMap<>();
+        for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> entry : byOwner.entrySet())
+        {
+            double minTick = Double.POSITIVE_INFINITY;
+            double maxTick = Double.NEGATIVE_INFINITY;
+            for (KeyFrame kf : entry.getValue())
+            {
+                if (kf.getTick() < minTick) minTick = kf.getTick();
+                if (kf.getTick() > maxTick) maxTick = kf.getTick();
+            }
+            templates.put(entry.getKey(), new double[]{minTick, maxTick - minTick});
+        }
+
+        final java.util.Random rng = new java.util.Random();
+        // Roll once: global step shared by every step tick. Rolling per-step
+        // would scramble the cadence so the user couldn't tell the density
+        // variation apart from random timing.
+        int globalStep = stepMin == stepMax
+                ? stepMin
+                : stepMin + rng.nextInt(stepMax - stepMin + 1);
+
+        java.util.LinkedHashMap<Character, java.util.List<Double>> planned = new java.util.LinkedHashMap<>();
+        for (Character owner : byOwner.keySet())
+        {
+            planned.put(owner, new ArrayList<>());
+        }
+
+        java.util.List<Character> ownerList = new ArrayList<>(byOwner.keySet());
+        // Integer step counter (not double accumulation) so the final step
+        // tick lands exactly at fFrom + N*step without floating-point drift.
+        int totalSteps = (int) Math.floor((fTo - fFrom) / globalStep) + 1;
+        for (int sIdx = 0; sIdx < totalSteps; sIdx++)
+        {
+            double T = fFrom + (double) sIdx * globalStep;
+
+            // Only Characters whose block fits [T, T+dur] within [fFrom, fTo]
+            // are eligible at this tick. A Character with a 5-tick block can't
+            // be placed at T = fTo - 2 because it would spill past fTo.
+            java.util.List<Character> feasible = new ArrayList<>();
+            for (Character owner : ownerList)
+            {
+                double dur = templates.get(owner)[1];
+                if (T + dur <= fTo + 1e-9)
+                {
+                    feasible.add(owner);
+                }
+            }
+            if (feasible.isEmpty()) continue;
+
+            int K = perStepMin == perStepMax
+                    ? perStepMin
+                    : perStepMin + rng.nextInt(perStepMax - perStepMin + 1);
+            K = Math.min(K, feasible.size());
+            if (K == 0) continue;
+
+            java.util.Collections.shuffle(feasible, rng);
+            for (int i = 0; i < K; i++)
+            {
+                planned.get(feasible.get(i)).add(T);
+            }
+        }
+
+        // Commit: remove originals, add planned copies. Mirrors the structure
+        // of the per-Character commit phase so finalizeTickTransform sees a
+        // single combined undo group.
+        KeyFrameAction[] kfa = new KeyFrameAction[0];
+        java.util.List<KeyFrame> newSelected = new ArrayList<>();
+        for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> entry : byOwner.entrySet())
+        {
+            Character owner = entry.getKey();
+            java.util.List<KeyFrame> originalBlock = entry.getValue();
+            double blockMin = templates.get(owner)[0];
+
+            for (KeyFrame kf : originalBlock)
+            {
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(kf, owner, KeyFrameCharacterActionType.REMOVE));
+                owner.removeKeyFrame(kf);
+            }
+
+            for (double anchor : planned.get(owner))
+            {
+                double delta = anchor - blockMin;
+                for (KeyFrame kf : originalBlock)
+                {
+                    double newTick = round(kf.getTick() + delta);
+                    KeyFrame replacement = KeyFrame.createCopy(kf, newTick);
+                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replacement, owner, KeyFrameCharacterActionType.ADD));
+                    owner.addKeyFrame(replacement, currentTime);
+                    newSelected.add(replacement);
+                }
+            }
+        }
+
+        if (kfa.length == 0)
+        {
+            JOptionPane.showMessageDialog(this,
+                    "No copies were placed. Every step tick rolled K=0 or had no feasible Characters -- try widening the range or raising 'Copies per step (max)'.",
+                    "Scatter", JOptionPane.INFORMATION_MESSAGE);
+            return;
         }
 
         finalizeTickTransform(kfa, newSelected.toArray(new KeyFrame[0]));
