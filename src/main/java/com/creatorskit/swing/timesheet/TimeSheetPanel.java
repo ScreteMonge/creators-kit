@@ -2161,12 +2161,26 @@ public class TimeSheetPanel extends JPanel
 
     public void onSelectAllPressed()
     {
-        if (selectedCharacter == null)
+        java.util.Collection<Character> targets = resolveSelectionTargets();
+
+        KeyFrame[] all = new KeyFrame[0];
+        for (Character c : targets)
         {
-            return;
+            all = ArrayUtils.addAll(all, c.getAllKeyFrames());
         }
 
-        setSelectedKeyFrames(selectedCharacter.getAllKeyFrames());
+        // Globals live in the central store and aren't reachable via
+        // Character.getAllKeyFrames (their per-Character frames[] slots are
+        // null post-Phase-2). Append them so CTRL+A picks them up too.
+        com.creatorskit.saves.GlobalKeyFrames store = plugin.getGlobalKeyFrames();
+        if (store != null)
+        {
+            all = ArrayUtils.addAll(all, store.getCameraKeyFramesSafe());
+            all = ArrayUtils.addAll(all, store.getScreenFadeKeyFramesSafe());
+            all = ArrayUtils.addAll(all, store.getScreenShakeKeyFramesSafe());
+        }
+
+        setSelectedKeyFrames(all);
     }
 
     public void onDeleteKeyPressed()
