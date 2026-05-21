@@ -1348,22 +1348,25 @@ public class CreatorsPanel extends PluginPanel
         }
 
         boolean inPOH = cornerA.isInPOH();
-        int plane = cornerA.getInstancedPlane();
-
-        // DIAG: log both corners' raw positions so we can see the input state
-        // when stacking happens. Remove after confirming the cause.
+        // Plane source depends on the placement context:
+        //   - POH/instance characters: instancedPlane is set by setLocationPOH.
+        //   - Overworld characters: instancedPlane stays at the constructor
+        //     default (-1) because setLocationWorld never writes it. The real
+        //     plane lives on nonInstancedPoint.getPlane(). Using -1 here would
+        //     produce new WorldPoint(tx, ty, -1) for every copy, which then
+        //     fails LocalPoint.fromWorld's "wv.plane != world.plane" guard --
+        //     fromWorld returns null, setLocationWorld can't position the
+        //     character, and the engine renders at a fallback (visible as
+        //     every copy stacked on the same wrong tile).
+        int plane;
+        if (inPOH)
         {
-            LocalPoint lpA = cornerA.getInstancedPoint();
-            LocalPoint lpB = cornerB.getInstancedPoint();
-            WorldPoint wpA = cornerA.getNonInstancedPoint();
-            WorldPoint wpB = cornerB.getNonInstancedPoint();
-            System.out.println("[FillRect.corners] inPOH=" + inPOH + " plane=" + plane);
-            System.out.println("  cornerA name=" + cornerA.getName()
-                    + " lp=" + (lpA != null ? "(x=" + lpA.getX() + ",y=" + lpA.getY() + ",sx=" + lpA.getSceneX() + ",sy=" + lpA.getSceneY() + ")" : "null")
-                    + " wp=" + (wpA != null ? "(" + wpA.getX() + "," + wpA.getY() + ",p" + wpA.getPlane() + ")" : "null"));
-            System.out.println("  cornerB name=" + cornerB.getName()
-                    + " lp=" + (lpB != null ? "(x=" + lpB.getX() + ",y=" + lpB.getY() + ",sx=" + lpB.getSceneX() + ",sy=" + lpB.getSceneY() + ")" : "null")
-                    + " wp=" + (wpB != null ? "(" + wpB.getX() + "," + wpB.getY() + ",p" + wpB.getPlane() + ")" : "null"));
+            plane = cornerA.getInstancedPlane();
+        }
+        else
+        {
+            WorldPoint wpForPlane = cornerA.getNonInstancedPoint();
+            plane = wpForPlane != null ? wpForPlane.getPlane() : 0;
         }
 
         // Pull tile coordinates from whichever point applies for this context.
@@ -1435,14 +1438,16 @@ public class CreatorsPanel extends PluginPanel
         String folderName = "Fill: " + cornerA.getName() + " & " + cornerB.getName();
         final DefaultMutableTreeNode fillFolderNode = findOrCreateChildFolder(managerTree, parentFolderNode, folderName);
 
-        // Iterative naming: each spawned copy gets "<base> (N)" where base is
-        // the source name with any existing " (M)" suffix stripped. Counter is
-        // per-source so cornerA-templated copies and cornerB-templated copies
-        // get independent (1), (2), (3) sequences.
-        final String baseA = stripTrailingNumber(cornerA.getName());
-        final String baseB = stripTrailingNumber(cornerB.getName());
-        final int[] counterA = {1};
-        final int[] counterB = {1};
+        // Iterative naming: single global counter so copies get strictly
+        // sequential names regardless of which corner templated them. Earlier
+        // attempt used per-source counters but when both corners shared a base
+        // name (very common -- duplicating a Character via the side-panel
+        // button keeps the same stem) the two counters produced duplicate
+        // names like "Foo (1)", "Foo (1)" instead of iterating. Use cornerA's
+        // stripped name as the base (the user can rename later if cornerB had
+        // a meaningfully different label).
+        final String baseName = stripTrailingNumber(cornerA.getName());
+        final int[] globalCounter = {1};
 
         // Spawn copies on a background thread so the (potentially large) fill
         // doesn't freeze the EDT. createCharacter does its own clientThread
@@ -1479,9 +1484,7 @@ public class CreatorsPanel extends PluginPanel
                     // pattern is the same regardless of stride.
                     int parity = ((dx / stride) + (dy / stride)) % 2;
                     Character source = parity == 0 ? cornerA : cornerB;
-                    String base = parity == 0 ? baseA : baseB;
-                    int n = parity == 0 ? counterA[0]++ : counterB[0]++;
-                    String name = base + " (" + n + ")";
+                    String name = baseName + " (" + (globalCounter[0]++) + ")";
 
                     spawnFillCopy(source, name, tx, ty, planeFinal, inPOHFinal, worldView, fillFolderNode, parentPanel);
                     spawned++;
@@ -1567,19 +1570,6 @@ public class CreatorsPanel extends PluginPanel
             // scene shifts to include it.
             targetLocal = worldView != null ? LocalPoint.fromWorld(worldView, targetWorld) : null;
         }
-
-        // DIAG: trace what positions we're computing per copy and what the
-        // resulting Character ends up reporting after setupRLObject runs.
-        // Tells us whether the stacking is in our position math (computed
-        // targetLocal/targetWorld identical), in the engine's instance
-        // template mapping (computed unique but resolved to same scene tile),
-        // or in the character's stored position after setLocation runs.
-        // Remove after we confirm the cause.
-        System.out.println("[FillRect.spawn] name=" + name
-                + " tx=" + targetTileX + " ty=" + targetTileY
-                + " inPOH=" + inPOH + " plane=" + plane
-                + " targetWorld=" + (targetWorld != null ? "(" + targetWorld.getX() + "," + targetWorld.getY() + ",p" + targetWorld.getPlane() + ")" : "null")
-                + " targetLocal=" + (targetLocal != null ? "(x=" + targetLocal.getX() + ",y=" + targetLocal.getY() + ",sx=" + targetLocal.getSceneX() + ",sy=" + targetLocal.getSceneY() + ")" : "null"));
 
         KeyFrameType[] summary = source.getSummary();
         KeyFrameType[] summaryCopy = summary == null ? null : new KeyFrameType[]{summary[0], summary[1], summary[2]};
