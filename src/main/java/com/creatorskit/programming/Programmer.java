@@ -77,6 +77,11 @@ public class Programmer
                 clientTickAtLastProgramTick = 0;
                 incrementSubTime();
             }
+            // Stamp the wall-clock for sub-ClientTick interpolation in
+            // getSmoothedCurrentTime. Without this stamp, frames between
+            // ClientTicks all get the same smoothed value (~16 of them at
+            // 60fps) and the camera apply stutters.
+            lastClientTickRealtimeMs = System.currentTimeMillis();
 
             updateCharacter3D();
             if (clientTickAtLastProgramTick == 0 && triggerPause)
@@ -987,12 +992,22 @@ public class Programmer
     }
 
     /**
-     * Sub-tick-precision timeline time for renderers that need to update
-     * faster than the 0.1-per-3-client-ticks playback granularity. While
-     * playing this adds the in-progress fraction of the next 0.1 step to
-     * {@code currentTime} so per-{@link ClientTick} effects (e.g. the camera
-     * keyframe pump) advance at 50 Hz instead of stuttering every 60 ms.
-     * While paused / scrubbing, returns the raw {@code currentTime}.
+     * Wall-clock timestamp of the most recent {@link #onClientTick} during play.
+     * Used by {@link #getSmoothedCurrentTime} to interpolate between
+     * ClientTicks at millisecond precision -- without this the smoothed time
+     * has only 50Hz granularity, so the camera-keyframe apply (fired per
+     * BeforeRender, 60Hz+) sees the same value for ~16 frames in a row and
+     * stutters visibly. Tracking wall-clock ms gets us continuous motion.
+     */
+    private long lastClientTickRealtimeMs = 0L;
+
+    /**
+     * Sub-tick-precision timeline time at millisecond resolution. Adds the
+     * elapsed wall-clock fraction of the current ClientTick window on top of
+     * the regular per-ClientTick offset, so per-frame consumers (camera
+     * keyframe apply at BeforeRender) get a unique value per frame instead
+     * of one shared value across all the frames that fall inside the same
+     * 20ms ClientTick gap. Pause / scrub return the raw timeline tick.
      */
     public double getSmoothedCurrentTime()
     {
@@ -1001,11 +1016,21 @@ public class Programmer
         {
             return base;
         }
-        // clientTickAtLastProgramTick is the count of client ticks since the
-        // last 0.1 advance (0..2). One client tick = CLIENT_TICK_LENGTH ms of a
-        // game tick, so its contribution in game-tick units is just the ratio.
-        return base + clientTickAtLastProgramTick
+        // Per-ClientTick component: 0, 1/30, 2/30 within the current 60ms /
+        // 0.1-game-tick window.
+        double clientTickComponent = clientTickAtLastProgramTick
                 * Constants.CLIENT_TICK_LENGTH / (double) Constants.GAME_TICK_LENGTH;
+        // Sub-ClientTick component: wall-clock ms since the last ClientTick,
+        // expressed in timeline-tick units. 1 ms = 1 / GAME_TICK_LENGTH game
+        // ticks (because one game-tick window of timeline time spans 600 ms
+        // of real time at 1x playback).
+        long now = System.currentTimeMillis();
+        long elapsed = lastClientTickRealtimeMs == 0L ? 0L : Math.max(0L, now - lastClientTickRealtimeMs);
+        // Cap at CLIENT_TICK_LENGTH so a long pause / slow tick doesn't let
+        // the smoothed time overshoot the next ClientTick's actual advance.
+        elapsed = Math.min(elapsed, Constants.CLIENT_TICK_LENGTH);
+        double subClientTickComponent = elapsed / (double) Constants.GAME_TICK_LENGTH;
+        return base + clientTickComponent + subClientTickComponent;
     }
 
     public void togglePlay()
@@ -1045,6 +1070,9 @@ public class Programmer
     {
         triggerPause = false;
         playing = false;
+        // Reset the wall-clock stamp so a subsequent play doesn't add stale
+        // pause-duration into the smoothed-time interpolation.
+        lastClientTickRealtimeMs = 0L;
         ArrayList<Character> characters = plugin.getCharacters();
         for (int i = 0; i < characters.size(); i++)
         {
