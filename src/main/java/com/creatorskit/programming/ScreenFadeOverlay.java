@@ -1,8 +1,6 @@
 package com.creatorskit.programming;
 
-import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import com.creatorskit.swing.timesheet.keyframe.ScreenFadeKeyFrame;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -21,7 +19,6 @@ import java.awt.Paint;
 import java.awt.RadialGradientPaint;
 import java.awt.Rectangle;
 import java.awt.geom.Point2D;
-import java.util.ArrayList;
 
 /**
  * Whisperer / Blackstone-Fragment style global fade -- fullscreen tint with a
@@ -154,17 +151,18 @@ public class ScreenFadeOverlay extends Overlay
     /**
      * Returns the most-recently-started fade keyframe that's currently within its
      * fade-in / hold / fade-out envelope. Returns null if no fade is active.
+     * Phase 2: reads from the central GlobalKeyFrames store instead of walking
+     * every Character -- globals no longer require a per-Character owner.
      */
     private ScreenFadeKeyFrame findActiveFade(double currentTick)
     {
         ScreenFadeKeyFrame best = null;
         double bestStart = Double.NEGATIVE_INFINITY;
 
-        ArrayList<Character> characters = plugin.getCharacters();
-        for (int i = 0; i < characters.size(); i++)
+        ScreenFadeKeyFrame[] all = plugin.getGlobalKeyFrames().getScreenFadeKeyFramesSafe();
+        for (int i = 0; i < all.length; i++)
         {
-            Character character = characters.get(i);
-            ScreenFadeKeyFrame kf = (ScreenFadeKeyFrame) character.getCurrentKeyFrame(KeyFrameType.SCREEN_FADE);
+            ScreenFadeKeyFrame kf = all[i];
             if (kf == null)
             {
                 continue;

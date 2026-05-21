@@ -416,8 +416,46 @@ public class Character
         keyFrame.setStepClientTick(stepCTick);
     }
 
+    /**
+     * Static handle to the central GlobalKeyFrames store, injected by the
+     * plugin at boot via {@link #setGlobalKeyFramesStore}. Phase 2: the three
+     * "global" keyframe types (Camera / Screen Fade / Screen Shake) no longer
+     * live in per-Character {@link #frames} -- {@link #getKeyFrames} and
+     * {@link #setKeyFrames} transparently delegate them to this store so every
+     * existing code path (find/add/remove keyframe) keeps working while reads
+     * and writes hit one canonical location.
+     *
+     * <p>Static rather than instance-level because every Character shares the
+     * same global store anyway; injecting it through every Character
+     * constructor would require touching every {@code new Character(...)}
+     * callsite for no behavioural gain.
+     */
+    private static com.creatorskit.saves.GlobalKeyFrames globalKeyFramesStore;
+
+    public static void setGlobalKeyFramesStore(com.creatorskit.saves.GlobalKeyFrames store)
+    {
+        globalKeyFramesStore = store;
+    }
+
+    private static boolean isGlobalType(KeyFrameType type)
+    {
+        return type == KeyFrameType.CAMERA
+                || type == KeyFrameType.SCREEN_FADE
+                || type == KeyFrameType.SCREEN_SHAKE;
+    }
+
     public KeyFrame[] getKeyFrames(KeyFrameType type)
     {
+        if (globalKeyFramesStore != null && isGlobalType(type))
+        {
+            switch (type)
+            {
+                case CAMERA:       return globalKeyFramesStore.getCameraKeyFramesSafe();
+                case SCREEN_FADE:  return globalKeyFramesStore.getScreenFadeKeyFramesSafe();
+                case SCREEN_SHAKE: return globalKeyFramesStore.getScreenShakeKeyFramesSafe();
+                default:           break;
+            }
+        }
         return frames[KeyFrameType.getIndex(type)];
     }
 
@@ -434,7 +472,52 @@ public class Character
 
     public void setKeyFrames(KeyFrame[] keyFrames, KeyFrameType type)
     {
+        if (globalKeyFramesStore != null && isGlobalType(type))
+        {
+            // Cast is safe because Character.addKeyFrame only builds typed arrays
+            // for one type at a time -- the array's element type matches `type`.
+            switch (type)
+            {
+                case CAMERA:
+                    globalKeyFramesStore.setCameraKeyFrames(
+                            toTypedArray(keyFrames, com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame.class));
+                    return;
+                case SCREEN_FADE:
+                    globalKeyFramesStore.setScreenFadeKeyFrames(
+                            toTypedArray(keyFrames, com.creatorskit.swing.timesheet.keyframe.ScreenFadeKeyFrame.class));
+                    return;
+                case SCREEN_SHAKE:
+                    globalKeyFramesStore.setScreenShakeKeyFrames(
+                            toTypedArray(keyFrames, com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame.class));
+                    return;
+                default: break;
+            }
+        }
         frames[KeyFrameType.getIndex(type)] = keyFrames;
+    }
+
+    /**
+     * Copies a generic {@code KeyFrame[]} into a typed array of {@code T[]}.
+     * The existing addKeyFrame path manipulates the array as {@code KeyFrame[]}
+     * (uses ArrayUtils.insert / removeElement), so by the time we forward to
+     * the typed setter we have a {@code KeyFrame[]} whose elements are all of
+     * the right concrete subtype. Direct cast would ClassCast at runtime
+     * (Java arrays are reified by element type); copy element-by-element
+     * instead.
+     */
+    @SuppressWarnings("unchecked")
+    private static <T extends KeyFrame> T[] toTypedArray(KeyFrame[] src, Class<T> elementType)
+    {
+        if (src == null)
+        {
+            return (T[]) java.lang.reflect.Array.newInstance(elementType, 0);
+        }
+        T[] out = (T[]) java.lang.reflect.Array.newInstance(elementType, src.length);
+        for (int i = 0; i < src.length; i++)
+        {
+            out[i] = (T) src[i];
+        }
+        return out;
     }
 
     /**

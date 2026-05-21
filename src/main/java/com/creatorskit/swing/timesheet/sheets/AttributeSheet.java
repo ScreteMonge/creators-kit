@@ -5,6 +5,7 @@ import com.creatorskit.CreatorsConfig;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.AttributePanel;
+import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -166,6 +167,96 @@ public class AttributeSheet extends TimeSheet
         for (Character character : visible)
         {
             drawCharacterKeyFrames(g, character, image, imageHeight, yImageOffset, xImageOffset, zoomFactor, multi);
+        }
+
+        // Phase 2: globals (Camera / Fade / Shake) live in the central
+        // GlobalKeyFrames store rather than per-Character frames[][], so the
+        // per-character loop above will skip them. Draw them once total from
+        // the central store at the global row positions (computed via
+        // displayRowIndex so collapse mode places them at the top).
+        drawGlobalKeyFrames(g, image, imageHeight, yImageOffset, xImageOffset, zoomFactor);
+    }
+
+    private void drawGlobalKeyFrames(Graphics g, BufferedImage image, int imageHeight, int yImageOffset, int xImageOffset, double zoomFactor)
+    {
+        TimeSheetPanel ts = getTimeSheetPanel();
+        if (ts == null || ts.getPlugin() == null)
+        {
+            return;
+        }
+        com.creatorskit.saves.GlobalKeyFrames store = ts.getPlugin().getGlobalKeyFrames();
+        if (store == null)
+        {
+            return;
+        }
+        drawGlobalRow(g, store.getCameraKeyFramesSafe(),
+                KeyFrameType.CAMERA, image, imageHeight, yImageOffset, xImageOffset, zoomFactor);
+        drawGlobalRow(g, store.getScreenFadeKeyFramesSafe(),
+                KeyFrameType.SCREEN_FADE, image, imageHeight, yImageOffset, xImageOffset, zoomFactor);
+        drawGlobalRow(g, store.getScreenShakeKeyFramesSafe(),
+                KeyFrameType.SCREEN_SHAKE, image, imageHeight, yImageOffset, xImageOffset, zoomFactor);
+    }
+
+    private void drawGlobalRow(Graphics g, KeyFrame[] keyFrames, KeyFrameType type, BufferedImage image, int imageHeight, int yImageOffset, int xImageOffset, double zoomFactor)
+    {
+        if (keyFrames == null || keyFrames.length == 0)
+        {
+            return;
+        }
+        int displayRow = displayRowIndex(type);
+        if (displayRow < 0)
+        {
+            return;
+        }
+
+        for (int e = 0; e < keyFrames.length; e++)
+        {
+            KeyFrame keyFrame = keyFrames[e];
+            BufferedImage endImage = image;
+            KeyFrame[] selectedKeyframes = getTimeSheetPanel().getSelectedKeyFrames();
+            if (Arrays.stream(selectedKeyframes).anyMatch(s -> s == keyFrame))
+            {
+                endImage = getKeyframeSelected();
+            }
+
+            int x = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor);
+            int y = rowHeightOffset + rowHeight + rowHeight * displayRow - getVScroll() - yImageOffset;
+
+            // Duration tails for the global types so the bar shows how long the
+            // effect lasts (matches drawCharacterKeyFrames' behaviour for the
+            // same types pre-Phase-2).
+            switch (type)
+            {
+                case SCREEN_FADE:
+                    ScreenFadeKeyFrame sfkf = (ScreenFadeKeyFrame) keyFrame;
+                    drawTail(g, e, keyFrames, sfkf.totalDurationTicks(), zoomFactor, sfkf.getTick(), x, y, imageHeight);
+                    break;
+                case SCREEN_SHAKE:
+                    ScreenShakeKeyFrame sskf = (ScreenShakeKeyFrame) keyFrame;
+                    drawTail(g, e, keyFrames, sskf.getDurationTicks(), zoomFactor, sskf.getTick(), x, y, imageHeight);
+                    break;
+                case CAMERA:
+                    CameraKeyFrame ckf = (CameraKeyFrame) keyFrame;
+                    drawTail(g, e, keyFrames, ckf.getDurationTicks(), zoomFactor, ckf.getTick(), x, y, imageHeight);
+                    break;
+                default: break;
+            }
+
+            // Pulsing-alpha for selected globals matches drawCharacterKeyFrames
+            // for per-character keyframes -- selection cue is the same in both.
+            if (endImage == getKeyframeSelected() && g instanceof Graphics2D)
+            {
+                Graphics2D g2 = (Graphics2D) g;
+                java.awt.Composite prevComposite = g2.getComposite();
+                g2.setComposite(java.awt.AlphaComposite.getInstance(
+                        java.awt.AlphaComposite.SRC_OVER, pulseAlpha()));
+                g2.drawImage(endImage, x - xImageOffset, y, null);
+                g2.setComposite(prevComposite);
+            }
+            else
+            {
+                g.drawImage(endImage, x - xImageOffset, y, null);
+            }
         }
     }
 
@@ -512,16 +603,25 @@ public class AttributeSheet extends TimeSheet
     @Override
     public KeyFrame[] getKeyFrameClicked(Point point)
     {
+        BufferedImage image = getKeyframeImage();
+        int yImageOffset = (image.getHeight() - rowHeight) / 2;
+        int xImageOffset = image.getWidth() / 2;
+        double zoomFactor = this.getWidth() / getZoom();
+
+        // Phase 2: hit-test the global keyframes from the central store first
+        // so they're clickable even when no Character is visible. Globals don't
+        // live in per-Character frames anymore.
+        KeyFrame globalHit = hitTestGlobalRows(point, image, xImageOffset, yImageOffset, zoomFactor);
+        if (globalHit != null)
+        {
+            return new KeyFrame[]{globalHit};
+        }
+
         java.util.List<Character> visible = getVisibleCharacters();
         if (visible.isEmpty())
         {
             return null;
         }
-
-        BufferedImage image = getKeyframeImage();
-        int yImageOffset = (image.getHeight() - rowHeight) / 2;
-        int xImageOffset = image.getWidth() / 2;
-        double zoomFactor = this.getWidth() / getZoom();
 
         for (Character c : visible)
         {
@@ -566,24 +666,87 @@ public class AttributeSheet extends TimeSheet
         return null;
     }
 
+    /**
+     * Hit-tests {@code point} against the three global-row arrays in the
+     * central GlobalKeyFrames store. Used by every click/drag handler in this
+     * sheet so global keyframes are selectable and draggable even when no
+     * Character is selected. Returns the first keyframe whose icon rect
+     * contains {@code point}, or null if none.
+     */
+    private KeyFrame hitTestGlobalRows(Point point, BufferedImage image, int xImageOffset, int yImageOffset, double zoomFactor)
+    {
+        TimeSheetPanel ts = getTimeSheetPanel();
+        if (ts == null || ts.getPlugin() == null)
+        {
+            return null;
+        }
+        com.creatorskit.saves.GlobalKeyFrames store = ts.getPlugin().getGlobalKeyFrames();
+        if (store == null)
+        {
+            return null;
+        }
+        KeyFrame hit = hitTestGlobalRow(point, image, xImageOffset, yImageOffset, zoomFactor,
+                store.getCameraKeyFramesSafe(), KeyFrameType.CAMERA);
+        if (hit != null) return hit;
+        hit = hitTestGlobalRow(point, image, xImageOffset, yImageOffset, zoomFactor,
+                store.getScreenFadeKeyFramesSafe(), KeyFrameType.SCREEN_FADE);
+        if (hit != null) return hit;
+        return hitTestGlobalRow(point, image, xImageOffset, yImageOffset, zoomFactor,
+                store.getScreenShakeKeyFramesSafe(), KeyFrameType.SCREEN_SHAKE);
+    }
+
+    private KeyFrame hitTestGlobalRow(Point point, BufferedImage image, int xImageOffset, int yImageOffset, double zoomFactor, KeyFrame[] keyFrames, KeyFrameType type)
+    {
+        if (keyFrames == null || keyFrames.length == 0)
+        {
+            return null;
+        }
+        int displayRow = displayRowIndex(type);
+        if (displayRow < 0)
+        {
+            return null;
+        }
+        int y1 = rowHeightOffset + rowHeight + rowHeight * displayRow - getVScroll() - yImageOffset;
+        int y2 = y1 + image.getHeight();
+        if (point.getY() < y1 || point.getY() > y2)
+        {
+            return null;
+        }
+        for (KeyFrame keyFrame : keyFrames)
+        {
+            int x1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
+            int x2 = x1 + image.getWidth();
+            if (point.getX() >= x1 && point.getX() <= x2)
+            {
+                return keyFrame;
+            }
+        }
+        return null;
+    }
+
     @Override
     public void updateSelectedKeyFrameOnRelease(Point point, boolean shiftKey)
     {
-        java.util.List<Character> visible = getVisibleCharacters();
-        if (visible.isEmpty())
-        {
-            return;
-        }
-
         BufferedImage image = getKeyframeImage();
         int yImageOffset = (image.getHeight() - rowHeight) / 2;
         int xImageOffset = image.getWidth() / 2;
         double zoomFactor = this.getWidth() / getZoom();
 
-        KeyFrame foundKeyFrame = null;
+        // Phase 2: globals first -- they're outside the per-Character frames.
+        KeyFrame foundKeyFrame = hitTestGlobalRows(point, image, xImageOffset, yImageOffset, zoomFactor);
+
+        java.util.List<Character> visible = getVisibleCharacters();
+        if (foundKeyFrame == null && visible.isEmpty())
+        {
+            // Nothing global hit and no character to scan -- still want to
+            // clear the marquee on a non-shift miss, so fall through to the
+            // post-loop selection update rather than early-returning.
+        }
+
         outer:
         for (Character c : visible)
         {
+            if (foundKeyFrame != null) break;
             KeyFrame[][] frames = c.getFrames();
             if (frames == null)
             {
@@ -655,10 +818,8 @@ public class AttributeSheet extends TimeSheet
     public void checkRectangleForKeyFrames(Point point, boolean shiftKey)
     {
         java.util.List<Character> visible = getVisibleCharacters();
-        if (visible.isEmpty())
-        {
-            return;
-        }
+        // Allow rect-select even with no visible characters -- globals are
+        // selectable on their own (the central store doesn't need a Character).
 
         if (!isAllowRectangleSelect())
         {
@@ -793,6 +954,66 @@ public class AttributeSheet extends TimeSheet
             }
         }
 
+        // Phase 2: also rect-select globals from the central store. Same
+        // dedupe + rect-intersect logic as the per-character loop above.
+        foundKeyFrames = addRectangleHitGlobals(rectangle, image, xImageOffset, yImageOffset, zoomFactor, foundKeyFrames);
+
         setSelectedKeyFrames(foundKeyFrames);
+    }
+
+    private KeyFrame[] addRectangleHitGlobals(Rectangle2D rectangle, BufferedImage image, int xImageOffset, int yImageOffset, double zoomFactor, KeyFrame[] foundKeyFrames)
+    {
+        TimeSheetPanel ts = getTimeSheetPanel();
+        if (ts == null || ts.getPlugin() == null)
+        {
+            return foundKeyFrames;
+        }
+        com.creatorskit.saves.GlobalKeyFrames store = ts.getPlugin().getGlobalKeyFrames();
+        if (store == null)
+        {
+            return foundKeyFrames;
+        }
+        foundKeyFrames = addRectangleHitGlobalRow(rectangle, image, xImageOffset, yImageOffset, zoomFactor,
+                store.getCameraKeyFramesSafe(), KeyFrameType.CAMERA, foundKeyFrames);
+        foundKeyFrames = addRectangleHitGlobalRow(rectangle, image, xImageOffset, yImageOffset, zoomFactor,
+                store.getScreenFadeKeyFramesSafe(), KeyFrameType.SCREEN_FADE, foundKeyFrames);
+        foundKeyFrames = addRectangleHitGlobalRow(rectangle, image, xImageOffset, yImageOffset, zoomFactor,
+                store.getScreenShakeKeyFramesSafe(), KeyFrameType.SCREEN_SHAKE, foundKeyFrames);
+        return foundKeyFrames;
+    }
+
+    private KeyFrame[] addRectangleHitGlobalRow(Rectangle2D rectangle, BufferedImage image, int xImageOffset, int yImageOffset, double zoomFactor, KeyFrame[] keyFrames, KeyFrameType type, KeyFrame[] foundKeyFrames)
+    {
+        if (keyFrames == null || keyFrames.length == 0)
+        {
+            return foundKeyFrames;
+        }
+        int displayRow = displayRowIndex(type);
+        if (displayRow < 0)
+        {
+            return foundKeyFrames;
+        }
+        int ky1 = rowHeightOffset + rowHeight + rowHeight * displayRow - getVScroll() - yImageOffset;
+        for (KeyFrame keyFrame : keyFrames)
+        {
+            boolean alreadyContains = false;
+            for (KeyFrame kf : foundKeyFrames)
+            {
+                if (keyFrame == kf)
+                {
+                    alreadyContains = true;
+                    break;
+                }
+            }
+            if (alreadyContains) continue;
+
+            int kx1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
+            Rectangle2D frameRect = new Rectangle(kx1, ky1, image.getWidth(), image.getHeight());
+            if (rectangle.intersects(frameRect))
+            {
+                foundKeyFrames = ArrayUtils.add(foundKeyFrames, keyFrame);
+            }
+        }
+        return foundKeyFrames;
     }
 }

@@ -387,7 +387,13 @@ public class TimeSheetPanel extends JPanel
         // one's keyframe of the same type at the seeker tick. The primary's
         // removal happens through the same loop so the action history records
         // every removal as one batched undo step.
+        //
+        // Phase 2: globals live in a single central store, so the per-Character
+        // findKeyFrame call returns the same instance for every target. Process
+        // the primary only and skip the rest -- otherwise we'd file N redundant
+        // remove actions for the same global keyframe.
         java.util.Collection<Character> targets = resolveSelectionTargets();
+        boolean globalType = isGlobalType(type);
         KeyFrameAction[] kfa = new KeyFrameAction[0];
         for (Character c : targets)
         {
@@ -398,6 +404,13 @@ public class TimeSheetPanel extends JPanel
             }
             removeKeyFrame(c, kf);
             kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(kf, c, KeyFrameCharacterActionType.REMOVE));
+            if (globalType)
+            {
+                // One central-store removal is enough -- every other selected
+                // Character would see the same (already-removed) keyframe and
+                // file a redundant action.
+                break;
+            }
         }
         addKeyFrameActions(kfa);
     }
@@ -442,6 +455,13 @@ public class TimeSheetPanel extends JPanel
             boolean isPrimary = (c == selectedCharacter);
             for (KeyFrame template : keyFrames)
             {
+                // Phase 2: global keyframes live in a single central store --
+                // skip every non-primary Character so we don't end up writing
+                // N copies of the same camera/fade/shake at the same tick.
+                if (isGlobalType(template.getKeyFrameType()) && !isPrimary)
+                {
+                    continue;
+                }
                 KeyFrame perChar = isPrimary ? template : KeyFrame.createCopy(template, template.getTick());
                 kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(perChar, c, KeyFrameCharacterActionType.ADD));
 
@@ -454,6 +474,13 @@ public class TimeSheetPanel extends JPanel
         }
 
         addKeyFrameActions(kfa);
+    }
+
+    private static boolean isGlobalType(KeyFrameType type)
+    {
+        return type == KeyFrameType.CAMERA
+                || type == KeyFrameType.SCREEN_FADE
+                || type == KeyFrameType.SCREEN_SHAKE;
     }
 
     public void removeKeyFrameAction(KeyFrame keyFrame)
@@ -510,6 +537,11 @@ public class TimeSheetPanel extends JPanel
         // selected Character's matching KF. Each Character's MOVEMENT path /
         // plane / poh stays its own (per-character world geometry) so only
         // card-edited fields like speed / turn rate change.
+        //
+        // Phase 2: global types (Camera / Fade / Shake) live in the central
+        // store -- a single update per tick, not per-character (otherwise we'd
+        // write the same keyframe N times to the same store).
+        boolean globalType = isGlobalType(type);
         for (double tick : ticks)
         {
             for (Character owner : chars)
@@ -541,6 +573,12 @@ public class TimeSheetPanel extends JPanel
                 kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(oldKeyFrame, owner, KeyFrameCharacterActionType.REMOVE));
                 addKeyFrame(owner, newKf);
                 replacements.put(oldKeyFrame, newKf);
+
+                if (globalType)
+                {
+                    // Already wrote through to the central store; one pass is enough.
+                    break;
+                }
             }
         }
 

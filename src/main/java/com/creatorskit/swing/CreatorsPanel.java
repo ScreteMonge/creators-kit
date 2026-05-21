@@ -2221,7 +2221,15 @@ public class CreatorsPanel extends PluginPanel
         //Get Folder structure and all characters contained within
         FolderNodeSave folderNodeSave = getFolders(comps);
 
-        SetupSave saveFile = new SetupSave(getPluginVersion(), comps, folderNodeSave, new CharacterSave[0]);
+        // Phase 2: pull the central GlobalKeyFrames out of the plugin and bake
+        // it into the SetupSave so future loads source globals from the
+        // top-level field rather than walking each CharacterSave.
+        SetupSave saveFile = new SetupSave(
+                getPluginVersion(),
+                comps,
+                folderNodeSave,
+                new CharacterSave[0],
+                plugin.getGlobalKeyFrames());
 
         try
         {
@@ -2410,10 +2418,15 @@ public class CreatorsPanel extends PluginPanel
                 character.getOffsetZ(),
                 character.getShieldKeyFrames(),
                 character.getSpecialKeyFrames(),
-                character.getScreenFadeKeyFrames(),
-                character.getScreenShakeKeyFrames(),
+                // Phase 2: the three global keyframe types live in SetupSave's
+                // top-level GlobalKeyFrames now. Write nulls into the per-
+                // Character fields so we don't duplicate the data across N
+                // CharacterSaves. Pre-Phase-2 saves still have these populated
+                // and the load path migrates them; new saves keep them null.
+                null,
+                null,
                 character.getExtraScale(),
-                character.getCameraKeyFrames());
+                null);
     }
 
     public void openLoadSetupDialog()
@@ -2529,6 +2542,13 @@ public class CreatorsPanel extends PluginPanel
         {
             fileVersion = "1.5.0";
         }
+
+        // Phase 2 migration: pull the global keyframes either from the new
+        // top-level field or, if absent (pre-Phase-2 file), aggregate them
+        // out of every CharacterSave's per-Character globals fields. Installed
+        // BEFORE the character/folder walk so any code that reads the central
+        // store during load sees the migrated values.
+        installGlobalKeyFramesFromSave(saveFile, folderNodeSave);
 
         for (int i = 0; i < comps.length; i++)
         {
@@ -2652,6 +2672,118 @@ public class CreatorsPanel extends PluginPanel
                     }
                 });
                 thread.start();
+            }
+        }
+    }
+
+    /**
+     * Phase 2 migration. If the save has a top-level GlobalKeyFrames field
+     * (post-Phase-2 saves), install it directly. Otherwise scan every
+     * CharacterSave in the file's folder tree, collect any non-empty per-
+     * Character globals fields (camera / screen fade / screen shake) into a
+     * fresh GlobalKeyFrames, and install that.
+     *
+     * <p>Pre-Phase-2 saves frequently put globals on a single "scene
+     * controller" Character, but nothing prevented them being scattered across
+     * several; concat-by-tick is the right consolidation either way. Per-
+     * Character fields stay populated on the CharacterSaves (read-only) so a
+     * downgraded plugin would still see them. New saves emit empty/zero
+     * length arrays on each CharacterSave plus the top-level store.
+     */
+    private void installGlobalKeyFramesFromSave(SetupSave saveFile, FolderNodeSave folderNodeSave)
+    {
+        // Always mutate the plugin's existing GlobalKeyFrames instance rather
+        // than replacing it -- Character.globalKeyFramesStore is a static
+        // reference captured at startUp(); swapping the instance would orphan
+        // it. (We could re-set the static, but mutating preserves invariants
+        // simpler.)
+        com.creatorskit.saves.GlobalKeyFrames target = plugin.getGlobalKeyFrames();
+        com.creatorskit.saves.GlobalKeyFrames topLevel = saveFile.getGlobalKeyFrames();
+        if (topLevel != null)
+        {
+            target.setCameraKeyFrames(topLevel.getCameraKeyFramesSafe());
+            target.setScreenFadeKeyFrames(topLevel.getScreenFadeKeyFramesSafe());
+            target.setScreenShakeKeyFrames(topLevel.getScreenShakeKeyFramesSafe());
+            return;
+        }
+
+        java.util.ArrayList<com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame> cams = new java.util.ArrayList<>();
+        java.util.ArrayList<com.creatorskit.swing.timesheet.keyframe.ScreenFadeKeyFrame> fades = new java.util.ArrayList<>();
+        java.util.ArrayList<com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame> shakes = new java.util.ArrayList<>();
+
+        if (folderNodeSave != null)
+        {
+            collectLegacyGlobalsFromFolder(folderNodeSave, cams, fades, shakes);
+        }
+        // Older flat-list save format (no folder structure) -- everything sat
+        // in saveFile.getSaves(). Still walk it to catch any leftover globals.
+        CharacterSave[] flat = saveFile.getSaves();
+        if (flat != null)
+        {
+            for (CharacterSave cs : flat)
+            {
+                accumulateLegacyGlobals(cs, cams, fades, shakes);
+            }
+        }
+
+        target.setCameraKeyFrames(cams.toArray(new com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame[0]));
+        target.setScreenFadeKeyFrames(fades.toArray(new com.creatorskit.swing.timesheet.keyframe.ScreenFadeKeyFrame[0]));
+        target.setScreenShakeKeyFrames(shakes.toArray(new com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame[0]));
+    }
+
+    private void collectLegacyGlobalsFromFolder(
+            FolderNodeSave folderNodeSave,
+            java.util.List<com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame> cams,
+            java.util.List<com.creatorskit.swing.timesheet.keyframe.ScreenFadeKeyFrame> fades,
+            java.util.List<com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame> shakes)
+    {
+        CharacterSave[] saves = folderNodeSave.getCharacterSaves();
+        if (saves != null)
+        {
+            for (CharacterSave cs : saves)
+            {
+                accumulateLegacyGlobals(cs, cams, fades, shakes);
+            }
+        }
+        FolderNodeSave[] childFolders = folderNodeSave.getFolderSaves();
+        if (childFolders != null)
+        {
+            for (FolderNodeSave child : childFolders)
+            {
+                collectLegacyGlobalsFromFolder(child, cams, fades, shakes);
+            }
+        }
+    }
+
+    private void accumulateLegacyGlobals(
+            CharacterSave cs,
+            java.util.List<com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame> cams,
+            java.util.List<com.creatorskit.swing.timesheet.keyframe.ScreenFadeKeyFrame> fades,
+            java.util.List<com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame> shakes)
+    {
+        if (cs == null) return;
+        com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame[] csCams = cs.getCameraKeyFrames();
+        if (csCams != null)
+        {
+            for (com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame kf : csCams)
+            {
+                if (kf != null) cams.add(kf);
+            }
+        }
+        com.creatorskit.swing.timesheet.keyframe.ScreenFadeKeyFrame[] csFades = cs.getScreenFadeKeyFrames();
+        if (csFades != null)
+        {
+            for (com.creatorskit.swing.timesheet.keyframe.ScreenFadeKeyFrame kf : csFades)
+            {
+                if (kf != null) fades.add(kf);
+            }
+        }
+        com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame[] csShakes = cs.getScreenShakeKeyFrames();
+        if (csShakes != null)
+        {
+            for (com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame kf : csShakes)
+            {
+                if (kf != null) shakes.add(kf);
             }
         }
     }

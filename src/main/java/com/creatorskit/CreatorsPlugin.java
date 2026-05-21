@@ -109,6 +109,18 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	@Inject
 	private BossHealthOverlay bossHealthOverlay;
 
+	/**
+	 * Phase 2 central store for Camera / Screen Fade / Screen Shake keyframes.
+	 * Replaces per-Character storage for these three "global" types -- the
+	 * runtime overlays read from this; UI editing writes back here. Old saves
+	 * still have the per-Character fields populated and the load path migrates
+	 * them into this store on import. Lombok generates the getter+setter via
+	 * the class-level {@code @Getter}/{@code @Setter}. Non-final so loadSetup
+	 * can swap the whole instance during file load.
+	 */
+	private com.creatorskit.saves.GlobalKeyFrames globalKeyFrames =
+			new com.creatorskit.saves.GlobalKeyFrames();
+
 	@Inject
 	private KeyManager keyManager;
 
@@ -474,27 +486,25 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	}
 
 	/**
-	 * Iterates every Character's current SCREEN_SHAKE keyframe and returns the
-	 * most-recently-started one that's still inside its duration window. Mirrors
-	 * {@code ScreenFadeOverlay.findActiveFade}: lets multiple "scene controller"
-	 * Characters define shakes, latest-started wins deterministically.
+	 * Walks the central GlobalKeyFrames store for the most-recently-started
+	 * SCREEN_SHAKE keyframe inside its duration window. Phase 2 refactor: was
+	 * a per-Character scan; now reads from {@link #globalKeyFrames} so globals
+	 * no longer need a Character owner.
 	 */
 	private com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame findActiveScreenShake()
 	{
 		double currentTick = getCurrentTick();
 		com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame best = null;
 		double bestStart = Double.NEGATIVE_INFINITY;
-		for (int i = 0; i < characters.size(); i++)
+		com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame[] all =
+				globalKeyFrames.getScreenShakeKeyFramesSafe();
+		for (int i = 0; i < all.length; i++)
 		{
-			Character c = characters.get(i);
-			com.creatorskit.swing.timesheet.keyframe.KeyFrame kf =
-					c.getCurrentKeyFrame(com.creatorskit.swing.timesheet.keyframe.KeyFrameType.SCREEN_SHAKE);
-			if (!(kf instanceof com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame))
+			com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame sk = all[i];
+			if (sk == null)
 			{
 				continue;
 			}
-			com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame sk =
-					(com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame) kf;
 			double elapsed = currentTick - sk.getTick();
 			if (elapsed < 0 || elapsed > sk.getDurationTicks())
 			{
@@ -516,11 +526,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	 * {@code to} via the keyframe's easing curve, and push focal point + pitch
 	 * + yaw + zoom to the client.
 	 *
-	 * <p>Per-Character storage (like Screen Fade / Screen Shake -- Phase 2
-	 * will move all three to a central global store). Scans every Character's
-	 * current CAMERA keyframe, picks the most-recently-started one within its
-	 * window. The "to" keyframe must live on the same Character as "from"
-	 * (cross-character interpolation would be confusing and rarely useful).
+	 * <p>Phase 2: reads from {@link #globalKeyFrames} instead of per-Character
+	 * storage. "Next" is just the keyframe with the smallest tick strictly
+	 * greater than the active one -- no Character-owner constraint anymore.
 	 *
 	 * <p>Forces camera mode to 1 (free-camera) before touching the focal-point
 	 * setters -- those throw IllegalArgumentException otherwise. Won't fight
@@ -529,33 +537,30 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	 */
 	private void applyCurrentCameraKeyframe()
 	{
-		if (characters.isEmpty())
+		double currentTick = getCurrentTick();
+		com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame[] all =
+				globalKeyFrames.getCameraKeyFramesSafe();
+		if (all.length == 0)
 		{
 			return;
 		}
 
-		double currentTick = getCurrentTick();
-		Character bestOwner = null;
 		com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame best = null;
 		double bestStart = Double.NEGATIVE_INFINITY;
 
-		for (int i = 0; i < characters.size(); i++)
+		for (int i = 0; i < all.length; i++)
 		{
-			Character c = characters.get(i);
-			com.creatorskit.swing.timesheet.keyframe.KeyFrame kf =
-					c.getCurrentKeyFrame(com.creatorskit.swing.timesheet.keyframe.KeyFrameType.CAMERA);
-			if (!(kf instanceof com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame))
+			com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame ck = all[i];
+			if (ck == null)
 			{
 				continue;
 			}
-			com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame ck =
-					(com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame) kf;
-			// Check window: from this keyframe until either next keyframe or
-			// duration runs out. Outside the window, release camera to user.
-			com.creatorskit.swing.timesheet.keyframe.KeyFrame nextKf =
-					c.findNextKeyFrame(com.creatorskit.swing.timesheet.keyframe.KeyFrameType.CAMERA, ck.getTick());
-			double endTick = nextKf != null
-					? nextKf.getTick()
+			// Check window: from this keyframe until either the next keyframe
+			// (in the central store) or this keyframe's duration runs out.
+			// Outside the window, release camera to user.
+			com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame nextCk = findNextCameraKf(all, ck.getTick());
+			double endTick = nextCk != null
+					? nextCk.getTick()
 					: ck.getTick() + ck.getDurationTicks();
 			if (currentTick < ck.getTick() || currentTick > endTick)
 			{
@@ -565,7 +570,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			{
 				bestStart = ck.getTick();
 				best = ck;
-				bestOwner = c;
 			}
 		}
 		if (best == null)
@@ -573,13 +577,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 		}
 
-		com.creatorskit.swing.timesheet.keyframe.KeyFrame nextKf =
-				bestOwner.findNextKeyFrame(com.creatorskit.swing.timesheet.keyframe.KeyFrameType.CAMERA, best.getTick());
+		com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame next = findNextCameraKf(all, best.getTick());
 		com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame interp;
-		if (nextKf instanceof com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame)
+		if (next != null)
 		{
-			com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame next =
-					(com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame) nextKf;
 			double span = next.getTick() - best.getTick();
 			double t = span <= 0
 					? 1.0
@@ -610,6 +611,31 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		{
 			// Camera mode flipped under us between the check and the setters; bail.
 		}
+	}
+
+	/**
+	 * Returns the camera keyframe with the smallest tick strictly greater than
+	 * {@code referenceTick}, or null if none. O(n) scan -- the keyframe count
+	 * in the central store is small enough that sorting wouldn't pay off, and
+	 * the array isn't guaranteed sorted (UI inserts append, not insert-sort).
+	 */
+	private com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame findNextCameraKf(
+			com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame[] all, double referenceTick)
+	{
+		com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame best = null;
+		for (int i = 0; i < all.length; i++)
+		{
+			com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame ck = all[i];
+			if (ck == null || ck.getTick() <= referenceTick)
+			{
+				continue;
+			}
+			if (best == null || ck.getTick() < best.getTick())
+			{
+				best = ck;
+			}
+		}
+		return best;
 	}
 
 	private CKObject transmog;
@@ -649,6 +675,12 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	@Override
 	protected void startUp() throws Exception
 	{
+		// Wire the Character class's static reference to the central GlobalKeyFrames
+		// store so per-Character getKeyFrames/setKeyFrames delegate the 3 global
+		// types (Camera / Fade / Shake) to the shared store. Must happen before
+		// any Character is constructed via the load path.
+		Character.setGlobalKeyFramesStore(globalKeyFrames);
+
 		creatorsPanel = injector.getInstance(CreatorsPanel.class);
 		final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
 		navigationButton = NavigationButton.builder()

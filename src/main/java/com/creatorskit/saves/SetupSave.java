@@ -14,4 +14,14 @@ public class SetupSave
     private CustomModelComp[] comps;
     private FolderNodeSave masterFolderNode;
     private CharacterSave[] saves;
+    /**
+     * Added Phase 2 (camera integration follow-up): central store for Camera /
+     * Screen Fade / Screen Shake keyframes. Null in pre-Phase-2 saves; the
+     * load path treats null as "no central store yet" and migrates each
+     * CharacterSave's per-Character global fields into a new GlobalKeyFrames
+     * instance. After migration these CharacterSave fields stay populated
+     * (read-only on subsequent loads) so downgraded plugin versions can still
+     * round-trip the file.
+     */
+    private GlobalKeyFrames globalKeyFrames;
 }
