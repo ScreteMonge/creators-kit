@@ -479,6 +479,16 @@ public class ToolBoxFrame extends JFrame
         rippleDelete.addActionListener(e -> timeSheetPanel.showRippleDeleteDialog(0.0, 0.0, null));
         tools.add(rippleDelete);
 
+        JMenuItem rippleInsert = new JMenuItem("Ripple Insert...");
+        rippleInsert.setToolTipText("<html>Insert N empty ticks at the playhead. Every keyframe with<br>"
+                + "tick > playhead shifts forward by N. Keyframes at the playhead<br>"
+                + "exactly stay put (the gap opens to their right). Targets are<br>"
+                + "the multi-selected Characters if any, else the primary,<br>"
+                + "plus globals (Camera / Fade / Shake) from the central store.<br>"
+                + "Counterpart to Ripple Delete.</html>");
+        rippleInsert.addActionListener(e -> timeSheetPanel.showRippleInsertDialog());
+        tools.add(rippleInsert);
+
         // A-B Loop submenu -- vertical markers on the timeline that loop
         // playback between them. The markers can also be removed via X
         // buttons drawn on the marker chips themselves (Premiere-style).

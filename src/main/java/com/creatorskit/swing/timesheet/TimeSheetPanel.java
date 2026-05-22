@@ -4327,6 +4327,181 @@ public class TimeSheetPanel extends JPanel
         return kfa;
     }
 
+    // ----- Ripple Insert --------------------------------------------------
+    //
+    // Counterpart to Ripple Delete. Inserts {@code amount} ticks of empty
+    // space at the playhead by shifting every keyframe strictly after
+    // {@code currentTime} forward by that much. Same scope as Ripple Delete
+    // with scope=null: per-Character locals (across multi-Character
+    // selection) plus globals from the central store.
+    //
+    // Keyframes AT the playhead tick stay put -- the convention "insert at
+    // playhead" means the new gap opens AFTER any kf the user just landed
+    // on, not THROUGH it.
+
+    /**
+     * Tools > Ripple Insert... entry point. Opens a small dialog that
+     * picks the tick amount and then calls
+     * {@link #executeRippleInsertAtPlaybar}.
+     */
+    public void showRippleInsertDialog()
+    {
+        JSpinner amountSpinner = new JSpinner(new SpinnerNumberModel(5.0, 0.1, 1000000.0, 1.0));
+        amountSpinner.setPreferredSize(new Dimension(90, 24));
+
+        JPanel content = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(4, 4, 4, 4);
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        content.add(new JLabel("Insert ticks at playhead:"), gbc);
+        gbc.gridx = 1;
+        content.add(amountSpinner, gbc);
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.gridwidth = 2;
+        content.add(new JLabel(String.format("(playhead is at tick %.1f -- keyframes after it shift right)", currentTime)), gbc);
+
+        int choice = JOptionPane.showConfirmDialog(this, content, "Ripple Insert",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (choice != JOptionPane.OK_OPTION) return;
+
+        double amount = ((Number) amountSpinner.getValue()).doubleValue();
+        executeRippleInsertAtPlaybar(amount);
+    }
+
+    /**
+     * Right-click empty-space entry point. Same as the Tools dialog but
+     * runnable without dropping into another menu. Defers to the shared
+     * dialog so the input UX stays identical.
+     */
+    public void showRippleInsertDialogAtPlaybar()
+    {
+        showRippleInsertDialog();
+    }
+
+    /**
+     * Shifts every per-Character keyframe with {@code tick > currentTime}
+     * forward by {@code amount} on every target from {@link #resolveSelectionTargets},
+     * plus the same shift on global keyframes (Camera / Fade / Shake) in
+     * the central store. Single undoable KeyFrameAction batch.
+     *
+     * <p>Iterates in descending tick order so the re-add of a shifted kf
+     * never lands on a slot still held by a later kf (later kf has already
+     * been moved out of the way). Strict inequality on the cutoff means
+     * a keyframe sitting exactly on the playhead tick stays put -- the
+     * inserted gap opens to its right.
+     */
+    public void executeRippleInsertAtPlaybar(double amount)
+    {
+        if (amount <= 0) return;
+        double cutoff = currentTime;
+        java.util.Collection<Character> targets = resolveSelectionTargets();
+
+        KeyFrameAction[] kfa = new KeyFrameAction[0];
+
+        // --- LOCAL types: walk each Character's frame matrix.
+        for (Character owner : targets)
+        {
+            KeyFrame[][] frames = owner.getFrames();
+            if (frames == null) continue;
+
+            for (int i = 0; i < frames.length; i++)
+            {
+                KeyFrame[] row = frames[i];
+                if (row == null) continue;
+                KeyFrameType type = KeyFrameType.getKeyFrameType(i);
+                if (isGlobalType(type)) continue;  // handled below
+
+                kfa = shiftRowAfterCutoff(row, kfa, cutoff, amount, owner, null);
+            }
+        }
+
+        // --- GLOBAL types: walk the central store.
+        com.creatorskit.saves.GlobalKeyFrames store = plugin.getGlobalKeyFrames();
+        if (store != null)
+        {
+            kfa = shiftRowAfterCutoff(store.getCameraKeyFramesSafe(), kfa, cutoff, amount, null, store);
+            kfa = shiftRowAfterCutoff(store.getScreenFadeKeyFramesSafe(), kfa, cutoff, amount, null, store);
+            kfa = shiftRowAfterCutoff(store.getScreenShakeKeyFramesSafe(), kfa, cutoff, amount, null, store);
+        }
+
+        if (kfa.length == 0)
+        {
+            JOptionPane.showMessageDialog(this,
+                    String.format("No keyframes after tick %.1f to shift.", cutoff),
+                    "Ripple Insert", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        addKeyFrameActions(kfa);
+        // The marquee may have held refs that got replaced; clear it so we
+        // don't dangle pointers into the card placeholder state.
+        setSelectedKeyFrames(new KeyFrame[0]);
+        if (client != null && client.getGameState() == GameState.LOGGED_IN)
+        {
+            toolBox.getProgrammer().updatePrograms(currentTime);
+        }
+        attributePanel.setKeyFramedIcon(true);
+        if (selectedCharacter != null)
+        {
+            attributePanel.resetAttributes(selectedCharacter, currentTime);
+        }
+        repaint();
+    }
+
+    /**
+     * Shared inner loop for Ripple Insert. Walks a keyframe array (Character
+     * row OR global store array) in descending tick order and moves
+     * everything strictly after {@code cutoff} forward by {@code amount}.
+     * Exactly one of {@code owner} (local) or {@code store} (global) must be
+     * non-null -- that controls which add/remove API the shift goes through.
+     */
+    private KeyFrameAction[] shiftRowAfterCutoff(KeyFrame[] arr, KeyFrameAction[] kfa, double cutoff, double amount,
+                                                  Character owner, com.creatorskit.saves.GlobalKeyFrames store)
+    {
+        if (arr == null) return kfa;
+        KeyFrame[] snapshot = arr.clone();
+        // Descending sort so the highest-tick kf is processed first. Without
+        // this, a kf at tick T moving to T+amount could land on an unmoved
+        // kf at T+amount, and addKeyFrame's same-tick-displaces behaviour
+        // would clobber the still-to-move target.
+        java.util.Arrays.sort(snapshot, (a, b) ->
+        {
+            if (a == null && b == null) return 0;
+            if (a == null) return 1;
+            if (b == null) return -1;
+            return Double.compare(b.getTick(), a.getTick());
+        });
+        for (KeyFrame kf : snapshot)
+        {
+            if (kf == null) continue;
+            if (kf.getTick() <= cutoff) continue;
+            double newTick = round(kf.getTick() + amount);
+            KeyFrame replacement = KeyFrame.createCopy(kf, newTick);
+            if (owner != null)
+            {
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(kf, owner, KeyFrameCharacterActionType.REMOVE));
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replacement, owner, KeyFrameCharacterActionType.ADD));
+                owner.removeKeyFrame(kf);
+                owner.addKeyFrame(replacement, currentTime);
+            }
+            else if (store != null)
+            {
+                store.remove(kf);
+                KeyFrame displaced = store.add(replacement);
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(kf, null, KeyFrameCharacterActionType.REMOVE));
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replacement, null, KeyFrameCharacterActionType.ADD));
+                if (displaced != null && displaced != kf)
+                {
+                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(displaced, null, KeyFrameCharacterActionType.REMOVE));
+                }
+            }
+        }
+        return kfa;
+    }
+
     // ===== Blocks (Phase 1) ============================================
 
     /**

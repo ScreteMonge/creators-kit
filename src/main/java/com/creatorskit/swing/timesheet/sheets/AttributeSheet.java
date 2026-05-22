@@ -1065,6 +1065,15 @@ public class AttributeSheet extends TimeSheet
         dialogItem.addActionListener(e -> tsp.showRippleDeleteDialog(from, to, type));
         menu.add(dialogItem);
 
+        menu.addSeparator();
+
+        // Ripple Insert: counterpart to Ripple Delete. Inserts empty ticks
+        // at the playhead and pushes every later keyframe forward.
+        JMenuItem rippleInsert = new JMenuItem("Ripple Insert... (at playhead)");
+        rippleInsert.setToolTipText("Insert N empty ticks at the playhead; everything after shifts forward.");
+        rippleInsert.addActionListener(e -> tsp.showRippleInsertDialogAtPlaybar());
+        menu.add(rippleInsert);
+
         menu.show(this, (int) p.getX(), (int) p.getY());
     }
 }
