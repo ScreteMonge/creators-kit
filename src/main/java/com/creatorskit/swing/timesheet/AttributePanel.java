@@ -3637,10 +3637,13 @@ public class AttributePanel extends JPanel
         boolean editable = !mixedTypes && !noSelectionForCurrentType;
         updateButton.setEnabled(editable);
         resetButton.setEnabled(editable);
-        // The "+" / keyframe icon is a CREATE/REMOVE button -- still useful even
-        // when no keyframe is selected (creates one at the seeker). Only disable
-        // it for the genuinely-ambiguous mixed-types case.
-        keyFramed.setEnabled(!mixedTypes);
+        // The "+" / keyframe icon is a CREATE button -- disabled when the
+        // marquee mixes types (ambiguous which to add) OR when every
+        // selected target already has a keyframe at the current tick for
+        // the current page (nothing to add). The all-have check covers
+        // both per-Character types (every selected Character has one) and
+        // global types (the central store has one at this tick).
+        refreshAddKeyFrameEnabled(mixedTypes);
 
         // Keep the object label in sync with the marquee count -- updateObjectLabel
         // reads timeSheetPanel.getSelectedKeyFrames() to compose the
@@ -4177,9 +4180,50 @@ public class AttributePanel extends JPanel
         if (isKeyFramed)
         {
             keyFramed.setIcon(keyframeImage);
+        }
+        else
+        {
+            keyFramed.setIcon(keyframeEmptyImage);
+        }
+        // Icon changes happen when the seeker moves, the Character changes,
+        // or a keyframe is added/removed -- exactly the events that flip
+        // the "+" enabled state. Re-derive both at the same time so the
+        // grey-out stays in sync with the icon.
+        refreshAddKeyFrameEnabled(computeMixedTypes());
+    }
+
+    /**
+     * Sets {@code keyFramed.setEnabled} per the spec: disabled when the
+     * marquee mixes types (ambiguous which to create) OR when every
+     * selected target already has a keyframe at the current tick for
+     * the current page. {@code mixedTypes} is passed in by the caller
+     * because both callsites already compute it.
+     */
+    private void refreshAddKeyFrameEnabled(boolean mixedTypes)
+    {
+        if (timeSheetPanel == null)
+        {
+            keyFramed.setEnabled(!mixedTypes);
             return;
         }
+        boolean allHave = timeSheetPanel.allSelectedTargetsHaveKeyFrame(
+                selectedKeyFramePage, timeSheetPanel.getCurrentTime());
+        keyFramed.setEnabled(!mixedTypes && !allHave);
+    }
 
-        keyFramed.setIcon(keyframeEmptyImage);
+    /** Recomputes mixedTypes from the current marquee. Mirrors the inline
+     *  scan in refreshKeyFrameSelectionState; pulled out so setKeyFramedIcon
+     *  can re-derive it without re-running the full selection-state pass. */
+    private boolean computeMixedTypes()
+    {
+        if (timeSheetPanel == null) return false;
+        KeyFrame[] selected = timeSheetPanel.getSelectedKeyFrames();
+        if (selected == null) return false;
+        java.util.EnumSet<KeyFrameType> types = java.util.EnumSet.noneOf(KeyFrameType.class);
+        for (KeyFrame kf : selected)
+        {
+            if (kf != null) types.add(kf.getKeyFrameType());
+        }
+        return types.size() > 1;
     }
 }

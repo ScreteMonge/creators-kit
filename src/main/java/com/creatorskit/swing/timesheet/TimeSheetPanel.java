@@ -788,6 +788,30 @@ public class TimeSheetPanel extends JPanel
     }
 
     /**
+     * Returns true when every Character in {@link #resolveSelectionTargets()}
+     * already has a keyframe of {@code type} at exactly {@code tick}. For
+     * global keyframe types (Camera / Fade / Shake) the check hits the
+     * central store instead -- "present at this tick" is the same concept
+     * either way. Used by AttributePanel to grey out the "+" add-keyframe
+     * button when there's nothing to add.
+     */
+    public boolean allSelectedTargetsHaveKeyFrame(KeyFrameType type, double tick)
+    {
+        if (type == null) return false;
+        if (isGlobalType(type))
+        {
+            return findGlobalKeyFrameAt(type, tick) != null;
+        }
+        java.util.Collection<Character> targets = resolveSelectionTargets();
+        if (targets.isEmpty()) return false;
+        for (Character c : targets)
+        {
+            if (c.findKeyFrame(type, tick) == null) return false;
+        }
+        return true;
+    }
+
+    /**
      * Looks up an existing global keyframe of {@code type} at exactly {@code tick}.
      * Used by the no-Character "+" path to decide between add and remove --
      * mirrors {@code Character.findKeyFrame(type, tick)} but reads from the
