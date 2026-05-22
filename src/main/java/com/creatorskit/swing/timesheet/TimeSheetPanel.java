@@ -306,7 +306,7 @@ public class TimeSheetPanel extends JPanel
         this.movementManager = movementManager;
         this.selectionManager = selectionManager;
 
-        setLayout(new GridBagLayout());
+        setLayout(new BorderLayout());
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
         setupTreeScrollPane();
@@ -3015,76 +3015,131 @@ public class TimeSheetPanel extends JPanel
         attributePanel.switchCards(KeyFrameType.getKeyFrameType(index).toString());
     }
 
+    /**
+     * Lays out the four major sections of the timeline view as nested
+     * JSplitPanes so the user can drag the dividers to resize each one
+     * independently. Each section is wrapped in a JPanel with a visible
+     * LineBorder (and the dividers themselves are painted in a contrast
+     * colour) so the boundaries are obvious at a glance.
+     *
+     * <pre>
+     * +----------------+----------------------------+
+     * |                |                            |
+     * |  Tree section  |  Summary section           |
+     * |                |                            |
+     * +- - - - - - - - +- - - - - - - - - - - - - -+
+     * |                |                            |
+     * |  Attribute     |  Timeline body section     |
+     * |  section       |  (scrollbar + controls +   |
+     * |                |   labels | sheet)          |
+     * |                |                            |
+     * +----------------+----------------------------+
+     *  ^ leftSplit       ^ rightSplit
+     *      (vertical)        (vertical)
+     *  Both wrapped in a horizontal rootSplit.
+     * </pre>
+     *
+     * GridBag is still used inside individual sections (controlPanel etc.);
+     * only the OUTER layout switched to split panes.
+     */
     private void setupManager()
     {
-        c.fill = GridBagConstraints.BOTH;
-        c.insets = new Insets(2, 2, 2, 2);
+        // Wrap each major component in a bordered panel so the section
+        // boundaries read as actual UI regions instead of just gaps.
+        JPanel treeSection = wrapInSection(treeScrollPane);
+        JPanel attrSection = wrapInSection(attributePanel);
 
-        c.gridwidth = 2;
-        c.gridheight = 2;
-        c.weightx = 0;
-        c.weighty = 5;
-        c.gridx = 0;
-        c.gridy = 0;
-        add(treeScrollPane, c);
-
-        c.gridheight = 1;
-        c.gridwidth = 1;
-        c.weightx = 0;
-        c.weighty = 0;
-        c.gridx = 2;
-        c.gridy = 0;
+        JPanel summarySection = new JPanel(new BorderLayout());
+        summarySection.setBorder(SECTION_BORDER);
+        summarySection.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         JLabel summaryLabel = new JLabel("Summary");
         summaryLabel.setFont(FontManager.getRunescapeBoldFont());
-        summaryLabel.setBorder(new EmptyBorder(1, 2, 2, 2));
-        add(summaryLabel, c);
+        summaryLabel.setBorder(new EmptyBorder(1, 4, 2, 2));
+        summarySection.add(summaryLabel, BorderLayout.NORTH);
+        summarySection.add(summarySheet, BorderLayout.CENTER);
 
-        c.gridheight = 1;
-        c.gridwidth = 1;
-        c.weightx = 8;
-        c.weighty = 5;
-        c.gridx = 2;
-        c.gridy = 1;
-        add(summarySheet, c);
+        // Timeline section: horizontal scrollbar + transport controls
+        // stack on top of the labels|sheet body. Keeping them inside the
+        // same section means the bottom-right divider drag resizes the
+        // whole timeline as a unit (scrollbar + controls + rows).
+        JPanel timelineSection = new JPanel(new BorderLayout());
+        timelineSection.setBorder(SECTION_BORDER);
+        timelineSection.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
-        c.gridheight = 1;
-        c.weightx = 0;
-        c.weighty = 0;
-        c.gridx = 2;
-        c.gridy = 2;
-        add(scrollBar, c);
+        JPanel timelineHeader = new JPanel(new BorderLayout());
+        timelineHeader.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        timelineHeader.add(scrollBar, BorderLayout.NORTH);
+        timelineHeader.add(controlPanel, BorderLayout.CENTER);
+        timelineSection.add(timelineHeader, BorderLayout.NORTH);
 
-        c.weightx = 0;
-        c.weighty = 0;
-        c.gridx = 2;
-        c.gridy = 3;
-        add(controlPanel, c);
+        JPanel timelineBody = new JPanel(new BorderLayout());
+        timelineBody.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        timelineBody.add(labelCards, BorderLayout.WEST);
+        timelineBody.add(sheetCards, BorderLayout.CENTER);
+        timelineSection.add(timelineBody, BorderLayout.CENTER);
 
-        c.gridheight = 3;
-        c.weightx = 0;
-        c.weighty = 0;
-        c.gridx = 0;
-        c.gridy = 2;
-        add(attributePanel, c);
+        // Three nested split panes -- the user can drag any divider to
+        // resize the adjacent sections without affecting the others.
+        JSplitPane leftSplit = makeSplit(JSplitPane.VERTICAL_SPLIT, treeSection, attrSection, 0.5);
+        JSplitPane rightSplit = makeSplit(JSplitPane.VERTICAL_SPLIT, summarySection, timelineSection, 0.35);
+        JSplitPane rootSplit = makeSplit(JSplitPane.HORIZONTAL_SPLIT, leftSplit, rightSplit, 0.3);
 
-        // gridy=4 hosts the property labels (left) + timeline body (right).
-        // weighty>0 here lets the user grow the window vertically and have
-        // the timeline rows expand to show more properties before cropping.
-        // Without this, the row was pinned at the labelScrollPane's prefSize
-        // (150px), which only fit ~5 of 17 local rows.
-        c.gridheight = 1;
-        c.weightx = 0;
-        c.weighty = 1;
-        c.gridx = 1;
-        c.gridy = 4;
-        add(labelCards, c);
-
-        c.weightx = 8;
-        c.weighty = 1;
-        c.gridx = 2;
-        c.gridy = 4;
-        add(sheetCards, c);
+        add(rootSplit, BorderLayout.CENTER);
     }
+
+    /** Wraps any component in a fixed-border section panel so the user
+     *  can see where one section ends and another begins, even before
+     *  they touch a divider. */
+    private static JPanel wrapInSection(JComponent inner)
+    {
+        JPanel section = new JPanel(new BorderLayout());
+        section.setBorder(SECTION_BORDER);
+        section.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        section.add(inner, BorderLayout.CENTER);
+        return section;
+    }
+
+    /** Builds a JSplitPane styled to be obvious: a fat divider painted in
+     *  the medium-grey accent so it reads as a draggable boundary, not a
+     *  thin Swing default line that disappears on a dark background. */
+    private static JSplitPane makeSplit(int orientation, JComponent a, JComponent b, double resizeWeight)
+    {
+        JSplitPane split = new JSplitPane(orientation, a, b);
+        split.setBorder(null);
+        split.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
+        split.setDividerSize(SPLIT_DIVIDER_SIZE);
+        split.setResizeWeight(resizeWeight);
+        split.setContinuousLayout(true);
+        split.setOneTouchExpandable(true);
+        split.setUI(new javax.swing.plaf.basic.BasicSplitPaneUI()
+        {
+            @Override
+            public javax.swing.plaf.basic.BasicSplitPaneDivider createDefaultDivider()
+            {
+                return new javax.swing.plaf.basic.BasicSplitPaneDivider(this)
+                {
+                    @Override
+                    public void paint(Graphics g)
+                    {
+                        // Solid contrast bar so the divider stays visible on
+                        // the dark theme; default L&F painting blends in.
+                        g.setColor(ColorScheme.MEDIUM_GRAY_COLOR);
+                        g.fillRect(0, 0, getWidth(), getHeight());
+                        super.paint(g);
+                    }
+                };
+            }
+        });
+        return split;
+    }
+
+    /** Thickness of every split divider. Big enough to grab without
+     *  pixel-hunting; small enough not to eat real estate. */
+    private static final int SPLIT_DIVIDER_SIZE = 6;
+    /** 1px line in MEDIUM_GRAY -- contrasts against the DARKER_GRAY panel
+     *  background so each section reads as a discrete region. */
+    private static final javax.swing.border.Border SECTION_BORDER =
+            new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1);
 
     private void updateSheets()
     {
