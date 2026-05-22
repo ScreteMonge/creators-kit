@@ -3006,9 +3006,15 @@ public class AttributePanel extends JPanel
                     specialAttributes.setRgb(newRgb);
                 }
                 colour.setBackground(picked);
-                // Mark as dirty (red) so the user knows to hit Update.
-                Color dirty = isShield ? shieldAttributes.getRed() : specialAttributes.getRed();
-                colour.setBorder(BorderFactory.createLineBorder(dirty, 2));
+                colour.setBorder(BorderFactory.createLineBorder(
+                        isShield ? shieldAttributes.getRed() : specialAttributes.getRed(), 2));
+                // wireAutoUpdate skips JButton on purpose -- the colour
+                // chooser action listener has to fire the auto-update itself
+                // so the selected keyframe actually gets rewritten with the
+                // new RGB. Without this the picked colour shows on the swatch
+                // but the keyframe still carries the old value, and a save /
+                // reload silently reverts to the old colour.
+                fireAutoUpdate();
             }
         });
         card.add(colour, c);
@@ -3129,6 +3135,8 @@ public class AttributePanel extends JPanel
                 screenFadeAttributes.setRgb(newRgb);
                 colour.setBackground(picked);
                 colour.setBorder(BorderFactory.createLineBorder(screenFadeAttributes.getRed(), 2));
+                // wireAutoUpdate skips JButton -- fire from here so the keyframe gets rewritten.
+                fireAutoUpdate();
             }
         });
         card.add(colour, c);
@@ -3521,6 +3529,13 @@ public class AttributePanel extends JPanel
                 pulseAttributes.setRgb(newRgb);
                 colour.setBackground(picked);
                 colour.setBorder(BorderFactory.createLineBorder(pulseAttributes.getRed(), 2));
+                // wireAutoUpdate skips JButton on purpose -- the colour
+                // chooser action listener has to fire the auto-update itself
+                // so the selected Pulse keyframe actually gets rewritten with
+                // the new RGB. Without this the picked colour shows on the
+                // swatch but the keyframe still carries the old value, and
+                // playback keeps using the previous tint.
+                fireAutoUpdate();
             }
         });
         card.add(colour, c);
