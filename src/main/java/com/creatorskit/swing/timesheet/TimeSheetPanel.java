@@ -2573,7 +2573,7 @@ public class TimeSheetPanel extends JPanel
         scrollPane.setViewportView(labelPanel);
         scrollPane.setBorder(new EmptyBorder(1, 0, 1, 0));
         scrollPane.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        scrollPane.setPreferredSize(new Dimension(100, 150));
+        scrollPane.setPreferredSize(new Dimension(LABEL_COL_WIDTH, 150));
         scrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         // AS_NEEDED so the user actually sees the scrollbar when rows are
         // cropped. Used to be NEVER + InvisibleScrollBar -- the model still
@@ -2631,7 +2631,7 @@ public class TimeSheetPanel extends JPanel
                 new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1),
                 new EmptyBorder(0, 6, 0, 6)));
         toggle.setMargin(new java.awt.Insets(0, 4, 0, 4));
-        toggle.setPreferredSize(new Dimension(100, 28));
+        toggle.setPreferredSize(new Dimension(LABEL_COL_WIDTH, 28));
         toggle.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         toggle.setAlignmentX(Component.LEFT_ALIGNMENT);
         toggle.setBackground(ColorScheme.BRAND_ORANGE);
@@ -2662,7 +2662,7 @@ public class TimeSheetPanel extends JPanel
             label.setFocusable(true);
             label.setHorizontalAlignment(SwingConstants.RIGHT);
             label.setOpaque(true);
-            label.setPreferredSize(new Dimension(100, 24));
+            label.setPreferredSize(new Dimension(LABEL_COL_WIDTH, 24));
             label.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
             label.setAlignmentX(Component.LEFT_ALIGNMENT);
             label.setBackground(i == 0 ? ColorScheme.MEDIUM_GRAY_COLOR : ColorScheme.DARKER_GRAY_COLOR);
@@ -3253,6 +3253,13 @@ public class TimeSheetPanel extends JPanel
     /** Thickness of every split divider. 10px is chunky enough to grab
      *  comfortably with the mouse and leaves room for the grip dots. */
     private static final int SPLIT_DIVIDER_SIZE = 10;
+
+    /** Width of the property-labels column on the left of the timeline
+     *  body. Was 100px; bumped so "Manage global" fits in the toggle
+     *  without truncating to "Manage glo...". The 18px right padding on
+     *  each label + the bold font on the toggle both eat into the usable
+     *  text area. */
+    private static final int LABEL_COL_WIDTH = 150;
 
     /**
      * Wires divider-position persistence onto a split pane:
