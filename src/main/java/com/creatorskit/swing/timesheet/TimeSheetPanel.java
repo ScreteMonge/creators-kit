@@ -2344,7 +2344,46 @@ public class TimeSheetPanel extends JPanel
             globalAttributeSheet.setTimeIndicatorPressed(false);
         }
 
+        // Auto-scroll the horizontal timeline so the playbar stays visible.
+        // Fires on playback, spinner edits, arrow-key skips, etc. -- any
+        // time setCurrentTime is called -- so the user never loses sight of
+        // the playhead during play and arrow-key seeking jumps the view
+        // along with the seeker.
+        autoScrollToKeepPlaybarVisible();
+
         onCurrentTimeChanged(tick);
+    }
+
+    /**
+     * Scrolls the timeline horizontally if the playbar (currentTime) is
+     * outside the visible window {@code [-hScroll, -hScroll + zoom]}.
+     * Re-centres so the playbar appears at 10% from the left edge --
+     * leaves most of the visible range showing what's coming, which is
+     * the natural "follow the playhead during playback" behaviour. No-op
+     * when the playbar is already on-screen, so manual scrubbing inside
+     * the visible window doesn't trigger jumps.
+     */
+    private void autoScrollToKeepPlaybarVisible()
+    {
+        double visibleStart = -hScroll;
+        double visibleEnd = visibleStart + zoom;
+        if (currentTime >= visibleStart && currentTime <= visibleEnd)
+        {
+            return; // already in view, leave hScroll alone
+        }
+        // Anchor playbar at 10% from the left of the visible range: the
+        // visibleStart sits 0.1*zoom before currentTime, so the user sees
+        // what just passed plus most of the upcoming range.
+        double newVisibleStart = currentTime - 0.1 * zoom;
+        double newHScroll = -newVisibleStart;
+        // Reuse the existing scrollbar plumbing so the scrollbar thumb
+        // syncs and updateSheets fires.
+        hScroll = round(newHScroll);
+        if (hScroll < -ABSOLUTE_MAX_SEQUENCE_LENGTH) hScroll = -ABSOLUTE_MAX_SEQUENCE_LENGTH;
+        if (hScroll > ABSOLUTE_MAX_SEQUENCE_LENGTH) hScroll = ABSOLUTE_MAX_SEQUENCE_LENGTH;
+        boundSliderMinMax();
+        updateScrollBar();
+        updateSheets();
     }
 
     public void onCurrentTimeChanged(double tick)
@@ -2581,15 +2620,25 @@ public class TimeSheetPanel extends JPanel
             }
         });
 
+        // Manage local/global toggle: needs to read as an obvious button,
+        // not just another label row. BRAND_ORANGE background + a 1px
+        // raised-look LineBorder in BRIGHT_GRAY_COLOR gives high contrast
+        // against the dark labels beneath. Bumped to 28px so it's taller
+        // than the property rows (24px) and visually separate.
         JButton toggle = new JButton();
         toggle.setFocusable(false);
-        toggle.setBorder(null);
+        toggle.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1),
+                new EmptyBorder(0, 6, 0, 6)));
         toggle.setMargin(new java.awt.Insets(0, 4, 0, 4));
-        toggle.setPreferredSize(new Dimension(100, 24));
-        toggle.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
+        toggle.setPreferredSize(new Dimension(100, 28));
+        toggle.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         toggle.setAlignmentX(Component.LEFT_ALIGNMENT);
-        toggle.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        toggle.setBackground(ColorScheme.BRAND_ORANGE);
         toggle.setForeground(Color.WHITE);
+        toggle.setOpaque(true);
+        toggle.setFont(FontManager.getRunescapeBoldFont());
+        toggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         toggle.addActionListener(e -> onViewToggleClicked());
         labelPanel.add(toggle);
         if (ownsToggleButton)
@@ -2617,6 +2666,11 @@ public class TimeSheetPanel extends JPanel
             label.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
             label.setAlignmentX(Component.LEFT_ALIGNMENT);
             label.setBackground(i == 0 ? ColorScheme.MEDIUM_GRAY_COLOR : ColorScheme.DARKER_GRAY_COLOR);
+            // 18px right padding so the AS_NEEDED vertical scrollbar in
+            // the labels column (~14px wide depending on L&F) doesn't
+            // cover the right-aligned property text. Left padding kept
+            // minimal because the text aligns to the right edge.
+            label.setBorder(new EmptyBorder(0, 4, 0, 18));
             label.setText(types[i].getName() + LABEL_OFFSET);
 
             label.addMouseListener(new MouseAdapter()
