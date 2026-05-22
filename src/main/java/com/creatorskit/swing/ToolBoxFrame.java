@@ -59,7 +59,7 @@ public class ToolBoxFrame extends JFrame
     private final BufferedImage ICON = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
 
     @Inject
-    public ToolBoxFrame(Client client, EventBus eventBus, ClientThread clientThread, CreatorsPlugin plugin, CreatorsConfig config, ConfigManager configManager, DataFinder dataFinder, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, TransmogPanel transmogPanel, PathFinder pathFinder, ModelUtilities modelUtilities, OkHttpClient httpClient, SelectionManager selectionManager)
+    public ToolBoxFrame(Client client, EventBus eventBus, ClientThread clientThread, CreatorsPlugin plugin, CreatorsConfig config, ConfigManager configManager, DataFinder dataFinder, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, TransmogPanel transmogPanel, PathFinder pathFinder, ModelUtilities modelUtilities, OkHttpClient httpClient, SelectionManager selectionManager, com.creatorskit.programming.PulseController pulseController)
     {
         this.client = client;
         this.clientThread = clientThread;
@@ -95,7 +95,7 @@ public class ToolBoxFrame extends JFrame
         this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, config, clientThread, dataFinder, managerTree, movementManager, selectionManager);
         this.managerPanel = new ManagerPanel(client, plugin, objectHolder, managerTree);
         this.cacheSearcher = new CacheSearcherTab(plugin, clientThread, dataFinder, modelUtilities, httpClient);
-        this.programmer = new Programmer(client, config, clientThread, plugin, timeSheetPanel, dataFinder, modelUtilities);
+        this.programmer = new Programmer(client, config, clientThread, plugin, timeSheetPanel, dataFinder, modelUtilities, pulseController);
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setTitle("Creator's Kit Toolbox");

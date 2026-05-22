@@ -61,8 +61,11 @@ public class Programmer
     private boolean playing = false;
     private boolean triggerPause = false;
 
+    @lombok.Getter
+    private final PulseController pulseController;
+
     @Inject
-    public Programmer(Client client, CreatorsConfig config, ClientThread clientThread, CreatorsPlugin plugin, TimeSheetPanel timeSheetPanel, DataFinder dataFinder, ModelUtilities modelUtilities)
+    public Programmer(Client client, CreatorsConfig config, ClientThread clientThread, CreatorsPlugin plugin, TimeSheetPanel timeSheetPanel, DataFinder dataFinder, ModelUtilities modelUtilities, PulseController pulseController)
     {
         this.client = client;
         this.config = config;
@@ -71,6 +74,7 @@ public class Programmer
         this.timeSheetPanel = timeSheetPanel;
         this.dataFinder = dataFinder;
         this.modelUtilities = modelUtilities;
+        this.pulseController = pulseController;
     }
 
     @Subscribe
@@ -1171,6 +1175,11 @@ public class Programmer
         registerModelChanges(character);
         registerSpawnChanges(character);
         updateProjectiles(character, tick);
+        // Pulse re-evaluates last so it sees whatever model the Model keyframe (or
+        // base model fallback) just installed, and can snapshot the right face
+        // colours before mutating them. The controller is idempotent so calling
+        // it on every tick during the envelope keeps the tint fresh.
+        pulseController.update(character, tick);
     }
 
     /**

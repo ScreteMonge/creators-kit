@@ -1025,6 +1025,11 @@ public class CreatorsPanel extends PluginPanel
 
         for (Character c : charactersToRemove)
         {
+            // Drop any Pulse snapshot we may be holding -- the controller's
+            // IdentityHashMap entry would otherwise pin the Character and its
+            // Model references after the visual is gone.
+            toolBox.getProgrammer().getPulseController().release(c);
+
             clientThread.invokeLater(() ->
             {
                 c.getCkObject().setActive(false);
