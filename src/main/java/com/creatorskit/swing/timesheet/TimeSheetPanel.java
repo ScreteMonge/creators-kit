@@ -216,6 +216,60 @@ public class TimeSheetPanel extends JPanel
         repaint();
     }
 
+    /** True when both A and B markers are set (so a between-A-B select can run). */
+    public boolean canSelectBetweenAB()
+    {
+        return aLoopTick != null && bLoopTick != null;
+    }
+
+    /**
+     * Selects every keyframe on every Character in the current selection
+     * (or the primary Character if only one is selected) whose tick falls
+     * inside the closed [A, B] interval. No-op when either marker is
+     * unset. Used by the empty-space right-click menu in the timeline.
+     *
+     * <p>Honors {@link #resolveSelectionTargets()} so multi-Character
+     * selection grabs from every selected Character, single selection
+     * grabs from the primary only.
+     *
+     * <p>Globals (Camera / Screen Fade / Screen Shake) are intentionally
+     * excluded -- those live in a central store and have their own
+     * dedicated global view. This action is for per-Character work.
+     */
+    public void selectAllKeyFramesBetweenAB()
+    {
+        if (!canSelectBetweenAB()) return;
+        double a = aLoopTick;
+        double b = bLoopTick;
+        java.util.Collection<Character> targets = resolveSelectionTargets();
+        if (targets.isEmpty()) return;
+
+        java.util.List<KeyFrame> collected = new java.util.ArrayList<>();
+        for (Character c : targets)
+        {
+            KeyFrame[][] frames = c.getFrames();
+            if (frames == null) continue;
+            for (int typeIdx = 0; typeIdx < frames.length; typeIdx++)
+            {
+                KeyFrame[] row = frames[typeIdx];
+                if (row == null) continue;
+                KeyFrameType type = KeyFrameType.getKeyFrameType(typeIdx);
+                // Globals live in the central store; skip them here so the
+                // per-Character frames matrix doesn't accidentally
+                // double-include them on saves that pre-date the Phase-2
+                // global refactor (those still carry copies on Character).
+                if (KeyFrameType.isGlobal(type)) continue;
+                for (KeyFrame kf : row)
+                {
+                    if (kf == null) continue;
+                    double t = kf.getTick();
+                    if (t >= a && t <= b) collected.add(kf);
+                }
+            }
+        }
+        setSelectedKeyFrames(collected.toArray(new KeyFrame[0]));
+    }
+
     /**
      * Bulk-toggle every keyframe of {@code type} into / out of the marquee
      * selection. Triggered by CTRL+click on a property label; mirrors the

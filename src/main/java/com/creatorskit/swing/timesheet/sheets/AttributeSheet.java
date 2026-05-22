@@ -1018,6 +1018,26 @@ public class AttributeSheet extends TimeSheet
 
         JPopupMenu menu = new JPopupMenu();
 
+        // Select-between-A-B: always present at the top so the user can
+        // find it consistently. Greyed out when either marker is unset --
+        // the tooltip explains why so they know to drop A + B first.
+        JMenuItem selectAB;
+        if (tsp.canSelectBetweenAB())
+        {
+            Double a = tsp.getALoopTick();
+            Double b = tsp.getBLoopTick();
+            selectAB = new JMenuItem(String.format("Select keyframes between A-B  [%.1f-%.1f]", a, b));
+            selectAB.addActionListener(e -> tsp.selectAllKeyFramesBetweenAB());
+        }
+        else
+        {
+            selectAB = new JMenuItem("Select keyframes between A-B");
+            selectAB.setEnabled(false);
+            selectAB.setToolTipText("Drop both A and B markers first (Tools > A-B Loop, or shortcut).");
+        }
+        menu.add(selectAB);
+        menu.addSeparator();
+
         // Blocks: only show when the marquee selection forms a valid block
         // on at least one Character. Cheap to test (canCreateBlockFromSelection
         // just iterates the selection once).
