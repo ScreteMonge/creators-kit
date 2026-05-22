@@ -3136,14 +3136,41 @@ public class TimeSheetPanel extends JPanel
         timelineBody.add(sheetCards, BorderLayout.CENTER);
         timelineSection.add(timelineBody, BorderLayout.CENTER);
 
-        // Three nested split panes -- the user can drag any divider to
-        // resize the adjacent sections without affecting the others.
-        JSplitPane leftSplit = makeSplit(JSplitPane.VERTICAL_SPLIT, treeSection, attrSection, 0.5);
-        JSplitPane rightSplit = makeSplit(JSplitPane.VERTICAL_SPLIT, summarySection, timelineSection, 0.35);
-        JSplitPane rootSplit = makeSplit(JSplitPane.HORIZONTAL_SPLIT, leftSplit, rightSplit, 0.3);
+        // Section minimum sizes drive the JSplitPane's drag clamp. Children
+        // like attributePanel naturally have a large preferred (and thus
+        // minimum) width because of their internal layouts -- without
+        // overriding here, the splits won't let the user shrink past those
+        // values. Tiny minimums = full drag freedom; if the user drags too
+        // narrow some content clips, which is their explicit choice.
+        treeSection.setMinimumSize(SECTION_MIN);
+        attrSection.setMinimumSize(SECTION_MIN);
+        summarySection.setMinimumSize(SECTION_MIN);
+        timelineSection.setMinimumSize(SECTION_MIN);
+
+        // Three nested split panes. Default proportions from the user spec:
+        //   rootSplit  (horizontal):  left 30% | right 70%
+        //   leftSplit  (vertical):    tree 70% / attr 30%
+        //   rightSplit (vertical):    summary 30% / timeline 70%
+        // Persistence keys + defaults are wired in makeSplit -- divider
+        // positions saved on drag and restored on next launch.
+        JSplitPane leftSplit  = makeSplit(JSplitPane.VERTICAL_SPLIT,   treeSection,    attrSection,     0.7, 0.7, DIV_KEY_LEFT);
+        JSplitPane rightSplit = makeSplit(JSplitPane.VERTICAL_SPLIT,   summarySection, timelineSection, 0.3, 0.3, DIV_KEY_RIGHT);
+        JSplitPane rootSplit  = makeSplit(JSplitPane.HORIZONTAL_SPLIT, leftSplit,      rightSplit,      0.3, 0.3, DIV_KEY_ROOT);
 
         add(rootSplit, BorderLayout.CENTER);
     }
+
+    /** Tiny absolute minimum so split-pane drag has full range. ~60 px
+     *  on each axis is small enough that the user can crush a section
+     *  to almost nothing; their problem if they can't read the inside. */
+    private static final Dimension SECTION_MIN = new Dimension(60, 60);
+
+    /** Config keys for divider-location persistence. Stored as fractions
+     *  (0..1) so they scale when the toolbox window size changes. */
+    private static final String DIV_KEY_ROOT  = "timelineDivider_root";
+    private static final String DIV_KEY_LEFT  = "timelineDivider_left";
+    private static final String DIV_KEY_RIGHT = "timelineDivider_right";
+    private static final String DIV_CFG_GROUP = "creatorssuite";
 
     /** Wraps any component in a fixed-border section panel so the user
      *  can see where one section ends and another begins, even before
@@ -3159,8 +3186,14 @@ public class TimeSheetPanel extends JPanel
 
     /** Builds a JSplitPane styled to be obvious: a fat divider painted in
      *  the medium-grey accent with a "grip" of dots in the middle so the
-     *  user reads it as a draggable boundary, not just a thin line. */
-    private static JSplitPane makeSplit(final int orientation, JComponent a, JComponent b, double resizeWeight)
+     *  user reads it as a draggable boundary, not just a thin line.
+     *
+     *  Initial divider position = {@code persistKey}'s saved fraction
+     *  (read via ConfigManager) or {@code defaultFraction} if no saved
+     *  value exists. After the first paint, drag events save the new
+     *  fraction back to ConfigManager so positions survive restarts. */
+    private JSplitPane makeSplit(final int orientation, JComponent a, JComponent b,
+                                 double resizeWeight, double defaultFraction, String persistKey)
     {
         JSplitPane split = new JSplitPane(orientation, a, b);
         split.setBorder(null);
@@ -3168,6 +3201,7 @@ public class TimeSheetPanel extends JPanel
         split.setDividerSize(SPLIT_DIVIDER_SIZE);
         split.setResizeWeight(resizeWeight);
         split.setContinuousLayout(true);
+        installDividerPersistence(split, persistKey, defaultFraction);
         split.setUI(new javax.swing.plaf.basic.BasicSplitPaneUI()
         {
             @Override
@@ -3219,6 +3253,73 @@ public class TimeSheetPanel extends JPanel
     /** Thickness of every split divider. 10px is chunky enough to grab
      *  comfortably with the mouse and leaves room for the grip dots. */
     private static final int SPLIT_DIVIDER_SIZE = 10;
+
+    /**
+     * Wires divider-position persistence onto a split pane:
+     *   - On first show, restores the saved fraction (or {@code defaultFraction}
+     *     if none) via {@link JSplitPane#setDividerLocation(double)}. Has to
+     *     wait for the split pane to have a non-zero size before the call
+     *     works -- HierarchyListener on SHOWING_CHANGED is the standard hook.
+     *   - After the initial restore, every drag fires the listener which
+     *     saves the new fraction to ConfigManager under {@code persistKey}.
+     *     The listener is intentionally attached AFTER the first restore so
+     *     the restore itself doesn't echo the default value back to disk.
+     * Stored as a fraction (0..1) of the relevant axis so positions stay
+     * proportional if the toolbox window is later resized to a different
+     * dimension between sessions.
+     */
+    private void installDividerPersistence(JSplitPane split, String persistKey, double defaultFraction)
+    {
+        final double startFraction = loadDividerFraction(persistKey, defaultFraction);
+        split.addHierarchyListener(new java.awt.event.HierarchyListener()
+        {
+            @Override
+            public void hierarchyChanged(java.awt.event.HierarchyEvent e)
+            {
+                if ((e.getChangeFlags() & java.awt.event.HierarchyEvent.SHOWING_CHANGED) == 0) return;
+                if (!split.isShowing()) return;
+                split.removeHierarchyListener(this);
+                // Defer to invokeLater so the split pane's actual width/height
+                // is set before setDividerLocation(double) computes pixels
+                // from the fraction. Calling it from the listener directly
+                // can race with the layout pass.
+                javax.swing.SwingUtilities.invokeLater(() ->
+                {
+                    split.setDividerLocation(startFraction);
+                    // Attach the save listener AFTER the restore so the
+                    // restore-driven property change doesn't trigger a save
+                    // of the default value. Subsequent drags persist normally.
+                    split.addPropertyChangeListener(JSplitPane.DIVIDER_LOCATION_PROPERTY, evt ->
+                    {
+                        if (plugin == null || plugin.getConfigManager() == null) return;
+                        int loc = ((Number) evt.getNewValue()).intValue();
+                        int size = split.getOrientation() == JSplitPane.HORIZONTAL_SPLIT
+                                ? split.getWidth() : split.getHeight();
+                        if (size <= 0) return;
+                        double fraction = Math.max(0.0, Math.min(1.0, (double) loc / size));
+                        plugin.getConfigManager().setConfiguration(
+                                DIV_CFG_GROUP, persistKey, Double.toString(fraction));
+                    });
+                });
+            }
+        });
+    }
+
+    private double loadDividerFraction(String key, double defaultFraction)
+    {
+        if (plugin == null || plugin.getConfigManager() == null) return defaultFraction;
+        String stored = plugin.getConfigManager().getConfiguration(DIV_CFG_GROUP, key);
+        if (stored == null || stored.isEmpty()) return defaultFraction;
+        try
+        {
+            double f = Double.parseDouble(stored);
+            return (f > 0.0 && f < 1.0) ? f : defaultFraction;
+        }
+        catch (NumberFormatException ex)
+        {
+            return defaultFraction;
+        }
+    }
     /** 1px line in MEDIUM_GRAY -- contrasts against the DARKER_GRAY panel
      *  background so each section reads as a discrete region. */
     private static final javax.swing.border.Border SECTION_BORDER =
