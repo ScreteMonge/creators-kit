@@ -2367,7 +2367,11 @@ public class TimeSheetPanel extends JPanel
     private void setupTreeScrollPane()
     {
         treeScrollPane = new TreeScrollPane(managerTree);
-        treeScrollPane.setPreferredSize(new Dimension(614, 0));
+        // Preferred width drives the initial position of the rootSplit's
+        // vertical divider -- 360 keeps the tree narrow at startup so the
+        // timeline / summary on the right get most of the canvas. User
+        // can drag the divider to whatever they want from there.
+        treeScrollPane.setPreferredSize(new Dimension(360, 0));
 
         MouseWheelListener[] mouseWheelListeners = treeScrollPane.getMouseWheelListeners();
         for (int i = 0; i < mouseWheelListeners.length; i++)
@@ -3100,9 +3104,9 @@ public class TimeSheetPanel extends JPanel
     }
 
     /** Builds a JSplitPane styled to be obvious: a fat divider painted in
-     *  the medium-grey accent so it reads as a draggable boundary, not a
-     *  thin Swing default line that disappears on a dark background. */
-    private static JSplitPane makeSplit(int orientation, JComponent a, JComponent b, double resizeWeight)
+     *  the medium-grey accent with a "grip" of dots in the middle so the
+     *  user reads it as a draggable boundary, not just a thin line. */
+    private static JSplitPane makeSplit(final int orientation, JComponent a, JComponent b, double resizeWeight)
     {
         JSplitPane split = new JSplitPane(orientation, a, b);
         split.setBorder(null);
@@ -3110,13 +3114,13 @@ public class TimeSheetPanel extends JPanel
         split.setDividerSize(SPLIT_DIVIDER_SIZE);
         split.setResizeWeight(resizeWeight);
         split.setContinuousLayout(true);
-        split.setOneTouchExpandable(true);
         split.setUI(new javax.swing.plaf.basic.BasicSplitPaneUI()
         {
             @Override
             public javax.swing.plaf.basic.BasicSplitPaneDivider createDefaultDivider()
             {
-                return new javax.swing.plaf.basic.BasicSplitPaneDivider(this)
+                javax.swing.plaf.basic.BasicSplitPaneDivider divider =
+                        new javax.swing.plaf.basic.BasicSplitPaneDivider(this)
                 {
                     @Override
                     public void paint(Graphics g)
@@ -3125,17 +3129,42 @@ public class TimeSheetPanel extends JPanel
                         // the dark theme; default L&F painting blends in.
                         g.setColor(ColorScheme.MEDIUM_GRAY_COLOR);
                         g.fillRect(0, 0, getWidth(), getHeight());
-                        super.paint(g);
+                        // 5-dot grip in the centre so the divider visually
+                        // reads as a drag handle, not just a coloured stripe.
+                        g.setColor(ColorScheme.LIGHT_GRAY_COLOR);
+                        int cx = getWidth() / 2;
+                        int cy = getHeight() / 2;
+                        if (orientation == JSplitPane.HORIZONTAL_SPLIT)
+                        {
+                            for (int dy = -8; dy <= 8; dy += 4)
+                            {
+                                g.fillRect(cx - 1, cy + dy - 1, 2, 2);
+                            }
+                        }
+                        else
+                        {
+                            for (int dx = -8; dx <= 8; dx += 4)
+                            {
+                                g.fillRect(cx + dx - 1, cy - 1, 2, 2);
+                            }
+                        }
                     }
                 };
+                // Crosshair cursor when hovering the divider -- makes it
+                // unambiguous that this is a drag target.
+                divider.setCursor(Cursor.getPredefinedCursor(
+                        orientation == JSplitPane.HORIZONTAL_SPLIT
+                                ? Cursor.E_RESIZE_CURSOR
+                                : Cursor.N_RESIZE_CURSOR));
+                return divider;
             }
         });
         return split;
     }
 
-    /** Thickness of every split divider. Big enough to grab without
-     *  pixel-hunting; small enough not to eat real estate. */
-    private static final int SPLIT_DIVIDER_SIZE = 6;
+    /** Thickness of every split divider. 10px is chunky enough to grab
+     *  comfortably with the mouse and leaves room for the grip dots. */
+    private static final int SPLIT_DIVIDER_SIZE = 10;
     /** 1px line in MEDIUM_GRAY -- contrasts against the DARKER_GRAY panel
      *  background so each section reads as a discrete region. */
     private static final javax.swing.border.Border SECTION_BORDER =
