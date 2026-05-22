@@ -626,7 +626,8 @@ public class AttributePanel extends JPanel
                         keyFrameType,
                         (int) spAttributes.getSpotAnimId().getValue(),
                         spAttributes.getLoop().getSelectedItem() == Toggle.ENABLE,
-                        (int) spAttributes.getHeight().getValue()
+                        (int) spAttributes.getHeight().getValue(),
+                        (int) spAttributes.getRadius().getValue()
                 );
             case HITSPLAT_1:
             case HITSPLAT_2:
@@ -2347,15 +2348,31 @@ public class AttributePanel extends JPanel
         height.setModel(new SpinnerNumberModel(92, 0, 9999, 1));
         card.add(height, c);
 
+        // Radius spinner -- mirrors Character.radiusSpinner semantics so users
+        // can match the spotanim's clip radius to wide / tall models the same
+        // way they would on a standalone Character placement.
         c.gridx = 0;
         c.gridy = 4;
+        JLabel radiusLabel = new JLabel("Radius: ");
+        radiusLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(radiusLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 4;
+        JSpinner radius = spAttributes.getRadius();
+        radius.setToolTipText("How far the SpotAnim should render vs clip with other tiles around it, measured in 1/128th tiles");
+        radius.setModel(new SpinnerNumberModel(60, 0, 9999, 1));
+        card.add(radius, c);
+
+        c.gridx = 0;
+        c.gridy = 5;
         JLabel searcherLabel = new JLabel("SpotAnims: ");
         searcherLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(searcherLabel, c);
 
         c.gridwidth = 3;
         c.gridx = 1;
-        c.gridy = 4;
+        c.gridy = 5;
         JTextField spotanimField = new JTextField("");
         spotanimField.setToolTipText("Find all SpotAnims from the cache, and double click the name to apply its Id");
         spotanimField.setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -2404,14 +2421,14 @@ public class AttributePanel extends JPanel
         c.weightx = 1;
         c.weighty = 1;
         c.gridx = 2;
-        c.gridy = 5;
+        c.gridy = 6;
         JLabel empty1 = new JLabel("");
         card.add(empty1, c);
 
         c.weightx = 0;
         c.weighty = 0;
         c.gridx = 3;
-        c.gridy = 6;
+        c.gridy = 7;
         JPanel duplicatePanel = new JPanel();
         duplicatePanel.setLayout(new GridLayout(0, 1, 2, 2));
         card.add(duplicatePanel, c);

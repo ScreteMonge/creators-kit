@@ -111,7 +111,8 @@ public class KeyFrame
                         type,
                         spotKF.getSpotAnimId(),
                         spotKF.isLoop(),
-                        spotKF.getHeight());
+                        spotKF.getHeight(),
+                        spotKF.getRadius());
             case HITSPLAT_1:
             case HITSPLAT_2:
             case HITSPLAT_3:

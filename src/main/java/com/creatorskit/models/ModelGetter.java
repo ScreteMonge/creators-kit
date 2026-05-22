@@ -363,7 +363,8 @@ public class ModelGetter
                         type,
                         actorSpotAnim.getId(),
                         false,
-                        actorSpotAnim.getHeight());
+                        actorSpotAnim.getHeight(),
+                        60);
 
                 spkfs = ArrayUtils.add(spkfs, spkf);
 
@@ -743,7 +744,8 @@ public class ModelGetter
                         type,
                         actorSpotAnim.getId(),
                         false,
-                        actorSpotAnim.getHeight());
+                        actorSpotAnim.getHeight(),
+                        60);
 
                 spkfs = ArrayUtils.add(spkfs, spkf);
 

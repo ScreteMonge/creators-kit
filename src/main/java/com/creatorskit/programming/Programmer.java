@@ -2114,10 +2114,10 @@ public class Programmer
         LocalPoint lp = ckObject.getLocation();
         int plane = ckObject.getLevel();
 
-        updateSpotAnim(keyFrameType, spotAnimKeyFrame.getSpotAnimId(), spotAnimKeyFrame.getHeight(), character, currentTime, spotAnimKeyFrame.getTick(), spotAnimKeyFrame.isLoop(), lp, plane, ckObject.getOrientation());
+        updateSpotAnim(keyFrameType, spotAnimKeyFrame.getSpotAnimId(), spotAnimKeyFrame.getHeight(), spotAnimKeyFrame.getRadius(), character, currentTime, spotAnimKeyFrame.getTick(), spotAnimKeyFrame.isLoop(), lp, plane, ckObject.getOrientation());
     }
 
-    private void updateSpotAnim(KeyFrameType keyFrameType, int spotAnimId, int height, Character character, double currentTime, double startTick, boolean loop, LocalPoint lp, int plane, int orientation)
+    private void updateSpotAnim(KeyFrameType keyFrameType, int spotAnimId, int height, int radius, Character character, double currentTime, double startTick, boolean loop, LocalPoint lp, int plane, int orientation)
     {
         CKObject spotAnim;
         if (keyFrameType == KeyFrameType.SPOTANIM)
@@ -2169,6 +2169,12 @@ public class Programmer
                 }
 
                 ckObject.setOrientation(orientation);
+                // Apply the keyframe's radius (matches Character.setRadius
+                // semantics on the parent CKObject). Old saves that lack the
+                // field deserialize as 0; treat that as "use RuneLite default"
+                // so we don't shrink existing spotanims down to a 0-tile clip
+                // box on load.
+                ckObject.setRadius(radius > 0 ? radius : 60);
                 ckObject.setPlaying(playing);
                 ckObject.setActive(false);
                 ckObject.setActive(true);

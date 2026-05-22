@@ -1698,7 +1698,8 @@ public class TimeSheetPanel extends JPanel
                 type,
                 spotanimData.getId(),
                 false,
-                92);
+                92,
+                60);
 
         addKeyFrameAction(new KeyFrame[]{keyFrame});
     }
@@ -1793,7 +1794,8 @@ public class TimeSheetPanel extends JPanel
                     targetType,
                     src.getSpotAnimId(),
                     src.isLoop(),
-                    src.getHeight());
+                    src.getHeight(),
+                    src.getRadius());
             kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(spkf, c, KeyFrameCharacterActionType.ADD));
             KeyFrame replaced = addKeyFrame(c, spkf);
             if (replaced != null)
