@@ -60,15 +60,30 @@ public class BlockEditDialog
 
         // 4x3 swatch grid. Each swatch is a JPanel painted with the palette
         // colour; clicking selects it. Selected swatch gets a white border.
+        // The paintComponent override is load-bearing -- RuneLite ships a
+        // Synth-based LaF whose JPanel UI ignores setBackground for plain
+        // (no-child) panels and leaves them with the default gray. Doing the
+        // fill ourselves bypasses the LaF entirely so each swatch actually
+        // shows its palette colour instead of all twelve looking identical.
         JPanel swatches = new JPanel(new GridLayout(3, 4, 4, 4));
         swatches.setOpaque(false);
         final JPanel[] swatchPanels = new JPanel[BlockPalette.COLOURS.length];
         for (int i = 0; i < BlockPalette.COLOURS.length; i++)
         {
             final int rgb = BlockPalette.COLOURS[i];
-            JPanel sw = new JPanel();
+            final Color fill = new Color(rgb);
+            JPanel sw = new JPanel()
+            {
+                @Override
+                protected void paintComponent(Graphics g)
+                {
+                    g.setColor(fill);
+                    g.fillRect(0, 0, getWidth(), getHeight());
+                }
+            };
+            sw.setOpaque(true);
             sw.setPreferredSize(new Dimension(48, 36));
-            sw.setBackground(new Color(rgb));
+            sw.setBackground(fill);
             sw.setBorder(new LineBorder(rgb == initialColorRgb ? Color.WHITE : ColorScheme.MEDIUM_GRAY_COLOR,
                     rgb == initialColorRgb ? 3 : 1));
             sw.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
