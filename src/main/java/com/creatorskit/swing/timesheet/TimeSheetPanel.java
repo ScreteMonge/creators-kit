@@ -2222,6 +2222,12 @@ public class TimeSheetPanel extends JPanel
     public void setSelectedKeyFrames(KeyFrame[] keyFrames)
     {
         this.selectedKeyFrames = keyFrames;
+        // Any keyframe-selection change clears the block selection -- the
+        // block-click path explicitly re-sets it after this call returns.
+        // Marquee / keyframe-click / programmatic paths leave it cleared so
+        // Delete-key behaviour reverts to "delete just keyframes" instead
+        // of accidentally triggering the block-delete confirmation.
+        clearBlockSelection();
         refreshGlobalRowsOnlyMode();
         if (attributePanel != null)
         {
@@ -2983,6 +2989,23 @@ public class TimeSheetPanel extends JPanel
 
     public void onDeleteKeyPressed()
     {
+        // Block selection takes precedence: if the user clicked a block
+        // and then hit Delete, treat it as "delete the block + its
+        // keyframes" with a confirmation (matches the right-click menu).
+        if (selectedBlocks != null && !selectedBlocks.isEmpty())
+        {
+            for (int i = 0; i < selectedBlocks.size(); i++)
+            {
+                com.creatorskit.swing.timesheet.keyframe.Block b = selectedBlocks.get(i);
+                Character owner = i < selectedBlockOwners.size() ? selectedBlockOwners.get(i) : null;
+                if (owner != null && b != null)
+                {
+                    deleteBlockWithConfirm(owner, b);
+                }
+            }
+            return;
+        }
+
         if (selectedKeyFrames == null || selectedKeyFrames.length == 0)
         {
             return;
@@ -4246,6 +4269,93 @@ public class TimeSheetPanel extends JPanel
             }
         }
         return kfa;
+    }
+
+    // ===== Blocks (Phase 1) ============================================
+
+    /**
+     * Block(s) the user has selected via left-click on the block rect.
+     * Parallel to {@link #selectedKeyFrames}: clicking a block sets BOTH
+     * the keyframe selection (to the block's members) AND this list so the
+     * Delete-key handler can offer the "delete block + its keyframes"
+     * confirmation. Cleared the moment any other selection path fires
+     * (marquee, keyframe click, Tools action).
+     */
+    @Getter
+    private java.util.List<com.creatorskit.swing.timesheet.keyframe.Block> selectedBlocks = new java.util.ArrayList<>();
+    /** Parallel list of the Character that owns each selected block. */
+    private java.util.List<Character> selectedBlockOwners = new java.util.ArrayList<>();
+
+    public void setSelectedBlock(com.creatorskit.swing.timesheet.keyframe.Block block, Character owner)
+    {
+        selectedBlocks = new java.util.ArrayList<>(java.util.Collections.singletonList(block));
+        selectedBlockOwners = new java.util.ArrayList<>(java.util.Collections.singletonList(owner));
+    }
+
+    public void clearBlockSelection()
+    {
+        selectedBlocks = new java.util.ArrayList<>();
+        selectedBlockOwners = new java.util.ArrayList<>();
+    }
+
+    /** Removes the block grouping from {@code character} but leaves all
+     *  member keyframes in place. The user's "dissolve" action -- the
+     *  keyframes go back to ungrouped life on the timeline. */
+    public void dissolveBlock(Character character, com.creatorskit.swing.timesheet.keyframe.Block block)
+    {
+        if (character == null || block == null) return;
+        character.getBlocks().remove(block);
+        clearBlockSelection();
+        attributeSheet.repaint();
+        summarySheet.repaint();
+    }
+
+    /** Shows a confirmation dialog then deletes both the block AND every
+     *  member keyframe. The "Delete block + keyframes..." action -- routes
+     *  the kf removals through {@link #addKeyFrameActions} so undo can
+     *  restore them in one step. */
+    public void deleteBlockWithConfirm(Character character, com.creatorskit.swing.timesheet.keyframe.Block block)
+    {
+        if (character == null || block == null) return;
+        int n = block.getKeyFrames().size();
+        int choice = JOptionPane.showConfirmDialog(this,
+                "Delete block \"" + (block.getName() == null ? "(unnamed)" : block.getName())
+                        + "\" and its " + n + " keyframe" + (n == 1 ? "" : "s") + "?",
+                "Delete block",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
+        if (choice != JOptionPane.OK_OPTION) return;
+
+        // Record the kf removals as a single undoable batch, then drop
+        // the block itself. Snapshot the member list first because
+        // removeKeyFrame mutates the Character's frame arrays underneath.
+        KeyFrameAction[] kfa = new KeyFrameAction[0];
+        java.util.List<com.creatorskit.swing.timesheet.keyframe.KeyFrame> snapshot =
+                new java.util.ArrayList<>(block.getKeyFrames());
+        for (com.creatorskit.swing.timesheet.keyframe.KeyFrame kf : snapshot)
+        {
+            if (kf == null) continue;
+            character.removeKeyFrame(kf);
+            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(kf, character, KeyFrameCharacterActionType.REMOVE));
+        }
+        character.getBlocks().remove(block);
+        if (kfa.length > 0) addKeyFrameActions(kfa);
+        clearBlockSelection();
+        setSelectedKeyFrames(new com.creatorskit.swing.timesheet.keyframe.KeyFrame[0]);
+    }
+
+    /** Pops the BlockEditDialog pre-filled with the block's current name
+     *  and colour. On OK, writes back; on cancel, leaves the block as-is. */
+    public void editBlockNameAndColour(Character character, com.creatorskit.swing.timesheet.keyframe.Block block)
+    {
+        if (block == null) return;
+        com.creatorskit.swing.timesheet.blocks.BlockEditDialog.Result result =
+                com.creatorskit.swing.timesheet.blocks.BlockEditDialog.show(this,
+                        "Rename / Recolour block", block.getName(), block.getColorRgb());
+        if (result == null) return;
+        block.setName(result.name);
+        block.setColorRgb(result.colorRgb);
+        attributeSheet.repaint();
+        summarySheet.repaint();
     }
 
     // ===== Blocks (Phase 1: create + render) ============================

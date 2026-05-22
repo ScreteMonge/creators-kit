@@ -832,6 +832,10 @@ public class AttributeSheet extends TimeSheet
     {
         if (getKeyFrameClicked(p) != null) return;
 
+        // Block right-click intercepts BEFORE the empty-space ripple-delete
+        // menu so the user can manage the block directly via its rect.
+        if (tryHandleBlockRightClick(p)) return;
+
         // Row math is the inverse of the y1 formula used by drawKeyFrames /
         // getKeyFrameClicked: y1 = rowHeightOffset + rowHeight + rowHeight*dr - vScroll.
         // The first data row sits one rowHeight below the header chip row.
@@ -842,6 +846,120 @@ public class AttributeSheet extends TimeSheet
         double clickTick = (double) p.getX() * getZoom() / getWidth() - getHScroll();
         double[] gap = findGapForRippleDelete(type, clickTick);
         showRippleDeleteContextPopup(p, gap[0], gap[1], type);
+    }
+
+    /**
+     * Returns the (Character, Block) pair whose rect contains {@code p}, or
+     * null if no block is hit. Iterates visible Characters and their blocks;
+     * uses the same rect math as drawBlocks so hit-test agrees with what's
+     * painted. First match wins -- blocks are disjoint in time on a single
+     * Character per the spec, but with multi-Character selection two
+     * different Characters could have overlapping block rects in screen
+     * space; the iteration order matches visible Character order.
+     */
+    private BlockHit findBlockAt(Point p)
+    {
+        java.util.List<Character> visible = getVisibleCharacters();
+        if (visible.isEmpty()) return null;
+        BufferedImage keyImg = getKeyframeImage();
+        int xImageOffset = keyImg.getWidth() / 2;
+        double zoomFactor = (double) this.getWidth() / getZoom();
+
+        for (Character c : visible)
+        {
+            java.util.List<com.creatorskit.swing.timesheet.keyframe.Block> blocks = c.getBlocks();
+            if (blocks == null) continue;
+            for (com.creatorskit.swing.timesheet.keyframe.Block block : blocks)
+            {
+                if (block == null || block.isEmpty()) continue;
+                int minRow = Integer.MAX_VALUE;
+                int maxRow = Integer.MIN_VALUE;
+                for (KeyFrameType type : block.getIncludedTypes())
+                {
+                    int dr = displayRowIndex(type);
+                    if (dr < 0) continue;
+                    if (dr < minRow) minRow = dr;
+                    if (dr > maxRow) maxRow = dr;
+                }
+                if (minRow == Integer.MAX_VALUE) continue;
+
+                int leftX = (int) ((block.getStartTick() + getHScroll()) * zoomFactor) - xImageOffset;
+                int rightX = (int) ((block.getEndTick() + getHScroll()) * zoomFactor) + xImageOffset;
+                int topY = rowHeightOffset + rowHeight + rowHeight * minRow - getVScroll();
+                int bottomY = rowHeightOffset + rowHeight + rowHeight * (maxRow + 1) - getVScroll();
+
+                if (p.getX() >= leftX && p.getX() <= rightX
+                        && p.getY() >= topY && p.getY() <= bottomY)
+                {
+                    return new BlockHit(c, block);
+                }
+            }
+        }
+        return null;
+    }
+
+    private static final class BlockHit
+    {
+        final Character character;
+        final com.creatorskit.swing.timesheet.keyframe.Block block;
+        BlockHit(Character character, com.creatorskit.swing.timesheet.keyframe.Block block)
+        {
+            this.character = character;
+            this.block = block;
+        }
+    }
+
+    @Override
+    public boolean tryHandleBlockLeftClick(Point p, boolean shiftDown)
+    {
+        BlockHit hit = findBlockAt(p);
+        if (hit == null) return false;
+        TimeSheetPanel tsp = getTimeSheetPanel();
+        if (tsp == null) return false;
+        // Select all of the block's member keyframes -- existing marquee
+        // semantics handle the rest (card refresh, multi-character labels,
+        // etc.). Also register the block on TimeSheetPanel so a subsequent
+        // Delete key knows it's deleting a whole block (with confirmation).
+        java.util.List<com.creatorskit.swing.timesheet.keyframe.KeyFrame> members = hit.block.getKeyFrames();
+        tsp.setSelectedKeyFrames(members.toArray(new com.creatorskit.swing.timesheet.keyframe.KeyFrame[0]));
+        tsp.setSelectedBlock(hit.block, hit.character);
+        return true;
+    }
+
+    @Override
+    public boolean tryHandleBlockRightClick(Point p)
+    {
+        BlockHit hit = findBlockAt(p);
+        if (hit == null) return false;
+        showBlockContextMenu(p, hit);
+        return true;
+    }
+
+    private void showBlockContextMenu(Point p, BlockHit hit)
+    {
+        TimeSheetPanel tsp = getTimeSheetPanel();
+        if (tsp == null) return;
+        javax.swing.JPopupMenu menu = new javax.swing.JPopupMenu();
+
+        javax.swing.JMenuItem enter = new javax.swing.JMenuItem("Enter block (nested view) -- coming soon");
+        enter.setEnabled(false);
+        menu.add(enter);
+
+        menu.addSeparator();
+
+        javax.swing.JMenuItem rename = new javax.swing.JMenuItem("Rename / Recolour...");
+        rename.addActionListener(e -> tsp.editBlockNameAndColour(hit.character, hit.block));
+        menu.add(rename);
+
+        javax.swing.JMenuItem dissolve = new javax.swing.JMenuItem("Dissolve block (keep keyframes)");
+        dissolve.addActionListener(e -> tsp.dissolveBlock(hit.character, hit.block));
+        menu.add(dissolve);
+
+        javax.swing.JMenuItem delete = new javax.swing.JMenuItem("Delete block + keyframes...");
+        delete.addActionListener(e -> tsp.deleteBlockWithConfirm(hit.character, hit.block));
+        menu.add(delete);
+
+        menu.show(this, (int) p.getX(), (int) p.getY());
     }
 
     /**

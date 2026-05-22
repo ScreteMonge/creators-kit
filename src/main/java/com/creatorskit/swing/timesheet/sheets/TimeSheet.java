@@ -484,6 +484,25 @@ public class TimeSheet extends JPanel
 
     }
 
+    /** Hit-test hook for clicks on a block rectangle. Default: no-op
+     *  returning false. AttributeSheet overrides to: if the click landed
+     *  inside a block rect (and not on a keyframe icon), select the block's
+     *  member keyframes + register the block selection, then return true
+     *  so the press doesn't fall through to marquee start. */
+    public boolean tryHandleBlockLeftClick(Point p, boolean shiftDown)
+    {
+        return false;
+    }
+
+    /** Hit-test hook for right-clicks on a block rectangle. Default false.
+     *  AttributeSheet overrides to show the block context menu (Dissolve /
+     *  Delete / Rename / Recolour / Enter) when the click lands inside a
+     *  block, intercepting before the empty-space Ripple Delete menu fires. */
+    public boolean tryHandleBlockRightClick(Point p)
+    {
+        return false;
+    }
+
     private void drawBackgroundLines(Graphics g)
     {
         double modeMultiplier = config.timelineUnits().getMultiplier();
@@ -762,6 +781,12 @@ public class TimeSheet extends JPanel
                 {
                     allowRectangleSelect = false;
                     updateSelectedKeyFrameOnPressed(e.isShiftDown());
+                }
+                else if (tryHandleBlockLeftClick(mousePosition, e.isShiftDown()))
+                {
+                    // Block click consumed the press -- don't start marquee
+                    // dragging on top of a block selection.
+                    allowRectangleSelect = false;
                 }
             }
 
