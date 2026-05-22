@@ -73,6 +73,7 @@ public enum KeyFrameType
     public static final KeyFrameType[] ALL_KEYFRAME_TYPES_ALPHABETICAL = new KeyFrameType[]{
             ANIMATION,
             CAMERA,
+            COLOUR,
             HEALTH,
             HITSPLAT_1,
             HITSPLAT_2,
@@ -83,7 +84,6 @@ public enum KeyFrameType
             ORIENTATION,
             OVERHEAD,
             PROJECTILE,
-            COLOUR,
             SCREEN_FADE,
             SCREEN_SHAKE,
             SHIELD,
@@ -101,6 +101,7 @@ public enum KeyFrameType
      */
     public static final KeyFrameType[] LOCAL_KEYFRAME_TYPES_ALPHABETICAL = new KeyFrameType[]{
             ANIMATION,
+            COLOUR,
             HEALTH,
             HITSPLAT_1,
             HITSPLAT_2,
@@ -111,7 +112,6 @@ public enum KeyFrameType
             ORIENTATION,
             OVERHEAD,
             PROJECTILE,
-            COLOUR,
             SHIELD,
             SPAWN,
             SPECIAL,

@@ -38,8 +38,6 @@ public class ColourAttributes extends Attributes
     private final JSpinner holdTicks = new JSpinner();
     private final JSpinner fadeOutTicks = new JSpinner();
     private final JComboBox<ColourBlendMode> blendMode = new JComboBox<>();
-    /** Toggle: ENABLE = smoothstep ramps, DISABLE = linear ramps. */
-    private final JComboBox<Toggle> easeInOut = new JComboBox<>();
     /** Toggle: ENABLE = tint also applied to spotanim 1 / 2 CKObjects. */
     private final JComboBox<Toggle> affectSpotAnims = new JComboBox<>();
 
@@ -68,7 +66,6 @@ public class ColourAttributes extends Attributes
         holdTicks.setValue(kf.getHoldTicks());
         fadeOutTicks.setValue(kf.getFadeOutTicks());
         blendMode.setSelectedItem(kf.getBlendMode() == null ? DEFAULT_BLEND_MODE : kf.getBlendMode());
-        easeInOut.setSelectedItem(kf.isEaseInOut() ? Toggle.ENABLE : Toggle.DISABLE);
         affectSpotAnims.setSelectedItem(kf.isAffectSpotAnims() ? Toggle.ENABLE : Toggle.DISABLE);
     }
 
@@ -82,7 +79,6 @@ public class ColourAttributes extends Attributes
         holdTicks.setBackground(color);
         fadeOutTicks.setBackground(color);
         blendMode.setBackground(color);
-        easeInOut.setBackground(color);
         affectSpotAnims.setBackground(color);
     }
 
@@ -96,7 +92,6 @@ public class ColourAttributes extends Attributes
                         holdTicks,
                         fadeOutTicks,
                         blendMode,
-                        easeInOut,
                         affectSpotAnims
                 };
     }
@@ -108,7 +103,6 @@ public class ColourAttributes extends Attributes
         holdTicks.addChangeListener(e -> holdTicks.setBackground(getRed()));
         fadeOutTicks.addChangeListener(e -> fadeOutTicks.setBackground(getRed()));
         blendMode.addItemListener(e -> blendMode.setBackground(getRed()));
-        easeInOut.addItemListener(e -> easeInOut.setBackground(getRed()));
         affectSpotAnims.addItemListener(e -> affectSpotAnims.setBackground(getRed()));
         // colour button is wired in the card setup -- it needs the JColorChooser dialog.
     }
@@ -121,7 +115,6 @@ public class ColourAttributes extends Attributes
         holdTicks.setValue(DEFAULT_HOLD);
         fadeOutTicks.setValue(DEFAULT_FADE_OUT);
         blendMode.setSelectedItem(DEFAULT_BLEND_MODE);
-        easeInOut.setSelectedItem(Toggle.DISABLE);
         affectSpotAnims.setSelectedItem(Toggle.DISABLE);
         super.resetAttributes(resetBackground);
     }

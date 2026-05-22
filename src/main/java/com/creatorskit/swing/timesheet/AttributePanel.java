@@ -738,7 +738,7 @@ public class AttributePanel extends JPanel
                         ((Number) colourAttributes.getHoldTicks().getValue()).doubleValue(),
                         ((Number) colourAttributes.getFadeOutTicks().getValue()).doubleValue(),
                         (com.creatorskit.swing.timesheet.keyframe.ColourBlendMode) colourAttributes.getBlendMode().getSelectedItem(),
-                        colourAttributes.getEaseInOut().getSelectedItem() == com.creatorskit.swing.timesheet.keyframe.settings.Toggle.ENABLE,
+                        true,  // easeInOut: smoothstep always -- the toggle was redundant in practice, removed from UI
                         colourAttributes.getAffectSpotAnims().getSelectedItem() == com.creatorskit.swing.timesheet.keyframe.settings.Toggle.ENABLE
                 );
         }
@@ -3506,7 +3506,6 @@ public class AttributePanel extends JPanel
         JSpinner hold = colourAttributes.getHoldTicks();
         JSpinner fadeOut = colourAttributes.getFadeOutTicks();
         JComboBox<com.creatorskit.swing.timesheet.keyframe.ColourBlendMode> blendMode = colourAttributes.getBlendMode();
-        JComboBox<com.creatorskit.swing.timesheet.keyframe.settings.Toggle> easeInOut = colourAttributes.getEaseInOut();
         JComboBox<com.creatorskit.swing.timesheet.keyframe.settings.Toggle> affectSpotAnims = colourAttributes.getAffectSpotAnims();
 
         c.gridwidth = 1;
@@ -3590,23 +3589,10 @@ public class AttributePanel extends JPanel
 
         c.gridx = 0;
         c.gridy = 6;
-        card.add(rightLabel("Ease in/out: "), c);
-
-        c.gridx = 1;
-        c.gridy = 6;
-        easeInOut.setToolTipText("Smoothstep the fade ramps (organic) vs linear ramps (mechanical)");
-        easeInOut.setFocusable(false);
-        easeInOut.removeAllItems();
-        easeInOut.addItem(com.creatorskit.swing.timesheet.keyframe.settings.Toggle.DISABLE);
-        easeInOut.addItem(com.creatorskit.swing.timesheet.keyframe.settings.Toggle.ENABLE);
-        card.add(easeInOut, c);
-
-        c.gridx = 0;
-        c.gridy = 7;
         card.add(rightLabel("Affect SpotAnims: "), c);
 
         c.gridx = 1;
-        c.gridy = 7;
+        c.gridy = 6;
         affectSpotAnims.setToolTipText("Also tint the Character's SpotAnim 1 / 2 CKObjects while the envelope is active");
         affectSpotAnims.setFocusable(false);
         affectSpotAnims.removeAllItems();

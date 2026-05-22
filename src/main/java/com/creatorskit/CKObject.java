@@ -349,13 +349,13 @@ public class CKObject extends RuneLiteObjectController
             // Fast path: no shrink/restore needed, no mutation of shared baseModel.
             if (animationController != null)
             {
-                return animationController.animate(this.baseModel, this.poseAnimationController);
+                return applyColourTintIfAny(animationController.animate(this.baseModel, this.poseAnimationController));
             }
             if (poseAnimationController != null)
             {
-                return poseAnimationController.animate(this.baseModel);
+                return applyColourTintIfAny(poseAnimationController.animate(this.baseModel));
             }
-            return baseModel;
+            return applyColourTintIfAny(baseModel);
         }
 
         // Synchronize the entire bracket on baseModel so another ckObject sharing
@@ -392,8 +392,38 @@ public class CKObject extends RuneLiteObjectController
             {
                 expandAnimatedModel(model);
             }
-            return model;
+            return applyColourTintIfAny(model);
         }
+    }
+
+    /**
+     * Per-CKObject colour tint, set by ColourController during a Colour
+     * keyframe envelope and cleared on envelope end. When non-null,
+     * {@link #getModel} routes its post-animation output through the
+     * tint -- the tint clones the animated frame via {@code mergeModels}
+     * and writes a per-face HSL blend into the clone, so the mutation
+     * doesn't leak to other Characters sharing the same baseModel.
+     *
+     * <p>Same idea as ProjectileCKObject's pitch hook (which deep-copies
+     * the animated frame to apply pitch without disturbing the shared
+     * baseModel) -- just for colour instead of geometry.
+     */
+    @Setter
+    @Getter
+    private com.creatorskit.programming.ColourTint colourTint;
+
+    /**
+     * Returns {@code raw} unchanged when no tint is active, otherwise the
+     * tint's per-frame deep-copy with the lerped face colours applied.
+     * Always safe to call -- null tint or null model both short-circuit
+     * to the raw input.
+     */
+    private Model applyColourTintIfAny(Model raw)
+    {
+        com.creatorskit.programming.ColourTint tint = this.colourTint;
+        if (tint == null || raw == null) return raw;
+        Model tinted = tint.applyToFrame(client, raw);
+        return tinted == null ? raw : tinted;
     }
 
     /**
