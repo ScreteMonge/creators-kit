@@ -26,6 +26,11 @@ public class HealthAttributes extends Attributes
      * keyframe can opt in/out independently.
      */
     private final JCheckBox syncHitsplats = new JCheckBox("", true);
+    /** Fade-in / fade-out durations in ticks. Only meaningful for the
+     *  BOSS_HEALTH sprite -- the Boss healthbar overlay reads them at the
+     *  edges of the bar's lifecycle. 0 = no fade (snap in / snap out). */
+    private final JSpinner fadeInTicks = new JSpinner();
+    private final JSpinner fadeOutTicks = new JSpinner();
 
     public HealthAttributes()
     {
@@ -43,6 +48,8 @@ public class HealthAttributes extends Attributes
         order.setValue(kf.getOrder());
         width.setValue(kf.getWidth());
         syncHitsplats.setSelected(kf.isSyncHitsplats());
+        fadeInTicks.setValue(kf.getFadeInTicks());
+        fadeOutTicks.setValue(kf.getFadeOutTicks());
     }
 
     @Override
@@ -55,6 +62,8 @@ public class HealthAttributes extends Attributes
         order.setBackground(color);
         width.setBackground(color);
         syncHitsplats.setBackground(color);
+        fadeInTicks.setBackground(color);
+        fadeOutTicks.setBackground(color);
     }
 
     @Override
@@ -68,7 +77,9 @@ public class HealthAttributes extends Attributes
                         currentHealth,
                         order,
                         width,
-                        syncHitsplats
+                        syncHitsplats,
+                        fadeInTicks,
+                        fadeOutTicks
                 };
     }
 
@@ -106,6 +117,9 @@ public class HealthAttributes extends Attributes
         });
 
         syncHitsplats.addActionListener(e -> syncHitsplats.setBackground(getRed()));
+
+        fadeInTicks.addChangeListener(e -> fadeInTicks.setBackground(getRed()));
+        fadeOutTicks.addChangeListener(e -> fadeOutTicks.setBackground(getRed()));
     }
 
     @Override
@@ -118,6 +132,8 @@ public class HealthAttributes extends Attributes
         order.setValue(HealthKeyFrame.DEFAULT_ORDER);
         width.setValue(HealthKeyFrame.AUTO_WIDTH);
         syncHitsplats.setSelected(true);
+        fadeInTicks.setValue(0.0);
+        fadeOutTicks.setValue(0.0);
         super.resetAttributes(resetBackground);
     }
 }

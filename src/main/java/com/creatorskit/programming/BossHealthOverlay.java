@@ -14,7 +14,9 @@ import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 
 import javax.inject.Inject;
+import java.awt.AlphaComposite;
 import java.awt.Color;
+import java.awt.Composite;
 import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
@@ -174,6 +176,22 @@ public class BossHealthOverlay extends Overlay
         int x = (canvasW - BAR_WIDTH) / 2;
         int y = TOP_MARGIN;
 
+        // Lifecycle fade alpha. Compute lifecycle bounds across every
+        // boss-health keyframe on bossChar (manual + synced), then check
+        // currentTick against the fade-in window at the start and the
+        // fade-out window at the end. Synced keyframes inherit fade values
+        // from the manual one, so reading from the first / last keyframe
+        // by tick gives the user's authored values. Alpha == 1.0 in the
+        // middle of the lifecycle so hitsplats don't trigger any fade.
+        float lifecycleAlpha = computeLifecycleAlpha(bossChar, currentTick);
+        if (lifecycleAlpha <= 0f) return null;
+        Composite originalComposite = null;
+        if (lifecycleAlpha < 1f)
+        {
+            originalComposite = graphics.getComposite();
+            graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, lifecycleAlpha));
+        }
+
         // Plate: brown frame (#3a352b) outer + dark fill inside. PLATE_PAD
         // around the contents gives the "chunky" look the reference shows.
         // Frame is a single fillRect; we then paint the inside with PLATE_FILL
@@ -268,7 +286,71 @@ public class BossHealthOverlay extends Overlay
         graphics.setColor(Color.WHITE);
         graphics.drawString(text, textX, textY);
 
+        if (originalComposite != null)
+        {
+            graphics.setComposite(originalComposite);
+        }
+
         return null;
+    }
+
+    /**
+     * Lifecycle alpha for the boss healthbar's fade-in / fade-out animation.
+     *
+     * <p>The "lifecycle" spans from the earliest boss-health keyframe's tick
+     * to the latest {@code tick + duration} across every boss-health
+     * keyframe on the Character. Within {@code fadeInTicks} of the start
+     * the alpha ramps 0 -> 1; within {@code fadeOutTicks} of the end it
+     * ramps 1 -> 0. Outside both windows alpha is 1.0, so hitsplats /
+     * mid-fight events never re-trigger a fade.
+     *
+     * <p>fadeIn is sourced from the FIRST keyframe (lowest tick) and
+     * fadeOut from the LAST one (highest tick+duration). Since
+     * sync-created keyframes inherit fade values from the prior manual
+     * keyframe, both ends agree on the user-authored values.
+     *
+     * <p>Returns 0 when the lifecycle is degenerate or currentTick is
+     * outside the lifecycle entirely -- the render caller treats <= 0 as
+     * "skip the bar this frame".
+     */
+    private float computeLifecycleAlpha(Character character, double currentTick)
+    {
+        KeyFrame[] frames = character.getKeyFrames(KeyFrameType.HEALTH);
+        if (frames == null) return 1f;
+
+        double lifecycleStart = Double.POSITIVE_INFINITY;
+        double lifecycleEnd = Double.NEGATIVE_INFINITY;
+        HealthKeyFrame first = null;
+        HealthKeyFrame last = null;
+        for (KeyFrame kf : frames)
+        {
+            if (!(kf instanceof HealthKeyFrame)) continue;
+            HealthKeyFrame h = (HealthKeyFrame) kf;
+            if (h.getHealthbarSprite() != HealthbarSprite.BOSS_HEALTH) continue;
+            double start = h.getTick();
+            double end = h.getTick() + h.getDuration();
+            if (start < lifecycleStart) { lifecycleStart = start; first = h; }
+            if (end > lifecycleEnd) { lifecycleEnd = end; last = h; }
+        }
+        if (first == null || last == null) return 1f;
+        if (currentTick < lifecycleStart || currentTick > lifecycleEnd) return 0f;
+
+        double fadeIn = Math.max(0.0, first.getFadeInTicks());
+        double fadeOut = Math.max(0.0, last.getFadeOutTicks());
+
+        // Fade-in window: [lifecycleStart, lifecycleStart + fadeIn]
+        if (fadeIn > 0 && currentTick < lifecycleStart + fadeIn)
+        {
+            double t = (currentTick - lifecycleStart) / fadeIn;
+            return (float) Math.max(0.0, Math.min(1.0, t));
+        }
+        // Fade-out window: [lifecycleEnd - fadeOut, lifecycleEnd]
+        if (fadeOut > 0 && currentTick > lifecycleEnd - fadeOut)
+        {
+            double t = (lifecycleEnd - currentTick) / fadeOut;
+            return (float) Math.max(0.0, Math.min(1.0, t));
+        }
+        return 1f;
     }
 
     /**

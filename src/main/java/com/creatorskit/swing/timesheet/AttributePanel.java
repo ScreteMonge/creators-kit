@@ -605,6 +605,8 @@ public class AttributePanel extends JPanel
                 // auto-sync. Card-driven create defaults autoSynced=false
                 // (the new keyframe is user-authored, not sync-owned).
                 healthKf.setSyncHitsplats(healthAttributes.getSyncHitsplats().isSelected());
+                healthKf.setFadeInTicks(((Number) healthAttributes.getFadeInTicks().getValue()).doubleValue());
+                healthKf.setFadeOutTicks(((Number) healthAttributes.getFadeOutTicks().getValue()).doubleValue());
                 return healthKf;
             }
             case SPOTANIM:
@@ -2212,6 +2214,43 @@ public class AttributePanel extends JPanel
                 + "with their damage subtracted. Turn OFF to lock this Health bar<br>"
                 + "against incoming hitsplats so the bar stays at its declared value.</html>");
         card.add(syncHitsplatsCheck, c);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 8;
+        JLabel fadeInLabel = new JLabel("Fade in (ticks): ");
+        fadeInLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(fadeInLabel, c);
+
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.gridy = 8;
+        JSpinner fadeInSpinner = healthAttributes.getFadeInTicks();
+        fadeInSpinner.setModel(new SpinnerNumberModel(0.0, 0.0, 100.0, 0.1));
+        fadeInSpinner.setToolTipText("<html><b>Boss healthbar only.</b><br>"
+                + "Fade the bar in over this many ticks at the very start of the bar's lifecycle<br>"
+                + "(= the earliest boss-health keyframe's tick). 0 = no fade, bar snaps in.<br>"
+                + "Sync-created follow-up keyframes inherit this value, so hitsplats don't<br>"
+                + "re-trigger the fade mid-fight.</html>");
+        card.add(fadeInSpinner, c);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 9;
+        JLabel fadeOutLabel = new JLabel("Fade out (ticks): ");
+        fadeOutLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(fadeOutLabel, c);
+
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.gridy = 9;
+        JSpinner fadeOutSpinner = healthAttributes.getFadeOutTicks();
+        fadeOutSpinner.setModel(new SpinnerNumberModel(0.0, 0.0, 100.0, 0.1));
+        fadeOutSpinner.setToolTipText("<html><b>Boss healthbar only.</b><br>"
+                + "Fade the bar out over this many ticks at the very end of the bar's lifecycle<br>"
+                + "(= max tick+duration across every boss-health keyframe). 0 = no fade,<br>"
+                + "bar snaps out.</html>");
+        card.add(fadeOutSpinner, c);
 
         c.gridwidth = 1;
         c.gridheight = 1;

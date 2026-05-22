@@ -48,6 +48,23 @@ public class HealthKeyFrame extends KeyFrame
      * {@code !syncHitsplatsDisabled}.
      */
     private boolean syncHitsplatsDisabled = false;
+    /**
+     * Fade-in duration in game ticks. Only takes effect when the keyframe's
+     * sprite is BOSS_HEALTH. The bar's alpha ramps from 0 to 1 over the
+     * first {@code fadeInTicks} ticks of the boss-health lifecycle (= from
+     * the earliest boss-health keyframe's tick). 0 (default) = no fade --
+     * bar snaps in. Synced follow-up keyframes inherit this value so a
+     * chain of hitsplat-driven syncs doesn't re-trigger the fade.
+     */
+    private double fadeInTicks = 0.0;
+    /**
+     * Fade-out duration in game ticks. Only takes effect when the
+     * keyframe's sprite is BOSS_HEALTH. The bar's alpha ramps from 1 to 0
+     * over the final {@code fadeOutTicks} ticks before the lifecycle's
+     * absolute end (= max {@code tick + duration} across all boss-health
+     * keyframes). 0 (default) = no fade -- bar snaps out.
+     */
+    private double fadeOutTicks = 0.0;
 
     /** UI-facing convenience: "Sync hitsplats" checkbox state. True = on. */
     public boolean isSyncHitsplats()

@@ -1578,6 +1578,11 @@ public class TimeSheetPanel extends JPanel
         // opt-in state -- subsequent hitsplats at later ticks chain off
         // this one and need to see the same toggle value.
         drain.setSyncHitsplats(healthKF.isSyncHitsplats());
+        // Inherit fade-in/fade-out so the lifecycle bounds the BossHealthOverlay
+        // computes from any keyframe in the chain agree on the same values --
+        // a hitsplat-driven sync mid-fight mustn't reset / re-fire the fade.
+        drain.setFadeInTicks(healthKF.getFadeInTicks());
+        drain.setFadeOutTicks(healthKF.getFadeOutTicks());
         return drain;
     }
 
