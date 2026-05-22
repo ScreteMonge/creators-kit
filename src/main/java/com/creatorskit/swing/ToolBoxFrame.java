@@ -443,6 +443,32 @@ public class ToolBoxFrame extends JFrame
         // Same op is also exposed as a right-click context menu on empty
         // timeline space (Premiere Pro-style); this menu entry is the
         // discoverable / scope-picking entry point.
+        // Blocks: Premiere-style nested-clip grouping of keyframes. Greyed
+        // out when the marquee selection isn't a valid block on at least
+        // one Character (the per-Character no-gaps + no-overlap rules
+        // live in BlockValidator).
+        JMenuItem createBlock = new JMenuItem("Create Block...");
+        createBlock.setToolTipText("<html>Group the currently marquee-selected keyframes into a named, coloured<br>"
+                + "block (Premiere nested-clip equivalent). Requires at least 2 keyframes<br>"
+                + "and that for every property type in the selection, every keyframe of<br>"
+                + "that type in the selection's tick range is also included.<br>"
+                + "Per-Character: each selected Character gets its own block from its share<br>"
+                + "of the marquee.</html>");
+        createBlock.addActionListener(e -> timeSheetPanel.showCreateBlockDialog());
+        // Lazy-enabled at menu open time so the user sees the gate reflect
+        // the current marquee state without us having to listen for every
+        // selection event.
+        tools.addMenuListener(new javax.swing.event.MenuListener()
+        {
+            @Override public void menuSelected(javax.swing.event.MenuEvent e)
+            {
+                createBlock.setEnabled(timeSheetPanel.canCreateBlockFromSelection());
+            }
+            @Override public void menuDeselected(javax.swing.event.MenuEvent e) {}
+            @Override public void menuCanceled(javax.swing.event.MenuEvent e) {}
+        });
+        tools.add(createBlock);
+
         JMenuItem rippleDelete = new JMenuItem("Ripple Delete keyframes...");
         rippleDelete.setToolTipText("<html>Remove every keyframe in [from, to] for the chosen scope, then<br>"
                 + "shift everything after the deleted span back by (to - from + 1)<br>"

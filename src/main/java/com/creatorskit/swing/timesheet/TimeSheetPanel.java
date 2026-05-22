@@ -4247,4 +4247,134 @@ public class TimeSheetPanel extends JPanel
         }
         return kfa;
     }
+
+    // ===== Blocks (Phase 1: create + render) ============================
+
+    /**
+     * Whether the current marquee selection forms at least one valid block
+     * on at least one Character. Drives the enabled state of Tools > Create
+     * Block and the right-click "Create Block" context menu item.
+     */
+    public boolean canCreateBlockFromSelection()
+    {
+        if (selectedKeyFrames == null || selectedKeyFrames.length < 2) return false;
+        java.util.Map<Character, java.util.List<KeyFrame>> byOwner = groupSelectedKeyFramesByOwner();
+        for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> e : byOwner.entrySet())
+        {
+            if (com.creatorskit.swing.timesheet.keyframe.BlockValidator.isValidSelection(e.getKey(), e.getValue()))
+            {
+                double[] range = com.creatorskit.swing.timesheet.keyframe.BlockValidator.tickRange(e.getValue());
+                if (!com.creatorskit.swing.timesheet.keyframe.BlockValidator.overlapsExistingBlock(e.getKey(), range[0], range[1]))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Tools > Create Block / right-click "Create Block". Groups the marquee
+     * by owner, runs the validator per Character, surfaces a count of
+     * valid blocks vs total Characters with a selection, then prompts the
+     * user once for a shared name + colour. Per the design: one prompt,
+     * same name and colour for every Character that contributes a valid
+     * block; Characters whose selection is invalid (gaps) or overlaps an
+     * existing block are skipped with a warning.
+     */
+    public void showCreateBlockDialog()
+    {
+        if (selectedKeyFrames == null || selectedKeyFrames.length < 2)
+        {
+            JOptionPane.showMessageDialog(this,
+                    "Select at least 2 keyframes (the easiest way is to marquee-drag a rectangle) before creating a block.",
+                    "Create block", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        java.util.Map<Character, java.util.List<KeyFrame>> byOwner = groupSelectedKeyFramesByOwner();
+        if (byOwner.isEmpty())
+        {
+            JOptionPane.showMessageDialog(this,
+                    "Couldn't resolve any owners for the selected keyframes.",
+                    "Create block", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Partition into "valid for block" and "invalid" with a reason
+        // string per invalid Character so the warning surfaces specifics.
+        java.util.LinkedHashMap<Character, java.util.List<KeyFrame>> validByOwner = new java.util.LinkedHashMap<>();
+        java.util.LinkedHashMap<Character, String> invalidReasons = new java.util.LinkedHashMap<>();
+        for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> e : byOwner.entrySet())
+        {
+            Character c = e.getKey();
+            java.util.List<KeyFrame> sel = e.getValue();
+            if (!com.creatorskit.swing.timesheet.keyframe.BlockValidator.isValidSelection(c, sel))
+            {
+                invalidReasons.put(c, "selection has gaps in an included property");
+                continue;
+            }
+            double[] range = com.creatorskit.swing.timesheet.keyframe.BlockValidator.tickRange(sel);
+            if (com.creatorskit.swing.timesheet.keyframe.BlockValidator.overlapsExistingBlock(c, range[0], range[1]))
+            {
+                invalidReasons.put(c, "range overlaps an existing block");
+                continue;
+            }
+            validByOwner.put(c, sel);
+        }
+
+        if (validByOwner.isEmpty())
+        {
+            StringBuilder msg = new StringBuilder("No valid blocks can be created from this selection:\n");
+            for (java.util.Map.Entry<Character, String> e : invalidReasons.entrySet())
+            {
+                msg.append("\n - ").append(e.getKey().getName()).append(": ").append(e.getValue());
+            }
+            JOptionPane.showMessageDialog(this, msg.toString(),
+                    "Create block", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Confirmation with the "X blocks across Y Characters" headline the
+        // spec asked for. Invalid Characters get a tail message so the user
+        // knows they were skipped.
+        StringBuilder warn = new StringBuilder();
+        warn.append("Create ").append(validByOwner.size()).append(" block");
+        if (validByOwner.size() != 1) warn.append("s");
+        warn.append(" across ").append(validByOwner.size()).append(" Character");
+        if (validByOwner.size() != 1) warn.append("s");
+        warn.append("?");
+        if (!invalidReasons.isEmpty())
+        {
+            warn.append("\n\nSkipping ").append(invalidReasons.size())
+                    .append(" Character").append(invalidReasons.size() == 1 ? "" : "s")
+                    .append(" with invalid selections:");
+            for (java.util.Map.Entry<Character, String> e : invalidReasons.entrySet())
+            {
+                warn.append("\n  - ").append(e.getKey().getName()).append(": ").append(e.getValue());
+            }
+        }
+        int confirm = JOptionPane.showConfirmDialog(this, warn.toString(),
+                "Create block", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+        if (confirm != JOptionPane.OK_OPTION) return;
+
+        // Name + colour prompt: shared across every Character per spec.
+        com.creatorskit.swing.timesheet.blocks.BlockEditDialog.Result result =
+                com.creatorskit.swing.timesheet.blocks.BlockEditDialog.show(this, "New block",
+                        "Block " + (validByOwner.values().iterator().next().size()) + " keyframes",
+                        com.creatorskit.swing.timesheet.keyframe.BlockPalette.DEFAULT_RGB);
+        if (result == null) return; // user cancelled
+
+        for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> e : validByOwner.entrySet())
+        {
+            com.creatorskit.swing.timesheet.keyframe.Block block =
+                    new com.creatorskit.swing.timesheet.keyframe.Block(
+                            result.name, result.colorRgb, e.getValue());
+            e.getKey().getBlocks().add(block);
+        }
+        // Refresh the visible attribute sheets so the new block paints.
+        attributeSheet.repaint();
+        if (globalAttributeSheet != null) globalAttributeSheet.repaint();
+        summarySheet.repaint();
+    }
 }

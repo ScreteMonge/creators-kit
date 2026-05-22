@@ -563,7 +563,8 @@ public class CreatorsPanel extends PluginPanel
                 0,
                 0,
                 0,
-                1.0);
+                1.0,
+                new java.util.ArrayList<>());
 
         textField.addActionListener(e -> onNameTextFieldChanged(character));
 

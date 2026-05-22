@@ -133,6 +133,84 @@ public class AttributeSheet extends TimeSheet
     }
 
     @Override
+    public void drawBlocks(Graphics g)
+    {
+        java.util.List<Character> visible = getVisibleCharacters();
+        if (visible.isEmpty()) return;
+        BufferedImage keyImg = getKeyframeImage();
+        int xImageOffset = keyImg.getWidth() / 2;
+        double zoomFactor = (double) this.getWidth() / getZoom();
+
+        Graphics2D g2 = (Graphics2D) g;
+        Font origFont = g2.getFont();
+        java.awt.Font labelFont = FontManager.getRunescapeBoldFont();
+        g2.setFont(labelFont);
+        FontMetrics fm = g2.getFontMetrics();
+
+        for (Character c : visible)
+        {
+            java.util.List<com.creatorskit.swing.timesheet.keyframe.Block> blocks = c.getBlocks();
+            if (blocks == null || blocks.isEmpty()) continue;
+            for (com.creatorskit.swing.timesheet.keyframe.Block block : blocks)
+            {
+                if (block == null || block.isEmpty()) continue;
+                // Resolve row span: span every display row from the
+                // top-most included property to the bottom-most. Per the
+                // user spec the rect is a single contiguous rectangle even
+                // if intermediate rows aren't in the block.
+                int minRow = Integer.MAX_VALUE;
+                int maxRow = Integer.MIN_VALUE;
+                for (com.creatorskit.swing.timesheet.keyframe.KeyFrameType type : block.getIncludedTypes())
+                {
+                    int dr = displayRowIndex(type);
+                    if (dr < 0) continue; // global type slipped in -- skip
+                    if (dr < minRow) minRow = dr;
+                    if (dr > maxRow) maxRow = dr;
+                }
+                if (minRow == Integer.MAX_VALUE) continue;
+
+                double startTick = block.getStartTick();
+                double endTick = block.getEndTick();
+                int leftX = (int) ((startTick + getHScroll()) * zoomFactor) - xImageOffset;
+                int rightX = (int) ((endTick + getHScroll()) * zoomFactor) + xImageOffset;
+                int topY = rowHeightOffset + rowHeight + rowHeight * minRow - getVScroll();
+                int bottomY = rowHeightOffset + rowHeight + rowHeight * (maxRow + 1) - getVScroll();
+
+                int rectW = Math.max(1, rightX - leftX);
+                int rectH = Math.max(1, bottomY - topY);
+
+                Color fillColor = new Color(block.getColorRgb());
+                g2.setColor(fillColor);
+                g2.fillRect(leftX, topY, rectW, rectH);
+                // 1px darker border for definition against the dark
+                // background and adjacent blocks.
+                g2.setColor(fillColor.darker());
+                g2.drawRect(leftX, topY, rectW - 1, rectH - 1);
+
+                // Name label centred horizontally + vertically inside the
+                // block. White with a 1px black shadow so it reads on every
+                // palette colour. Clipped via setClip so it never spills
+                // outside the block rect.
+                String name = block.getName();
+                if (name != null && !name.isEmpty())
+                {
+                    java.awt.Shape oldClip = g2.getClip();
+                    g2.setClip(leftX, topY, rectW, rectH);
+                    int textW = fm.stringWidth(name);
+                    int textX = leftX + (rectW - textW) / 2;
+                    int textY = topY + (rectH + fm.getAscent()) / 2 - 2;
+                    g2.setColor(Color.BLACK);
+                    g2.drawString(name, textX + 1, textY + 1);
+                    g2.setColor(Color.WHITE);
+                    g2.drawString(name, textX, textY);
+                    g2.setClip(oldClip);
+                }
+            }
+        }
+        g2.setFont(origFont);
+    }
+
+    @Override
     public void drawKeyFrames(Graphics g)
     {
         java.util.List<Character> visible = getVisibleCharacters();
@@ -803,6 +881,17 @@ public class AttributeSheet extends TimeSheet
         if (tsp == null) return;
 
         JPopupMenu menu = new JPopupMenu();
+
+        // Blocks: only show when the marquee selection forms a valid block
+        // on at least one Character. Cheap to test (canCreateBlockFromSelection
+        // just iterates the selection once).
+        if (tsp.canCreateBlockFromSelection())
+        {
+            JMenuItem createBlock = new JMenuItem("Create Block...");
+            createBlock.addActionListener(e -> tsp.showCreateBlockDialog());
+            menu.add(createBlock);
+            menu.addSeparator();
+        }
 
         JMenuItem oneItem = new JMenuItem(
                 String.format("Ripple delete gap on %s  [%.1f-%.1f]", type.getName(), from, to));

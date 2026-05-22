@@ -167,6 +167,9 @@ public class TimeSheet extends JPanel
         drawBackgroundText(g2);
         drawHighlight(g2);
         drawBackgroundLines(g2);
+        // Block rectangles sit BELOW keyframe icons so the icons remain
+        // visible on top of the coloured block area. Premiere clip style.
+        drawBlocks(g2);
         drawRectangleSelect(g2);
         drawKeyFrames(g2);
         drawPreviewKeyFrames(g2);
@@ -468,6 +471,15 @@ public class TimeSheet extends JPanel
     }
 
     public void drawHighlight(Graphics g)
+    {
+
+    }
+
+    /** Block rectangles. Default: no-op. AttributeSheet overrides to render
+     *  the per-Character {@link com.creatorskit.swing.timesheet.keyframe.Block}
+     *  list -- one opaque rect per block from min-tick to max-tick across
+     *  every property row that's included in the block. */
+    public void drawBlocks(Graphics g)
     {
 
     }

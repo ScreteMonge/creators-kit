@@ -118,6 +118,20 @@ public class Character
      * pre-2.3 saves (and the Lombok no-args ctor path) default to 1.0.
      */
     private double extraScale = 1.0;
+    /**
+     * User-defined block groupings for this Character's keyframes. Empty
+     * (not null) for fresh Characters and for pre-blocks-feature saves. See
+     * {@link com.creatorskit.swing.timesheet.keyframe.Block} for the data
+     * model and {@link com.creatorskit.swing.timesheet.keyframe.BlockValidator}
+     * for the no-gaps + no-overlap rules a candidate selection must satisfy.
+     *
+     * <p>Positioned at the END of the field list so Lombok's
+     * {@code @AllArgsConstructor} adds the new arg as the LAST parameter --
+     * existing positional {@code new Character(...)} callsites just append
+     * one more arg (empty list or null) instead of having to renumber
+     * everything in between.
+     */
+    private java.util.List<com.creatorskit.swing.timesheet.keyframe.Block> blocks = new java.util.ArrayList<>();
 
     /**
      * Overrides Lombok's auto-generated setter so toggling renderFix on the Character
