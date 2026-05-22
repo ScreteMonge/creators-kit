@@ -25,6 +25,7 @@ public enum KeyFrameType
     PROJECTILE("Projectile","P"),
     SHIELD("Shield","SH"),
     SPECIAL("Special","SP"),
+    PULSE("Pulse","PL"),
     SCREEN_FADE("Screen Fade","SF"),
     SCREEN_SHAKE("Screen Shake","SK"),
     CAMERA("Camera","CM");
@@ -55,6 +56,7 @@ public enum KeyFrameType
             PROJECTILE,
             SHIELD,
             SPECIAL,
+            PULSE,
             SCREEN_FADE,
             SCREEN_SHAKE,
             CAMERA
@@ -81,6 +83,7 @@ public enum KeyFrameType
             ORIENTATION,
             OVERHEAD,
             PROJECTILE,
+            PULSE,
             SCREEN_FADE,
             SCREEN_SHAKE,
             SHIELD,
@@ -108,6 +111,7 @@ public enum KeyFrameType
             ORIENTATION,
             OVERHEAD,
             PROJECTILE,
+            PULSE,
             SHIELD,
             SPAWN,
             SPECIAL,
@@ -219,6 +223,8 @@ public enum KeyFrameType
                 return 18;
             case CAMERA:
                 return 19;
+            case PULSE:
+                return 20;
         }
     }
 
@@ -267,12 +273,14 @@ public enum KeyFrameType
                 return SCREEN_SHAKE;
             case 19:
                 return CAMERA;
+            case 20:
+                return PULSE;
         }
     }
 
     public static int getTotalFrameTypes()
     {
-        return 20;
+        return 21;
     }
 
     public static KeyFrameType[] createDefaultSummary()

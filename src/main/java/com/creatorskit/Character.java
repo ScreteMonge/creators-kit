@@ -1167,6 +1167,29 @@ public class Character
         return keyFrame;
     }
 
+    public com.creatorskit.swing.timesheet.keyframe.PulseKeyFrame[] getPulseKeyFrames()
+    {
+        KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.PULSE);
+        if (keyFrames == null)
+        {
+            return null;
+        }
+
+        com.creatorskit.swing.timesheet.keyframe.PulseKeyFrame[] keyFrame =
+                new com.creatorskit.swing.timesheet.keyframe.PulseKeyFrame[keyFrames.length];
+        for (int i = 0; i < keyFrames.length; i++)
+        {
+            keyFrame[i] = (com.creatorskit.swing.timesheet.keyframe.PulseKeyFrame) keyFrames[i];
+        }
+
+        if (Arrays.stream(keyFrame).allMatch(Objects::isNull))
+        {
+            return null;
+        }
+
+        return keyFrame;
+    }
+
     public ShieldKeyFrame[] getShieldKeyFrames()
     {
         KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.SHIELD);
