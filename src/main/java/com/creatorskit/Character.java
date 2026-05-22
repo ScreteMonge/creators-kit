@@ -1167,19 +1167,19 @@ public class Character
         return keyFrame;
     }
 
-    public com.creatorskit.swing.timesheet.keyframe.PulseKeyFrame[] getPulseKeyFrames()
+    public com.creatorskit.swing.timesheet.keyframe.ColourKeyFrame[] getColourKeyFrames()
     {
-        KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.PULSE);
+        KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.COLOUR);
         if (keyFrames == null)
         {
             return null;
         }
 
-        com.creatorskit.swing.timesheet.keyframe.PulseKeyFrame[] keyFrame =
-                new com.creatorskit.swing.timesheet.keyframe.PulseKeyFrame[keyFrames.length];
+        com.creatorskit.swing.timesheet.keyframe.ColourKeyFrame[] keyFrame =
+                new com.creatorskit.swing.timesheet.keyframe.ColourKeyFrame[keyFrames.length];
         for (int i = 0; i < keyFrames.length; i++)
         {
-            keyFrame[i] = (com.creatorskit.swing.timesheet.keyframe.PulseKeyFrame) keyFrames[i];
+            keyFrame[i] = (com.creatorskit.swing.timesheet.keyframe.ColourKeyFrame) keyFrames[i];
         }
 
         if (Arrays.stream(keyFrame).allMatch(Objects::isNull))

@@ -1025,10 +1025,10 @@ public class CreatorsPanel extends PluginPanel
 
         for (Character c : charactersToRemove)
         {
-            // Drop any Pulse snapshot we may be holding -- the controller's
+            // Drop any Colour-kf snapshot we may be holding -- the controller's
             // IdentityHashMap entry would otherwise pin the Character and its
             // Model references after the visual is gone.
-            toolBox.getProgrammer().getPulseController().release(c);
+            toolBox.getProgrammer().getColourController().release(c);
 
             clientThread.invokeLater(() ->
             {
@@ -2433,7 +2433,7 @@ public class CreatorsPanel extends PluginPanel
                 null,
                 character.getExtraScale(),
                 null,
-                character.getPulseKeyFrames());
+                character.getColourKeyFrames());
     }
 
     public void openLoadSetupDialog()
@@ -2969,9 +2969,9 @@ public class CreatorsPanel extends PluginPanel
             {
                 frames[KeyFrameType.getIndex(KeyFrameType.CAMERA)] = save.getCameraKeyFrames();
             }
-            if (save.getPulseKeyFrames() != null)
+            if (save.getColourKeyFrames() != null)
             {
-                frames[KeyFrameType.getIndex(KeyFrameType.PULSE)] = save.getPulseKeyFrames();
+                frames[KeyFrameType.getIndex(KeyFrameType.COLOUR)] = save.getColourKeyFrames();
             }
 
             KeyFrameType[] summary;

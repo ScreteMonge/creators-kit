@@ -304,9 +304,9 @@ public class SummarySheet extends TimeSheet
                     ProjectileKeyFrame pkf = (ProjectileKeyFrame) keyFrame;
                     drawTail(g, e, keyFrames, pkf.getStartDelayTicks() + pkf.getDurationTicks(), zoomFactor, pkf.getTick(), x, y, xStringOffset, stringHeight);
                     break;
-                case PULSE:
-                    PulseKeyFrame plkf = (PulseKeyFrame) keyFrame;
-                    drawTail(g, e, keyFrames, plkf.getFadeInTicks() + plkf.getHoldTicks() + plkf.getFadeOutTicks(), zoomFactor, plkf.getTick(), x, y, xStringOffset, stringHeight);
+                case COLOUR:
+                    ColourKeyFrame clkf = (ColourKeyFrame) keyFrame;
+                    drawTail(g, e, keyFrames, clkf.getFadeInTicks() + clkf.getHoldTicks() + clkf.getFadeOutTicks(), zoomFactor, clkf.getTick(), x, y, xStringOffset, stringHeight);
                     break;
                 default:
                     break;

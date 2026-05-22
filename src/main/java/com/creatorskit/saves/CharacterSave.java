@@ -91,10 +91,13 @@ public class CharacterSave
      */
     private CameraKeyFrame[] cameraKeyFrames;
     /**
-     * Pulse keyframes (temporary model recolour with fade-in / hold / fade-out
+     * Colour keyframes (temporary model recolour with fade-in / hold / fade-out
      * envelope). Null in saves predating this field; the load path treats null
-     * as "no pulse keyframes" so old saves load cleanly without a migration step.
+     * as "no Colour keyframes" so old saves load cleanly without a migration step.
+     *
+     * <p>Originally shipped as {@code pulseKeyFrames} -- renamed pre-release
+     * before any user-authored saves existed, so no migration shim is needed.
      */
-    private PulseKeyFrame[] pulseKeyFrames;
+    private ColourKeyFrame[] colourKeyFrames;
 }
 

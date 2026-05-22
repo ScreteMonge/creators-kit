@@ -1,8 +1,8 @@
 package com.creatorskit.swing.timesheet.attributes;
 
+import com.creatorskit.swing.timesheet.keyframe.ColourBlendMode;
+import com.creatorskit.swing.timesheet.keyframe.ColourKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.PulseBlendMode;
-import com.creatorskit.swing.timesheet.keyframe.PulseKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.settings.Toggle;
 import lombok.Getter;
 
@@ -10,14 +10,14 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Card-state for the {@link PulseKeyFrame} card. Owns:
+ * Card-state for the {@link ColourKeyFrame} card. Owns:
  * <ul>
  *   <li>a colour-picker JButton (same pattern as ShieldAttributes' fill picker)
  *       backed by a separately-tracked packed RGB int so the
  *       keyframe-state tint can recolour the button border without
  *       clobbering the selected fill;</li>
  *   <li>three tick-valued JSpinners for fadeIn / hold / fadeOut;</li>
- *   <li>a {@link PulseBlendMode} combo (Add / Replace / Multiply) with
+ *   <li>a {@link ColourBlendMode} combo (Add / Replace / Multiply) with
  *       Add as the default;</li>
  *   <li>an easing toggle (linear vs ease-in-out smoothstep);</li>
  *   <li>an "affect spotanims" toggle so the tint can extend to the
@@ -25,19 +25,19 @@ import java.awt.*;
  * </ul>
  */
 @Getter
-public class PulseAttributes extends Attributes
+public class ColourAttributes extends Attributes
 {
     public static final int DEFAULT_RGB = 0xFFB060;  // warm peach -- reads on most skintones
     public static final double DEFAULT_FADE_IN = 1.0;
     public static final double DEFAULT_HOLD = 1.0;
     public static final double DEFAULT_FADE_OUT = 1.0;
-    public static final PulseBlendMode DEFAULT_BLEND_MODE = PulseBlendMode.ADD;
+    public static final ColourBlendMode DEFAULT_BLEND_MODE = ColourBlendMode.ADD;
 
     private final JButton colour = new JButton();
     private final JSpinner fadeInTicks = new JSpinner();
     private final JSpinner holdTicks = new JSpinner();
     private final JSpinner fadeOutTicks = new JSpinner();
-    private final JComboBox<PulseBlendMode> blendMode = new JComboBox<>();
+    private final JComboBox<ColourBlendMode> blendMode = new JComboBox<>();
     /** Toggle: ENABLE = smoothstep ramps, DISABLE = linear ramps. */
     private final JComboBox<Toggle> easeInOut = new JComboBox<>();
     /** Toggle: ENABLE = tint also applied to spotanim 1 / 2 CKObjects. */
@@ -45,7 +45,7 @@ public class PulseAttributes extends Attributes
 
     private int rgb = DEFAULT_RGB;
 
-    public PulseAttributes()
+    public ColourAttributes()
     {
         addChangeListeners();
     }
@@ -62,7 +62,7 @@ public class PulseAttributes extends Attributes
     @Override
     public void setAttributes(KeyFrame keyFrame)
     {
-        PulseKeyFrame kf = (PulseKeyFrame) keyFrame;
+        ColourKeyFrame kf = (ColourKeyFrame) keyFrame;
         setRgb(kf.getColorRgb());
         fadeInTicks.setValue(kf.getFadeInTicks());
         holdTicks.setValue(kf.getHoldTicks());

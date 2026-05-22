@@ -25,7 +25,7 @@ public enum KeyFrameType
     PROJECTILE("Projectile","P"),
     SHIELD("Shield","SH"),
     SPECIAL("Special","SP"),
-    PULSE("Colour","CL"),
+    COLOUR("Colour","CL"),
     SCREEN_FADE("Screen Fade","SF"),
     SCREEN_SHAKE("Screen Shake","SK"),
     CAMERA("Camera","CM");
@@ -56,7 +56,7 @@ public enum KeyFrameType
             PROJECTILE,
             SHIELD,
             SPECIAL,
-            PULSE,
+            COLOUR,
             SCREEN_FADE,
             SCREEN_SHAKE,
             CAMERA
@@ -83,7 +83,7 @@ public enum KeyFrameType
             ORIENTATION,
             OVERHEAD,
             PROJECTILE,
-            PULSE,
+            COLOUR,
             SCREEN_FADE,
             SCREEN_SHAKE,
             SHIELD,
@@ -111,7 +111,7 @@ public enum KeyFrameType
             ORIENTATION,
             OVERHEAD,
             PROJECTILE,
-            PULSE,
+            COLOUR,
             SHIELD,
             SPAWN,
             SPECIAL,
@@ -223,7 +223,7 @@ public enum KeyFrameType
                 return 18;
             case CAMERA:
                 return 19;
-            case PULSE:
+            case COLOUR:
                 return 20;
         }
     }
@@ -274,7 +274,7 @@ public enum KeyFrameType
             case 19:
                 return CAMERA;
             case 20:
-                return PULSE;
+                return COLOUR;
         }
     }
 

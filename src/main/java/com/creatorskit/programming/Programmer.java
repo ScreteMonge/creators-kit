@@ -62,10 +62,10 @@ public class Programmer
     private boolean triggerPause = false;
 
     @lombok.Getter
-    private final PulseController pulseController;
+    private final ColourController colourController;
 
     @Inject
-    public Programmer(Client client, CreatorsConfig config, ClientThread clientThread, CreatorsPlugin plugin, TimeSheetPanel timeSheetPanel, DataFinder dataFinder, ModelUtilities modelUtilities, PulseController pulseController)
+    public Programmer(Client client, CreatorsConfig config, ClientThread clientThread, CreatorsPlugin plugin, TimeSheetPanel timeSheetPanel, DataFinder dataFinder, ModelUtilities modelUtilities, ColourController colourController)
     {
         this.client = client;
         this.config = config;
@@ -74,7 +74,7 @@ public class Programmer
         this.timeSheetPanel = timeSheetPanel;
         this.dataFinder = dataFinder;
         this.modelUtilities = modelUtilities;
-        this.pulseController = pulseController;
+        this.colourController = colourController;
     }
 
     @Subscribe
@@ -1175,11 +1175,11 @@ public class Programmer
         registerModelChanges(character);
         registerSpawnChanges(character);
         updateProjectiles(character, tick);
-        // Pulse re-evaluates last so it sees whatever model the Model keyframe (or
-        // base model fallback) just installed, and can snapshot the right face
+        // Colour kf re-evaluates last so it sees whatever model the Model keyframe
+        // (or base model fallback) just installed, and can snapshot the right face
         // colours before mutating them. The controller is idempotent so calling
         // it on every tick during the envelope keeps the tint fresh.
-        pulseController.update(character, tick);
+        colourController.update(character, tick);
     }
 
     /**
@@ -1211,16 +1211,16 @@ public class Programmer
      * never advances during real playback and its registers never fire --
      * so visually nothing happens until the user scrubs.
      *
-     * <p>For per-tick continuous effects (Pulse's blend factor, Camera
+     * <p>For per-tick continuous effects (Colour kf's blend factor, Camera
      * smoothing, ScreenShake jitter) the "advance on entry" block is not
      * enough -- they also need an UNCONDITIONAL per-tick driver call here
-     * because the effect changes between keyframe boundaries. The Pulse
+     * because the effect changes between keyframe boundaries. The Colour
      * block at the bottom of this method does exactly that.
      *
      * <p>When adding a new KeyFrameType, copy one of the existing "find
      * next, advance, fire side-effects" blocks below as the template, and
      * also add the per-character continuous driver call (like
-     * pulseController.update) just before the end of the per-character
+     * colourController.update) just before the end of the per-character
      * loop if the effect is time-continuous.
      */
     public void updateProgramsOnTick()
@@ -1465,27 +1465,27 @@ public class Programmer
                 }
             }
 
-            // Pulse (colour) -- two parts:
-            //  1) Advance currentFrames so introspection / UI sees the current pulse.
-            //  2) Drive the recolour engine unconditionally every tick. The pulse
+            // Colour kf -- two parts:
+            //  1) Advance currentFrames so introspection / UI sees the active kf.
+            //  2) Drive the recolour engine unconditionally every tick. The
             //     envelope's blend factor t-in-[0,1] changes continuously over
             //     fadeIn / hold / fadeOut, so a "transition once on entry" call
             //     wouldn't be enough -- the recolour has to re-run every tick to
-            //     interpolate the tint. pulseController.update is idempotent and
-            //     re-finds the active pulse each call, so calling it on every
-            //     tick is fine even when no pulse is active (it cheaply no-ops).
-            KeyFrame currentPulse = currentFrames[KeyFrameType.getIndex(KeyFrameType.PULSE)];
-            double lastPulseTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
-            if (currentPulse != null)
+            //     interpolate the tint. colourController.update is idempotent
+            //     and re-finds the active kf each call, so calling it on every
+            //     tick is fine even when no Colour kf is active (it cheaply no-ops).
+            KeyFrame currentColour = currentFrames[KeyFrameType.getIndex(KeyFrameType.COLOUR)];
+            double lastColourTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
+            if (currentColour != null)
             {
-                lastPulseTick = currentPulse.getTick();
+                lastColourTick = currentColour.getTick();
             }
-            KeyFrame nextPulse = character.findNextKeyFrame(KeyFrameType.PULSE, lastPulseTick);
-            if (nextPulse != null && nextPulse.getTick() <= currentTime)
+            KeyFrame nextColour = character.findNextKeyFrame(KeyFrameType.COLOUR, lastColourTick);
+            if (nextColour != null && nextColour.getTick() <= currentTime)
             {
-                character.setCurrentKeyFrame(nextPulse, KeyFrameType.PULSE);
+                character.setCurrentKeyFrame(nextColour, KeyFrameType.COLOUR);
             }
-            pulseController.update(character, currentTime);
+            colourController.update(character, currentTime);
         }
     }
 

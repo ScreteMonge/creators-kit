@@ -357,9 +357,9 @@ public class AttributeSheet extends TimeSheet
                         SpecialKeyFrame spkf = (SpecialKeyFrame) keyFrame;
                         drawTail(g, e, keyFrames, spkf.getDuration(), zoomFactor, spkf.getTick(), x, y, imageHeight);
                         break;
-                    case PULSE:
-                        PulseKeyFrame plkf = (PulseKeyFrame) keyFrame;
-                        drawTail(g, e, keyFrames, plkf.getFadeInTicks() + plkf.getHoldTicks() + plkf.getFadeOutTicks(), zoomFactor, plkf.getTick(), x, y, imageHeight);
+                    case COLOUR:
+                        ColourKeyFrame clkf = (ColourKeyFrame) keyFrame;
+                        drawTail(g, e, keyFrames, clkf.getFadeInTicks() + clkf.getHoldTicks() + clkf.getFadeOutTicks(), zoomFactor, clkf.getTick(), x, y, imageHeight);
                         break;
                     default:
                         break;
@@ -512,9 +512,9 @@ public class AttributeSheet extends TimeSheet
                     SpecialKeyFrame spkf = (SpecialKeyFrame) keyFrame;
                     drawPreviewTail(g, x, y, imageHeight, spkf.getDuration(), zoomFactor);
                     break;
-                case PULSE:
-                    PulseKeyFrame plkf = (PulseKeyFrame) keyFrame;
-                    drawPreviewTail(g, x, y, imageHeight, plkf.getFadeInTicks() + plkf.getHoldTicks() + plkf.getFadeOutTicks(), zoomFactor);
+                case COLOUR:
+                    ColourKeyFrame clkf = (ColourKeyFrame) keyFrame;
+                    drawPreviewTail(g, x, y, imageHeight, clkf.getFadeInTicks() + clkf.getHoldTicks() + clkf.getFadeOutTicks(), zoomFactor);
                     break;
                 default:
                     break;

@@ -8,21 +8,21 @@ import lombok.Setter;
  * fadeOut envelope (all in ticks). The underlying model is whatever the
  * Character's CKObject is rendering at the time -- typically derived from
  * the nearest preceding {@link KeyFrameType#MODEL} keyframe, falling back to
- * the Character's base model when none has been authored yet. The Pulse
- * itself does not change the model; it only mutates face colours during
- * its window, and restores them on the way out.
+ * the Character's base model when none has been authored yet. The Colour
+ * keyframe itself does not change the model; it only mutates face colours
+ * during its window, and restores them on the way out.
  *
  * <p>Total lifecycle on the timeline = {@code tick} .. {@code tick + fadeIn +
  * hold + fadeOut}. Inside that window the blend factor t in [0,1] is
  * computed off the wall position within the envelope and optionally
  * smoothed by ease-in-out. The resulting tint is composed with each face's
- * original HSL via {@link PulseBlendMode}.
+ * original HSL via {@link ColourBlendMode}.
  */
 @Getter
 @Setter
-public class PulseKeyFrame extends KeyFrame
+public class ColourKeyFrame extends KeyFrame
 {
-    /** Pulse target colour packed as an ARGB int (alpha ignored). */
+    /** Target colour packed as an ARGB int (alpha ignored). */
     private int colorRgb;
     /** Ticks to ramp the blend factor 0 -> 1. May be 0 for "instant on." */
     private double fadeInTicks;
@@ -30,24 +30,24 @@ public class PulseKeyFrame extends KeyFrame
     private double holdTicks;
     /** Ticks to ramp the blend factor 1 -> 0. May be 0 for "instant off." */
     private double fadeOutTicks;
-    /** How the pulse colour combines with each face's original HSL. */
-    private PulseBlendMode blendMode;
+    /** How the target colour combines with each face's original HSL. */
+    private ColourBlendMode blendMode;
     /** When true, smoothstep the fade ramps; when false, linear ramps. */
     private boolean easeInOut;
     /** When true, the tint is also applied to the Character's spotanim 1 / 2 CKObjects. */
     private boolean affectSpotAnims;
 
-    public PulseKeyFrame(
+    public ColourKeyFrame(
             double tick,
             int colorRgb,
             double fadeInTicks,
             double holdTicks,
             double fadeOutTicks,
-            PulseBlendMode blendMode,
+            ColourBlendMode blendMode,
             boolean easeInOut,
             boolean affectSpotAnims)
     {
-        super(KeyFrameType.PULSE, tick);
+        super(KeyFrameType.COLOUR, tick);
         this.colorRgb = colorRgb;
         this.fadeInTicks = fadeInTicks;
         this.holdTicks = holdTicks;
@@ -57,7 +57,7 @@ public class PulseKeyFrame extends KeyFrame
         this.affectSpotAnims = affectSpotAnims;
     }
 
-    /** End tick of the pulse envelope. */
+    /** End tick of the envelope. */
     public double getEndTick()
     {
         return getTick() + fadeInTicks + holdTicks + fadeOutTicks;

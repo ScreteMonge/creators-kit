@@ -2,8 +2,8 @@ package com.creatorskit.programming;
 
 import com.creatorskit.CKObject;
 import com.creatorskit.Character;
-import com.creatorskit.swing.timesheet.keyframe.PulseBlendMode;
-import com.creatorskit.swing.timesheet.keyframe.PulseKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.ColourBlendMode;
+import com.creatorskit.swing.timesheet.keyframe.ColourKeyFrame;
 import net.runelite.api.JagexColor;
 import net.runelite.api.Model;
 import net.runelite.client.callback.ClientThread;
@@ -14,16 +14,16 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 
 /**
- * Per-Character lifecycle for {@link PulseKeyFrame}s.
+ * Per-Character lifecycle for {@link ColourKeyFrame}s.
  *
  * <p>On every Programmer tick {@link #update(Character, double)} is called.
- * The controller finds the latest-starting Pulse whose envelope window
- * contains the current tick, snapshots the underlying model's face
+ * The controller finds the latest-starting Colour keyframe whose envelope
+ * window contains the current tick, snapshots the underlying model's face
  * colours on first activation (and re-snapshots if a Model keyframe
- * swaps the model mid-pulse), then mutates those face colour arrays
- * in-place toward the pulse target. Outside the envelope the snapshot
- * is restored and discarded so the model is unaffected when no pulse is
- * playing.
+ * swaps the model mid-envelope), then mutates those face colour arrays
+ * in-place toward the target colour. Outside the envelope the snapshot
+ * is restored and discarded so the model is unaffected when no Colour kf
+ * is playing.
  *
  * <p>Blending is done in HSL space directly on the packed-short colours
  * the renderer reads -- much faster than RGB roundtrips, and visually
@@ -31,9 +31,9 @@ import java.util.Map;
  * / fade-out measured in ticks, not seconds).
  */
 @Singleton
-public class PulseController
+public class ColourController
 {
-    /** Captured face-colour state for one Model so it can be reverted on pulse end. */
+    /** Captured face-colour state for one Model so it can be reverted on envelope end. */
     private static class Snapshot
     {
         final Model model;
@@ -71,10 +71,10 @@ public class PulseController
         }
     }
 
-    /** Per-Character state -- which pulse is active and what we snapshotted for it. */
+    /** Per-Character state -- which Colour kf is active and what we snapshotted for it. */
     private static class State
     {
-        PulseKeyFrame activePulse;
+        ColourKeyFrame activeKf;
         Snapshot mainSnapshot;
         Snapshot sp1Snapshot;
         Snapshot sp2Snapshot;
@@ -84,56 +84,56 @@ public class PulseController
     private final Map<Character, State> states = new IdentityHashMap<>();
 
     @Inject
-    public PulseController(ClientThread clientThread)
+    public ColourController(ClientThread clientThread)
     {
         this.clientThread = clientThread;
     }
 
     /**
-     * Drives the Pulse lifecycle for one Character. Called from
-     * Programmer.updateProgram (both per-tick during play and on scrub).
-     * Idempotent: calling repeatedly with the same currentTime re-applies
-     * the same tint, so a Model keyframe that swaps the underlying model
-     * picks the pulse back up on the next update tick.
+     * Drives the Colour-keyframe lifecycle for one Character. Called from
+     * Programmer.updateProgram (scrub) and Programmer.updateProgramsOnTick
+     * (play). Idempotent: calling repeatedly with the same currentTime
+     * re-applies the same tint, so a Model keyframe that swaps the
+     * underlying model picks the envelope back up on the next update tick.
      */
     public synchronized void update(Character character, double currentTime)
     {
         if (character == null) return;
         State s = states.computeIfAbsent(character, c -> new State());
 
-        PulseKeyFrame active = findActivePulse(character, currentTime);
+        ColourKeyFrame active = findActiveKf(character, currentTime);
 
         if (active == null)
         {
-            // Transitioning out of any pulse -- restore and forget.
-            if (s.activePulse != null)
+            // Transitioning out of any Colour kf -- restore and forget.
+            if (s.activeKf != null)
             {
                 final State sf = s;
                 clientThread.invoke(() -> restoreAll(sf));
-                s.activePulse = null;
+                s.activeKf = null;
             }
             return;
         }
 
-        // Pulse changed (or first activation): drop old snapshot, capture new.
-        if (s.activePulse != active)
+        // Active kf changed (or first activation): drop old snapshot, capture new.
+        if (s.activeKf != active)
         {
             final State sf = s;
             clientThread.invoke(() -> restoreAll(sf));
-            s.activePulse = active;
+            s.activeKf = active;
             s.mainSnapshot = null;
             s.sp1Snapshot = null;
             s.sp2Snapshot = null;
         }
 
-        final PulseKeyFrame pulse = active;
-        final double tFinal = pulse.computeBlendFactor(currentTime);
+        final ColourKeyFrame kf = active;
+        final double tFinal = kf.computeBlendFactor(currentTime);
         clientThread.invoke(() ->
         {
             // Re-snapshot whenever the underlying model identity changed (e.g. a Model
-            // keyframe swapped baseModel mid-pulse). The == check is intentional --
+            // keyframe swapped baseModel mid-envelope). The == check is intentional --
             // Model instances are reference-identity per CKObject.setModel call.
-            ensureSnapshotFor(s, character, pulse);
+            ensureSnapshotFor(s, character, kf);
 
             if (tFinal <= 0)
             {
@@ -142,11 +142,11 @@ public class PulseController
                 return;
             }
 
-            applyToSnapshot(s.mainSnapshot, pulse, tFinal);
-            if (pulse.isAffectSpotAnims())
+            applyToSnapshot(s.mainSnapshot, kf, tFinal);
+            if (kf.isAffectSpotAnims())
             {
-                applyToSnapshot(s.sp1Snapshot, pulse, tFinal);
-                applyToSnapshot(s.sp2Snapshot, pulse, tFinal);
+                applyToSnapshot(s.sp1Snapshot, kf, tFinal);
+                applyToSnapshot(s.sp2Snapshot, kf, tFinal);
             }
         });
     }
@@ -167,17 +167,17 @@ public class PulseController
     }
 
     /**
-     * Selects the pulse that should be "playing" at {@code currentTime}.
+     * Selects the Colour kf that should be "playing" at {@code currentTime}.
      * Latest start wins -- mirrors how a layered audio mix would interpret
-     * overlapping clips, and matches the user's intuition when two pulses
-     * touch (the newer one takes over).
+     * overlapping clips, and matches the user's intuition when two
+     * envelopes touch (the newer one takes over).
      */
-    private PulseKeyFrame findActivePulse(Character character, double currentTime)
+    private ColourKeyFrame findActiveKf(Character character, double currentTime)
     {
-        PulseKeyFrame[] pulses = character.getPulseKeyFrames();
-        if (pulses == null) return null;
-        PulseKeyFrame best = null;
-        for (PulseKeyFrame p : pulses)
+        ColourKeyFrame[] kfs = character.getColourKeyFrames();
+        if (kfs == null) return null;
+        ColourKeyFrame best = null;
+        for (ColourKeyFrame p : kfs)
         {
             if (p == null) continue;
             if (currentTime >= p.getTick() && currentTime <= p.getEndTick())
@@ -191,7 +191,7 @@ public class PulseController
         return best;
     }
 
-    private void ensureSnapshotFor(State s, Character character, PulseKeyFrame pulse)
+    private void ensureSnapshotFor(State s, Character character, ColourKeyFrame kf)
     {
         CKObject main = character.getCkObject();
         Model mainModel = main == null ? null : main.getBaseModel();
@@ -207,14 +207,14 @@ public class PulseController
             s.mainSnapshot = null;
         }
 
-        if (pulse.isAffectSpotAnims())
+        if (kf.isAffectSpotAnims())
         {
             s.sp1Snapshot = refreshOrCapture(s.sp1Snapshot, character.getSpotAnim1());
             s.sp2Snapshot = refreshOrCapture(s.sp2Snapshot, character.getSpotAnim2());
         }
         else
         {
-            // affectSpotAnims toggled off mid-pulse -- release any held spotanim snapshots.
+            // affectSpotAnims toggled off mid-envelope -- release any held spotanim snapshots.
             if (s.sp1Snapshot != null) { s.sp1Snapshot.restore(); s.sp1Snapshot = null; }
             if (s.sp2Snapshot != null) { s.sp2Snapshot.restore(); s.sp2Snapshot = null; }
         }
@@ -245,7 +245,7 @@ public class PulseController
         if (s.sp2Snapshot != null) { s.sp2Snapshot.restore(); s.sp2Snapshot = null; }
     }
 
-    private void applyToSnapshot(Snapshot snap, PulseKeyFrame pulse, double t)
+    private void applyToSnapshot(Snapshot snap, ColourKeyFrame kf, double t)
     {
         if (snap == null || snap.model == null) return;
         int[] f1 = snap.model.getFaceColors1();
@@ -253,11 +253,11 @@ public class PulseController
         int[] f3 = snap.model.getFaceColors3();
         if (f1 == null || snap.face1 == null) return;
 
-        PulseBlendMode mode = pulse.getBlendMode() == null ? PulseBlendMode.ADD : pulse.getBlendMode();
+        ColourBlendMode mode = kf.getBlendMode() == null ? ColourBlendMode.ADD : kf.getBlendMode();
         // Pack the user's RGB into the engine's HSL space once -- per-face we only
         // do cheap int unpacks + per-channel lerps. Brightness 1.0 keeps the
         // gamma-correction pass that rgbToHSL applies neutral.
-        short targetHsl = JagexColor.rgbToHSL(pulse.getColorRgb() & 0xFFFFFF, 1.0);
+        short targetHsl = JagexColor.rgbToHSL(kf.getColorRgb() & 0xFFFFFF, 1.0);
         int targetH = JagexColor.unpackHue(targetHsl);
         int targetS = JagexColor.unpackSaturation(targetHsl);
         int targetL = JagexColor.unpackLuminance(targetHsl);
@@ -267,7 +267,7 @@ public class PulseController
         if (f3 != null && snap.face3 != null) blendArray(f3, snap.face3, targetH, targetS, targetL, t, mode);
     }
 
-    private static void blendArray(int[] dest, int[] original, int tH, int tS, int tL, double t, PulseBlendMode mode)
+    private static void blendArray(int[] dest, int[] original, int tH, int tS, int tL, double t, ColourBlendMode mode)
     {
         // The renderer reads face colour as an HSL-packed short stored in the lower
         // 16 bits of each int (upper bits can carry texture / shading flags --

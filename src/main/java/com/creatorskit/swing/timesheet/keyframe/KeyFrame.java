@@ -189,17 +189,17 @@ public class KeyFrame
                         camKF.getScale(),
                         camKF.getEase(),
                         camKF.getDurationTicks());
-            case PULSE:
-                PulseKeyFrame pulseKF = (PulseKeyFrame) keyFrame;
-                return new PulseKeyFrame(
+            case COLOUR:
+                ColourKeyFrame colourKF = (ColourKeyFrame) keyFrame;
+                return new ColourKeyFrame(
                         tick,
-                        pulseKF.getColorRgb(),
-                        pulseKF.getFadeInTicks(),
-                        pulseKF.getHoldTicks(),
-                        pulseKF.getFadeOutTicks(),
-                        pulseKF.getBlendMode(),
-                        pulseKF.isEaseInOut(),
-                        pulseKF.isAffectSpotAnims());
+                        colourKF.getColorRgb(),
+                        colourKF.getFadeInTicks(),
+                        colourKF.getHoldTicks(),
+                        colourKF.getFadeOutTicks(),
+                        colourKF.getBlendMode(),
+                        colourKF.isEaseInOut(),
+                        colourKF.isAffectSpotAnims());
         }
     }
 }

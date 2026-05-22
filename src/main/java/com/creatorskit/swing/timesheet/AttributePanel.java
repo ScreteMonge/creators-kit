@@ -88,10 +88,9 @@ public class AttributePanel extends JPanel
     public static final String SCREEN_FADE_CARD = "Screen Fade";
     public static final String SCREEN_SHAKE_CARD = "Screen Shake";
     public static final String CAMERA_CARD = "Camera";
-    // Internal card identifier kept as PULSE_CARD; its STRING VALUE must match
-    // KeyFrameType.PULSE.getName() so the cardName <-> type mapping resolves.
-    // Renamed from "Pulse" to "Colour" along with the enum display name.
-    public static final String PULSE_CARD = "Colour";
+    // Card identifier whose STRING VALUE must match KeyFrameType.COLOUR.getName()
+    // so the cardName <-> type mapping resolves.
+    public static final String COLOUR_CARD = "Colour";
     public static final String MIXED_TYPES_CARD = "MixedTypes";
     public static final String NO_SELECTION_CARD = "NoSelection";
 
@@ -141,7 +140,7 @@ public class AttributePanel extends JPanel
     private final ScreenFadeAttributes screenFadeAttributes = new ScreenFadeAttributes();
     private final ScreenShakeAttributes screenShakeAttributes = new ScreenShakeAttributes();
     private final com.creatorskit.swing.timesheet.attributes.CameraAttributes cameraAttributes = new com.creatorskit.swing.timesheet.attributes.CameraAttributes();
-    private final com.creatorskit.swing.timesheet.attributes.PulseAttributes pulseAttributes = new com.creatorskit.swing.timesheet.attributes.PulseAttributes();
+    private final com.creatorskit.swing.timesheet.attributes.ColourAttributes colourAttributes = new com.creatorskit.swing.timesheet.attributes.ColourAttributes();
 
     private final Random random = new Random();
 
@@ -256,8 +255,8 @@ public class AttributePanel extends JPanel
         cardPanel.add(screenShakeCard, SCREEN_SHAKE_CARD);
         JPanel cameraCard = new JPanel();
         cardPanel.add(cameraCard, CAMERA_CARD);
-        JPanel pulseCard = new JPanel();
-        cardPanel.add(pulseCard, PULSE_CARD);
+        JPanel colourCard = new JPanel();
+        cardPanel.add(colourCard, COLOUR_CARD);
 
         // Empty placeholder shown when the keyframe selection spans multiple types.
         // Using a CardLayout entry keeps the cardPanel at its normal height instead
@@ -301,7 +300,7 @@ public class AttributePanel extends JPanel
         setupScreenFadeCard(screenFadeCard);
         setupScreenShakeCard(screenShakeCard);
         setupCameraCard(cameraCard);
-        setupPulseCard(pulseCard);
+        setupColourCard(colourCard);
 
         // Wire up auto-update on every Attributes instance. Each card's setupXxxCard
         // already attached the "set red on change" listeners for the dirty-state
@@ -316,7 +315,7 @@ public class AttributePanel extends JPanel
                 hitsplat1Attributes, hitsplat2Attributes, hitsplat3Attributes, hitsplat4Attributes,
                 projectileAttributes, shieldAttributes, specialAttributes,
                 screenFadeAttributes, screenShakeAttributes, cameraAttributes,
-                pulseAttributes
+                colourAttributes
         };
         for (com.creatorskit.swing.timesheet.attributes.Attributes attrs : allAttributes)
         {
@@ -731,16 +730,16 @@ public class AttributePanel extends JPanel
                         (com.creatorskit.swing.timesheet.keyframe.CameraEaseType) cameraAttributes.getEase().getSelectedItem(),
                         ((Number) cameraAttributes.getDurationTicks().getValue()).doubleValue()
                 );
-            case PULSE:
-                return new com.creatorskit.swing.timesheet.keyframe.PulseKeyFrame(
+            case COLOUR:
+                return new com.creatorskit.swing.timesheet.keyframe.ColourKeyFrame(
                         tick,
-                        pulseAttributes.getRgb(),
-                        ((Number) pulseAttributes.getFadeInTicks().getValue()).doubleValue(),
-                        ((Number) pulseAttributes.getHoldTicks().getValue()).doubleValue(),
-                        ((Number) pulseAttributes.getFadeOutTicks().getValue()).doubleValue(),
-                        (com.creatorskit.swing.timesheet.keyframe.PulseBlendMode) pulseAttributes.getBlendMode().getSelectedItem(),
-                        pulseAttributes.getEaseInOut().getSelectedItem() == com.creatorskit.swing.timesheet.keyframe.settings.Toggle.ENABLE,
-                        pulseAttributes.getAffectSpotAnims().getSelectedItem() == com.creatorskit.swing.timesheet.keyframe.settings.Toggle.ENABLE
+                        colourAttributes.getRgb(),
+                        ((Number) colourAttributes.getFadeInTicks().getValue()).doubleValue(),
+                        ((Number) colourAttributes.getHoldTicks().getValue()).doubleValue(),
+                        ((Number) colourAttributes.getFadeOutTicks().getValue()).doubleValue(),
+                        (com.creatorskit.swing.timesheet.keyframe.ColourBlendMode) colourAttributes.getBlendMode().getSelectedItem(),
+                        colourAttributes.getEaseInOut().getSelectedItem() == com.creatorskit.swing.timesheet.keyframe.settings.Toggle.ENABLE,
+                        colourAttributes.getAffectSpotAnims().getSelectedItem() == com.creatorskit.swing.timesheet.keyframe.settings.Toggle.ENABLE
                 );
         }
     }
@@ -3461,7 +3460,7 @@ public class AttributePanel extends JPanel
         card.add(new JLabel(""), c);
     }
 
-    private void setupPulseCard(JPanel card)
+    private void setupColourCard(JPanel card)
     {
         card.setLayout(new GridBagLayout());
         card.setBorder(new EmptyBorder(4, 4, 4, 4));
@@ -3502,13 +3501,13 @@ public class AttributePanel extends JPanel
                 + "<br>snapshotted on activation and restored on the way out.</html>");
         titlePanel.add(help);
 
-        JButton colour = pulseAttributes.getColour();
-        JSpinner fadeIn = pulseAttributes.getFadeInTicks();
-        JSpinner hold = pulseAttributes.getHoldTicks();
-        JSpinner fadeOut = pulseAttributes.getFadeOutTicks();
-        JComboBox<com.creatorskit.swing.timesheet.keyframe.PulseBlendMode> blendMode = pulseAttributes.getBlendMode();
-        JComboBox<com.creatorskit.swing.timesheet.keyframe.settings.Toggle> easeInOut = pulseAttributes.getEaseInOut();
-        JComboBox<com.creatorskit.swing.timesheet.keyframe.settings.Toggle> affectSpotAnims = pulseAttributes.getAffectSpotAnims();
+        JButton colour = colourAttributes.getColour();
+        JSpinner fadeIn = colourAttributes.getFadeInTicks();
+        JSpinner hold = colourAttributes.getHoldTicks();
+        JSpinner fadeOut = colourAttributes.getFadeOutTicks();
+        JComboBox<com.creatorskit.swing.timesheet.keyframe.ColourBlendMode> blendMode = colourAttributes.getBlendMode();
+        JComboBox<com.creatorskit.swing.timesheet.keyframe.settings.Toggle> easeInOut = colourAttributes.getEaseInOut();
+        JComboBox<com.creatorskit.swing.timesheet.keyframe.settings.Toggle> affectSpotAnims = colourAttributes.getAffectSpotAnims();
 
         c.gridwidth = 1;
         c.gridx = 0;
@@ -3521,20 +3520,20 @@ public class AttributePanel extends JPanel
         colour.setFocusable(false);
         colour.setPreferredSize(new Dimension(120, 26));
         colour.setOpaque(true);
-        colour.setBackground(new Color(com.creatorskit.swing.timesheet.attributes.PulseAttributes.DEFAULT_RGB));
-        pulseAttributes.setRgb(com.creatorskit.swing.timesheet.attributes.PulseAttributes.DEFAULT_RGB);
+        colour.setBackground(new Color(com.creatorskit.swing.timesheet.attributes.ColourAttributes.DEFAULT_RGB));
+        colourAttributes.setRgb(com.creatorskit.swing.timesheet.attributes.ColourAttributes.DEFAULT_RGB);
         colour.addActionListener(e ->
         {
-            Color picked = JColorChooser.showDialog(this, "Colour", new Color(pulseAttributes.getRgb()));
+            Color picked = JColorChooser.showDialog(this, "Colour", new Color(colourAttributes.getRgb()));
             if (picked != null)
             {
                 int newRgb = picked.getRGB() & 0xFFFFFF;
-                pulseAttributes.setRgb(newRgb);
+                colourAttributes.setRgb(newRgb);
                 colour.setBackground(picked);
-                colour.setBorder(BorderFactory.createLineBorder(pulseAttributes.getRed(), 2));
+                colour.setBorder(BorderFactory.createLineBorder(colourAttributes.getRed(), 2));
                 // wireAutoUpdate skips JButton on purpose -- the colour
                 // chooser action listener has to fire the auto-update itself
-                // so the selected Pulse keyframe actually gets rewritten with
+                // so the selected Colour keyframe actually gets rewritten with
                 // the new RGB. Without this the picked colour shows on the
                 // swatch but the keyframe still carries the old value, and
                 // playback keeps using the previous tint.
@@ -3550,7 +3549,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 2;
         fadeIn.setToolTipText("Ticks to ramp the blend factor from 0 to 1 (0 = instant on)");
-        fadeIn.setModel(new SpinnerNumberModel(com.creatorskit.swing.timesheet.attributes.PulseAttributes.DEFAULT_FADE_IN, 0d, 1000000d, 0.5));
+        fadeIn.setModel(new SpinnerNumberModel(com.creatorskit.swing.timesheet.attributes.ColourAttributes.DEFAULT_FADE_IN, 0d, 1000000d, 0.5));
         card.add(fadeIn, c);
 
         c.gridx = 0;
@@ -3560,7 +3559,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 3;
         hold.setToolTipText("Ticks the blend factor stays at peak");
-        hold.setModel(new SpinnerNumberModel(com.creatorskit.swing.timesheet.attributes.PulseAttributes.DEFAULT_HOLD, 0d, 1000000d, 0.5));
+        hold.setModel(new SpinnerNumberModel(com.creatorskit.swing.timesheet.attributes.ColourAttributes.DEFAULT_HOLD, 0d, 1000000d, 0.5));
         card.add(hold, c);
 
         c.gridx = 0;
@@ -3570,7 +3569,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 4;
         fadeOut.setToolTipText("Ticks to ramp the blend factor from 1 back to 0 (0 = instant off)");
-        fadeOut.setModel(new SpinnerNumberModel(com.creatorskit.swing.timesheet.attributes.PulseAttributes.DEFAULT_FADE_OUT, 0d, 1000000d, 0.5));
+        fadeOut.setModel(new SpinnerNumberModel(com.creatorskit.swing.timesheet.attributes.ColourAttributes.DEFAULT_FADE_OUT, 0d, 1000000d, 0.5));
         card.add(fadeOut, c);
 
         c.gridx = 0;
@@ -3579,14 +3578,14 @@ public class AttributePanel extends JPanel
 
         c.gridx = 1;
         c.gridy = 5;
-        blendMode.setToolTipText("How the pulse colour combines with the model's original face colours");
+        blendMode.setToolTipText("How the target colour combines with the model's original face colours");
         blendMode.setFocusable(false);
         blendMode.removeAllItems();
-        for (com.creatorskit.swing.timesheet.keyframe.PulseBlendMode m : com.creatorskit.swing.timesheet.keyframe.PulseBlendMode.values())
+        for (com.creatorskit.swing.timesheet.keyframe.ColourBlendMode m : com.creatorskit.swing.timesheet.keyframe.ColourBlendMode.values())
         {
             blendMode.addItem(m);
         }
-        blendMode.setSelectedItem(com.creatorskit.swing.timesheet.attributes.PulseAttributes.DEFAULT_BLEND_MODE);
+        blendMode.setSelectedItem(com.creatorskit.swing.timesheet.attributes.ColourAttributes.DEFAULT_BLEND_MODE);
         card.add(blendMode, c);
 
         c.gridx = 0;
@@ -3608,7 +3607,7 @@ public class AttributePanel extends JPanel
 
         c.gridx = 1;
         c.gridy = 7;
-        affectSpotAnims.setToolTipText("Also tint the Character's SpotAnim 1 / 2 CKObjects when the pulse is active");
+        affectSpotAnims.setToolTipText("Also tint the Character's SpotAnim 1 / 2 CKObjects while the envelope is active");
         affectSpotAnims.setFocusable(false);
         affectSpotAnims.removeAllItems();
         affectSpotAnims.addItem(com.creatorskit.swing.timesheet.keyframe.settings.Toggle.DISABLE);
@@ -3697,8 +3696,8 @@ public class AttributePanel extends JPanel
             case CAMERA_CARD:
                 type = KeyFrameType.CAMERA;
                 break;
-            case PULSE_CARD:
-                type = KeyFrameType.PULSE;
+            case COLOUR_CARD:
+                type = KeyFrameType.COLOUR;
         }
 
         switchCards(type);
@@ -4304,9 +4303,9 @@ public class AttributePanel extends JPanel
                 cameraAttributes.setAttributes(keyFrame);
                 cameraAttributes.setBackgroundColours(keyFrameState);
                 break;
-            case PULSE:
-                pulseAttributes.setAttributes(keyFrame);
-                pulseAttributes.setBackgroundColours(keyFrameState);
+            case COLOUR:
+                colourAttributes.setAttributes(keyFrame);
+                colourAttributes.setBackgroundColours(keyFrameState);
         }
     }
 
@@ -4388,8 +4387,8 @@ public class AttributePanel extends JPanel
             case CAMERA:
                 cameraAttributes.resetAttributes(resetBackground);
                 break;
-            case PULSE:
-                pulseAttributes.resetAttributes(resetBackground);
+            case COLOUR:
+                colourAttributes.resetAttributes(resetBackground);
         }
     }
 
