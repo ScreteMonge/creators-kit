@@ -88,6 +88,7 @@ public class AttributePanel extends JPanel
     public static final String SCREEN_FADE_CARD = "Screen Fade";
     public static final String SCREEN_SHAKE_CARD = "Screen Shake";
     public static final String CAMERA_CARD = "Camera";
+    public static final String PULSE_CARD = "Pulse";
     public static final String MIXED_TYPES_CARD = "MixedTypes";
     public static final String NO_SELECTION_CARD = "NoSelection";
 
@@ -137,6 +138,7 @@ public class AttributePanel extends JPanel
     private final ScreenFadeAttributes screenFadeAttributes = new ScreenFadeAttributes();
     private final ScreenShakeAttributes screenShakeAttributes = new ScreenShakeAttributes();
     private final com.creatorskit.swing.timesheet.attributes.CameraAttributes cameraAttributes = new com.creatorskit.swing.timesheet.attributes.CameraAttributes();
+    private final com.creatorskit.swing.timesheet.attributes.PulseAttributes pulseAttributes = new com.creatorskit.swing.timesheet.attributes.PulseAttributes();
 
     private final Random random = new Random();
 
@@ -251,6 +253,8 @@ public class AttributePanel extends JPanel
         cardPanel.add(screenShakeCard, SCREEN_SHAKE_CARD);
         JPanel cameraCard = new JPanel();
         cardPanel.add(cameraCard, CAMERA_CARD);
+        JPanel pulseCard = new JPanel();
+        cardPanel.add(pulseCard, PULSE_CARD);
 
         // Empty placeholder shown when the keyframe selection spans multiple types.
         // Using a CardLayout entry keeps the cardPanel at its normal height instead
@@ -294,6 +298,7 @@ public class AttributePanel extends JPanel
         setupScreenFadeCard(screenFadeCard);
         setupScreenShakeCard(screenShakeCard);
         setupCameraCard(cameraCard);
+        setupPulseCard(pulseCard);
 
         // Wire up auto-update on every Attributes instance. Each card's setupXxxCard
         // already attached the "set red on change" listeners for the dirty-state
@@ -307,7 +312,8 @@ public class AttributePanel extends JPanel
                 spotAnimAttributes, spotAnim2Attributes,
                 hitsplat1Attributes, hitsplat2Attributes, hitsplat3Attributes, hitsplat4Attributes,
                 projectileAttributes, shieldAttributes, specialAttributes,
-                screenFadeAttributes, screenShakeAttributes, cameraAttributes
+                screenFadeAttributes, screenShakeAttributes, cameraAttributes,
+                pulseAttributes
         };
         for (com.creatorskit.swing.timesheet.attributes.Attributes attrs : allAttributes)
         {
@@ -721,6 +727,17 @@ public class AttributePanel extends JPanel
                         ((Number) cameraAttributes.getScale().getValue()).intValue(),
                         (com.creatorskit.swing.timesheet.keyframe.CameraEaseType) cameraAttributes.getEase().getSelectedItem(),
                         ((Number) cameraAttributes.getDurationTicks().getValue()).doubleValue()
+                );
+            case PULSE:
+                return new com.creatorskit.swing.timesheet.keyframe.PulseKeyFrame(
+                        tick,
+                        pulseAttributes.getRgb(),
+                        ((Number) pulseAttributes.getFadeInTicks().getValue()).doubleValue(),
+                        ((Number) pulseAttributes.getHoldTicks().getValue()).doubleValue(),
+                        ((Number) pulseAttributes.getFadeOutTicks().getValue()).doubleValue(),
+                        (com.creatorskit.swing.timesheet.keyframe.PulseBlendMode) pulseAttributes.getBlendMode().getSelectedItem(),
+                        pulseAttributes.getEaseInOut().getSelectedItem() == com.creatorskit.swing.timesheet.keyframe.settings.Toggle.ENABLE,
+                        pulseAttributes.getAffectSpotAnims().getSelectedItem() == com.creatorskit.swing.timesheet.keyframe.settings.Toggle.ENABLE
                 );
         }
     }
@@ -3433,6 +3450,162 @@ public class AttributePanel extends JPanel
         card.add(new JLabel(""), c);
     }
 
+    private void setupPulseCard(JPanel card)
+    {
+        card.setLayout(new GridBagLayout());
+        card.setBorder(new EmptyBorder(4, 4, 4, 4));
+        card.setFocusable(true);
+        addMouseFocusListener(card);
+
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(2, 2, 2, 2);
+
+        c.gridwidth = 4;
+        c.gridheight = 1;
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 0;
+        JPanel titlePanel = new JPanel();
+        titlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        card.add(titlePanel, c);
+
+        JLabel title = new JLabel("Pulse");
+        title.setHorizontalAlignment(SwingConstants.LEFT);
+        title.setFont(FontManager.getRunescapeBoldFont());
+        titlePanel.add(title);
+
+        JLabel help = new JLabel(new ImageIcon(HELP));
+        help.setBorder(new EmptyBorder(0, 4, 0, 4));
+        help.setToolTipText("<html>Temporarily recolours the Character's current model."
+                + "<br>The underlying model is whatever the Character is rendering -- typically"
+                + "<br>the nearest preceding Model keyframe, or the base model if none."
+                + "<br>"
+                + "<br>Envelope = fadeIn + hold + fadeOut (all in ticks). Inside the envelope,"
+                + "<br>the chosen colour is blended into each face's original HSL by blend mode:"
+                + "<br>&nbsp;&nbsp;Add - hit-flash / glow (brightens toward the colour)"
+                + "<br>&nbsp;&nbsp;Multiply - damage tint (darkens toward the colour)"
+                + "<br>&nbsp;&nbsp;Replace - wash (face becomes the colour at peak)"
+                + "<br>"
+                + "<br>Outside the envelope, the model is left alone. Pulses snapshot the"
+                + "<br>original face colours on activation and restore them on the way out.</html>");
+        titlePanel.add(help);
+
+        JButton colour = pulseAttributes.getColour();
+        JSpinner fadeIn = pulseAttributes.getFadeInTicks();
+        JSpinner hold = pulseAttributes.getHoldTicks();
+        JSpinner fadeOut = pulseAttributes.getFadeOutTicks();
+        JComboBox<com.creatorskit.swing.timesheet.keyframe.PulseBlendMode> blendMode = pulseAttributes.getBlendMode();
+        JComboBox<com.creatorskit.swing.timesheet.keyframe.settings.Toggle> easeInOut = pulseAttributes.getEaseInOut();
+        JComboBox<com.creatorskit.swing.timesheet.keyframe.settings.Toggle> affectSpotAnims = pulseAttributes.getAffectSpotAnims();
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 1;
+        card.add(rightLabel("Colour: "), c);
+
+        c.gridx = 1;
+        c.gridy = 1;
+        colour.setToolTipText("Click to pick the pulse target colour");
+        colour.setFocusable(false);
+        colour.setPreferredSize(new Dimension(120, 26));
+        colour.setOpaque(true);
+        colour.setBackground(new Color(com.creatorskit.swing.timesheet.attributes.PulseAttributes.DEFAULT_RGB));
+        pulseAttributes.setRgb(com.creatorskit.swing.timesheet.attributes.PulseAttributes.DEFAULT_RGB);
+        colour.addActionListener(e ->
+        {
+            Color picked = JColorChooser.showDialog(this, "Pulse Colour", new Color(pulseAttributes.getRgb()));
+            if (picked != null)
+            {
+                int newRgb = picked.getRGB() & 0xFFFFFF;
+                pulseAttributes.setRgb(newRgb);
+                colour.setBackground(picked);
+                colour.setBorder(BorderFactory.createLineBorder(pulseAttributes.getRed(), 2));
+            }
+        });
+        card.add(colour, c);
+
+        c.gridx = 0;
+        c.gridy = 2;
+        card.add(rightLabel("Fade In: "), c);
+
+        c.gridx = 1;
+        c.gridy = 2;
+        fadeIn.setToolTipText("Ticks to ramp the blend factor from 0 to 1 (0 = instant on)");
+        fadeIn.setModel(new SpinnerNumberModel(com.creatorskit.swing.timesheet.attributes.PulseAttributes.DEFAULT_FADE_IN, 0d, 1000000d, 0.5));
+        card.add(fadeIn, c);
+
+        c.gridx = 0;
+        c.gridy = 3;
+        card.add(rightLabel("Hold: "), c);
+
+        c.gridx = 1;
+        c.gridy = 3;
+        hold.setToolTipText("Ticks the blend factor stays at peak");
+        hold.setModel(new SpinnerNumberModel(com.creatorskit.swing.timesheet.attributes.PulseAttributes.DEFAULT_HOLD, 0d, 1000000d, 0.5));
+        card.add(hold, c);
+
+        c.gridx = 0;
+        c.gridy = 4;
+        card.add(rightLabel("Fade Out: "), c);
+
+        c.gridx = 1;
+        c.gridy = 4;
+        fadeOut.setToolTipText("Ticks to ramp the blend factor from 1 back to 0 (0 = instant off)");
+        fadeOut.setModel(new SpinnerNumberModel(com.creatorskit.swing.timesheet.attributes.PulseAttributes.DEFAULT_FADE_OUT, 0d, 1000000d, 0.5));
+        card.add(fadeOut, c);
+
+        c.gridx = 0;
+        c.gridy = 5;
+        card.add(rightLabel("Blend: "), c);
+
+        c.gridx = 1;
+        c.gridy = 5;
+        blendMode.setToolTipText("How the pulse colour combines with the model's original face colours");
+        blendMode.setFocusable(false);
+        blendMode.removeAllItems();
+        for (com.creatorskit.swing.timesheet.keyframe.PulseBlendMode m : com.creatorskit.swing.timesheet.keyframe.PulseBlendMode.values())
+        {
+            blendMode.addItem(m);
+        }
+        blendMode.setSelectedItem(com.creatorskit.swing.timesheet.attributes.PulseAttributes.DEFAULT_BLEND_MODE);
+        card.add(blendMode, c);
+
+        c.gridx = 0;
+        c.gridy = 6;
+        card.add(rightLabel("Ease in/out: "), c);
+
+        c.gridx = 1;
+        c.gridy = 6;
+        easeInOut.setToolTipText("Smoothstep the fade ramps (organic) vs linear ramps (mechanical)");
+        easeInOut.setFocusable(false);
+        easeInOut.removeAllItems();
+        easeInOut.addItem(com.creatorskit.swing.timesheet.keyframe.settings.Toggle.DISABLE);
+        easeInOut.addItem(com.creatorskit.swing.timesheet.keyframe.settings.Toggle.ENABLE);
+        card.add(easeInOut, c);
+
+        c.gridx = 0;
+        c.gridy = 7;
+        card.add(rightLabel("Affect SpotAnims: "), c);
+
+        c.gridx = 1;
+        c.gridy = 7;
+        affectSpotAnims.setToolTipText("Also tint the Character's SpotAnim 1 / 2 CKObjects when the pulse is active");
+        affectSpotAnims.setFocusable(false);
+        affectSpotAnims.removeAllItems();
+        affectSpotAnims.addItem(com.creatorskit.swing.timesheet.keyframe.settings.Toggle.DISABLE);
+        affectSpotAnims.addItem(com.creatorskit.swing.timesheet.keyframe.settings.Toggle.ENABLE);
+        card.add(affectSpotAnims, c);
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.weightx = 1;
+        c.weighty = 1;
+        c.gridx = 8;
+        c.gridy = 15;
+        card.add(new JLabel(""), c);
+    }
+
     private JLabel rightLabel(String text)
     {
         JLabel label = new JLabel(text);
@@ -3505,6 +3678,9 @@ public class AttributePanel extends JPanel
                 break;
             case CAMERA_CARD:
                 type = KeyFrameType.CAMERA;
+                break;
+            case PULSE_CARD:
+                type = KeyFrameType.PULSE;
         }
 
         switchCards(type);
