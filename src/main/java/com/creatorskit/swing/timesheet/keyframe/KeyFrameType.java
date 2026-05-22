@@ -25,7 +25,7 @@ public enum KeyFrameType
     PROJECTILE("Projectile","P"),
     SHIELD("Shield","SH"),
     SPECIAL("Special","SP"),
-    PULSE("Pulse","PL"),
+    PULSE("Colour","CL"),
     SCREEN_FADE("Screen Fade","SF"),
     SCREEN_SHAKE("Screen Shake","SK"),
     CAMERA("Camera","CM");

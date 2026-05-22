@@ -88,7 +88,10 @@ public class AttributePanel extends JPanel
     public static final String SCREEN_FADE_CARD = "Screen Fade";
     public static final String SCREEN_SHAKE_CARD = "Screen Shake";
     public static final String CAMERA_CARD = "Camera";
-    public static final String PULSE_CARD = "Pulse";
+    // Internal card identifier kept as PULSE_CARD; its STRING VALUE must match
+    // KeyFrameType.PULSE.getName() so the cardName <-> type mapping resolves.
+    // Renamed from "Pulse" to "Colour" along with the enum display name.
+    public static final String PULSE_CARD = "Colour";
     public static final String MIXED_TYPES_CARD = "MixedTypes";
     public static final String NO_SELECTION_CARD = "NoSelection";
 
@@ -3478,7 +3481,7 @@ public class AttributePanel extends JPanel
         titlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
         card.add(titlePanel, c);
 
-        JLabel title = new JLabel("Pulse");
+        JLabel title = new JLabel("Colour");
         title.setHorizontalAlignment(SwingConstants.LEFT);
         title.setFont(FontManager.getRunescapeBoldFont());
         titlePanel.add(title);
@@ -3495,8 +3498,8 @@ public class AttributePanel extends JPanel
                 + "<br>&nbsp;&nbsp;Multiply - damage tint (darkens toward the colour)"
                 + "<br>&nbsp;&nbsp;Replace - wash (face becomes the colour at peak)"
                 + "<br>"
-                + "<br>Outside the envelope, the model is left alone. Pulses snapshot the"
-                + "<br>original face colours on activation and restore them on the way out.</html>");
+                + "<br>Outside the envelope, the model is left alone. The face colours are"
+                + "<br>snapshotted on activation and restored on the way out.</html>");
         titlePanel.add(help);
 
         JButton colour = pulseAttributes.getColour();
@@ -3514,7 +3517,7 @@ public class AttributePanel extends JPanel
 
         c.gridx = 1;
         c.gridy = 1;
-        colour.setToolTipText("Click to pick the pulse target colour");
+        colour.setToolTipText("Click to pick the target colour for this Colour keyframe");
         colour.setFocusable(false);
         colour.setPreferredSize(new Dimension(120, 26));
         colour.setOpaque(true);
@@ -3522,7 +3525,7 @@ public class AttributePanel extends JPanel
         pulseAttributes.setRgb(com.creatorskit.swing.timesheet.attributes.PulseAttributes.DEFAULT_RGB);
         colour.addActionListener(e ->
         {
-            Color picked = JColorChooser.showDialog(this, "Pulse Colour", new Color(pulseAttributes.getRgb()));
+            Color picked = JColorChooser.showDialog(this, "Colour", new Color(pulseAttributes.getRgb()));
             if (picked != null)
             {
                 int newRgb = picked.getRGB() & 0xFFFFFF;

@@ -1199,6 +1199,29 @@ public class Programmer
     /**
      * Loops through all Characters and updates their current KeyFrame for the current time in the TimeSheetPanel
      * Intended for use when Playing the programmer, not when manually setting the time
+     *
+     * <p><b>RECURRING GOTCHA -- "scrub works, play doesn't":</b> every new
+     * KeyFrameType needs registration in BOTH {@link #updateProgram} (scrub
+     * path, iterates ALL_KEYFRAME_TYPES) AND here (play path, per-type
+     * advance-on-entry logic). The scrub path is forgiving because it
+     * re-runs all the per-type registers every time the user drags the
+     * playhead. The play path is not: it expects every type to have its
+     * own "find next, advance if its tick has passed, fire side-effects"
+     * block here. Without that block, the type's current keyframe pointer
+     * never advances during real playback and its registers never fire --
+     * so visually nothing happens until the user scrubs.
+     *
+     * <p>For per-tick continuous effects (Pulse's blend factor, Camera
+     * smoothing, ScreenShake jitter) the "advance on entry" block is not
+     * enough -- they also need an UNCONDITIONAL per-tick driver call here
+     * because the effect changes between keyframe boundaries. The Pulse
+     * block at the bottom of this method does exactly that.
+     *
+     * <p>When adding a new KeyFrameType, copy one of the existing "find
+     * next, advance, fire side-effects" blocks below as the template, and
+     * also add the per-character continuous driver call (like
+     * pulseController.update) just before the end of the per-character
+     * loop if the effect is time-continuous.
      */
     public void updateProgramsOnTick()
     {
@@ -1441,6 +1464,28 @@ public class Programmer
                     character.setCurrentKeyFrame(nextBar, barType);
                 }
             }
+
+            // Pulse (colour) -- two parts:
+            //  1) Advance currentFrames so introspection / UI sees the current pulse.
+            //  2) Drive the recolour engine unconditionally every tick. The pulse
+            //     envelope's blend factor t-in-[0,1] changes continuously over
+            //     fadeIn / hold / fadeOut, so a "transition once on entry" call
+            //     wouldn't be enough -- the recolour has to re-run every tick to
+            //     interpolate the tint. pulseController.update is idempotent and
+            //     re-finds the active pulse each call, so calling it on every
+            //     tick is fine even when no pulse is active (it cheaply no-ops).
+            KeyFrame currentPulse = currentFrames[KeyFrameType.getIndex(KeyFrameType.PULSE)];
+            double lastPulseTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
+            if (currentPulse != null)
+            {
+                lastPulseTick = currentPulse.getTick();
+            }
+            KeyFrame nextPulse = character.findNextKeyFrame(KeyFrameType.PULSE, lastPulseTick);
+            if (nextPulse != null && nextPulse.getTick() <= currentTime)
+            {
+                character.setCurrentKeyFrame(nextPulse, KeyFrameType.PULSE);
+            }
+            pulseController.update(character, currentTime);
         }
     }
 
