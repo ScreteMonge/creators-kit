@@ -219,6 +219,14 @@ public class TimeSheet extends JPanel
      */
     private boolean draggingAMarker = false;
     private boolean draggingBMarker = false;
+    /**
+     * Set in mousePressed when {@link #tryHandleBlockLeftClick} consumed
+     * the press (the click landed inside a block rect). Read in
+     * mouseReleased so the "empty-space click deselects everything"
+     * fallback branch doesn't undo the block selection we just made.
+     * Cleared by {@link #clearTransientDragFlags}.
+     */
+    private boolean blockLeftClicked = false;
 
     private void drawABMarkers(Graphics2D g)
     {
@@ -364,6 +372,7 @@ public class TimeSheet extends JPanel
         timeIndicatorPressed = false;
         draggingAMarker = false;
         draggingBMarker = false;
+        blockLeftClicked = false;
     }
 
     private void drawRectangleSelect(Graphics2D g)
@@ -790,8 +799,11 @@ public class TimeSheet extends JPanel
                 else if (tryHandleBlockLeftClick(mousePosition, additive))
                 {
                     // Block click consumed the press -- don't start marquee
-                    // dragging on top of a block selection.
+                    // dragging on top of a block selection, and signal the
+                    // release handler so it doesn't fire its "empty-space
+                    // click deselects everything" fallback.
                     allowRectangleSelect = false;
+                    blockLeftClicked = true;
                 }
             }
 
@@ -974,8 +986,12 @@ public class TimeSheet extends JPanel
                     keyFrameClicked = false;
                     allowRectangleSelect = false;
                 }
-                else
+                else if (!blockLeftClicked)
                 {
+                    // Empty-space click on the body: deselect everything.
+                    // Skipped when the press landed inside a block rect --
+                    // tryHandleBlockLeftClick already set selectedKeyFrames
+                    // to the block's members and we don't want to undo that.
                     setSelectedKeyFrames(new KeyFrame[0]);
                 }
 
