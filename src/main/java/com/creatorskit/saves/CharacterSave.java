@@ -90,4 +90,11 @@ public class CharacterSave
      * Phase 2 refactor will move all three to a central global-keyframes store).
      */
     private CameraKeyFrame[] cameraKeyFrames;
+    /**
+     * Pulse keyframes (temporary model recolour with fade-in / hold / fade-out
+     * envelope). Null in saves predating this field; the load path treats null
+     * as "no pulse keyframes" so old saves load cleanly without a migration step.
+     */
+    private PulseKeyFrame[] pulseKeyFrames;
 }
+

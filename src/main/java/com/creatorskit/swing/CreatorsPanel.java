@@ -2432,7 +2432,8 @@ public class CreatorsPanel extends PluginPanel
                 null,
                 null,
                 character.getExtraScale(),
-                null);
+                null,
+                character.getPulseKeyFrames());
     }
 
     public void openLoadSetupDialog()
@@ -2967,6 +2968,10 @@ public class CreatorsPanel extends PluginPanel
             if (save.getCameraKeyFrames() != null)
             {
                 frames[KeyFrameType.getIndex(KeyFrameType.CAMERA)] = save.getCameraKeyFrames();
+            }
+            if (save.getPulseKeyFrames() != null)
+            {
+                frames[KeyFrameType.getIndex(KeyFrameType.PULSE)] = save.getPulseKeyFrames();
             }
 
             KeyFrameType[] summary;
