@@ -4285,6 +4285,10 @@ public class AttributePanel extends JPanel
             case CAMERA:
                 cameraAttributes.setAttributes(keyFrame);
                 cameraAttributes.setBackgroundColours(keyFrameState);
+                break;
+            case PULSE:
+                pulseAttributes.setAttributes(keyFrame);
+                pulseAttributes.setBackgroundColours(keyFrameState);
         }
     }
 
@@ -4365,6 +4369,9 @@ public class AttributePanel extends JPanel
                 break;
             case CAMERA:
                 cameraAttributes.resetAttributes(resetBackground);
+                break;
+            case PULSE:
+                pulseAttributes.resetAttributes(resetBackground);
         }
     }
 

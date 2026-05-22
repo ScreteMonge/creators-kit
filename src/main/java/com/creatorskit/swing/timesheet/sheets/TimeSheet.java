@@ -815,6 +815,18 @@ public class TimeSheet extends JPanel
 
                 Point mousePosition = e.getPoint();
 
+                // Belt + braces: every branch below either falls through to the
+                // explicit clearTransientDragFlags() at the bottom of the body
+                // OR early-returns after its own clearTransientDragFlags() call.
+                // But if the selection-update downstream (setSelectedKeyFrames ->
+                // switchCards -> resetAttributes) throws -- e.g. a card switch on
+                // a new keyframe type with a missing case -- both cleanups get
+                // skipped and the marquee box / drag flags stay stuck. Wrapping
+                // the whole body in try/finally guarantees the flags reset even
+                // when downstream Swing dispatch dies.
+                try
+                {
+
                 if (e.getButton() == MouseEvent.BUTTON3)
                 {
                     onMouseButton3Pressed(mousePosition);
@@ -1009,6 +1021,16 @@ public class TimeSheet extends JPanel
                 // certain release paths (e.g. mouse released outside canvas)
                 // skipped one or another cleanup site.
                 clearTransientDragFlags();
+
+                }
+                finally
+                {
+                    // Final-final sweep: re-runs even if any branch above threw
+                    // (e.g. a downstream Swing dispatch hit a missing case). The
+                    // operation is idempotent so the redundant call on a clean
+                    // exit is harmless.
+                    clearTransientDragFlags();
+                }
             }
         });
 
