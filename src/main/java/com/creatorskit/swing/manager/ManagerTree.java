@@ -843,7 +843,7 @@ public class ManagerTree extends JTree
 
         if (user instanceof Character)
         {
-            showCharacterContextMenu((Character) user, x, y);
+            showCharacterContextMenu(node, (Character) user, x, y);
             return;
         }
 
@@ -858,7 +858,7 @@ public class ManagerTree extends JTree
      * keyframe-summary submenu plus a "Recolour" submenu that operates on the current
      * SelectionManager state (so multi-select recolour works from the tree).
      */
-    private void showCharacterContextMenu(Character character, int x, int y)
+    private void showCharacterContextMenu(DefaultMutableTreeNode characterNode, Character character, int x, int y)
     {
         if (!selectionManager.isSelected(character))
         {
@@ -904,6 +904,27 @@ public class ManagerTree extends JTree
         popup.add(cameraLock);
 
         popup.addSeparator();
+
+        // Collapse the Character's immediate parent folder. Only enabled
+        // when the parent is actually a Folder node (Characters sitting at
+        // the root have no folder to collapse). Useful after finishing a
+        // pass over one folder's Characters and wanting to fold the whole
+        // group away without right-clicking the folder node itself.
+        DefaultMutableTreeNode parent = characterNode == null ? null
+                : (DefaultMutableTreeNode) characterNode.getParent();
+        boolean parentIsFolder = parent != null && parent.getUserObject() instanceof Folder;
+        JMenuItem collapseParent = new JMenuItem("Collapse parent folder");
+        collapseParent.setToolTipText(parentIsFolder
+                ? "Close \"" + ((Folder) parent.getUserObject()).getName()
+                        + "\" and every nested subfolder."
+                : "This Character sits at the tree root -- no parent folder to collapse.");
+        collapseParent.setEnabled(parentIsFolder);
+        if (parentIsFolder)
+        {
+            final DefaultMutableTreeNode folderToCollapse = parent;
+            collapseParent.addActionListener(e -> setFolderExpanded(folderToCollapse, false));
+        }
+        popup.add(collapseParent);
 
         JMenuItem deselect = new JMenuItem("Deselect");
         deselect.setToolTipText("Clear the current selection. Useful for stepping out of multi-select without picking another Character.");
