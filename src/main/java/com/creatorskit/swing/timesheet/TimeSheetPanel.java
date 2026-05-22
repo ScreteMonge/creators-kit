@@ -4313,11 +4313,15 @@ public class TimeSheetPanel extends JPanel
     /** Shows a confirmation dialog then deletes both the block AND every
      *  member keyframe. The "Delete block + keyframes..." action -- routes
      *  the kf removals through {@link #addKeyFrameActions} so undo can
-     *  restore them in one step. */
+     *  restore them in one step. Members are resolved live from the
+     *  Character's frame matrix using the block's [startTick, endTick]
+     *  range (range-based block model). */
     public void deleteBlockWithConfirm(Character character, com.creatorskit.swing.timesheet.keyframe.Block block)
     {
         if (character == null || block == null) return;
-        int n = block.getKeyFrames().size();
+        java.util.List<com.creatorskit.swing.timesheet.keyframe.KeyFrame> members =
+                block.resolveMembers(character);
+        int n = members.size();
         int choice = JOptionPane.showConfirmDialog(this,
                 "Delete block \"" + (block.getName() == null ? "(unnamed)" : block.getName())
                         + "\" and its " + n + " keyframe" + (n == 1 ? "" : "s") + "?",
@@ -4325,13 +4329,8 @@ public class TimeSheetPanel extends JPanel
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
         if (choice != JOptionPane.OK_OPTION) return;
 
-        // Record the kf removals as a single undoable batch, then drop
-        // the block itself. Snapshot the member list first because
-        // removeKeyFrame mutates the Character's frame arrays underneath.
         KeyFrameAction[] kfa = new KeyFrameAction[0];
-        java.util.List<com.creatorskit.swing.timesheet.keyframe.KeyFrame> snapshot =
-                new java.util.ArrayList<>(block.getKeyFrames());
-        for (com.creatorskit.swing.timesheet.keyframe.KeyFrame kf : snapshot)
+        for (com.creatorskit.swing.timesheet.keyframe.KeyFrame kf : members)
         {
             if (kf == null) continue;
             character.removeKeyFrame(kf);
@@ -4477,9 +4476,10 @@ public class TimeSheetPanel extends JPanel
 
         for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> e : validByOwner.entrySet())
         {
+            double[] range = com.creatorskit.swing.timesheet.keyframe.BlockValidator.tickRange(e.getValue());
             com.creatorskit.swing.timesheet.keyframe.Block block =
                     new com.creatorskit.swing.timesheet.keyframe.Block(
-                            result.name, result.colorRgb, e.getValue());
+                            result.name, result.colorRgb, range[0], range[1]);
             e.getKey().getBlocks().add(block);
         }
         // Refresh the visible attribute sheets so the new block paints.

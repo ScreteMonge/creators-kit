@@ -777,12 +777,17 @@ public class TimeSheet extends JPanel
 
                 clickedKeyFrames = getKeyFrameClicked(mousePosition);
                 keyFrameClicked = clickedKeyFrames != null;
+                // CTRL OR SHIFT = additive selection. The two modifiers
+                // behave identically here -- user feedback was that CTRL
+                // wasn't doing anything for kf multi-select on a single
+                // Character; this aligns it with SHIFT.
+                boolean additive = e.isShiftDown() || e.isControlDown();
                 if (keyFrameClicked)
                 {
                     allowRectangleSelect = false;
-                    updateSelectedKeyFrameOnPressed(e.isShiftDown());
+                    updateSelectedKeyFrameOnPressed(additive);
                 }
-                else if (tryHandleBlockLeftClick(mousePosition, e.isShiftDown()))
+                else if (tryHandleBlockLeftClick(mousePosition, additive))
                 {
                     // Block click consumed the press -- don't start marquee
                     // dragging on top of a block selection.
@@ -851,7 +856,8 @@ public class TimeSheet extends JPanel
                     // engage promptly.
                     if (mousePosition.distance(mousePointOnPressed) < 5)
                     {
-                        updateSelectedKeyFrameOnRelease(mousePosition, e.isShiftDown());
+                        updateSelectedKeyFrameOnRelease(mousePosition,
+                                e.isShiftDown() || e.isControlDown());
                     }
                     else
                     {
@@ -975,7 +981,8 @@ public class TimeSheet extends JPanel
 
                 if (allowRectangleSelect)
                 {
-                    checkRectangleForKeyFrames(mousePosition, e.isShiftDown());
+                    checkRectangleForKeyFrames(mousePosition,
+                            e.isShiftDown() || e.isControlDown());
                     allowRectangleSelect = false;
                 }
 

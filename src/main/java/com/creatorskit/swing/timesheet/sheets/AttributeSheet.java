@@ -132,6 +132,15 @@ public class AttributeSheet extends TimeSheet
         g.fillRect(0, row * rowHeight + rowHeightOffset - getVScroll(), this.getWidth(), rowHeight);
     }
 
+    /** Header strip height (above the rows) where the block name renders
+     *  at full opacity. The rest of the block fill is translucent so the
+     *  keyframe icons inside stay visible. */
+    private static final int BLOCK_HEADER_HEIGHT = 18;
+    /** Alpha for the body fill of a block rect. Low enough that the
+     *  alternating row colours + keyframe icons inside still read; high
+     *  enough that the block is unambiguous. */
+    private static final int BLOCK_BODY_ALPHA = 70;
+
     @Override
     public void drawBlocks(Graphics g)
     {
@@ -143,9 +152,19 @@ public class AttributeSheet extends TimeSheet
 
         Graphics2D g2 = (Graphics2D) g;
         Font origFont = g2.getFont();
-        java.awt.Font labelFont = FontManager.getRunescapeBoldFont();
-        g2.setFont(labelFont);
+        g2.setFont(FontManager.getRunescapeBoldFont());
         FontMetrics fm = g2.getFontMetrics();
+
+        // Full body span: from the top of row 0 (just under the time-header
+        // chip) down to the bottom of the last keyframe-type row. Range
+        // covers every row whether or not the block has a kf in it -- the
+        // dumb range-based model says "everything in [startTick, endTick]
+        // is a member", and the visual matches that.
+        int bodyTop = rowHeightOffset + rowHeight - getVScroll();
+        int bodyBottom = rowHeightOffset + rowHeight
+                + rowHeight * KeyFrameType.LOCAL_KEYFRAME_TYPES_ALPHABETICAL.length
+                - getVScroll();
+        if (bodyBottom > this.getHeight()) bodyBottom = this.getHeight();
 
         for (Character c : visible)
         {
@@ -153,52 +172,48 @@ public class AttributeSheet extends TimeSheet
             if (blocks == null || blocks.isEmpty()) continue;
             for (com.creatorskit.swing.timesheet.keyframe.Block block : blocks)
             {
-                if (block == null || block.isEmpty()) continue;
-                // Resolve row span: span every display row from the
-                // top-most included property to the bottom-most. Per the
-                // user spec the rect is a single contiguous rectangle even
-                // if intermediate rows aren't in the block.
-                int minRow = Integer.MAX_VALUE;
-                int maxRow = Integer.MIN_VALUE;
-                for (com.creatorskit.swing.timesheet.keyframe.KeyFrameType type : block.getIncludedTypes())
-                {
-                    int dr = displayRowIndex(type);
-                    if (dr < 0) continue; // global type slipped in -- skip
-                    if (dr < minRow) minRow = dr;
-                    if (dr > maxRow) maxRow = dr;
-                }
-                if (minRow == Integer.MAX_VALUE) continue;
+                if (block == null) continue;
 
                 double startTick = block.getStartTick();
                 double endTick = block.getEndTick();
                 int leftX = (int) ((startTick + getHScroll()) * zoomFactor) - xImageOffset;
                 int rightX = (int) ((endTick + getHScroll()) * zoomFactor) + xImageOffset;
-                int topY = rowHeightOffset + rowHeight + rowHeight * minRow - getVScroll();
-                int bottomY = rowHeightOffset + rowHeight + rowHeight * (maxRow + 1) - getVScroll();
-
                 int rectW = Math.max(1, rightX - leftX);
-                int rectH = Math.max(1, bottomY - topY);
+                int rectH = Math.max(1, bodyBottom - bodyTop);
+                if (rectH <= 0) continue;
 
-                Color fillColor = new Color(block.getColorRgb());
-                g2.setColor(fillColor);
-                g2.fillRect(leftX, topY, rectW, rectH);
-                // 1px darker border for definition against the dark
-                // background and adjacent blocks.
-                g2.setColor(fillColor.darker());
-                g2.drawRect(leftX, topY, rectW - 1, rectH - 1);
+                Color baseColour = new Color(block.getColorRgb());
 
-                // Name label centred horizontally + vertically inside the
-                // block. White with a 1px black shadow so it reads on every
-                // palette colour. Clipped via setClip so it never spills
-                // outside the block rect.
+                // Body: translucent fill across the full timeline height so
+                // keyframe icons inside the block stay visible (tinted).
+                Color body = new Color(baseColour.getRed(), baseColour.getGreen(),
+                        baseColour.getBlue(), BLOCK_BODY_ALPHA);
+                g2.setColor(body);
+                g2.fillRect(leftX, bodyTop, rectW, rectH);
+
+                // Header strip: opaque colour with the block name, sits at
+                // the top of the rows. Drawn AFTER the body so it covers
+                // the body's alpha in the header region.
+                int hdrTop = bodyTop;
+                int hdrH = Math.min(BLOCK_HEADER_HEIGHT, rectH);
+                g2.setColor(baseColour);
+                g2.fillRect(leftX, hdrTop, rectW, hdrH);
+                // 1px darker outline around the entire block rect so it
+                // separates from neighbours and from the background.
+                g2.setColor(baseColour.darker());
+                g2.drawRect(leftX, bodyTop, rectW - 1, rectH - 1);
+
+                // Name label centred in the header strip. White with a
+                // 1px black shadow so it reads on every palette colour.
+                // Clipped to the header rect to prevent overrun.
                 String name = block.getName();
                 if (name != null && !name.isEmpty())
                 {
                     java.awt.Shape oldClip = g2.getClip();
-                    g2.setClip(leftX, topY, rectW, rectH);
+                    g2.setClip(leftX, hdrTop, rectW, hdrH);
                     int textW = fm.stringWidth(name);
                     int textX = leftX + (rectW - textW) / 2;
-                    int textY = topY + (rectH + fm.getAscent()) / 2 - 2;
+                    int textY = hdrTop + (hdrH + fm.getAscent()) / 2 - 2;
                     g2.setColor(Color.BLACK);
                     g2.drawString(name, textX + 1, textY + 1);
                     g2.setColor(Color.WHITE);
@@ -865,31 +880,24 @@ public class AttributeSheet extends TimeSheet
         int xImageOffset = keyImg.getWidth() / 2;
         double zoomFactor = (double) this.getWidth() / getZoom();
 
+        // Same body span as drawBlocks -- full timeline height, since
+        // range-based blocks cover all rows in their time range.
+        int bodyTop = rowHeightOffset + rowHeight - getVScroll();
+        int bodyBottom = rowHeightOffset + rowHeight
+                + rowHeight * KeyFrameType.LOCAL_KEYFRAME_TYPES_ALPHABETICAL.length
+                - getVScroll();
+        if (p.getY() < bodyTop || p.getY() > bodyBottom) return null;
+
         for (Character c : visible)
         {
             java.util.List<com.creatorskit.swing.timesheet.keyframe.Block> blocks = c.getBlocks();
             if (blocks == null) continue;
             for (com.creatorskit.swing.timesheet.keyframe.Block block : blocks)
             {
-                if (block == null || block.isEmpty()) continue;
-                int minRow = Integer.MAX_VALUE;
-                int maxRow = Integer.MIN_VALUE;
-                for (KeyFrameType type : block.getIncludedTypes())
-                {
-                    int dr = displayRowIndex(type);
-                    if (dr < 0) continue;
-                    if (dr < minRow) minRow = dr;
-                    if (dr > maxRow) maxRow = dr;
-                }
-                if (minRow == Integer.MAX_VALUE) continue;
-
+                if (block == null) continue;
                 int leftX = (int) ((block.getStartTick() + getHScroll()) * zoomFactor) - xImageOffset;
                 int rightX = (int) ((block.getEndTick() + getHScroll()) * zoomFactor) + xImageOffset;
-                int topY = rowHeightOffset + rowHeight + rowHeight * minRow - getVScroll();
-                int bottomY = rowHeightOffset + rowHeight + rowHeight * (maxRow + 1) - getVScroll();
-
-                if (p.getX() >= leftX && p.getX() <= rightX
-                        && p.getY() >= topY && p.getY() <= bottomY)
+                if (p.getX() >= leftX && p.getX() <= rightX)
                 {
                     return new BlockHit(c, block);
                 }
@@ -916,11 +924,13 @@ public class AttributeSheet extends TimeSheet
         if (hit == null) return false;
         TimeSheetPanel tsp = getTimeSheetPanel();
         if (tsp == null) return false;
-        // Select all of the block's member keyframes -- existing marquee
-        // semantics handle the rest (card refresh, multi-character labels,
-        // etc.). Also register the block on TimeSheetPanel so a subsequent
-        // Delete key knows it's deleting a whole block (with confirmation).
-        java.util.List<com.creatorskit.swing.timesheet.keyframe.KeyFrame> members = hit.block.getKeyFrames();
+        // Resolve members live -- range-based block means "every kf on
+        // this Character with tick in [startTick, endTick]". Selecting all
+        // of them mirrors the previous block-membership behaviour without
+        // a separately-tracked member list. setSelectedBlock fires after
+        // setSelectedKeyFrames since the latter clears block selection.
+        java.util.List<com.creatorskit.swing.timesheet.keyframe.KeyFrame> members =
+                hit.block.resolveMembers(hit.character);
         tsp.setSelectedKeyFrames(members.toArray(new com.creatorskit.swing.timesheet.keyframe.KeyFrame[0]));
         tsp.setSelectedBlock(hit.block, hit.character);
         return true;
