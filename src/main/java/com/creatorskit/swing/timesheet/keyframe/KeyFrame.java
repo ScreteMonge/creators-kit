@@ -67,7 +67,8 @@ public class KeyFrame
                         oriKF.getEnd(),
                         oriKF.getDuration(),
                         oriKF.getTurnRate(),
-                        oriKF.getTargetCharacterName());
+                        oriKF.getTargetCharacterName(),
+                        oriKF.getTurnDirection());
             case SPAWN:
                 SpawnKeyFrame spawnKF = (SpawnKeyFrame) keyFrame;
                 return new SpawnKeyFrame(

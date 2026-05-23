@@ -3,6 +3,7 @@ package com.creatorskit.swing.timesheet.attributes;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameState;
 import com.creatorskit.swing.timesheet.keyframe.OrientationKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.TurnDirection;
 import lombok.Getter;
 
 import javax.swing.*;
@@ -16,6 +17,7 @@ public class OriAttributes extends Attributes
     private final JSpinner duration = new JSpinner();
     private final JSpinner turnRate = new JSpinner();
     private final JTextField targetCharacterName = new JTextField();
+    private final JComboBox<TurnDirection> turnDirection = new JComboBox<>();
 
     public OriAttributes()
     {
@@ -49,6 +51,7 @@ public class OriAttributes extends Attributes
         duration.setValue(kf.getDuration());
         turnRate.setValue(kf.getTurnRate());
         targetCharacterName.setText(kf.getTargetCharacterName() == null ? "" : kf.getTargetCharacterName());
+        turnDirection.setSelectedItem(kf.getTurnDirection() == null ? TurnDirection.AUTO : kf.getTurnDirection());
     }
 
     public void setBackgroundColours(Color color)
@@ -58,6 +61,7 @@ public class OriAttributes extends Attributes
         duration.setBackground(color);
         turnRate.setBackground(color);
         targetCharacterName.setBackground(color);
+        turnDirection.setBackground(color);
     }
 
     @Override
@@ -69,7 +73,8 @@ public class OriAttributes extends Attributes
                         end,
                         duration,
                         turnRate,
-                        targetCharacterName
+                        targetCharacterName,
+                        turnDirection
                 };
     }
 
@@ -102,6 +107,8 @@ public class OriAttributes extends Attributes
             @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { targetCharacterName.setBackground(getRed()); }
             @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { targetCharacterName.setBackground(getRed()); }
         });
+
+        turnDirection.addItemListener(e -> turnDirection.setBackground(getRed()));
     }
 
     @Override
@@ -112,6 +119,7 @@ public class OriAttributes extends Attributes
         duration.setValue(1.0);
         turnRate.setValue(OrientationKeyFrame.TURN_RATE);
         targetCharacterName.setText("");
+        turnDirection.setSelectedItem(TurnDirection.AUTO);
         super.resetAttributes(resetBackground);
     }
 }

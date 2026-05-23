@@ -18,12 +18,11 @@ import java.awt.image.BufferedImage;
  * Clickable compass for the Orientation card. Owns:
  * <ul>
  *   <li>a white circular border that visually contains the compass image;</li>
- *   <li>one coloured indicator line (red) drawn from centre outward at the
- *       End spinner angle, repainted whenever the spinner changes;</li>
+ *   <li>a FAINT green indicator line at the Start angle (read-only --
+ *       Start is snapshotted at kf activation time, not user-editable);</li>
+ *   <li>a RED indicator line at the End angle (the kf's destination);</li>
  *   <li>click-to-snap selection of one of the 8 cardinal / intercardinal
- *       directions, always writing to the End spinner (Start is no longer a
- *       UI-editable concept -- it gets snapshotted from the character's live
- *       orientation at kf activation time);</li>
+ *       directions, always writing to the End spinner;</li>
  *   <li>a {@link #setControlsEnabled} override so the parent card can grey
  *       out the whole widget when Face Target overrides explicit orientation.</li>
  * </ul>
@@ -40,21 +39,28 @@ public class CompassPanel extends JComponent
     private static final int JAGEX_FULL_TURN = 2048;
     private static final int SNAP_STEP = JAGEX_FULL_TURN / 8;  // 256
 
-    /** Indicator line colour -- chosen to read clearly against the dark compass face. */
-    private static final Color END_COLOUR = new Color(220, 80, 80);     // red
+    /** Indicator line colours -- chosen to read clearly against the dark compass face. */
+    private static final Color START_COLOUR = new Color(80, 200, 95, 110);  // faint green, read-only reference
+    private static final Color END_COLOUR = new Color(220, 80, 80);          // red, kf destination
 
     private final BufferedImage compassImage;
+    /** Read-only source for the Start indicator. May be null (no Start indicator drawn). */
+    private final JSpinner startSpinner;
     private final JSpinner endSpinner;
     private boolean enabledByParent = true;
 
     /**
      * @param compassImage the compass face PNG (drawn inside the circle)
+     * @param startSpinner Start Orientation spinner -- read-only; faint
+     *                     green indicator drawn at this angle. May be null
+     *                     for no Start indicator.
      * @param endSpinner   End Orientation spinner -- click writes here,
      *                     line drawn red at this angle
      */
-    public CompassPanel(BufferedImage compassImage, JSpinner endSpinner)
+    public CompassPanel(BufferedImage compassImage, JSpinner startSpinner, JSpinner endSpinner)
     {
         this.compassImage = compassImage;
+        this.startSpinner = startSpinner;
         this.endSpinner = endSpinner;
 
         // Compass is the dominant visual on the right side of the card and
@@ -70,6 +76,7 @@ public class CompassPanel extends JComponent
 
         ChangeListener repaintOnChange = e -> repaint();
         endSpinner.addChangeListener(repaintOnChange);
+        if (startSpinner != null) startSpinner.addChangeListener(repaintOnChange);
 
         addMouseListener(new MouseAdapter()
         {
@@ -164,9 +171,18 @@ public class CompassPanel extends JComponent
                 g2.setComposite(prev);
             }
 
-            // End indicator: drawn last so it sits on top of the compass face.
-            int endJ = readSpinnerInt(endSpinner, 0);
             int lineR = imageR - 6;
+            // Start indicator: drawn FIRST and faint so the End line clearly
+            // sits on top when both point at the same angle. Start is the
+            // snapshot of the character's orientation at kf activation -- not
+            // editable here, just shown as context for the user.
+            if (startSpinner != null)
+            {
+                int startJ = readSpinnerInt(startSpinner, 0);
+                drawIndicator(g2, cx, cy, lineR, startJ, applyAlpha(START_COLOUR, alpha));
+            }
+            // End indicator: red, the kf's destination angle.
+            int endJ = readSpinnerInt(endSpinner, 0);
             drawIndicator(g2, cx, cy, lineR, endJ, applyAlpha(END_COLOUR, alpha));
         }
         finally

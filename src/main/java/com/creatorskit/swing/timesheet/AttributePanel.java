@@ -604,6 +604,9 @@ public class AttributePanel extends JPanel
                 {
                     liveStart = sel.getCkObject().getOrientation();
                 }
+                com.creatorskit.swing.timesheet.keyframe.TurnDirection td =
+                        (com.creatorskit.swing.timesheet.keyframe.TurnDirection) oriAttributes.getTurnDirection().getSelectedItem();
+                if (td == null) td = com.creatorskit.swing.timesheet.keyframe.TurnDirection.AUTO;
                 return new OrientationKeyFrame(
                         tick,
                         OrientationGoal.POINT,
@@ -611,7 +614,8 @@ public class AttributePanel extends JPanel
                         (int) oriAttributes.getEnd().getValue(),
                         ((Number) oriAttributes.getDuration().getValue()).doubleValue(),
                         (int) oriAttributes.getTurnRate().getValue(),
-                        oriAttributes.getTargetCharacterNameValue()
+                        oriAttributes.getTargetCharacterNameValue(),
+                        td
                 );
             }
             case SPAWN:
@@ -1770,6 +1774,29 @@ public class AttributePanel extends JPanel
         card.add(convertRow, c);
         c.gridwidth = 1;
 
+        // Row 4: Turn direction (Auto / Clockwise / Counter-clockwise).
+        // Made explicit because the auto "shortest path" behaviour is opaque
+        // -- you can't tell which way the kf will spin without running it.
+        c.gridx = 2;
+        c.gridy = 4;
+        JLabel turnDirLabel = new JLabel("Turn: ");
+        turnDirLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(turnDirLabel, c);
+
+        c.gridx = 3;
+        c.gridy = 4;
+        JComboBox<com.creatorskit.swing.timesheet.keyframe.TurnDirection> turnDirCombo = oriAttributes.getTurnDirection();
+        turnDirCombo.removeAllItems();
+        for (com.creatorskit.swing.timesheet.keyframe.TurnDirection td : com.creatorskit.swing.timesheet.keyframe.TurnDirection.values())
+        {
+            turnDirCombo.addItem(td);
+        }
+        turnDirCombo.setSelectedItem(com.creatorskit.swing.timesheet.keyframe.TurnDirection.AUTO);
+        turnDirCombo.setToolTipText("<html><b>Auto</b>: shortest path (legacy behaviour)."
+                + "<br><b>Clockwise</b>: always rotate CW (decreasing jagex), takes the long way around if needed."
+                + "<br><b>Counter-clockwise</b>: always rotate CCW (increasing jagex), takes the long way around if needed.</html>");
+        card.add(turnDirCombo, c);
+
         // Row 5: Face target -- the override row.
         c.gridwidth = 1;
         c.gridx = 0;
@@ -1798,9 +1825,10 @@ public class AttributePanel extends JPanel
         c.fill = GridBagConstraints.NONE;
         c.anchor = GridBagConstraints.CENTER;
         com.creatorskit.swing.timesheet.attributes.CompassPanel compass =
-                new com.creatorskit.swing.timesheet.attributes.CompassPanel(COMPASS, end);
+                new com.creatorskit.swing.timesheet.attributes.CompassPanel(COMPASS, start, end);
         compass.setToolTipText("<html>Click any of the 8 directions to set <b>End</b> (red line)."
-                + "<br>Start is auto-derived from the Character's live orientation when the kf activates.</html>");
+                + "<br>The faint <b>green</b> line shows the kf's Start angle -- snapshotted from the"
+                + "<br>Character's live orientation when the kf activates. Read-only.</html>");
         card.add(compass, c);
         // Reset GridBag fill so any future rows added downstream don't inherit NONE/CENTER.
         c.fill = GridBagConstraints.HORIZONTAL;
@@ -1823,6 +1851,7 @@ public class AttributePanel extends JPanel
             end.setEnabled(enabled);
             duration.setEnabled(enabled);
             turnRate.setEnabled(enabled);
+            turnDirCombo.setEnabled(enabled);
             getEnd.setEnabled(enabled);
             convertArrow.setControlsEnabled(enabled);
             compass.setControlsEnabled(enabled);

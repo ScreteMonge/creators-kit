@@ -16,6 +16,12 @@ public class OrientationKeyFrame extends KeyFrame
     private double duration;
     private int turnRate;
     private String targetCharacterName;
+    /**
+     * Explicit turn direction (CW / CCW) or AUTO for legacy "shortest
+     * path" behaviour. Null in saves predating this field; the playback
+     * path treats null as AUTO so old saves load with no behaviour change.
+     */
+    private TurnDirection turnDirection;
 
     public OrientationKeyFrame(double tick, OrientationGoal goal, int start, int end, double duration, int turnRate)
     {
@@ -24,6 +30,11 @@ public class OrientationKeyFrame extends KeyFrame
 
     public OrientationKeyFrame(double tick, OrientationGoal goal, int start, int end, double duration, int turnRate, String targetCharacterName)
     {
+        this(tick, goal, start, end, duration, turnRate, targetCharacterName, TurnDirection.AUTO);
+    }
+
+    public OrientationKeyFrame(double tick, OrientationGoal goal, int start, int end, double duration, int turnRate, String targetCharacterName, TurnDirection turnDirection)
+    {
         super(KeyFrameType.ORIENTATION, tick);
         this.goal = goal;
         this.start = start;
@@ -31,5 +42,6 @@ public class OrientationKeyFrame extends KeyFrame
         this.duration = duration;
         this.turnRate = turnRate;
         this.targetCharacterName = targetCharacterName;
+        this.turnDirection = turnDirection;
     }
 }
