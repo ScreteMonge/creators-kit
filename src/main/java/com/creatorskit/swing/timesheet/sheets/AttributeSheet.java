@@ -1036,6 +1036,21 @@ public class AttributeSheet extends TimeSheet
             selectAB.setToolTipText("Drop both A and B markers first (Tools > A-B Loop, or shortcut).");
         }
         menu.add(selectAB);
+
+        // Selection-narrowing helper for the multi-Character + marquee case:
+        // when the user has more Characters selected than they actually want
+        // to operate on, this drops the non-keyframe-owners from the Character
+        // selection in one click. Only shown when the context makes sense
+        // (2+ Characters selected AND at least one keyframe in the marquee)
+        // so the menu isn't cluttered for the single-Character path.
+        if (tsp.canReduceSelectionToKeyFrameOwners())
+        {
+            JMenuItem reduce = new JMenuItem("Reduce selection to keyframe owners");
+            reduce.setToolTipText("Drop any Characters from the multi-selection that don't own one of the currently-selected keyframes. Keyframe selection is unchanged.");
+            reduce.addActionListener(e -> tsp.reduceSelectionToKeyFrameOwners());
+            menu.add(reduce);
+        }
+
         menu.addSeparator();
 
         // Blocks: only show when the marquee selection forms a valid block

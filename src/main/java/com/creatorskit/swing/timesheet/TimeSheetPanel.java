@@ -4184,6 +4184,43 @@ public class TimeSheetPanel extends JPanel
     }
 
     /**
+     * Right-click context guard for "Reduce selection to keyframe owners".
+     * Returns true when both:
+     *  - 2+ Characters are currently selected (otherwise reducing is a no-op
+     *    or empty), AND
+     *  - 1+ keyframes are currently marquee/click-selected (so we have an
+     *    owner set to derive).
+     */
+    public boolean canReduceSelectionToKeyFrameOwners()
+    {
+        return selectedKeyFrames != null
+                && selectedKeyFrames.length > 0
+                && selectionManager.size() >= 2;
+    }
+
+    /**
+     * Narrows the Character multi-selection down to just the owners of the
+     * currently-selected keyframes. The keyframe selection itself is left
+     * untouched -- only the SelectionManager state changes.
+     *
+     * <p>Use case: after a marquee that covers part of a folder, the user
+     * wants to operate (move, recolour, etc.) on JUST the Characters that
+     * have keyframes in the marquee window, not the whole folder they
+     * originally had selected. Saves manually CTRL-clicking off siblings.
+     *
+     * <p>Tree highlight is refreshed via syncTreeFromSelection so the
+     * manager panel reflects the new state immediately -- selectionManager
+     * doesn't push to the tree on its own.
+     */
+    public void reduceSelectionToKeyFrameOwners()
+    {
+        java.util.Map<Character, java.util.List<KeyFrame>> byOwner = groupSelectedKeyFramesByOwner();
+        if (byOwner.isEmpty()) return;
+        selectionManager.selectAll(byOwner.keySet());
+        if (managerTree != null) managerTree.syncTreeFromSelection();
+    }
+
+    /**
      * Groups the marquee selection by owning Character. Skips keyframes whose
      * owner can't be resolved (shouldn't normally happen since the marquee is
      * built from visible Characters' keyframes, but defensive against stale
