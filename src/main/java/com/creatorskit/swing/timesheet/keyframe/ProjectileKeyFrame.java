@@ -21,9 +21,7 @@ public class ProjectileKeyFrame extends KeyFrame
     public static final int DEFAULT_START_HEIGHT = 80;
     public static final int DEFAULT_END_HEIGHT = 80;
     public static final int DEFAULT_SLOPE = 15;
-    public static final int DEFAULT_START_POS = 64;
     public static final double DEFAULT_DURATION = 2.0;
-    public static final double DEFAULT_START_DELAY = 0.0;
     public static final boolean DEFAULT_FACE_TRAJECTORY = false;
 
     /** Spotanim / projectile gfx id used by client.createProjectile. */
@@ -41,11 +39,8 @@ public class ProjectileKeyFrame extends KeyFrame
     private int startHeight;
     private int endHeight;
     private int slope;
-    private int startPos;
     /** Game ticks the projectile takes to traverse from source to target. */
     private double durationTicks;
-    /** Game ticks of delay between this keyframe firing and the projectile spawning. */
-    private double startDelayTicks;
     /**
      * When true, the model is pitched each frame so its forward axis aligns with the
      * trajectory direction (nose-up when ascending, nose-down when crashing back to
@@ -54,7 +49,7 @@ public class ProjectileKeyFrame extends KeyFrame
      */
     private boolean faceTrajectory;
 
-    public ProjectileKeyFrame(double tick, int projectileId, String target, int startHeight, int endHeight, int slope, int startPos, double durationTicks, double startDelayTicks, boolean faceTrajectory)
+    public ProjectileKeyFrame(double tick, int projectileId, String target, int startHeight, int endHeight, int slope, double durationTicks, boolean faceTrajectory)
     {
         super(KeyFrameType.PROJECTILE, tick);
         this.projectileId = projectileId;
@@ -62,9 +57,7 @@ public class ProjectileKeyFrame extends KeyFrame
         this.startHeight = startHeight;
         this.endHeight = endHeight;
         this.slope = slope;
-        this.startPos = startPos;
         this.durationTicks = durationTicks;
-        this.startDelayTicks = startDelayTicks;
         this.faceTrajectory = faceTrajectory;
     }
 }

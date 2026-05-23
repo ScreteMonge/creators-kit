@@ -15,9 +15,7 @@ public class ProjectileAttributes extends Attributes
     private final JSpinner startHeight = new JSpinner();
     private final JSpinner endHeight = new JSpinner();
     private final JSpinner slope = new JSpinner();
-    private final JSpinner startPos = new JSpinner();
     private final JSpinner durationTicks = new JSpinner();
-    private final JSpinner startDelayTicks = new JSpinner();
     private final JCheckBox faceTrajectory = new JCheckBox("Face trajectory");
 
     public ProjectileAttributes()
@@ -53,9 +51,7 @@ public class ProjectileAttributes extends Attributes
         startHeight.setValue(kf.getStartHeight());
         endHeight.setValue(kf.getEndHeight());
         slope.setValue(kf.getSlope());
-        startPos.setValue(kf.getStartPos());
         durationTicks.setValue(kf.getDurationTicks());
-        startDelayTicks.setValue(kf.getStartDelayTicks());
         faceTrajectory.setSelected(kf.isFaceTrajectory());
     }
 
@@ -67,9 +63,7 @@ public class ProjectileAttributes extends Attributes
         startHeight.setBackground(color);
         endHeight.setBackground(color);
         slope.setBackground(color);
-        startPos.setBackground(color);
         durationTicks.setBackground(color);
-        startDelayTicks.setBackground(color);
         faceTrajectory.setBackground(color);
     }
 
@@ -83,9 +77,7 @@ public class ProjectileAttributes extends Attributes
                         startHeight,
                         endHeight,
                         slope,
-                        startPos,
                         durationTicks,
-                        startDelayTicks,
                         faceTrajectory
                 };
     }
@@ -97,9 +89,7 @@ public class ProjectileAttributes extends Attributes
         startHeight.addChangeListener(e -> startHeight.setBackground(getRed()));
         endHeight.addChangeListener(e -> endHeight.setBackground(getRed()));
         slope.addChangeListener(e -> slope.setBackground(getRed()));
-        startPos.addChangeListener(e -> startPos.setBackground(getRed()));
         durationTicks.addChangeListener(e -> durationTicks.setBackground(getRed()));
-        startDelayTicks.addChangeListener(e -> startDelayTicks.setBackground(getRed()));
         faceTrajectory.addItemListener(e -> faceTrajectory.setBackground(getRed()));
 
         target.getDocument().addDocumentListener(new javax.swing.event.DocumentListener()
@@ -118,9 +108,7 @@ public class ProjectileAttributes extends Attributes
         startHeight.setValue(ProjectileKeyFrame.DEFAULT_START_HEIGHT);
         endHeight.setValue(ProjectileKeyFrame.DEFAULT_END_HEIGHT);
         slope.setValue(ProjectileKeyFrame.DEFAULT_SLOPE);
-        startPos.setValue(ProjectileKeyFrame.DEFAULT_START_POS);
         durationTicks.setValue(ProjectileKeyFrame.DEFAULT_DURATION);
-        startDelayTicks.setValue(ProjectileKeyFrame.DEFAULT_START_DELAY);
         faceTrajectory.setSelected(ProjectileKeyFrame.DEFAULT_FACE_TRAJECTORY);
         super.resetAttributes(resetBackground);
     }

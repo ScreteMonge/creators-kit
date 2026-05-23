@@ -1547,8 +1547,8 @@ public class Programmer
      * CKObject per resolved target, computing position and parabolic Z arc from
      * {@code currentTime} so scrubbing, pausing, and stepping all behave correctly.
      *
-     * <p>Active window is {@code [tick + startDelay, tick + startDelay + duration]}.
-     * Outside that window all of the Character's projectile CKObjects are deactivated.
+     * <p>Active window is {@code [tick, tick + duration]}. Outside that window
+     * all of the Character's projectile CKObjects are deactivated.
      */
     private void updateProjectiles(Character character, double currentTime)
     {
@@ -1561,7 +1561,7 @@ public class Programmer
             return;
         }
 
-        double startTime = kf.getTick() + kf.getStartDelayTicks();
+        double startTime = kf.getTick();
         double duration = Math.max(0.0001, kf.getDurationTicks());
         double endTime = startTime + duration;
 

@@ -302,7 +302,7 @@ public class SummarySheet extends TimeSheet
                     break;
                 case PROJECTILE:
                     ProjectileKeyFrame pkf = (ProjectileKeyFrame) keyFrame;
-                    drawTail(g, e, keyFrames, pkf.getStartDelayTicks() + pkf.getDurationTicks(), zoomFactor, pkf.getTick(), x, y, xStringOffset, stringHeight);
+                    drawTail(g, e, keyFrames, pkf.getDurationTicks(), zoomFactor, pkf.getTick(), x, y, xStringOffset, stringHeight);
                     break;
                 case COLOUR:
                     ColourKeyFrame clkf = (ColourKeyFrame) keyFrame;

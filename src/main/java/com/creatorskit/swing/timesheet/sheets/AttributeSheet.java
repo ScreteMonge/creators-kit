@@ -347,7 +347,7 @@ public class AttributeSheet extends TimeSheet
                         break;
                     case PROJECTILE:
                         ProjectileKeyFrame pkf = (ProjectileKeyFrame) keyFrame;
-                        drawTail(g, e, keyFrames, pkf.getStartDelayTicks() + pkf.getDurationTicks(), zoomFactor, pkf.getTick(), x, y, imageHeight);
+                        drawTail(g, e, keyFrames, pkf.getDurationTicks(), zoomFactor, pkf.getTick(), x, y, imageHeight);
                         break;
                     case SHIELD:
                         ShieldKeyFrame shkf = (ShieldKeyFrame) keyFrame;

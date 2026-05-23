@@ -755,9 +755,7 @@ public class AttributePanel extends JPanel
                         (int) projectileAttributes.getStartHeight().getValue(),
                         (int) projectileAttributes.getEndHeight().getValue(),
                         (int) projectileAttributes.getSlope().getValue(),
-                        (int) projectileAttributes.getStartPos().getValue(),
                         ((Number) projectileAttributes.getDurationTicks().getValue()).doubleValue(),
-                        ((Number) projectileAttributes.getStartDelayTicks().getValue()).doubleValue(),
                         projectileAttributes.getFaceTrajectory().isSelected()
                 );
             case SHIELD:
@@ -3074,16 +3072,10 @@ public class AttributePanel extends JPanel
         slope.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_SLOPE, -100000, 100000, 1));
         card.add(slope, c);
 
-        c.gridx = 2;
-        c.gridy = 4;
-        card.add(rightLabel("Start Pos:"), c);
-
-        c.gridx = 3;
-        c.gridy = 4;
-        JSpinner startPos = projectileAttributes.getStartPos();
-        startPos.setToolTipText("Offset from the source tile (game's internal start offset). Default 64.");
-        startPos.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_START_POS, -100000, 100000, 1));
-        card.add(startPos, c);
+        // Start Pos and Start Delay used to live at (2,4) and (2,5) but both
+        // were confirmed no-ops -- startPos was never read by the renderer at
+        // all, and startDelayTicks was redundant with just placing the kf at
+        // a different tick. Removed in favour of a simpler card.
 
         c.gridx = 0;
         c.gridy = 5;
@@ -3095,17 +3087,6 @@ public class AttributePanel extends JPanel
         duration.setToolTipText("Game ticks the projectile takes to fly from source to target");
         duration.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_DURATION, 0.1, 100, 0.1));
         card.add(duration, c);
-
-        c.gridx = 2;
-        c.gridy = 5;
-        card.add(rightLabel("Start Delay:"), c);
-
-        c.gridx = 3;
-        c.gridy = 5;
-        JSpinner startDelay = projectileAttributes.getStartDelayTicks();
-        startDelay.setToolTipText("Game ticks of delay between this keyframe firing and the projectile actually spawning. Useful for syncing with cast animations.");
-        startDelay.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_START_DELAY, 0, 100, 0.1));
-        card.add(startDelay, c);
 
         c.gridwidth = 4;
         c.gridx = 0;

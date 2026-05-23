@@ -135,9 +135,7 @@ public class KeyFrame
                         projKF.getStartHeight(),
                         projKF.getEndHeight(),
                         projKF.getSlope(),
-                        projKF.getStartPos(),
                         projKF.getDurationTicks(),
-                        projKF.getStartDelayTicks(),
                         projKF.isFaceTrajectory());
             case SHIELD:
                 ShieldKeyFrame shieldKF = (ShieldKeyFrame) keyFrame;
