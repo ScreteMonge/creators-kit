@@ -3619,50 +3619,82 @@ public class TimeSheetPanel extends JPanel
         // step 1..3 = some raindrops on a tighter rhythm than others).
         JSpinner stepMinSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 1000, 1));
         JSpinner stepMaxSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 1000, 1));
-        // Copies per Character is a min..max range -- each Character rolls
-        // independently in that range. min == max behaves like a fixed count
-        // (original single-spinner UX preserved when both set to the same
-        // value). min == 0 lets a Character end up with its original block
-        // simply deleted and zero copies added, useful for sparse rain where
-        // not every tile should hit. Default 1..1 matches the previous default.
+        // Copies per Character (per-Character mode only). min == max behaves
+        // like a fixed count; min == 0 lets a Character end up with its
+        // original block simply deleted and zero copies added.
         JSpinner copiesMinSpinner = new JSpinner(new SpinnerNumberModel(1, 0, 1000, 1));
         JSpinner copiesMaxSpinner = new JSpinner(new SpinnerNumberModel(1, 0, 1000, 1));
-        // Per-step copy count is an ALTERNATE mode (max > 0 enables it). When
-        // active, the planner walks step ticks across [from, to] and for each
-        // tick rolls K in [perStepMin, perStepMax] -- K distinct Characters
-        // (without replacement, clamped to byOwner.size()) each get a copy of
-        // their block anchored at that step tick. Density per step varies
-        // independently from per-Character copy count. Use case: rain that
-        // gets denser on certain beats. Both = 0 (default) preserves the
-        // existing per-Character planning behaviour completely.
-        JSpinner perStepMinSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 1000, 1));
-        JSpinner perStepMaxSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 1000, 1));
+        // Per-step copy count (per-Step mode only). Per step tick the
+        // planner rolls K in [perStepMin, perStepMax] and picks K distinct
+        // Characters (without replacement, clamped to pool size + collision
+        // filter) -- each gets a copy of the source block anchored at that
+        // step tick.
+        JSpinner perStepMinSpinner = new JSpinner(new SpinnerNumberModel(1, 0, 1000, 1));
+        JSpinner perStepMaxSpinner = new JSpinner(new SpinnerNumberModel(1, 0, 1000, 1));
 
-        JPanel panel = new JPanel(new GridLayout(0, 2, 6, 6));
-        panel.add(new JLabel("From tick:"));
-        panel.add(fromSpinner);
-        panel.add(new JLabel("To tick:"));
-        panel.add(toSpinner);
-        panel.add(new JLabel("Step size (min):"));
-        panel.add(stepMinSpinner);
-        panel.add(new JLabel("Step size (max):"));
-        panel.add(stepMaxSpinner);
-        panel.add(new JLabel("Copies per Character (min):"));
-        panel.add(copiesMinSpinner);
-        panel.add(new JLabel("Copies per Character (max):"));
-        panel.add(copiesMaxSpinner);
-        panel.add(new JLabel("Copies per step (min):"));
-        panel.add(perStepMinSpinner);
-        panel.add(new JLabel("Copies per step (max, 0 = off):"));
-        panel.add(perStepMaxSpinner);
+        // Explicit mode toggle replaces the old "perStepMax == 0 = off"
+        // sentinel. Per-Character and Per-Step are conceptually different
+        // planners (one rolls per-Character independently, the other
+        // walks a global step grid), so the dialog has to make the choice
+        // explicit -- the previous magic-zero pattern was both invisible
+        // and let the user accidentally fall back to per-Character mode by
+        // bumping perStepMax to 0 mid-edit.
+        JRadioButton perCharRadio = new JRadioButton("Per Character", true);
+        JRadioButton perStepRadio = new JRadioButton("Per Step", false);
+        perCharRadio.setToolTipText("Each selected Character independently rolls a copy count and places its block at random anchors across the range.");
+        perStepRadio.setToolTipText("Walks step ticks across the range; at each step picks K random Characters from the multi-selection -- each gets one copy of the source block anchored at that tick.");
+        ButtonGroup modeGroup = new ButtonGroup();
+        modeGroup.add(perCharRadio);
+        modeGroup.add(perStepRadio);
+
+        // Greys out the spinner pair that doesn't apply to the current mode.
+        // Visual cue + cannot-misclick safety. Step / range spinners are
+        // used by both modes so they stay live.
+        Runnable refreshEnabled = () ->
+        {
+            boolean perStep = perStepRadio.isSelected();
+            copiesMinSpinner.setEnabled(!perStep);
+            copiesMaxSpinner.setEnabled(!perStep);
+            perStepMinSpinner.setEnabled(perStep);
+            perStepMaxSpinner.setEnabled(perStep);
+        };
+        perCharRadio.addActionListener(e -> refreshEnabled.run());
+        perStepRadio.addActionListener(e -> refreshEnabled.run());
+        refreshEnabled.run();
+
+        JPanel modePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        modePanel.add(new JLabel("Mode:"));
+        modePanel.add(perCharRadio);
+        modePanel.add(perStepRadio);
+
+        JPanel spinners = new JPanel(new GridLayout(0, 2, 6, 6));
+        spinners.add(new JLabel("From tick:"));
+        spinners.add(fromSpinner);
+        spinners.add(new JLabel("To tick:"));
+        spinners.add(toSpinner);
+        spinners.add(new JLabel("Step size (min):"));
+        spinners.add(stepMinSpinner);
+        spinners.add(new JLabel("Step size (max):"));
+        spinners.add(stepMaxSpinner);
+        spinners.add(new JLabel("Copies per Character (min):"));
+        spinners.add(copiesMinSpinner);
+        spinners.add(new JLabel("Copies per Character (max):"));
+        spinners.add(copiesMaxSpinner);
+        spinners.add(new JLabel("Copies per step (min):"));
+        spinners.add(perStepMinSpinner);
+        spinners.add(new JLabel("Copies per step (max):"));
+        spinners.add(perStepMaxSpinner);
         // Per-step mode draws from the multi-selected Characters in the
-        // manager, NOT just the owners of the selected source kfs. Hint
-        // sits in the dialog so the user knows multi-select widens the
-        // pool without having to read source comments.
-        JLabel perStepHint = new JLabel("<html><i>(per-step picks from multi-selected Characters in the manager)</i></html>");
+        // manager, NOT just the owners of the selected source kfs.
+        JLabel perStepHint = new JLabel("<html><i>(per-step picks from multi-selected Characters in the manager;<br>"
+                + "a Character is skipped at a step if its block would overlap one it already has)</i></html>");
         perStepHint.setFont(perStepHint.getFont().deriveFont(perStepHint.getFont().getSize2D() - 1f));
-        panel.add(new JLabel());
-        panel.add(perStepHint);
+        spinners.add(new JLabel());
+        spinners.add(perStepHint);
+
+        JPanel panel = new JPanel(new BorderLayout(0, 8));
+        panel.add(modePanel, BorderLayout.NORTH);
+        panel.add(spinners, BorderLayout.CENTER);
 
         int result = JOptionPane.showConfirmDialog(this, panel,
                 "Scatter " + selectedKeyFrames.length + " keyframes across " + byOwner.size() + " Characters",
@@ -3710,13 +3742,12 @@ public class TimeSheetPanel extends JPanel
         final double fFrom = from;
         final double fTo = to;
 
-        // Branch to the per-step planner when the user enabled it (max > 0).
-        // That mode is structurally different -- the step grid is global, K
-        // copies fire per step tick drawn from random Characters (without
-        // replacement, clamped to source count) -- so it lives in its own
-        // method instead of trying to overload the per-Character feasibility
-        // logic. Per-Character mode below is unchanged.
-        if (perStepMax > 0)
+        // Branch to the per-step planner when the user selected it. The two
+        // modes are conceptually different planners (per-Character: each char
+        // rolls independently; per-Step: walk a global step grid and pick K
+        // chars per step) so each lives in its own method instead of trying
+        // to overload one feasibility loop.
+        if (perStepRadio.isSelected())
         {
             scatterPerStep(byOwner, fFrom, fTo, stepMin, stepMax, perStepMin, perStepMax);
             return;
@@ -3919,25 +3950,28 @@ public class TimeSheetPanel extends JPanel
     }
 
     /**
-     * Per-step mode of Scatter (active when "Copies per step (max)" > 0).
+     * Per-step mode of Scatter (active when the dialog's Mode radio is
+     * "Per Step").
      *
-     * <p>The step grid is GLOBAL here -- one step value rolled in [stepMin,
+     * <p>The step grid is GLOBAL -- one step value rolled in [stepMin,
      * stepMax] drives every Character. At each step tick T in [from, to]:
      *   K = roll in [perStepMin, perStepMax], clamped to the count of
-     *       Characters whose block still fits within fTo at this tick.
+     *       feasible Characters at T (block fits within [from, to] AND
+     *       doesn't overlap a prior placement for the same Character).
      *   K distinct Characters are picked (Fisher-Yates shuffle, first K) --
      *   each gets ONE copy of their block anchored at T.
      *
      * <p>"Density per beat" is the use case: K varies independently per step
-     * so some beats fire more drops than others. Same-Character overlap
-     * across step ticks IS allowed (the block at T=0 and at T=3 with
-     * duration 5 will visually overlap in [3, 5]) -- per-step mode treats
-     * that as intentional rain-density behaviour, not a planning failure.
-     * Same-tick collisions for the same Character can't happen because the
-     * within-step Character pick is without replacement.
+     * so some beats fire more drops than others. Same-Character collisions
+     * across step ticks are PREVENTED -- a Character whose block already
+     * occupies [T_prev, T_prev + dur] is excluded from feasibility at any
+     * T where [T, T + dur] would overlap that span. Without this exclusion
+     * the planner could silently overwrite earlier kfs via addKeyFrame's
+     * same-tick-displaces behaviour, which manifested as "fewer kfs than
+     * I asked for."
      *
-     * <p>Originals are removed once per Character and replaced with the
-     * planned copies in a single undo group (via finalizeTickTransform).
+     * <p>Originals are removed once per source Character and replaced with
+     * the planned copies in a single undo group (via finalizeTickTransform).
      */
     private void scatterPerStep(java.util.Map<Character, java.util.List<KeyFrame>> byOwner,
                                 double fFrom, double fTo,
@@ -4007,6 +4041,10 @@ public class TimeSheetPanel extends JPanel
                 ? stepMin
                 : stepMin + rng.nextInt(stepMax - stepMin + 1);
 
+        // planned[ch] = list of anchor ticks where ch's block will be placed.
+        // Used both for committing copies AND for per-Character collision
+        // checks during the planning loop (a Character is excluded from
+        // feasibility at T if its block would overlap any prior placement).
         java.util.LinkedHashMap<Character, java.util.List<Double>> planned = new java.util.LinkedHashMap<>();
         for (Character ch : pool)
         {
@@ -4021,17 +4059,29 @@ public class TimeSheetPanel extends JPanel
         {
             double T = fFrom + (double) sIdx * globalStep;
 
-            // Only Characters whose block fits [T, T+dur] within [fFrom, fTo]
-            // are eligible at this tick. A Character with a 5-tick block can't
-            // be placed at T = fTo - 2 because it would spill past fTo.
+            // Feasibility: block fits within range, AND would not overlap a
+            // prior placement for this same Character. Two intervals
+            // [a, a+dur] and [b, b+dur] overlap iff |a - b| < dur, so for
+            // each candidate Character we scan its planned anchors and reject
+            // T when any prior anchor is within `dur` of T. Zero-duration
+            // blocks (single kf) only collide on exact-tick equality, which
+            // can't happen here since step ticks are distinct across sIdx.
             java.util.List<Character> feasible = new ArrayList<>();
             for (Character ch : poolList)
             {
                 double dur = templates.get(ch)[1];
-                if (T + dur <= fTo + 1e-9)
+                if (T + dur > fTo + 1e-9) continue;  // spills past end
+                boolean overlapsPrior = false;
+                for (double prior : planned.get(ch))
                 {
-                    feasible.add(ch);
+                    if (Math.abs(T - prior) < dur + 1e-9)
+                    {
+                        overlapsPrior = true;
+                        break;
+                    }
                 }
+                if (overlapsPrior) continue;
+                feasible.add(ch);
             }
             if (feasible.isEmpty()) continue;
 
