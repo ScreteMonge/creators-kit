@@ -5,6 +5,7 @@ import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import com.creatorskit.swing.timesheet.keyframe.ScreenFadeKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.lang3.ArrayUtils;
@@ -31,12 +32,21 @@ public class GlobalKeyFrames
     private CameraKeyFrame[] cameraKeyFrames;
     private ScreenFadeKeyFrame[] screenFadeKeyFrames;
     private ScreenShakeKeyFrame[] screenShakeKeyFrames;
+    /** 4 parallel sound slots so multiple sounds can play layered at the same tick. */
+    private SoundKeyFrame[] sound1KeyFrames;
+    private SoundKeyFrame[] sound2KeyFrames;
+    private SoundKeyFrame[] sound3KeyFrames;
+    private SoundKeyFrame[] sound4KeyFrames;
 
     public GlobalKeyFrames()
     {
         this.cameraKeyFrames = new CameraKeyFrame[0];
         this.screenFadeKeyFrames = new ScreenFadeKeyFrame[0];
         this.screenShakeKeyFrames = new ScreenShakeKeyFrame[0];
+        this.sound1KeyFrames = new SoundKeyFrame[0];
+        this.sound2KeyFrames = new SoundKeyFrame[0];
+        this.sound3KeyFrames = new SoundKeyFrame[0];
+        this.sound4KeyFrames = new SoundKeyFrame[0];
     }
 
     public CameraKeyFrame[] getCameraKeyFramesSafe()
@@ -52,6 +62,36 @@ public class GlobalKeyFrames
     public ScreenShakeKeyFrame[] getScreenShakeKeyFramesSafe()
     {
         return screenShakeKeyFrames == null ? new ScreenShakeKeyFrame[0] : screenShakeKeyFrames;
+    }
+
+    public SoundKeyFrame[] getSound1KeyFramesSafe() { return sound1KeyFrames == null ? new SoundKeyFrame[0] : sound1KeyFrames; }
+    public SoundKeyFrame[] getSound2KeyFramesSafe() { return sound2KeyFrames == null ? new SoundKeyFrame[0] : sound2KeyFrames; }
+    public SoundKeyFrame[] getSound3KeyFramesSafe() { return sound3KeyFrames == null ? new SoundKeyFrame[0] : sound3KeyFrames; }
+    public SoundKeyFrame[] getSound4KeyFramesSafe() { return sound4KeyFrames == null ? new SoundKeyFrame[0] : sound4KeyFrames; }
+
+    /** Returns the safe array for the matching SOUND_x type, or null if the type isn't a sound. */
+    public SoundKeyFrame[] getSoundKeyFramesSafe(KeyFrameType type)
+    {
+        switch (type)
+        {
+            case SOUND_1: return getSound1KeyFramesSafe();
+            case SOUND_2: return getSound2KeyFramesSafe();
+            case SOUND_3: return getSound3KeyFramesSafe();
+            case SOUND_4: return getSound4KeyFramesSafe();
+            default: return null;
+        }
+    }
+
+    public void setSoundKeyFrames(KeyFrameType type, SoundKeyFrame[] arr)
+    {
+        switch (type)
+        {
+            case SOUND_1: sound1KeyFrames = arr; break;
+            case SOUND_2: sound2KeyFrames = arr; break;
+            case SOUND_3: sound3KeyFrames = arr; break;
+            case SOUND_4: sound4KeyFrames = arr; break;
+            default: break;
+        }
     }
 
     /**
@@ -89,6 +129,17 @@ public class GlobalKeyFrames
                 screenShakeKeyFrames = insertSorted(existing, (ScreenShakeKeyFrame) kf, new ScreenShakeKeyFrame[0]);
                 return replaced;
             }
+            case SOUND_1:
+            case SOUND_2:
+            case SOUND_3:
+            case SOUND_4:
+            {
+                SoundKeyFrame[] existing = getSoundKeyFramesSafe(kf.getKeyFrameType());
+                SoundKeyFrame replaced = (SoundKeyFrame) findAtTick(existing, kf.getTick());
+                setSoundKeyFrames(kf.getKeyFrameType(),
+                        insertSorted(existing, (SoundKeyFrame) kf, new SoundKeyFrame[0]));
+                return replaced;
+            }
             default:
                 return null;
         }
@@ -111,6 +162,13 @@ public class GlobalKeyFrames
                 break;
             case SCREEN_SHAKE:
                 screenShakeKeyFrames = ArrayUtils.removeElement(getScreenShakeKeyFramesSafe(), kf);
+                break;
+            case SOUND_1:
+            case SOUND_2:
+            case SOUND_3:
+            case SOUND_4:
+                setSoundKeyFrames(kf.getKeyFrameType(),
+                        ArrayUtils.removeElement(getSoundKeyFramesSafe(kf.getKeyFrameType()), kf));
                 break;
             default:
                 break;

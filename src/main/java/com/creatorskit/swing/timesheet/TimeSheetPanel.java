@@ -836,9 +836,9 @@ public class TimeSheetPanel extends JPanel
 
     private static boolean isGlobalType(KeyFrameType type)
     {
-        return type == KeyFrameType.CAMERA
-                || type == KeyFrameType.SCREEN_FADE
-                || type == KeyFrameType.SCREEN_SHAKE;
+        // Delegate to the canonical predicate on KeyFrameType so new global
+        // types (e.g. SOUND_1..4) don't drift between the two.
+        return KeyFrameType.isGlobal(type);
     }
 
     /**
@@ -886,6 +886,10 @@ public class TimeSheetPanel extends JPanel
             case CAMERA:       arr = store.getCameraKeyFramesSafe(); break;
             case SCREEN_FADE:  arr = store.getScreenFadeKeyFramesSafe(); break;
             case SCREEN_SHAKE: arr = store.getScreenShakeKeyFramesSafe(); break;
+            case SOUND_1:
+            case SOUND_2:
+            case SOUND_3:
+            case SOUND_4:      arr = store.getSoundKeyFramesSafe(type); break;
             default:           return null;
         }
         KeyFrame best = null;
@@ -910,6 +914,10 @@ public class TimeSheetPanel extends JPanel
             case CAMERA:       arr = store.getCameraKeyFramesSafe(); break;
             case SCREEN_FADE:  arr = store.getScreenFadeKeyFramesSafe(); break;
             case SCREEN_SHAKE: arr = store.getScreenShakeKeyFramesSafe(); break;
+            case SOUND_1:
+            case SOUND_2:
+            case SOUND_3:
+            case SOUND_4:      arr = store.getSoundKeyFramesSafe(type); break;
             default:           return null;
         }
         KeyFrame best = null;
@@ -958,6 +966,10 @@ public class TimeSheetPanel extends JPanel
             case CAMERA:       arr = store.getCameraKeyFramesSafe(); break;
             case SCREEN_FADE:  arr = store.getScreenFadeKeyFramesSafe(); break;
             case SCREEN_SHAKE: arr = store.getScreenShakeKeyFramesSafe(); break;
+            case SOUND_1:
+            case SOUND_2:
+            case SOUND_3:
+            case SOUND_4:      arr = store.getSoundKeyFramesSafe(type); break;
             default:           return null;
         }
         for (KeyFrame kf : arr)
@@ -4429,6 +4441,35 @@ public class TimeSheetPanel extends JPanel
             }
         }
         return kfa;
+    }
+
+    /**
+     * Adds a Sound keyframe to the first empty global Sound slot (1-4) at
+     * the current playhead tick. Called from Cache Searcher > Sound Searcher's
+     * Add KeyFrame button. If all four slots are occupied at this tick, the
+     * Sound 1 slot is overwritten (same displace-on-same-tick rule as other
+     * kfs). Returns the slot the kf landed in, or null if no global store.
+     */
+    public KeyFrameType addSoundKeyFrameFromCache(int soundId)
+    {
+        com.creatorskit.saves.GlobalKeyFrames store = plugin.getGlobalKeyFrames();
+        if (store == null) return null;
+        KeyFrameType chosen = null;
+        for (KeyFrameType slot : KeyFrameType.SOUND_TYPES)
+        {
+            if (findGlobalKeyFrameAt(slot, currentTime) == null)
+            {
+                chosen = slot;
+                break;
+            }
+        }
+        if (chosen == null) chosen = KeyFrameType.SOUND_1;  // all slots full; overwrite slot 1
+        com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame kf =
+                new com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame(
+                        currentTime, chosen, soundId,
+                        com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame.DEFAULT_VOLUME);
+        addKeyFrameAction(new KeyFrame[]{kf});
+        return chosen;
     }
 
     // ----- Ripple Insert --------------------------------------------------

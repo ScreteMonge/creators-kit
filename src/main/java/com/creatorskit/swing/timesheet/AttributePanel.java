@@ -91,6 +91,10 @@ public class AttributePanel extends JPanel
     // Card identifier whose STRING VALUE must match KeyFrameType.COLOUR.getName()
     // so the cardName <-> type mapping resolves.
     public static final String COLOUR_CARD = "Colour";
+    public static final String SOUND_1_CARD = "Sound 1";
+    public static final String SOUND_2_CARD = "Sound 2";
+    public static final String SOUND_3_CARD = "Sound 3";
+    public static final String SOUND_4_CARD = "Sound 4";
     public static final String MIXED_TYPES_CARD = "MixedTypes";
     public static final String NO_SELECTION_CARD = "NoSelection";
 
@@ -141,6 +145,10 @@ public class AttributePanel extends JPanel
     private final ScreenShakeAttributes screenShakeAttributes = new ScreenShakeAttributes();
     private final com.creatorskit.swing.timesheet.attributes.CameraAttributes cameraAttributes = new com.creatorskit.swing.timesheet.attributes.CameraAttributes();
     private final com.creatorskit.swing.timesheet.attributes.ColourAttributes colourAttributes = new com.creatorskit.swing.timesheet.attributes.ColourAttributes();
+    private final com.creatorskit.swing.timesheet.attributes.SoundAttributes sound1Attributes = new com.creatorskit.swing.timesheet.attributes.SoundAttributes();
+    private final com.creatorskit.swing.timesheet.attributes.SoundAttributes sound2Attributes = new com.creatorskit.swing.timesheet.attributes.SoundAttributes();
+    private final com.creatorskit.swing.timesheet.attributes.SoundAttributes sound3Attributes = new com.creatorskit.swing.timesheet.attributes.SoundAttributes();
+    private final com.creatorskit.swing.timesheet.attributes.SoundAttributes sound4Attributes = new com.creatorskit.swing.timesheet.attributes.SoundAttributes();
 
     private final Random random = new Random();
 
@@ -257,6 +265,14 @@ public class AttributePanel extends JPanel
         cardPanel.add(cameraCard, CAMERA_CARD);
         JPanel colourCard = new JPanel();
         cardPanel.add(colourCard, COLOUR_CARD);
+        JPanel sound1Card = new JPanel();
+        cardPanel.add(sound1Card, SOUND_1_CARD);
+        JPanel sound2Card = new JPanel();
+        cardPanel.add(sound2Card, SOUND_2_CARD);
+        JPanel sound3Card = new JPanel();
+        cardPanel.add(sound3Card, SOUND_3_CARD);
+        JPanel sound4Card = new JPanel();
+        cardPanel.add(sound4Card, SOUND_4_CARD);
 
         // Empty placeholder shown when the keyframe selection spans multiple types.
         // Using a CardLayout entry keeps the cardPanel at its normal height instead
@@ -301,6 +317,10 @@ public class AttributePanel extends JPanel
         setupScreenShakeCard(screenShakeCard);
         setupCameraCard(cameraCard);
         setupColourCard(colourCard);
+        setupSoundCard(sound1Card, KeyFrameType.SOUND_1);
+        setupSoundCard(sound2Card, KeyFrameType.SOUND_2);
+        setupSoundCard(sound3Card, KeyFrameType.SOUND_3);
+        setupSoundCard(sound4Card, KeyFrameType.SOUND_4);
 
         // Wire up auto-update on every Attributes instance. Each card's setupXxxCard
         // already attached the "set red on change" listeners for the dirty-state
@@ -315,7 +335,8 @@ public class AttributePanel extends JPanel
                 hitsplat1Attributes, hitsplat2Attributes, hitsplat3Attributes, hitsplat4Attributes,
                 projectileAttributes, shieldAttributes, specialAttributes,
                 screenFadeAttributes, screenShakeAttributes, cameraAttributes,
-                colourAttributes
+                colourAttributes,
+                sound1Attributes, sound2Attributes, sound3Attributes, sound4Attributes
         };
         for (com.creatorskit.swing.timesheet.attributes.Attributes attrs : allAttributes)
         {
@@ -788,6 +809,31 @@ public class AttributePanel extends JPanel
                         true,  // easeInOut: smoothstep always -- the toggle was redundant in practice, removed from UI
                         colourAttributes.getAffectSpotAnims().getSelectedItem() == com.creatorskit.swing.timesheet.keyframe.settings.Toggle.ENABLE
                 );
+            case SOUND_1:
+            case SOUND_2:
+            case SOUND_3:
+            case SOUND_4:
+            {
+                com.creatorskit.swing.timesheet.attributes.SoundAttributes sa = soundAttributesFor(keyFrameType);
+                return new com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame(
+                        tick,
+                        keyFrameType,
+                        ((Number) sa.getSoundId().getValue()).intValue(),
+                        ((Number) sa.getVolume().getValue()).intValue());
+            }
+        }
+    }
+
+    /** Maps a SOUND_x type to its backing SoundAttributes card. */
+    private com.creatorskit.swing.timesheet.attributes.SoundAttributes soundAttributesFor(KeyFrameType type)
+    {
+        switch (type)
+        {
+            case SOUND_2: return sound2Attributes;
+            case SOUND_3: return sound3Attributes;
+            case SOUND_4: return sound4Attributes;
+            case SOUND_1:
+            default:      return sound1Attributes;
         }
     }
 
@@ -3782,6 +3828,97 @@ public class AttributePanel extends JPanel
         card.add(new JLabel(""), c);
     }
 
+    /**
+     * Sound 1..4 card. Two fields: cache sound id and 0-127 volume. On
+     * activation during playback the Programmer hands these to
+     * client.playSoundEffect via SoundController. Authoring the kf doesn't
+     * play a preview here -- the user can hear it via the Sound Searcher's
+     * selection listener.
+     */
+    private void setupSoundCard(JPanel card, KeyFrameType slot)
+    {
+        com.creatorskit.swing.timesheet.attributes.SoundAttributes sa = soundAttributesFor(slot);
+        Dimension spinnerSize = new Dimension(120, 25);
+
+        card.setLayout(new GridBagLayout());
+        card.setBorder(new EmptyBorder(4, 4, 4, 4));
+        card.setFocusable(true);
+        addMouseFocusListener(card);
+
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(2, 2, 2, 2);
+
+        c.gridwidth = 4;
+        c.gridheight = 1;
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 0;
+        JPanel titlePanel = new JPanel();
+        titlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        card.add(titlePanel, c);
+
+        JLabel title = new JLabel(slot.getName());
+        title.setHorizontalAlignment(SwingConstants.LEFT);
+        title.setFont(FontManager.getRunescapeBoldFont());
+        titlePanel.add(title);
+
+        JLabel help = new JLabel(new ImageIcon(HELP));
+        help.setBorder(new EmptyBorder(0, 4, 0, 4));
+        help.setToolTipText("<html>Plays a cache sound effect when the playhead crosses this kf during playback."
+                + "<br>Global keyframe -- not tied to a Character. Use Sound 1/2/3/4 as parallel slots so"
+                + "<br>multiple sounds can layer at the same tick without cutting each other off."
+                + "<br>"
+                + "<br><b>Sound id</b>: cache sound effect id. Use the Sound Searcher (Cache Searcher tab) to"
+                + "<br>browse and audition before adding."
+                + "<br><b>Volume</b>: 0-127 (SoundEffectVolume scale). Default 127.</html>");
+        titlePanel.add(help);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 1;
+        card.add(rightLabel("Sound id: "), c);
+        c.gridx = 1;
+        JSpinner id = sa.getSoundId();
+        id.setModel(new SpinnerNumberModel(-1, -1, 100000, 1));
+        id.setPreferredSize(spinnerSize);
+        id.setToolTipText("Cache sound effect id. -1 = silence (kf does nothing). Browse via Cache Searcher > Sound Searcher.");
+        card.add(id, c);
+
+        c.gridx = 0;
+        c.gridy = 2;
+        card.add(rightLabel("Volume: "), c);
+        c.gridx = 1;
+        JSpinner vol = sa.getVolume();
+        vol.setModel(new SpinnerNumberModel(com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame.DEFAULT_VOLUME, 0, 127, 1));
+        vol.setPreferredSize(spinnerSize);
+        vol.setToolTipText("0-127. SoundEffectVolume scale.");
+        card.add(vol, c);
+
+        c.gridx = 0;
+        c.gridy = 3;
+        c.gridwidth = 2;
+        JButton preview = new JButton("Preview");
+        preview.setToolTipText("Play this sound now (uses the current card values).");
+        preview.addActionListener(e ->
+        {
+            try { id.commitEdit(); vol.commitEdit(); } catch (java.text.ParseException ignored) {}
+            int soundId = ((Number) id.getValue()).intValue();
+            int volume = ((Number) vol.getValue()).intValue();
+            if (soundId < 0 || client == null) return;
+            clientThread.invokeLater(() -> client.playSoundEffect(soundId, volume));
+        });
+        card.add(preview, c);
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.weightx = 1;
+        c.weighty = 1;
+        c.gridx = 8;
+        c.gridy = 15;
+        card.add(new JLabel(""), c);
+    }
+
     private JLabel rightLabel(String text)
     {
         JLabel label = new JLabel(text);
@@ -3857,6 +3994,18 @@ public class AttributePanel extends JPanel
                 break;
             case COLOUR_CARD:
                 type = KeyFrameType.COLOUR;
+                break;
+            case SOUND_1_CARD:
+                type = KeyFrameType.SOUND_1;
+                break;
+            case SOUND_2_CARD:
+                type = KeyFrameType.SOUND_2;
+                break;
+            case SOUND_3_CARD:
+                type = KeyFrameType.SOUND_3;
+                break;
+            case SOUND_4_CARD:
+                type = KeyFrameType.SOUND_4;
         }
 
         switchCards(type);
@@ -4321,9 +4470,7 @@ public class AttributePanel extends JPanel
         if (character == null)
         {
             KeyFrame selectedGlobal = findSelectedKeyFrameOfCurrentType();
-            boolean isGlobal = selectedKeyFramePage == KeyFrameType.CAMERA
-                    || selectedKeyFramePage == KeyFrameType.SCREEN_FADE
-                    || selectedKeyFramePage == KeyFrameType.SCREEN_SHAKE;
+            boolean isGlobal = KeyFrameType.isGlobal(selectedKeyFramePage);
             if (selectedGlobal != null && isGlobal)
             {
                 setKeyFramedIcon(true);
@@ -4344,6 +4491,16 @@ public class AttributePanel extends JPanel
                         screenShakeAttributes.setAttributes(selectedGlobal);
                         screenShakeAttributes.setBackgroundColours(s);
                         break;
+                    case SOUND_1:
+                    case SOUND_2:
+                    case SOUND_3:
+                    case SOUND_4:
+                    {
+                        com.creatorskit.swing.timesheet.attributes.SoundAttributes sa = soundAttributesFor(selectedKeyFramePage);
+                        sa.setAttributes(selectedGlobal);
+                        sa.setBackgroundColours(s);
+                        break;
+                    }
                     default: break;
                 }
                 return;
@@ -4465,6 +4622,17 @@ public class AttributePanel extends JPanel
             case COLOUR:
                 colourAttributes.setAttributes(keyFrame);
                 colourAttributes.setBackgroundColours(keyFrameState);
+                break;
+            case SOUND_1:
+            case SOUND_2:
+            case SOUND_3:
+            case SOUND_4:
+            {
+                com.creatorskit.swing.timesheet.attributes.SoundAttributes sa = soundAttributesFor(selectedKeyFramePage);
+                sa.setAttributes(keyFrame);
+                sa.setBackgroundColours(keyFrameState);
+                break;
+            }
         }
     }
 
@@ -4548,6 +4716,12 @@ public class AttributePanel extends JPanel
                 break;
             case COLOUR:
                 colourAttributes.resetAttributes(resetBackground);
+                break;
+            case SOUND_1:
+            case SOUND_2:
+            case SOUND_3:
+            case SOUND_4:
+                soundAttributesFor(selectedKeyFramePage).resetAttributes(resetBackground);
         }
     }
 

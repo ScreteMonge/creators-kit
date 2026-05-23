@@ -201,6 +201,16 @@ public class KeyFrame
                         colourKF.getBlendMode(),
                         colourKF.isEaseInOut(),
                         colourKF.isAffectSpotAnims());
+            case SOUND_1:
+            case SOUND_2:
+            case SOUND_3:
+            case SOUND_4:
+                SoundKeyFrame soundKF = (SoundKeyFrame) keyFrame;
+                return new SoundKeyFrame(
+                        tick,
+                        type,
+                        soundKF.getSoundId(),
+                        soundKF.getVolume());
         }
     }
 }

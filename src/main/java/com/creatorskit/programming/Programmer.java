@@ -63,9 +63,11 @@ public class Programmer
 
     @lombok.Getter
     private final ColourController colourController;
+    @lombok.Getter
+    private final SoundController soundController;
 
     @Inject
-    public Programmer(Client client, CreatorsConfig config, ClientThread clientThread, CreatorsPlugin plugin, TimeSheetPanel timeSheetPanel, DataFinder dataFinder, ModelUtilities modelUtilities, ColourController colourController)
+    public Programmer(Client client, CreatorsConfig config, ClientThread clientThread, CreatorsPlugin plugin, TimeSheetPanel timeSheetPanel, DataFinder dataFinder, ModelUtilities modelUtilities, ColourController colourController, SoundController soundController)
     {
         this.client = client;
         this.config = config;
@@ -75,6 +77,7 @@ public class Programmer
         this.dataFinder = dataFinder;
         this.modelUtilities = modelUtilities;
         this.colourController = colourController;
+        this.soundController = soundController;
     }
 
     @Subscribe
@@ -1202,6 +1205,12 @@ public class Programmer
      */
     public void updateProgram(Character character, double tick)
     {
+        // Reset sound-controller "already fired" markers whenever the
+        // playhead moves (this is the scrub entry). Without this, the next
+        // play-tick after a scrub would skip a sound if it's already been
+        // fired in a prior play-through. Cheap: just walks the global
+        // store's 4 sound arrays.
+        soundController.onScrub(tick, plugin.getGlobalKeyFrames());
         character.updateProgram(tick);
         character.setPlaying(playing);
         registerSpotAnimChanges(character, KeyFrameType.SPOTANIM, tick);
@@ -1523,6 +1532,12 @@ public class Programmer
             }
             colourController.update(character, currentTime);
         }
+
+        // Sound kfs are GLOBAL -- not per-Character -- so the controller
+        // walks the central store once per play-tick (not per character).
+        // SoundController internally guards against re-firing the same kf
+        // within its activation window.
+        soundController.onPlayTick(currentTime, plugin.getGlobalKeyFrames());
     }
 
     /**

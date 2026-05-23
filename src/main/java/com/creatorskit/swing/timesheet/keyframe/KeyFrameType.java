@@ -28,7 +28,11 @@ public enum KeyFrameType
     COLOUR("Colour","CL"),
     SCREEN_FADE("Screen Fade","SF"),
     SCREEN_SHAKE("Screen Shake","SK"),
-    CAMERA("Camera","CM");
+    CAMERA("Camera","CM"),
+    SOUND_1("Sound 1","SD1"),
+    SOUND_2("Sound 2","SD2"),
+    SOUND_3("Sound 3","SD3"),
+    SOUND_4("Sound 4","SD4");
 
     private final String name;
     private final String shortHand;
@@ -59,7 +63,11 @@ public enum KeyFrameType
             COLOUR,
             SCREEN_FADE,
             SCREEN_SHAKE,
-            CAMERA
+            CAMERA,
+            SOUND_1,
+            SOUND_2,
+            SOUND_3,
+            SOUND_4
     };
 
     /**
@@ -87,6 +95,10 @@ public enum KeyFrameType
             SCREEN_FADE,
             SCREEN_SHAKE,
             SHIELD,
+            SOUND_1,
+            SOUND_2,
+            SOUND_3,
+            SOUND_4,
             SPAWN,
             SPECIAL,
             SPOTANIM,
@@ -128,7 +140,11 @@ public enum KeyFrameType
     public static final KeyFrameType[] GLOBAL_KEYFRAME_TYPES_ALPHABETICAL = new KeyFrameType[]{
             CAMERA,
             SCREEN_FADE,
-            SCREEN_SHAKE
+            SCREEN_SHAKE,
+            SOUND_1,
+            SOUND_2,
+            SOUND_3,
+            SOUND_4
     };
 
     /**
@@ -170,13 +186,16 @@ public enum KeyFrameType
 
     public static boolean isGlobal(KeyFrameType type)
     {
-        return type == CAMERA || type == SCREEN_FADE || type == SCREEN_SHAKE;
+        return type == CAMERA || type == SCREEN_FADE || type == SCREEN_SHAKE
+                || type == SOUND_1 || type == SOUND_2 || type == SOUND_3 || type == SOUND_4;
     }
 
     public static final KeyFrameType[] HITSPLAT_TYPES = new KeyFrameType[]{KeyFrameType.HITSPLAT_1, KeyFrameType.HITSPLAT_2, KeyFrameType.HITSPLAT_3, KeyFrameType.HITSPLAT_4};
     public static final KeyFrameType[] SPOTANIM_TYPES = new KeyFrameType[]{KeyFrameType.SPOTANIM, KeyFrameType.SPOTANIM2};
     /** Bar keyframes that share the overhead-bar rendering pipeline (HP / shield / special). */
     public static final KeyFrameType[] BAR_TYPES = new KeyFrameType[]{KeyFrameType.HEALTH, KeyFrameType.SHIELD, KeyFrameType.SPECIAL};
+    /** All 4 sound kf slots in order. */
+    public static final KeyFrameType[] SOUND_TYPES = new KeyFrameType[]{KeyFrameType.SOUND_1, KeyFrameType.SOUND_2, KeyFrameType.SOUND_3, KeyFrameType.SOUND_4};
 
     public static int getIndex(KeyFrameType type)
     {
@@ -225,6 +244,14 @@ public enum KeyFrameType
                 return 19;
             case COLOUR:
                 return 20;
+            case SOUND_1:
+                return 21;
+            case SOUND_2:
+                return 22;
+            case SOUND_3:
+                return 23;
+            case SOUND_4:
+                return 24;
         }
     }
 
@@ -275,12 +302,20 @@ public enum KeyFrameType
                 return CAMERA;
             case 20:
                 return COLOUR;
+            case 21:
+                return SOUND_1;
+            case 22:
+                return SOUND_2;
+            case 23:
+                return SOUND_3;
+            case 24:
+                return SOUND_4;
         }
     }
 
     public static int getTotalFrameTypes()
     {
-        return 21;
+        return 25;
     }
 
     public static KeyFrameType[] createDefaultSummary()
