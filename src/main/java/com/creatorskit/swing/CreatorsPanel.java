@@ -1593,6 +1593,61 @@ public class CreatorsPanel extends PluginPanel
     }
 
     /**
+     * Duplicates {@code source} at its OWN world position, parented under its
+     * OWN existing folder. Entry point for ManagerTree's CTRL+D / CTRL+V /
+     * "Duplicate" context-menu item -- the user picked the source in the
+     * tree, not on the world, so we keep both the tile and the folder placement
+     * stable instead of routing through tree-selection-based parent inference.
+     *
+     * <p>Returns the new Character (synchronously; the actual addPanel UI
+     * wiring runs through invokeLater inside spawnFillCopy but the model
+     * object is fully built by the time we return).
+     */
+    public Character duplicateCharacterInPlace(Character source)
+    {
+        if (source == null) return null;
+        String name = stripTrailingNumber(source.getName()) + " (" + nextPasteCounter(source) + ")";
+        WorldPoint wp = source.getNonInstancedPoint();
+        int tileX = wp != null ? wp.getX() : 0;
+        int tileY = wp != null ? wp.getY() : 0;
+        int plane = wp != null ? wp.getPlane() : source.getInstancedPlane();
+        WorldView wv = client.getTopLevelWorldView();
+        // Use source.getParentManagerNode() as fillFolderNode so the copy lands
+        // directly under the source's folder, regardless of what's currently
+        // highlighted in the tree (matches "same parent as source" semantics
+        // the user asked for in the tree copy/paste/duplicate question).
+        return spawnFillCopy(source, name, tileX, tileY, plane, source.isInPOH(), wv,
+                source.getParentManagerNode(), source.getParentPanel());
+    }
+
+    /**
+     * Multi-source variant of {@link #duplicateCharacterInPlace}. After each
+     * source is cloned, the new copies replace the selection so the user can
+     * immediately chain another action (move, recolour, another CTRL+D)
+     * against the duplicates rather than the originals.
+     *
+     * <p>Filters out null / already-removed sources defensively (the clipboard
+     * for CTRL+C / CTRL+V holds Character references; a paste after the
+     * source was deleted shouldn't NPE, it should just skip).
+     */
+    public java.util.List<Character> duplicateCharactersInPlace(java.util.Collection<Character> sources)
+    {
+        java.util.List<Character> copies = new java.util.ArrayList<>();
+        if (sources == null || sources.isEmpty()) return copies;
+        for (Character src : sources)
+        {
+            if (src == null) continue;
+            Character copy = duplicateCharacterInPlace(src);
+            if (copy != null) copies.add(copy);
+        }
+        if (!copies.isEmpty())
+        {
+            selectionManager.selectAll(copies);
+        }
+        return copies;
+    }
+
+    /**
      * Duplicates {@code source} onto a target tile (POH-aware) and parents the
      * new Character under {@code fillFolderNode}. Reuses createCharacter's full
      * arg form so keyframes, render-fix state, offsets, and extraScale all
@@ -1607,14 +1662,14 @@ public class CreatorsPanel extends PluginPanel
      * copy landed at the same tile when MovementManager.useLocalLocations
      * returned true -- visible as "all copies stacked in the middle".
      */
-    private void spawnFillCopy(Character source, String name, int targetTileX, int targetTileY, int plane, boolean inPOH,
+    private Character spawnFillCopy(Character source, String name, int targetTileX, int targetTileY, int plane, boolean inPOH,
                                @Nullable WorldView worldView, DefaultMutableTreeNode fillFolderNode, ParentPanel parentPanel)
     {
         WorldPoint targetWorld;
         LocalPoint targetLocal;
         if (inPOH)
         {
-            if (worldView == null) return;
+            if (worldView == null) return null;
             targetLocal = new LocalPoint(targetTileX * 128, targetTileY * 128, worldView);
             targetWorld = source.getNonInstancedPoint();
         }
@@ -1682,6 +1737,7 @@ public class CreatorsPanel extends PluginPanel
         copy.setExtraScale(source.getExtraScale());
 
         SwingUtilities.invokeLater(() -> addPanel(parentPanel, copy, fillFolderNode, false, false));
+        return copy;
     }
 
     /**

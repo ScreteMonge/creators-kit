@@ -94,18 +94,98 @@ public class ManagerTree extends JTree
             }
         });
 
+        // The DEFAULT JTree key bindings include cut/copy/paste, which would
+        // otherwise fire Swing's text-transfer transfer handler and dump
+        // node-label strings on the system clipboard. We replace all three
+        // with our OWN actions: copy/paste of Character entries (the user-
+        // visible domain object) and a CTRL+D duplicate-in-place hotkey.
         ActionMap actionMap = getActionMap();
+        // Cut is still unwanted -- there's no analog for "remove from tree
+        // and keep on clipboard until paste" that wouldn't surprise users
+        // (deletes are destructive and the tree already has its own Delete
+        // path). Null out so the inherited binding is a no-op.
         actionMap.put("cut", null);
-        actionMap.put("copy", null);
-        actionMap.put("paste", null);
         actionMap.getParent().put("cut", null);
+        actionMap.put("copy", new AbstractAction()
+        {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) { copySelectionToClipboard(); }
+        });
+        actionMap.put("paste", new AbstractAction()
+        {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) { pasteFromClipboard(); }
+        });
+        // The inherited copy/paste bindings on the parent ActionMap take
+        // precedence over our local entries on some look-and-feels; null
+        // them out so they don't shadow the new actions.
         actionMap.getParent().put("copy", null);
         actionMap.getParent().put("paste", null);
+
+        // Explicit input-map entries for CTRL+C / CTRL+V / CTRL+D. Swing's
+        // TransferHandler integration wires CTRL+C / CTRL+V to "copy"/"paste"
+        // on focusable components when a TransferHandler is set (which we do
+        // a few lines up), but the LaF input map is the only guaranteed
+        // binding source -- being explicit avoids depending on whether the
+        // active LaF chose to install those defaults. CTRL+D has no default.
+        InputMap inputMap = getInputMap(WHEN_FOCUSED);
+        inputMap.put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_C,
+                java.awt.event.InputEvent.CTRL_DOWN_MASK), "copy");
+        inputMap.put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_V,
+                java.awt.event.InputEvent.CTRL_DOWN_MASK), "paste");
+        inputMap.put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_D,
+                java.awt.event.InputEvent.CTRL_DOWN_MASK), "duplicateInPlace");
+        actionMap.put("duplicateInPlace", new AbstractAction()
+        {
+            @Override public void actionPerformed(java.awt.event.ActionEvent e) { duplicateSelectionInPlace(); }
+        });
 
         ManagerTreeCellRenderer renderer = new ManagerTreeCellRenderer();
         setCellRenderer(renderer);
 
         setMouseListeners();
+    }
+
+    /**
+     * Clipboard for CTRL+C / CTRL+V on Character entries. Stores LIVE Character
+     * references rather than snapshots so a paste re-clones whatever state
+     * the source has at paste time (model id, position, keyframes, etc.).
+     * Dead references (Characters deleted between copy and paste) are
+     * filtered out by {@link CreatorsPanel#duplicateCharactersInPlace}.
+     */
+    private final java.util.List<Character> characterClipboard = new ArrayList<>();
+
+    /**
+     * CTRL+C entry point. Snapshots the current selection into the clipboard;
+     * the original Characters stay selected. No-op when selection is empty.
+     */
+    public void copySelectionToClipboard()
+    {
+        java.util.Set<Character> selected = selectionManager.getSelected();
+        if (selected.isEmpty()) return;
+        characterClipboard.clear();
+        characterClipboard.addAll(selected);
+    }
+
+    /**
+     * CTRL+V entry point. Duplicates every clipboard entry in-place (under
+     * its own folder, at its own tile) and replaces the selection with the
+     * new copies. Multiple consecutive pastes stack additional duplicates
+     * (each with its own incrementing "(N)" suffix from nextPasteCounter).
+     */
+    public void pasteFromClipboard()
+    {
+        if (characterClipboard.isEmpty()) return;
+        plugin.getCreatorsPanel().duplicateCharactersInPlace(characterClipboard);
+    }
+
+    /**
+     * CTRL+D entry point. Equivalent to copy + paste in one shot, but doesn't
+     * touch the clipboard so a previous CTRL+C target is preserved.
+     */
+    public void duplicateSelectionInPlace()
+    {
+        java.util.Set<Character> selected = selectionManager.getSelected();
+        if (selected.isEmpty()) return;
+        plugin.getCreatorsPanel().duplicateCharactersInPlace(selected);
     }
 
     @Override
@@ -891,6 +971,44 @@ public class ManagerTree extends JTree
         keyframes.addActionListener(e ->
                 toolBox.getTimeSheetPanel().getSummarySheet().showSummaryPopup(this, character, x, y));
         popup.add(keyframes);
+
+        popup.addSeparator();
+
+        // Copy / Paste / Duplicate -- mirror the CTRL+C / CTRL+V / CTRL+D
+        // keybinds so the hotkeys are discoverable from the menu. Accelerators
+        // are display-only (the actual binding lives in the tree's input map);
+        // they show "Ctrl+C" etc next to the menu item in the same font the
+        // rest of Swing renders accelerators with.
+        JMenuItem copyItem = new JMenuItem("Copy");
+        copyItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_C,
+                java.awt.event.InputEvent.CTRL_DOWN_MASK));
+        copyItem.setToolTipText(count > 1
+                ? "Copy these " + count + " Characters to the clipboard."
+                : "Copy this Character to the clipboard.");
+        copyItem.addActionListener(e -> copySelectionToClipboard());
+        popup.add(copyItem);
+
+        JMenuItem pasteItem = new JMenuItem("Paste");
+        pasteItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_V,
+                java.awt.event.InputEvent.CTRL_DOWN_MASK));
+        boolean clipboardEmpty = characterClipboard.isEmpty();
+        pasteItem.setEnabled(!clipboardEmpty);
+        pasteItem.setToolTipText(clipboardEmpty
+                ? "Nothing on the clipboard -- copy a Character first."
+                : "Paste " + characterClipboard.size() + " copied Character"
+                    + (characterClipboard.size() == 1 ? "" : "s")
+                    + " in-place (same tile + folder as each source).");
+        pasteItem.addActionListener(e -> pasteFromClipboard());
+        popup.add(pasteItem);
+
+        JMenuItem duplicateItem = new JMenuItem("Duplicate");
+        duplicateItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_D,
+                java.awt.event.InputEvent.CTRL_DOWN_MASK));
+        duplicateItem.setToolTipText(count > 1
+                ? "Create an in-place duplicate of each of these " + count + " Characters."
+                : "Create an in-place duplicate of this Character.");
+        duplicateItem.addActionListener(e -> duplicateSelectionInPlace());
+        popup.add(duplicateItem);
 
         // Camera lock toggle. Checked state reflects whatever the plugin currently has
         // locked, and the action just delegates to the plugin which centralises the
