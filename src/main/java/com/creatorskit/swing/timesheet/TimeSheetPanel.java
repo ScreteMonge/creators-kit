@@ -3655,6 +3655,14 @@ public class TimeSheetPanel extends JPanel
         panel.add(perStepMinSpinner);
         panel.add(new JLabel("Copies per step (max, 0 = off):"));
         panel.add(perStepMaxSpinner);
+        // Per-step mode draws from the multi-selected Characters in the
+        // manager, NOT just the owners of the selected source kfs. Hint
+        // sits in the dialog so the user knows multi-select widens the
+        // pool without having to read source comments.
+        JLabel perStepHint = new JLabel("<html><i>(per-step picks from multi-selected Characters in the manager)</i></html>");
+        perStepHint.setFont(perStepHint.getFont().deriveFont(perStepHint.getFont().getSize2D() - 1f));
+        panel.add(new JLabel());
+        panel.add(perStepHint);
 
         int result = JOptionPane.showConfirmDialog(this, panel,
                 "Scatter " + selectedKeyFrames.length + " keyframes across " + byOwner.size() + " Characters",
@@ -3936,19 +3944,59 @@ public class TimeSheetPanel extends JPanel
                                 int stepMin, int stepMax,
                                 int perStepMin, int perStepMax)
     {
-        // Block template: minTick (anchor for "delta from anchor" math) +
-        // duration (max - min, used for feasibility filtering at each step).
-        java.util.LinkedHashMap<Character, double[]> templates = new java.util.LinkedHashMap<>();
-        for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> entry : byOwner.entrySet())
+        // Per-step mode treats the selected keyframes as a SOURCE TEMPLATE
+        // and the multi-selected Characters in the manager as the TARGET
+        // POOL the picker draws from. Without this, a marquee on one
+        // Character forces every step's K-pick to land on that same
+        // Character, defeating the point of the per-step mode.
+        //
+        // Pool = byOwner.keySet() (sources, always eligible) ∪
+        //        resolveSelectionTargets() (manager-selected, only eligible
+        //        when distinct from sources). Non-source pool Characters
+        //        clone the FIRST source's block template -- it's the
+        //        unambiguous "this pattern" the user just demonstrated by
+        //        selecting it.
+        java.util.LinkedHashSet<Character> pool = new java.util.LinkedHashSet<>(byOwner.keySet());
+        pool.addAll(resolveSelectionTargets());
+
+        // First source's block template, used as the fallback pattern for
+        // every non-source Character in the pool.
+        java.util.List<KeyFrame> firstSourceBlock = byOwner.values().iterator().next();
+        double firstSourceMin = Double.POSITIVE_INFINITY;
+        double firstSourceMax = Double.NEGATIVE_INFINITY;
+        for (KeyFrame kf : firstSourceBlock)
         {
-            double minTick = Double.POSITIVE_INFINITY;
-            double maxTick = Double.NEGATIVE_INFINITY;
-            for (KeyFrame kf : entry.getValue())
+            if (kf.getTick() < firstSourceMin) firstSourceMin = kf.getTick();
+            if (kf.getTick() > firstSourceMax) firstSourceMax = kf.getTick();
+        }
+        final double firstSourceMinFinal = firstSourceMin;
+        final double firstSourceDuration = firstSourceMax - firstSourceMin;
+
+        // For each pool Character: which kfs to clone + [minTick, duration].
+        // Source Characters use their own selected kfs; non-source Characters
+        // use the first source's block.
+        java.util.LinkedHashMap<Character, java.util.List<KeyFrame>> blocks = new java.util.LinkedHashMap<>();
+        java.util.LinkedHashMap<Character, double[]> templates = new java.util.LinkedHashMap<>();
+        for (Character ch : pool)
+        {
+            if (byOwner.containsKey(ch))
             {
-                if (kf.getTick() < minTick) minTick = kf.getTick();
-                if (kf.getTick() > maxTick) maxTick = kf.getTick();
+                java.util.List<KeyFrame> own = byOwner.get(ch);
+                double minTick = Double.POSITIVE_INFINITY;
+                double maxTick = Double.NEGATIVE_INFINITY;
+                for (KeyFrame kf : own)
+                {
+                    if (kf.getTick() < minTick) minTick = kf.getTick();
+                    if (kf.getTick() > maxTick) maxTick = kf.getTick();
+                }
+                blocks.put(ch, own);
+                templates.put(ch, new double[]{minTick, maxTick - minTick});
             }
-            templates.put(entry.getKey(), new double[]{minTick, maxTick - minTick});
+            else
+            {
+                blocks.put(ch, firstSourceBlock);
+                templates.put(ch, new double[]{firstSourceMinFinal, firstSourceDuration});
+            }
         }
 
         final java.util.Random rng = new java.util.Random();
@@ -3960,12 +4008,12 @@ public class TimeSheetPanel extends JPanel
                 : stepMin + rng.nextInt(stepMax - stepMin + 1);
 
         java.util.LinkedHashMap<Character, java.util.List<Double>> planned = new java.util.LinkedHashMap<>();
-        for (Character owner : byOwner.keySet())
+        for (Character ch : pool)
         {
-            planned.put(owner, new ArrayList<>());
+            planned.put(ch, new ArrayList<>());
         }
 
-        java.util.List<Character> ownerList = new ArrayList<>(byOwner.keySet());
+        java.util.List<Character> poolList = new ArrayList<>(pool);
         // Integer step counter (not double accumulation) so the final step
         // tick lands exactly at fFrom + N*step without floating-point drift.
         int totalSteps = (int) Math.floor((fTo - fFrom) / globalStep) + 1;
@@ -3977,12 +4025,12 @@ public class TimeSheetPanel extends JPanel
             // are eligible at this tick. A Character with a 5-tick block can't
             // be placed at T = fTo - 2 because it would spill past fTo.
             java.util.List<Character> feasible = new ArrayList<>();
-            for (Character owner : ownerList)
+            for (Character ch : poolList)
             {
-                double dur = templates.get(owner)[1];
+                double dur = templates.get(ch)[1];
                 if (T + dur <= fTo + 1e-9)
                 {
-                    feasible.add(owner);
+                    feasible.add(ch);
                 }
             }
             if (feasible.isEmpty()) continue;
@@ -4000,32 +4048,38 @@ public class TimeSheetPanel extends JPanel
             }
         }
 
-        // Commit: remove originals, add planned copies. Mirrors the structure
-        // of the per-Character commit phase so finalizeTickTransform sees a
-        // single combined undo group.
+        // Commit: remove originals on SOURCE Characters only (non-source
+        // pool Characters had nothing selected so there's nothing to remove),
+        // then add planned copies for every pool Character that drew at
+        // least one step. Single combined undo group via finalizeTickTransform.
         KeyFrameAction[] kfa = new KeyFrameAction[0];
         java.util.List<KeyFrame> newSelected = new ArrayList<>();
+
+        // Phase 1: remove originals on source Characters.
         for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> entry : byOwner.entrySet())
         {
             Character owner = entry.getKey();
-            java.util.List<KeyFrame> originalBlock = entry.getValue();
-            double blockMin = templates.get(owner)[0];
-
-            for (KeyFrame kf : originalBlock)
+            for (KeyFrame kf : entry.getValue())
             {
                 kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(kf, owner, KeyFrameCharacterActionType.REMOVE));
                 owner.removeKeyFrame(kf);
             }
+        }
 
-            for (double anchor : planned.get(owner))
+        // Phase 2: add planned copies for every pool Character.
+        for (Character ch : poolList)
+        {
+            java.util.List<KeyFrame> block = blocks.get(ch);
+            double blockMin = templates.get(ch)[0];
+            for (double anchor : planned.get(ch))
             {
                 double delta = anchor - blockMin;
-                for (KeyFrame kf : originalBlock)
+                for (KeyFrame kf : block)
                 {
                     double newTick = round(kf.getTick() + delta);
                     KeyFrame replacement = KeyFrame.createCopy(kf, newTick);
-                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replacement, owner, KeyFrameCharacterActionType.ADD));
-                    owner.addKeyFrame(replacement, currentTime);
+                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replacement, ch, KeyFrameCharacterActionType.ADD));
+                    ch.addKeyFrame(replacement, currentTime);
                     newSelected.add(replacement);
                 }
             }
