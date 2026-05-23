@@ -557,12 +557,16 @@ public class ColourSwapPanel extends JPanel
 
         oldSwatch.addActionListener(e ->
         {
-            colourChooser.setColor(colourFromShort(colourPanel.getOldColour()));
             // Highlight by ORIGINAL colour (per-face origin). Lights up ONLY
             // the faces that were originally this row's Old colour -- if
             // multiple rows swap to the same New colour, this distinguishes
             // them in the preview. Symmetric with model-click which also
             // uses per-face origin via highlightByOriginalColour.
+            //
+            // highlightByOriginalColour also syncs the JColorChooser to this
+            // row's EFFECTIVE colour (new if a swap is set, else old), so the
+            // user can immediately tweak / replace whatever is currently
+            // rendering for these faces -- no need to remember the value.
             highlightByOriginalColour(colourPanel.getOldColour());
         });
         newSwatch.addActionListener(e ->
@@ -1097,6 +1101,15 @@ public class ColourSwapPanel extends JPanel
         match.setBorder(HIGHLIGHTED_PANEL_BORDER);
         highlightedPanels.add(match);
 
+        // Sync the JColorChooser to this row's EFFECTIVE colour (new if a
+        // swap is set, else old). Surfaces "what would I tweak to change
+        // these faces" right where the user is already looking, and works
+        // whether the row was selected via swatch click or model-face click.
+        // We use effective rather than the raw original so that already-
+        // overridden rows show their CURRENT rendered colour -- the user
+        // doesn't usually want to edit starting from a stale original.
+        colourChooser.setColor(colourFromShort(effectiveColour(match)));
+
         if (modelAnvil.getRenderPanel() != null)
         {
             modelAnvil.getRenderPanel().setHighlightedOriginalColour(highlightedColour);
@@ -1146,6 +1159,12 @@ public class ColourSwapPanel extends JPanel
         highlightedPanels.clear();
 
         highlightedColour = target & 0xFFFF;
+
+        // Sync the JColorChooser to the highlighted effective colour for the
+        // same "select a colour, see it in the picker" reason as
+        // highlightByOriginalColour -- keeps the two highlight entry points
+        // consistent, including the model-click fallback path that lands here.
+        colourChooser.setColor(colourFromShort(target));
 
         // Outline every row whose effective colour equals the target. Captures
         // the "many Old colours -> same New colour" case: all those rows
