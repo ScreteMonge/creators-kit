@@ -117,9 +117,13 @@ public class GlobalAttributeSheet extends TimeSheet
         int xImageOffset = image.getWidth() / 2;
         double zoomFactor = this.getWidth() / getZoom();
 
-        drawRow(g, s.getCameraKeyFramesSafe(), KeyFrameType.CAMERA, image, imageHeight, yImageOffset, xImageOffset, zoomFactor);
-        drawRow(g, s.getScreenFadeKeyFramesSafe(), KeyFrameType.SCREEN_FADE, image, imageHeight, yImageOffset, xImageOffset, zoomFactor);
-        drawRow(g, s.getScreenShakeKeyFramesSafe(), KeyFrameType.SCREEN_SHAKE, image, imageHeight, yImageOffset, xImageOffset, zoomFactor);
+        // Iterate the canonical global-type list so adding a new global type
+        // (e.g. SOUND_x) automatically gets a row drawn here without a per-
+        // type edit. Order matches GLOBAL_KEYFRAME_TYPES_ALPHABETICAL.
+        for (KeyFrameType type : KeyFrameType.GLOBAL_KEYFRAME_TYPES_ALPHABETICAL)
+        {
+            drawRow(g, s.getGlobalKeyFramesByType(type), type, image, imageHeight, yImageOffset, xImageOffset, zoomFactor);
+        }
     }
 
     private void drawRow(Graphics g, KeyFrame[] keyFrames, KeyFrameType type, BufferedImage image, int imageHeight, int yImageOffset, int xImageOffset, double zoomFactor)
@@ -292,15 +296,12 @@ public class GlobalAttributeSheet extends TimeSheet
         int xImageOffset = image.getWidth() / 2;
         double zoomFactor = this.getWidth() / getZoom();
 
-        KeyFrame hit = hitRow(point, image, xImageOffset, yImageOffset, zoomFactor,
-                s.getCameraKeyFramesSafe(), KeyFrameType.CAMERA);
-        if (hit != null) return new KeyFrame[]{hit};
-        hit = hitRow(point, image, xImageOffset, yImageOffset, zoomFactor,
-                s.getScreenFadeKeyFramesSafe(), KeyFrameType.SCREEN_FADE);
-        if (hit != null) return new KeyFrame[]{hit};
-        hit = hitRow(point, image, xImageOffset, yImageOffset, zoomFactor,
-                s.getScreenShakeKeyFramesSafe(), KeyFrameType.SCREEN_SHAKE);
-        if (hit != null) return new KeyFrame[]{hit};
+        for (KeyFrameType type : KeyFrameType.GLOBAL_KEYFRAME_TYPES_ALPHABETICAL)
+        {
+            KeyFrame hit = hitRow(point, image, xImageOffset, yImageOffset, zoomFactor,
+                    s.getGlobalKeyFramesByType(type), type);
+            if (hit != null) return new KeyFrame[]{hit};
+        }
         return null;
     }
 
@@ -390,12 +391,11 @@ public class GlobalAttributeSheet extends TimeSheet
         double zoomFactor = this.getWidth() / getZoom();
 
         KeyFrame[] foundKeyFrames = shiftKey ? getSelectedKeyFrames() : new KeyFrame[0];
-        foundKeyFrames = rectRow(rectangle, image, xImageOffset, yImageOffset, zoomFactor,
-                s.getCameraKeyFramesSafe(), KeyFrameType.CAMERA, foundKeyFrames);
-        foundKeyFrames = rectRow(rectangle, image, xImageOffset, yImageOffset, zoomFactor,
-                s.getScreenFadeKeyFramesSafe(), KeyFrameType.SCREEN_FADE, foundKeyFrames);
-        foundKeyFrames = rectRow(rectangle, image, xImageOffset, yImageOffset, zoomFactor,
-                s.getScreenShakeKeyFramesSafe(), KeyFrameType.SCREEN_SHAKE, foundKeyFrames);
+        for (KeyFrameType type : KeyFrameType.GLOBAL_KEYFRAME_TYPES_ALPHABETICAL)
+        {
+            foundKeyFrames = rectRow(rectangle, image, xImageOffset, yImageOffset, zoomFactor,
+                    s.getGlobalKeyFramesByType(type), type, foundKeyFrames);
+        }
         setSelectedKeyFrames(foundKeyFrames);
     }
 
@@ -446,12 +446,7 @@ public class GlobalAttributeSheet extends TimeSheet
     private double[] findGapForRippleDelete(KeyFrameType type, double clickTick)
     {
         GlobalKeyFrames s = store();
-        KeyFrame[] arr;
-        if (s == null) arr = new KeyFrame[0];
-        else if (type == KeyFrameType.CAMERA) arr = s.getCameraKeyFramesSafe();
-        else if (type == KeyFrameType.SCREEN_FADE) arr = s.getScreenFadeKeyFramesSafe();
-        else if (type == KeyFrameType.SCREEN_SHAKE) arr = s.getScreenShakeKeyFramesSafe();
-        else arr = new KeyFrame[0];
+        KeyFrame[] arr = s == null ? new KeyFrame[0] : s.getGlobalKeyFramesByType(type);
 
         double prevTick = Double.NEGATIVE_INFINITY;
         double nextTick = Double.POSITIVE_INFINITY;

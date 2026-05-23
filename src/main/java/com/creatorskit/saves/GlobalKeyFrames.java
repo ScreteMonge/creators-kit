@@ -82,6 +82,31 @@ public class GlobalKeyFrames
         }
     }
 
+    /**
+     * Universal "give me the kf array for this global type" lookup. Returns
+     * an empty array (never null) for any unrecognised type, so callers can
+     * iterate {@link KeyFrameType#GLOBAL_KEYFRAME_TYPES_ALPHABETICAL} without
+     * caring which underlying field each row reads from. Used by the
+     * GlobalAttributeSheet's draw / hit-test / rectangle-select / ripple-gap
+     * passes so adding a new global type is a one-line touch on the
+     * GLOBAL_KEYFRAME_TYPES_ALPHABETICAL array, not a 4-call-site edit.
+     */
+    public KeyFrame[] getGlobalKeyFramesByType(KeyFrameType type)
+    {
+        if (type == null) return new KeyFrame[0];
+        switch (type)
+        {
+            case CAMERA:       return getCameraKeyFramesSafe();
+            case SCREEN_FADE:  return getScreenFadeKeyFramesSafe();
+            case SCREEN_SHAKE: return getScreenShakeKeyFramesSafe();
+            case SOUND_1:
+            case SOUND_2:
+            case SOUND_3:
+            case SOUND_4:      return getSoundKeyFramesSafe(type);
+            default:           return new KeyFrame[0];
+        }
+    }
+
     public void setSoundKeyFrames(KeyFrameType type, SoundKeyFrame[] arr)
     {
         switch (type)

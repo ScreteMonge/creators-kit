@@ -299,11 +299,7 @@ public class TimeSheetPanel extends JPanel
             com.creatorskit.saves.GlobalKeyFrames store = plugin.getGlobalKeyFrames();
             if (store != null)
             {
-                KeyFrame[] arr;
-                if (type == KeyFrameType.CAMERA) arr = store.getCameraKeyFramesSafe();
-                else if (type == KeyFrameType.SCREEN_FADE) arr = store.getScreenFadeKeyFramesSafe();
-                else if (type == KeyFrameType.SCREEN_SHAKE) arr = store.getScreenShakeKeyFramesSafe();
-                else arr = new KeyFrame[0];
+                KeyFrame[] arr = store.getGlobalKeyFramesByType(type);
                 for (KeyFrame kf : arr) if (kf != null) matching.add(kf);
             }
         }
@@ -3047,9 +3043,10 @@ public class TimeSheetPanel extends JPanel
         com.creatorskit.saves.GlobalKeyFrames store = plugin.getGlobalKeyFrames();
         if (store != null)
         {
-            all = ArrayUtils.addAll(all, store.getCameraKeyFramesSafe());
-            all = ArrayUtils.addAll(all, store.getScreenFadeKeyFramesSafe());
-            all = ArrayUtils.addAll(all, store.getScreenShakeKeyFramesSafe());
+            for (KeyFrameType type : KeyFrameType.GLOBAL_KEYFRAME_TYPES_ALPHABETICAL)
+            {
+                all = ArrayUtils.addAll(all, store.getGlobalKeyFramesByType(type));
+            }
         }
 
         setSelectedKeyFrames(all);
@@ -4368,17 +4365,14 @@ public class TimeSheetPanel extends JPanel
         com.creatorskit.saves.GlobalKeyFrames store = plugin.getGlobalKeyFrames();
         if (store != null)
         {
-            if (scope == null || scope == KeyFrameType.CAMERA)
+            // null scope means "all globals" -- iterate the canonical list so
+            // new global types (SOUND_x) auto-participate in ripple delete.
+            for (KeyFrameType globalType : KeyFrameType.GLOBAL_KEYFRAME_TYPES_ALPHABETICAL)
             {
-                kfa = rippleGlobalArray(store.getCameraKeyFramesSafe(), kfa, from, to, removed, store);
-            }
-            if (scope == null || scope == KeyFrameType.SCREEN_FADE)
-            {
-                kfa = rippleGlobalArray(store.getScreenFadeKeyFramesSafe(), kfa, from, to, removed, store);
-            }
-            if (scope == null || scope == KeyFrameType.SCREEN_SHAKE)
-            {
-                kfa = rippleGlobalArray(store.getScreenShakeKeyFramesSafe(), kfa, from, to, removed, store);
+                if (scope == null || scope == globalType)
+                {
+                    kfa = rippleGlobalArray(store.getGlobalKeyFramesByType(globalType), kfa, from, to, removed, store);
+                }
             }
         }
 
@@ -4567,9 +4561,10 @@ public class TimeSheetPanel extends JPanel
         com.creatorskit.saves.GlobalKeyFrames store = plugin.getGlobalKeyFrames();
         if (store != null)
         {
-            kfa = shiftRowAfterCutoff(store.getCameraKeyFramesSafe(), kfa, cutoff, amount, null, store);
-            kfa = shiftRowAfterCutoff(store.getScreenFadeKeyFramesSafe(), kfa, cutoff, amount, null, store);
-            kfa = shiftRowAfterCutoff(store.getScreenShakeKeyFramesSafe(), kfa, cutoff, amount, null, store);
+            for (KeyFrameType globalType : KeyFrameType.GLOBAL_KEYFRAME_TYPES_ALPHABETICAL)
+            {
+                kfa = shiftRowAfterCutoff(store.getGlobalKeyFramesByType(globalType), kfa, cutoff, amount, null, store);
+            }
         }
 
         if (kfa.length == 0)
