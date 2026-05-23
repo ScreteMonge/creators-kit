@@ -589,15 +589,31 @@ public class AttributePanel extends JPanel
                         (int) animAttributes.getPauseTicks().getValue()
                 );
             case ORIENTATION:
+            {
+                // Start is no longer a UI input. Initialise it from the live
+                // in-game orientation as a sensible placeholder; the snapshot
+                // hook in Character.setCurrentKeyFrame will overwrite it on the
+                // next activation of this kf with whatever the character was
+                // facing right before the kf takes over. Falls back to 0 when
+                // no Character is selected (e.g. authoring before any Object
+                // exists) -- harmless because the kf can't activate without
+                // a Character to play against anyway.
+                int liveStart = 0;
+                Character sel = timeSheetPanel.getSelectedCharacter();
+                if (sel != null && sel.getCkObject() != null)
+                {
+                    liveStart = sel.getCkObject().getOrientation();
+                }
                 return new OrientationKeyFrame(
                         tick,
                         OrientationGoal.POINT,
-                        (int) oriAttributes.getStart().getValue(),
+                        liveStart,
                         (int) oriAttributes.getEnd().getValue(),
-                        (double) oriAttributes.getDuration().getValue(),
+                        ((Number) oriAttributes.getDuration().getValue()).doubleValue(),
                         (int) oriAttributes.getTurnRate().getValue(),
                         oriAttributes.getTargetCharacterNameValue()
                 );
+            }
             case SPAWN:
                 return new SpawnKeyFrame(
                         tick,
@@ -1597,31 +1613,26 @@ public class AttributePanel extends JPanel
         JLabel manualTitleHelp = new JLabel(new ImageIcon(HELP));
         manualTitleHelp.setHorizontalAlignment(SwingConstants.LEFT);
         manualTitleHelp.setBorder(new EmptyBorder(0, 4, 0, 4));
-        manualTitleHelp.setToolTipText("<html>Setting an Orientation keyframe allows you to take direct control of an Object's orientation" +
-                "<br>Otherwise, the Object's orientation is instead based off of the direction of its movement" +
-                "<br>Start is the orientation to set at the start of the keyframe, while End determines where the Object will eventually point" +
-                "<br>The compass on the right is clickable: first click sets Start, second click sets End, alternates after that" +
-                "<br>Use Ctrl+[ on a tile to set that orientation, relative to the Object's current tile, as the Start" +
-                "<br>Use Ctrl+] on a tile to set that orientation, relative to the Object's current tile, as the End" +
-                "<br>Filling in 'Face target' overrides Start / End / Duration / Turn Rate and snaps to face the named Character each tick</html>");
+        manualTitleHelp.setToolTipText("<html>Setting an Orientation keyframe allows you to take direct control of an Object's orientation."
+                + "<br>Otherwise, the Object's orientation is based off the direction of its movement."
+                + "<br>Only End orientation is authored -- the kf automatically interpolates from whatever the"
+                + "<br>Character was facing right before the kf activated (snapshotted at activation time, so"
+                + "<br>reordering keyframes stays coherent without re-editing)."
+                + "<br>The compass on the right is clickable: click any of the 8 directions to set End."
+                + "<br>Filling in 'Face target' overrides End / Duration / Turn Rate and snaps to face the named Character each tick.</html>");
         manualTitlePanel.add(manualTitleHelp);
 
-        // Row 1: Start | End
-        c.gridwidth = 1;
-        c.gridx = 0;
-        c.gridy = 1;
-        JLabel startLabel = new JLabel("Start Orientation: ");
-        startLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(startLabel, c);
-
-        c.gridx = 1;
-        c.gridy = 1;
+        // The Start spinner is no longer in the UI -- start is now auto-derived
+        // at kf activation time via the snapshot hook in Character.setCurrentKeyFrame.
+        // We still hold the spinner object behind the scenes (OriAttributes still
+        // owns it for back-compat with the data class + getAllComponents wiring)
+        // but never add it to the card. setAttributes will set its value when a
+        // kf is loaded, which is harmless -- nothing reads from it.
         JSpinner start = oriAttributes.getStart();
-        start.setToolTipText("Set the starting orientation that will apply at the beginning of the KeyFrame");
         start.setModel(new SpinnerNumberModel(0, 0, 2048, 1));
-        start.setPreferredSize(spinnerSize);
-        card.add(start, c);
 
+        // Row 1: End orientation (sits in the right half to keep the layout
+        // weight on the compass-and-controls side).
         c.gridwidth = 1;
         c.gridx = 2;
         c.gridy = 1;
@@ -1632,30 +1643,15 @@ public class AttributePanel extends JPanel
         c.gridx = 3;
         c.gridy = 1;
         JSpinner end = oriAttributes.getEnd();
-        end.setToolTipText("Set the ending orientation that the KeyFrame will try to reach");
+        end.setToolTipText("Set the orientation the KeyFrame will rotate toward (interpolates from the Character's live orientation at activation)");
         end.setModel(new SpinnerNumberModel(0, 0, 2048, 1));
         end.setPreferredSize(spinnerSize);
         card.add(end, c);
 
-        // Row 2: Copy in-game (Start) | Copy in-game (End) -- read the live
-        // CKObject orientation (e.g. after the user rotated with ALT-arrow
-        // hotkeys) and stamp into the spinner. Useful for "rotate to face the
-        // target by eye, then capture as the keyframe value."
-        c.gridwidth = 1;
-        c.gridx = 1;
-        c.gridy = 2;
-        JButton getStart = new JButton("Copy in-game");
-        getStart.setToolTipText("Copy the Character's current in-game orientation and apply it as Start");
-        getStart.addActionListener(e ->
-        {
-            Character selectedCharacter = timeSheetPanel.getSelectedCharacter();
-            if (selectedCharacter == null) return;
-            CKObject ckObject = selectedCharacter.getCkObject();
-            if (ckObject == null) return;
-            start.setValue(ckObject.getOrientation());
-        });
-        card.add(getStart, c);
-
+        // Row 2: Copy in-game (End only) -- reads the live CKObject orientation
+        // (e.g. after the user rotated with ALT-arrow hotkeys) and stamps into
+        // the End spinner. Useful for "rotate to face the target by eye, then
+        // capture as the kf's destination."
         c.gridwidth = 1;
         c.gridx = 3;
         c.gridy = 2;
@@ -1701,26 +1697,40 @@ public class AttributePanel extends JPanel
         // lost / spinner-button-click, and clicking the arrow is none of those).
         Runnable commitAllOrientationSpinners = () ->
         {
-            try { start.commitEdit(); } catch (java.text.ParseException ignored) {}
             try { end.commitEdit(); } catch (java.text.ParseException ignored) {}
             try { duration.commitEdit(); } catch (java.text.ParseException ignored) {}
             try { turnRate.commitEdit(); } catch (java.text.ParseException ignored) {}
         };
 
+        // The convert calc needs a "start" angle to compute the delta against.
+        // Since Start is no longer UI-editable, source it from the live in-game
+        // orientation -- predictable WYSIWYG: "I see the character facing X, I
+        // want the kf to rotate from X to whatever End is." Returns 0 if no
+        // Character is selected, which falls back to a meaningless calc but
+        // doesn't crash.
+        java.util.function.IntSupplier liveStartFromCharacter = () ->
+        {
+            Character sel = timeSheetPanel.getSelectedCharacter();
+            if (sel == null) return 0;
+            CKObject ck = sel.getCkObject();
+            if (ck == null) return 0;
+            return ck.getOrientation();
+        };
+
         com.creatorskit.swing.timesheet.attributes.ConvertArrowWidget convertArrow =
                 new com.creatorskit.swing.timesheet.attributes.ConvertArrowWidget(
-                        "Convert Turn Rate -> Duration (calculate duration from start/end and current turn rate)",
-                        "Convert Duration -> Turn Rate (pick the integer turn rate that gives a duration closest to the current Duration)",
+                        "Convert Turn Rate -> Duration (uses Character's live orientation as start)",
+                        "Convert Duration -> Turn Rate (picks the integer turn rate that gives a duration closest to the current Duration; uses live orientation as start)",
                         () ->
                         {
                             commitAllOrientationSpinners.run();
-                            double d = calculateOrientationDuration((int) start.getValue(), (int) end.getValue(), (int) turnRate.getValue());
+                            double d = calculateOrientationDuration(liveStartFromCharacter.getAsInt(), (int) end.getValue(), (int) turnRate.getValue());
                             duration.setValue(d);
                         },
                         () ->
                         {
                             commitAllOrientationSpinners.run();
-                            int tr = calculateOrientationTurnRate((int) start.getValue(), (int) end.getValue(), ((Number) duration.getValue()).doubleValue());
+                            int tr = calculateOrientationTurnRate(liveStartFromCharacter.getAsInt(), (int) end.getValue(), ((Number) duration.getValue()).doubleValue());
                             turnRate.setValue(tr);
                         }
                 );
@@ -1776,7 +1786,7 @@ public class AttributePanel extends JPanel
         card.add(faceTarget, c);
         c.gridwidth = 1;
 
-        // Row 6: Compass -- clickable, paints Start (green) / End (red) indicators.
+        // Row 6: Compass -- clickable, paints End (red) indicator.
         // Spans the right two columns (like the old static compass JLabel did)
         // so it doesn't crowd the spinner column on the left.
         c.gridx = 2;
@@ -1788,10 +1798,9 @@ public class AttributePanel extends JPanel
         c.fill = GridBagConstraints.NONE;
         c.anchor = GridBagConstraints.CENTER;
         com.creatorskit.swing.timesheet.attributes.CompassPanel compass =
-                new com.creatorskit.swing.timesheet.attributes.CompassPanel(COMPASS, start, end);
-        compass.setToolTipText("<html>Click a direction to set orientation. First click sets <b>Start</b> (green),"
-                + "<br>second click sets <b>End</b> (red), alternates after that.<br>"
-                + "Lines reflect the current Start / End spinner values.</html>");
+                new com.creatorskit.swing.timesheet.attributes.CompassPanel(COMPASS, end);
+        compass.setToolTipText("<html>Click any of the 8 directions to set <b>End</b> (red line)."
+                + "<br>Start is auto-derived from the Character's live orientation when the kf activates.</html>");
         card.add(compass, c);
         // Reset GridBag fill so any future rows added downstream don't inherit NONE/CENTER.
         c.fill = GridBagConstraints.HORIZONTAL;
@@ -1800,7 +1809,7 @@ public class AttributePanel extends JPanel
         c.weighty = 0;
 
         // Face Target overrides explicit orientation -- when the user types a
-        // name there, Start / End / Duration / Turn Rate / Grab / convert /
+        // name there, End / Duration / Turn Rate / Copy-in-game / convert /
         // compass all stop having an effect. Grey them out so it's visually
         // obvious that they're inert. The text field's own DocumentListener
         // already sets the dirty colour; we hook a second listener here for
@@ -1811,11 +1820,9 @@ public class AttributePanel extends JPanel
         {
             boolean active = oriAttributes.getTargetCharacterNameValue() != null;
             boolean enabled = !active;
-            start.setEnabled(enabled);
             end.setEnabled(enabled);
             duration.setEnabled(enabled);
             turnRate.setEnabled(enabled);
-            getStart.setEnabled(enabled);
             getEnd.setEnabled(enabled);
             convertArrow.setControlsEnabled(enabled);
             compass.setControlsEnabled(enabled);

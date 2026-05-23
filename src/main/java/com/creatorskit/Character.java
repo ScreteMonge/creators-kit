@@ -469,7 +469,32 @@ public class Character
 
     public void setCurrentKeyFrame(KeyFrame keyFrame, KeyFrameType type)
     {
-        currentFrames[KeyFrameType.getIndex(type)] = keyFrame;
+        int idx = KeyFrameType.getIndex(type);
+        KeyFrame previous = currentFrames[idx];
+
+        // Orientation snapshot-at-activation: when an OrientationKeyFrame
+        // becomes the current kf (transition from a different value), capture
+        // the Character's live in-game orientation and write it as the kf's
+        // start. The "start" field is now a runtime cache rather than user
+        // input -- the Orientation card no longer exposes it, the kf
+        // interpolates from "wherever the character was just before" so it
+        // auto-handles timeline edit-reordering.
+        //
+        // Snapshot is gated on previous != keyFrame so repeated updateProgram
+        // calls within the kf's window (e.g. every-tick play loop) don't keep
+        // overwriting start with mid-interpolation state. ckObject.getOrientation()
+        // at this exact moment IS the orientation right before this kf takes
+        // over -- either the prior kf's final state, the prior tick's
+        // movement-driven facing, or the Character's spawn orientation.
+        if (type == KeyFrameType.ORIENTATION
+                && keyFrame instanceof OrientationKeyFrame
+                && keyFrame != previous
+                && ckObject != null)
+        {
+            ((OrientationKeyFrame) keyFrame).setStart(ckObject.getOrientation());
+        }
+
+        currentFrames[idx] = keyFrame;
     }
 
     public void resetMovementKeyFrame(int clientTick, double currentTime)
