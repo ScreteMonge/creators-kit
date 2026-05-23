@@ -65,8 +65,17 @@ public class AttributePanel extends JPanel
     private final JFilterableTable itemTable = new JFilterableTable("Items");
     private final JFilterableTable animTable = new JFilterableTable("Animations");
     private final JFilterableTable spotanimTable = new JFilterableTable("SpotAnims");
+    /**
+     * One shared table backing the per-card sound search fields. Identical
+     * pattern to {@link #spotanimTable} -- there's a JTextField per Sound 1/4
+     * card and a single popup with this table on it. The mouseClicked handler
+     * routes to whichever sound slot is currently selected via
+     * {@link #selectedKeyFramePage}.
+     */
+    private final JFilterableTable soundTable = new JFilterableTable("Sounds");
 
     private final JPopupMenu spotanimPopup = new JPopupMenu("SpotAnims");
+    private final JPopupMenu soundPopup = new JPopupMenu("Sounds");
 
     public static final String MOVE_CARD = "Movement";
     public static final String ANIM_CARD = "Animation";
@@ -317,6 +326,10 @@ public class AttributePanel extends JPanel
         setupScreenShakeCard(screenShakeCard);
         setupCameraCard(cameraCard);
         setupColourCard(colourCard);
+        // Sound finder before card setup so the shared popup/table is wired
+        // up first; each card's search field hooks onto the already-existing
+        // soundPopup. Mirrors setupSpotAnimFinder ordering.
+        setupSoundFinder();
         setupSoundCard(sound1Card, KeyFrameType.SOUND_1);
         setupSoundCard(sound2Card, KeyFrameType.SOUND_2);
         setupSoundCard(sound3Card, KeyFrameType.SOUND_3);
@@ -3910,6 +3923,91 @@ public class AttributePanel extends JPanel
         });
         card.add(preview, c);
 
+        // Inline name search -- same UX as Animation / SpotAnim cards. Each
+        // Sound 1..4 card gets its own JTextField but they all share a single
+        // popup (soundPopup) hosting the soundTable. The popup repositions to
+        // whichever field has focus, and the mouseClicked handler in
+        // setupSoundFinder routes the double-clicked SoundData id to the
+        // soundAttributesFor(selectedKeyFramePage) spinner.
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 4;
+        JLabel soundSearcherLabel = new JLabel("Sounds: ");
+        soundSearcherLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(soundSearcherLabel, c);
+
+        c.gridwidth = 3;
+        c.gridx = 1;
+        c.gridy = 4;
+        JTextField soundField = new JTextField("");
+        soundField.setToolTipText("Search cache sounds by name; double-click a row to load its id into this card.");
+        soundField.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        card.add(soundField, c);
+
+        KeyListener soundListener = new KeyListener()
+        {
+            @Override public void keyTyped(KeyEvent e) {}
+            @Override public void keyPressed(KeyEvent e) {}
+
+            @Override
+            public void keyReleased(KeyEvent e)
+            {
+                String text = soundField.getText();
+                soundTable.searchAndListEntries(text);
+                soundPopup.setVisible(true);
+                Point p = soundField.getLocationOnScreen();
+                soundPopup.setLocation(new Point((int) p.getX() + soundField.getWidth(), (int) p.getY()));
+            }
+        };
+        soundField.addKeyListener(soundListener);
+
+        soundField.addFocusListener(new FocusListener()
+        {
+            @Override public void focusGained(FocusEvent e) {}
+
+            @Override
+            public void focusLost(FocusEvent e)
+            {
+                soundPopup.setVisible(false);
+            }
+        });
+
+        // Duplicate-To column on the right -- same shape as the SpotAnim card.
+        // Always shows 4 rows so the layout doesn't jump between slots: the
+        // current slot is a flat label, the other 3 are buttons that clone
+        // this slot's most-recent kf (at-or-before currentTime) into the
+        // target slot.
+        c.gridwidth = 1;
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 3;
+        c.gridy = 1;
+        c.gridheight = 3;
+        JPanel duplicatePanel = new JPanel();
+        duplicatePanel.setLayout(new GridLayout(0, 1, 2, 2));
+        card.add(duplicatePanel, c);
+        c.gridheight = 1;
+
+        duplicatePanel.add(new JLabel("Duplicate To:"));
+
+        for (KeyFrameType target : KeyFrameType.SOUND_TYPES)
+        {
+            if (target == slot)
+            {
+                JLabel selfLabel = new JLabel(target.getName());
+                selfLabel.setHorizontalAlignment(SwingConstants.CENTER);
+                duplicatePanel.add(selfLabel);
+            }
+            else
+            {
+                JButton btn = new JButton(target.getName());
+                btn.setBackground(ColorScheme.DARK_GRAY_COLOR);
+                btn.setToolTipText("Copy the most recent " + slot.getName() + " kf (at or before the playhead) into " + target.getName() + " at the same tick.");
+                btn.addActionListener(e -> timeSheetPanel.duplicateSoundKeyFrame(slot, target));
+                duplicatePanel.add(btn);
+            }
+        }
+
         c.gridwidth = 1;
         c.gridheight = 1;
         c.weightx = 1;
@@ -3917,6 +4015,62 @@ public class AttributePanel extends JPanel
         c.gridx = 8;
         c.gridy = 15;
         card.add(new JLabel(""), c);
+    }
+
+    /**
+     * Mirror of {@link #setupSpotAnimFinder} but for the Sound search popup.
+     * One shared table feeds 4 JTextFields (one per Sound slot card). The
+     * double-click handler loads the picked id into whichever sound card is
+     * currently visible -- routed via {@link #selectedKeyFramePage} since
+     * the cards swap on the same CardLayout the rest of AttributePanel uses.
+     */
+    private void setupSoundFinder()
+    {
+        soundTable.addMouseListener(new MouseAdapter()
+        {
+            @Override
+            public void mouseClicked(MouseEvent e)
+            {
+                super.mouseClicked(e);
+
+                KeyFrameType slot = selectedKeyFramePage;
+                if (slot != KeyFrameType.SOUND_1 && slot != KeyFrameType.SOUND_2
+                        && slot != KeyFrameType.SOUND_3 && slot != KeyFrameType.SOUND_4)
+                {
+                    return;
+                }
+
+                if (e.getClickCount() == 2 && e.getButton() == MouseEvent.BUTTON1)
+                {
+                    Object o = soundTable.getSelectedObject();
+                    if (o instanceof SoundData)
+                    {
+                        SoundData data = (SoundData) o;
+                        soundAttributesFor(slot).getSoundId().setValue(data.getId());
+                    }
+                    soundPopup.setVisible(false);
+                }
+            }
+        });
+
+        if (dataFinder.isDataLoaded(DataFinder.DataType.SOUND))
+        {
+            List<SoundData> dataList = dataFinder.getSoundData();
+            List<Object> list = new ArrayList<>(dataList);
+            soundTable.initialize(list);
+        }
+        else
+        {
+            dataFinder.addLoadCallback(DataFinder.DataType.SOUND, () ->
+            {
+                List<SoundData> dataList = dataFinder.getSoundData();
+                List<Object> list = new ArrayList<>(dataList);
+                soundTable.initialize(list);
+            });
+        }
+
+        JScrollPane scrollPane = new JScrollPane(soundTable);
+        soundPopup.add(scrollPane);
     }
 
     private JLabel rightLabel(String text)

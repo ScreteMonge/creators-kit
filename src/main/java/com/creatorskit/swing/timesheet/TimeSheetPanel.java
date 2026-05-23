@@ -1869,6 +1869,36 @@ public class TimeSheetPanel extends JPanel
     }
 
     /**
+     * Counterpart to {@link #duplicateSpotanimKeyFrame} for the 4 global
+     * Sound slots. Reads the most recent {@code previousType} (Sound 1..4)
+     * keyframe at or before the playhead from the global store, clones it
+     * into {@code targetType}, and writes it through the standard global add
+     * path so undo/redo, timeline refresh, and overwrite-on-same-tick all
+     * work uniformly.
+     *
+     * <p>No-op when the source slot has nothing at or before the playhead
+     * (nothing to copy) or when the slots are the same (UI shouldn't allow
+     * this since the current slot is rendered as a flat label, but guard
+     * defensively in case the cards are ever reused with different wiring).
+     */
+    public void duplicateSoundKeyFrame(KeyFrameType previousType, KeyFrameType targetType)
+    {
+        if (previousType == targetType) return;
+        KeyFrame kf = findPreviousGlobalKeyFrame(previousType, currentTime);
+        if (!(kf instanceof com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame)) return;
+        com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame src =
+                (com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame) kf;
+        // Reuse the source kf's tick so the copy lands NEXT to the original
+        // on the timeline (same column, different row) -- matches user
+        // expectation when looking at the Duplicate To buttons. If the user
+        // wants it at the playhead instead they can drag it after.
+        com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame copy =
+                new com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame(
+                        src.getTick(), targetType, src.getSoundId(), src.getVolume());
+        addKeyFrameAction(new KeyFrame[]{copy});
+    }
+
+    /**
      * Adds the keyframe to a specific character, or replaces a keyframe if the tick matches exactly
      * @param character the character to add the keyframe to
      * @param keyFrame the keyframe to add or modify for the character
