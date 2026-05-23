@@ -473,36 +473,75 @@ public class Character
         KeyFrame previous = currentFrames[idx];
 
         // Orientation snapshot-at-activation: when an OrientationKeyFrame
-        // becomes the current kf (transition from a different value), capture
-        // the Character's live in-game orientation and write it as the kf's
-        // start. The "start" field is now a runtime cache rather than user
-        // input -- the Orientation card no longer exposes it, the kf
-        // interpolates from "wherever the character was just before" so it
-        // auto-handles timeline edit-reordering.
+        // becomes the current kf (transition from a different value), write
+        // its start angle so {@code setOrientationStatic} / {@code getOrientation}
+        // interpolate from a sensible "before this kf" value. start is a
+        // runtime cache, not user input.
         //
-        // Two gates:
-        //  (1) previous != keyFrame -- skip when the same kf is re-set within
-        //      its window (e.g. every-tick play loop), so start isn't
-        //      overwritten with mid-interpolation state.
-        //  (2) !ckObject.isPlaying() -- skip during active play. The snapshot
-        //      is refreshed on every scrub / edit instead (both go through
-        //      setCurrentKeyFrame when not playing). During play we use the
-        //      most-recently-scrubbed value -- deterministic per play-through.
-        //      Without this, play would re-snapshot per A-B loop iteration
-        //      or per Movement-driven facing tick, and the compass green
-        //      indicator (which mirrors kf.start via the spinner) would
-        //      visibly flicker as resetAttributes-per-tick propagates the
-        //      new value to the UI.
+        // Source is the IMMEDIATELY-PRECEDING orientation kf's end value
+        // (or the character's idle spinner if there isn't one) -- NOT
+        // ckObject.getOrientation(). Reading the live ckObject orientation
+        // would include any rotation a Movement keyframe's face-trajectory
+        // had just applied, so the snapshot would capture a movement-
+        // influenced angle. Then setOrientationStatic interps from that
+        // angle to kf.end -- visibly wrong, because the user's intent for
+        // an orientation kf is to override movement face-trajectory
+        // entirely.
+        //
+        // Gates:
+        //  (1) previous != keyFrame -- skip when the same kf is re-set
+        //      within its window (every-tick play loop), so start isn't
+        //      rewritten with the same value redundantly.
+        //  (2) !ckObject.isPlaying() -- only refresh on scrub / edit, not
+        //      mid-play. Play uses whatever the most recent scrub
+        //      computed, keeping per-play orientation deterministic.
         if (type == KeyFrameType.ORIENTATION
                 && keyFrame instanceof OrientationKeyFrame
                 && keyFrame != previous
                 && ckObject != null
                 && !ckObject.isPlaying())
         {
-            ((OrientationKeyFrame) keyFrame).setStart(ckObject.getOrientation());
+            OrientationKeyFrame newKf = (OrientationKeyFrame) keyFrame;
+            newKf.setStart(computeOrientationStartFor(newKf));
         }
 
         currentFrames[idx] = keyFrame;
+    }
+
+    /**
+     * Movement-independent "start" angle for an OrientationKeyFrame's
+     * interpolation. Returns the end angle of the closest prior orientation
+     * kf (by tick), or the Character's idle orientation spinner value if
+     * there isn't one. Never reads ckObject.getOrientation().
+     */
+    private int computeOrientationStartFor(OrientationKeyFrame newKf)
+    {
+        OrientationKeyFrame priorKf = null;
+        KeyFrame[] all = getKeyFrames(KeyFrameType.ORIENTATION);
+        if (all != null)
+        {
+            for (KeyFrame kf : all)
+            {
+                if (kf == null || kf == newKf) continue;
+                if (kf.getTick() < newKf.getTick())
+                {
+                    if (priorKf == null || kf.getTick() > priorKf.getTick())
+                    {
+                        priorKf = (OrientationKeyFrame) kf;
+                    }
+                }
+            }
+        }
+        if (priorKf != null)
+        {
+            return priorKf.getEnd();
+        }
+        if (orientationSpinner != null)
+        {
+            Object v = orientationSpinner.getValue();
+            if (v instanceof Number) return ((Number) v).intValue();
+        }
+        return 0;
     }
 
     public void resetMovementKeyFrame(int clientTick, double currentTime)
