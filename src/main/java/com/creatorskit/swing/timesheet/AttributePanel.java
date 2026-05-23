@@ -1600,10 +1600,13 @@ public class AttributePanel extends JPanel
         manualTitleHelp.setToolTipText("<html>Setting an Orientation keyframe allows you to take direct control of an Object's orientation" +
                 "<br>Otherwise, the Object's orientation is instead based off of the direction of its movement" +
                 "<br>Start is the orientation to set at the start of the keyframe, while End determines where the Object will eventually point" +
+                "<br>The compass on the right is clickable: first click sets Start, second click sets End, alternates after that" +
                 "<br>Use Ctrl+[ on a tile to set that orientation, relative to the Object's current tile, as the Start" +
-                "<br>Use Ctrl+] on a tile to set that orientation, relative to the Object's current tile, as the End</html>");
+                "<br>Use Ctrl+] on a tile to set that orientation, relative to the Object's current tile, as the End" +
+                "<br>Filling in 'Face target' overrides Start / End / Duration / Turn Rate and snaps to face the named Character each tick</html>");
         manualTitlePanel.add(manualTitleHelp);
 
+        // Row 1: Start | End
         c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 1;
@@ -1634,25 +1637,21 @@ public class AttributePanel extends JPanel
         end.setPreferredSize(spinnerSize);
         card.add(end, c);
 
+        // Row 2: Grab Start | Grab End -- these read the live in-game CKObject
+        // orientation (e.g. after the user rotated the Character with ALT-arrow
+        // hotkeys) and stamp it into the spinner. Useful for "rotate to face the
+        // target by eye, then capture as the keyframe value."
         c.gridwidth = 1;
         c.gridx = 1;
         c.gridy = 2;
         JButton getStart = new JButton("Grab");
-        getStart.setToolTipText("Grab the current orientation of the Object, and apply it as the Start");
+        getStart.setToolTipText("Grab the Character's current in-game orientation and apply it as Start");
         getStart.addActionListener(e ->
         {
             Character selectedCharacter = timeSheetPanel.getSelectedCharacter();
-            if (selectedCharacter == null)
-            {
-                return;
-            }
-
+            if (selectedCharacter == null) return;
             CKObject ckObject = selectedCharacter.getCkObject();
-            if (ckObject == null)
-            {
-                return;
-            }
-
+            if (ckObject == null) return;
             start.setValue(ckObject.getOrientation());
         });
         card.add(getStart, c);
@@ -1661,24 +1660,49 @@ public class AttributePanel extends JPanel
         c.gridx = 3;
         c.gridy = 2;
         JButton getEnd = new JButton("Grab");
-        getEnd.setToolTipText("Grab the current Orientation of the Object, and apply it as the End");
+        getEnd.setToolTipText("Grab the Character's current in-game orientation and apply it as End");
         getEnd.addActionListener(e ->
         {
             Character selectedCharacter = timeSheetPanel.getSelectedCharacter();
-            if (selectedCharacter == null)
-            {
-                return;
-            }
-
+            if (selectedCharacter == null) return;
             CKObject ckObject = selectedCharacter.getCkObject();
-            if (ckObject == null)
-            {
-                return;
-            }
-
+            if (ckObject == null) return;
             end.setValue(ckObject.getOrientation());
         });
         card.add(getEnd, c);
+
+        // Row 3: Duration [spinner] <==> [spinner] Turn Rate
+        // The convert arrow replaces the old one-way Calculate button -- left
+        // arrowhead converts Turn Rate -> Duration (forward calc), right
+        // arrowhead converts Duration -> Turn Rate (reverse calc that picks
+        // the integer turn rate giving a duration closest to the target).
+        JSpinner duration = oriAttributes.getDuration();
+        duration.setToolTipText("<html>Set the duration for how long the Object will attempt to point towards its End orientation"
+                + "<br>If the Object reaches the End orientation, it will remain in that state until the Duration is over,"
+                + "<br>regardless of its movement trajectory</html>");
+        duration.setModel(new SpinnerNumberModel(1.0, 0, TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.1));
+        duration.setPreferredSize(spinnerSize);
+
+        JSpinner turnRate = oriAttributes.getTurnRate();
+        turnRate.setToolTipText("Determines the rate at which the Object rotates in JUnits/clientTick");
+        turnRate.setModel(new SpinnerNumberModel(OrientationKeyFrame.TURN_RATE, 0, 2048, 1));
+        turnRate.setPreferredSize(spinnerSize);
+
+        com.creatorskit.swing.timesheet.attributes.ConvertArrowWidget convertArrow =
+                new com.creatorskit.swing.timesheet.attributes.ConvertArrowWidget(
+                        "Convert Turn Rate -> Duration (calculate duration from start/end and current turn rate)",
+                        "Convert Duration -> Turn Rate (pick the integer turn rate that gives a duration closest to the current Duration)",
+                        () ->
+                        {
+                            double d = calculateOrientationDuration((int) start.getValue(), (int) end.getValue(), (int) turnRate.getValue());
+                            duration.setValue(d);
+                        },
+                        () ->
+                        {
+                            int tr = calculateOrientationTurnRate((int) start.getValue(), (int) end.getValue(), ((Number) duration.getValue()).doubleValue());
+                            turnRate.setValue(tr);
+                        }
+                );
 
         c.gridwidth = 1;
         c.gridx = 0;
@@ -1689,37 +1713,28 @@ public class AttributePanel extends JPanel
 
         c.gridx = 1;
         c.gridy = 3;
-        JSpinner duration = oriAttributes.getDuration();
-        duration.setToolTipText("<html>Set the duration for how long the Object will attempt to point towards its End orientation" +
-                "<br>If the Object reaches the End orientation, it will remain in that state until the Duration is over, regardless of its movement trajectory</html>");
-        duration.setModel(new SpinnerNumberModel(1.0, 0, TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.1));
-        duration.setPreferredSize(spinnerSize);
         card.add(duration, c);
 
-        c.gridwidth = 2;
         c.gridx = 2;
         c.gridy = 3;
-        JButton calculate = new JButton("Calculate");
-        calculate.setToolTipText("Calculates the exact duration based on the start and end orientation and the current turn rate");
-        calculate.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        card.add(calculate, c);
+        // Centre the arrow horizontally inside its cell so the visual sits
+        // exactly between the duration and turn-rate spinners.
+        JPanel arrowWrap = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        arrowWrap.setOpaque(false);
+        arrowWrap.add(convertArrow);
+        card.add(arrowWrap, c);
 
-        c.gridwidth = 1;
-        c.gridx = 0;
-        c.gridy = 4;
+        c.gridx = 3;
+        c.gridy = 3;
         JLabel turnRateLabel = new JLabel("Turn Rate: ");
         turnRateLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(turnRateLabel, c);
 
-        c.gridx = 1;
-        c.gridy = 4;
-        JSpinner turnRate = oriAttributes.getTurnRate();
-        turnRate.setToolTipText("Determines the rate at which the Object rotates in JUnits/clientTick");
-        turnRate.setModel(new SpinnerNumberModel(OrientationKeyFrame.TURN_RATE, 0, 2048, 1));
+        c.gridx = 4;
+        c.gridy = 3;
         card.add(turnRate, c);
 
-        // Face target row: while this orientation keyframe is active, the Object snaps
-        // every tick to face the named Character (combat-style turn-to-target).
+        // Row 5: Face target -- the override row.
         c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 5;
@@ -1735,21 +1750,57 @@ public class AttributePanel extends JPanel
         card.add(faceTarget, c);
         c.gridwidth = 1;
 
-        calculate.addActionListener(e ->
-        {
-            double turnDuration = calculateOrientationDuration((int) start.getValue(), (int) end.getValue(), (int) turnRate.getValue());
-            duration.setValue(turnDuration);
-
-        });
-
-        c.gridx = 5;
-        c.gridy = 5;
+        // Row 6: Compass -- clickable, paints Start (green) / End (red) indicators.
+        // Spans the right two columns (like the old static compass JLabel did)
+        // so it doesn't crowd the spinner column on the left.
+        c.gridx = 2;
+        c.gridy = 6;
+        c.gridwidth = 2;
+        c.gridheight = 1;
         c.weightx = 1;
         c.weighty = 1;
-        c.gridwidth = 1;
-        JLabel compass = new JLabel(new ImageIcon(COMPASS));
-        compass.setHorizontalAlignment(SwingConstants.CENTER);
+        c.fill = GridBagConstraints.NONE;
+        c.anchor = GridBagConstraints.CENTER;
+        com.creatorskit.swing.timesheet.attributes.CompassPanel compass =
+                new com.creatorskit.swing.timesheet.attributes.CompassPanel(COMPASS, start, end);
+        compass.setToolTipText("<html>Click a direction to set orientation. First click sets <b>Start</b> (green),"
+                + "<br>second click sets <b>End</b> (red), alternates after that.<br>"
+                + "Lines reflect the current Start / End spinner values.</html>");
         card.add(compass, c);
+        // Reset GridBag fill so any future rows added downstream don't inherit NONE/CENTER.
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.anchor = GridBagConstraints.CENTER;
+        c.weightx = 0;
+        c.weighty = 0;
+
+        // Face Target overrides explicit orientation -- when the user types a
+        // name there, Start / End / Duration / Turn Rate / Grab / convert /
+        // compass all stop having an effect. Grey them out so it's visually
+        // obvious that they're inert. The text field's own DocumentListener
+        // already sets the dirty colour; we hook a second listener here for
+        // the enable-cascade because it has a different responsibility (mode
+        // gate vs edit indicator) and trying to share would mean intermixing
+        // logic across files.
+        Runnable refreshFaceTargetGate = () ->
+        {
+            boolean active = oriAttributes.getTargetCharacterNameValue() != null;
+            boolean enabled = !active;
+            start.setEnabled(enabled);
+            end.setEnabled(enabled);
+            duration.setEnabled(enabled);
+            turnRate.setEnabled(enabled);
+            getStart.setEnabled(enabled);
+            getEnd.setEnabled(enabled);
+            convertArrow.setControlsEnabled(enabled);
+            compass.setControlsEnabled(enabled);
+        };
+        faceTarget.getDocument().addDocumentListener(new javax.swing.event.DocumentListener()
+        {
+            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { refreshFaceTargetGate.run(); }
+            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { refreshFaceTargetGate.run(); }
+            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { refreshFaceTargetGate.run(); }
+        });
+        refreshFaceTargetGate.run();
     }
 
     public static double calculateOrientationDuration(int start, int end, double turnRate)
@@ -1758,6 +1809,39 @@ public class AttributePanel extends JPanel
         double ticks = (double) difference / turnRate * Constants.CLIENT_TICK_LENGTH / Constants.GAME_TICK_LENGTH;
         int scale = (int) Math.pow(10, 1);
         return Math.abs(Math.ceil(ticks * scale) / scale);
+    }
+
+    /**
+     * Inverse of {@link #calculateOrientationDuration}: given a desired
+     * duration in game ticks, returns the integer turn rate that produces a
+     * duration closest to the target. Because duration is inversely
+     * proportional to turn rate (D = |delta| / turnRate * 1/30) the midpoint
+     * between two adjacent integer turn rates is NOT 0.5 in turn-rate space,
+     * so naive Math.round of the ideal float would occasionally pick the
+     * worse of the two. We evaluate both floor and ceil explicitly and pick
+     * whichever gives a duration closer to {@code targetDuration}.
+     *
+     * <p>Returns {@link OrientationKeyFrame#TURN_RATE} when start == end or
+     * the target duration is non-positive -- both degenerate cases.
+     */
+    public static int calculateOrientationTurnRate(int start, int end, double targetDuration)
+    {
+        int diff = Math.abs(Orientation.subtract(end, start));
+        if (diff == 0 || targetDuration <= 0)
+        {
+            return OrientationKeyFrame.TURN_RATE;
+        }
+
+        double ratio = (double) Constants.CLIENT_TICK_LENGTH / (double) Constants.GAME_TICK_LENGTH;
+        // duration = (diff / turnRate) * ratio  =>  turnRate = (diff * ratio) / duration
+        double idealTurnRate = (diff * ratio) / targetDuration;
+        int floor = Math.max(1, (int) Math.floor(idealTurnRate));
+        int ceil  = Math.max(1, (int) Math.ceil(idealTurnRate));
+        if (floor == ceil) return floor;
+
+        double dFloor = calculateOrientationDuration(start, end, floor);
+        double dCeil  = calculateOrientationDuration(start, end, ceil);
+        return Math.abs(targetDuration - dFloor) <= Math.abs(targetDuration - dCeil) ? floor : ceil;
     }
 
     private void setupSpawnCard(JPanel card)
