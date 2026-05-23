@@ -480,16 +480,24 @@ public class Character
         // interpolates from "wherever the character was just before" so it
         // auto-handles timeline edit-reordering.
         //
-        // Snapshot is gated on previous != keyFrame so repeated updateProgram
-        // calls within the kf's window (e.g. every-tick play loop) don't keep
-        // overwriting start with mid-interpolation state. ckObject.getOrientation()
-        // at this exact moment IS the orientation right before this kf takes
-        // over -- either the prior kf's final state, the prior tick's
-        // movement-driven facing, or the Character's spawn orientation.
+        // Two gates:
+        //  (1) previous != keyFrame -- skip when the same kf is re-set within
+        //      its window (e.g. every-tick play loop), so start isn't
+        //      overwritten with mid-interpolation state.
+        //  (2) !ckObject.isPlaying() -- skip during active play. The snapshot
+        //      is refreshed on every scrub / edit instead (both go through
+        //      setCurrentKeyFrame when not playing). During play we use the
+        //      most-recently-scrubbed value -- deterministic per play-through.
+        //      Without this, play would re-snapshot per A-B loop iteration
+        //      or per Movement-driven facing tick, and the compass green
+        //      indicator (which mirrors kf.start via the spinner) would
+        //      visibly flicker as resetAttributes-per-tick propagates the
+        //      new value to the UI.
         if (type == KeyFrameType.ORIENTATION
                 && keyFrame instanceof OrientationKeyFrame
                 && keyFrame != previous
-                && ckObject != null)
+                && ckObject != null
+                && !ckObject.isPlaying())
         {
             ((OrientationKeyFrame) keyFrame).setStart(ckObject.getOrientation());
         }
