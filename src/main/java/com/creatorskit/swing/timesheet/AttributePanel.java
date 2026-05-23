@@ -357,9 +357,15 @@ public class AttributePanel extends JPanel
      * Walks every component in {@code attrs}' card and attaches a "user edited"
      * listener that calls {@link #fireAutoUpdate()}. Skips {@link JButton}s
      * because their own action handlers do the right thing already (e.g. the
-     * Camera card's Capture button reads the live camera, not the spinner state).
-     * Text fields are skipped too because their per-keystroke fire rate would
-     * spam the undo stack -- text edits still need the manual Update button.
+     * Camera card's Capture button reads the live camera, not the spinner state;
+     * the colour-picker buttons call fireAutoUpdate themselves on chooser-close).
+     *
+     * <p>Text fields fire on Enter / focus-lost rather than per-keystroke. The
+     * "per-keystroke would spam the undo stack" concern from the old Update-
+     * button era is still real, so we commit only at user-visible "done editing"
+     * moments. Without this the Orientation card's Face Target field had no
+     * commit path at all after the Update button was removed -- you could type
+     * a name, click away, and the change was silently dropped.
      */
     private void wireAutoUpdate(com.creatorskit.swing.timesheet.attributes.Attributes attrs)
     {
@@ -386,7 +392,28 @@ public class AttributePanel extends JPanel
                     fireAutoUpdate();
                 });
             }
-            // JButton / JTextField / JTextArea intentionally not wired -- see method javadoc.
+            else if (c instanceof JTextField)
+            {
+                JTextField tf = (JTextField) c;
+                // Enter commits like a spinner.
+                tf.addActionListener(e -> {
+                    flagFieldEdited(c);
+                    fireAutoUpdate();
+                });
+                // Focus-lost commits too -- typical user flow is "type, click
+                // somewhere else." Without this, the only commit trigger is
+                // Enter and a click-away silently drops the edit.
+                tf.addFocusListener(new java.awt.event.FocusAdapter()
+                {
+                    @Override
+                    public void focusLost(java.awt.event.FocusEvent e)
+                    {
+                        flagFieldEdited(c);
+                        fireAutoUpdate();
+                    }
+                });
+            }
+            // JButton intentionally not wired -- see method javadoc.
         }
     }
 
