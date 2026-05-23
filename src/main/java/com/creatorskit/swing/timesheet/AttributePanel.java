@@ -1793,8 +1793,8 @@ public class AttributePanel extends JPanel
         }
         turnDirCombo.setSelectedItem(com.creatorskit.swing.timesheet.keyframe.TurnDirection.AUTO);
         turnDirCombo.setToolTipText("<html><b>Auto</b>: shortest path (legacy behaviour)."
-                + "<br><b>Clockwise</b>: always rotate CW (decreasing jagex), takes the long way around if needed."
-                + "<br><b>Counter-clockwise</b>: always rotate CCW (increasing jagex), takes the long way around if needed.</html>");
+                + "<br><b>Clockwise</b>: always rotate CW (increasing jagex), takes the long way around if needed."
+                + "<br><b>Counter-clockwise</b>: always rotate CCW (decreasing jagex), takes the long way around if needed.</html>");
         card.add(turnDirCombo, c);
 
         // Row 5: Face target -- the override row.

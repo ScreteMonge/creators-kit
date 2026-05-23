@@ -624,17 +624,17 @@ public class Programmer
      * <ul>
      *   <li>AUTO -- the short-path signed difference from
      *   {@code Orientation.subtract} (legacy behaviour).</li>
-     *   <li>COUNTER_CLOCKWISE -- always positive: short path if already
-     *   positive, otherwise long-way (2048 + shortNegative).</li>
-     *   <li>CLOCKWISE -- always negative: short path if already negative,
-     *   otherwise long-way (shortPositive - 2048).</li>
+     *   <li>CLOCKWISE -- always positive: short path if already positive,
+     *   otherwise long-way (2048 + shortNegative).</li>
+     *   <li>COUNTER_CLOCKWISE -- always negative: short path if already
+     *   negative, otherwise long-way (shortPositive - 2048).</li>
      * </ul>
      *
-     * <p>Increasing jagex = CCW under the compass-image convention
-     * (0=S, 512=W, 1024=N, 1536=E -- going S→W→N→E increases by 512 each
-     * step), so positive delta drives the rotation +rotation in
-     * {@link #getOrientation} / {@link #getOrientationStatic}, matching
-     * CCW; negative drives -rotation, matching CW.
+     * <p>Increasing jagex = CW under the compass-image convention
+     * (0=S, 512=W, 1024=N, 1536=E -- the path S→W→N→E is bottom→left→
+     * top→right, which is clockwise when viewed from above). So positive
+     * delta drives +rotation in {@link #getOrientation} /
+     * {@link #getOrientationStatic} = CW; negative drives -rotation = CCW.
      */
     private static int directionalDifference(int start, int end, TurnDirection direction)
     {
@@ -643,13 +643,13 @@ public class Programmer
         {
             return autoDiff;
         }
-        if (direction == TurnDirection.COUNTER_CLOCKWISE)
+        if (direction == TurnDirection.CLOCKWISE)
         {
-            // Force positive. If already positive (short path is already CCW),
-            // keep it; otherwise take the long way around (2048 + negative).
+            // Force positive (CW = increasing jagex). Short path if already
+            // positive, otherwise take the long way around.
             return autoDiff >= 0 ? autoDiff : 2048 + autoDiff;
         }
-        // CLOCKWISE: force negative.
+        // COUNTER_CLOCKWISE: force negative.
         return autoDiff <= 0 ? autoDiff : autoDiff - 2048;
     }
 
