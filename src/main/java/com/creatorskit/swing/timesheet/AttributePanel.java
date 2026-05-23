@@ -1637,15 +1637,15 @@ public class AttributePanel extends JPanel
         end.setPreferredSize(spinnerSize);
         card.add(end, c);
 
-        // Row 2: Grab Start | Grab End -- these read the live in-game CKObject
-        // orientation (e.g. after the user rotated the Character with ALT-arrow
-        // hotkeys) and stamp it into the spinner. Useful for "rotate to face the
+        // Row 2: Copy in-game (Start) | Copy in-game (End) -- read the live
+        // CKObject orientation (e.g. after the user rotated with ALT-arrow
+        // hotkeys) and stamp into the spinner. Useful for "rotate to face the
         // target by eye, then capture as the keyframe value."
         c.gridwidth = 1;
         c.gridx = 1;
         c.gridy = 2;
-        JButton getStart = new JButton("Grab");
-        getStart.setToolTipText("Grab the Character's current in-game orientation and apply it as Start");
+        JButton getStart = new JButton("Copy in-game");
+        getStart.setToolTipText("Copy the Character's current in-game orientation and apply it as Start");
         getStart.addActionListener(e ->
         {
             Character selectedCharacter = timeSheetPanel.getSelectedCharacter();
@@ -1659,8 +1659,8 @@ public class AttributePanel extends JPanel
         c.gridwidth = 1;
         c.gridx = 3;
         c.gridy = 2;
-        JButton getEnd = new JButton("Grab");
-        getEnd.setToolTipText("Grab the Character's current in-game orientation and apply it as End");
+        JButton getEnd = new JButton("Copy in-game");
+        getEnd.setToolTipText("Copy the Character's current in-game orientation and apply it as End");
         getEnd.addActionListener(e ->
         {
             Character selectedCharacter = timeSheetPanel.getSelectedCharacter();
@@ -1676,6 +1676,12 @@ public class AttributePanel extends JPanel
         // arrowhead converts Turn Rate -> Duration (forward calc), right
         // arrowhead converts Duration -> Turn Rate (reverse calc that picks
         // the integer turn rate giving a duration closest to the target).
+        //
+        // Wrapped in a sub-panel that spans gridwidth=4 so the row matches
+        // the column layout of the rows above (Start / End / Grabs). Putting
+        // the 5 cells directly into the main GridBag was making column 4 the
+        // only one that anyone occupied, so it stole all the leftover width
+        // and pushed Turn Rate to the far right of the card.
         JSpinner duration = oriAttributes.getDuration();
         duration.setToolTipText("<html>Set the duration for how long the Object will attempt to point towards its End orientation"
                 + "<br>If the Object reaches the End orientation, it will remain in that state until the Duration is over,"
@@ -1688,51 +1694,71 @@ public class AttributePanel extends JPanel
         turnRate.setModel(new SpinnerNumberModel(OrientationKeyFrame.TURN_RATE, 0, 2048, 1));
         turnRate.setPreferredSize(spinnerSize);
 
+        // commitEdit() drains pending text-edit state from the spinner's editor
+        // into the model value. Without this, clicking the convert arrow right
+        // after typing a number reads the OLD value because the editor's text
+        // hasn't been committed yet (commit normally fires on Enter / focus-
+        // lost / spinner-button-click, and clicking the arrow is none of those).
+        Runnable commitAllOrientationSpinners = () ->
+        {
+            try { start.commitEdit(); } catch (java.text.ParseException ignored) {}
+            try { end.commitEdit(); } catch (java.text.ParseException ignored) {}
+            try { duration.commitEdit(); } catch (java.text.ParseException ignored) {}
+            try { turnRate.commitEdit(); } catch (java.text.ParseException ignored) {}
+        };
+
         com.creatorskit.swing.timesheet.attributes.ConvertArrowWidget convertArrow =
                 new com.creatorskit.swing.timesheet.attributes.ConvertArrowWidget(
                         "Convert Turn Rate -> Duration (calculate duration from start/end and current turn rate)",
                         "Convert Duration -> Turn Rate (pick the integer turn rate that gives a duration closest to the current Duration)",
                         () ->
                         {
+                            commitAllOrientationSpinners.run();
                             double d = calculateOrientationDuration((int) start.getValue(), (int) end.getValue(), (int) turnRate.getValue());
                             duration.setValue(d);
                         },
                         () ->
                         {
+                            commitAllOrientationSpinners.run();
                             int tr = calculateOrientationTurnRate((int) start.getValue(), (int) end.getValue(), ((Number) duration.getValue()).doubleValue());
                             turnRate.setValue(tr);
                         }
                 );
 
-        c.gridwidth = 1;
-        c.gridx = 0;
-        c.gridy = 3;
+        // Single-row sub-panel: [Duration:] [dur] [arrow] [Turn Rate:] [tr]
+        // GridBag inside for tight column control + consistent insets.
+        JPanel convertRow = new JPanel(new GridBagLayout());
+        convertRow.setOpaque(false);
+        GridBagConstraints rc = new GridBagConstraints();
+        rc.insets = new Insets(2, 2, 2, 2);
+        rc.fill = GridBagConstraints.HORIZONTAL;
+        rc.weightx = 0;
+
         JLabel durationLabel = new JLabel("Duration: ");
         durationLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(durationLabel, c);
-
-        c.gridx = 1;
-        c.gridy = 3;
-        card.add(duration, c);
-
-        c.gridx = 2;
-        c.gridy = 3;
-        // Centre the arrow horizontally inside its cell so the visual sits
-        // exactly between the duration and turn-rate spinners.
-        JPanel arrowWrap = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        rc.gridx = 0; rc.gridy = 0;
+        convertRow.add(durationLabel, rc);
+        rc.gridx = 1;
+        convertRow.add(duration, rc);
+        rc.gridx = 2;
+        // FlowLayout-wrap the arrow so it sits naturally centred without
+        // stretching to fill the cell.
+        JPanel arrowWrap = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
         arrowWrap.setOpaque(false);
         arrowWrap.add(convertArrow);
-        card.add(arrowWrap, c);
-
-        c.gridx = 3;
-        c.gridy = 3;
+        convertRow.add(arrowWrap, rc);
         JLabel turnRateLabel = new JLabel("Turn Rate: ");
         turnRateLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(turnRateLabel, c);
+        rc.gridx = 3;
+        convertRow.add(turnRateLabel, rc);
+        rc.gridx = 4;
+        convertRow.add(turnRate, rc);
 
-        c.gridx = 4;
+        c.gridwidth = 4;
+        c.gridx = 0;
         c.gridy = 3;
-        card.add(turnRate, c);
+        card.add(convertRow, c);
+        c.gridwidth = 1;
 
         // Row 5: Face target -- the override row.
         c.gridwidth = 1;

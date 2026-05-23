@@ -28,9 +28,11 @@ import java.awt.image.BufferedImage;
  *       out the whole widget when Face Target overrides explicit orientation.</li>
  * </ul>
  *
- * <p>Angle convention follows {@link com.creatorskit.programming.orientation.Orientation}:
- * 0 = N, 512 = W, 1024 = S, 1536 = E (counter-clockwise from N in jagex units,
- * 2048 = full turn). The 8 click targets are spaced every 256 units.
+ * <p>Angle convention matches the labels on the compass image asset
+ * (which follows RuneLite's CKObject.getOrientation convention):
+ * 0 = S, 512 = W, 1024 = N, 1536 = E (counter-clockwise from S in
+ * jagex units, 2048 = full turn). The 8 click targets are spaced every
+ * 256 units.
  */
 public class CompassPanel extends JComponent
 {
@@ -64,10 +66,12 @@ public class CompassPanel extends JComponent
         this.startSpinner = startSpinner;
         this.endSpinner = endSpinner;
 
-        // ~3x the old static label size so the 8 click targets are easy to hit
-        // without precision aim. 120px diameter leaves room for the white border
-        // around a 110px compass image.
-        Dimension d = new Dimension(120, 120);
+        // Compass is the dominant visual on the right side of the card and
+        // its 8 click targets need to be easy to hit without precision aim.
+        // 180px diameter leaves room for the white border + the compass image's
+        // own direction labels (the asset embeds N/S/E/W text + angle numbers
+        // that get crowded below ~150px).
+        Dimension d = new Dimension(180, 180);
         setPreferredSize(d);
         setMinimumSize(d);
         setOpaque(false);
@@ -120,13 +124,19 @@ public class CompassPanel extends JComponent
         repaint();
     }
 
-    /** Maps a click offset (dx, dy from centre) to a snapped jagex angle (0..1792 in 256 steps). */
+    /**
+     * Maps a click offset (dx, dy from centre, screen coords with +Y down)
+     * to a snapped jagex angle (0..1792 in 256 steps).
+     *
+     * <p>Convention (matches compass image labels + CKObject.getOrientation):
+     * jagex 0 points DOWN (south), 512 LEFT (west), 1024 UP (north),
+     * 1536 RIGHT (east). The screen-direction vector for a jagex angle is
+     * {@code (-sin(rad), cos(rad))} so the inverse atan2 below recovers
+     * {@code rad = atan2(-dx, dy)}.
+     */
     private static int clickToSnappedJagex(int dx, int dy)
     {
-        // atan2(-dx, -dy) inverts both axes so the result is jagex_rad, where
-        // direction (sin, cos) = (-sin(rad), -cos(rad)) per the codebase's
-        // orientation convention (N=0=-Y, W=512=-X, S=1024=+Y, E=1536=+X).
-        double rad = Math.atan2(-dx, -dy);
+        double rad = Math.atan2(-dx, dy);
         if (rad < 0) rad += 2 * Math.PI;
         int jagex = (int) Math.round(rad * JAGEX_FULL_TURN / (2 * Math.PI));
         // Snap to nearest 8-direction (multiple of 256).
@@ -202,15 +212,15 @@ public class CompassPanel extends JComponent
 
     /**
      * Draws an indicator line from centre to the rim at the given jagex angle.
-     * Convention: jagex 0 points up (N), 512 left (W), 1024 down (S), 1536 right (E)
-     * -- counter-clockwise. The unit-direction formula
-     * {@code (sin*-1, cos*-1)} matches {@link com.creatorskit.programming.orientation.Orientation}.
+     * Convention (matches compass image labels): jagex 0 points DOWN (S),
+     * 512 LEFT (W), 1024 UP (N), 1536 RIGHT (E) -- counter-clockwise from
+     * south.
      */
     private static void drawIndicator(Graphics2D g2, int cx, int cy, int r, int jagex, Color color)
     {
         double rad = jagex * 2 * Math.PI / JAGEX_FULL_TURN;
         double ux = -Math.sin(rad);
-        double uy = -Math.cos(rad);
+        double uy = Math.cos(rad);
         int endX = cx + (int) (r * ux);
         int endY = cy + (int) (r * uy);
 
