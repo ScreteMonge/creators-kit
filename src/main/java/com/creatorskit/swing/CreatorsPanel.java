@@ -1714,6 +1714,44 @@ public class CreatorsPanel extends PluginPanel
      * (kfs at tick &lt; threshold stay at their original tick, useful for
      * preserving a tick-0 baseline disable on every stamp).
      */
+    /**
+     * Hazard-grid state owned by the open dialog. The plugin's right-click
+     * hook reads this via {@link #getHazardGridState()} -- when non-null,
+     * "Set as Corner A" / "Set as Corner B" entries are appended to every
+     * tile right-click menu, so the user picks corners from the game's own
+     * menu rather than fighting mouse-move-loses-hover with capture buttons.
+     */
+    public static final class HazardGridState
+    {
+        public WorldPoint cornerA;
+        public WorldPoint cornerB;
+        public Runnable onChange;
+
+        public void setCornerA(WorldPoint wp)
+        {
+            cornerA = wp;
+            if (onChange != null) onChange.run();
+        }
+
+        public void setCornerB(WorldPoint wp)
+        {
+            cornerB = wp;
+            if (onChange != null) onChange.run();
+        }
+    }
+
+    private HazardGridState hazardGridState = null;
+
+    /**
+     * Returns the live hazard-grid dialog state, or null when no Random
+     * Hazard Grid window is open. Plugin reads this from onPostMenuSort
+     * to gate the corner-capture menu entries.
+     */
+    public HazardGridState getHazardGridState()
+    {
+        return hazardGridState;
+    }
+
     public void showRandomHazardGridDialog()
     {
         ManagerTree managerTree = toolBox.getManagerPanel().getManagerTree();
@@ -1728,43 +1766,24 @@ public class CreatorsPanel extends PluginPanel
         }
         final Folder source = directFolders[0];
 
-        final WorldPoint[] cornerA = new WorldPoint[1];
-        final WorldPoint[] cornerB = new WorldPoint[1];
+        // Publish state so CreatorsPlugin.addMenuEntries can wire the
+        // "Set as Corner A/B" right-click entries while this window is up.
+        final HazardGridState state = new HazardGridState();
+        hazardGridState = state;
 
-        JButton captureA = new JButton();
-        JButton captureB = new JButton();
+        JLabel cornerALabel = new JLabel();
+        JLabel cornerBLabel = new JLabel();
         Runnable refreshCornerLabels = () ->
         {
-            captureA.setText(cornerA[0] == null
-                    ? "Capture corner A from hovered tile"
-                    : "Corner A: " + cornerA[0].getX() + "," + cornerA[0].getY() + " (p" + cornerA[0].getPlane() + ")  [click to recapture]");
-            captureB.setText(cornerB[0] == null
-                    ? "Capture corner B from hovered tile"
-                    : "Corner B: " + cornerB[0].getX() + "," + cornerB[0].getY() + " (p" + cornerB[0].getPlane() + ")  [click to recapture]");
+            cornerALabel.setText(state.cornerA == null
+                    ? "<not set>"
+                    : state.cornerA.getX() + "," + state.cornerA.getY() + " (p" + state.cornerA.getPlane() + ")");
+            cornerBLabel.setText(state.cornerB == null
+                    ? "<not set>"
+                    : state.cornerB.getX() + "," + state.cornerB.getY() + " (p" + state.cornerB.getPlane() + ")");
         };
+        state.onChange = refreshCornerLabels;
         refreshCornerLabels.run();
-
-        java.util.function.Consumer<WorldPoint[]> capture = slot ->
-        {
-            WorldView wv = client.getTopLevelWorldView();
-            if (wv == null) return;
-            net.runelite.api.Tile t = wv.getSelectedSceneTile();
-            if (t == null)
-            {
-                JOptionPane.showMessageDialog(this,
-                        "No tile under the cursor. Hover a tile in the game and click capture again.",
-                        "Random Hazard Grid", JOptionPane.INFORMATION_MESSAGE);
-                return;
-            }
-            LocalPoint lp = t.getLocalLocation();
-            if (lp == null) return;
-            WorldPoint wp = WorldPoint.fromLocalInstance(client, lp);
-            if (wp == null) return;
-            slot[0] = wp;
-            refreshCornerLabels.run();
-        };
-        captureA.addActionListener(e -> capture.accept(cornerA));
-        captureB.addActionListener(e -> capture.accept(cornerB));
 
         JSpinner timeFromSpinner = new JSpinner(new SpinnerNumberModel(0.0, 0.0, 100000.0, 1.0));
         JSpinner timeToSpinner = new JSpinner(new SpinnerNumberModel(100.0, 0.0, 100000.0, 1.0));
@@ -1778,9 +1797,9 @@ public class CreatorsPanel extends PluginPanel
         form.add(new JLabel("Source folder:"));
         form.add(new JLabel(source.getName()));
         form.add(new JLabel("Corner A:"));
-        form.add(captureA);
+        form.add(cornerALabel);
         form.add(new JLabel("Corner B:"));
-        form.add(captureB);
+        form.add(cornerBLabel);
         form.add(new JLabel("Time window from (tick):"));
         form.add(timeFromSpinner);
         form.add(new JLabel("Time window to (tick):"));
@@ -1796,12 +1815,12 @@ public class CreatorsPanel extends PluginPanel
         form.add(new JLabel("Shift only kfs at tick >="));
         form.add(shiftThresholdSpinner);
 
-        JLabel hint = new JLabel("<html><i>This window is non-modal -- you can switch focus to the game, hover the<br>"
-                + "tile you want as a corner, then click the capture button. Each step tick<br>"
-                + "picks Count random tiles in the rectangle and stamps the folder there,<br>"
-                + "with keyframes (at tick &gt;= threshold) shifted by the step tick. Set<br>"
-                + "threshold to 1 to preserve a tick-0 baseline (e.g. spawn-Disable) across<br>"
-                + "every stamp.</i></html>");
+        JLabel hint = new JLabel("<html><i>Right-click any tile in-game and pick <b>Set as Corner A</b> /<br>"
+                + "<b>Set as Corner B</b> -- the entries are added to the right-click menu while<br>"
+                + "this window is open. Each step tick picks Count random tiles in the<br>"
+                + "rectangle and stamps the folder there, with keyframes (at tick &gt;=<br>"
+                + "threshold) shifted by the step tick. Set threshold to 1 to preserve a<br>"
+                + "tick-0 baseline (e.g. spawn-Disable) across every stamp.</i></html>");
         hint.setFont(hint.getFont().deriveFont(hint.getFont().getSize2D() - 1f));
 
         JButton runBtn = new JButton("Run");
@@ -1831,12 +1850,19 @@ public class CreatorsPanel extends PluginPanel
         frame.setLocationRelativeTo(null);
         frame.setAlwaysOnTop(true);  // keep visible above the game canvas
 
+        // Clear hazardGridState on close so the plugin's menu hook stops
+        // injecting the "Set as Corner" entries once the window is gone.
+        frame.addWindowListener(new java.awt.event.WindowAdapter()
+        {
+            @Override public void windowClosed(java.awt.event.WindowEvent e) { hazardGridState = null; }
+        });
+
         runBtn.addActionListener(e ->
         {
-            if (cornerA[0] == null || cornerB[0] == null)
+            if (state.cornerA == null || state.cornerB == null)
             {
                 JOptionPane.showMessageDialog(frame,
-                        "Capture BOTH corners first. Tab focus to the game, hover a tile, click the capture button, then return.",
+                        "Capture BOTH corners first. Right-click a tile in the game and pick \"Set as Corner A\" / \"Set as Corner B\".",
                         "Random Hazard Grid", JOptionPane.WARNING_MESSAGE);
                 return;
             }
@@ -1853,7 +1879,7 @@ public class CreatorsPanel extends PluginPanel
             if (stepMin > stepMax) { int t = stepMin; stepMin = stepMax; stepMax = t; }
             if (countMin > countMax) { int t = countMin; countMin = countMax; countMax = t; }
 
-            runRandomHazardGrid(source, cornerA[0], cornerB[0],
+            runRandomHazardGrid(source, state.cornerA, state.cornerB,
                     timeFrom, timeTo, stepMin, stepMax, countMin, countMax, shiftThreshold);
         });
         closeBtn.addActionListener(e -> frame.dispose());

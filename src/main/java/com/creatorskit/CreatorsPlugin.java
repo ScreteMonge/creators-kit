@@ -1538,6 +1538,45 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		// by the same rightClick() master toggle as everything else in
 		// this branch.
 		addHideGameObjectMenuEntries(tile);
+		// "Set as Corner A/B" entries while the Random Hazard Grid dialog
+		// is open. Right-click is the only way to pick a tile without the
+		// mouse-travel race that breaks click-a-button-while-hovering.
+		addHazardGridCornerMenuEntries(tile);
+	}
+
+	/**
+	 * Right-click menu hook for the Random Hazard Grid dialog. When the
+	 * dialog is open (creatorsPanel.getHazardGridState() != null), every
+	 * tile right-click gets two extra entries -- "Set as Corner A" and
+	 * "Set as Corner B" -- which write the clicked tile's WorldPoint
+	 * back to the dialog state. The dialog refreshes its corner labels
+	 * via the state's onChange callback.
+	 *
+	 * <p>Entries are added with idx=1 (above Cancel, near the bottom of
+	 * the menu) so they don't fight with the primary game actions for
+	 * top placement, same as the Hide entry.
+	 */
+	private void addHazardGridCornerMenuEntries(Tile tile)
+	{
+		com.creatorskit.swing.CreatorsPanel.HazardGridState state = creatorsPanel.getHazardGridState();
+		if (state == null || tile == null) return;
+		LocalPoint lp = tile.getLocalLocation();
+		if (lp == null) return;
+		WorldPoint wp = WorldPoint.fromLocalInstance(client, lp);
+		if (wp == null) return;
+		String coord = wp.getX() + "," + wp.getY() + " (p" + wp.getPlane() + ")";
+
+		client.getMenu().createMenuEntry(1)
+				.setOption(ColorUtil.prependColorTag("Set as Corner A", Color.ORANGE))
+				.setTarget(ColorUtil.prependColorTag(coord, Color.CYAN))
+				.setType(MenuAction.RUNELITE)
+				.onClick(e -> state.setCornerA(wp));
+
+		client.getMenu().createMenuEntry(1)
+				.setOption(ColorUtil.prependColorTag("Set as Corner B", Color.ORANGE))
+				.setTarget(ColorUtil.prependColorTag(coord, Color.CYAN))
+				.setType(MenuAction.RUNELITE)
+				.onClick(e -> state.setCornerB(wp));
 	}
 
 	@Subscribe
