@@ -963,6 +963,24 @@ public class CreatorsPanel extends PluginPanel
 
     private KeyFrame[][] duplicateKeyFrames(Character character)
     {
+        return duplicateKeyFrames(character, 0.0, 0.0);
+    }
+
+    /**
+     * Variant of {@link #duplicateKeyFrames(Character)} that lets the caller
+     * shift each duplicated keyframe's tick by {@code timeOffset}, with an
+     * opt-in floor: keyframes at tick &lt; {@code shiftThreshold} stay at
+     * their original tick. Used by the Random Hazard Grid so each stamp can
+     * advance its "effect" keyframes by the step tick while preserving an
+     * earlier baseline (e.g. a tick-0 spawn-Disable to keep the Character
+     * invisible until the effect fires).
+     *
+     * <p>When called with {@code timeOffset == 0} this is a no-op offset
+     * and matches the original behaviour exactly -- callers that don't
+     * need the shift go through the zero-arg overload.
+     */
+    private KeyFrame[][] duplicateKeyFrames(Character character, double timeOffset, double shiftThreshold)
+    {
         KeyFrame[][] duplicatesArrays = new KeyFrame[KeyFrameType.getTotalFrameTypes()][];
 
         KeyFrame[][] originalArrays = character.getFrames();
@@ -979,7 +997,10 @@ public class CreatorsPanel extends PluginPanel
             for (int e = 0; e < originalArray.length; e++)
             {
                 KeyFrame original = originalArray[e];
-                KeyFrame duplicate = KeyFrame.createCopy(original, original.getTick());
+                double newTick = original.getTick() >= shiftThreshold
+                        ? original.getTick() + timeOffset
+                        : original.getTick();
+                KeyFrame duplicate = KeyFrame.createCopy(original, newTick);
                 duplicateArray[e] = duplicate;
             }
 
@@ -1558,6 +1579,360 @@ public class CreatorsPanel extends PluginPanel
         spawnFillCopy(source, name, tileX, tileY, plane, inPOH, worldView, null, source.getParentPanel());
     }
 
+    // ----- Folder stamp -----------------------------------------------------
+    //
+    // A "stamp" duplicates an entire folder + its descendant Characters as
+    // a new sibling folder, with each Character placed at a tile offset
+    // from the first descendant (the "pivot"). Internal layout is preserved:
+    // Fire 2 tiles east of Ring in the source folder stays 2 east of Ring
+    // in every stamp. Optional time offset shifts each new Character's
+    // keyframes -- used by Random Hazard Grid to give every stamp a
+    // staggered start tick in one atomic operation.
+
+    /**
+     * First descendant {@link Character} of {@code folder} in DFS tree order,
+     * or null if the folder is empty. Used as the pivot for folder stamps --
+     * its tile becomes the anchor that every other descendant offsets from.
+     */
+    public Character findFolderPivot(Folder folder)
+    {
+        if (folder == null || folder.getLinkedManagerNode() == null) return null;
+        ArrayList<Character> chars = new ArrayList<>();
+        toolBox.getManagerPanel().getManagerTree().getCharacterNodeChildren(folder.getLinkedManagerNode(), chars);
+        return chars.isEmpty() ? null : chars.get(0);
+    }
+
+    /**
+     * Next "(N)" suffix for sibling-folder naming. Mirrors
+     * {@link #nextPasteCounter(Character)} but scoped to the source folder's
+     * parent (so two siblings named "Set 1 (2)" and "Set 1 (3)" already in
+     * the parent both bump the counter).
+     */
+    private int nextFolderPasteCounter(Folder source)
+    {
+        if (source == null) return 1;
+        DefaultMutableTreeNode parent = source.getParentManagerNode();
+        if (parent == null) return 1;
+        String base = stripTrailingNumber(source.getName());
+        int max = 0;
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile("\\((\\d+)\\)$");
+        java.util.Enumeration<javax.swing.tree.TreeNode> children = parent.children();
+        while (children.hasMoreElements())
+        {
+            DefaultMutableTreeNode child = (DefaultMutableTreeNode) children.nextElement();
+            if (!(child.getUserObject() instanceof Folder)) continue;
+            Folder f = (Folder) child.getUserObject();
+            String n = f.getName();
+            if (n == null) continue;
+            if (!stripTrailingNumber(n).equals(base)) continue;
+            java.util.regex.Matcher m = p.matcher(n);
+            if (m.find())
+            {
+                try
+                {
+                    int v = Integer.parseInt(m.group(1));
+                    if (v > max) max = v;
+                }
+                catch (NumberFormatException ignored) {}
+            }
+        }
+        return max + 1;
+    }
+
+    /**
+     * Convenience overload: stamp at the source folder's own tiles (no offset
+     * + no time shift). Used by CTRL+D and CTRL+V-in-tree on folders.
+     */
+    public Folder stampFolderInPlace(Folder source)
+    {
+        if (source == null) return null;
+        Character pivot = findFolderPivot(source);
+        if (pivot == null) return null;
+        WorldPoint pivotTile = pivot.getNonInstancedPoint();
+        if (pivotTile == null) return null;
+        return stampFolderAtTile(source, pivotTile, 0.0, 0.0, client.getTopLevelWorldView());
+    }
+
+    /**
+     * Stamps a copy of {@code source} at {@code targetTile}, using the first
+     * descendant Character as the pivot. Every descendant Character is
+     * placed at (its own tile + (targetTile - pivotTile)), preserving the
+     * source folder's internal positional layout.
+     *
+     * <p>{@code timeOffset} shifts every cloned keyframe whose tick is at
+     * or above {@code shiftThreshold}. The default (0, 0) values clone
+     * verbatim. Random Hazard Grid passes the step tick as timeOffset and
+     * lets the user set the threshold to preserve early baseline kfs.
+     *
+     * <p>Returns the new sibling folder, or null if the source had no
+     * descendant Characters or no pivot tile.
+     */
+    public Folder stampFolderAtTile(Folder source, WorldPoint targetTile, double timeOffset, double shiftThreshold, WorldView worldView)
+    {
+        if (source == null || targetTile == null) return null;
+        DefaultMutableTreeNode srcNode = source.getLinkedManagerNode();
+        if (srcNode == null) return null;
+        Character pivot = findFolderPivot(source);
+        if (pivot == null) return null;
+        WorldPoint pivotTile = pivot.getNonInstancedPoint();
+        if (pivotTile == null) return null;
+
+        final int dx = targetTile.getX() - pivotTile.getX();
+        final int dy = targetTile.getY() - pivotTile.getY();
+        final int newPlane = targetTile.getPlane();
+
+        DefaultMutableTreeNode parentNode = source.getParentManagerNode();
+        if (parentNode == null) parentNode = (DefaultMutableTreeNode) srcNode.getParent();
+        if (parentNode == null) return null;
+
+        ManagerTree managerTree = toolBox.getManagerPanel().getManagerTree();
+        ParentPanel parentPanel = managerTree.treeContainsSidePanel(parentNode) ? ParentPanel.SIDE_PANEL : ParentPanel.MANAGER;
+
+        String newName = stripTrailingNumber(source.getName()) + " (" + nextFolderPasteCounter(source) + ")";
+        DefaultMutableTreeNode dstFolderNode = managerTree.addFolderNode(parentNode, newName);
+
+        cloneFolderContents(srcNode, dstFolderNode, dx, dy, newPlane, timeOffset, shiftThreshold, parentPanel, worldView);
+
+        return (Folder) dstFolderNode.getUserObject();
+    }
+
+    /**
+     * Tools &gt; Random Hazard Grid... -- spreads N stamps of a source
+     * folder across a rectangular tile area, advancing the timeline step
+     * by step. At each step tick the planner rolls K stamps; each stamp
+     * lands at a random tile in the rectangle and clones the source folder
+     * with its keyframes shifted by the step tick.
+     *
+     * <p>The source folder is whichever folder the user has DIRECTLY
+     * clicked in the manager tree -- explicit so the user can't trigger
+     * the grid by accident with a stray multi-selection. Refuses to open
+     * without one.
+     *
+     * <p>Parameters: tile-area corners (captured live from the hovered
+     * scene tile), time window [from, to], step min/max (ticks between
+     * grid rows), count per step min/max (stamps per row), shift threshold
+     * (kfs at tick &lt; threshold stay at their original tick, useful for
+     * preserving a tick-0 baseline disable on every stamp).
+     */
+    public void showRandomHazardGridDialog()
+    {
+        ManagerTree managerTree = toolBox.getManagerPanel().getManagerTree();
+        Folder[] directFolders = managerTree.getDirectlySelectedFolders();
+        if (directFolders.length == 0)
+        {
+            JOptionPane.showMessageDialog(this,
+                    "Select a folder in the manager tree first -- it'll be the source template for each stamp.",
+                    "Random Hazard Grid",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        final Folder source = directFolders[0];
+
+        final WorldPoint[] cornerA = new WorldPoint[1];
+        final WorldPoint[] cornerB = new WorldPoint[1];
+
+        JButton captureA = new JButton();
+        JButton captureB = new JButton();
+        Runnable refreshCornerLabels = () ->
+        {
+            captureA.setText(cornerA[0] == null
+                    ? "Capture corner A from hovered tile"
+                    : "Corner A: " + cornerA[0].getX() + "," + cornerA[0].getY() + " (p" + cornerA[0].getPlane() + ")  [click to recapture]");
+            captureB.setText(cornerB[0] == null
+                    ? "Capture corner B from hovered tile"
+                    : "Corner B: " + cornerB[0].getX() + "," + cornerB[0].getY() + " (p" + cornerB[0].getPlane() + ")  [click to recapture]");
+        };
+        refreshCornerLabels.run();
+
+        java.util.function.Consumer<WorldPoint[]> capture = slot ->
+        {
+            WorldView wv = client.getTopLevelWorldView();
+            if (wv == null) return;
+            net.runelite.api.Tile t = wv.getSelectedSceneTile();
+            if (t == null)
+            {
+                JOptionPane.showMessageDialog(this,
+                        "No tile under the cursor. Hover a tile in the game and click capture again.",
+                        "Random Hazard Grid", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            LocalPoint lp = t.getLocalLocation();
+            if (lp == null) return;
+            WorldPoint wp = WorldPoint.fromLocalInstance(client, lp);
+            if (wp == null) return;
+            slot[0] = wp;
+            refreshCornerLabels.run();
+        };
+        captureA.addActionListener(e -> capture.accept(cornerA));
+        captureB.addActionListener(e -> capture.accept(cornerB));
+
+        JSpinner timeFromSpinner = new JSpinner(new SpinnerNumberModel(0.0, 0.0, 100000.0, 1.0));
+        JSpinner timeToSpinner = new JSpinner(new SpinnerNumberModel(100.0, 0.0, 100000.0, 1.0));
+        JSpinner stepMinSpinner = new JSpinner(new SpinnerNumberModel(2, 1, 1000, 1));
+        JSpinner stepMaxSpinner = new JSpinner(new SpinnerNumberModel(5, 1, 1000, 1));
+        JSpinner countMinSpinner = new JSpinner(new SpinnerNumberModel(1, 0, 100, 1));
+        JSpinner countMaxSpinner = new JSpinner(new SpinnerNumberModel(2, 0, 100, 1));
+        JSpinner shiftThresholdSpinner = new JSpinner(new SpinnerNumberModel(1.0, 0.0, 100000.0, 1.0));
+
+        JPanel form = new JPanel(new GridLayout(0, 2, 6, 6));
+        form.add(new JLabel("Source folder:"));
+        form.add(new JLabel(source.getName()));
+        form.add(new JLabel("Corner A:"));
+        form.add(captureA);
+        form.add(new JLabel("Corner B:"));
+        form.add(captureB);
+        form.add(new JLabel("Time window from (tick):"));
+        form.add(timeFromSpinner);
+        form.add(new JLabel("Time window to (tick):"));
+        form.add(timeToSpinner);
+        form.add(new JLabel("Step ticks (min):"));
+        form.add(stepMinSpinner);
+        form.add(new JLabel("Step ticks (max):"));
+        form.add(stepMaxSpinner);
+        form.add(new JLabel("Count per step (min):"));
+        form.add(countMinSpinner);
+        form.add(new JLabel("Count per step (max):"));
+        form.add(countMaxSpinner);
+        form.add(new JLabel("Shift only kfs at tick >="));
+        form.add(shiftThresholdSpinner);
+
+        JLabel hint = new JLabel("<html><i>Each step tick picks Count random tiles in the rectangle and stamps the folder there,<br>"
+                + "with keyframes (at tick &gt;= threshold) shifted by the step tick. Set threshold to 1 to<br>"
+                + "preserve a tick-0 baseline (e.g. spawn-Disable) across every stamp.</i></html>");
+        hint.setFont(hint.getFont().deriveFont(hint.getFont().getSize2D() - 1f));
+
+        JPanel content = new JPanel(new BorderLayout(0, 8));
+        content.add(form, BorderLayout.CENTER);
+        content.add(hint, BorderLayout.SOUTH);
+
+        int result = JOptionPane.showConfirmDialog(this, content,
+                "Random Hazard Grid -- source: " + source.getName(),
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result != JOptionPane.OK_OPTION) return;
+
+        if (cornerA[0] == null || cornerB[0] == null)
+        {
+            JOptionPane.showMessageDialog(this,
+                    "Capture BOTH corners (hover a tile, click the button) before running.",
+                    "Random Hazard Grid", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        double timeFrom = ((Number) timeFromSpinner.getValue()).doubleValue();
+        double timeTo = ((Number) timeToSpinner.getValue()).doubleValue();
+        int stepMin = ((Number) stepMinSpinner.getValue()).intValue();
+        int stepMax = ((Number) stepMaxSpinner.getValue()).intValue();
+        int countMin = ((Number) countMinSpinner.getValue()).intValue();
+        int countMax = ((Number) countMaxSpinner.getValue()).intValue();
+        double shiftThreshold = ((Number) shiftThresholdSpinner.getValue()).doubleValue();
+
+        if (timeTo < timeFrom) { double t = timeFrom; timeFrom = timeTo; timeTo = t; }
+        if (stepMin > stepMax) { int t = stepMin; stepMin = stepMax; stepMax = t; }
+        if (countMin > countMax) { int t = countMin; countMin = countMax; countMax = t; }
+
+        runRandomHazardGrid(source, cornerA[0], cornerB[0],
+                timeFrom, timeTo, stepMin, stepMax, countMin, countMax, shiftThreshold);
+    }
+
+    /**
+     * Executor for {@link #showRandomHazardGridDialog}. Walks the time
+     * axis from {@code timeFrom} to {@code timeTo}, at each tick rolling
+     * a random count K in [countMin, countMax] and stamping the folder K
+     * times at random tiles inside the rectangle, then advances by a
+     * random step in [stepMin, stepMax]. Each stamp's keyframes shift by
+     * the current step tick.
+     */
+    private void runRandomHazardGrid(Folder source,
+                                     WorldPoint cornerA, WorldPoint cornerB,
+                                     double timeFrom, double timeTo,
+                                     int stepMin, int stepMax,
+                                     int countMin, int countMax,
+                                     double shiftThreshold)
+    {
+        int minX = Math.min(cornerA.getX(), cornerB.getX());
+        int maxX = Math.max(cornerA.getX(), cornerB.getX());
+        int minY = Math.min(cornerA.getY(), cornerB.getY());
+        int maxY = Math.max(cornerA.getY(), cornerB.getY());
+        int plane = cornerA.getPlane();
+        if (cornerA.getPlane() != cornerB.getPlane())
+        {
+            // Mismatched planes -- not catastrophic but probably a mistake.
+            // Carry on with corner A's plane; user can see in chat what
+            // happened.
+            plugin.sendChatMessage("Random Hazard Grid: corners differ in plane (A=" + cornerA.getPlane()
+                    + ", B=" + cornerB.getPlane() + "). Using A's plane (" + plane + ").");
+        }
+
+        WorldView worldView = client.getTopLevelWorldView();
+        java.util.Random rng = new java.util.Random();
+        double tick = timeFrom;
+        int totalStamps = 0;
+        // Hard safety bound -- if step rolls 0 (shouldn't, min is 1) we'd
+        // loop forever; cap total stamps at 10k to protect against pathological
+        // params even at minute tick windows.
+        final int SAFETY = 10000;
+        while (tick <= timeTo && totalStamps < SAFETY)
+        {
+            int k = countMin == countMax ? countMin : countMin + rng.nextInt(countMax - countMin + 1);
+            for (int i = 0; i < k && totalStamps < SAFETY; i++)
+            {
+                int x = minX + rng.nextInt(maxX - minX + 1);
+                int y = minY + rng.nextInt(maxY - minY + 1);
+                WorldPoint target = new WorldPoint(x, y, plane);
+                Folder stamp = stampFolderAtTile(source, target, tick, shiftThreshold, worldView);
+                if (stamp != null) totalStamps++;
+            }
+            int step = stepMin == stepMax ? stepMin : stepMin + rng.nextInt(stepMax - stepMin + 1);
+            if (step <= 0) step = 1;
+            tick += step;
+        }
+
+        plugin.sendChatMessage("Random Hazard Grid: stamped " + totalStamps + " copies of folder '" + source.getName() + "'.");
+        if (totalStamps >= SAFETY)
+        {
+            JOptionPane.showMessageDialog(this,
+                    "Hit the " + SAFETY + "-stamp safety cap. Try smaller count-per-step or a shorter time window.",
+                    "Random Hazard Grid", JOptionPane.WARNING_MESSAGE);
+        }
+    }
+
+    /**
+     * Recursive worker behind {@link #stampFolderAtTile}. Walks every child
+     * of {@code srcNode}: Characters land in {@code dstFolderNode} at the
+     * tile offset, subfolders create matching sub-destination folders and
+     * recurse.
+     */
+    private void cloneFolderContents(DefaultMutableTreeNode srcNode, DefaultMutableTreeNode dstFolderNode,
+                                     int dx, int dy, int newPlane,
+                                     double timeOffset, double shiftThreshold,
+                                     ParentPanel parentPanel, WorldView worldView)
+    {
+        ManagerTree managerTree = toolBox.getManagerPanel().getManagerTree();
+        java.util.Enumeration<javax.swing.tree.TreeNode> children = srcNode.children();
+        while (children.hasMoreElements())
+        {
+            DefaultMutableTreeNode child = (DefaultMutableTreeNode) children.nextElement();
+            Object user = child.getUserObject();
+            if (user instanceof Character)
+            {
+                Character srcChar = (Character) user;
+                WorldPoint srcTile = srcChar.getNonInstancedPoint();
+                if (srcTile == null) continue;
+                int tx = srcTile.getX() + dx;
+                int ty = srcTile.getY() + dy;
+                String name = stripTrailingNumber(srcChar.getName()) + " (" + nextPasteCounter(srcChar) + ")";
+                spawnFillCopy(srcChar, name, tx, ty, newPlane, srcChar.isInPOH(),
+                        worldView, dstFolderNode, parentPanel, timeOffset, shiftThreshold);
+            }
+            else if (user instanceof Folder)
+            {
+                Folder srcSub = (Folder) user;
+                DefaultMutableTreeNode dstSubFolder = managerTree.addFolderNode(dstFolderNode, srcSub.getName());
+                cloneFolderContents(child, dstSubFolder, dx, dy, newPlane, timeOffset, shiftThreshold, parentPanel, worldView);
+            }
+        }
+    }
+
     /**
      * Returns the next available "(N)" index for paste-at-cursor naming, based
      * on existing Characters whose names already match the {base} (N) pattern.
@@ -1665,6 +2040,20 @@ public class CreatorsPanel extends PluginPanel
     private Character spawnFillCopy(Character source, String name, int targetTileX, int targetTileY, int plane, boolean inPOH,
                                @Nullable WorldView worldView, DefaultMutableTreeNode fillFolderNode, ParentPanel parentPanel)
     {
+        return spawnFillCopy(source, name, targetTileX, targetTileY, plane, inPOH, worldView, fillFolderNode, parentPanel, 0.0, 0.0);
+    }
+
+    /**
+     * Variant of spawnFillCopy that accepts a per-keyframe time shift.
+     * Used by the folder-stamp + Random Hazard Grid path so each stamped
+     * copy can advance its effect keyframes by the step tick atomically
+     * (one createCharacter call = one undo step). Pass timeOffset = 0 for
+     * the regular fill / paste-at-tile behaviour.
+     */
+    private Character spawnFillCopy(Character source, String name, int targetTileX, int targetTileY, int plane, boolean inPOH,
+                               @Nullable WorldView worldView, DefaultMutableTreeNode fillFolderNode, ParentPanel parentPanel,
+                               double timeOffset, double shiftThreshold)
+    {
         WorldPoint targetWorld;
         LocalPoint targetLocal;
         if (inPOH)
@@ -1716,7 +2105,7 @@ public class CreatorsPanel extends PluginPanel
                 (int) source.getAnimationSpinner().getValue(),
                 (int) source.getAnimationFrameSpinner().getValue(),
                 (int) source.getRadiusSpinner().getValue(),
-                duplicateKeyFrames(source),
+                duplicateKeyFrames(source, timeOffset, shiftThreshold),
                 summaryCopy,
                 getRandomColor(),
                 source.isActive(),

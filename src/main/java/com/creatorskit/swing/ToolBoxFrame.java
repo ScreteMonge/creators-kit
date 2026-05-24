@@ -508,6 +508,15 @@ public class ToolBoxFrame extends JFrame
         hideObjects.addActionListener(e -> plugin.showHideGameObjectsDialog());
         tools.add(hideObjects);
 
+        JMenuItem hazardGrid = new JMenuItem("Random Hazard Grid...");
+        hazardGrid.setToolTipText("<html>Stamps copies of a folder (the directly-selected one in the manager tree)<br>"
+                + "across a rectangular tile area, advancing the timeline step by step.<br>"
+                + "Each stamp clones every Character in the folder at a random tile and<br>"
+                + "shifts its keyframes by the step tick. Useful for randomised choreographed<br>"
+                + "effects like ground-hazard grids in boss simulations.</html>");
+        hazardGrid.addActionListener(e -> plugin.getCreatorsPanel().showRandomHazardGridDialog());
+        tools.add(hazardGrid);
+
         // A-B Loop submenu -- vertical markers on the timeline that loop
         // playback between them. The markers can also be removed via X
         // buttons drawn on the marker chips themselves (Premiere-style).

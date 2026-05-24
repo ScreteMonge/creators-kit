@@ -2243,8 +2243,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	 */
 	private void paintAtCurrentHoveredTile()
 	{
-		Character source = getSelectedCharacter();
-		if (source == null) return;
 		WorldView worldView = client.getTopLevelWorldView();
 		if (worldView == null) return;
 		net.runelite.api.Tile tile = worldView.getSelectedSceneTile();
@@ -2259,6 +2257,25 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			// a wiggle inside a single tile doesn't pile up copies.
 			return;
 		}
+
+		// Folder clipboard takes priority -- if the user CTRL+C'd a folder,
+		// CTRL+V drag stamps the whole folder at every new hovered tile,
+		// using the folder's first descendant Character as the pivot. Falls
+		// back to the existing per-Character paint when the folder clipboard
+		// is empty.
+		java.util.List<com.creatorskit.swing.manager.Folder> folderClip =
+				creatorsPanel.getToolBox().getManagerPanel().getManagerTree().getFolderClipboard();
+		if (!folderClip.isEmpty())
+		{
+			for (com.creatorskit.swing.manager.Folder f : folderClip)
+			{
+				creatorsPanel.stampFolderAtTile(f, wp, 0.0, 0.0, worldView);
+			}
+			return;
+		}
+
+		Character source = getSelectedCharacter();
+		if (source == null) return;
 		creatorsPanel.pasteCharacterAtTile(source, wp.getX(), wp.getY(), wp.getPlane(), false, worldView);
 	}
 

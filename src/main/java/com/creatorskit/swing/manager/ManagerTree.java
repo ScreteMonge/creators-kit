@@ -154,35 +154,85 @@ public class ManagerTree extends JTree
     private final java.util.List<Character> characterClipboard = new ArrayList<>();
 
     /**
-     * CTRL+C entry point. Snapshots the current selection into the clipboard;
-     * the original Characters stay selected. No-op when selection is empty.
+     * Parallel clipboard for FOLDER entries. Same live-reference design as
+     * the character clipboard, separate field so a CTRL+C on a folder doesn't
+     * wipe a previously-copied set of Characters and vice versa. CTRL+V
+     * pastes both lists if both are populated; in practice the user almost
+     * always copies just one kind at a time.
      */
-    public void copySelectionToClipboard()
+    private final java.util.List<Folder> folderClipboard = new ArrayList<>();
+
+    /**
+     * Read-only view used by world-paste-drag (CreatorsPlugin.paintAtCurrentHoveredTile)
+     * to decide whether the held CTRL+V should stamp folders at the cursor
+     * tile vs paint the selected Character. Empty list = no folders queued.
+     */
+    public java.util.List<Folder> getFolderClipboard()
     {
-        java.util.Set<Character> selected = selectionManager.getSelected();
-        if (selected.isEmpty()) return;
-        characterClipboard.clear();
-        characterClipboard.addAll(selected);
+        return java.util.Collections.unmodifiableList(folderClipboard);
     }
 
     /**
-     * CTRL+V entry point. Duplicates every clipboard entry in-place (under
-     * its own folder, at its own tile) and replaces the selection with the
-     * new copies. Multiple consecutive pastes stack additional duplicates
-     * (each with its own incrementing "(N)" suffix from nextPasteCounter).
+     * CTRL+C entry point. Snapshots the current selection into the clipboards.
+     * Folders that were DIRECTLY clicked land in folderClipboard; Characters
+     * in characterClipboard. Folders take priority -- when both are present
+     * in the tree selection (e.g. user CTRL-clicked a folder and a stray
+     * Character) only the folder ends up on the clipboard, since the
+     * inferred-parent fallback in ManagerTree's TreeSelectionListener would
+     * otherwise stuff the Character's whole parent folder onto the list as
+     * a surprise.
+     */
+    public void copySelectionToClipboard()
+    {
+        Folder[] folders = getDirectlySelectedFolders();
+        characterClipboard.clear();
+        folderClipboard.clear();
+        if (folders.length > 0)
+        {
+            for (Folder f : folders) folderClipboard.add(f);
+            return;
+        }
+        java.util.Set<Character> selected = selectionManager.getSelected();
+        if (!selected.isEmpty())
+        {
+            characterClipboard.addAll(selected);
+        }
+    }
+
+    /**
+     * CTRL+V entry point. Duplicates every clipboard entry in-place (folders
+     * stamped at their own pivot tile, characters at their own tile) and --
+     * for the character case -- replaces the selection with the new copies.
+     * Folder pastes leave the source folder selected so chained CTRL+V keeps
+     * stamping from the same source.
      */
     public void pasteFromClipboard()
     {
+        if (!folderClipboard.isEmpty())
+        {
+            for (Folder f : folderClipboard)
+            {
+                plugin.getCreatorsPanel().stampFolderInPlace(f);
+            }
+            return;
+        }
         if (characterClipboard.isEmpty()) return;
         plugin.getCreatorsPanel().duplicateCharactersInPlace(characterClipboard);
     }
 
     /**
      * CTRL+D entry point. Equivalent to copy + paste in one shot, but doesn't
-     * touch the clipboard so a previous CTRL+C target is preserved.
+     * touch the clipboard so a previous CTRL+C target is preserved. Folders
+     * take priority over Characters when both are part of the tree selection.
      */
     public void duplicateSelectionInPlace()
     {
+        Folder[] folders = getDirectlySelectedFolders();
+        if (folders.length > 0)
+        {
+            for (Folder f : folders) plugin.getCreatorsPanel().stampFolderInPlace(f);
+            return;
+        }
         java.util.Set<Character> selected = selectionManager.getSelected();
         if (selected.isEmpty()) return;
         plugin.getCreatorsPanel().duplicateCharactersInPlace(selected);
@@ -1196,6 +1246,37 @@ public class ManagerTree extends JTree
         rename.setToolTipText("Edit this folder's display name.");
         rename.addActionListener(e -> promptRenameFolder(folderNode, folder));
         popup.add(rename);
+
+        popup.addSeparator();
+
+        // Folder Copy/Paste/Duplicate -- mirror the Character context menu.
+        // CTRL+C / CTRL+V / CTRL+D do the same thing through tree key
+        // bindings; the menu items just make it discoverable and show the
+        // accelerator next to the label.
+        JMenuItem copyItem = new JMenuItem("Copy");
+        copyItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_C,
+                java.awt.event.InputEvent.CTRL_DOWN_MASK));
+        copyItem.setToolTipText("Copy this folder (and every descendant Character) to the clipboard. CTRL+V drag in the world stamps copies at the cursor.");
+        copyItem.addActionListener(e -> copySelectionToClipboard());
+        popup.add(copyItem);
+
+        JMenuItem pasteItem = new JMenuItem("Paste");
+        pasteItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_V,
+                java.awt.event.InputEvent.CTRL_DOWN_MASK));
+        boolean clipboardEmpty = folderClipboard.isEmpty() && characterClipboard.isEmpty();
+        pasteItem.setEnabled(!clipboardEmpty);
+        pasteItem.setToolTipText(clipboardEmpty
+                ? "Nothing on the clipboard -- copy a folder or Character first."
+                : "Paste from the clipboard. Folders stamp as new siblings at the source folder's tiles.");
+        pasteItem.addActionListener(e -> pasteFromClipboard());
+        popup.add(pasteItem);
+
+        JMenuItem duplicateItem = new JMenuItem("Duplicate");
+        duplicateItem.setAccelerator(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_D,
+                java.awt.event.InputEvent.CTRL_DOWN_MASK));
+        duplicateItem.setToolTipText("Create an in-place stamp of this folder (same tiles, every Character cloned).");
+        duplicateItem.addActionListener(e -> plugin.getCreatorsPanel().stampFolderInPlace(folder));
+        popup.add(duplicateItem);
 
         popup.addSeparator();
 
