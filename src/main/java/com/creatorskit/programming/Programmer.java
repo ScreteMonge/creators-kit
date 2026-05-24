@@ -382,6 +382,17 @@ public class Programmer
      * exists in the scene, snap the source's orientation to face it. Combat-style
      * "turn before attacking" — applied per tick so the source tracks a moving target.
      */
+    /**
+     * Per-keyframe throttle for the ambiguous-face-target chat warning.
+     * Without this, applyFaceTarget would fire one chat line per render
+     * frame (60+ Hz) the moment the user lands on a dupe name -- enough
+     * to fill the chat log instantly and contribute to the freeze symptom.
+     * WeakHashMap so deleted kfs don't pin memory; the value records the
+     * last name we warned about so re-typing the same dupe doesn't re-spam,
+     * but switching to a different ambiguous name does fire a fresh warn.
+     */
+    private final java.util.WeakHashMap<OrientationKeyFrame, String> lastAmbiguousFaceTargetWarn = new java.util.WeakHashMap<>();
+
     private void applyFaceTarget(Character source, OrientationKeyFrame oriKeyFrame)
     {
         if (oriKeyFrame == null)
@@ -393,6 +404,45 @@ public class Programmer
         {
             return;
         }
+
+        // Ambiguity guard: refuse to apply when the name resolves to more
+        // than one Character, OR when it collides with a Folder of the same
+        // name. The lookup itself only walks Characters (findCharacterByName)
+        // so a folder match isn't a functional ambiguity -- but the user
+        // can't tell that from the field, and a same-named folder is a
+        // strong signal they probably meant something else (e.g. f[Folder]
+        // multi-target syntax on Projectile). Better to surface it than to
+        // silently snap to the first Character that happens to share the
+        // name.
+        int charCount = 0;
+        for (Character c : plugin.getCharacters())
+        {
+            if (targetName.equals(c.getName())) charCount++;
+        }
+        boolean folderClash = folderNameExists(targetName);
+        if (charCount > 1 || (charCount >= 1 && folderClash))
+        {
+            String prev = lastAmbiguousFaceTargetWarn.get(oriKeyFrame);
+            if (!targetName.equals(prev))
+            {
+                StringBuilder msg = new StringBuilder();
+                msg.append("Orientation Face target \"").append(targetName).append("\" is ambiguous: ");
+                if (charCount > 1) msg.append(charCount).append(" Characters share that name");
+                if (charCount > 1 && folderClash) msg.append(" and ");
+                if (folderClash) msg.append("a Folder also matches");
+                msg.append(". Rename one of them so the lookup is unique, or use a unique Character name. Face target ignored until resolved.");
+                plugin.sendChatMessage(msg.toString());
+                lastAmbiguousFaceTargetWarn.put(oriKeyFrame, targetName);
+            }
+            return;
+        }
+        // Name became unambiguous (rename, or user edited the field) --
+        // clear the cache so a future ambiguity on the same kf re-warns.
+        if (charCount <= 1 && !folderClash)
+        {
+            lastAmbiguousFaceTargetWarn.remove(oriKeyFrame);
+        }
+
         Character target = findCharacterByName(targetName);
         if (target == null || target == source)
         {
@@ -429,6 +479,31 @@ public class Programmer
             }
         }
         return null;
+    }
+
+    /**
+     * Returns true if any Folder in the manager tree carries this name
+     * (case-sensitive to match the Character lookup). Walks the tree once;
+     * the cost is fine at render frequency since folder counts are typically
+     * dozens, not thousands.
+     */
+    private boolean folderNameExists(String name)
+    {
+        if (name == null) return false;
+        com.creatorskit.swing.manager.ManagerTree tree = plugin.getCreatorsPanel().getToolBox().getManagerPanel().getManagerTree();
+        javax.swing.tree.DefaultMutableTreeNode root = tree.getRootNode();
+        java.util.ArrayList<javax.swing.tree.DefaultMutableTreeNode> all = new java.util.ArrayList<>();
+        tree.getAllNodes(root, all);
+        for (javax.swing.tree.DefaultMutableTreeNode node : all)
+        {
+            Object u = node.getUserObject();
+            if (u instanceof com.creatorskit.swing.manager.Folder
+                    && name.equals(((com.creatorskit.swing.manager.Folder) u).getName()))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private OrientationInstruction findLastOrientation(MovementKeyFrame mkf, OrientationKeyFrame okf, double clientTicksForCurrentTime)
