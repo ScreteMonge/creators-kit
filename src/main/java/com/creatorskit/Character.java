@@ -509,33 +509,130 @@ public class Character
     }
 
     /**
-     * Movement-independent "start" angle for an OrientationKeyFrame's
-     * interpolation. Returns the end angle of the closest prior orientation
-     * kf (by tick), or the Character's idle orientation spinner value if
-     * there isn't one. Never reads ckObject.getOrientation().
+     * "Start" angle snapshot for an OrientationKeyFrame's interpolation.
+     * Picks whichever of (latest prior orientation kf, latest prior movement
+     * kf) ENDED LATER as the reference -- because that's whatever was last
+     * actively driving the character's rotation, so it's where the character
+     * is sitting now.
+     *
+     * <p>"Ended last" vs "started last": two sources can start at the same
+     * tick (e.g. a 5-tick movement and a 3-tick orientation kf both at tick
+     * 0). "Started last" is ambiguous there. "Ended last" picks Movement
+     * (ends at tick 5) over the prior orientation (ends at tick 3) -- and
+     * Movement's auto-orient is the more recent driver of the character's
+     * rotation at any tick after 3, so its final-segment direction is the
+     * honest snapshot.
+     *
+     * <p>Reference value:
+     * <ul>
+     *   <li>Prior orientation kf wins -&gt; its {@code end} angle.</li>
+     *   <li>Prior movement kf wins -&gt; the angle of its last path segment
+     *     (path[length-2] -&gt; path[length-1]), which is what Movement's
+     *     auto-orient settled on when the path completed.</li>
+     *   <li>Neither exists -&gt; the Character's idle orientation spinner.</li>
+     * </ul>
+     *
+     * <p>Never reads ckObject.getOrientation() -- the live ckObject value
+     * can be mid-interpolation, mid-face-target snap, or otherwise
+     * transient, so going to the keyframe data directly keeps the start
+     * stable across scrub / pause / play.
      */
     private int computeOrientationStartFor(OrientationKeyFrame newKf)
     {
-        OrientationKeyFrame priorKf = null;
-        KeyFrame[] all = getKeyFrames(KeyFrameType.ORIENTATION);
-        if (all != null)
+        double newKfTick = newKf.getTick();
+
+        OrientationKeyFrame priorOri = null;
+        KeyFrame[] oris = getKeyFrames(KeyFrameType.ORIENTATION);
+        if (oris != null)
         {
-            for (KeyFrame kf : all)
+            for (KeyFrame kf : oris)
             {
                 if (kf == null || kf == newKf) continue;
-                if (kf.getTick() < newKf.getTick())
+                if (kf.getTick() < newKfTick
+                        && (priorOri == null || kf.getTick() > priorOri.getTick()))
                 {
-                    if (priorKf == null || kf.getTick() > priorKf.getTick())
-                    {
-                        priorKf = (OrientationKeyFrame) kf;
-                    }
+                    priorOri = (OrientationKeyFrame) kf;
                 }
             }
         }
-        if (priorKf != null)
+
+        MovementKeyFrame priorMkf = null;
+        KeyFrame[] mkfs = getKeyFrames(KeyFrameType.MOVEMENT);
+        if (mkfs != null)
         {
-            return priorKf.getEnd();
+            for (KeyFrame kf : mkfs)
+            {
+                if (kf == null) continue;
+                if (kf.getTick() < newKfTick
+                        && (priorMkf == null || kf.getTick() > priorMkf.getTick()))
+                {
+                    priorMkf = (MovementKeyFrame) kf;
+                }
+            }
         }
+
+        double oriEnd = priorOri == null
+                ? Double.NEGATIVE_INFINITY
+                : priorOri.getTick() + priorOri.getDuration();
+        double mkfEnd = Double.NEGATIVE_INFINITY;
+        if (priorMkf != null
+                && priorMkf.getPath() != null
+                && priorMkf.getPath().length >= 2
+                && priorMkf.getSpeed() > 0)
+        {
+            // Path completes when the character finishes walking the last
+            // segment. (path.length - 1) transitions at "speed tiles per
+            // game tick" = (length - 1) / speed game ticks of duration.
+            double pathDur = (priorMkf.getPath().length - 1) / priorMkf.getSpeed();
+            mkfEnd = priorMkf.getTick() + pathDur;
+        }
+
+        if (priorOri == null && priorMkf == null)
+        {
+            return idleOrientationFromSpinner();
+        }
+        // Whichever ENDED later -- that's the more recent driver of the
+        // character's rotation, so its final value is the snapshot.
+        // Tie goes to ori for backward compatibility with the prior
+        // ori-only behaviour.
+        if (priorMkf != null && mkfEnd > oriEnd)
+        {
+            return movementFinalDirection(priorMkf);
+        }
+        if (priorOri != null)
+        {
+            return priorOri.getEnd();
+        }
+        // Movement existed but had no valid final-direction (single-tile
+        // path or zero speed). Fall through to spinner.
+        return idleOrientationFromSpinner();
+    }
+
+    /**
+     * Direction angle of the movement kf's final segment -- where its
+     * auto-orient leaves the character pointing once the path is fully
+     * walked. Returns the idle spinner value when the path is too short
+     * to define a direction (length &lt; 2).
+     */
+    private int movementFinalDirection(MovementKeyFrame mkf)
+    {
+        int[][] path = mkf.getPath();
+        if (path == null || path.length < 2) return idleOrientationFromSpinner();
+        int[] last = path[path.length - 1];
+        int[] secondLast = path[path.length - 2];
+        if (last == null || secondLast == null || last.length < 2 || secondLast.length < 2)
+        {
+            return idleOrientationFromSpinner();
+        }
+        double dx = last[0] - secondLast[0];
+        double dy = last[1] - secondLast[1];
+        if (dx == 0 && dy == 0) return idleOrientationFromSpinner();
+        return (int) com.creatorskit.programming.orientation.Orientation
+                .radiansToJAngle(Math.atan(dy / dx), dx, dy);
+    }
+
+    private int idleOrientationFromSpinner()
+    {
         if (orientationSpinner != null)
         {
             Object v = orientationSpinner.getValue();
