@@ -575,37 +575,51 @@ public class Character
                 ? Double.NEGATIVE_INFINITY
                 : priorOri.getTick() + priorOri.getDuration();
         double mkfEnd = Double.NEGATIVE_INFINITY;
-        if (priorMkf != null
+        boolean mkfUsable = priorMkf != null
                 && priorMkf.getPath() != null
                 && priorMkf.getPath().length >= 2
-                && priorMkf.getSpeed() > 0)
+                && priorMkf.getSpeed() > 0;
+        if (mkfUsable)
         {
-            // Path completes when the character finishes walking the last
-            // segment. (path.length - 1) transitions at "speed tiles per
-            // game tick" = (length - 1) / speed game ticks of duration.
-            double pathDur = (priorMkf.getPath().length - 1) / priorMkf.getSpeed();
+            // Match Programmer.findLastOrientation's pathDuration formula
+            // (Math.ceil((length - 1) / speed)) so the "end tick" computed
+            // here lines up exactly with the play-loop's notion of when
+            // movement finishes. Without ceil, fractional speeds make this
+            // value slightly less than the play loop's, so the tie check
+            // below can fire "true tie" when one side thinks they're
+            // tied and the other thinks movement ends later.
+            double pathDur = Math.ceil((priorMkf.getPath().length - 1) / priorMkf.getSpeed());
             mkfEnd = priorMkf.getTick() + pathDur;
         }
 
-        if (priorOri == null && priorMkf == null)
+        // No candidates -> idle spinner.
+        if (priorOri == null && !mkfUsable)
         {
             return idleOrientationFromSpinner();
         }
-        // Whichever ENDED later -- that's the more recent driver of the
-        // character's rotation, so its final value is the snapshot.
-        // Tie goes to ori for backward compatibility with the prior
-        // ori-only behaviour.
-        if (priorMkf != null && mkfEnd > oriEnd)
-        {
-            return movementFinalDirection(priorMkf);
-        }
-        if (priorOri != null)
+        // Only one candidate -> use it.
+        if (!mkfUsable)
         {
             return priorOri.getEnd();
         }
-        // Movement existed but had no valid final-direction (single-tile
-        // path or zero speed). Fall through to spinner.
-        return idleOrientationFromSpinner();
+        if (priorOri == null)
+        {
+            return movementFinalDirection(priorMkf);
+        }
+        // Both candidates exist. Whichever ENDED LATER is the more recent
+        // driver of rotation, so its final value is the snapshot.
+        //
+        // TIE-BREAKER: when end ticks are equal, orientation wins. The
+        // user explicitly authored an orientation kf to override what
+        // would otherwise be movement's auto-orient, so a tied-end means
+        // the user said "this orientation runs to the end of movement";
+        // honour that by snapshotting the ori's end angle, not the
+        // movement's final-segment direction.
+        if (mkfEnd > oriEnd)
+        {
+            return movementFinalDirection(priorMkf);
+        }
+        return priorOri.getEnd();
     }
 
     /**
