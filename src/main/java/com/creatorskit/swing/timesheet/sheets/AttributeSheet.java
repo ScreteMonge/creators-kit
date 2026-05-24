@@ -323,7 +323,13 @@ public class AttributeSheet extends TimeSheet
                         break;
                     case ORIENTATION:
                         OrientationKeyFrame okf = (OrientationKeyFrame) keyFrame;
-                        drawTail(g, e, keyFrames, okf.getDuration(), zoomFactor, okf.getTick(), x, y, imageHeight);
+                        // Face Target tracks indefinitely -- no fixed end-of-effect
+                        // tick, so don't draw a misleading finite tail. Duration on
+                        // a face-target kf governs the initial-turn ramp only.
+                        if (okf.getTargetCharacterName() == null || okf.getTargetCharacterName().isEmpty())
+                        {
+                            drawTail(g, e, keyFrames, okf.getDuration(), zoomFactor, okf.getTick(), x, y, imageHeight);
+                        }
                         break;
                     case TEXT:
                         TextKeyFrame tkf = (TextKeyFrame) keyFrame;
@@ -482,7 +488,10 @@ public class AttributeSheet extends TimeSheet
                     break;
                 case ORIENTATION:
                     OrientationKeyFrame okf = (OrientationKeyFrame) keyFrame;
-                    drawPreviewTail(g, x, y, imageHeight, okf.getDuration(), zoomFactor);
+                    if (okf.getTargetCharacterName() == null || okf.getTargetCharacterName().isEmpty())
+                    {
+                        drawPreviewTail(g, x, y, imageHeight, okf.getDuration(), zoomFactor);
+                    }
                     break;
                 case TEXT:
                     TextKeyFrame tkf = (TextKeyFrame) keyFrame;

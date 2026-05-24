@@ -250,7 +250,10 @@ public class SummarySheet extends TimeSheet
                     break;
                 case ORIENTATION:
                     OrientationKeyFrame okf = (OrientationKeyFrame) keyFrame;
-                    drawTail(g, e, keyFrames, okf.getDuration(), zoomFactor, okf.getTick(), x, y, xStringOffset, stringHeight);
+                    if (okf.getTargetCharacterName() == null || okf.getTargetCharacterName().isEmpty())
+                    {
+                        drawTail(g, e, keyFrames, okf.getDuration(), zoomFactor, okf.getTick(), x, y, xStringOffset, stringHeight);
+                    }
                     break;
                 case TEXT:
                     TextKeyFrame tkf = (TextKeyFrame) keyFrame;
