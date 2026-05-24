@@ -393,6 +393,34 @@ public class Programmer
      */
     private final java.util.WeakHashMap<OrientationKeyFrame, String> lastAmbiguousFaceTargetWarn = new java.util.WeakHashMap<>();
 
+    /**
+     * Per-keyframe cache of the ambiguity-resolution work. applyFaceTarget
+     * runs once per Character per ClientTick during play; the original
+     * implementation paid an O(characters) + O(tree-nodes) cost EVERY
+     * call. On a heavy scene (hazard-grid stamping creates hundreds of
+     * Characters and folders) that compounded to enough work per tick
+     * to lock up the client thread within a few seconds of play.
+     *
+     * <p>Cache invalidates on (a) the target name changing -- new kf or
+     * user-edited name -- OR (b) age &gt; {@link #AMBIGUITY_CACHE_TTL_MS}.
+     * The TTL accounts for the user adding / removing Characters or
+     * Folders between renders without us hooking every mutation point.
+     */
+    private static final class FaceTargetAmbiguityCache
+    {
+        final String name;
+        final boolean ambiguous;
+        final int charCount;
+        final boolean folderClash;
+        final long computedAtMs;
+        FaceTargetAmbiguityCache(String n, boolean amb, int cc, boolean fc, long t)
+        {
+            this.name = n; this.ambiguous = amb; this.charCount = cc; this.folderClash = fc; this.computedAtMs = t;
+        }
+    }
+    private static final long AMBIGUITY_CACHE_TTL_MS = 5000;
+    private final java.util.WeakHashMap<OrientationKeyFrame, FaceTargetAmbiguityCache> faceTargetAmbiguityCache = new java.util.WeakHashMap<>();
+
     private void applyFaceTarget(Character source, OrientationKeyFrame oriKeyFrame)
     {
         if (oriKeyFrame == null)
@@ -407,29 +435,41 @@ public class Programmer
 
         // Ambiguity guard: refuse to apply when the name resolves to more
         // than one Character, OR when it collides with a Folder of the same
-        // name. The lookup itself only walks Characters (findCharacterByName)
-        // so a folder match isn't a functional ambiguity -- but the user
-        // can't tell that from the field, and a same-named folder is a
-        // strong signal they probably meant something else (e.g. f[Folder]
-        // multi-target syntax on Projectile). Better to surface it than to
-        // silently snap to the first Character that happens to share the
-        // name.
-        int charCount = 0;
-        for (Character c : plugin.getCharacters())
+        // name. The expensive part (character iteration + tree walk) is
+        // cached per-kf for AMBIGUITY_CACHE_TTL_MS so the per-render hot
+        // path is O(1) after the first hit, with the cache invalidating
+        // on name change OR age.
+        long now = System.currentTimeMillis();
+        FaceTargetAmbiguityCache cache = faceTargetAmbiguityCache.get(oriKeyFrame);
+        boolean stale = cache == null
+                || !targetName.equals(cache.name)
+                || (now - cache.computedAtMs) > AMBIGUITY_CACHE_TTL_MS;
+        if (stale)
         {
-            if (targetName.equals(c.getName())) charCount++;
+            int charCount = 0;
+            for (Character c : plugin.getCharacters())
+            {
+                if (targetName.equals(c.getName())) charCount++;
+            }
+            // Folder walk is the most expensive operation -- skip it when
+            // we already know the lookup will return null (no Character
+            // match means no apply regardless of folder state).
+            boolean folderClash = charCount >= 1 && folderNameExists(targetName);
+            boolean ambiguous = charCount > 1 || (charCount >= 1 && folderClash);
+            cache = new FaceTargetAmbiguityCache(targetName, ambiguous, charCount, folderClash, now);
+            faceTargetAmbiguityCache.put(oriKeyFrame, cache);
         }
-        boolean folderClash = folderNameExists(targetName);
-        if (charCount > 1 || (charCount >= 1 && folderClash))
+
+        if (cache.ambiguous)
         {
             String prev = lastAmbiguousFaceTargetWarn.get(oriKeyFrame);
             if (!targetName.equals(prev))
             {
                 StringBuilder msg = new StringBuilder();
                 msg.append("Orientation Face target \"").append(targetName).append("\" is ambiguous: ");
-                if (charCount > 1) msg.append(charCount).append(" Characters share that name");
-                if (charCount > 1 && folderClash) msg.append(" and ");
-                if (folderClash) msg.append("a Folder also matches");
+                if (cache.charCount > 1) msg.append(cache.charCount).append(" Characters share that name");
+                if (cache.charCount > 1 && cache.folderClash) msg.append(" and ");
+                if (cache.folderClash) msg.append("a Folder also matches");
                 msg.append(". Rename one of them so the lookup is unique, or use a unique Character name. Face target ignored until resolved.");
                 plugin.sendChatMessage(msg.toString());
                 lastAmbiguousFaceTargetWarn.put(oriKeyFrame, targetName);
@@ -438,10 +478,7 @@ public class Programmer
         }
         // Name became unambiguous (rename, or user edited the field) --
         // clear the cache so a future ambiguity on the same kf re-warns.
-        if (charCount <= 1 && !folderClash)
-        {
-            lastAmbiguousFaceTargetWarn.remove(oriKeyFrame);
-        }
+        lastAmbiguousFaceTargetWarn.remove(oriKeyFrame);
 
         Character target = findCharacterByName(targetName);
         if (target == null || target == source)
