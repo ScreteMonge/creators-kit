@@ -4901,6 +4901,171 @@ public class TimeSheetPanel extends JPanel
     }
 
     /**
+     * Tools > Repeat selection... -- pastes N copies of the currently
+     * selected keyframes contiguously after the existing block, each
+     * separated by a configurable {@code gap}. Counterpart to Scatter
+     * when the user wants a regular cadence instead of a random spread.
+     *
+     * <p>Block span = max(endTick) - min(tick) across the selection,
+     * where {@code endTick} accounts for the per-keyframe duration
+     * concept of each type (Hitsplat / Projectile / Shield / Special /
+     * Colour all carry an explicit duration; everything else uses just
+     * the tick). The i-th copy lands at {@code originalTick + i * (span + gap)}
+     * so copy 1 starts exactly at the original block's duration line
+     * with gap=0, or {@code gap} ticks after with gap>0.
+     *
+     * <p>Multi-Character aware: each kf's copy goes to its own owner.
+     * Originals stay in place; only the new copies are added. Same-tick
+     * displacement is allowed (matches addKeyFrame semantics) so e.g. a
+     * single kf with no duration repeated at gap=0 would overwrite
+     * itself, but that's a degenerate case the dialog guards against
+     * up front (span + gap must be > 0).
+     */
+    public void showRepeatSelectionDialog()
+    {
+        if (selectedKeyFrames == null || selectedKeyFrames.length == 0)
+        {
+            JOptionPane.showMessageDialog(this,
+                    "No keyframes selected. Marquee or click keyframes first.",
+                    "Repeat selection", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        JSpinner repeatSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 1000, 1));
+        JSpinner gapSpinner = new JSpinner(new SpinnerNumberModel(0.0, 0.0, ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.5));
+
+        JPanel panel = new JPanel(new GridLayout(0, 2, 6, 6));
+        panel.add(new JLabel("Repeat times (N):"));
+        panel.add(repeatSpinner);
+        panel.add(new JLabel("Gap between copies (M ticks):"));
+        panel.add(gapSpinner);
+
+        // Pre-compute the block span to show the user what their copies will
+        // actually look like before they commit. Cheap walk; selection sizes
+        // are bounded by what's drawn on screen.
+        double previewStart = Double.POSITIVE_INFINITY;
+        double previewEnd = Double.NEGATIVE_INFINITY;
+        for (KeyFrame kf : selectedKeyFrames)
+        {
+            if (kf == null) continue;
+            if (kf.getTick() < previewStart) previewStart = kf.getTick();
+            double end = repeatEndTickOf(kf);
+            if (end > previewEnd) previewEnd = end;
+        }
+        double previewSpan = previewEnd - previewStart;
+        JLabel hint = new JLabel(String.format(
+                "<html><i>Block: tick %.1f -> %.1f (span %.1f). Each copy = span + gap apart.</i></html>",
+                previewStart, previewEnd, previewSpan));
+        hint.setFont(hint.getFont().deriveFont(hint.getFont().getSize2D() - 1f));
+        JPanel content = new JPanel(new BorderLayout(0, 6));
+        content.add(panel, BorderLayout.CENTER);
+        content.add(hint, BorderLayout.SOUTH);
+
+        int choice = JOptionPane.showConfirmDialog(this, content,
+                "Repeat " + selectedKeyFrames.length + " keyframes",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (choice != JOptionPane.OK_OPTION) return;
+
+        int repeats = ((Number) repeatSpinner.getValue()).intValue();
+        double gap = ((Number) gapSpinner.getValue()).doubleValue();
+        if (repeats < 1) return;
+
+        double blockSpan = previewSpan;
+        if (blockSpan + gap <= 0)
+        {
+            JOptionPane.showMessageDialog(this,
+                    "Block span is 0 (single tick selection) and gap is 0 -- every copy would land on the original. Set a gap > 0 to space them out.",
+                    "Repeat selection", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Snapshot owners BEFORE any mutation. findKeyFrameOwner scans the
+        // owner's frames, so it would return null after addKeyFrame's
+        // same-tick-displace logic potentially removed a referenced kf
+        // mid-batch. Identity-keyed map is enough since the original
+        // selection holds object refs we control.
+        java.util.IdentityHashMap<KeyFrame, Character> kfOwner = new java.util.IdentityHashMap<>();
+        for (KeyFrame kf : selectedKeyFrames)
+        {
+            if (kf == null) continue;
+            Character owner = findKeyFrameOwner(kf);
+            if (owner != null) kfOwner.put(kf, owner);
+        }
+
+        KeyFrameAction[] kfa = new KeyFrameAction[0];
+        java.util.List<KeyFrame> newSelected = new ArrayList<>();
+        // Keep the originals in the post-op selection so a follow-up
+        // operation operates on "everything I just had + the new copies"
+        // -- matches the "I see what I made" expectation rather than
+        // dropping the selection.
+        for (KeyFrame kf : selectedKeyFrames) if (kf != null) newSelected.add(kf);
+
+        for (int i = 1; i <= repeats; i++)
+        {
+            double offset = i * (blockSpan + gap);
+            for (KeyFrame kf : selectedKeyFrames)
+            {
+                if (kf == null) continue;
+                Character owner = kfOwner.get(kf);
+                if (owner == null) continue;
+                double newTick = round(kf.getTick() + offset);
+                KeyFrame replacement = KeyFrame.createCopy(kf, newTick);
+                KeyFrame displaced = owner.addKeyFrame(replacement, currentTime);
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replacement, owner, KeyFrameCharacterActionType.ADD));
+                if (displaced != null && displaced != replacement)
+                {
+                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(displaced, owner, KeyFrameCharacterActionType.REMOVE));
+                }
+                newSelected.add(replacement);
+            }
+        }
+
+        finalizeTickTransform(kfa, newSelected.toArray(new KeyFrame[0]));
+    }
+
+    /**
+     * Returns the "duration line" tick of {@code kf} -- its tick plus
+     * whatever per-type duration concept it carries. Mirrors the tail-
+     * rendering logic in AttributeSheet / SummarySheet so what the user
+     * sees on the timeline matches what Repeat treats as the block end.
+     *
+     * <p>Types without a duration (Animation, Movement, Spawn, etc.)
+     * return just the tick. Movement's per-tile travel is a special case
+     * we don't model here -- block-end based on the kf object alone is
+     * the predictable contract; users can pad with the gap if their
+     * Movement tail extends beyond.
+     */
+    private static double repeatEndTickOf(KeyFrame kf)
+    {
+        if (kf == null) return 0;
+        double tick = kf.getTick();
+        if (kf instanceof HitsplatKeyFrame)
+        {
+            double d = ((HitsplatKeyFrame) kf).getDuration();
+            if (d == -1) d = HitsplatKeyFrame.DEFAULT_DURATION;
+            return tick + d;
+        }
+        if (kf instanceof ProjectileKeyFrame)
+        {
+            return tick + ((ProjectileKeyFrame) kf).getDurationTicks();
+        }
+        if (kf instanceof ShieldKeyFrame)
+        {
+            return tick + ((ShieldKeyFrame) kf).getDuration();
+        }
+        if (kf instanceof SpecialKeyFrame)
+        {
+            return tick + ((SpecialKeyFrame) kf).getDuration();
+        }
+        if (kf instanceof ColourKeyFrame)
+        {
+            ColourKeyFrame ckf = (ColourKeyFrame) kf;
+            return tick + ckf.getFadeInTicks() + ckf.getHoldTicks() + ckf.getFadeOutTicks();
+        }
+        return tick;
+    }
+
+    /**
      * Shifts every per-Character keyframe with {@code tick > currentTime}
      * forward by {@code amount} on every target from {@link #resolveSelectionTargets},
      * plus the same shift on global keyframes (Camera / Fade / Shake) in

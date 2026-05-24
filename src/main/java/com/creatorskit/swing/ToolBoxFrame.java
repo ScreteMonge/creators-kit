@@ -489,6 +489,17 @@ public class ToolBoxFrame extends JFrame
         rippleInsert.addActionListener(e -> timeSheetPanel.showRippleInsertDialog());
         tools.add(rippleInsert);
 
+        JMenuItem repeatSelection = new JMenuItem("Repeat selection...");
+        repeatSelection.setToolTipText("<html>Paste N copies of the currently-selected keyframes,<br>"
+                + "each starting immediately after the previous block's end<br>"
+                + "(tick of the latest selected kf + its duration), optionally<br>"
+                + "spaced by a gap of M ticks. Works across multiple Characters<br>"
+                + "-- each kf's copy goes to its own owner. Counterpart to<br>"
+                + "Scatter when you want a perfectly regular repetition<br>"
+                + "instead of a random spread.</html>");
+        repeatSelection.addActionListener(e -> timeSheetPanel.showRepeatSelectionDialog());
+        tools.add(repeatSelection);
+
         // A-B Loop submenu -- vertical markers on the timeline that loop
         // playback between them. The markers can also be removed via X
         // buttons drawn on the marker chips themselves (Premiere-style).
