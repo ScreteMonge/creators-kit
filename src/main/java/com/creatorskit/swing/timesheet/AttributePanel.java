@@ -1906,7 +1906,12 @@ public class AttributePanel extends JPanel
             boolean active = oriAttributes.getTargetCharacterNameValue() != null;
             boolean enabled = !active;
             end.setEnabled(enabled);
-            duration.setEnabled(enabled);
+            // Duration stays editable while Face Target is on -- it acts as
+            // a "track for N ticks then stop" timer for the face-target
+            // snap (see applyFaceTarget's duration gate). The other fields
+            // (end / turnRate / turn direction / compass / convert / copy)
+            // remain inert because face-target overrides them entirely.
+            duration.setEnabled(true);
             turnRate.setEnabled(enabled);
             turnDirCombo.setEnabled(enabled);
             getEnd.setEnabled(enabled);

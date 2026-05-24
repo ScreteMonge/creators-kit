@@ -432,6 +432,17 @@ public class Programmer
         {
             return;
         }
+        // Honour the kf's Duration as a "track for N ticks then stop" timer.
+        // Without this, Face Target snaps every tick until the next ori kf
+        // becomes current -- effectively indefinite, and the Duration field
+        // had no meaning. Now Duration ungates editing in the card and
+        // bounds how long the snap stays live; once expired the character
+        // keeps whatever angle it last had (or the next kf takes over).
+        double ticksPassed = timeSheetPanel.getCurrentTime() - oriKeyFrame.getTick();
+        if (ticksPassed > oriKeyFrame.getDuration())
+        {
+            return;
+        }
 
         // Ambiguity guard: refuse to apply when the name resolves to more
         // than one Character, OR when it collides with a Folder of the same
