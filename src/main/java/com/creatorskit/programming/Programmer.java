@@ -522,7 +522,11 @@ public class Programmer
         int targetAngle = (int) Orientation.getAngleBetween(sourceLp, targetLp);
         int difference = directionalDifference(start, targetAngle, oriKeyFrame.getTurnDirection());
         double turnRate = oriKeyFrame.getTurnRate();
-        double rotation = turnRate * ticksPassed;
+        // turnRate is JUnits per CLIENT tick (50Hz). ticksPassed is in game
+        // ticks. GAME_TICK_LENGTH / CLIENT_TICK_LENGTH = 600 / 20 = 30
+        // client ticks per game tick, so the right per-game-tick rotation
+        // amount is turnRate * 30. Same scaling getOrientationStatic uses.
+        double rotation = turnRate * ticksPassed * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH;
 
         int newOrientation;
         if (difference > -rotation && difference < rotation)
