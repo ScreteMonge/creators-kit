@@ -779,6 +779,38 @@ public class ManagerTree extends JTree
     }
 
     /**
+     * Folders the user has DIRECTLY clicked in the tree -- i.e. selection
+     * paths whose terminal node is itself a Folder. Distinct from the
+     * {@code selectedFolders} field, which the TreeSelectionListener also
+     * back-fills with the implicit parent folder when ONLY Characters are
+     * clicked (so {@code selectedFolders.length > 0} doesn't mean "user
+     * picked a folder"; it means "there's an active folder context, possibly
+     * inferred from a Character click").
+     *
+     * <p>Group-aware ops (Scatter group mode) need the stricter signal --
+     * "scatter as one rigid block per folder" should only fire when the
+     * user actually meant to scope at the folder level, not whenever they
+     * happened to multi-select Characters that share a parent.
+     */
+    public Folder[] getDirectlySelectedFolders()
+    {
+        TreePath[] paths = getSelectionPaths();
+        if (paths == null) return new Folder[0];
+        Folder[] out = new Folder[0];
+        for (TreePath p : paths)
+        {
+            Object terminal = p.getLastPathComponent();
+            if (!(terminal instanceof DefaultMutableTreeNode)) continue;
+            Object user = ((DefaultMutableTreeNode) terminal).getUserObject();
+            if (user instanceof Folder)
+            {
+                out = ArrayUtils.add(out, (Folder) user);
+            }
+        }
+        return out;
+    }
+
+    /**
      * Updates the tree's visual selection to match SelectionManager. Called from sidebar
      * click handlers so the tree reflects multi-selection done elsewhere. The
      * syncingFromSelectionManager flag prevents the resulting TreeSelectionEvent from

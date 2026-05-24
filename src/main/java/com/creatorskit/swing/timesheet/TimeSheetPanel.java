@@ -14,6 +14,7 @@ import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.programming.orientation.OrientationGoal;
 import com.creatorskit.programming.orientation.OrientationHotkeyMode;
 import com.creatorskit.swing.ToolBoxFrame;
+import com.creatorskit.swing.manager.Folder;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.manager.TreeScrollPane;
 import com.creatorskit.swing.timesheet.keyframe.*;
@@ -3684,25 +3685,89 @@ public class TimeSheetPanel extends JPanel
         modeGroup.add(perCharRadio);
         modeGroup.add(perStepRadio);
 
+        // Group-mode toggle: treats every Character under each DIRECTLY-
+        // selected folder as one rigid block. Block duration = max - min
+        // tick across the union of every member's selected keyframes;
+        // every scatter copy applies one shared delta to all of them so
+        // tightly-choreographed multi-Character effects (e.g. a damage
+        // ring + projectile + fire sequence) stay in lockstep through
+        // the randomisation.
+        //
+        // Auto-checked when the user has directly clicked a folder in the
+        // tree (so the common "I selected the folder, now Scatter it"
+        // path Just Works) and disabled otherwise -- we don't want a stale
+        // Group toggle silently grouping siblings the user multi-selected
+        // by Character. Tooltip explains the disabled state.
+        Folder[] directFolders = managerTree != null ? managerTree.getDirectlySelectedFolders() : new Folder[0];
+        boolean folderModeAvailable = directFolders.length > 0;
+        JCheckBox groupModeCheck = new JCheckBox("Group mode (treat each selected folder as one rigid block)");
+        groupModeCheck.setEnabled(folderModeAvailable);
+        groupModeCheck.setSelected(folderModeAvailable);
+        if (folderModeAvailable)
+        {
+            String list;
+            if (directFolders.length == 1)
+            {
+                list = "\"" + directFolders[0].getName() + "\"";
+            }
+            else
+            {
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < directFolders.length; i++)
+                {
+                    if (i > 0) sb.append(", ");
+                    sb.append("\"").append(directFolders[i].getName()).append("\"");
+                }
+                list = sb.toString();
+            }
+            groupModeCheck.setToolTipText("<html>Apply one shared shift per copy to every Character in "
+                    + list + ".<br>Block duration spans the union of all members' selected keyframes,"
+                    + "<br>so collision math respects the full group footprint.</html>");
+        }
+        else
+        {
+            groupModeCheck.setToolTipText("Click a folder in the manager tree to enable group mode "
+                    + "(this scatters every Character in the folder as one block).");
+        }
+
         // Greys out the spinner pair that doesn't apply to the current mode.
         // Visual cue + cannot-misclick safety. Step / range spinners are
         // used by both modes so they stay live.
         Runnable refreshEnabled = () ->
         {
+            boolean group = groupModeCheck.isSelected();
             boolean perStep = perStepRadio.isSelected();
+            // Group mode is incompatible with Per Step -- the per-step
+            // planner picks K Characters per step, but in group mode every
+            // member moves together so "picking K members" is meaningless.
+            // Lock the Per-Step radio off while group mode is active.
+            perCharRadio.setEnabled(!group);
+            perStepRadio.setEnabled(!group);
+            if (group && perStepRadio.isSelected())
+            {
+                perCharRadio.setSelected(true);
+                perStep = false;
+            }
             copiesMinSpinner.setEnabled(!perStep);
             copiesMaxSpinner.setEnabled(!perStep);
-            perStepMinSpinner.setEnabled(perStep);
-            perStepMaxSpinner.setEnabled(perStep);
+            perStepMinSpinner.setEnabled(!group && perStep);
+            perStepMaxSpinner.setEnabled(!group && perStep);
         };
         perCharRadio.addActionListener(e -> refreshEnabled.run());
         perStepRadio.addActionListener(e -> refreshEnabled.run());
+        groupModeCheck.addActionListener(e -> refreshEnabled.run());
         refreshEnabled.run();
 
-        JPanel modePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        modePanel.add(new JLabel("Mode:"));
-        modePanel.add(perCharRadio);
-        modePanel.add(perStepRadio);
+        JPanel modePanel = new JPanel();
+        modePanel.setLayout(new BoxLayout(modePanel, BoxLayout.Y_AXIS));
+        JPanel modeRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        modeRow.add(new JLabel("Mode:"));
+        modeRow.add(perCharRadio);
+        modeRow.add(perStepRadio);
+        modePanel.add(modeRow);
+        JPanel groupRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        groupRow.add(groupModeCheck);
+        modePanel.add(groupRow);
 
         JPanel spinners = new JPanel(new GridLayout(0, 2, 6, 6));
         spinners.add(new JLabel("From tick:"));
@@ -3779,11 +3844,17 @@ public class TimeSheetPanel extends JPanel
         final double fFrom = from;
         final double fTo = to;
 
-        // Branch to the per-step planner when the user selected it. The two
+        // Branch to the per-step planner when the user selected it. The three
         // modes are conceptually different planners (per-Character: each char
         // rolls independently; per-Step: walk a global step grid and pick K
-        // chars per step) so each lives in its own method instead of trying
+        // chars per step; per-Group: treat the directly-selected folder as
+        // one rigid block) so each lives in its own method instead of trying
         // to overload one feasibility loop.
+        if (groupModeCheck.isSelected())
+        {
+            scatterPerGroup(byOwner, directFolders, fFrom, fTo, stepMin, stepMax, copiesMin, copiesMax);
+            return;
+        }
         if (perStepRadio.isSelected())
         {
             scatterPerStep(byOwner, fFrom, fTo, stepMin, stepMax, perStepMin, perStepMax);
@@ -4178,6 +4249,250 @@ public class TimeSheetPanel extends JPanel
                     "No copies were placed. Every step tick rolled K=0 or had no feasible Characters -- try widening the range or raising 'Copies per step (max)'.",
                     "Scatter", JOptionPane.INFORMATION_MESSAGE);
             return;
+        }
+
+        finalizeTickTransform(kfa, newSelected.toArray(new KeyFrame[0]));
+    }
+
+    /**
+     * Group mode of Scatter (active when the dialog's "Group mode" checkbox
+     * is on and the user has directly clicked one or more folders in the
+     * manager tree).
+     *
+     * <p>Each directly-selected folder is treated as ONE rigid block. The
+     * block's footprint is the union of every member Character's selected
+     * keyframes -- {@code blockMin} = earliest selected tick across the
+     * group, {@code blockMax} = latest, {@code blockDuration} = max-min.
+     * Per-folder block: one shared (step, copies) roll, one anchor planner,
+     * and at each anchor a single delta gets applied to every member's
+     * keyframes, so a tightly-choreographed sequence (e.g. damage ring at
+     * tick 0 + projectile at tick 2 + fire at tick 4) keeps its internal
+     * timing intact through the randomisation.
+     *
+     * <p>Members with no selected keyframes contribute nothing to the
+     * block and aren't touched -- if a folder has 5 Characters but only 3
+     * have keyframes in the marquee, only those 3 get scattered. Folders
+     * with zero selected-keyframe members are skipped silently (the
+     * dialog already validated that {@code selectedKeyFrames} is non-empty
+     * overall).
+     *
+     * <p>Pre-validation, greedy random anchor planning, and the
+     * remove-once / add-N-copies commit shape mirror the per-Character
+     * planner -- the only structural difference is that the unit of
+     * planning is "folder" instead of "Character".
+     */
+    private void scatterPerGroup(java.util.Map<Character, java.util.List<KeyFrame>> byOwner,
+                                 Folder[] directFolders,
+                                 double fFrom, double fTo,
+                                 int stepMin, int stepMax,
+                                 int copiesMin, int copiesMax)
+    {
+        // Assemble the per-folder block contents. Fallback: if no folder
+        // is directly selected (shouldn't normally reach here because the
+        // dialog disables Group mode without one, but defensive in case
+        // the user re-enabled it manually), treat the union of selection
+        // owners as a single ad-hoc group so the action still does
+        // something coherent.
+        java.util.LinkedHashMap<Folder, java.util.List<Character>> groupMembers = new java.util.LinkedHashMap<>();
+        java.util.LinkedHashMap<Folder, java.util.List<KeyFrame>> groupBlock = new java.util.LinkedHashMap<>();
+        if (directFolders != null && directFolders.length > 0)
+        {
+            for (Folder folder : directFolders)
+            {
+                if (folder == null || folder.getLinkedManagerNode() == null) continue;
+                ArrayList<Character> members = new ArrayList<>();
+                managerTree.getCharacterNodeChildren(folder.getLinkedManagerNode(), members);
+                java.util.List<KeyFrame> block = new ArrayList<>();
+                for (Character m : members)
+                {
+                    java.util.List<KeyFrame> mkfs = byOwner.get(m);
+                    if (mkfs != null) block.addAll(mkfs);
+                }
+                if (block.isEmpty()) continue;
+                groupMembers.put(folder, members);
+                groupBlock.put(folder, block);
+            }
+        }
+        else
+        {
+            // Synthetic single-group fallback. Use null folder key so the
+            // commit-side error messages can detect "ad-hoc group" vs a
+            // real folder by name.
+            java.util.List<KeyFrame> block = new ArrayList<>();
+            ArrayList<Character> members = new ArrayList<>();
+            for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> e : byOwner.entrySet())
+            {
+                members.add(e.getKey());
+                block.addAll(e.getValue());
+            }
+            groupMembers.put(null, members);
+            groupBlock.put(null, block);
+        }
+
+        if (groupMembers.isEmpty())
+        {
+            JOptionPane.showMessageDialog(this,
+                    "Group mode requires at least one selected keyframe inside a directly-selected folder. None of the chosen folders contain keyframes in the marquee.",
+                    "Scatter blocked", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Phase 1: PLAN per group. Same shape as per-Character pre-validation
+        // and greedy-random anchor selection, but the "unit" is a whole folder
+        // instead of one Character.
+        final java.util.Random rng = new java.util.Random();
+        java.util.LinkedHashMap<Folder, double[]> plannedAnchors = new java.util.LinkedHashMap<>();
+        java.util.LinkedHashMap<Folder, Double> plannedBlockMin = new java.util.LinkedHashMap<>();
+
+        for (java.util.Map.Entry<Folder, java.util.List<KeyFrame>> entry : groupBlock.entrySet())
+        {
+            Folder folder = entry.getKey();
+            java.util.List<KeyFrame> block = entry.getValue();
+            String label = folder == null ? "(ad-hoc group)" : "\"" + folder.getName() + "\"";
+
+            double blockMin = Double.POSITIVE_INFINITY;
+            double blockMax = Double.NEGATIVE_INFINITY;
+            for (KeyFrame kf : block)
+            {
+                if (kf.getTick() < blockMin) blockMin = kf.getTick();
+                if (kf.getTick() > blockMax) blockMax = kf.getTick();
+            }
+            double blockDuration = blockMax - blockMin;
+            plannedBlockMin.put(folder, blockMin);
+
+            if (copiesMax > 0)
+            {
+                if (blockDuration > (fTo - fFrom))
+                {
+                    JOptionPane.showMessageDialog(this,
+                            "Cannot scatter: group " + label + " spans " + blockDuration + " ticks across its selected keyframes, which is larger than the range " + (fTo - fFrom) + ".",
+                            "Scatter blocked", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                double anchorRange = fTo - fFrom - blockDuration;
+                int theoreticalMaxAtStepMax = (int) Math.floor(anchorRange / (blockDuration + stepMax)) + 1;
+                if (copiesMax > theoreticalMaxAtStepMax)
+                {
+                    JOptionPane.showMessageDialog(this,
+                            "Cannot scatter: group " + label + " has room for at most " + theoreticalMaxAtStepMax + " non-overlapping copies at step " + stepMax + " (block duration " + blockDuration + " in range " + (fTo - fFrom) + "). Reduce 'Copies (max)', reduce 'Step size (max)', widen the range, or shrink the marquee within the group.",
+                            "Scatter blocked", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+            }
+
+            int rolledN = copiesMin == copiesMax
+                    ? copiesMin
+                    : copiesMin + rng.nextInt(copiesMax - copiesMin + 1);
+            int rolledStep = stepMin == stepMax
+                    ? stepMin
+                    : stepMin + rng.nextInt(stepMax - stepMin + 1);
+            final double groupStep = rolledStep;
+
+            if (rolledN == 0)
+            {
+                plannedAnchors.put(folder, new double[0]);
+                continue;
+            }
+
+            int totalSlots = (int) Math.floor((fTo - fFrom - blockDuration) / groupStep) + 1;
+
+            final int MAX_RETRIES = 20;
+            double[] anchors = null;
+            for (int attempt = 0; attempt < MAX_RETRIES && anchors == null; attempt++)
+            {
+                double[] trial = new double[rolledN];
+                boolean failed = false;
+                for (int c = 0; c < rolledN; c++)
+                {
+                    java.util.List<Integer> validSlots = new ArrayList<>();
+                    for (int s = 0; s < totalSlots; s++)
+                    {
+                        double candidate = fFrom + s * groupStep;
+                        boolean ok = true;
+                        for (int prior = 0; prior < c; prior++)
+                        {
+                            if (Math.abs(candidate - trial[prior]) <= blockDuration)
+                            {
+                                ok = false;
+                                break;
+                            }
+                        }
+                        if (ok) validSlots.add(s);
+                    }
+                    if (validSlots.isEmpty())
+                    {
+                        failed = true;
+                        break;
+                    }
+                    int pickedSlot = validSlots.get(rng.nextInt(validSlots.size()));
+                    trial[c] = fFrom + pickedSlot * groupStep;
+                }
+                if (!failed) anchors = trial;
+            }
+
+            if (anchors == null)
+            {
+                JOptionPane.showMessageDialog(this,
+                        "Cannot scatter " + rolledN + " non-overlapping copies for group " + label + " at step " + rolledStep + " after " + MAX_RETRIES + " attempts (block duration " + blockDuration + " in range " + (fTo - fFrom) + " ticks). Widen the [from, to] range, lower 'Step size (max)', or lower 'Copies (max)'.",
+                        "Scatter blocked", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            plannedAnchors.put(folder, anchors);
+        }
+
+        // Phase 2: COMMIT. For each group, remove every selected original
+        // keyframe from its owner, then add N copies of the entire group
+        // block at each planned anchor. Each member's keyframes shift by
+        // (anchor - groupBlockMin) so internal offsets across members
+        // are preserved exactly.
+        //
+        // We snapshot kf -> owner via the pre-existing byOwner map BEFORE
+        // any removals so findKeyFrameOwner (which scans current Character
+        // frames and would return null after removeKeyFrame) doesn't
+        // matter here.
+        java.util.IdentityHashMap<KeyFrame, Character> kfOwner = new java.util.IdentityHashMap<>();
+        for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> e : byOwner.entrySet())
+        {
+            for (KeyFrame kf : e.getValue()) kfOwner.put(kf, e.getKey());
+        }
+
+        KeyFrameAction[] kfa = new KeyFrameAction[0];
+        java.util.List<KeyFrame> newSelected = new ArrayList<>();
+
+        for (java.util.Map.Entry<Folder, java.util.List<KeyFrame>> entry : groupBlock.entrySet())
+        {
+            Folder folder = entry.getKey();
+            java.util.List<KeyFrame> block = entry.getValue();
+            double blockMin = plannedBlockMin.get(folder);
+            double[] anchors = plannedAnchors.get(folder);
+
+            for (KeyFrame kf : block)
+            {
+                Character owner = kfOwner.get(kf);
+                if (owner == null) continue;
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(kf, owner, KeyFrameCharacterActionType.REMOVE));
+                owner.removeKeyFrame(kf);
+            }
+
+            // Plant copies. Each anchor is one "instance" of the whole
+            // group block; iterate every member kf and re-anchor it on
+            // its own owner. Same delta everywhere keeps multi-Character
+            // synchronisation intact.
+            for (double anchor : anchors)
+            {
+                double delta = anchor - blockMin;
+                for (KeyFrame kf : block)
+                {
+                    Character owner = kfOwner.get(kf);
+                    if (owner == null) continue;
+                    double newTick = round(kf.getTick() + delta);
+                    KeyFrame replacement = KeyFrame.createCopy(kf, newTick);
+                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replacement, owner, KeyFrameCharacterActionType.ADD));
+                    owner.addKeyFrame(replacement, currentTime);
+                    newSelected.add(replacement);
+                }
+            }
         }
 
         finalizeTickTransform(kfa, newSelected.toArray(new KeyFrame[0]));
