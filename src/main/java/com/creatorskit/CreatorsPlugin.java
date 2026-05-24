@@ -1141,6 +1141,20 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 	}
 
+	// TEMP: hardcoded GameObject hide test. Subscribes to spawn events and
+	// drops object id 56670 from the scene as it appears (re-fires on every
+	// region/tile reload so it stays hidden across travel). Remove this
+	// once the full "Hide GameObjects" feature lands.
+	@Subscribe
+	public void onGameObjectSpawned(GameObjectSpawned event)
+	{
+		GameObject obj = event.getGameObject();
+		if (obj != null && obj.getId() == 56670)
+		{
+			client.getScene().removeGameObject(obj);
+		}
+	}
+
 	@Subscribe
 	public void onPostMenuSort(PostMenuSort event)
 	{
