@@ -697,14 +697,19 @@ public class TimeSheet extends JPanel
         ActionMap actionMap = getActionMap();
         InputMap inputMap = getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
 
+        // Plain LEFT / RIGHT scrub the timeline by +/- 1 tick. WHEN_IN_FOCUSED_WINDOW
+        // means this fires whenever the toolbox window has focus and no inner
+        // component consumed the key (text fields keep their caret-move
+        // behaviour because component-level bindings take precedence). The
+        // CTRL+arrow / CTRL+ALT+arrow cadence (jump-to-kf and 0.1-tick) lives
+        // on the plugin-level HotkeyListener path so they fire from any window.
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, 0), "VK_LEFT");
         actionMap.put("VK_LEFT", new AbstractAction()
         {
             @Override
             public void actionPerformed(ActionEvent e)
             {
-
-                getTimeSheetPanel().setCurrentTime(TimeSheetPanel.round(currentTime - 0.1), false);
+                getTimeSheetPanel().skipListener(-1.0);
             }
         });
 
@@ -714,7 +719,7 @@ public class TimeSheet extends JPanel
             @Override
             public void actionPerformed(ActionEvent e)
             {
-                getTimeSheetPanel().setCurrentTime(TimeSheetPanel.round(currentTime + 0.1), false);
+                getTimeSheetPanel().skipListener(1.0);
             }
         });
     }
