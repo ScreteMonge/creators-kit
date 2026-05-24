@@ -5065,6 +5065,395 @@ public class TimeSheetPanel extends JPanel
         return tick;
     }
 
+    // ----- Iterate field values ------------------------------------------
+    //
+    // Sliding-window iterator over a sequence of values, applied to a field
+    // on each of N selected keyframes in tick order. Generalises the
+    // "kf at tick 4 wants Tile (1-5), kf at tick 8 wants Tile (6-10)..."
+    // pattern across whatever field needs it.
+    //
+    // v1 wires up only ProjectileKeyFrame.target as the target field --
+    // the dialog has a JComboBox with one entry, the apply path is one
+    // switch arm. Adding a second field is: add to the combo's items,
+    // add an arm to applySliceToKeyFrame. The slicer + sequence-source +
+    // preview + everything else is shared.
+
+    /**
+     * Tools &gt; Iterate field values... entry point. Refuses to open
+     * without a homogeneous keyframe selection (every selected kf must
+     * share a type so the field dropdown is well-defined). The dialog
+     * is JOptionPane-modal because the user doesn't need to touch the
+     * game while configuring -- the inputs are all text/spinners.
+     */
+    public void showIterateFieldDialog()
+    {
+        if (selectedKeyFrames == null || selectedKeyFrames.length == 0)
+        {
+            JOptionPane.showMessageDialog(this,
+                    "No keyframes selected. Marquee the kfs you want to fill, then re-open this tool.",
+                    "Iterate field values", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        KeyFrameType firstType = selectedKeyFrames[0].getKeyFrameType();
+        for (KeyFrame kf : selectedKeyFrames)
+        {
+            if (kf.getKeyFrameType() != firstType)
+            {
+                JOptionPane.showMessageDialog(this,
+                        "Selection mixes keyframe types (" + firstType.getName() + " + " + kf.getKeyFrameType().getName()
+                                + "). This tool needs all kfs to share a type so the field dropdown is valid -- marquee a homogeneous slice.",
+                        "Iterate field values", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        }
+
+        // Field picker. v1 only knows about ProjectileKeyFrame.target; the
+        // combo is empty for other types until they're wired in, which
+        // lets the dialog still display the selection summary so the user
+        // sees they're in the right place but the tool doesn't apply.
+        javax.swing.JComboBox<String> fieldCombo = new javax.swing.JComboBox<>();
+        if (firstType == KeyFrameType.PROJECTILE)
+        {
+            fieldCombo.addItem("Target");
+        }
+
+        if (fieldCombo.getItemCount() == 0)
+        {
+            JOptionPane.showMessageDialog(this,
+                    "No iterable fields registered for keyframe type \"" + firstType.getName() + "\" yet. "
+                            + "Currently only Projectile.Target is wired up -- ping the developer with the field you want next.",
+                    "Iterate field values", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        javax.swing.JRadioButton folderPatternRadio = new javax.swing.JRadioButton("Folder names matching pattern", true);
+        javax.swing.JRadioButton literalListRadio = new javax.swing.JRadioButton("Literal comma list", false);
+        ButtonGroup sourceGroup = new ButtonGroup();
+        sourceGroup.add(folderPatternRadio);
+        sourceGroup.add(literalListRadio);
+        javax.swing.JTextField folderPatternField = new javax.swing.JTextField("Tile (*)", 20);
+        folderPatternField.setToolTipText("Glob-style match where * is a wildcard. Folders sorted numerically when the wildcard captures digits, otherwise alphabetically.");
+        javax.swing.JTextField literalListField = new javax.swing.JTextField("", 20);
+        literalListField.setToolTipText("Comma-separated values, used verbatim as slice contents.");
+
+        javax.swing.JSpinner windowSpinner = new javax.swing.JSpinner(new SpinnerNumberModel(5, 1, 1000, 1));
+        javax.swing.JSpinner strideSpinner = new javax.swing.JSpinner(new SpinnerNumberModel(5, 1, 1000, 1));
+        // Stride defaults to window size (non-overlapping). Auto-link on
+        // window edit so the common case "size 5, stride 5" Just Works
+        // without the user touching stride. Manually editing stride later
+        // breaks the link until the next window edit -- standard sticky
+        // behaviour, matches how DAW grid editors handle it.
+        final boolean[] strideLinked = { true };
+        windowSpinner.addChangeListener(e ->
+        {
+            if (strideLinked[0])
+            {
+                strideSpinner.setValue(windowSpinner.getValue());
+            }
+        });
+        strideSpinner.addChangeListener(e -> strideLinked[0] = strideSpinner.getValue().equals(windowSpinner.getValue()));
+
+        javax.swing.JCheckBox wrapFolderCheck = new javax.swing.JCheckBox("Wrap each slice in f[...] (folder fan-out syntax)", true);
+        wrapFolderCheck.setToolTipText("On: each slice is written as f[v1, v2, ...] so the Projectile target parser treats each value as a folder name. Off: slice is written as a plain comma list.");
+
+        javax.swing.JTextArea previewArea = new javax.swing.JTextArea(10, 50);
+        previewArea.setEditable(false);
+        previewArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        previewArea.setLineWrap(false);
+        javax.swing.JScrollPane previewScroll = new javax.swing.JScrollPane(previewArea);
+        previewScroll.setBorder(BorderFactory.createTitledBorder("Preview"));
+
+        // The Characters that wrap each selected kf -- needed for the
+        // tick-then-name sort. Snapshot once; the selection can't change
+        // while the modal dialog is open.
+        java.util.IdentityHashMap<KeyFrame, Character> kfOwner = new java.util.IdentityHashMap<>();
+        for (KeyFrame kf : selectedKeyFrames)
+        {
+            Character owner = findKeyFrameOwner(kf);
+            if (owner != null) kfOwner.put(kf, owner);
+        }
+        // Sort: tick ascending, then owner name alphabetically. KeyFrames
+        // without a resolvable owner (shouldn't normally happen) sort to
+        // the end so they don't break ordering of the real ones.
+        java.util.List<KeyFrame> ordered = new ArrayList<>(java.util.Arrays.asList(selectedKeyFrames));
+        ordered.sort((a, b) ->
+        {
+            int t = Double.compare(a.getTick(), b.getTick());
+            if (t != 0) return t;
+            Character oa = kfOwner.get(a);
+            Character ob = kfOwner.get(b);
+            String na = oa == null ? "~" : (oa.getName() == null ? "" : oa.getName());
+            String nb = ob == null ? "~" : (ob.getName() == null ? "" : ob.getName());
+            return na.compareTo(nb);
+        });
+
+        Runnable refreshPreview = () ->
+        {
+            java.util.List<String> sequence = resolveSequence(folderPatternRadio.isSelected(),
+                    folderPatternField.getText(), literalListField.getText());
+            int window = ((Number) windowSpinner.getValue()).intValue();
+            int stride = ((Number) strideSpinner.getValue()).intValue();
+            boolean wrap = folderPatternRadio.isSelected() && wrapFolderCheck.isSelected();
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("Sequence (").append(sequence.size()).append(" entries): ");
+            if (sequence.isEmpty()) sb.append("<empty>");
+            else
+            {
+                int show = Math.min(sequence.size(), 20);
+                for (int i = 0; i < show; i++)
+                {
+                    if (i > 0) sb.append(", ");
+                    sb.append(sequence.get(i));
+                }
+                if (sequence.size() > show) sb.append(", ...");
+            }
+            sb.append("\n\n");
+
+            int applied = 0;
+            for (int i = 0; i < ordered.size(); i++)
+            {
+                KeyFrame kf = ordered.get(i);
+                int start = i * stride;
+                int end = start + window;
+                if (end > sequence.size())
+                {
+                    sb.append(String.format("  kf @ tick %.1f (%s): NOT APPLIED (sequence ran out at index %d, needed %d)\n",
+                            kf.getTick(),
+                            kfOwner.get(kf) == null ? "?" : kfOwner.get(kf).getName(),
+                            sequence.size(), end));
+                    continue;
+                }
+                java.util.List<String> slice = sequence.subList(start, end);
+                String value = formatSlice(slice, wrap);
+                sb.append(String.format("  kf @ tick %.1f (%s): %s\n",
+                        kf.getTick(),
+                        kfOwner.get(kf) == null ? "?" : kfOwner.get(kf).getName(),
+                        value));
+                applied++;
+            }
+            sb.append("\nWill apply to ").append(applied).append(" of ").append(ordered.size()).append(" selected keyframes.");
+            previewArea.setText(sb.toString());
+            previewArea.setCaretPosition(0);
+        };
+
+        // Wire every input to refresh the preview live.
+        folderPatternRadio.addActionListener(e -> refreshPreview.run());
+        literalListRadio.addActionListener(e -> refreshPreview.run());
+        wrapFolderCheck.addActionListener(e -> refreshPreview.run());
+        javax.swing.event.DocumentListener docListener = new javax.swing.event.DocumentListener()
+        {
+            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { refreshPreview.run(); }
+            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { refreshPreview.run(); }
+            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { refreshPreview.run(); }
+        };
+        folderPatternField.getDocument().addDocumentListener(docListener);
+        literalListField.getDocument().addDocumentListener(docListener);
+        windowSpinner.addChangeListener(e -> refreshPreview.run());
+        strideSpinner.addChangeListener(e -> refreshPreview.run());
+
+        JPanel sourcePanel = new JPanel();
+        sourcePanel.setLayout(new BoxLayout(sourcePanel, BoxLayout.Y_AXIS));
+        sourcePanel.setBorder(BorderFactory.createTitledBorder("Value sequence"));
+        JPanel row1 = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        row1.add(folderPatternRadio);
+        row1.add(folderPatternField);
+        sourcePanel.add(row1);
+        JPanel row2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        row2.add(literalListRadio);
+        row2.add(literalListField);
+        sourcePanel.add(row2);
+
+        JPanel slicePanel = new JPanel(new GridLayout(0, 2, 6, 6));
+        slicePanel.setBorder(BorderFactory.createTitledBorder("Slicing"));
+        slicePanel.add(new JLabel("Window size:"));
+        slicePanel.add(windowSpinner);
+        slicePanel.add(new JLabel("Stride:"));
+        slicePanel.add(strideSpinner);
+
+        JPanel headerPanel = new JPanel(new GridLayout(0, 2, 6, 6));
+        headerPanel.add(new JLabel("Selection:"));
+        headerPanel.add(new JLabel(selectedKeyFrames.length + " kfs of type " + firstType.getName()));
+        headerPanel.add(new JLabel("Field:"));
+        headerPanel.add(fieldCombo);
+        headerPanel.add(new JLabel("Format:"));
+        headerPanel.add(wrapFolderCheck);
+
+        JPanel content = new JPanel(new BorderLayout(0, 6));
+        content.setBorder(new EmptyBorder(6, 6, 6, 6));
+        JPanel top = new JPanel();
+        top.setLayout(new BoxLayout(top, BoxLayout.Y_AXIS));
+        top.add(headerPanel);
+        top.add(sourcePanel);
+        top.add(slicePanel);
+        content.add(top, BorderLayout.NORTH);
+        content.add(previewScroll, BorderLayout.CENTER);
+
+        refreshPreview.run();
+
+        int result = JOptionPane.showConfirmDialog(this, content,
+                "Iterate field values",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result != JOptionPane.OK_OPTION) return;
+
+        java.util.List<String> sequence = resolveSequence(folderPatternRadio.isSelected(),
+                folderPatternField.getText(), literalListField.getText());
+        int window = ((Number) windowSpinner.getValue()).intValue();
+        int stride = ((Number) strideSpinner.getValue()).intValue();
+        boolean wrap = folderPatternRadio.isSelected() && wrapFolderCheck.isSelected();
+        String field = (String) fieldCombo.getSelectedItem();
+
+        int applied = 0;
+        int skipped = 0;
+        for (int i = 0; i < ordered.size(); i++)
+        {
+            KeyFrame kf = ordered.get(i);
+            int start = i * stride;
+            int end = start + window;
+            if (end > sequence.size())
+            {
+                skipped = ordered.size() - i;
+                break;
+            }
+            java.util.List<String> slice = sequence.subList(start, end);
+            String value = formatSlice(slice, wrap);
+            if (applySliceToKeyFrame(kf, firstType, field, value))
+            {
+                applied++;
+            }
+        }
+
+        // Re-run the play/scrub pipeline so the new field values land in
+        // the renderer immediately. AttributePanel reset so the inspector
+        // shows whatever was written if the user has a kf selected.
+        if (client != null && client.getGameState() == net.runelite.api.GameState.LOGGED_IN)
+        {
+            toolBox.getProgrammer().updatePrograms(currentTime);
+        }
+        if (selectedCharacter != null)
+        {
+            attributePanel.resetAttributes(selectedCharacter, currentTime);
+        }
+
+        String msg = "Iterate field values: wrote " + applied + " of " + ordered.size() + " selected keyframes";
+        if (skipped > 0)
+        {
+            msg += " (" + skipped + " skipped -- sequence ran out)";
+        }
+        plugin.sendChatMessage(msg + ".");
+    }
+
+    /**
+     * Resolves the configured value sequence. For folder pattern source,
+     * walks the manager tree, matches folder names against the glob, and
+     * sorts numerically when the wildcard portion is parseable as an int.
+     * For literal-list source, splits the text on commas and trims each.
+     */
+    private java.util.List<String> resolveSequence(boolean folderPattern, String patternText, String literalText)
+    {
+        if (folderPattern)
+        {
+            String pattern = patternText == null ? "" : patternText.trim();
+            if (pattern.isEmpty()) return java.util.Collections.emptyList();
+            int star = pattern.indexOf('*');
+            if (star < 0)
+            {
+                // Exact match -- single-folder sequence.
+                java.util.List<String> single = new ArrayList<>();
+                if (folderExists(pattern)) single.add(pattern);
+                return single;
+            }
+            String prefix = pattern.substring(0, star);
+            String suffix = pattern.substring(star + 1);
+
+            // Collect every folder name in the tree
+            ManagerTree tree = managerTree;
+            javax.swing.tree.DefaultMutableTreeNode root = tree.getRootNode();
+            java.util.ArrayList<javax.swing.tree.DefaultMutableTreeNode> all = new java.util.ArrayList<>();
+            tree.getAllNodes(root, all);
+            java.util.List<String[]> matched = new ArrayList<>(); // [fullName, wildcardCapture]
+            for (javax.swing.tree.DefaultMutableTreeNode node : all)
+            {
+                Object u = node.getUserObject();
+                if (!(u instanceof Folder)) continue;
+                String name = ((Folder) u).getName();
+                if (name == null) continue;
+                if (name.length() < prefix.length() + suffix.length()) continue;
+                if (!name.startsWith(prefix)) continue;
+                if (!name.endsWith(suffix)) continue;
+                String capture = name.substring(prefix.length(), name.length() - suffix.length());
+                matched.add(new String[]{name, capture});
+            }
+
+            // Try numeric sort on the capture; fall back to alpha.
+            boolean allNumeric = !matched.isEmpty();
+            for (String[] m : matched)
+            {
+                try { Integer.parseInt(m[1].trim()); }
+                catch (NumberFormatException e) { allNumeric = false; break; }
+            }
+            if (allNumeric)
+            {
+                matched.sort((a, b) -> Integer.compare(Integer.parseInt(a[1].trim()), Integer.parseInt(b[1].trim())));
+            }
+            else
+            {
+                matched.sort((a, b) -> a[1].compareTo(b[1]));
+            }
+
+            java.util.List<String> out = new ArrayList<>();
+            for (String[] m : matched) out.add(m[0]);
+            return out;
+        }
+        else
+        {
+            String text = literalText == null ? "" : literalText.trim();
+            if (text.isEmpty()) return java.util.Collections.emptyList();
+            java.util.List<String> out = new ArrayList<>();
+            for (String t : text.split(","))
+            {
+                String n = t.trim();
+                if (!n.isEmpty()) out.add(n);
+            }
+            return out;
+        }
+    }
+
+    private boolean folderExists(String name)
+    {
+        javax.swing.tree.DefaultMutableTreeNode root = managerTree.getRootNode();
+        java.util.ArrayList<javax.swing.tree.DefaultMutableTreeNode> all = new java.util.ArrayList<>();
+        managerTree.getAllNodes(root, all);
+        for (javax.swing.tree.DefaultMutableTreeNode node : all)
+        {
+            Object u = node.getUserObject();
+            if (u instanceof Folder && name.equalsIgnoreCase(((Folder) u).getName())) return true;
+        }
+        return false;
+    }
+
+    /** Joins {@code slice} as a comma-separated string, optionally wrapped in f[...]. */
+    private static String formatSlice(java.util.List<String> slice, boolean wrapInFFolder)
+    {
+        String joined = String.join(", ", slice);
+        return wrapInFFolder ? "f[" + joined + "]" : joined;
+    }
+
+    /**
+     * Writes {@code value} to the named field of {@code kf}. v1 only knows
+     * ProjectileKeyFrame.target; adding a new field is one arm here plus
+     * one entry in the dialog's field combo. Returns true on success.
+     */
+    private boolean applySliceToKeyFrame(KeyFrame kf, KeyFrameType type, String field, String value)
+    {
+        if (type == KeyFrameType.PROJECTILE && "Target".equals(field) && kf instanceof ProjectileKeyFrame)
+        {
+            ((ProjectileKeyFrame) kf).setTarget(value);
+            return true;
+        }
+        return false;
+    }
+
     /**
      * Shifts every per-Character keyframe with {@code tick > currentTime}
      * forward by {@code amount} on every target from {@link #resolveSelectionTargets},

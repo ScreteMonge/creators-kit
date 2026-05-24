@@ -500,6 +500,16 @@ public class ToolBoxFrame extends JFrame
         repeatSelection.addActionListener(e -> timeSheetPanel.showRepeatSelectionDialog());
         tools.add(repeatSelection);
 
+        JMenuItem iterateFields = new JMenuItem("Iterate field values...");
+        iterateFields.setToolTipText("<html>Sliding-window iterator: write slices of a value sequence into<br>"
+                + "the same field on each of the currently-selected keyframes,<br>"
+                + "in tick order. Useful for cases like \"kf @ tick 4 targets<br>"
+                + "Tile (1-5), kf @ tick 8 targets Tile (6-10), ...\" where each<br>"
+                + "consecutive kf consumes the next slice of a folder/value list.<br>"
+                + "v1 supports Projectile.Target only.</html>");
+        iterateFields.addActionListener(e -> timeSheetPanel.showIterateFieldDialog());
+        tools.add(iterateFields);
+
         JMenuItem hideObjects = new JMenuItem("Hide GameObjects...");
         hideObjects.setToolTipText("<html>Manage the list of in-game GameObjects suppressed from rendering.<br>"
                 + "Add via right-click &gt; Hide on any object; this dialog lets you<br>"
