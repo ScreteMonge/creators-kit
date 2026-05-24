@@ -27,6 +27,13 @@ public class CreatorsOverlay extends Overlay
     private final com.creatorskit.selection.SelectionManager selectionManager;
     private static final Color HOVERED_COLOUR = new Color(146, 206, 193, 255);
     private static final Color SELECTED_COLOUR = new Color(220, 253, 245);
+    // Translucent pink fill for the Random Hazard Grid candidate-pool overlay.
+    // Drawn only while the hazard-grid dialog is open. Stroke outline + fill
+    // are stacked: the outline at higher alpha helps individual tiles stay
+    // distinguishable when many overlap; the fill is what gives the area its
+    // overall sense.
+    private static final Color HAZARD_FILL_COLOUR = new Color(255, 64, 192, 60);
+    private static final Color HAZARD_STROKE_COLOUR = new Color(255, 64, 192, 180);
     private static final Color GAME_OBJECT_COLOUR = new Color(255, 138, 18);
     private static final Color DYNAMIC_OBJECT_COLOUR = new Color(255, 190, 130);
     private static final Color GROUND_OBJECT_COLOUR = new Color(73, 255, 0);
@@ -67,7 +74,46 @@ public class CreatorsOverlay extends Overlay
             renderOverlays(graphics, worldView);
         }
 
+        renderHazardGridPool(graphics, topLevelWorldView);
+
         return null;
+    }
+
+    /**
+     * Pink tile-pool preview for the Random Hazard Grid dialog. Walks the
+     * dialog state's resolved tile pool and fills each tile with a
+     * translucent pink quad so the user can see the live candidate area as
+     * they refine it with corners A/B + CTRL+I/E paint. No-op when the
+     * dialog isn't open.
+     *
+     * <p>Tiles outside the loaded scene get skipped silently --
+     * Perspective.getCanvasTilePoly returns null in that case, which is
+     * the correct visual: the pool extends beyond what's currently
+     * rendered but only the on-screen tiles need a quad.
+     */
+    private void renderHazardGridPool(Graphics2D graphics, WorldView worldView)
+    {
+        com.creatorskit.swing.CreatorsPanel.HazardGridState state = plugin.getCreatorsPanel().getHazardGridState();
+        if (state == null) return;
+        java.util.Set<WorldPoint> pool = state.resolvePool();
+        if (pool.isEmpty()) return;
+        int currentPlane = worldView.getPlane();
+        for (WorldPoint wp : pool)
+        {
+            // Multi-plane pools are allowed (a CTRL+I-painted tile can be
+            // on a different floor than the corners); only paint the ones
+            // matching the current plane so the user doesn't see ghost
+            // tiles when standing on a different floor.
+            if (wp.getPlane() != currentPlane) continue;
+            LocalPoint lp = LocalPoint.fromWorld(worldView, wp);
+            if (lp == null) continue;
+            Polygon poly = Perspective.getCanvasTilePoly(client, lp);
+            if (poly == null) continue;
+            graphics.setColor(HAZARD_FILL_COLOUR);
+            graphics.fillPolygon(poly);
+            graphics.setColor(HAZARD_STROKE_COLOUR);
+            graphics.drawPolygon(poly);
+        }
     }
 
     public void renderOverlays(Graphics2D graphics, WorldView worldView)

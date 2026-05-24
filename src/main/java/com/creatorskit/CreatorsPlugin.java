@@ -724,6 +724,15 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	 */
 	private boolean paintHeld = false;
 	private final java.util.Set<net.runelite.api.coords.WorldPoint> paintedTiles = new java.util.HashSet<>();
+
+	// Random Hazard Grid CTRL+I / CTRL+E paint-drag state. Same shape as
+	// paintHeld / paintedTiles above -- one flag + a dedupe set per hotkey
+	// so wiggling inside a single tile during a held drag doesn't fire
+	// repeated include/exclude on the same tile.
+	private boolean includePaintHeld = false;
+	private boolean excludePaintHeld = false;
+	private final java.util.Set<net.runelite.api.coords.WorldPoint> includePaintedTiles = new java.util.HashSet<>();
+	private final java.util.Set<net.runelite.api.coords.WorldPoint> excludePaintedTiles = new java.util.HashSet<>();
 	private java.util.concurrent.ScheduledExecutorService setupVersionExecutor;
 	private java.util.concurrent.ScheduledFuture<?> setupVersionTask;
 
@@ -765,6 +774,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		overlayManager.add(bossHealthOverlay);
 
 		keyManager.registerKeyListener(pasteAtCursorListener);
+		keyManager.registerKeyListener(hazardIncludeListener);
+		keyManager.registerKeyListener(hazardExcludeListener);
 		keyManager.registerKeyListener(overlayKeyListener);
 		keyManager.registerKeyListener(oculusOrbListener);
 		keyManager.registerKeyListener(orbPreset1Listener);
@@ -989,6 +1000,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.unregisterKeyListener(scaleUpListener);
 		keyManager.unregisterKeyListener(scaleDownListener);
 		keyManager.unregisterKeyListener(pasteAtCursorListener);
+		keyManager.unregisterKeyListener(hazardIncludeListener);
+		keyManager.unregisterKeyListener(hazardExcludeListener);
 		mouseManager.unregisterMouseWheelListener(this::mouseWheelMoved);
 		mouseManager.unregisterMouseListener(this);
 	}
@@ -2280,6 +2293,77 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	 * setLocation call cause copies to land at stale tiles, which during a
 	 * fast drag would visibly lag the cursor.
 	 */
+	/**
+	 * Random Hazard Grid CTRL+I (include) hotkey. While held, every newly
+	 * hovered tile is added to the candidate pool of the open hazard-grid
+	 * dialog. No-op when the dialog isn't open.
+	 */
+	private final HotkeyListener hazardIncludeListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_I, InputEvent.CTRL_DOWN_MASK))
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			if (creatorsPanel.getHazardGridState() == null) return;
+			includePaintHeld = true;
+			includePaintedTiles.clear();
+			paintHazardTile(true);
+		}
+
+		@Override
+		public void hotkeyReleased()
+		{
+			includePaintHeld = false;
+			includePaintedTiles.clear();
+		}
+	};
+
+	/**
+	 * Random Hazard Grid CTRL+E (exclude) counterpart to
+	 * {@link #hazardIncludeListener}. Carves tiles out of the pool.
+	 */
+	private final HotkeyListener hazardExcludeListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_E, InputEvent.CTRL_DOWN_MASK))
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			if (creatorsPanel.getHazardGridState() == null) return;
+			excludePaintHeld = true;
+			excludePaintedTiles.clear();
+			paintHazardTile(false);
+		}
+
+		@Override
+		public void hotkeyReleased()
+		{
+			excludePaintHeld = false;
+			excludePaintedTiles.clear();
+		}
+	};
+
+	/**
+	 * Single hovered-tile pick for CTRL+I / CTRL+E. Called by the hotkey's
+	 * own press handler (initial tile) and by mouseMoved while held (drag
+	 * paint), with the per-gesture dedupe set keeping each tile to one
+	 * include/exclude call per held gesture.
+	 */
+	private void paintHazardTile(boolean include)
+	{
+		com.creatorskit.swing.CreatorsPanel.HazardGridState state = creatorsPanel.getHazardGridState();
+		if (state == null) return;
+		WorldView worldView = client.getTopLevelWorldView();
+		if (worldView == null) return;
+		net.runelite.api.Tile tile = worldView.getSelectedSceneTile();
+		if (tile == null) return;
+		LocalPoint lp = tile.getLocalLocation();
+		if (lp == null || !lp.isInScene()) return;
+		WorldPoint wp = WorldPoint.fromLocalInstance(client, lp);
+		if (wp == null) return;
+		java.util.Set<WorldPoint> seen = include ? includePaintedTiles : excludePaintedTiles;
+		if (!seen.add(wp)) return;
+		if (include) state.includeTile(wp);
+		else state.excludeTile(wp);
+	}
+
 	private void paintAtCurrentHoveredTile()
 	{
 		WorldView worldView = client.getTopLevelWorldView();
@@ -2774,6 +2858,15 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		if (paintHeld)
 		{
 			paintAtCurrentHoveredTile();
+		}
+		// Same pattern for the hazard-grid CTRL+I / CTRL+E paint-drags.
+		if (includePaintHeld)
+		{
+			paintHazardTile(true);
+		}
+		if (excludePaintHeld)
+		{
+			paintHazardTile(false);
 		}
 		return e;
 	}

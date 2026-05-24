@@ -1715,29 +1715,80 @@ public class CreatorsPanel extends PluginPanel
      * preserving a tick-0 baseline disable on every stamp).
      */
     /**
-     * Hazard-grid state owned by the open dialog. The plugin's right-click
-     * hook reads this via {@link #getHazardGridState()} -- when non-null,
-     * "Set as Corner A" / "Set as Corner B" entries are appended to every
-     * tile right-click menu, so the user picks corners from the game's own
-     * menu rather than fighting mouse-move-loses-hover with capture buttons.
+     * Hazard-grid state owned by the open dialog. The plugin reads this
+     * via {@link #getHazardGridState()} to:
+     *   - inject "Set as Corner A/B" entries on tile right-clicks
+     *   - drive CTRL+I / CTRL+E paint-drag that adds / removes individual
+     *     tiles from the candidate pool
+     *   - drive the pink overlay that paints the live pool on the game
+     *     canvas
+     *
+     * <p>Effective pool = (rectangle from cornerA to cornerB if both set)
+     * ∪ {@code includedTiles} − {@code excludedTiles}. Resolved on demand
+     * via {@link #resolvePool()} since corner edits + CTRL+I/E paints are
+     * all mutations that should be reflected immediately in the overlay.
      */
     public static final class HazardGridState
     {
         public WorldPoint cornerA;
         public WorldPoint cornerB;
+        /** Extra tiles added via CTRL+I; outside the rect or as overrides for excluded. */
+        public final java.util.Set<WorldPoint> includedTiles = new java.util.LinkedHashSet<>();
+        /** Cutouts subtracted from (rect ∪ includedTiles) via CTRL+E. */
+        public final java.util.Set<WorldPoint> excludedTiles = new java.util.LinkedHashSet<>();
         public Runnable onChange;
 
-        public void setCornerA(WorldPoint wp)
+        public void setCornerA(WorldPoint wp) { cornerA = wp; fire(); }
+        public void setCornerB(WorldPoint wp) { cornerB = wp; fire(); }
+
+        /** CTRL+I action: tile becomes part of the pool. Beats any prior exclude. */
+        public void includeTile(WorldPoint wp)
         {
-            cornerA = wp;
-            if (onChange != null) onChange.run();
+            if (wp == null) return;
+            excludedTiles.remove(wp);
+            includedTiles.add(wp);
+            fire();
         }
 
-        public void setCornerB(WorldPoint wp)
+        /** CTRL+E action: tile is carved out. Beats any prior include. */
+        public void excludeTile(WorldPoint wp)
         {
-            cornerB = wp;
-            if (onChange != null) onChange.run();
+            if (wp == null) return;
+            includedTiles.remove(wp);
+            excludedTiles.add(wp);
+            fire();
         }
+
+        /**
+         * Resolves the live candidate pool. Walks the rect once + applies
+         * include/exclude on top. LinkedHashSet preserves deterministic
+         * iteration order if the caller wants to (the Run loop doesn't
+         * need it, but the overlay benefits from stable layering).
+         */
+        public java.util.Set<WorldPoint> resolvePool()
+        {
+            java.util.LinkedHashSet<WorldPoint> pool = new java.util.LinkedHashSet<>();
+            if (cornerA != null && cornerB != null)
+            {
+                int minX = Math.min(cornerA.getX(), cornerB.getX());
+                int maxX = Math.max(cornerA.getX(), cornerB.getX());
+                int minY = Math.min(cornerA.getY(), cornerB.getY());
+                int maxY = Math.max(cornerA.getY(), cornerB.getY());
+                int plane = cornerA.getPlane();
+                for (int x = minX; x <= maxX; x++)
+                {
+                    for (int y = minY; y <= maxY; y++)
+                    {
+                        pool.add(new WorldPoint(x, y, plane));
+                    }
+                }
+            }
+            pool.addAll(includedTiles);
+            pool.removeAll(excludedTiles);
+            return pool;
+        }
+
+        private void fire() { if (onChange != null) onChange.run(); }
     }
 
     private HazardGridState hazardGridState = null;
@@ -1782,8 +1833,18 @@ public class CreatorsPanel extends PluginPanel
                     ? "<not set>"
                     : state.cornerB.getX() + "," + state.cornerB.getY() + " (p" + state.cornerB.getPlane() + ")");
         };
-        state.onChange = refreshCornerLabels;
-        refreshCornerLabels.run();
+        JLabel poolSizeLabel = new JLabel();
+        Runnable refreshPoolSize = () ->
+        {
+            int n = state.resolvePool().size();
+            poolSizeLabel.setText(n + " candidate tile" + (n == 1 ? "" : "s"));
+        };
+        // Chain refreshCornerLabels with the pool-size refresh so any state
+        // mutation hits both. Wrapping rather than replacing because the
+        // right-click menu still calls onChange directly.
+        Runnable everyRefresh = () -> { refreshCornerLabels.run(); refreshPoolSize.run(); };
+        state.onChange = everyRefresh;
+        everyRefresh.run();
 
         JSpinner timeFromSpinner = new JSpinner(new SpinnerNumberModel(0.0, 0.0, 100000.0, 1.0));
         JSpinner timeToSpinner = new JSpinner(new SpinnerNumberModel(100.0, 0.0, 100000.0, 1.0));
@@ -1792,6 +1853,12 @@ public class CreatorsPanel extends PluginPanel
         JSpinner countMinSpinner = new JSpinner(new SpinnerNumberModel(1, 0, 100, 1));
         JSpinner countMaxSpinner = new JSpinner(new SpinnerNumberModel(2, 0, 100, 1));
         JSpinner shiftThresholdSpinner = new JSpinner(new SpinnerNumberModel(1.0, 0.0, 100000.0, 1.0));
+        JCheckBox collisionCheck = new JCheckBox("Collision check (no two stamps on the same tile)", true);
+        collisionCheck.setToolTipText("<html>When on, every stamp picks a tile that hasn't been used yet in this Run.<br>"
+                + "If the pool is exhausted the Run stops early. Mirrors Scatter's<br>"
+                + "non-overlap planner so a finite tile area can't be flooded with<br>"
+                + "stacked stamps. Turn off if you DO want stacking (e.g. ramping<br>"
+                + "intensity at the same tile across multiple ticks).</html>");
 
         JPanel form = new JPanel(new GridLayout(0, 2, 6, 6));
         form.add(new JLabel("Source folder:"));
@@ -1800,6 +1867,8 @@ public class CreatorsPanel extends PluginPanel
         form.add(cornerALabel);
         form.add(new JLabel("Corner B:"));
         form.add(cornerBLabel);
+        form.add(new JLabel("Candidate pool:"));
+        form.add(poolSizeLabel);
         form.add(new JLabel("Time window from (tick):"));
         form.add(timeFromSpinner);
         form.add(new JLabel("Time window to (tick):"));
@@ -1814,13 +1883,13 @@ public class CreatorsPanel extends PluginPanel
         form.add(countMaxSpinner);
         form.add(new JLabel("Shift only kfs at tick >="));
         form.add(shiftThresholdSpinner);
+        form.add(new JLabel("Collision check:"));
+        form.add(collisionCheck);
 
-        JLabel hint = new JLabel("<html><i>Right-click any tile in-game and pick <b>Set as Corner A</b> /<br>"
-                + "<b>Set as Corner B</b> -- the entries are added to the right-click menu while<br>"
-                + "this window is open. Each step tick picks Count random tiles in the<br>"
-                + "rectangle and stamps the folder there, with keyframes (at tick &gt;=<br>"
-                + "threshold) shifted by the step tick. Set threshold to 1 to preserve a<br>"
-                + "tick-0 baseline (e.g. spawn-Disable) across every stamp.</i></html>");
+        JLabel hint = new JLabel("<html><i>Pink tiles in the world preview the candidate pool. Refine with:<br>"
+                + "<b>Hold CTRL+I + drag</b> to <i>include</i> tiles, <b>CTRL+E + drag</b> to <i>exclude</i>.<br>"
+                + "Keyframes at tick &gt;= threshold get shifted by the step tick; set the<br>"
+                + "threshold to 1 to preserve a tick-0 baseline across every stamp.</i></html>");
         hint.setFont(hint.getFont().deriveFont(hint.getFont().getSize2D() - 1f));
 
         JButton runBtn = new JButton("Run");
@@ -1859,10 +1928,11 @@ public class CreatorsPanel extends PluginPanel
 
         runBtn.addActionListener(e ->
         {
-            if (state.cornerA == null || state.cornerB == null)
+            java.util.Set<WorldPoint> pool = state.resolvePool();
+            if (pool.isEmpty())
             {
                 JOptionPane.showMessageDialog(frame,
-                        "Capture BOTH corners first. Right-click a tile in the game and pick \"Set as Corner A\" / \"Set as Corner B\".",
+                        "Candidate pool is empty. Set corners A and B (right-click a tile), or CTRL+I-drag tiles in manually.",
                         "Random Hazard Grid", JOptionPane.WARNING_MESSAGE);
                 return;
             }
@@ -1874,13 +1944,14 @@ public class CreatorsPanel extends PluginPanel
             int countMin = ((Number) countMinSpinner.getValue()).intValue();
             int countMax = ((Number) countMaxSpinner.getValue()).intValue();
             double shiftThreshold = ((Number) shiftThresholdSpinner.getValue()).doubleValue();
+            boolean collisionOn = collisionCheck.isSelected();
 
             if (timeTo < timeFrom) { double t = timeFrom; timeFrom = timeTo; timeTo = t; }
             if (stepMin > stepMax) { int t = stepMin; stepMin = stepMax; stepMax = t; }
             if (countMin > countMax) { int t = countMin; countMin = countMax; countMax = t; }
 
-            runRandomHazardGrid(source, state.cornerA, state.cornerB,
-                    timeFrom, timeTo, stepMin, stepMax, countMin, countMax, shiftThreshold);
+            runRandomHazardGrid(source, pool,
+                    timeFrom, timeTo, stepMin, stepMax, countMin, countMax, shiftThreshold, collisionOn);
         });
         closeBtn.addActionListener(e -> frame.dispose());
 
@@ -1891,30 +1962,38 @@ public class CreatorsPanel extends PluginPanel
      * Executor for {@link #showRandomHazardGridDialog}. Walks the time
      * axis from {@code timeFrom} to {@code timeTo}, at each tick rolling
      * a random count K in [countMin, countMax] and stamping the folder K
-     * times at random tiles inside the rectangle, then advances by a
-     * random step in [stepMin, stepMax]. Each stamp's keyframes shift by
-     * the current step tick.
+     * times at random tiles drawn from {@code pool}. Each stamp's
+     * keyframes shift by the current step tick.
+     *
+     * <p>When {@code collisionCheckOn} is true the planner samples without
+     * replacement across the entire Run -- no two stamps ever share a tile.
+     * If the pool is exhausted before the time window ends the Run stops
+     * gracefully. With collision off, every step picks fresh randoms and
+     * stacking is allowed.
      */
     private void runRandomHazardGrid(Folder source,
-                                     WorldPoint cornerA, WorldPoint cornerB,
+                                     java.util.Set<WorldPoint> pool,
                                      double timeFrom, double timeTo,
                                      int stepMin, int stepMax,
                                      int countMin, int countMax,
-                                     double shiftThreshold)
+                                     double shiftThreshold,
+                                     boolean collisionCheckOn)
     {
-        int minX = Math.min(cornerA.getX(), cornerB.getX());
-        int maxX = Math.max(cornerA.getX(), cornerB.getX());
-        int minY = Math.min(cornerA.getY(), cornerB.getY());
-        int maxY = Math.max(cornerA.getY(), cornerB.getY());
-        int plane = cornerA.getPlane();
-        if (cornerA.getPlane() != cornerB.getPlane())
+        // Plane mismatch sanity: warn in chat if the pool spans multiple
+        // planes (e.g. user CTRL+I'd tiles on a different floor). Stamps
+        // still use each tile's own plane.
+        java.util.Set<Integer> planes = new java.util.HashSet<>();
+        for (WorldPoint wp : pool) planes.add(wp.getPlane());
+        if (planes.size() > 1)
         {
-            // Mismatched planes -- not catastrophic but probably a mistake.
-            // Carry on with corner A's plane; user can see in chat what
-            // happened.
-            plugin.sendChatMessage("Random Hazard Grid: corners differ in plane (A=" + cornerA.getPlane()
-                    + ", B=" + cornerB.getPlane() + "). Using A's plane (" + plane + ").");
+            plugin.sendChatMessage("Random Hazard Grid: candidate tiles span planes " + planes + ". Stamps use each tile's own plane.");
         }
+
+        // Working copy: when collision is on we sample without replacement
+        // by removing picked tiles. When off, we sample with replacement
+        // (picking a fresh random tile each time) so the original pool is
+        // untouched -- we use the list view directly.
+        java.util.List<WorldPoint> remaining = new java.util.ArrayList<>(pool);
 
         WorldView worldView = client.getTopLevelWorldView();
         java.util.Random rng = new java.util.Random();
@@ -1924,14 +2003,28 @@ public class CreatorsPanel extends PluginPanel
         // loop forever; cap total stamps at 10k to protect against pathological
         // params even at minute tick windows.
         final int SAFETY = 10000;
+        boolean exhausted = false;
+        outer:
         while (tick <= timeTo && totalStamps < SAFETY)
         {
             int k = countMin == countMax ? countMin : countMin + rng.nextInt(countMax - countMin + 1);
             for (int i = 0; i < k && totalStamps < SAFETY; i++)
             {
-                int x = minX + rng.nextInt(maxX - minX + 1);
-                int y = minY + rng.nextInt(maxY - minY + 1);
-                WorldPoint target = new WorldPoint(x, y, plane);
+                WorldPoint target;
+                if (collisionCheckOn)
+                {
+                    if (remaining.isEmpty())
+                    {
+                        exhausted = true;
+                        break outer;
+                    }
+                    int idx = rng.nextInt(remaining.size());
+                    target = remaining.remove(idx);
+                }
+                else
+                {
+                    target = remaining.get(rng.nextInt(remaining.size()));
+                }
                 Folder stamp = stampFolderAtTile(source, target, tick, shiftThreshold, worldView);
                 if (stamp != null) totalStamps++;
             }
@@ -1940,7 +2033,10 @@ public class CreatorsPanel extends PluginPanel
             tick += step;
         }
 
-        plugin.sendChatMessage("Random Hazard Grid: stamped " + totalStamps + " copies of folder '" + source.getName() + "'.");
+        StringBuilder summary = new StringBuilder("Random Hazard Grid: stamped " + totalStamps + " copies of folder '" + source.getName() + "'");
+        if (exhausted) summary.append(" (pool exhausted at tick ").append(tick).append(")");
+        summary.append(".");
+        plugin.sendChatMessage(summary.toString());
         if (totalStamps >= SAFETY)
         {
             JOptionPane.showMessageDialog(this,
