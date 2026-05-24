@@ -341,7 +341,24 @@ public class AttributePanel extends JPanel
         // selected keyframe immediately, replacing the old click-Update-or-lose-it
         // flow. Done AFTER setupXxxCard so the initial SpinnerNumberModel installs
         // don't fire as "user edits".
-        com.creatorskit.swing.timesheet.attributes.Attributes[] allAttributes = {
+        for (com.creatorskit.swing.timesheet.attributes.Attributes attrs : allAttributes())
+        {
+            wireAutoUpdate(attrs);
+        }
+
+        setupKeyListeners();
+    }
+
+    /**
+     * Single source of truth for every Attributes container the panel owns.
+     * Used by the auto-update wiring at boot AND by {@link #setPlayLocked}
+     * to disable every editable field during playback (anti-freeze defense
+     * -- spinner.setValue cascades during play were the root cause of an
+     * earlier orientation-kf-driven freeze).
+     */
+    private com.creatorskit.swing.timesheet.attributes.Attributes[] allAttributes()
+    {
+        return new com.creatorskit.swing.timesheet.attributes.Attributes[]{
                 movementAttributes, animAttributes, oriAttributes, spawnAttributes,
                 modelAttributes, textAttributes, overheadAttributes, healthAttributes,
                 spotAnimAttributes, spotAnim2Attributes,
@@ -351,12 +368,67 @@ public class AttributePanel extends JPanel
                 colourAttributes,
                 sound1Attributes, sound2Attributes, sound3Attributes, sound4Attributes
         };
-        for (com.creatorskit.swing.timesheet.attributes.Attributes attrs : allAttributes)
-        {
-            wireAutoUpdate(attrs);
-        }
+    }
 
-        setupKeyListeners();
+    /**
+     * When true, every editable field across every keyframe card has been
+     * disabled to prevent edits during playback. See {@link #setPlayLocked}
+     * for the rationale + restore logic.
+     */
+    private boolean playLocked = false;
+
+    /**
+     * Snapshot of each component's pre-lock enabled state so unlock restores
+     * exactly the visible-disabled fields (e.g. the Face-Target gate
+     * disables End / Turn rate / etc. while it's active; we don't want
+     * unlock to override that and re-enable them).
+     */
+    private final java.util.IdentityHashMap<JComponent, Boolean> preLockEnabled = new java.util.IdentityHashMap<>();
+
+    /**
+     * Defense in depth: when playback is active, disable every editable
+     * field across every keyframe card. Stops spinner.setValue cascades
+     * (which previously froze the EDT on heavy scenes when Orientation
+     * kfs ticked through), prevents accidental edits while the user is
+     * watching playback, and gives a clear visual cue that the panel is
+     * inert.
+     *
+     * <p>Snapshots the prior enabled state on lock and restores from it
+     * on unlock -- so fields the Face-Target gate (or any other
+     * card-level enable logic) had already greyed out stay greyed out
+     * after play stops, instead of being globally re-enabled.
+     *
+     * <p>Idempotent. Called from {@link Programmer#togglePlay} on play
+     * start and {@link Programmer#pause} on stop.
+     */
+    public void setPlayLocked(boolean locked)
+    {
+        if (locked == playLocked) return;
+        playLocked = locked;
+        if (locked)
+        {
+            preLockEnabled.clear();
+            for (com.creatorskit.swing.timesheet.attributes.Attributes attrs : allAttributes())
+            {
+                for (JComponent c : attrs.getAllComponents())
+                {
+                    preLockEnabled.put(c, c.isEnabled());
+                    c.setEnabled(false);
+                }
+            }
+        }
+        else
+        {
+            for (com.creatorskit.swing.timesheet.attributes.Attributes attrs : allAttributes())
+            {
+                for (JComponent c : attrs.getAllComponents())
+                {
+                    Boolean prev = preLockEnabled.get(c);
+                    c.setEnabled(prev == null || prev);
+                }
+            }
+            preLockEnabled.clear();
+        }
     }
 
     /**

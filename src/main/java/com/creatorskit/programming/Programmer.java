@@ -1275,6 +1275,13 @@ public class Programmer
             triggerPause = false;
             playing = true;
             timeSheetPanel.setPlayButtonIcon(true);
+            // Defense in depth: freeze every editable field on the
+            // AttributePanel for the duration of playback. Without this a
+            // stray edit (spinner arrow-key, focus-lost commit, etc.)
+            // could rewrite the active keyframe mid-play -- and the
+            // listener cascade was previously the root cause of an
+            // Orientation-kf freeze on heavy scenes. Restored on pause.
+            timeSheetPanel.getAttributePanel().setPlayLocked(true);
             double currentTime = timeSheetPanel.getCurrentTime();
 
             ArrayList<Character> characters = plugin.getCharacters();
@@ -1309,6 +1316,11 @@ public class Programmer
         }
 
         timeSheetPanel.setPlayButtonIcon(false);
+        // Unlock the AttributePanel fields. Restores each component to its
+        // pre-play enabled state so any per-card gates (Face Target etc.)
+        // that were greyed out STAY greyed out, instead of being globally
+        // re-enabled.
+        timeSheetPanel.getAttributePanel().setPlayLocked(false);
     }
 
     /**
