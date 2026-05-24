@@ -1316,16 +1316,33 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			javax.swing.DefaultListModel<String> model = new javax.swing.DefaultListModel<>();
 			java.util.LinkedHashMap<String, Integer> rowToId = new java.util.LinkedHashMap<>();
+			// Name resolution requires the client thread (ObjectComposition
+			// lookup asserts on it). Bounce: snapshot ids on the EDT, look
+			// up names on the client thread, then hop back to the EDT to
+			// repopulate the JList model. Two hops per refresh but the
+			// refresh fires rarely (only on user-initiated add / remove).
 			Runnable refresh = () ->
 			{
-				model.clear();
-				rowToId.clear();
-				for (Integer id : hiddenGameObjectIds)
+				final java.util.List<Integer> snapshot = new java.util.ArrayList<>(hiddenGameObjectIds);
+				clientThread.invoke(() ->
 				{
-					String row = id + "  -  " + getGameObjectName(id);
-					model.addElement(row);
-					rowToId.put(row, id);
-				}
+					final java.util.LinkedHashMap<Integer, String> namesById = new java.util.LinkedHashMap<>();
+					for (Integer id : snapshot)
+					{
+						namesById.put(id, getGameObjectName(id));
+					}
+					javax.swing.SwingUtilities.invokeLater(() ->
+					{
+						model.clear();
+						rowToId.clear();
+						for (java.util.Map.Entry<Integer, String> e : namesById.entrySet())
+						{
+							String row = e.getKey() + "  -  " + e.getValue();
+							model.addElement(row);
+							rowToId.put(row, e.getKey());
+						}
+					});
+				});
 			};
 			refresh.run();
 
@@ -1430,7 +1447,12 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			if (!seen.add(id)) continue;
 			if (hiddenGameObjectIds.contains(id)) continue;
 			String name = getGameObjectName(id);
-			client.getMenu().createMenuEntry(-1)
+			// idx=1 inserts just above Cancel rather than at the end of
+			// the array (-1 = end = TOP of the visible menu). The user
+			// asked for Hide to NOT be the primary option, so we want it
+			// near the bottom instead. Matches the placement Store-Add
+			// uses in ModelGetter.
+			client.getMenu().createMenuEntry(1)
 					.setOption(ColorUtil.prependColorTag("Hide", Color.RED))
 					.setTarget(ColorUtil.prependColorTag(name + " (" + id + ")", Color.CYAN))
 					.setType(MenuAction.RUNELITE)
