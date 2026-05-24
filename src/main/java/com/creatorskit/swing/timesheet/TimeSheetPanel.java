@@ -2511,6 +2511,23 @@ public class TimeSheetPanel extends JPanel
 
     public void onCurrentTimeChanged(double tick)
     {
+        // Skip the AttributePanel refresh while the Programmer is playing.
+        // setCurrentTime fires every client tick during play, and each
+        // refresh cascades into per-field spinner.setValue calls -- each
+        // of those fires Swing ChangeListeners and a background-flash
+        // repaint. Multiplied by the active card's field count and the
+        // play tick rate, the EDT can spike enough to lock visible
+        // playback in heavier scenes (especially with Orientation kfs,
+        // which carry 6 fields each).
+        //
+        // The card is informational during play -- the user isn't
+        // editing -- so a stale snapshot is fine. The next pause / scrub
+        // / selection change goes through one of the other resetAttributes
+        // call sites and refreshes the card to the live state.
+        if (toolBox != null && toolBox.getProgrammer() != null && toolBox.getProgrammer().isPlaying())
+        {
+            return;
+        }
         attributePanel.resetAttributes(selectedCharacter, tick);
     }
 
