@@ -1796,42 +1796,69 @@ public class CreatorsPanel extends PluginPanel
         form.add(new JLabel("Shift only kfs at tick >="));
         form.add(shiftThresholdSpinner);
 
-        JLabel hint = new JLabel("<html><i>Each step tick picks Count random tiles in the rectangle and stamps the folder there,<br>"
-                + "with keyframes (at tick &gt;= threshold) shifted by the step tick. Set threshold to 1 to<br>"
-                + "preserve a tick-0 baseline (e.g. spawn-Disable) across every stamp.</i></html>");
+        JLabel hint = new JLabel("<html><i>This window is non-modal -- you can switch focus to the game, hover the<br>"
+                + "tile you want as a corner, then click the capture button. Each step tick<br>"
+                + "picks Count random tiles in the rectangle and stamps the folder there,<br>"
+                + "with keyframes (at tick &gt;= threshold) shifted by the step tick. Set<br>"
+                + "threshold to 1 to preserve a tick-0 baseline (e.g. spawn-Disable) across<br>"
+                + "every stamp.</i></html>");
         hint.setFont(hint.getFont().deriveFont(hint.getFont().getSize2D() - 1f));
 
+        JButton runBtn = new JButton("Run");
+        JButton closeBtn = new JButton("Close");
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        buttons.add(runBtn);
+        buttons.add(closeBtn);
+
         JPanel content = new JPanel(new BorderLayout(0, 8));
-        content.add(form, BorderLayout.CENTER);
-        content.add(hint, BorderLayout.SOUTH);
+        content.setBorder(new EmptyBorder(8, 8, 8, 8));
+        content.add(form, BorderLayout.NORTH);
+        content.add(hint, BorderLayout.CENTER);
+        content.add(buttons, BorderLayout.SOUTH);
 
-        int result = JOptionPane.showConfirmDialog(this, content,
-                "Random Hazard Grid -- source: " + source.getName(),
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (result != JOptionPane.OK_OPTION) return;
+        // Non-modal JFrame so the user can hover game tiles BETWEEN clicks
+        // -- modal dialogs (JOptionPane) steal focus and prevent the game
+        // canvas from receiving the mouse-move events that update
+        // worldView.getSelectedSceneTile(). With a non-modal frame the user
+        // can: focus the game, hover the tile they want, click back on the
+        // capture button (the most recently selected scene tile is what the
+        // button reads). Run stays available so the user can stamp, tweak
+        // params, and stamp again without reopening.
+        final javax.swing.JFrame frame = new javax.swing.JFrame("Random Hazard Grid -- source: " + source.getName());
+        frame.setDefaultCloseOperation(javax.swing.JFrame.DISPOSE_ON_CLOSE);
+        frame.setContentPane(content);
+        frame.pack();
+        frame.setLocationRelativeTo(null);
+        frame.setAlwaysOnTop(true);  // keep visible above the game canvas
 
-        if (cornerA[0] == null || cornerB[0] == null)
+        runBtn.addActionListener(e ->
         {
-            JOptionPane.showMessageDialog(this,
-                    "Capture BOTH corners (hover a tile, click the button) before running.",
-                    "Random Hazard Grid", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
+            if (cornerA[0] == null || cornerB[0] == null)
+            {
+                JOptionPane.showMessageDialog(frame,
+                        "Capture BOTH corners first. Tab focus to the game, hover a tile, click the capture button, then return.",
+                        "Random Hazard Grid", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
 
-        double timeFrom = ((Number) timeFromSpinner.getValue()).doubleValue();
-        double timeTo = ((Number) timeToSpinner.getValue()).doubleValue();
-        int stepMin = ((Number) stepMinSpinner.getValue()).intValue();
-        int stepMax = ((Number) stepMaxSpinner.getValue()).intValue();
-        int countMin = ((Number) countMinSpinner.getValue()).intValue();
-        int countMax = ((Number) countMaxSpinner.getValue()).intValue();
-        double shiftThreshold = ((Number) shiftThresholdSpinner.getValue()).doubleValue();
+            double timeFrom = ((Number) timeFromSpinner.getValue()).doubleValue();
+            double timeTo = ((Number) timeToSpinner.getValue()).doubleValue();
+            int stepMin = ((Number) stepMinSpinner.getValue()).intValue();
+            int stepMax = ((Number) stepMaxSpinner.getValue()).intValue();
+            int countMin = ((Number) countMinSpinner.getValue()).intValue();
+            int countMax = ((Number) countMaxSpinner.getValue()).intValue();
+            double shiftThreshold = ((Number) shiftThresholdSpinner.getValue()).doubleValue();
 
-        if (timeTo < timeFrom) { double t = timeFrom; timeFrom = timeTo; timeTo = t; }
-        if (stepMin > stepMax) { int t = stepMin; stepMin = stepMax; stepMax = t; }
-        if (countMin > countMax) { int t = countMin; countMin = countMax; countMax = t; }
+            if (timeTo < timeFrom) { double t = timeFrom; timeFrom = timeTo; timeTo = t; }
+            if (stepMin > stepMax) { int t = stepMin; stepMin = stepMax; stepMax = t; }
+            if (countMin > countMax) { int t = countMin; countMin = countMax; countMax = t; }
 
-        runRandomHazardGrid(source, cornerA[0], cornerB[0],
-                timeFrom, timeTo, stepMin, stepMax, countMin, countMax, shiftThreshold);
+            runRandomHazardGrid(source, cornerA[0], cornerB[0],
+                    timeFrom, timeTo, stepMin, stepMax, countMin, countMax, shiftThreshold);
+        });
+        closeBtn.addActionListener(e -> frame.dispose());
+
+        frame.setVisible(true);
     }
 
     /**
