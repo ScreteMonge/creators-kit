@@ -801,6 +801,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.registerKeyListener(skipSubForwardListener);
 		keyManager.registerKeyListener(skipBackwardListener);
 		keyManager.registerKeyListener(skipSubBackwardListener);
+		keyManager.registerKeyListener(skipOneTickForwardListener);
+		keyManager.registerKeyListener(skipOneTickBackwardListener);
 		keyManager.registerKeyListener(saveListener);
 		keyManager.registerKeyListener(openListener);
 		keyManager.registerKeyListener(undoListener);
@@ -987,6 +989,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.unregisterKeyListener(skipSubForwardListener);
 		keyManager.unregisterKeyListener(skipBackwardListener);
 		keyManager.unregisterKeyListener(skipSubBackwardListener);
+		keyManager.unregisterKeyListener(skipOneTickForwardListener);
+		keyManager.unregisterKeyListener(skipOneTickBackwardListener);
 		keyManager.unregisterKeyListener(saveListener);
 		keyManager.unregisterKeyListener(openListener);
 		keyManager.unregisterKeyListener(undoListener);
@@ -2547,6 +2551,44 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			creatorsPanel.getToolBox().getTimeSheetPanel().skipListener(-0.1);
 		}
 	};
+
+	/**
+	 * Plain arrow keys scrub the timeline by +/- 1 tick. Skipped when a
+	 * text component has focus so the arrows still navigate the cursor
+	 * inside the plugin's many text fields (Face Target, Hide-GameObjects
+	 * id field, etc.) and the in-game chat box.
+	 */
+	private final HotkeyListener skipOneTickForwardListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_RIGHT, 0))
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			if (isTextComponentFocused()) return;
+			creatorsPanel.getToolBox().getTimeSheetPanel().skipListener(1.0);
+		}
+	};
+
+	private final HotkeyListener skipOneTickBackwardListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_LEFT, 0))
+	{
+		@Override
+		public void hotkeyPressed()
+		{
+			if (isTextComponentFocused()) return;
+			creatorsPanel.getToolBox().getTimeSheetPanel().skipListener(-1.0);
+		}
+	};
+
+	/**
+	 * True when the keyboard focus owner is a text input -- JTextField,
+	 * JTextArea, JTextPane, JFormattedTextField, etc. Used by the plain
+	 * arrow-key timeline scrub so the user's cursor navigation inside
+	 * text fields isn't hijacked.
+	 */
+	private boolean isTextComponentFocused()
+	{
+		java.awt.Component f = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+		return f instanceof javax.swing.text.JTextComponent;
+	}
 
 	private final HotkeyListener saveListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK))
 	{
