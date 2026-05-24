@@ -195,19 +195,36 @@ public class Programmer
             }
 
             int[][] path = keyFrame.getPath();
-            int currentStep = keyFrame.getCurrentStep();
             int pathLength = path.length;
+
+            // Recompute currentStep from the kf's stepClientTick BEFORE the
+            // early-out check. The stored currentStep is only authoritative
+            // during continuous play -- when starting play from the middle of
+            // a kf (or after pausing past the path's natural end and resuming
+            // before the next kf), the stored value can be stale (e.g.
+            // pathLength left over from a previous playthrough that walked
+            // the whole path). Without recomputing first, the early-out
+            // saw "stale pathLength" and skipped movement until the next
+            // kf forced a setCurrentStep(0) -- the symptom the user
+            // reported as "play does nothing until the next keyframe".
+            //
+            // resetMovementKeyFrame in togglePlay() seeds stepClientTick to
+            // the correct "currentTime ago" value, so the recompute lands on
+            // the time-correct step. Mid-path: continues from where scrub
+            // left off. Past path: caps at pathLength and the early-out
+            // below still triggers, falling through to the no-mkf path so
+            // animation / orientation keep updating.
+            double tileSpeed = keyFrame.getSpeed();
+            double speed = tileSpeed * Constants.CLIENT_TICK_LENGTH / Constants.GAME_TICK_LENGTH;
+            int clientTicksPassed = client.getGameCycle() - keyFrame.getStepClientTick();
+            double stepsComplete = clientTicksPassed * speed;
+            int currentStep = (int) Math.floor(stepsComplete);
+
             if (currentStep >= pathLength || currentStep == -1)
             {
                 transform3D(worldView, character, currentClientTick);
                 continue;
             }
-
-            double tileSpeed = keyFrame.getSpeed();
-            double speed = tileSpeed * Constants.CLIENT_TICK_LENGTH / Constants.GAME_TICK_LENGTH;
-            int clientTicksPassed = client.getGameCycle() - keyFrame.getStepClientTick();
-            double stepsComplete = clientTicksPassed * speed;
-            currentStep = (int) Math.floor(stepsComplete);
 
             double endSpeed = (pathLength - 1) - (Math.floor(((pathLength - 1) / tileSpeed)) * tileSpeed);
             double finalSpeed = tileSpeed;
