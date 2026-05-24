@@ -509,8 +509,42 @@ public class Programmer
         {
             return;
         }
-        int angle = (int) Orientation.getAngleBetween(sourceLp, targetLp);
-        source.setOrientation(angle);
+
+        // Smooth turn-then-track: interpolate from the kf's snapshot Start
+        // angle toward the target angle at the kf's turn rate. Until the
+        // accumulated rotation covers the start-to-target difference, the
+        // character rotates step-by-step; once it's caught up, the snap
+        // tracks the target each tick.
+        //
+        // Without this the old code snapped directly to the target on
+        // the kf's first active tick, ignoring Start entirely. The user
+        // saw that as Face Target "assuming previous orientation" wrong
+        // -- it was using none. Now Start (snapshotted at activation
+        // from the prior orientation kf, or the idle spinner) is the
+        // honest initial pose, and turn rate governs how fast we close
+        // the gap.
+        int start = oriKeyFrame.getStart();
+        int targetAngle = (int) Orientation.getAngleBetween(sourceLp, targetLp);
+        int difference = directionalDifference(start, targetAngle, oriKeyFrame.getTurnDirection());
+        double turnRate = oriKeyFrame.getTurnRate();
+        double rotation = turnRate * ticksPassed;
+
+        int newOrientation;
+        if (difference > -rotation && difference < rotation)
+        {
+            // Close enough -- snap to current target angle and keep
+            // tracking from here.
+            newOrientation = targetAngle;
+        }
+        else if (difference > 0)
+        {
+            newOrientation = Orientation.boundOrientation((int) (start + rotation));
+        }
+        else
+        {
+            newOrientation = Orientation.boundOrientation((int) (start - rotation));
+        }
+        source.setOrientation(newOrientation);
     }
 
     private Character findCharacterByName(String name)

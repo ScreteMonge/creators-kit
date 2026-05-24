@@ -1977,18 +1977,23 @@ public class AttributePanel extends JPanel
         {
             boolean active = oriAttributes.getTargetCharacterNameValue() != null;
             boolean enabled = !active;
+            // Disabled-with-face-target: End / Turn direction / Copy in-game /
+            // Compass. These configure the rotation END goal, which Face
+            // Target supplies dynamically -- the static value would just
+            // be ignored.
             end.setEnabled(enabled);
-            // Duration stays editable while Face Target is on -- it acts as
-            // a "track for N ticks then stop" timer for the face-target
-            // snap (see applyFaceTarget's duration gate). The other fields
-            // (end / turnRate / turn direction / compass / convert / copy)
-            // remain inert because face-target overrides them entirely.
-            duration.setEnabled(true);
-            turnRate.setEnabled(enabled);
             turnDirCombo.setEnabled(enabled);
             getEnd.setEnabled(enabled);
-            convertArrow.setControlsEnabled(enabled);
             compass.setControlsEnabled(enabled);
+            // Editable-with-face-target: Duration acts as the "track for N
+            // ticks then stop" timer (applyFaceTarget duration gate).
+            // Turn rate drives the initial rotate-to-target speed in
+            // applyFaceTarget so the character SMOOTHLY turns to face the
+            // target before locking on. Convert arrow lets the user
+            // toggle between duration / turn-rate for that ramp.
+            duration.setEnabled(true);
+            turnRate.setEnabled(true);
+            convertArrow.setControlsEnabled(true);
         };
         faceTarget.getDocument().addDocumentListener(new javax.swing.event.DocumentListener()
         {
