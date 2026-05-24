@@ -500,6 +500,14 @@ public class ToolBoxFrame extends JFrame
         repeatSelection.addActionListener(e -> timeSheetPanel.showRepeatSelectionDialog());
         tools.add(repeatSelection);
 
+        JMenuItem hideObjects = new JMenuItem("Hide GameObjects...");
+        hideObjects.setToolTipText("<html>Manage the list of in-game GameObjects suppressed from rendering.<br>"
+                + "Add via right-click &gt; Hide on any object; this dialog lets you<br>"
+                + "review the list and unhide entries you've added. Limited to<br>"
+                + "GameObjects (walls / decorations need a different mechanism).</html>");
+        hideObjects.addActionListener(e -> plugin.showHideGameObjectsDialog());
+        tools.add(hideObjects);
+
         // A-B Loop submenu -- vertical markers on the timeline that loop
         // playback between them. The markers can also be removed via X
         // buttons drawn on the marker chips themselves (Premiere-style).

@@ -736,6 +736,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		// any Character is constructed via the load path.
 		Character.setGlobalKeyFramesStore(globalKeyFrames);
 
+		// Restore the persisted hide-list before any GameObjectSpawned events
+		// fire (login spawns the initial scene, which we want filtered).
+		loadHiddenGameObjectIds();
+
 		creatorsPanel = injector.getInstance(CreatorsPanel.class);
 		final BufferedImage icon = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
 		navigationButton = NavigationButton.builder()
@@ -1141,17 +1145,302 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 	}
 
-	// TEMP: hardcoded GameObject hide test. Subscribes to spawn events and
-	// drops object id 56670 from the scene as it appears (re-fires on every
-	// region/tile reload so it stays hidden across travel). Remove this
-	// once the full "Hide GameObjects" feature lands.
+	// ----- Hide GameObjects ----------------------------------------------
+	//
+	// Persistent per-user list of GameObject ids to suppress from rendering.
+	// Stored as a comma-separated string under config key {@link #HIDDEN_GAMEOBJECT_IDS_KEY}
+	// (configManager rather than @ConfigItem because the canonical UI is a
+	// dedicated Tools dialog, not the RuneLite sidebar). Hit by:
+	//   * onGameObjectSpawned -- drops matching objects from the Scene as
+	//     they appear (handles region/tile reload, login, instance enter/exit).
+	//   * hideGameObjectId() -- when the user picks "Hide" from a right-click,
+	//     also walks the live Scene so the object disappears immediately
+	//     without waiting for natural respawn.
+	//
+	// Caveats:
+	//   * Scene.removeGameObject() is GameObject-only. WallObject /
+	//     DecorativeObject sibling categories can't be removed via the
+	//     public API today, so they're out of scope.
+	//   * Unhiding doesn't restore a live object -- the scene has no
+	//     re-spawn event. User has to walk away / re-load the area for
+	//     the natural spawn to recreate the object now that it's not
+	//     filtered. The manage dialog flags this explicitly.
+
+	private static final String HIDDEN_GAMEOBJECT_IDS_KEY = "hiddenGameObjectIds";
+
+	private final java.util.Set<Integer> hiddenGameObjectIds = new java.util.LinkedHashSet<>();
+
+	private void loadHiddenGameObjectIds()
+	{
+		hiddenGameObjectIds.clear();
+		String raw = configManager.getConfiguration("creatorssuite", HIDDEN_GAMEOBJECT_IDS_KEY);
+		if (raw == null || raw.isEmpty()) return;
+		for (String token : raw.split(","))
+		{
+			String trimmed = token.trim();
+			if (trimmed.isEmpty()) continue;
+			try { hiddenGameObjectIds.add(Integer.parseInt(trimmed)); }
+			catch (NumberFormatException ignored) {}
+		}
+	}
+
+	private void saveHiddenGameObjectIds()
+	{
+		StringBuilder sb = new StringBuilder();
+		boolean first = true;
+		for (Integer id : hiddenGameObjectIds)
+		{
+			if (!first) sb.append(",");
+			sb.append(id);
+			first = false;
+		}
+		configManager.setConfiguration("creatorssuite", HIDDEN_GAMEOBJECT_IDS_KEY, sb.toString());
+	}
+
 	@Subscribe
 	public void onGameObjectSpawned(GameObjectSpawned event)
 	{
 		GameObject obj = event.getGameObject();
-		if (obj != null && obj.getId() == 56670)
+		if (obj != null && hiddenGameObjectIds.contains(obj.getId()))
 		{
 			client.getScene().removeGameObject(obj);
+		}
+	}
+
+	/**
+	 * Live-scene snapshot of the user's hidden ids. Read-only -- mutate via
+	 * {@link #hideGameObjectId} / {@link #unhideGameObjectId} so the persisted
+	 * config and the active scene stay in sync.
+	 */
+	public java.util.Set<Integer> getHiddenGameObjectIds()
+	{
+		return java.util.Collections.unmodifiableSet(hiddenGameObjectIds);
+	}
+
+	/**
+	 * Adds {@code id} to the hidden set, persists, and walks the current
+	 * scene removing every live GameObject matching that id. Called from
+	 * the right-click "Hide" menu so the object disappears the moment the
+	 * user picks the option, not on the next tile reload.
+	 *
+	 * <p>Returns true when the id was newly added (so callers can short-
+	 * circuit chat-message / refresh logic on a no-op).
+	 */
+	public boolean hideGameObjectId(int id)
+	{
+		if (!hiddenGameObjectIds.add(id)) return false;
+		saveHiddenGameObjectIds();
+		// Walk the current scene to catch already-spawned instances. The
+		// spawn event won't re-fire for them; only future spawns hit
+		// onGameObjectSpawned, so without this pass the user would have
+		// to walk away and back to see the hide take effect.
+		clientThread.invoke(() ->
+		{
+			Scene scene = client.getScene();
+			if (scene == null) return;
+			Tile[][][] tiles = scene.getTiles();
+			for (Tile[][] plane : tiles)
+			{
+				if (plane == null) continue;
+				for (Tile[] row : plane)
+				{
+					if (row == null) continue;
+					for (Tile t : row)
+					{
+						if (t == null) continue;
+						GameObject[] gos = t.getGameObjects();
+						if (gos == null) continue;
+						for (GameObject go : gos)
+						{
+							if (go != null && go.getId() == id)
+							{
+								scene.removeGameObject(go);
+							}
+						}
+					}
+				}
+			}
+		});
+		return true;
+	}
+
+	/**
+	 * Removes {@code id} from the hidden set and persists. Does NOT re-spawn
+	 * the live object (no public scene API to do so) -- the user has to
+	 * walk away / re-load the area to see it again. Returns true when the
+	 * id was actually in the set.
+	 */
+	public boolean unhideGameObjectId(int id)
+	{
+		if (!hiddenGameObjectIds.remove(id)) return false;
+		saveHiddenGameObjectIds();
+		return true;
+	}
+
+	/**
+	 * Best-effort cache name for a GameObject id. Returns just the id
+	 * formatted as a fallback when the ObjectComposition lookup is null or
+	 * the cache name is the sentinel "null".
+	 */
+	public String getGameObjectName(int id)
+	{
+		try
+		{
+			ObjectComposition comp = client.getObjectDefinition(id);
+			if (comp != null)
+			{
+				String n = comp.getName();
+				if (n != null && !n.equals("null") && !n.isEmpty()) return n;
+			}
+		}
+		catch (Exception ignored) {}
+		return "Object " + id;
+	}
+
+	/**
+	 * Opens the management dialog under Tools &gt; Hide GameObjects.
+	 * Lists currently-hidden ids with their cache names, lets the user
+	 * remove individual entries, clear the whole list, or manually add an
+	 * id by number. The walk-away caveat for unhide is shown inline.
+	 *
+	 * <p>Built on Swing because the rest of the toolbox is Swing; the
+	 * dialog is non-modal so the user can keep playing the game with it
+	 * open and right-click to add more hides without dismissing it.
+	 */
+	public void showHideGameObjectsDialog()
+	{
+		javax.swing.SwingUtilities.invokeLater(() ->
+		{
+			javax.swing.JPanel panel = new javax.swing.JPanel(new java.awt.BorderLayout(6, 6));
+			panel.setBorder(new javax.swing.border.EmptyBorder(8, 8, 8, 8));
+
+			javax.swing.DefaultListModel<String> model = new javax.swing.DefaultListModel<>();
+			java.util.LinkedHashMap<String, Integer> rowToId = new java.util.LinkedHashMap<>();
+			Runnable refresh = () ->
+			{
+				model.clear();
+				rowToId.clear();
+				for (Integer id : hiddenGameObjectIds)
+				{
+					String row = id + "  -  " + getGameObjectName(id);
+					model.addElement(row);
+					rowToId.put(row, id);
+				}
+			};
+			refresh.run();
+
+			javax.swing.JList<String> list = new javax.swing.JList<>(model);
+			list.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+			list.setVisibleRowCount(10);
+			javax.swing.JScrollPane scroll = new javax.swing.JScrollPane(list);
+			scroll.setPreferredSize(new java.awt.Dimension(360, 200));
+			panel.add(scroll, java.awt.BorderLayout.CENTER);
+
+			javax.swing.JPanel south = new javax.swing.JPanel();
+			south.setLayout(new javax.swing.BoxLayout(south, javax.swing.BoxLayout.Y_AXIS));
+
+			javax.swing.JPanel buttons = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 6, 0));
+			javax.swing.JButton remove = new javax.swing.JButton("Remove selected");
+			remove.setToolTipText("Drop the highlighted ids from the hide list. Live instances stay invisible until the area reloads -- walk away and back to see them again.");
+			remove.addActionListener(ev ->
+			{
+				for (String row : list.getSelectedValuesList())
+				{
+					Integer id = rowToId.get(row);
+					if (id != null) unhideGameObjectId(id);
+				}
+				refresh.run();
+			});
+			buttons.add(remove);
+
+			javax.swing.JButton clear = new javax.swing.JButton("Clear all");
+			clear.setToolTipText("Drop every id from the hide list at once.");
+			clear.addActionListener(ev ->
+			{
+				java.util.List<Integer> snap = new java.util.ArrayList<>(hiddenGameObjectIds);
+				for (Integer id : snap) unhideGameObjectId(id);
+				refresh.run();
+			});
+			buttons.add(clear);
+			south.add(buttons);
+
+			javax.swing.JPanel addRow = new javax.swing.JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 6, 0));
+			addRow.add(new javax.swing.JLabel("Add id manually:"));
+			javax.swing.JTextField idField = new javax.swing.JTextField(8);
+			addRow.add(idField);
+			javax.swing.JButton addBtn = new javax.swing.JButton("Add");
+			Runnable doAdd = () ->
+			{
+				String txt = idField.getText() == null ? "" : idField.getText().trim();
+				if (txt.isEmpty()) return;
+				try
+				{
+					int id = Integer.parseInt(txt);
+					if (hideGameObjectId(id)) refresh.run();
+					idField.setText("");
+				}
+				catch (NumberFormatException nfe)
+				{
+					idField.setBackground(java.awt.Color.PINK);
+				}
+			};
+			addBtn.addActionListener(ev -> doAdd.run());
+			idField.addActionListener(ev -> doAdd.run());
+			addRow.add(addBtn);
+			south.add(addRow);
+
+			javax.swing.JLabel note = new javax.swing.JLabel("<html><i>Note: removing an id from this list doesn't<br>"
+					+ "re-spawn already-hidden objects. Walk away or<br>"
+					+ "re-load the area to see them again.</i></html>");
+			note.setBorder(new javax.swing.border.EmptyBorder(6, 0, 0, 0));
+			south.add(note);
+
+			panel.add(south, java.awt.BorderLayout.SOUTH);
+
+			javax.swing.JFrame frame = new javax.swing.JFrame("Hidden GameObjects");
+			frame.setDefaultCloseOperation(javax.swing.JFrame.DISPOSE_ON_CLOSE);
+			frame.getContentPane().add(panel);
+			frame.pack();
+			frame.setLocationRelativeTo(null);
+			frame.setVisible(true);
+		});
+	}
+
+	/**
+	 * Right-click menu hook: adds a red "Hide GameObject" entry for every
+	 * non-already-hidden GameObject on the hovered tile. Gated by
+	 * {@link CreatorsConfig#rightClick()} alongside the other Creator's Kit
+	 * menu options. Called from {@link #addMenuEntries(WorldView)}.
+	 *
+	 * <p>Identical objects across multiple tiles (multi-tile scenery) only
+	 * appear once per tile so the menu doesn't get spammed -- the de-dup
+	 * is by object identity on this tile, since the same id can show up
+	 * multiple times legitimately (e.g. paired flower beds).
+	 */
+	public void addHideGameObjectMenuEntries(Tile tile)
+	{
+		if (tile == null) return;
+		GameObject[] gameObjects = tile.getGameObjects();
+		if (gameObjects == null) return;
+		java.util.Set<Integer> seen = new java.util.HashSet<>();
+		for (GameObject go : gameObjects)
+		{
+			if (go == null) continue;
+			int id = go.getId();
+			if (!seen.add(id)) continue;
+			if (hiddenGameObjectIds.contains(id)) continue;
+			String name = getGameObjectName(id);
+			client.getMenu().createMenuEntry(-1)
+					.setOption(ColorUtil.prependColorTag("Hide", Color.RED))
+					.setTarget(ColorUtil.prependColorTag(name + " (" + id + ")", Color.CYAN))
+					.setType(MenuAction.RUNELITE)
+					.onClick(e ->
+					{
+						if (hideGameObjectId(id))
+						{
+							sendChatMessage("Hiding GameObject " + name + " (" + id + "). Manage via Tools > Hide GameObjects.");
+						}
+					});
 		}
 	}
 
@@ -1223,6 +1512,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		modelGetter.addLocalPlayerMenuEntries(tile);
 		modelGetter.addTileItemMenuEntries(tile);
 		modelGetter.addTileObjectMenuEntries(tile);
+		// Hide-this-object entries on every GameObject on the tile. Gated
+		// by the same rightClick() master toggle as everything else in
+		// this branch.
+		addHideGameObjectMenuEntries(tile);
 	}
 
 	@Subscribe
