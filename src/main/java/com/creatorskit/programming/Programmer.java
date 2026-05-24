@@ -432,12 +432,17 @@ public class Programmer
         {
             return;
         }
-        // Face Target tracks indefinitely until a later orientation kf
-        // takes over (or the user pauses). Duration / turn rate govern
-        // ONLY the initial rotate-to-target ramp below -- once the
-        // accumulated rotation closes the start->target gap, every
-        // subsequent tick re-snaps to the live target angle.
+        // Duration bounds how long Face Target tracks. After it expires
+        // the character keeps whatever angle it last had -- and if there
+        // is an active Movement kf, the movement-wins branch in
+        // transform3D takes over (findLastOrientation will pick MOVEMENT
+        // once oriEndTick < currentTime + movement still ongoing), so
+        // auto-orient-to-movement-direction resumes naturally.
         double ticksPassed = timeSheetPanel.getCurrentTime() - oriKeyFrame.getTick();
+        if (ticksPassed > oriKeyFrame.getDuration())
+        {
+            return;
+        }
 
         // Ambiguity guard: refuse to apply when the name resolves to more
         // than one Character, OR when it collides with a Folder of the same
