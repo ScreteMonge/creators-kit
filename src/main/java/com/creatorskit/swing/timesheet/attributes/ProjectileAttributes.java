@@ -25,6 +25,7 @@ public class ProjectileAttributes extends Attributes
                 + "<br>- A single Character name (\"Player\")"
                 + "<br>- A comma-separated list (\"Player, NPC1, NPC2\")"
                 + "<br>- \"folder:Foldername\" to fan out to every Character under that folder"
+                + "<br>- \"f[Folder1, Folder2, ...]\" to fan out to multiple folders at once"
                 + "<br>Empty = no projectile fires.</html>");
     }
 

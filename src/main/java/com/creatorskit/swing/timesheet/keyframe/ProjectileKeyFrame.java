@@ -32,6 +32,8 @@ public class ProjectileKeyFrame extends KeyFrame
      *   - a single Character name ("Player")
      *   - a comma-separated list ("Player, NPC1, NPC2")
      *   - "folder:Foldername" to fan out to every Character under that folder
+     *   - "f[Folder1, Folder2, ...]" multi-folder shorthand (same fan-out, just
+     *     less typing than chaining several "folder:" entries)
      * Empty string means no targets — no projectile fires.
      */
     private String target;

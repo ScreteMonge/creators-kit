@@ -1865,6 +1865,12 @@ public class Programmer
      *   "Player"                    -> single Character lookup
      *   "Player, NPC1, NPC2"        -> comma-separated list
      *   "folder:Foldername"         -> every Character recursively under that folder
+     *   "f[Folder1,Folder2,...]"    -> every Character under each named folder
+     *                                  (use for multi-folder fan-out without
+     *                                  spamming the "folder:" prefix per entry)
+     *
+     * <p>Comma-in-folder-name is not supported -- folder names with literal
+     * commas would have to use the legacy "folder:" form one at a time.
      */
     private java.util.List<Character> resolveProjectileTargets(String spec)
     {
@@ -1879,6 +1885,24 @@ public class Programmer
             return out;
         }
 
+        com.creatorskit.swing.manager.ManagerTree tree = plugin.getCreatorsPanel().getToolBox().getManagerPanel().getManagerTree();
+
+        // Multi-folder shorthand: f[Folder1, Folder2, ...]
+        if (trimmed.length() >= 3
+                && (trimmed.charAt(0) == 'f' || trimmed.charAt(0) == 'F')
+                && trimmed.charAt(1) == '['
+                && trimmed.charAt(trimmed.length() - 1) == ']')
+        {
+            String inside = trimmed.substring(2, trimmed.length() - 1);
+            for (String fname : inside.split(","))
+            {
+                String n = fname.trim();
+                if (n.isEmpty()) continue;
+                appendCharactersInFolder(tree, n, out);
+            }
+            return out;
+        }
+
         if (trimmed.toLowerCase().startsWith("folder:"))
         {
             String folderName = trimmed.substring(7).trim();
@@ -1886,20 +1910,7 @@ public class Programmer
             {
                 return out;
             }
-            com.creatorskit.swing.manager.ManagerTree tree = plugin.getCreatorsPanel().getToolBox().getManagerPanel().getManagerTree();
-            javax.swing.tree.DefaultMutableTreeNode root = tree.getRootNode();
-            java.util.ArrayList<javax.swing.tree.DefaultMutableTreeNode> all = new java.util.ArrayList<>();
-            tree.getAllNodes(root, all);
-            for (javax.swing.tree.DefaultMutableTreeNode node : all)
-            {
-                Object user = node.getUserObject();
-                if (user instanceof com.creatorskit.swing.manager.Folder
-                        && folderName.equalsIgnoreCase(((com.creatorskit.swing.manager.Folder) user).getName()))
-                {
-                    tree.getObjectPanelChildren(node, out);
-                    break;
-                }
-            }
+            appendCharactersInFolder(tree, folderName, out);
             return out;
         }
 
@@ -1923,6 +1934,36 @@ public class Programmer
             }
         }
         return out;
+    }
+
+    /**
+     * Folder-name lookup helper for both the legacy "folder:" syntax and the
+     * f[...] multi-folder shorthand. Walks the tree once, finds the first
+     * folder with a matching case-insensitive name, appends every descendant
+     * Character to {@code out} de-duped by identity.
+     */
+    private void appendCharactersInFolder(com.creatorskit.swing.manager.ManagerTree tree,
+                                          String folderName,
+                                          java.util.List<Character> out)
+    {
+        javax.swing.tree.DefaultMutableTreeNode root = tree.getRootNode();
+        java.util.ArrayList<javax.swing.tree.DefaultMutableTreeNode> all = new java.util.ArrayList<>();
+        tree.getAllNodes(root, all);
+        for (javax.swing.tree.DefaultMutableTreeNode node : all)
+        {
+            Object user = node.getUserObject();
+            if (user instanceof com.creatorskit.swing.manager.Folder
+                    && folderName.equalsIgnoreCase(((com.creatorskit.swing.manager.Folder) user).getName()))
+            {
+                java.util.ArrayList<Character> chars = new java.util.ArrayList<>();
+                tree.getObjectPanelChildren(node, chars);
+                for (Character c : chars)
+                {
+                    if (!out.contains(c)) out.add(c);
+                }
+                break;
+            }
+        }
     }
 
     private void registerSpawnChanges(Character character)

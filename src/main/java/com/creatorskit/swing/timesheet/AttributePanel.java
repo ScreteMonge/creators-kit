@@ -3012,7 +3012,7 @@ public class AttributePanel extends JPanel
         titleHelp.setToolTipText("<html>Fires an OSRS projectile from this Character's position toward the named target(s)."
                 + "<br>Uses the game's native createProjectile API — arc / height / slope are interpolated"
                 + "<br>by the engine just like real spells and arrows.<br>"
-                + "<br>Target accepts: single name, comma-separated list, or \"folder:Foldername\".</html>");
+                + "<br>Target accepts: single name, comma-separated list, \"folder:Foldername\", or \"f[Folder1,Folder2,...]\".</html>");
         titlePanel.add(titleHelp);
 
         c.gridwidth = 1;
