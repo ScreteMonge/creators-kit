@@ -55,6 +55,13 @@ public class AttributePanel extends JPanel
 
     private final GridBagConstraints c = new GridBagConstraints();
     private final JPanel cardPanel = new JPanel();
+    /**
+     * Banner shown above the card panel during playback. Visually confirms
+     * that the greyed-out field state is intentional ("you're watching
+     * playback, edits are paused") rather than the user wondering whether
+     * the panel is broken or some state got stuck.
+     */
+    private final JLabel playLockBanner = new JLabel();
     private final JLabel objectLabel = new JLabel("[No Object Selected]");
     private final JLabel cardLabel = new JLabel("");
     private final JButton keyFramed = new JButton();
@@ -230,7 +237,23 @@ public class AttributePanel extends JPanel
         c.weighty = 1;
         c.gridx = 0;
         c.gridy = 1;
-        add(cardPanel, c);
+        // Wrap cardPanel in a vertical container so the play-lock banner
+        // ("Cannot edit in playback mode.") can stack above it without
+        // disturbing the existing GridBag layout. Banner starts hidden;
+        // setPlayLocked toggles visibility.
+        JPanel cardWrapper = new JPanel(new BorderLayout());
+        cardWrapper.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        playLockBanner.setHorizontalAlignment(SwingConstants.CENTER);
+        playLockBanner.setOpaque(true);
+        playLockBanner.setBackground(ColorScheme.BRAND_ORANGE);
+        playLockBanner.setForeground(Color.WHITE);
+        playLockBanner.setFont(FontManager.getRunescapeBoldFont());
+        playLockBanner.setBorder(new EmptyBorder(4, 6, 4, 6));
+        playLockBanner.setText("Cannot edit in playback mode.");
+        playLockBanner.setVisible(false);
+        cardWrapper.add(playLockBanner, BorderLayout.NORTH);
+        cardWrapper.add(cardPanel, BorderLayout.CENTER);
+        add(cardWrapper, c);
 
         JPanel moveCard = new JPanel();
         JPanel animCard = new JPanel();
@@ -405,6 +428,7 @@ public class AttributePanel extends JPanel
     {
         if (locked == playLocked) return;
         playLocked = locked;
+        playLockBanner.setVisible(locked);
         if (locked)
         {
             preLockEnabled.clear();
