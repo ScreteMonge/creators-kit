@@ -495,14 +495,26 @@ public class Character
         //  (2) !ckObject.isPlaying() -- only refresh on scrub / edit, not
         //      mid-play. Play uses whatever the most recent scrub
         //      computed, keeping per-play orientation deterministic.
+        // Re-snapshot on every scrub-onto-this-kf, not just when it
+        // first becomes current. Previously the `keyFrame != previous`
+        // guard skipped re-snapshot when the SAME kf was activated
+        // again -- so editing the PRIOR ori kf's end didn't propagate
+        // to this kf's Start, and the compass showed the stale value
+        // until the user scrubbed away and back to force a fresh
+        // activation. The !isPlaying() gate still prevents per-tick
+        // churn during playback (where edits aren't allowed anyway
+        // because the play-lock disables the UI).
         if (type == KeyFrameType.ORIENTATION
                 && keyFrame instanceof OrientationKeyFrame
-                && keyFrame != previous
                 && ckObject != null
                 && !ckObject.isPlaying())
         {
             OrientationKeyFrame newKf = (OrientationKeyFrame) keyFrame;
-            newKf.setStart(computeOrientationStartFor(newKf));
+            int newStart = computeOrientationStartFor(newKf);
+            if (newStart != newKf.getStart())
+            {
+                newKf.setStart(newStart);
+            }
         }
 
         currentFrames[idx] = keyFrame;

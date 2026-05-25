@@ -584,6 +584,15 @@ public class ToolBoxFrame extends JFrame
         github.addActionListener(e -> openLink("https://github.com/ScreteMonge/creators-kit"));
         help.add(github);
 
+        help.addSeparator();
+
+        JMenuItem debugLogging = new JMenuItem("Debug logging...");
+        debugLogging.setToolTipText("<html>Print Movement / Orientation diagnostic logs for a specific Character.<br>"
+                + "Logs go to the RuneLite log file (and IntelliJ console when running from source).<br>"
+                + "Helpful when reporting a kf-related bug -- copy the output and share it.</html>");
+        debugLogging.addActionListener(e -> showDebugLoggingDialog());
+        help.add(debugLogging);
+
 
         JMenu donate = new JMenu("Donate");
         jMenuBar.add(donate);
@@ -603,5 +612,48 @@ public class ToolBoxFrame extends JFrame
         {
             plugin.sendChatMessage("Failed to open link.");
         }
+    }
+
+    /**
+     * Help &gt; Debug logging dialog. Mirrors the Debugging section in
+     * the RuneLite config sidebar but lives in the toolbox menu so it's
+     * discoverable without hunting the sidebar. Reads and writes the
+     * same config keys (creatorssuite.debugCharacterName,
+     * creatorssuite.debugLogToChat) so both surfaces stay in sync.
+     */
+    private void showDebugLoggingDialog()
+    {
+        ConfigManager cm = plugin.getConfigManager();
+        String currentName = cm.getConfiguration("creatorssuite", "debugCharacterName");
+        if (currentName == null) currentName = "";
+        String currentChatStr = cm.getConfiguration("creatorssuite", "debugLogToChat");
+        boolean currentChat = "true".equalsIgnoreCase(currentChatStr);
+
+        JTextField nameField = new JTextField(currentName, 20);
+        nameField.setToolTipText("Exact name of the Character to log for. Empty = disabled.");
+        JCheckBox chatToggle = new JCheckBox("Also log debug lines to in-game chat", currentChat);
+        chatToggle.setToolTipText("Default off (logs only go to the RuneLite log file). On = also visible in chat live.");
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.add(new JLabel("Character name to log for:"));
+        panel.add(nameField);
+        panel.add(javax.swing.Box.createVerticalStrut(8));
+        panel.add(chatToggle);
+        panel.add(javax.swing.Box.createVerticalStrut(8));
+        JLabel hint = new JLabel("<html><i>Logs Movement / Orientation kf activations, play-loop arbitration,<br>"
+                + "Face Target snaps, and Start-angle snapshots. Output goes to<br>"
+                + "the RuneLite log file (and the IntelliJ console when running<br>"
+                + "from source).</i></html>");
+        hint.setFont(hint.getFont().deriveFont(hint.getFont().getSize2D() - 1f));
+        panel.add(hint);
+
+        int res = JOptionPane.showConfirmDialog(this, panel, "Debug logging",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (res != JOptionPane.OK_OPTION) return;
+
+        String newName = nameField.getText() == null ? "" : nameField.getText().trim();
+        cm.setConfiguration("creatorssuite", "debugCharacterName", newName);
+        cm.setConfiguration("creatorssuite", "debugLogToChat", String.valueOf(chatToggle.isSelected()));
     }
 }
