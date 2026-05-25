@@ -5179,6 +5179,28 @@ public class TimeSheetPanel extends JPanel
         // permitted).
         javax.swing.JSpinner windowSpinner = new javax.swing.JSpinner(new SpinnerNumberModel(5, 1, 1000, 1));
         javax.swing.JSpinner strideSpinner = new javax.swing.JSpinner(new SpinnerNumberModel(5, 1, 1000, 1));
+
+        // Generate-missing toggle: when ON, ignores the rest of the
+        // selection and treats the first selected kf as a template. Walks
+        // i from 0 to N-1 (N = arithmetic count, or sequence/stride for
+        // other sources), placing one kf per step at template.tick +
+        // i*tickStep on the template's Character. Existing kfs at those
+        // ticks are updated in place; missing ones are CREATED by copying
+        // the template and overriding the iterated field. The "spawn a
+        // full series from one seed kf" workflow -- e.g. one Special bar
+        // kf at tick 10 with all the fields set, generate 92 more so the
+        // bar drains 92 -> 0 across 93 ticks.
+        javax.swing.JCheckBox generateMissingCheck = new javax.swing.JCheckBox("Generate missing kfs (single-template mode)");
+        generateMissingCheck.setToolTipText("<html>When ON: ignores any kfs after the first in the selection. Uses the<br>"
+                + "first selected kf as a template. For each value in the sequence (i=0..N-1):<br>"
+                + " - tick = template.tick + i * tickStep<br>"
+                + " - if a kf already exists at that tick on the template's Character: update it<br>"
+                + " - otherwise: create a new kf as a copy of the template with the iterated field replaced<br>"
+                + "All other fields are inherited from the template, so you get a uniform stream of kfs.</html>");
+        javax.swing.JSpinner tickStepSpinner = new javax.swing.JSpinner(new SpinnerNumberModel(1.0, 0.01, 1_000_000.0, 0.1));
+        tickStepSpinner.setToolTipText("Tick interval between generated kfs. 1.0 = one kf per game tick.");
+        tickStepSpinner.setEnabled(false);
+        generateMissingCheck.addActionListener(e -> tickStepSpinner.setEnabled(generateMissingCheck.isSelected()));
         // Stride defaults to window size (non-overlapping). Auto-link on
         // window edit so the common case "size 5, stride 5" Just Works
         // without the user touching stride. Manually editing stride later
@@ -5241,6 +5263,8 @@ public class TimeSheetPanel extends JPanel
             int window = ((Number) windowSpinner.getValue()).intValue();
             int stride = ((Number) strideSpinner.getValue()).intValue();
             boolean wrap = folderPatternRadio.isSelected() && wrapFolderCheck.isSelected();
+            boolean generate = generateMissingCheck.isSelected();
+            double tickStep = ((Number) tickStepSpinner.getValue()).doubleValue();
 
             StringBuilder sb = new StringBuilder();
             sb.append("Sequence (").append(sequence.size()).append(" entries): ");
@@ -5257,29 +5281,82 @@ public class TimeSheetPanel extends JPanel
             }
             sb.append("\n\n");
 
-            int applied = 0;
-            for (int i = 0; i < ordered.size(); i++)
+            if (generate)
             {
-                KeyFrame kf = ordered.get(i);
-                int start = i * stride;
-                int end = start + window;
-                if (end > sequence.size())
+                // Generate-mode preview: walk from template.tick by
+                // tickStep increments. New kfs are flagged "[new]" so
+                // the user can sanity check how many will be created.
+                KeyFrame template = ordered.isEmpty() ? null : ordered.get(0);
+                Character templateOwner = template == null ? null : kfOwner.get(template);
+                if (template == null || templateOwner == null)
                 {
-                    sb.append(String.format("  kf @ tick %.1f (%s): NOT APPLIED (sequence ran out at index %d, needed %d)\n",
+                    sb.append("No template kf -- select one and re-open.\n");
+                }
+                else
+                {
+                    sb.append("Generate mode -- template @ tick ")
+                            .append(String.format("%.1f", template.getTick()))
+                            .append(" on ").append(templateOwner.getName())
+                            .append(" (").append(template.getKeyFrameType().getName()).append(")\n");
+                    int sliceCount = (sequence.size() - window) / stride + 1;
+                    if (sliceCount < 0) sliceCount = 0;
+                    int shown = 0;
+                    int created = 0;
+                    int updated = 0;
+                    int total = 0;
+                    for (int i = 0; i < sliceCount; i++)
+                    {
+                        int start = i * stride;
+                        int end = start + window;
+                        if (end > sequence.size()) break;
+                        total++;
+                        java.util.List<String> slice = sequence.subList(start, end);
+                        String value = formatSlice(slice, wrap);
+                        double tick = template.getTick() + i * tickStep;
+                        KeyFrame existing = templateOwner.findKeyFrame(template.getKeyFrameType(), tick);
+                        boolean isNew = (existing == null);
+                        if (isNew) created++; else updated++;
+                        if (shown < 12)
+                        {
+                            sb.append(String.format("  %s tick %.2f: %s%n", isNew ? "[new]" : "[upd]", tick, value));
+                            shown++;
+                        }
+                    }
+                    if (total > shown)
+                    {
+                        sb.append("  ... (").append(total - shown).append(" more)\n");
+                    }
+                    sb.append("\nWill write ").append(total).append(" kfs (")
+                            .append(created).append(" new, ")
+                            .append(updated).append(" updating existing).");
+                }
+            }
+            else
+            {
+                int applied = 0;
+                for (int i = 0; i < ordered.size(); i++)
+                {
+                    KeyFrame kf = ordered.get(i);
+                    int start = i * stride;
+                    int end = start + window;
+                    if (end > sequence.size())
+                    {
+                        sb.append(String.format("  kf @ tick %.1f (%s): NOT APPLIED (sequence ran out at index %d, needed %d)\n",
+                                kf.getTick(),
+                                kfOwner.get(kf) == null ? "?" : kfOwner.get(kf).getName(),
+                                sequence.size(), end));
+                        continue;
+                    }
+                    java.util.List<String> slice = sequence.subList(start, end);
+                    String value = formatSlice(slice, wrap);
+                    sb.append(String.format("  kf @ tick %.1f (%s): %s\n",
                             kf.getTick(),
                             kfOwner.get(kf) == null ? "?" : kfOwner.get(kf).getName(),
-                            sequence.size(), end));
-                    continue;
+                            value));
+                    applied++;
                 }
-                java.util.List<String> slice = sequence.subList(start, end);
-                String value = formatSlice(slice, wrap);
-                sb.append(String.format("  kf @ tick %.1f (%s): %s\n",
-                        kf.getTick(),
-                        kfOwner.get(kf) == null ? "?" : kfOwner.get(kf).getName(),
-                        value));
-                applied++;
+                sb.append("\nWill apply to ").append(applied).append(" of ").append(ordered.size()).append(" selected keyframes.");
             }
-            sb.append("\nWill apply to ").append(applied).append(" of ").append(ordered.size()).append(" selected keyframes.");
             previewArea.setText(sb.toString());
             previewArea.setCaretPosition(0);
         };
@@ -5360,6 +5437,8 @@ public class TimeSheetPanel extends JPanel
         arithmeticStart.addChangeListener(e -> refreshPreview.run());
         arithmeticStep.addChangeListener(e -> refreshPreview.run());
         arithmeticCount.addChangeListener(e -> refreshPreview.run());
+        generateMissingCheck.addActionListener(e -> refreshPreview.run());
+        tickStepSpinner.addChangeListener(e -> refreshPreview.run());
 
         JPanel sourcePanel = new JPanel();
         sourcePanel.setLayout(new BoxLayout(sourcePanel, BoxLayout.Y_AXIS));
@@ -5389,6 +5468,13 @@ public class TimeSheetPanel extends JPanel
         slicePanel.add(new JLabel("Stride:"));
         slicePanel.add(strideSpinner);
 
+        JPanel generatePanel = new JPanel(new GridLayout(0, 2, 6, 6));
+        generatePanel.setBorder(BorderFactory.createTitledBorder("Generation"));
+        generatePanel.add(generateMissingCheck);
+        generatePanel.add(new JLabel(""));
+        generatePanel.add(new JLabel("Tick step:"));
+        generatePanel.add(tickStepSpinner);
+
         JPanel headerPanel = new JPanel(new GridLayout(0, 2, 6, 6));
         headerPanel.add(new JLabel("Selection:"));
         // Bare count was confusing -- the tool writes ONE slice per
@@ -5414,6 +5500,7 @@ public class TimeSheetPanel extends JPanel
         top.add(headerPanel);
         top.add(sourcePanel);
         top.add(slicePanel);
+        top.add(generatePanel);
         content.add(top, BorderLayout.NORTH);
         content.add(previewScroll, BorderLayout.CENTER);
 
@@ -5449,23 +5536,92 @@ public class TimeSheetPanel extends JPanel
         boolean wrap = folderPatternRadio.isSelected() && wrapFolderCheck.isSelected();
         String field = (String) fieldCombo.getSelectedItem();
 
+        boolean generate = generateMissingCheck.isSelected();
+        double tickStep = ((Number) tickStepSpinner.getValue()).doubleValue();
+
         int applied = 0;
         int skipped = 0;
-        for (int i = 0; i < ordered.size(); i++)
+        int created = 0;
+
+        if (generate)
         {
-            KeyFrame kf = ordered.get(i);
-            int start = i * stride;
-            int end = start + window;
-            if (end > sequence.size())
+            // Generate path: template = first selected kf. Walks i from 0
+            // to the sequence-derived slice count, placing one kf per
+            // step on the template's Character. Existing kfs at the
+            // computed tick are mutated in place; missing ticks get a
+            // fresh KeyFrame.createCopy(template, tick) which is added
+            // via Character.addKeyFrame. Every add / replace is recorded
+            // as a KeyFrameAction for the undo stack.
+            KeyFrame template = ordered.isEmpty() ? null : ordered.get(0);
+            Character templateOwner = template == null ? null : kfOwner.get(template);
+            if (template == null || templateOwner == null)
             {
-                skipped = ordered.size() - i;
-                break;
+                JOptionPane.showMessageDialog(this,
+                        "Generate mode needs the first selected kf to have a resolvable owner -- got null.",
+                        "Iterate field values", JOptionPane.WARNING_MESSAGE);
+                return;
             }
-            java.util.List<String> slice = sequence.subList(start, end);
-            String value = formatSlice(slice, wrap);
-            if (applySliceToKeyFrame(kf, firstType, field, value))
+            int sliceCount = (sequence.size() - window) / stride + 1;
+            if (sliceCount < 0) sliceCount = 0;
+            KeyFrameAction[] kfa = new KeyFrameAction[0];
+            for (int i = 0; i < sliceCount; i++)
             {
-                applied++;
+                int start = i * stride;
+                int end = start + window;
+                if (end > sequence.size()) break;
+                java.util.List<String> slice = sequence.subList(start, end);
+                String value = formatSlice(slice, wrap);
+                double tick = template.getTick() + i * tickStep;
+                KeyFrame existing = templateOwner.findKeyFrame(firstType, tick);
+                if (existing != null)
+                {
+                    if (applySliceToKeyFrame(existing, firstType, field, value))
+                    {
+                        applied++;
+                    }
+                }
+                else
+                {
+                    KeyFrame freshKf = KeyFrame.createCopy(template, tick);
+                    if (!applySliceToKeyFrame(freshKf, firstType, field, value))
+                    {
+                        // Parse failure -- skip this kf, don't add a half-
+                        // baked template copy with the wrong field value.
+                        continue;
+                    }
+                    KeyFrame replaced = templateOwner.addKeyFrame(freshKf, currentTime);
+                    kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(freshKf, templateOwner, KeyFrameCharacterActionType.ADD));
+                    if (replaced != null)
+                    {
+                        kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(replaced, templateOwner, KeyFrameCharacterActionType.REMOVE));
+                    }
+                    applied++;
+                    created++;
+                }
+            }
+            if (kfa.length > 0)
+            {
+                addKeyFrameActions(kfa);
+            }
+        }
+        else
+        {
+            for (int i = 0; i < ordered.size(); i++)
+            {
+                KeyFrame kf = ordered.get(i);
+                int start = i * stride;
+                int end = start + window;
+                if (end > sequence.size())
+                {
+                    skipped = ordered.size() - i;
+                    break;
+                }
+                java.util.List<String> slice = sequence.subList(start, end);
+                String value = formatSlice(slice, wrap);
+                if (applySliceToKeyFrame(kf, firstType, field, value))
+                {
+                    applied++;
+                }
             }
         }
 
@@ -5481,10 +5637,18 @@ public class TimeSheetPanel extends JPanel
             attributePanel.resetAttributes(selectedCharacter, currentTime);
         }
 
-        String msg = "Iterate field values: wrote " + applied + " of " + ordered.size() + " selected keyframes";
-        if (skipped > 0)
+        String msg;
+        if (generate)
         {
-            msg += " (" + skipped + " skipped -- sequence ran out)";
+            msg = "Iterate field values: wrote " + applied + " kfs (" + created + " new, " + (applied - created) + " updating existing)";
+        }
+        else
+        {
+            msg = "Iterate field values: wrote " + applied + " of " + ordered.size() + " selected keyframes";
+            if (skipped > 0)
+            {
+                msg += " (" + skipped + " skipped -- sequence ran out)";
+            }
         }
         plugin.sendChatMessage(msg + ".");
     }
