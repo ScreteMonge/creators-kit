@@ -5092,10 +5092,18 @@ public class TimeSheetPanel extends JPanel
     // "kf at tick 4 wants Tile (1-5), kf at tick 8 wants Tile (6-10)..."
     // pattern across whatever field needs it.
     //
-    // v1 wires up only ProjectileKeyFrame.target as the target field --
-    // the dialog has a JComboBox with one entry, the apply path is one
-    // switch arm. Adding a second field is: add to the combo's items,
-    // add an arm to applySliceToKeyFrame. The slicer + sequence-source +
+    // v2 adds:
+    //   - Arithmetic sequence source (start / step / count) for the
+    //     "92, 91, 90, ..." numeric decrement / increment use case.
+    //   - Scalar numeric fields for the bar keyframes (Special / Shield /
+    //     Health: currentValue, maxValue, duration, width, order). The
+    //     slice's first element is parsed and written; window > 1 takes
+    //     the leftmost value (useful when overlapping a string sequence,
+    //     unusual for numeric).
+    //
+    // Adding a new field is: add to the combo's items in
+    // {@link #populateIterateFieldCombo}, add an arm to
+    // {@link #applySliceToKeyFrame}. The slicer + sequence-source +
     // preview + everything else is shared.
 
     /**
@@ -5127,35 +5135,48 @@ public class TimeSheetPanel extends JPanel
             }
         }
 
-        // Field picker. v1 only knows about ProjectileKeyFrame.target; the
-        // combo is empty for other types until they're wired in, which
-        // lets the dialog still display the selection summary so the user
-        // sees they're in the right place but the tool doesn't apply.
+        // Field picker. Populated per-type in populateIterateFieldCombo
+        // (Projectile.Target from v1, plus numeric scalar fields on
+        // Special / Shield / Health bar kfs from v2). Empty combo for an
+        // unregistered type bails out below.
         javax.swing.JComboBox<String> fieldCombo = new javax.swing.JComboBox<>();
-        if (firstType == KeyFrameType.PROJECTILE)
-        {
-            fieldCombo.addItem("Target");
-        }
+        populateIterateFieldCombo(fieldCombo, firstType);
 
         if (fieldCombo.getItemCount() == 0)
         {
             JOptionPane.showMessageDialog(this,
                     "No iterable fields registered for keyframe type \"" + firstType.getName() + "\" yet. "
-                            + "Currently only Projectile.Target is wired up -- ping the developer with the field you want next.",
+                            + "Ping the developer with the field you want next.",
                     "Iterate field values", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
         javax.swing.JRadioButton folderPatternRadio = new javax.swing.JRadioButton("Folder names matching pattern", true);
         javax.swing.JRadioButton literalListRadio = new javax.swing.JRadioButton("Literal comma list", false);
+        javax.swing.JRadioButton arithmeticRadio = new javax.swing.JRadioButton("Arithmetic sequence (start, step, count)", false);
         ButtonGroup sourceGroup = new ButtonGroup();
         sourceGroup.add(folderPatternRadio);
         sourceGroup.add(literalListRadio);
+        sourceGroup.add(arithmeticRadio);
         javax.swing.JTextField folderPatternField = new javax.swing.JTextField("Tile (*)", 20);
         folderPatternField.setToolTipText("Glob-style match where * is a wildcard. Folders sorted numerically when the wildcard captures digits, otherwise alphabetically.");
         javax.swing.JTextField literalListField = new javax.swing.JTextField("", 20);
         literalListField.setToolTipText("Comma-separated values, used verbatim as slice contents.");
+        // Arithmetic source: start + i*step for i in [0, count). Default
+        // count = selected-kf-count so the typical "one value per kf"
+        // case Just Works without the user touching it.
+        javax.swing.JSpinner arithmeticStart = new javax.swing.JSpinner(new SpinnerNumberModel(0, -1_000_000, 1_000_000, 1));
+        javax.swing.JSpinner arithmeticStep  = new javax.swing.JSpinner(new SpinnerNumberModel(-1, -1_000_000, 1_000_000, 1));
+        javax.swing.JSpinner arithmeticCount = new javax.swing.JSpinner(new SpinnerNumberModel(Math.max(1, selectedKeyFrames.length), 1, 1_000_000, 1));
+        arithmeticStart.setToolTipText("First value in the sequence (written into the first selected kf).");
+        arithmeticStep.setToolTipText("Per-step increment. Negative values decrement (e.g. step=-1 with start=92 gives 92, 91, 90, ...).");
+        arithmeticCount.setToolTipText("How many values to generate. Set to the selected-kf count to fill every kf exactly once with window=stride=1.");
 
+        // Bumping arithmetic radio also bumps window/stride to 1/1 -- the
+        // sliding-window slicer still runs, but for the "one numeric value
+        // per kf" use case window=1 is what you want. Users can override
+        // afterwards if they want to overlap (unusual for scalars but
+        // permitted).
         javax.swing.JSpinner windowSpinner = new javax.swing.JSpinner(new SpinnerNumberModel(5, 1, 1000, 1));
         javax.swing.JSpinner strideSpinner = new javax.swing.JSpinner(new SpinnerNumberModel(5, 1, 1000, 1));
         // Stride defaults to window size (non-overlapping). Auto-link on
@@ -5209,8 +5230,14 @@ public class TimeSheetPanel extends JPanel
 
         Runnable refreshPreview = () ->
         {
-            java.util.List<String> sequence = resolveSequence(folderPatternRadio.isSelected(),
-                    folderPatternField.getText(), literalListField.getText());
+            java.util.List<String> sequence = resolveSequence(
+                    folderPatternRadio.isSelected(),
+                    arithmeticRadio.isSelected(),
+                    folderPatternField.getText(),
+                    literalListField.getText(),
+                    ((Number) arithmeticStart.getValue()).intValue(),
+                    ((Number) arithmeticStep.getValue()).intValue(),
+                    ((Number) arithmeticCount.getValue()).intValue());
             int window = ((Number) windowSpinner.getValue()).intValue();
             int stride = ((Number) strideSpinner.getValue()).intValue();
             boolean wrap = folderPatternRadio.isSelected() && wrapFolderCheck.isSelected();
@@ -5260,6 +5287,18 @@ public class TimeSheetPanel extends JPanel
         // Wire every input to refresh the preview live.
         folderPatternRadio.addActionListener(e -> refreshPreview.run());
         literalListRadio.addActionListener(e -> refreshPreview.run());
+        arithmeticRadio.addActionListener(e ->
+        {
+            // Auto-collapse window/stride to 1/1 when switching to the
+            // arithmetic source -- the typical "one value per kf" case.
+            // Users can override afterwards if they want overlap.
+            if (arithmeticRadio.isSelected())
+            {
+                windowSpinner.setValue(1);
+                strideSpinner.setValue(1);
+            }
+            refreshPreview.run();
+        });
         wrapFolderCheck.addActionListener(e -> refreshPreview.run());
         javax.swing.event.DocumentListener docListener = new javax.swing.event.DocumentListener()
         {
@@ -5271,6 +5310,9 @@ public class TimeSheetPanel extends JPanel
         literalListField.getDocument().addDocumentListener(docListener);
         windowSpinner.addChangeListener(e -> refreshPreview.run());
         strideSpinner.addChangeListener(e -> refreshPreview.run());
+        arithmeticStart.addChangeListener(e -> refreshPreview.run());
+        arithmeticStep.addChangeListener(e -> refreshPreview.run());
+        arithmeticCount.addChangeListener(e -> refreshPreview.run());
 
         JPanel sourcePanel = new JPanel();
         sourcePanel.setLayout(new BoxLayout(sourcePanel, BoxLayout.Y_AXIS));
@@ -5283,6 +5325,15 @@ public class TimeSheetPanel extends JPanel
         row2.add(literalListRadio);
         row2.add(literalListField);
         sourcePanel.add(row2);
+        JPanel row3 = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        row3.add(arithmeticRadio);
+        row3.add(new JLabel("start:"));
+        row3.add(arithmeticStart);
+        row3.add(new JLabel("step:"));
+        row3.add(arithmeticStep);
+        row3.add(new JLabel("count:"));
+        row3.add(arithmeticCount);
+        sourcePanel.add(row3);
 
         JPanel slicePanel = new JPanel(new GridLayout(0, 2, 6, 6));
         slicePanel.setBorder(BorderFactory.createTitledBorder("Slicing"));
@@ -5316,8 +5367,14 @@ public class TimeSheetPanel extends JPanel
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
         if (result != JOptionPane.OK_OPTION) return;
 
-        java.util.List<String> sequence = resolveSequence(folderPatternRadio.isSelected(),
-                folderPatternField.getText(), literalListField.getText());
+        java.util.List<String> sequence = resolveSequence(
+                folderPatternRadio.isSelected(),
+                arithmeticRadio.isSelected(),
+                folderPatternField.getText(),
+                literalListField.getText(),
+                ((Number) arithmeticStart.getValue()).intValue(),
+                ((Number) arithmeticStep.getValue()).intValue(),
+                ((Number) arithmeticCount.getValue()).intValue());
         int window = ((Number) windowSpinner.getValue()).intValue();
         int stride = ((Number) strideSpinner.getValue()).intValue();
         boolean wrap = folderPatternRadio.isSelected() && wrapFolderCheck.isSelected();
@@ -5364,13 +5421,31 @@ public class TimeSheetPanel extends JPanel
     }
 
     /**
-     * Resolves the configured value sequence. For folder pattern source,
-     * walks the manager tree, matches folder names against the glob, and
-     * sorts numerically when the wildcard portion is parseable as an int.
-     * For literal-list source, splits the text on commas and trims each.
+     * Resolves the configured value sequence. Branches:
+     * <ul>
+     *   <li><b>folder pattern</b>: walks the manager tree, matches folder
+     *       names against the glob, sorts numerically when the wildcard
+     *       portion is parseable as an int.</li>
+     *   <li><b>arithmetic</b>: generates [start + 0*step, start + 1*step,
+     *       ..., start + (count-1)*step] as integer strings. Negative
+     *       step lets the user decrement (92, 91, 90, ...).</li>
+     *   <li><b>literal-list</b>: splits the text on commas and trims each.</li>
+     * </ul>
      */
-    private java.util.List<String> resolveSequence(boolean folderPattern, String patternText, String literalText)
+    private java.util.List<String> resolveSequence(boolean folderPattern, boolean arithmetic,
+            String patternText, String literalText,
+            int arithmeticStart, int arithmeticStep, int arithmeticCount)
     {
+        if (arithmetic)
+        {
+            java.util.List<String> out = new ArrayList<>();
+            int count = Math.max(0, arithmeticCount);
+            for (int i = 0; i < count; i++)
+            {
+                out.add(Integer.toString(arithmeticStart + i * arithmeticStep));
+            }
+            return out;
+        }
         if (folderPattern)
         {
             String pattern = patternText == null ? "" : patternText.trim();
@@ -5460,18 +5535,164 @@ public class TimeSheetPanel extends JPanel
     }
 
     /**
-     * Writes {@code value} to the named field of {@code kf}. v1 only knows
-     * ProjectileKeyFrame.target; adding a new field is one arm here plus
-     * one entry in the dialog's field combo. Returns true on success.
+     * Registers the iterable fields for {@code type} in {@code combo}.
+     * Adding a new field means one entry here AND one arm in
+     * {@link #applySliceToKeyFrame}. Order in this method drives the
+     * dropdown order.
+     */
+    private void populateIterateFieldCombo(javax.swing.JComboBox<String> combo, KeyFrameType type)
+    {
+        if (type == KeyFrameType.PROJECTILE)
+        {
+            combo.addItem("Target");
+            combo.addItem("Projectile ID");
+            combo.addItem("Start Height");
+            combo.addItem("End Height");
+            combo.addItem("Slope");
+            combo.addItem("Duration");
+            combo.addItem("Radius");
+        }
+        else if (type == KeyFrameType.SPECIAL || type == KeyFrameType.SHIELD)
+        {
+            // Special and Shield share the same field schema (currentValue
+            // / maxValue / duration / order / width). Same combo, same
+            // apply path.
+            combo.addItem("Current Value");
+            combo.addItem("Max Value");
+            combo.addItem("Duration");
+            combo.addItem("Order");
+            combo.addItem("Width");
+        }
+        else if (type == KeyFrameType.HEALTH)
+        {
+            combo.addItem("Current Health");
+            combo.addItem("Max Health");
+            combo.addItem("Duration");
+            combo.addItem("Order");
+            combo.addItem("Width");
+        }
+        else if (type == KeyFrameType.HITSPLAT_1 || type == KeyFrameType.HITSPLAT_2
+                || type == KeyFrameType.HITSPLAT_3 || type == KeyFrameType.HITSPLAT_4)
+        {
+            combo.addItem("Damage");
+            combo.addItem("Duration");
+        }
+        else if (type == KeyFrameType.MODEL)
+        {
+            combo.addItem("Model ID");
+            combo.addItem("Radius");
+        }
+        else if (type == KeyFrameType.ANIMATION)
+        {
+            combo.addItem("Active");
+            combo.addItem("Start Frame");
+            combo.addItem("Last Frame");
+            combo.addItem("Pause Ticks");
+        }
+        else if (type == KeyFrameType.ORIENTATION)
+        {
+            combo.addItem("End");
+            combo.addItem("Duration");
+            combo.addItem("Turn Rate");
+        }
+    }
+
+    /**
+     * Writes {@code value} to the named field of {@code kf}. For scalar
+     * numeric fields the slice's first token is parsed; rejection on
+     * parse failure is treated as "skip this kf" so a partly-numeric
+     * sequence (one bad token) doesn't corrupt the rest.
+     *
+     * <p>Returns true on success. Add a new field: one branch here, one
+     * entry in {@link #populateIterateFieldCombo}.
      */
     private boolean applySliceToKeyFrame(KeyFrame kf, KeyFrameType type, String field, String value)
     {
-        if (type == KeyFrameType.PROJECTILE && "Target".equals(field) && kf instanceof ProjectileKeyFrame)
+        String trimmed = value == null ? "" : value.trim();
+        if (type == KeyFrameType.PROJECTILE && kf instanceof ProjectileKeyFrame)
         {
-            ((ProjectileKeyFrame) kf).setTarget(value);
-            return true;
+            ProjectileKeyFrame pkf = (ProjectileKeyFrame) kf;
+            if ("Target".equals(field))       { pkf.setTarget(value); return true; }
+            if ("Projectile ID".equals(field)) { Integer iv = tryParseInt(trimmed); if (iv == null) return false; pkf.setProjectileId(iv); return true; }
+            if ("Start Height".equals(field)) { Integer iv = tryParseInt(trimmed); if (iv == null) return false; pkf.setStartHeight(iv); return true; }
+            if ("End Height".equals(field))   { Integer iv = tryParseInt(trimmed); if (iv == null) return false; pkf.setEndHeight(iv); return true; }
+            if ("Slope".equals(field))        { Integer iv = tryParseInt(trimmed); if (iv == null) return false; pkf.setSlope(iv); return true; }
+            if ("Duration".equals(field))     { Double dv = tryParseDouble(trimmed); if (dv == null) return false; pkf.setDurationTicks(dv); return true; }
+            if ("Radius".equals(field))       { Integer iv = tryParseInt(trimmed); if (iv == null) return false; pkf.setRadius(iv); return true; }
+        }
+        else if (type == KeyFrameType.SPECIAL && kf instanceof com.creatorskit.swing.timesheet.keyframe.SpecialKeyFrame)
+        {
+            com.creatorskit.swing.timesheet.keyframe.SpecialKeyFrame skf =
+                    (com.creatorskit.swing.timesheet.keyframe.SpecialKeyFrame) kf;
+            if ("Current Value".equals(field)) { Integer iv = tryParseInt(trimmed); if (iv == null) return false; skf.setCurrentValue(iv); return true; }
+            if ("Max Value".equals(field))     { Integer iv = tryParseInt(trimmed); if (iv == null) return false; skf.setMaxValue(iv); return true; }
+            if ("Duration".equals(field))      { Double dv = tryParseDouble(trimmed); if (dv == null) return false; skf.setDuration(dv); return true; }
+            if ("Order".equals(field))         { Integer iv = tryParseInt(trimmed); if (iv == null) return false; skf.setOrder(iv); return true; }
+            if ("Width".equals(field))         { Integer iv = tryParseInt(trimmed); if (iv == null) return false; skf.setWidth(iv); return true; }
+        }
+        else if (type == KeyFrameType.SHIELD && kf instanceof com.creatorskit.swing.timesheet.keyframe.ShieldKeyFrame)
+        {
+            com.creatorskit.swing.timesheet.keyframe.ShieldKeyFrame skf =
+                    (com.creatorskit.swing.timesheet.keyframe.ShieldKeyFrame) kf;
+            if ("Current Value".equals(field)) { Integer iv = tryParseInt(trimmed); if (iv == null) return false; skf.setCurrentValue(iv); return true; }
+            if ("Max Value".equals(field))     { Integer iv = tryParseInt(trimmed); if (iv == null) return false; skf.setMaxValue(iv); return true; }
+            if ("Duration".equals(field))      { Double dv = tryParseDouble(trimmed); if (dv == null) return false; skf.setDuration(dv); return true; }
+            if ("Order".equals(field))         { Integer iv = tryParseInt(trimmed); if (iv == null) return false; skf.setOrder(iv); return true; }
+            if ("Width".equals(field))         { Integer iv = tryParseInt(trimmed); if (iv == null) return false; skf.setWidth(iv); return true; }
+        }
+        else if (type == KeyFrameType.HEALTH && kf instanceof com.creatorskit.swing.timesheet.keyframe.HealthKeyFrame)
+        {
+            com.creatorskit.swing.timesheet.keyframe.HealthKeyFrame hkf =
+                    (com.creatorskit.swing.timesheet.keyframe.HealthKeyFrame) kf;
+            if ("Current Health".equals(field)) { Integer iv = tryParseInt(trimmed); if (iv == null) return false; hkf.setCurrentHealth(iv); return true; }
+            if ("Max Health".equals(field))     { Integer iv = tryParseInt(trimmed); if (iv == null) return false; hkf.setMaxHealth(iv); return true; }
+            if ("Duration".equals(field))       { Double dv = tryParseDouble(trimmed); if (dv == null) return false; hkf.setDuration(dv); return true; }
+            if ("Order".equals(field))          { Integer iv = tryParseInt(trimmed); if (iv == null) return false; hkf.setOrder(iv); return true; }
+            if ("Width".equals(field))          { Integer iv = tryParseInt(trimmed); if (iv == null) return false; hkf.setWidth(iv); return true; }
+        }
+        else if ((type == KeyFrameType.HITSPLAT_1 || type == KeyFrameType.HITSPLAT_2
+                || type == KeyFrameType.HITSPLAT_3 || type == KeyFrameType.HITSPLAT_4)
+                && kf instanceof com.creatorskit.swing.timesheet.keyframe.HitsplatKeyFrame)
+        {
+            com.creatorskit.swing.timesheet.keyframe.HitsplatKeyFrame hkf =
+                    (com.creatorskit.swing.timesheet.keyframe.HitsplatKeyFrame) kf;
+            if ("Damage".equals(field))   { Integer iv = tryParseInt(trimmed); if (iv == null) return false; hkf.setDamage(iv); return true; }
+            if ("Duration".equals(field)) { Double dv = tryParseDouble(trimmed); if (dv == null) return false; hkf.setDuration(dv); return true; }
+        }
+        else if (type == KeyFrameType.MODEL && kf instanceof ModelKeyFrame)
+        {
+            ModelKeyFrame mkf = (ModelKeyFrame) kf;
+            if ("Model ID".equals(field)) { Integer iv = tryParseInt(trimmed); if (iv == null) return false; mkf.setModelId(iv); return true; }
+            if ("Radius".equals(field))   { Integer iv = tryParseInt(trimmed); if (iv == null) return false; mkf.setRadius(iv); return true; }
+        }
+        else if (type == KeyFrameType.ANIMATION && kf instanceof AnimationKeyFrame)
+        {
+            AnimationKeyFrame akf = (AnimationKeyFrame) kf;
+            if ("Active".equals(field))      { Integer iv = tryParseInt(trimmed); if (iv == null) return false; akf.setActive(iv); return true; }
+            if ("Start Frame".equals(field)) { Integer iv = tryParseInt(trimmed); if (iv == null) return false; akf.setStartFrame(iv); return true; }
+            if ("Last Frame".equals(field))  { Integer iv = tryParseInt(trimmed); if (iv == null) return false; akf.setLastFrame(iv); return true; }
+            if ("Pause Ticks".equals(field)) { Integer iv = tryParseInt(trimmed); if (iv == null) return false; akf.setPauseTicks(iv); return true; }
+        }
+        else if (type == KeyFrameType.ORIENTATION && kf instanceof OrientationKeyFrame)
+        {
+            OrientationKeyFrame okf = (OrientationKeyFrame) kf;
+            if ("End".equals(field))       { Integer iv = tryParseInt(trimmed); if (iv == null) return false; okf.setEnd(iv); return true; }
+            if ("Duration".equals(field))  { Double dv = tryParseDouble(trimmed); if (dv == null) return false; okf.setDuration(dv); return true; }
+            if ("Turn Rate".equals(field)) { Double dv = tryParseDouble(trimmed); if (dv == null) return false; okf.setTurnRate(dv); return true; }
         }
         return false;
+    }
+
+    private static Integer tryParseInt(String s)
+    {
+        if (s == null) return null;
+        try { return Integer.parseInt(s.trim()); } catch (NumberFormatException e) { return null; }
+    }
+
+    private static Double tryParseDouble(String s)
+    {
+        if (s == null) return null;
+        try { return Double.parseDouble(s.trim()); } catch (NumberFormatException e) { return null; }
     }
 
     /**
