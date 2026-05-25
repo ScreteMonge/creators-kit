@@ -1613,7 +1613,7 @@ public class Programmer
                     registerOrientationChanges(character);
                     OrientationKeyFrame okfActivated = (OrientationKeyFrame) nextOrientation;
                     debugCharacter(character,
-                            "ORIENTATION kf activated tick=%.2f start=%d end=%d duration=%.2f turnRate=%d dir=%s faceTarget=%s",
+                            "ORIENTATION kf activated tick=%.2f start=%d end=%d duration=%.2f turnRate=%.3f dir=%s faceTarget=%s",
                             okfActivated.getTick(),
                             okfActivated.getStart(),
                             okfActivated.getEnd(),

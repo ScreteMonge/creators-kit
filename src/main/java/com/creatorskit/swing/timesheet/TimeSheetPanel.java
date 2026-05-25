@@ -1251,7 +1251,7 @@ public class TimeSheetPanel extends JPanel
         selectedCharacter.setVisible(true, clientThread);
     }
 
-    public void initializeOrientationKeyFrame(Character character, OrientationHotkeyMode hotkeyMode, LocalPoint localPoint, double tick, int start, int end, OrientationGoal og, int turnRate)
+    public void initializeOrientationKeyFrame(Character character, OrientationHotkeyMode hotkeyMode, LocalPoint localPoint, double tick, int start, int end, OrientationGoal og, double turnRate)
     {
         CKObject ckObject = character.getCkObject();
         if (ckObject == null)

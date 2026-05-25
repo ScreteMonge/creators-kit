@@ -14,7 +14,7 @@ public class OrientationKeyFrame extends KeyFrame
     private int start;
     private int end;
     private double duration;
-    private int turnRate;
+    private double turnRate;
     private String targetCharacterName;
     /**
      * Explicit turn direction (CW / CCW) or AUTO for legacy "shortest
@@ -23,17 +23,17 @@ public class OrientationKeyFrame extends KeyFrame
      */
     private TurnDirection turnDirection;
 
-    public OrientationKeyFrame(double tick, OrientationGoal goal, int start, int end, double duration, int turnRate)
+    public OrientationKeyFrame(double tick, OrientationGoal goal, int start, int end, double duration, double turnRate)
     {
         this(tick, goal, start, end, duration, turnRate, null);
     }
 
-    public OrientationKeyFrame(double tick, OrientationGoal goal, int start, int end, double duration, int turnRate, String targetCharacterName)
+    public OrientationKeyFrame(double tick, OrientationGoal goal, int start, int end, double duration, double turnRate, String targetCharacterName)
     {
         this(tick, goal, start, end, duration, turnRate, targetCharacterName, TurnDirection.AUTO);
     }
 
-    public OrientationKeyFrame(double tick, OrientationGoal goal, int start, int end, double duration, int turnRate, String targetCharacterName, TurnDirection turnDirection)
+    public OrientationKeyFrame(double tick, OrientationGoal goal, int start, int end, double duration, double turnRate, String targetCharacterName, TurnDirection turnDirection)
     {
         super(KeyFrameType.ORIENTATION, tick);
         this.goal = goal;

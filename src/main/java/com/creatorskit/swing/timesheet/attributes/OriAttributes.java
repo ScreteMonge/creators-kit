@@ -117,7 +117,7 @@ public class OriAttributes extends Attributes
         start.setValue(0);
         end.setValue(0);
         duration.setValue(1.0);
-        turnRate.setValue(OrientationKeyFrame.TURN_RATE);
+        turnRate.setValue((double) OrientationKeyFrame.TURN_RATE);
         targetCharacterName.setText("");
         turnDirection.setSelectedItem(TurnDirection.AUTO);
         super.resetAttributes(resetBackground);

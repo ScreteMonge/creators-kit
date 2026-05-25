@@ -743,7 +743,7 @@ public class AttributePanel extends JPanel
                         liveStart,
                         (int) oriAttributes.getEnd().getValue(),
                         ((Number) oriAttributes.getDuration().getValue()).doubleValue(),
-                        (int) oriAttributes.getTurnRate().getValue(),
+                        ((Number) oriAttributes.getTurnRate().getValue()).doubleValue(),
                         oriAttributes.getTargetCharacterNameValue(),
                         td
                 );
@@ -1843,8 +1843,14 @@ public class AttributePanel extends JPanel
         duration.setPreferredSize(spinnerSize);
 
         JSpinner turnRate = oriAttributes.getTurnRate();
-        turnRate.setToolTipText("Determines the rate at which the Object rotates in JUnits/clientTick");
-        turnRate.setModel(new SpinnerNumberModel(OrientationKeyFrame.TURN_RATE, 0, 2048, 1));
+        turnRate.setToolTipText("<html>Determines the rate at which the Object rotates in JUnits/clientTick"
+                + "<br>Fractional values supported (precision down to 0.001).</html>");
+        turnRate.setModel(new SpinnerNumberModel((double) OrientationKeyFrame.TURN_RATE, 0.0, 2048.0, 0.1));
+        // Show 3 decimal places so fractional turn rates from the convert
+        // arrow (which rounds to 0.001) display in full precision instead of
+        // being truncated by the default formatter.
+        JSpinner.NumberEditor turnRateEditor = new JSpinner.NumberEditor(turnRate, "0.###");
+        turnRate.setEditor(turnRateEditor);
         turnRate.setPreferredSize(spinnerSize);
 
         // commitEdit() drains pending text-edit state from the spinner's editor
@@ -1877,17 +1883,17 @@ public class AttributePanel extends JPanel
         com.creatorskit.swing.timesheet.attributes.ConvertArrowWidget convertArrow =
                 new com.creatorskit.swing.timesheet.attributes.ConvertArrowWidget(
                         "Convert Turn Rate -> Duration (uses Character's live orientation as start)",
-                        "Convert Duration -> Turn Rate (picks the integer turn rate that gives a duration closest to the current Duration; uses live orientation as start)",
+                        "Convert Duration -> Turn Rate (computes the exact turn rate that produces the target Duration, rounded to 0.001; uses live orientation as start)",
                         () ->
                         {
                             commitAllOrientationSpinners.run();
-                            double d = calculateOrientationDuration(liveStartFromCharacter.getAsInt(), (int) end.getValue(), (int) turnRate.getValue());
+                            double d = calculateOrientationDuration(liveStartFromCharacter.getAsInt(), (int) end.getValue(), ((Number) turnRate.getValue()).doubleValue());
                             duration.setValue(d);
                         },
                         () ->
                         {
                             commitAllOrientationSpinners.run();
-                            int tr = calculateOrientationTurnRate(liveStartFromCharacter.getAsInt(), (int) end.getValue(), ((Number) duration.getValue()).doubleValue());
+                            double tr = calculateOrientationTurnRate(liveStartFromCharacter.getAsInt(), (int) end.getValue(), ((Number) duration.getValue()).doubleValue());
                             turnRate.setValue(tr);
                         }
                 );
@@ -2038,18 +2044,18 @@ public class AttributePanel extends JPanel
 
     /**
      * Inverse of {@link #calculateOrientationDuration}: given a desired
-     * duration in game ticks, returns the integer turn rate that produces a
-     * duration closest to the target. Because duration is inversely
-     * proportional to turn rate (D = |delta| / turnRate * 1/30) the midpoint
-     * between two adjacent integer turn rates is NOT 0.5 in turn-rate space,
-     * so naive Math.round of the ideal float would occasionally pick the
-     * worse of the two. We evaluate both floor and ceil explicitly and pick
-     * whichever gives a duration closer to {@code targetDuration}.
+     * duration in game ticks, returns the (fractional) turn rate that
+     * produces that duration exactly, rounded to the nearest 0.001 to keep
+     * the spinner display readable.
+     *
+     * <p>Turn rate is now a double (JUnits per client tick), so the
+     * conversion is just the algebraic inverse with no floor/ceil
+     * approximation: {@code turnRate = (|delta| * ratio) / duration}.
      *
      * <p>Returns {@link OrientationKeyFrame#TURN_RATE} when start == end or
      * the target duration is non-positive -- both degenerate cases.
      */
-    public static int calculateOrientationTurnRate(int start, int end, double targetDuration)
+    public static double calculateOrientationTurnRate(int start, int end, double targetDuration)
     {
         int diff = Math.abs(Orientation.subtract(end, start));
         if (diff == 0 || targetDuration <= 0)
@@ -2060,13 +2066,11 @@ public class AttributePanel extends JPanel
         double ratio = (double) Constants.CLIENT_TICK_LENGTH / (double) Constants.GAME_TICK_LENGTH;
         // duration = (diff / turnRate) * ratio  =>  turnRate = (diff * ratio) / duration
         double idealTurnRate = (diff * ratio) / targetDuration;
-        int floor = Math.max(1, (int) Math.floor(idealTurnRate));
-        int ceil  = Math.max(1, (int) Math.ceil(idealTurnRate));
-        if (floor == ceil) return floor;
-
-        double dFloor = calculateOrientationDuration(start, end, floor);
-        double dCeil  = calculateOrientationDuration(start, end, ceil);
-        return Math.abs(targetDuration - dFloor) <= Math.abs(targetDuration - dCeil) ? floor : ceil;
+        // Round to nearest thousandth so the spinner shows a clean value
+        // (e.g. 8.533) rather than a long floating-point tail. The forward
+        // calc tolerates this small rounding error -- a 0.001 turn-rate
+        // delta moves the resulting duration by under one client tick.
+        return Math.round(idealTurnRate * 1000.0) / 1000.0;
     }
 
     private void setupSpawnCard(JPanel card)
