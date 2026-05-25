@@ -625,18 +625,40 @@ public class Character
                     newKfTick, mkfEnd, v);
             return v;
         }
-        // Both candidates exist. Whichever ENDED LATER is the more recent
-        // driver of rotation, so its final value is the snapshot.
+        // Both candidates exist. Mirror Programmer.findLastOrientation's
+        // arbitration, in priority order:
         //
-        // TIE-BREAKER: when end ticks are equal, orientation wins.
+        //   1. newKfTick <= oriEnd -> ORI wins. The new kf sits within
+        //      (or exactly at the boundary of) the prior orientation kf's
+        //      effect window, so the prior ori was still in control at
+        //      newKfTick -- its end angle is what the character is
+        //      sitting at. This is the case the user's "Moon Shield
+        //      (Outer)" repro hit: second kf at tick 41, prior ori ends
+        //      at tick 41, movement extended further; without this check
+        //      Movement won the ended-last comparison and snapshot
+        //      grabbed the path's final segment direction instead of
+        //      the ori's end angle.
+        //
+        //   2. Else (newKfTick > oriEnd, prior ori has already expired):
+        //      compare end ticks. If oriEnd >= mkfEnd, ori was the
+        //      more recent driver; otherwise movement is.
+        //
+        // TIE-BREAKER inside rule 2: when end ticks are equal, ori wins
+        // (mkfEnd > oriEnd is strict).
+        if (newKfTick <= oriEnd)
+        {
+            debug("computeOrientationStartFor newKfTick=%.2f: priorOri ends %.2f (within window) -> ORI wins (end=%d)",
+                    newKfTick, oriEnd, priorOri.getEnd());
+            return priorOri.getEnd();
+        }
         if (mkfEnd > oriEnd)
         {
             int v = movementFinalDirection(priorMkf);
-            debug("computeOrientationStartFor newKfTick=%.2f: priorOri ends %.2f, priorMkf ends %.2f -> MOVEMENT wins (final dir=%d)",
+            debug("computeOrientationStartFor newKfTick=%.2f: priorOri ended %.2f, priorMkf ends %.2f (later) -> MOVEMENT wins (final dir=%d)",
                     newKfTick, oriEnd, mkfEnd, v);
             return v;
         }
-        debug("computeOrientationStartFor newKfTick=%.2f: priorOri ends %.2f, priorMkf ends %.2f -> ORI wins (end=%d)%s",
+        debug("computeOrientationStartFor newKfTick=%.2f: priorOri ended %.2f, priorMkf ends %.2f (oriEnd >= mkfEnd) -> ORI wins (end=%d)%s",
                 newKfTick, oriEnd, mkfEnd, priorOri.getEnd(), (mkfEnd == oriEnd ? " [TIE]" : ""));
         return priorOri.getEnd();
     }
