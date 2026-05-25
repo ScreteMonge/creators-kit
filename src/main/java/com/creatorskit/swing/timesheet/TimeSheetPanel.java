@@ -1405,9 +1405,12 @@ public class TimeSheetPanel extends JPanel
 
         double stepSpeed = plugin.getCurrentStepSpeed();
 
-        // turnRate scales with step speed so a turn completes within roughly one tile of
-        // movement (180 degrees per game tick at speed 1, faster at speed 2).
-        int speedAwareTurnRate = (int) Math.round(OrientationKeyFrame.TURN_RATE * stepSpeed);
+        // Default movement turn rate is the shared OrientationKeyFrame.TURN_RATE
+        // (32 JUnits / client tick). Previously this was multiplied by stepSpeed
+        // so a faster movement also turned faster -- removed because the user
+        // wanted decoupled defaults: turn rate is its own knob, independent of
+        // how many tiles per tick the path walks.
+        int defaultMovementTurnRate = OrientationKeyFrame.TURN_RATE;
 
         MovementKeyFrame previous = findLastMovementKeyFrame(selectedCharacter);
         if (newKeyFrame || previous == null)
@@ -1495,7 +1498,7 @@ public class TimeSheetPanel extends JPanel
             // is valid (the saved-position fallback above ensures the path has real
             // movement even if the Character hasn't been drawn yet, so we never
             // produce a 0-length placeholder here).
-            initializeMovementKeyFrame(selectedCharacter, currentTime, worldView.getPlane(), poh, path, false, stepSpeed, speedAwareTurnRate);
+            initializeMovementKeyFrame(selectedCharacter, currentTime, worldView.getPlane(), poh, path, false, stepSpeed, defaultMovementTurnRate);
 
             // Auto-advance the seeker to the end of the keyframe we just placed so the
             // next add-step lands chained immediately after. Ceil the duration so the
@@ -1548,7 +1551,7 @@ public class TimeSheetPanel extends JPanel
             }
             double newTick = previous.getTick() + prevDuration;
 
-            initializeMovementKeyFrame(selectedCharacter, newTick, worldView.getPlane(), poh, newPath, false, stepSpeed, speedAwareTurnRate);
+            initializeMovementKeyFrame(selectedCharacter, newTick, worldView.getPlane(), poh, newPath, false, stepSpeed, defaultMovementTurnRate);
 
             // Auto-advance the seeker to the end of this just-placed keyframe.
             // Same ceil reason as above -- keeps the seeker on an integer tick
