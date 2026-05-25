@@ -17,6 +17,7 @@ public class ProjectileAttributes extends Attributes
     private final JSpinner slope = new JSpinner();
     private final JSpinner durationTicks = new JSpinner();
     private final JCheckBox faceTrajectory = new JCheckBox("Face trajectory");
+    private final JSpinner radius = new JSpinner();
 
     public ProjectileAttributes()
     {
@@ -54,6 +55,11 @@ public class ProjectileAttributes extends Attributes
         slope.setValue(kf.getSlope());
         durationTicks.setValue(kf.getDurationTicks());
         faceTrajectory.setSelected(kf.isFaceTrajectory());
+        // Old saves predate the field -> Gson fills it with 0; show the
+        // default radius value instead of "0" so the spinner reads
+        // truthfully ("60 = renderer default") and an inadvertent edit
+        // away from 0 doesn't visually look like a different value.
+        radius.setValue(kf.getRadius() > 0 ? kf.getRadius() : ProjectileKeyFrame.DEFAULT_RADIUS);
     }
 
     @Override
@@ -66,6 +72,7 @@ public class ProjectileAttributes extends Attributes
         slope.setBackground(color);
         durationTicks.setBackground(color);
         faceTrajectory.setBackground(color);
+        radius.setBackground(color);
     }
 
     @Override
@@ -79,7 +86,8 @@ public class ProjectileAttributes extends Attributes
                         endHeight,
                         slope,
                         durationTicks,
-                        faceTrajectory
+                        faceTrajectory,
+                        radius
                 };
     }
 
@@ -92,6 +100,7 @@ public class ProjectileAttributes extends Attributes
         slope.addChangeListener(e -> slope.setBackground(getRed()));
         durationTicks.addChangeListener(e -> durationTicks.setBackground(getRed()));
         faceTrajectory.addItemListener(e -> faceTrajectory.setBackground(getRed()));
+        radius.addChangeListener(e -> radius.setBackground(getRed()));
 
         target.getDocument().addDocumentListener(new javax.swing.event.DocumentListener()
         {
@@ -111,6 +120,7 @@ public class ProjectileAttributes extends Attributes
         slope.setValue(ProjectileKeyFrame.DEFAULT_SLOPE);
         durationTicks.setValue(ProjectileKeyFrame.DEFAULT_DURATION);
         faceTrajectory.setSelected(ProjectileKeyFrame.DEFAULT_FACE_TRAJECTORY);
+        radius.setValue(ProjectileKeyFrame.DEFAULT_RADIUS);
         super.resetAttributes(resetBackground);
     }
 }

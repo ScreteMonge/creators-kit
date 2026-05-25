@@ -876,7 +876,8 @@ public class AttributePanel extends JPanel
                         (int) projectileAttributes.getEndHeight().getValue(),
                         (int) projectileAttributes.getSlope().getValue(),
                         ((Number) projectileAttributes.getDurationTicks().getValue()).doubleValue(),
-                        projectileAttributes.getFaceTrajectory().isSelected()
+                        projectileAttributes.getFaceTrajectory().isSelected(),
+                        (int) projectileAttributes.getRadius().getValue()
                 );
             case SHIELD:
                 return new ShieldKeyFrame(
@@ -1263,7 +1264,10 @@ public class AttributePanel extends JPanel
                                 : orig.getDurationTicks(),
                         wasEdited(projectileAttributes.getFaceTrajectory())
                                 ? projectileAttributes.getFaceTrajectory().isSelected()
-                                : orig.isFaceTrajectory()
+                                : orig.isFaceTrajectory(),
+                        wasEdited(projectileAttributes.getRadius())
+                                ? (int) projectileAttributes.getRadius().getValue()
+                                : orig.getRadius()
                 );
             }
             case SHIELD:
@@ -3751,6 +3755,22 @@ public class AttributePanel extends JPanel
         duration.setToolTipText("Game ticks the projectile takes to fly from source to target");
         duration.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_DURATION, 0.1, 100, 0.1));
         card.add(duration, c);
+
+        // Radius sits next to Duration on row 5 -- both scale the projectile
+        // (one in time, one in space), so grouping them visually keeps the
+        // "fly + size" controls together rather than wedging Radius into a
+        // lonely row of its own.
+        c.gridx = 2;
+        c.gridy = 5;
+        card.add(rightLabel("Radius:"), c);
+
+        c.gridx = 3;
+        c.gridy = 5;
+        JSpinner radius = projectileAttributes.getRadius();
+        radius.setToolTipText("<html>Render radius in 1/128-tile units. Scales the projectile model's visible size."
+                + "<br>Default 60 matches the renderer default. Larger = bigger.</html>");
+        radius.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_RADIUS, 1, 10000, 1));
+        card.add(radius, c);
 
         c.gridwidth = 4;
         c.gridx = 0;

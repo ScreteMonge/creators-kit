@@ -1897,6 +1897,11 @@ public class Programmer
             final int finalLevel = level;
             final double finalPitch = pitchRadians;
             final boolean applyPitch = kf.isFaceTrajectory();
+            // Apply the kf's per-shot radius. 0 (= old save predating the
+            // field, Gson default) is treated as "use renderer default" so
+            // existing scenes aren't suddenly clipped to a 0-tile box on
+            // load. Same convention SpotAnim's render path uses.
+            final int finalRadius = kf.getRadius() > 0 ? kf.getRadius() : ProjectileKeyFrame.DEFAULT_RADIUS;
             clientThread.invokeLater(() ->
             {
                 if (!finalHere.isInScene())
@@ -1910,6 +1915,7 @@ public class Programmer
                 obj.setLocation(finalHere, finalLevel);
                 obj.setZ(finalZ);
                 obj.setOrientation(finalOrientation);
+                obj.setRadius(finalRadius);
                 applyProjectilePitch(obj, finalPitch, applyPitch);
                 if (!obj.isActive())
                 {

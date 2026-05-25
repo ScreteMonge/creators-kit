@@ -23,6 +23,15 @@ public class ProjectileKeyFrame extends KeyFrame
     public static final int DEFAULT_SLOPE = 15;
     public static final double DEFAULT_DURATION = 2.0;
     public static final boolean DEFAULT_FACE_TRAJECTORY = false;
+    /**
+     * Render-radius default, in 1/128-tile units. Matches {@link
+     * com.creatorskit.swing.timesheet.keyframe.SpotAnimKeyFrame}'s default
+     * (60) and the underlying {@code RuneLiteObjectController.getRadius()}
+     * convention. Old saves predating the field deserialize as 0; the
+     * renderer treats 0 as "use default" so existing scenes don't suddenly
+     * clip to a 0-tile box on load.
+     */
+    public static final int DEFAULT_RADIUS = 60;
 
     /** Spotanim / projectile gfx id used by client.createProjectile. */
     private int projectileId;
@@ -50,8 +59,22 @@ public class ProjectileKeyFrame extends KeyFrame
      * fixed-pitch model looks unnatural at the top of the arc.
      */
     private boolean faceTrajectory;
+    /**
+     * Per-keyframe render radius (1/128 tile units). 0 = "use renderer default"
+     * (treated as {@link #DEFAULT_RADIUS} so pre-existing saves without the
+     * field deserialize cleanly via Gson's int-default). Scales the projectile
+     * model's visible size; intentionally per-kf so different shots in the
+     * same scene can be sized differently (e.g. a wave of small fireballs
+     * followed by a single boss-size impactor).
+     */
+    private int radius;
 
     public ProjectileKeyFrame(double tick, int projectileId, String target, int startHeight, int endHeight, int slope, double durationTicks, boolean faceTrajectory)
+    {
+        this(tick, projectileId, target, startHeight, endHeight, slope, durationTicks, faceTrajectory, DEFAULT_RADIUS);
+    }
+
+    public ProjectileKeyFrame(double tick, int projectileId, String target, int startHeight, int endHeight, int slope, double durationTicks, boolean faceTrajectory, int radius)
     {
         super(KeyFrameType.PROJECTILE, tick);
         this.projectileId = projectileId;
@@ -61,5 +84,6 @@ public class ProjectileKeyFrame extends KeyFrame
         this.slope = slope;
         this.durationTicks = durationTicks;
         this.faceTrajectory = faceTrajectory;
+        this.radius = radius;
     }
 }
