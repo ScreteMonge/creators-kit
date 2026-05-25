@@ -559,6 +559,27 @@ public class AttributePanel extends JPanel
     private final java.util.Map<JComponent, Long> recentlyEditedFields = new java.util.WeakHashMap<>();
     private javax.swing.Timer fieldFadeTimer;
 
+    /**
+     * Components the user has touched since the last panel load. Used by
+     * {@link #applyEditsTo(KeyFrame)} so a multi-selected commit only
+     * overwrites the fields the user actually edited -- e.g. setting
+     * Radius=80 on two selected Model kfs no longer clobbers each kf's
+     * own modelId / customModel / useCustomModel with whatever values were
+     * displayed for the FIRST kf when the user clicked into the panel.
+     *
+     * <p>Cleared at the top of {@link #resetAttributes(Character, double)}
+     * so loading a kf into the panel (selection change, page change,
+     * post-update refresh) starts the next edit batch with a clean slate.
+     * Population happens in {@link #flagFieldEdited(JComponent)}, which
+     * is already suppressed during the panel's own setValue cascade via
+     * {@code suppressAutoUpdateDepth}.
+     *
+     * <p>IdentityHashMap-backed because the keys are Swing components --
+     * equals/hashCode on JComponent isn't override-safe.
+     */
+    private final java.util.Set<JComponent> editedSinceSelection =
+            java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+
     private void flagFieldEdited(JComponent c)
     {
         // Suppress while the panel itself is pushing values via setAttributes
@@ -566,6 +587,9 @@ public class AttributePanel extends JPanel
         // visually noisy and meaningless.
         if (suppressAutoUpdateDepth > 0) return;
         recentlyEditedFields.put(c, System.currentTimeMillis());
+        // Track for the per-property multi-select commit path. Cleared by
+        // resetAttributes when a fresh kf loads into the panel.
+        editedSinceSelection.add(c);
         c.setBackground(FIELD_FLASH);
         ensureFieldFadeTimer();
     }
@@ -927,6 +951,496 @@ public class AttributePanel extends JPanel
                         keyFrameType,
                         ((Number) sa.getSoundId().getValue()).intValue(),
                         ((Number) sa.getVolume().getValue()).intValue());
+            }
+        }
+    }
+
+    private boolean wasEdited(JComponent c)
+    {
+        return editedSinceSelection.contains(c);
+    }
+
+    /**
+     * Returns a new KeyFrame built from {@code original}, with ONLY the panel
+     * fields the user touched since the last selection load overwritten.
+     * Everything else carries through from the original.
+     *
+     * <p>This is the per-property multi-select commit path: when the user
+     * shift-selects 3 Model kfs across different Characters and changes only
+     * Radius to 80, each kf's modelId / customModel / useCustomModel stay
+     * theirs while only Radius is propagated.
+     *
+     * <p>The branch structure mirrors {@link #createKeyFrame(KeyFrameType,
+     * double)} field-for-field. The "tick" is taken from the original so
+     * existing kfs stay at their own tick (drag-to-move uses a different
+     * code path -- {@code onUpdateButtonPressed} reuses {@code oldKf.getTick}
+     * when looping, so no panel-tick mixup is possible here).
+     *
+     * <p>Non-panel-editable fields (Movement's plane / poh / path /
+     * currentStep / stepClientTick, Orientation's start which is snapshot-
+     * managed) always carry from the original. The PROJECTILE / face-target
+     * checkbox / sound-id / etc. are read via {@link #wasEdited} to decide
+     * panel-vs-original.
+     */
+    public KeyFrame applyEditsTo(KeyFrame original)
+    {
+        if (original == null) return null;
+        double tick = original.getTick();
+        KeyFrameType type = original.getKeyFrameType();
+        switch (type)
+        {
+            default:
+            case MOVEMENT:
+            {
+                MovementKeyFrame orig = (MovementKeyFrame) original;
+                return new MovementKeyFrame(
+                        tick,
+                        orig.getPlane(),
+                        orig.isPoh(),
+                        orig.getPath(),
+                        orig.getCurrentStep(),
+                        orig.getStepClientTick(),
+                        wasEdited(movementAttributes.getLoop())
+                                ? movementAttributes.getLoop().getSelectedItem() == Toggle.ENABLE
+                                : orig.isLoop(),
+                        wasEdited(movementAttributes.getSpeed())
+                                ? ((Number) movementAttributes.getSpeed().getValue()).doubleValue()
+                                : orig.getSpeed(),
+                        wasEdited(movementAttributes.getTurnRate())
+                                ? (int) movementAttributes.getTurnRate().getValue()
+                                : orig.getTurnRate()
+                );
+            }
+            case ANIMATION:
+            {
+                AnimationKeyFrame orig = (AnimationKeyFrame) original;
+                return new AnimationKeyFrame(
+                        tick,
+                        wasEdited(animAttributes.getStall())
+                                ? animAttributes.getStall().getSelectedItem() == Toggle.ENABLE
+                                : orig.isStall(),
+                        wasEdited(animAttributes.getActive())
+                                ? (int) animAttributes.getActive().getValue()
+                                : orig.getActive(),
+                        wasEdited(animAttributes.getStartFrame())
+                                ? (int) animAttributes.getStartFrame().getValue()
+                                : orig.getStartFrame(),
+                        wasEdited(animAttributes.getLoop())
+                                ? animAttributes.getLoop().getSelectedItem() == Toggle.ENABLE
+                                : orig.isLoop(),
+                        wasEdited(animAttributes.getFreeze())
+                                ? animAttributes.getFreeze().getSelectedItem() == Toggle.ENABLE
+                                : orig.isFreeze(),
+                        wasEdited(animAttributes.getIdle())
+                                ? (int) animAttributes.getIdle().getValue()
+                                : orig.getIdle(),
+                        wasEdited(animAttributes.getWalk())
+                                ? (int) animAttributes.getWalk().getValue()
+                                : orig.getWalk(),
+                        wasEdited(animAttributes.getRun())
+                                ? (int) animAttributes.getRun().getValue()
+                                : orig.getRun(),
+                        wasEdited(animAttributes.getWalk180())
+                                ? (int) animAttributes.getWalk180().getValue()
+                                : orig.getWalk180(),
+                        wasEdited(animAttributes.getWalkRight())
+                                ? (int) animAttributes.getWalkRight().getValue()
+                                : orig.getWalkRight(),
+                        wasEdited(animAttributes.getWalkLeft())
+                                ? (int) animAttributes.getWalkLeft().getValue()
+                                : orig.getWalkLeft(),
+                        wasEdited(animAttributes.getIdleRight())
+                                ? (int) animAttributes.getIdleRight().getValue()
+                                : orig.getIdleRight(),
+                        wasEdited(animAttributes.getIdleLeft())
+                                ? (int) animAttributes.getIdleLeft().getValue()
+                                : orig.getIdleLeft(),
+                        wasEdited(animAttributes.getSpeed())
+                                ? ((Number) animAttributes.getSpeed().getValue()).doubleValue()
+                                : orig.getSpeed(),
+                        wasEdited(animAttributes.getLastFrame())
+                                ? (int) animAttributes.getLastFrame().getValue()
+                                : orig.getLastFrame(),
+                        wasEdited(animAttributes.getPauseTicks())
+                                ? (int) animAttributes.getPauseTicks().getValue()
+                                : orig.getPauseTicks()
+                );
+            }
+            case ORIENTATION:
+            {
+                OrientationKeyFrame orig = (OrientationKeyFrame) original;
+                // Start is snapshot-managed (Character.setCurrentKeyFrame
+                // writes it on kf activation), so even though the spinner
+                // exists in getAllComponents() we always carry the original
+                // value here. Same for goal -- not in the UI.
+                return new OrientationKeyFrame(
+                        tick,
+                        orig.getGoal(),
+                        orig.getStart(),
+                        wasEdited(oriAttributes.getEnd())
+                                ? (int) oriAttributes.getEnd().getValue()
+                                : orig.getEnd(),
+                        wasEdited(oriAttributes.getDuration())
+                                ? ((Number) oriAttributes.getDuration().getValue()).doubleValue()
+                                : orig.getDuration(),
+                        wasEdited(oriAttributes.getTurnRate())
+                                ? ((Number) oriAttributes.getTurnRate().getValue()).doubleValue()
+                                : orig.getTurnRate(),
+                        wasEdited(oriAttributes.getTargetCharacterName())
+                                ? oriAttributes.getTargetCharacterNameValue()
+                                : orig.getTargetCharacterName(),
+                        wasEdited(oriAttributes.getTurnDirection())
+                                ? (com.creatorskit.swing.timesheet.keyframe.TurnDirection) oriAttributes.getTurnDirection().getSelectedItem()
+                                : orig.getTurnDirection()
+                );
+            }
+            case SPAWN:
+            {
+                SpawnKeyFrame orig = (SpawnKeyFrame) original;
+                return new SpawnKeyFrame(
+                        tick,
+                        wasEdited(spawnAttributes.getSpawn())
+                                ? spawnAttributes.getSpawn().getSelectedItem() == Toggle.ENABLE
+                                : orig.isSpawnActive()
+                );
+            }
+            case MODEL:
+            {
+                ModelKeyFrame orig = (ModelKeyFrame) original;
+                return new ModelKeyFrame(
+                        tick,
+                        wasEdited(modelAttributes.getModelOverride())
+                                ? modelAttributes.getModelOverride().getSelectedItem() == ModelToggle.CUSTOM_MODEL
+                                : orig.isUseCustomModel(),
+                        wasEdited(modelAttributes.getModelId())
+                                ? (int) modelAttributes.getModelId().getValue()
+                                : orig.getModelId(),
+                        wasEdited(modelAttributes.getCustomModel())
+                                ? (CustomModel) modelAttributes.getCustomModel().getSelectedItem()
+                                : orig.getCustomModel(),
+                        wasEdited(modelAttributes.getRadius())
+                                ? (int) modelAttributes.getRadius().getValue()
+                                : orig.getRadius()
+                );
+            }
+            case TEXT:
+            {
+                TextKeyFrame orig = (TextKeyFrame) original;
+                return new TextKeyFrame(
+                        tick,
+                        wasEdited(textAttributes.getDuration())
+                                ? (double) textAttributes.getDuration().getValue()
+                                : orig.getDuration(),
+                        wasEdited(textAttributes.getText())
+                                ? textAttributes.getText().getText()
+                                : orig.getText()
+                );
+            }
+            case OVERHEAD:
+            {
+                OverheadKeyFrame orig = (OverheadKeyFrame) original;
+                return new OverheadKeyFrame(
+                        tick,
+                        wasEdited(overheadAttributes.getSkullSprite())
+                                ? (OverheadSprite) overheadAttributes.getSkullSprite().getSelectedItem()
+                                : orig.getSkullSprite(),
+                        wasEdited(overheadAttributes.getPrayerSprite())
+                                ? (OverheadSprite) overheadAttributes.getPrayerSprite().getSelectedItem()
+                                : orig.getPrayerSprite()
+                );
+            }
+            case HEALTH:
+            {
+                HealthKeyFrame orig = (HealthKeyFrame) original;
+                HealthKeyFrame healthKf = new HealthKeyFrame(
+                        tick,
+                        wasEdited(healthAttributes.getDuration())
+                                ? (double) healthAttributes.getDuration().getValue()
+                                : orig.getDuration(),
+                        wasEdited(healthAttributes.getHealthbarSprite())
+                                ? (HealthbarSprite) healthAttributes.getHealthbarSprite().getSelectedItem()
+                                : orig.getHealthbarSprite(),
+                        wasEdited(healthAttributes.getMaxHealth())
+                                ? (int) healthAttributes.getMaxHealth().getValue()
+                                : orig.getMaxHealth(),
+                        wasEdited(healthAttributes.getCurrentHealth())
+                                ? (int) healthAttributes.getCurrentHealth().getValue()
+                                : orig.getCurrentHealth(),
+                        wasEdited(healthAttributes.getOrder())
+                                ? (int) healthAttributes.getOrder().getValue()
+                                : orig.getOrder(),
+                        wasEdited(healthAttributes.getWidth())
+                                ? (int) healthAttributes.getWidth().getValue()
+                                : orig.getWidth()
+                );
+                healthKf.setSyncHitsplats(wasEdited(healthAttributes.getSyncHitsplats())
+                        ? healthAttributes.getSyncHitsplats().isSelected()
+                        : orig.isSyncHitsplats());
+                healthKf.setFadeInTicks(wasEdited(healthAttributes.getFadeInTicks())
+                        ? ((Number) healthAttributes.getFadeInTicks().getValue()).doubleValue()
+                        : orig.getFadeInTicks());
+                healthKf.setFadeOutTicks(wasEdited(healthAttributes.getFadeOutTicks())
+                        ? ((Number) healthAttributes.getFadeOutTicks().getValue()).doubleValue()
+                        : orig.getFadeOutTicks());
+                return healthKf;
+            }
+            case SPOTANIM:
+            case SPOTANIM2:
+            {
+                SpotAnimKeyFrame orig = (SpotAnimKeyFrame) original;
+                SpotAnimAttributes spAttributes = (type == KeyFrameType.SPOTANIM) ? spotAnimAttributes : spotAnim2Attributes;
+                return new SpotAnimKeyFrame(
+                        tick,
+                        type,
+                        wasEdited(spAttributes.getSpotAnimId())
+                                ? (int) spAttributes.getSpotAnimId().getValue()
+                                : orig.getSpotAnimId(),
+                        wasEdited(spAttributes.getLoop())
+                                ? spAttributes.getLoop().getSelectedItem() == Toggle.ENABLE
+                                : orig.isLoop(),
+                        wasEdited(spAttributes.getHeight())
+                                ? (int) spAttributes.getHeight().getValue()
+                                : orig.getHeight(),
+                        wasEdited(spAttributes.getRadius())
+                                ? (int) spAttributes.getRadius().getValue()
+                                : orig.getRadius()
+                );
+            }
+            case HITSPLAT_1:
+            case HITSPLAT_2:
+            case HITSPLAT_3:
+            case HITSPLAT_4:
+            {
+                HitsplatKeyFrame orig = (HitsplatKeyFrame) original;
+                HitsplatAttributes ha;
+                switch (type)
+                {
+                    default:
+                    case HITSPLAT_1: ha = hitsplat1Attributes; break;
+                    case HITSPLAT_2: ha = hitsplat2Attributes; break;
+                    case HITSPLAT_3: ha = hitsplat3Attributes; break;
+                    case HITSPLAT_4: ha = hitsplat4Attributes; break;
+                }
+                return new HitsplatKeyFrame(
+                        tick,
+                        type,
+                        wasEdited(ha.getDuration())
+                                ? ((Number) ha.getDuration().getValue()).doubleValue()
+                                : orig.getDuration(),
+                        wasEdited(ha.getSprite())
+                                ? (HitsplatSprite) ha.getSprite().getSelectedItem()
+                                : orig.getSprite(),
+                        wasEdited(ha.getVariant())
+                                ? (HitsplatVariant) ha.getVariant().getSelectedItem()
+                                : orig.getVariant(),
+                        wasEdited(ha.getDamage())
+                                ? (int) ha.getDamage().getValue()
+                                : orig.getDamage()
+                );
+            }
+            case PROJECTILE:
+            {
+                ProjectileKeyFrame orig = (ProjectileKeyFrame) original;
+                return new ProjectileKeyFrame(
+                        tick,
+                        wasEdited(projectileAttributes.getProjectileId())
+                                ? (int) projectileAttributes.getProjectileId().getValue()
+                                : orig.getProjectileId(),
+                        wasEdited(projectileAttributes.getTarget())
+                                ? projectileAttributes.getTargetValue()
+                                : orig.getTarget(),
+                        wasEdited(projectileAttributes.getStartHeight())
+                                ? (int) projectileAttributes.getStartHeight().getValue()
+                                : orig.getStartHeight(),
+                        wasEdited(projectileAttributes.getEndHeight())
+                                ? (int) projectileAttributes.getEndHeight().getValue()
+                                : orig.getEndHeight(),
+                        wasEdited(projectileAttributes.getSlope())
+                                ? (int) projectileAttributes.getSlope().getValue()
+                                : orig.getSlope(),
+                        wasEdited(projectileAttributes.getDurationTicks())
+                                ? ((Number) projectileAttributes.getDurationTicks().getValue()).doubleValue()
+                                : orig.getDurationTicks(),
+                        wasEdited(projectileAttributes.getFaceTrajectory())
+                                ? projectileAttributes.getFaceTrajectory().isSelected()
+                                : orig.isFaceTrajectory()
+                );
+            }
+            case SHIELD:
+            {
+                ShieldKeyFrame orig = (ShieldKeyFrame) original;
+                return new ShieldKeyFrame(
+                        tick,
+                        wasEdited(shieldAttributes.getDuration())
+                                ? ((Number) shieldAttributes.getDuration().getValue()).doubleValue()
+                                : orig.getDuration(),
+                        wasEdited(shieldAttributes.getColour())
+                                ? shieldAttributes.getRgb()
+                                : orig.getRgb(),
+                        wasEdited(shieldAttributes.getMaxValue())
+                                ? (int) shieldAttributes.getMaxValue().getValue()
+                                : orig.getMaxValue(),
+                        wasEdited(shieldAttributes.getCurrentValue())
+                                ? (int) shieldAttributes.getCurrentValue().getValue()
+                                : orig.getCurrentValue(),
+                        wasEdited(shieldAttributes.getOrder())
+                                ? (int) shieldAttributes.getOrder().getValue()
+                                : orig.getOrder(),
+                        wasEdited(shieldAttributes.getWidth())
+                                ? (int) shieldAttributes.getWidth().getValue()
+                                : orig.getWidth()
+                );
+            }
+            case SPECIAL:
+            {
+                SpecialKeyFrame orig = (SpecialKeyFrame) original;
+                return new SpecialKeyFrame(
+                        tick,
+                        wasEdited(specialAttributes.getDuration())
+                                ? ((Number) specialAttributes.getDuration().getValue()).doubleValue()
+                                : orig.getDuration(),
+                        wasEdited(specialAttributes.getColour())
+                                ? specialAttributes.getRgb()
+                                : orig.getRgb(),
+                        wasEdited(specialAttributes.getMaxValue())
+                                ? (int) specialAttributes.getMaxValue().getValue()
+                                : orig.getMaxValue(),
+                        wasEdited(specialAttributes.getCurrentValue())
+                                ? (int) specialAttributes.getCurrentValue().getValue()
+                                : orig.getCurrentValue(),
+                        wasEdited(specialAttributes.getOrder())
+                                ? (int) specialAttributes.getOrder().getValue()
+                                : orig.getOrder(),
+                        wasEdited(specialAttributes.getWidth())
+                                ? (int) specialAttributes.getWidth().getValue()
+                                : orig.getWidth()
+                );
+            }
+            case SCREEN_FADE:
+            {
+                ScreenFadeKeyFrame orig = (ScreenFadeKeyFrame) original;
+                return new ScreenFadeKeyFrame(
+                        tick,
+                        wasEdited(screenFadeAttributes.getColour())
+                                ? screenFadeAttributes.getRgb()
+                                : orig.getRgb(),
+                        wasEdited(screenFadeAttributes.getPeakAlpha())
+                                ? (int) screenFadeAttributes.getPeakAlpha().getValue()
+                                : orig.getPeakAlpha(),
+                        wasEdited(screenFadeAttributes.getRingRadius())
+                                ? (int) screenFadeAttributes.getRingRadius().getValue()
+                                : orig.getRingRadius(),
+                        wasEdited(screenFadeAttributes.getRingFeather())
+                                ? (int) screenFadeAttributes.getRingFeather().getValue()
+                                : orig.getRingFeather(),
+                        wasEdited(screenFadeAttributes.getFadeInTicks())
+                                ? ((Number) screenFadeAttributes.getFadeInTicks().getValue()).doubleValue()
+                                : orig.getFadeInTicks(),
+                        wasEdited(screenFadeAttributes.getHoldTicks())
+                                ? ((Number) screenFadeAttributes.getHoldTicks().getValue()).doubleValue()
+                                : orig.getHoldTicks(),
+                        wasEdited(screenFadeAttributes.getFadeOutTicks())
+                                ? ((Number) screenFadeAttributes.getFadeOutTicks().getValue()).doubleValue()
+                                : orig.getFadeOutTicks()
+                );
+            }
+            case SCREEN_SHAKE:
+            {
+                ScreenShakeKeyFrame orig = (ScreenShakeKeyFrame) original;
+                return new ScreenShakeKeyFrame(
+                        tick,
+                        wasEdited(screenShakeAttributes.getAmplitudeHorizontal())
+                                ? (int) screenShakeAttributes.getAmplitudeHorizontal().getValue()
+                                : orig.getAmplitudeHorizontal(),
+                        wasEdited(screenShakeAttributes.getAmplitudeVertical())
+                                ? (int) screenShakeAttributes.getAmplitudeVertical().getValue()
+                                : orig.getAmplitudeVertical(),
+                        wasEdited(screenShakeAttributes.getFrequency())
+                                ? ((Number) screenShakeAttributes.getFrequency().getValue()).doubleValue()
+                                : orig.getFrequency(),
+                        wasEdited(screenShakeAttributes.getDurationTicks())
+                                ? ((Number) screenShakeAttributes.getDurationTicks().getValue()).doubleValue()
+                                : orig.getDurationTicks()
+                );
+            }
+            case CAMERA:
+            {
+                com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame orig =
+                        (com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame) original;
+                return new com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame(
+                        tick,
+                        wasEdited(cameraAttributes.getFocalX())
+                                ? ((Number) cameraAttributes.getFocalX().getValue()).doubleValue()
+                                : orig.getFocalX(),
+                        wasEdited(cameraAttributes.getFocalY())
+                                ? ((Number) cameraAttributes.getFocalY().getValue()).doubleValue()
+                                : orig.getFocalY(),
+                        wasEdited(cameraAttributes.getFocalZ())
+                                ? ((Number) cameraAttributes.getFocalZ().getValue()).doubleValue()
+                                : orig.getFocalZ(),
+                        wasEdited(cameraAttributes.getPitchDeg())
+                                ? Math.toRadians(((Number) cameraAttributes.getPitchDeg().getValue()).doubleValue())
+                                : orig.getPitch(),
+                        wasEdited(cameraAttributes.getYawDeg())
+                                ? Math.toRadians(((Number) cameraAttributes.getYawDeg().getValue()).doubleValue())
+                                : orig.getYaw(),
+                        wasEdited(cameraAttributes.getScale())
+                                ? ((Number) cameraAttributes.getScale().getValue()).intValue()
+                                : orig.getScale(),
+                        wasEdited(cameraAttributes.getEase())
+                                ? (com.creatorskit.swing.timesheet.keyframe.CameraEaseType) cameraAttributes.getEase().getSelectedItem()
+                                : orig.getEase(),
+                        wasEdited(cameraAttributes.getDurationTicks())
+                                ? ((Number) cameraAttributes.getDurationTicks().getValue()).doubleValue()
+                                : orig.getDurationTicks()
+                );
+            }
+            case COLOUR:
+            {
+                com.creatorskit.swing.timesheet.keyframe.ColourKeyFrame orig =
+                        (com.creatorskit.swing.timesheet.keyframe.ColourKeyFrame) original;
+                return new com.creatorskit.swing.timesheet.keyframe.ColourKeyFrame(
+                        tick,
+                        wasEdited(colourAttributes.getColour())
+                                ? colourAttributes.getRgb()
+                                : orig.getColorRgb(),
+                        wasEdited(colourAttributes.getFadeInTicks())
+                                ? ((Number) colourAttributes.getFadeInTicks().getValue()).doubleValue()
+                                : orig.getFadeInTicks(),
+                        wasEdited(colourAttributes.getHoldTicks())
+                                ? ((Number) colourAttributes.getHoldTicks().getValue()).doubleValue()
+                                : orig.getHoldTicks(),
+                        wasEdited(colourAttributes.getFadeOutTicks())
+                                ? ((Number) colourAttributes.getFadeOutTicks().getValue()).doubleValue()
+                                : orig.getFadeOutTicks(),
+                        wasEdited(colourAttributes.getBlendMode())
+                                ? (com.creatorskit.swing.timesheet.keyframe.ColourBlendMode) colourAttributes.getBlendMode().getSelectedItem()
+                                : orig.getBlendMode(),
+                        // easeInOut: same hardcoded smoothstep as createKeyFrame
+                        orig.isEaseInOut(),
+                        wasEdited(colourAttributes.getAffectSpotAnims())
+                                ? colourAttributes.getAffectSpotAnims().getSelectedItem() == com.creatorskit.swing.timesheet.keyframe.settings.Toggle.ENABLE
+                                : orig.isAffectSpotAnims()
+                );
+            }
+            case SOUND_1:
+            case SOUND_2:
+            case SOUND_3:
+            case SOUND_4:
+            {
+                com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame orig =
+                        (com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame) original;
+                com.creatorskit.swing.timesheet.attributes.SoundAttributes sa = soundAttributesFor(type);
+                return new com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame(
+                        tick,
+                        type,
+                        wasEdited(sa.getSoundId())
+                                ? ((Number) sa.getSoundId().getValue()).intValue()
+                                : orig.getSoundId(),
+                        wasEdited(sa.getVolume())
+                                ? ((Number) sa.getVolume().getValue()).intValue()
+                                : orig.getVolume()
+                );
             }
         }
     }
@@ -3379,6 +3893,10 @@ public class AttributePanel extends JPanel
                 // new RGB. Without this the picked colour shows on the swatch
                 // but the keyframe still carries the old value, and a save /
                 // reload silently reverts to the old colour.
+                // flagFieldEdited so the per-property multi-select commit
+                // path picks up the colour edit (RGB lives off-spinner so
+                // wireAutoUpdate's ChangeListener can't see it).
+                flagFieldEdited(colour);
                 fireAutoUpdate();
             }
         });
@@ -3501,6 +4019,9 @@ public class AttributePanel extends JPanel
                 colour.setBackground(picked);
                 colour.setBorder(BorderFactory.createLineBorder(screenFadeAttributes.getRed(), 2));
                 // wireAutoUpdate skips JButton -- fire from here so the keyframe gets rewritten.
+                // flagFieldEdited so the per-property multi-select commit
+                // path picks up the colour edit (RGB lives off-spinner).
+                flagFieldEdited(colour);
                 fireAutoUpdate();
             }
         });
@@ -3899,6 +4420,9 @@ public class AttributePanel extends JPanel
                 // the new RGB. Without this the picked colour shows on the
                 // swatch but the keyframe still carries the old value, and
                 // playback keeps using the previous tint.
+                // flagFieldEdited so the per-property multi-select commit
+                // path picks up the colour edit (RGB lives off-spinner).
+                flagFieldEdited(colour);
                 fireAutoUpdate();
             }
         });
@@ -4733,6 +5257,12 @@ public class AttributePanel extends JPanel
 
     public void resetAttributes(Character character, double tick)
     {
+        // Loading a fresh kf into the panel == start of a new edit batch.
+        // The per-property multi-select commit reads this set to know which
+        // fields to write through; clearing here means user edits made AFTER
+        // this load count, and stale flags from the previous selection don't
+        // leak through.
+        editedSinceSelection.clear();
         // Suppress auto-update for the whole load path -- every spinner.setValue
         // below would otherwise echo back through fireAutoUpdate and either loop
         // or rewrite the freshly-loaded keyframe with its own (just-loaded) values.

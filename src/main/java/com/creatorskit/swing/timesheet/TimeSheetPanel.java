@@ -1044,13 +1044,20 @@ public class TimeSheetPanel extends JPanel
         // write the same keyframe N times to the same store). When no Object
         // is selected, the per-Character loop wouldn't run at all and global
         // edits would silently no-op; handle that path explicitly below.
+        // Per-property mutation: applyEditsTo returns a new kf that starts as
+        // a copy of the original and overlays ONLY the panel fields the user
+        // touched since the last selection load. Without this, every commit
+        // rebuilt the kf from ALL panel values, so editing Radius on a
+        // multi-select would clobber each kf's modelId / customModel /
+        // useCustomModel with whatever values were displayed for the first
+        // kf when the user clicked into the panel.
         if (globalType && chars.isEmpty())
         {
             for (double tick : ticks)
             {
                 KeyFrame oldKf = findGlobalKeyFrameAt(type, tick);
                 if (oldKf == null) continue;
-                KeyFrame newKf = attributePanel.createKeyFrame(type, tick);
+                KeyFrame newKf = attributePanel.applyEditsTo(oldKf);
                 if (newKf == null) continue;
                 plugin.getGlobalKeyFrames().add(newKf); // overwrites at this tick
                 kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(newKf, null, KeyFrameCharacterActionType.ADD));
@@ -1070,22 +1077,15 @@ public class TimeSheetPanel extends JPanel
                     continue;
                 }
 
-                KeyFrame newKf = attributePanel.createKeyFrame(type, tick);
+                KeyFrame newKf = attributePanel.applyEditsTo(oldKeyFrame);
                 if (newKf == null)
                 {
                     continue;
                 }
 
-                if (type == KeyFrameType.MOVEMENT)
-                {
-                    MovementKeyFrame oldKF = (MovementKeyFrame) oldKeyFrame;
-                    MovementKeyFrame newKF = (MovementKeyFrame) newKf;
-                    newKF.setPlane(oldKF.getPlane());
-                    newKF.setPoh(oldKF.isPoh());
-                    newKF.setPath(oldKF.getPath());
-                    newKF.setCurrentStep(0);
-                    newKF.setStepClientTick(0);
-                }
+                // MOVEMENT plane / poh / path / currentStep / stepClientTick
+                // are not panel-editable; applyEditsTo already carries them
+                // from the original. No special handling needed here anymore.
 
                 kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(newKf, owner, KeyFrameCharacterActionType.ADD));
                 kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(oldKeyFrame, owner, KeyFrameCharacterActionType.REMOVE));
