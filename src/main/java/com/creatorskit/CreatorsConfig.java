@@ -754,4 +754,40 @@ public interface CreatorsConfig extends Config
 	{
 		return false;
 	}
+
+	@ConfigSection(
+			name = "Debugging",
+			description = "Diagnostic logging for development",
+			position = 99,
+			closedByDefault = true
+	)
+	String debugging = "debugging";
+
+	@ConfigItem(
+			keyName = "debugCharacterName",
+			name = "Debug Character Name",
+			description = "When non-empty, the plugin logs Movement and Orientation keyframe activity "
+					+ "for the Character with this exact name. Logs go to the RuneLite log file (and "
+					+ "the IntelliJ console when running from source). Leave empty to disable.",
+			section = debugging,
+			position = 0
+	)
+	default String debugCharacterName()
+	{
+		return "";
+	}
+
+	@ConfigItem(
+			keyName = "debugLogToChat",
+			name = "Also log debug to chat",
+			description = "When on, every debug line for the named Character also appears as a chat message "
+					+ "in-game. Useful when watching live without an IntelliJ console open. Can spam the chat "
+					+ "log if the Character has many keyframes -- leave off for routine use.",
+			section = debugging,
+			position = 1
+	)
+	default boolean debugLogToChat()
+	{
+		return false;
+	}
 }

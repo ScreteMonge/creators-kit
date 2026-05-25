@@ -11,6 +11,7 @@ import com.creatorskit.programming.orientation.OrientationInstruction;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
@@ -22,6 +23,7 @@ import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.Collection;
 
+@Slf4j
 public class Programmer
 {
     private final Client client;
@@ -78,6 +80,31 @@ public class Programmer
         this.modelUtilities = modelUtilities;
         this.colourController = colourController;
         this.soundController = soundController;
+    }
+
+    /**
+     * Movement / Orientation diagnostic logger. When the user has typed a
+     * Character name into the Debugging &gt; Debug Character Name config
+     * field, every log line for a Character with a matching name lands in
+     * the RuneLite log (and the IntelliJ console when running from source).
+     * Optionally mirrored to in-game chat via debugLogToChat.
+     *
+     * <p>Early-returns when no target name is set, so log call sites can
+     * sprinkle freely without per-tick cost in normal use.
+     */
+    private void debugCharacter(Character character, String fmt, Object... args)
+    {
+        String target = config.debugCharacterName();
+        if (target == null || target.isEmpty()) return;
+        if (character == null || character.getName() == null) return;
+        if (!target.equals(character.getName())) return;
+        String msg = String.format(fmt, args);
+        log.info("[CK debug] [{}] @t={} : {}", character.getName(),
+                String.format("%.2f", timeSheetPanel.getCurrentTime()), msg);
+        if (config.debugLogToChat())
+        {
+            plugin.sendChatMessage("[" + character.getName() + "] " + msg);
+        }
     }
 
     @Subscribe
@@ -379,11 +406,16 @@ public class Programmer
         OrientationInstruction instruction = findLastOrientation(mkf, okf, currentClientTick);
         if (instruction.getType() == KeyFrameType.ORIENTATION)
         {
+            debugCharacter(character,
+                    "play arbitration: ORIENTATION wins (oriEndClientTick within window OR after movementEnd)");
             setOrientation(character, currentClientTick);
             applyFaceTarget(character, okf);
             setAnimation(character, mc.isMoving(), difference, finalSpeed);
             return;
         }
+        debugCharacter(character,
+                "play arbitration: MOVEMENT wins -- ori kf is past its duration AND movement still running. orientationGoal=%d (movement direction)",
+                orientationGoal);
 
         if (instruction.isSetOrientation())
         {
@@ -544,6 +576,9 @@ public class Programmer
         int targetAngle = (int) Orientation.getAngleBetween(sourceLp, targetLp);
         int difference = directionalDifference(start, targetAngle, oriKeyFrame.getTurnDirection());
         double turnRate = oriKeyFrame.getTurnRate();
+        debugCharacter(source,
+                "applyFaceTarget target=%s startAngle=%d targetAngle=%d diff=%d turnRate=%.2f ticksPassed=%.2f",
+                targetName, start, targetAngle, difference, turnRate, ticksPassed);
         // turnRate is JUnits per CLIENT tick (50Hz). ticksPassed is in game
         // ticks. GAME_TICK_LENGTH / CLIENT_TICK_LENGTH = 600 / 20 = 30
         // client ticks per game tick, so the right per-game-tick rotation
@@ -1490,6 +1525,13 @@ public class Programmer
                     // keyframe (where register3DChanges resets currentStep to 0 itself).
                     ((MovementKeyFrame) nextMovement).setCurrentStep(0);
                     character.resetMovementKeyFrame(client.getGameCycle(), currentTime);
+                    MovementKeyFrame mkfActivated = (MovementKeyFrame) nextMovement;
+                    debugCharacter(character,
+                            "MOVEMENT kf activated tick=%.2f path=%d speed=%.2f turnRate=%d",
+                            mkfActivated.getTick(),
+                            mkfActivated.getPath() == null ? 0 : mkfActivated.getPath().length,
+                            mkfActivated.getSpeed(),
+                            mkfActivated.getTurnRate());
                     // Intentionally skip register3DChanges here during playback. That
                     // helper calls transform3DStatic which uses OrientationAction.SET
                     // and snaps the orientation to the new MKF's first segment angle —
@@ -1569,6 +1611,16 @@ public class Programmer
                 {
                     character.setCurrentKeyFrame(nextOrientation, KeyFrameType.ORIENTATION);
                     registerOrientationChanges(character);
+                    OrientationKeyFrame okfActivated = (OrientationKeyFrame) nextOrientation;
+                    debugCharacter(character,
+                            "ORIENTATION kf activated tick=%.2f start=%d end=%d duration=%.2f turnRate=%d dir=%s faceTarget=%s",
+                            okfActivated.getTick(),
+                            okfActivated.getStart(),
+                            okfActivated.getEnd(),
+                            okfActivated.getDuration(),
+                            okfActivated.getTurnRate(),
+                            okfActivated.getTurnDirection(),
+                            okfActivated.getTargetCharacterName() == null ? "(none)" : okfActivated.getTargetCharacterName());
                 }
             }
 

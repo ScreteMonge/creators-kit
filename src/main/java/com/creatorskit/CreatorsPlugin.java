@@ -745,6 +745,22 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		// any Character is constructed via the load path.
 		Character.setGlobalKeyFramesStore(globalKeyFrames);
 
+		// Static debug hook so Character can log diagnostic messages
+		// without needing to know about CreatorsConfig / chat helpers.
+		// Same gating semantics as Programmer.debugCharacter: only logs
+		// when config.debugCharacterName matches the Character's name.
+		Character.setDebugHook((c, msg) ->
+		{
+			String target = config.debugCharacterName();
+			if (target == null || target.isEmpty()) return;
+			if (c == null || c.getName() == null || !target.equals(c.getName())) return;
+			log.info("[CK debug] [{}] : {}", c.getName(), msg);
+			if (config.debugLogToChat())
+			{
+				sendChatMessage("[" + c.getName() + "] " + msg);
+			}
+		});
+
 		// Restore the persisted hide-list before any GameObjectSpawned events
 		// fire (login spawns the initial scene, which we want filtered).
 		loadHiddenGameObjectIds();

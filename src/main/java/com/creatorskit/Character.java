@@ -595,30 +595,37 @@ public class Character
         // No candidates -> idle spinner.
         if (priorOri == null && !mkfUsable)
         {
-            return idleOrientationFromSpinner();
+            int v = idleOrientationFromSpinner();
+            debug("computeOrientationStartFor newKfTick=%.2f: no prior ori or movement -> spinner=%d", newKfTick, v);
+            return v;
         }
         // Only one candidate -> use it.
         if (!mkfUsable)
         {
+            debug("computeOrientationStartFor newKfTick=%.2f: only priorOri (ends %.2f) -> ori.end=%d",
+                    newKfTick, oriEnd, priorOri.getEnd());
             return priorOri.getEnd();
         }
         if (priorOri == null)
         {
-            return movementFinalDirection(priorMkf);
+            int v = movementFinalDirection(priorMkf);
+            debug("computeOrientationStartFor newKfTick=%.2f: only priorMkf (ends %.2f) -> movement final dir=%d",
+                    newKfTick, mkfEnd, v);
+            return v;
         }
         // Both candidates exist. Whichever ENDED LATER is the more recent
         // driver of rotation, so its final value is the snapshot.
         //
-        // TIE-BREAKER: when end ticks are equal, orientation wins. The
-        // user explicitly authored an orientation kf to override what
-        // would otherwise be movement's auto-orient, so a tied-end means
-        // the user said "this orientation runs to the end of movement";
-        // honour that by snapshotting the ori's end angle, not the
-        // movement's final-segment direction.
+        // TIE-BREAKER: when end ticks are equal, orientation wins.
         if (mkfEnd > oriEnd)
         {
-            return movementFinalDirection(priorMkf);
+            int v = movementFinalDirection(priorMkf);
+            debug("computeOrientationStartFor newKfTick=%.2f: priorOri ends %.2f, priorMkf ends %.2f -> MOVEMENT wins (final dir=%d)",
+                    newKfTick, oriEnd, mkfEnd, v);
+            return v;
         }
+        debug("computeOrientationStartFor newKfTick=%.2f: priorOri ends %.2f, priorMkf ends %.2f -> ORI wins (end=%d)%s",
+                newKfTick, oriEnd, mkfEnd, priorOri.getEnd(), (mkfEnd == oriEnd ? " [TIE]" : ""));
         return priorOri.getEnd();
     }
 
@@ -689,6 +696,27 @@ public class Character
     public static void setGlobalKeyFramesStore(com.creatorskit.saves.GlobalKeyFrames store)
     {
         globalKeyFramesStore = store;
+    }
+
+    /**
+     * Static debug hook installed by the plugin so Character can log
+     * diagnostic messages without needing access to CreatorsConfig /
+     * Programmer / sendChatMessage from inside its model code. Set to a
+     * BiConsumer that takes the Character and a message; the consumer
+     * decides whether to actually log based on its own config (e.g. the
+     * debugCharacterName setting in Programmer.debugCharacter).
+     */
+    private static java.util.function.BiConsumer<Character, String> debugHook;
+
+    public static void setDebugHook(java.util.function.BiConsumer<Character, String> hook)
+    {
+        debugHook = hook;
+    }
+
+    private void debug(String fmt, Object... args)
+    {
+        if (debugHook == null) return;
+        debugHook.accept(this, String.format(fmt, args));
     }
 
     private static boolean isGlobalType(KeyFrameType type)
