@@ -134,6 +134,39 @@ public class Orientation
         return product;
     }
 
+    /**
+     * Signed rotation delta from {@code start} to {@code end} that honours
+     * the kf's {@link com.creatorskit.swing.timesheet.keyframe.TurnDirection}:
+     * <ul>
+     *   <li>AUTO / null: shortest signed path (range {@code (-1024, +1024]}).</li>
+     *   <li>CLOCKWISE: always non-negative; takes the long way around if the
+     *       short path would be CCW.</li>
+     *   <li>COUNTER_CLOCKWISE: always non-positive; long way if the short
+     *       path would be CW.</li>
+     * </ul>
+     *
+     * <p>Critical for "near-full rotation" cases where AUTO would collapse
+     * to ~0 JUnits: e.g. start=0, end=2040 -> AUTO returns -8 (CCW the short
+     * way) but CLOCKWISE returns +2040 (CW the long way). The
+     * duration/turnRate converter and the playback path both consume this
+     * so the spinner numbers match what plays back.
+     */
+    public static int directionalDifference(int start, int end,
+            com.creatorskit.swing.timesheet.keyframe.TurnDirection direction)
+    {
+        int autoDiff = subtract(end, start);
+        if (direction == null || direction == com.creatorskit.swing.timesheet.keyframe.TurnDirection.AUTO)
+        {
+            return autoDiff;
+        }
+        if (direction == com.creatorskit.swing.timesheet.keyframe.TurnDirection.CLOCKWISE)
+        {
+            return autoDiff >= 0 ? autoDiff : 2048 + autoDiff;
+        }
+        // COUNTER_CLOCKWISE
+        return autoDiff <= 0 ? autoDiff : autoDiff - 2048;
+    }
+
     public static int boundOrientation(int orientation)
     {
         while (orientation >= 2048)

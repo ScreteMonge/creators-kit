@@ -1880,20 +1880,32 @@ public class AttributePanel extends JPanel
             return ck.getOrientation();
         };
 
+        // Read the live turnDirection from the combobox at click time so the
+        // converter computes the SAME rotation distance the playback will
+        // actually traverse. Without this, a CW "near-full rotation" gets
+        // collapsed by the shortest-path subtract to ~0 JUnits, which makes
+        // the turn-rate inverse calc return ~0.002.
+        java.util.function.Supplier<com.creatorskit.swing.timesheet.keyframe.TurnDirection> liveTurnDirection = () ->
+        {
+            Object sel = oriAttributes.getTurnDirection().getSelectedItem();
+            return sel == null ? com.creatorskit.swing.timesheet.keyframe.TurnDirection.AUTO
+                    : (com.creatorskit.swing.timesheet.keyframe.TurnDirection) sel;
+        };
+
         com.creatorskit.swing.timesheet.attributes.ConvertArrowWidget convertArrow =
                 new com.creatorskit.swing.timesheet.attributes.ConvertArrowWidget(
-                        "Convert Turn Rate -> Duration (uses Character's live orientation as start)",
-                        "Convert Duration -> Turn Rate (computes the exact turn rate that produces the target Duration, rounded to 0.001; uses live orientation as start)",
+                        "Convert Turn Rate -> Duration (uses Character's live orientation as start; honours selected Turn direction)",
+                        "Convert Duration -> Turn Rate (computes the exact turn rate that produces the target Duration, rounded to 0.001; uses live orientation as start; honours selected Turn direction)",
                         () ->
                         {
                             commitAllOrientationSpinners.run();
-                            double d = calculateOrientationDuration(liveStartFromCharacter.getAsInt(), (int) end.getValue(), ((Number) turnRate.getValue()).doubleValue());
+                            double d = calculateOrientationDuration(liveStartFromCharacter.getAsInt(), (int) end.getValue(), ((Number) turnRate.getValue()).doubleValue(), liveTurnDirection.get());
                             duration.setValue(d);
                         },
                         () ->
                         {
                             commitAllOrientationSpinners.run();
-                            double tr = calculateOrientationTurnRate(liveStartFromCharacter.getAsInt(), (int) end.getValue(), ((Number) duration.getValue()).doubleValue());
+                            double tr = calculateOrientationTurnRate(liveStartFromCharacter.getAsInt(), (int) end.getValue(), ((Number) duration.getValue()).doubleValue(), liveTurnDirection.get());
                             turnRate.setValue(tr);
                         }
                 );
@@ -2036,10 +2048,29 @@ public class AttributePanel extends JPanel
 
     public static double calculateOrientationDuration(int start, int end, double turnRate)
     {
-        int difference = Orientation.subtract(end, start);
+        return calculateOrientationDuration(start, end, turnRate, com.creatorskit.swing.timesheet.keyframe.TurnDirection.AUTO);
+    }
+
+    /**
+     * {@link #calculateOrientationDuration} that honours the kf's
+     * {@link com.creatorskit.swing.timesheet.keyframe.TurnDirection}. With
+     * AUTO the rotation collapses to the shortest signed path; with
+     * CW / CCW the converter respects the long-way-around so a "near full
+     * rotation" no longer returns a tiny duration (which previously
+     * mapped to a tiny turn rate via the inverse calc).
+     */
+    public static double calculateOrientationDuration(int start, int end, double turnRate,
+            com.creatorskit.swing.timesheet.keyframe.TurnDirection direction)
+    {
+        int difference = Orientation.directionalDifference(start, end, direction);
         double ticks = (double) difference / turnRate * Constants.CLIENT_TICK_LENGTH / Constants.GAME_TICK_LENGTH;
         int scale = (int) Math.pow(10, 1);
         return Math.abs(Math.ceil(ticks * scale) / scale);
+    }
+
+    public static double calculateOrientationTurnRate(int start, int end, double targetDuration)
+    {
+        return calculateOrientationTurnRate(start, end, targetDuration, com.creatorskit.swing.timesheet.keyframe.TurnDirection.AUTO);
     }
 
     /**
@@ -2048,16 +2079,25 @@ public class AttributePanel extends JPanel
      * produces that duration exactly, rounded to the nearest 0.001 to keep
      * the spinner display readable.
      *
-     * <p>Turn rate is now a double (JUnits per client tick), so the
-     * conversion is just the algebraic inverse with no floor/ceil
-     * approximation: {@code turnRate = (|delta| * ratio) / duration}.
+     * <p>Uses {@link Orientation#directionalDifference} so CW / CCW kfs
+     * compute against the actual playback rotation distance instead of the
+     * shortest signed path. Without this, "near-full rotation" cases (start
+     * and end close to each other but going the long way) collapsed to a
+     * tiny diff -> tiny turn rate -- e.g. 16 ticks for ~2040 JUnits CW gave
+     * turnRate = 0.002 instead of ~4.25.
      *
-     * <p>Returns {@link OrientationKeyFrame#TURN_RATE} when start == end or
-     * the target duration is non-positive -- both degenerate cases.
+     * <p>Turn rate is a double (JUnits per client tick), so the conversion
+     * is just the algebraic inverse with no floor/ceil approximation:
+     * {@code turnRate = (|delta| * ratio) / duration}.
+     *
+     * <p>Returns {@link OrientationKeyFrame#TURN_RATE} when start == end (in
+     * the chosen direction) or the target duration is non-positive -- both
+     * degenerate cases.
      */
-    public static double calculateOrientationTurnRate(int start, int end, double targetDuration)
+    public static double calculateOrientationTurnRate(int start, int end, double targetDuration,
+            com.creatorskit.swing.timesheet.keyframe.TurnDirection direction)
     {
-        int diff = Math.abs(Orientation.subtract(end, start));
+        int diff = Math.abs(Orientation.directionalDifference(start, end, direction));
         if (diff == 0 || targetDuration <= 0)
         {
             return OrientationKeyFrame.TURN_RATE;

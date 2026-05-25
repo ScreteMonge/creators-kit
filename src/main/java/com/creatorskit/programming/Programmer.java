@@ -834,39 +834,14 @@ public class Programmer
     }
 
     /**
-     * Computes a SIGNED rotation delta from {@code start} toward {@code end}
-     * obeying the kf's {@link TurnDirection}.
-     *
-     * <ul>
-     *   <li>AUTO -- the short-path signed difference from
-     *   {@code Orientation.subtract} (legacy behaviour).</li>
-     *   <li>CLOCKWISE -- always positive: short path if already positive,
-     *   otherwise long-way (2048 + shortNegative).</li>
-     *   <li>COUNTER_CLOCKWISE -- always negative: short path if already
-     *   negative, otherwise long-way (shortPositive - 2048).</li>
-     * </ul>
-     *
-     * <p>Increasing jagex = CW under the compass-image convention
-     * (0=S, 512=W, 1024=N, 1536=E -- the path S→W→N→E is bottom→left→
-     * top→right, which is clockwise when viewed from above). So positive
-     * delta drives +rotation in {@link #getOrientation} /
-     * {@link #getOrientationStatic} = CW; negative drives -rotation = CCW.
+     * Local alias kept so the playback callsites read uniformly. The actual
+     * implementation lives in {@link Orientation#directionalDifference} so
+     * the converter in {@link com.creatorskit.swing.timesheet.AttributePanel}
+     * can share the same rotation-distance logic.
      */
     private static int directionalDifference(int start, int end, TurnDirection direction)
     {
-        int autoDiff = Orientation.subtract(end, start);  // signed short path in (-1024, 1024]
-        if (direction == null || direction == TurnDirection.AUTO)
-        {
-            return autoDiff;
-        }
-        if (direction == TurnDirection.CLOCKWISE)
-        {
-            // Force positive (CW = increasing jagex). Short path if already
-            // positive, otherwise take the long way around.
-            return autoDiff >= 0 ? autoDiff : 2048 + autoDiff;
-        }
-        // COUNTER_CLOCKWISE: force negative.
-        return autoDiff <= 0 ? autoDiff : autoDiff - 2048;
+        return Orientation.directionalDifference(start, end, direction);
     }
 
     /**
