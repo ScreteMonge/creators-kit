@@ -503,10 +503,39 @@ public class AttributePanel extends JPanel
         {
             if (c instanceof JSpinner)
             {
-                ((JSpinner) c).addChangeListener(e -> {
+                JSpinner sp = (JSpinner) c;
+                sp.addChangeListener(e -> {
                     flagFieldEdited(c);
                     fireAutoUpdate();
                 });
+                // Mixed-state guard: if the user clicks into a "Mixed"
+                // spinner and clicks out without editing, the editor's
+                // built-in COMMIT_OR_REVERT focus behaviour reverts the
+                // text to the model value -- losing the Mixed indicator.
+                // We re-stamp "Mixed" after the revert if the field is
+                // still mixed (user didn't actually commit a new value;
+                // a successful edit would have removed the component
+                // from mixedSinceSelection via setSelectedKeyFrames ->
+                // resetAttributes -> applyMixedIndicators).
+                JComponent ed = sp.getEditor();
+                if (ed instanceof JSpinner.DefaultEditor)
+                {
+                    javax.swing.JFormattedTextField tf = ((JSpinner.DefaultEditor) ed).getTextField();
+                    tf.addFocusListener(new java.awt.event.FocusAdapter()
+                    {
+                        @Override
+                        public void focusLost(java.awt.event.FocusEvent e)
+                        {
+                            javax.swing.SwingUtilities.invokeLater(() ->
+                            {
+                                if (mixedSinceSelection.contains(sp))
+                                {
+                                    tf.setText(MIXED_DISPLAY);
+                                }
+                            });
+                        }
+                    });
+                }
             }
             else if (c instanceof JComboBox)
             {
@@ -527,6 +556,7 @@ public class AttributePanel extends JPanel
                 JTextField tf = (JTextField) c;
                 // Enter commits like a spinner.
                 tf.addActionListener(e -> {
+                    if (isMixedPlaceholder(tf)) return;
                     flagFieldEdited(c);
                     fireAutoUpdate();
                 });
@@ -538,8 +568,29 @@ public class AttributePanel extends JPanel
                     @Override
                     public void focusLost(java.awt.event.FocusEvent e)
                     {
-                        flagFieldEdited(c);
-                        fireAutoUpdate();
+                        // Mixed-state guard: if the field still shows the
+                        // "Mixed" placeholder (= user clicked in and out
+                        // without typing), DO NOT commit -- writing the
+                        // literal string "Mixed" to every selected kf
+                        // would corrupt them. JSpinner doesn't need this
+                        // because its ChangeListener only fires on a
+                        // model commit (which "Mixed" can't trigger);
+                        // JTextField's focus-lost fires unconditionally.
+                        if (!isMixedPlaceholder(tf))
+                        {
+                            flagFieldEdited(c);
+                            fireAutoUpdate();
+                        }
+                        // Re-stamp "Mixed" if the field is still mixed
+                        // after any commit completes (= user didn't
+                        // resolve the mismatch by typing a single value).
+                        javax.swing.SwingUtilities.invokeLater(() ->
+                        {
+                            if (mixedSinceSelection.contains(tf))
+                            {
+                                tf.setText(MIXED_DISPLAY);
+                            }
+                        });
                     }
                 });
             }
@@ -578,6 +629,31 @@ public class AttributePanel extends JPanel
      * equals/hashCode on JComponent isn't override-safe.
      */
     private final java.util.Set<JComponent> editedSinceSelection =
+            java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+
+    // Mixed-value indicator for multi-select with differing values --------
+    // Spinners / text fields / colour buttons render the literal string
+    // "Mixed"; combo boxes deselect (index = -1) and a MixedAwareRenderer
+    // paints "Mixed" in their button area. JCheckBox can't carry text so it
+    // settles for the MIXED_BG tint + tooltip. On the next user edit the
+    // "Mixed" display is naturally replaced by the new value (the user
+    // types, the spinner commits, the combo box gains a real selection),
+    // and the per-property commit path (applyEditsTo) propagates that
+    // single value to every selected kf.
+    private static final String MIXED_DISPLAY = "Mixed";
+    private static final Color  MIXED_BG = new Color(74, 65, 92); // muted indigo, distinct from FIELD_BASE / FIELD_FLASH / "dirty" red
+    private static final String MIXED_TOOLTIP = "Selected keyframes have different values for this field. Edit to apply to all of them.";
+
+    /**
+     * Components whose value differs across the currently multi-selected kfs.
+     * Refreshed by {@link #applyMixedIndicators(KeyFrame[])} each time the
+     * panel loads (inside {@code resetAttributes}). The previous-vs-new
+     * diff drives the visual restore: a component that was mixed and is
+     * no longer mixed has its background reset to {@link #FIELD_BASE}
+     * (its text gets restored by the {@code setAttributes} call that runs
+     * earlier in the same load).
+     */
+    private final java.util.Set<JComponent> mixedSinceSelection =
             java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
 
     private void flagFieldEdited(JComponent c)
@@ -959,6 +1035,472 @@ public class AttributePanel extends JPanel
     private boolean wasEdited(JComponent c)
     {
         return editedSinceSelection.contains(c);
+    }
+
+    /**
+     * Mixed-indicator entry point. Walks the multi-selection, computes which
+     * fields disagree, and applies / clears the "Mixed" visual on each
+     * component as appropriate. Called from {@link #resetAttributes} after
+     * the first kf's values have already been written to the panel.
+     */
+    private void applyMixedIndicators(KeyFrame[] selection)
+    {
+        java.util.Set<JComponent> nowMixed = detectMixedFields(selection);
+        // Clear visuals on fields that WERE mixed but no longer are. We
+        // don't need to restore text here -- setAttributes already wrote
+        // the new value through.
+        for (JComponent c : mixedSinceSelection)
+        {
+            if (!nowMixed.contains(c))
+            {
+                clearMixedDisplayFor(c);
+            }
+        }
+        // Apply visuals on newly-mixed fields (and refresh on still-mixed
+        // ones; setAttributes overwrote our previous "Mixed" text so we
+        // need to re-stamp it).
+        for (JComponent c : nowMixed)
+        {
+            applyMixedDisplayFor(c);
+        }
+        mixedSinceSelection.clear();
+        mixedSinceSelection.addAll(nowMixed);
+    }
+
+    /**
+     * Returns the set of components whose value differs across the
+     * multi-selected kfs of the currently-shown card. Empty when the
+     * selection is empty / single / mixed-type-only-one-of-current.
+     *
+     * <p>Branch-for-branch mirror of {@link #applyEditsTo(KeyFrame)}: each
+     * panel-editable field is compared across the homogeneous sub-selection
+     * of the current panel type, with non-panel-editable fields (Movement
+     * plane / path / etc., Orientation start / goal) excluded.
+     */
+    private java.util.Set<JComponent> detectMixedFields(KeyFrame[] selection)
+    {
+        java.util.Set<JComponent> mixed = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        if (selection == null || selection.length < 2) return mixed;
+
+        KeyFrameType type = selectedKeyFramePage;
+        java.util.List<KeyFrame> sameType = new java.util.ArrayList<>();
+        for (KeyFrame kf : selection)
+        {
+            if (kf != null && kf.getKeyFrameType() == type) sameType.add(kf);
+        }
+        if (sameType.size() < 2) return mixed;
+
+        KeyFrame first = sameType.get(0);
+        switch (type)
+        {
+            case MOVEMENT:
+            {
+                MovementKeyFrame f = (MovementKeyFrame) first;
+                for (int i = 1; i < sameType.size(); i++)
+                {
+                    MovementKeyFrame k = (MovementKeyFrame) sameType.get(i);
+                    if (f.isLoop() != k.isLoop()) mixed.add(movementAttributes.getLoop());
+                    if (f.getSpeed() != k.getSpeed()) mixed.add(movementAttributes.getSpeed());
+                    if (f.getTurnRate() != k.getTurnRate()) mixed.add(movementAttributes.getTurnRate());
+                }
+                break;
+            }
+            case ANIMATION:
+            {
+                AnimationKeyFrame f = (AnimationKeyFrame) first;
+                for (int i = 1; i < sameType.size(); i++)
+                {
+                    AnimationKeyFrame k = (AnimationKeyFrame) sameType.get(i);
+                    if (f.isStall() != k.isStall()) mixed.add(animAttributes.getStall());
+                    if (f.getActive() != k.getActive()) mixed.add(animAttributes.getActive());
+                    if (f.getStartFrame() != k.getStartFrame()) mixed.add(animAttributes.getStartFrame());
+                    if (f.isLoop() != k.isLoop()) mixed.add(animAttributes.getLoop());
+                    if (f.isFreeze() != k.isFreeze()) mixed.add(animAttributes.getFreeze());
+                    if (f.getIdle() != k.getIdle()) mixed.add(animAttributes.getIdle());
+                    if (f.getWalk() != k.getWalk()) mixed.add(animAttributes.getWalk());
+                    if (f.getRun() != k.getRun()) mixed.add(animAttributes.getRun());
+                    if (f.getWalk180() != k.getWalk180()) mixed.add(animAttributes.getWalk180());
+                    if (f.getWalkRight() != k.getWalkRight()) mixed.add(animAttributes.getWalkRight());
+                    if (f.getWalkLeft() != k.getWalkLeft()) mixed.add(animAttributes.getWalkLeft());
+                    if (f.getIdleRight() != k.getIdleRight()) mixed.add(animAttributes.getIdleRight());
+                    if (f.getIdleLeft() != k.getIdleLeft()) mixed.add(animAttributes.getIdleLeft());
+                    if (f.getSpeed() != k.getSpeed()) mixed.add(animAttributes.getSpeed());
+                    if (f.getLastFrame() != k.getLastFrame()) mixed.add(animAttributes.getLastFrame());
+                    if (f.getPauseTicks() != k.getPauseTicks()) mixed.add(animAttributes.getPauseTicks());
+                }
+                break;
+            }
+            case ORIENTATION:
+            {
+                OrientationKeyFrame f = (OrientationKeyFrame) first;
+                for (int i = 1; i < sameType.size(); i++)
+                {
+                    OrientationKeyFrame k = (OrientationKeyFrame) sameType.get(i);
+                    if (f.getEnd() != k.getEnd()) mixed.add(oriAttributes.getEnd());
+                    if (f.getDuration() != k.getDuration()) mixed.add(oriAttributes.getDuration());
+                    if (f.getTurnRate() != k.getTurnRate()) mixed.add(oriAttributes.getTurnRate());
+                    if (!java.util.Objects.equals(f.getTargetCharacterName(), k.getTargetCharacterName()))
+                        mixed.add(oriAttributes.getTargetCharacterName());
+                    if (!java.util.Objects.equals(f.getTurnDirection(), k.getTurnDirection()))
+                        mixed.add(oriAttributes.getTurnDirection());
+                }
+                break;
+            }
+            case SPAWN:
+            {
+                SpawnKeyFrame f = (SpawnKeyFrame) first;
+                for (int i = 1; i < sameType.size(); i++)
+                {
+                    SpawnKeyFrame k = (SpawnKeyFrame) sameType.get(i);
+                    if (f.isSpawnActive() != k.isSpawnActive()) mixed.add(spawnAttributes.getSpawn());
+                }
+                break;
+            }
+            case MODEL:
+            {
+                ModelKeyFrame f = (ModelKeyFrame) first;
+                for (int i = 1; i < sameType.size(); i++)
+                {
+                    ModelKeyFrame k = (ModelKeyFrame) sameType.get(i);
+                    if (f.isUseCustomModel() != k.isUseCustomModel()) mixed.add(modelAttributes.getModelOverride());
+                    if (f.getModelId() != k.getModelId()) mixed.add(modelAttributes.getModelId());
+                    if (!java.util.Objects.equals(f.getCustomModel(), k.getCustomModel())) mixed.add(modelAttributes.getCustomModel());
+                    if (f.getRadius() != k.getRadius()) mixed.add(modelAttributes.getRadius());
+                }
+                break;
+            }
+            case TEXT:
+            {
+                TextKeyFrame f = (TextKeyFrame) first;
+                for (int i = 1; i < sameType.size(); i++)
+                {
+                    TextKeyFrame k = (TextKeyFrame) sameType.get(i);
+                    if (f.getDuration() != k.getDuration()) mixed.add(textAttributes.getDuration());
+                    if (!java.util.Objects.equals(f.getText(), k.getText())) mixed.add(textAttributes.getText());
+                }
+                break;
+            }
+            case OVERHEAD:
+            {
+                OverheadKeyFrame f = (OverheadKeyFrame) first;
+                for (int i = 1; i < sameType.size(); i++)
+                {
+                    OverheadKeyFrame k = (OverheadKeyFrame) sameType.get(i);
+                    if (!java.util.Objects.equals(f.getSkullSprite(), k.getSkullSprite())) mixed.add(overheadAttributes.getSkullSprite());
+                    if (!java.util.Objects.equals(f.getPrayerSprite(), k.getPrayerSprite())) mixed.add(overheadAttributes.getPrayerSprite());
+                }
+                break;
+            }
+            case HEALTH:
+            {
+                HealthKeyFrame f = (HealthKeyFrame) first;
+                for (int i = 1; i < sameType.size(); i++)
+                {
+                    HealthKeyFrame k = (HealthKeyFrame) sameType.get(i);
+                    if (f.getDuration() != k.getDuration()) mixed.add(healthAttributes.getDuration());
+                    if (!java.util.Objects.equals(f.getHealthbarSprite(), k.getHealthbarSprite())) mixed.add(healthAttributes.getHealthbarSprite());
+                    if (f.getMaxHealth() != k.getMaxHealth()) mixed.add(healthAttributes.getMaxHealth());
+                    if (f.getCurrentHealth() != k.getCurrentHealth()) mixed.add(healthAttributes.getCurrentHealth());
+                    if (f.getOrder() != k.getOrder()) mixed.add(healthAttributes.getOrder());
+                    if (f.getWidth() != k.getWidth()) mixed.add(healthAttributes.getWidth());
+                    if (f.isSyncHitsplats() != k.isSyncHitsplats()) mixed.add(healthAttributes.getSyncHitsplats());
+                    if (f.getFadeInTicks() != k.getFadeInTicks()) mixed.add(healthAttributes.getFadeInTicks());
+                    if (f.getFadeOutTicks() != k.getFadeOutTicks()) mixed.add(healthAttributes.getFadeOutTicks());
+                }
+                break;
+            }
+            case SPOTANIM:
+            case SPOTANIM2:
+            {
+                SpotAnimAttributes sp = (type == KeyFrameType.SPOTANIM) ? spotAnimAttributes : spotAnim2Attributes;
+                SpotAnimKeyFrame f = (SpotAnimKeyFrame) first;
+                for (int i = 1; i < sameType.size(); i++)
+                {
+                    SpotAnimKeyFrame k = (SpotAnimKeyFrame) sameType.get(i);
+                    if (f.getSpotAnimId() != k.getSpotAnimId()) mixed.add(sp.getSpotAnimId());
+                    if (f.isLoop() != k.isLoop()) mixed.add(sp.getLoop());
+                    if (f.getHeight() != k.getHeight()) mixed.add(sp.getHeight());
+                    if (f.getRadius() != k.getRadius()) mixed.add(sp.getRadius());
+                }
+                break;
+            }
+            case HITSPLAT_1:
+            case HITSPLAT_2:
+            case HITSPLAT_3:
+            case HITSPLAT_4:
+            {
+                HitsplatAttributes ha;
+                switch (type)
+                {
+                    default:
+                    case HITSPLAT_1: ha = hitsplat1Attributes; break;
+                    case HITSPLAT_2: ha = hitsplat2Attributes; break;
+                    case HITSPLAT_3: ha = hitsplat3Attributes; break;
+                    case HITSPLAT_4: ha = hitsplat4Attributes; break;
+                }
+                HitsplatKeyFrame f = (HitsplatKeyFrame) first;
+                for (int i = 1; i < sameType.size(); i++)
+                {
+                    HitsplatKeyFrame k = (HitsplatKeyFrame) sameType.get(i);
+                    if (f.getDuration() != k.getDuration()) mixed.add(ha.getDuration());
+                    if (!java.util.Objects.equals(f.getSprite(), k.getSprite())) mixed.add(ha.getSprite());
+                    if (!java.util.Objects.equals(f.getVariant(), k.getVariant())) mixed.add(ha.getVariant());
+                    if (f.getDamage() != k.getDamage()) mixed.add(ha.getDamage());
+                }
+                break;
+            }
+            case PROJECTILE:
+            {
+                ProjectileKeyFrame f = (ProjectileKeyFrame) first;
+                for (int i = 1; i < sameType.size(); i++)
+                {
+                    ProjectileKeyFrame k = (ProjectileKeyFrame) sameType.get(i);
+                    if (f.getProjectileId() != k.getProjectileId()) mixed.add(projectileAttributes.getProjectileId());
+                    if (!java.util.Objects.equals(f.getTarget(), k.getTarget())) mixed.add(projectileAttributes.getTarget());
+                    if (f.getStartHeight() != k.getStartHeight()) mixed.add(projectileAttributes.getStartHeight());
+                    if (f.getEndHeight() != k.getEndHeight()) mixed.add(projectileAttributes.getEndHeight());
+                    if (f.getSlope() != k.getSlope()) mixed.add(projectileAttributes.getSlope());
+                    if (f.getDurationTicks() != k.getDurationTicks()) mixed.add(projectileAttributes.getDurationTicks());
+                    if (f.isFaceTrajectory() != k.isFaceTrajectory()) mixed.add(projectileAttributes.getFaceTrajectory());
+                    if (f.getRadius() != k.getRadius()) mixed.add(projectileAttributes.getRadius());
+                }
+                break;
+            }
+            case SHIELD:
+            {
+                ShieldKeyFrame f = (ShieldKeyFrame) first;
+                for (int i = 1; i < sameType.size(); i++)
+                {
+                    ShieldKeyFrame k = (ShieldKeyFrame) sameType.get(i);
+                    if (f.getDuration() != k.getDuration()) mixed.add(shieldAttributes.getDuration());
+                    if (f.getRgb() != k.getRgb()) mixed.add(shieldAttributes.getColour());
+                    if (f.getMaxValue() != k.getMaxValue()) mixed.add(shieldAttributes.getMaxValue());
+                    if (f.getCurrentValue() != k.getCurrentValue()) mixed.add(shieldAttributes.getCurrentValue());
+                    if (f.getOrder() != k.getOrder()) mixed.add(shieldAttributes.getOrder());
+                    if (f.getWidth() != k.getWidth()) mixed.add(shieldAttributes.getWidth());
+                }
+                break;
+            }
+            case SPECIAL:
+            {
+                SpecialKeyFrame f = (SpecialKeyFrame) first;
+                for (int i = 1; i < sameType.size(); i++)
+                {
+                    SpecialKeyFrame k = (SpecialKeyFrame) sameType.get(i);
+                    if (f.getDuration() != k.getDuration()) mixed.add(specialAttributes.getDuration());
+                    if (f.getRgb() != k.getRgb()) mixed.add(specialAttributes.getColour());
+                    if (f.getMaxValue() != k.getMaxValue()) mixed.add(specialAttributes.getMaxValue());
+                    if (f.getCurrentValue() != k.getCurrentValue()) mixed.add(specialAttributes.getCurrentValue());
+                    if (f.getOrder() != k.getOrder()) mixed.add(specialAttributes.getOrder());
+                    if (f.getWidth() != k.getWidth()) mixed.add(specialAttributes.getWidth());
+                }
+                break;
+            }
+            case SCREEN_FADE:
+            {
+                ScreenFadeKeyFrame f = (ScreenFadeKeyFrame) first;
+                for (int i = 1; i < sameType.size(); i++)
+                {
+                    ScreenFadeKeyFrame k = (ScreenFadeKeyFrame) sameType.get(i);
+                    if (f.getRgb() != k.getRgb()) mixed.add(screenFadeAttributes.getColour());
+                    if (f.getPeakAlpha() != k.getPeakAlpha()) mixed.add(screenFadeAttributes.getPeakAlpha());
+                    if (f.getRingRadius() != k.getRingRadius()) mixed.add(screenFadeAttributes.getRingRadius());
+                    if (f.getRingFeather() != k.getRingFeather()) mixed.add(screenFadeAttributes.getRingFeather());
+                    if (f.getFadeInTicks() != k.getFadeInTicks()) mixed.add(screenFadeAttributes.getFadeInTicks());
+                    if (f.getHoldTicks() != k.getHoldTicks()) mixed.add(screenFadeAttributes.getHoldTicks());
+                    if (f.getFadeOutTicks() != k.getFadeOutTicks()) mixed.add(screenFadeAttributes.getFadeOutTicks());
+                }
+                break;
+            }
+            case SCREEN_SHAKE:
+            {
+                ScreenShakeKeyFrame f = (ScreenShakeKeyFrame) first;
+                for (int i = 1; i < sameType.size(); i++)
+                {
+                    ScreenShakeKeyFrame k = (ScreenShakeKeyFrame) sameType.get(i);
+                    if (f.getAmplitudeHorizontal() != k.getAmplitudeHorizontal()) mixed.add(screenShakeAttributes.getAmplitudeHorizontal());
+                    if (f.getAmplitudeVertical() != k.getAmplitudeVertical()) mixed.add(screenShakeAttributes.getAmplitudeVertical());
+                    if (f.getFrequency() != k.getFrequency()) mixed.add(screenShakeAttributes.getFrequency());
+                    if (f.getDurationTicks() != k.getDurationTicks()) mixed.add(screenShakeAttributes.getDurationTicks());
+                }
+                break;
+            }
+            case CAMERA:
+            {
+                com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame f =
+                        (com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame) first;
+                for (int i = 1; i < sameType.size(); i++)
+                {
+                    com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame k =
+                            (com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame) sameType.get(i);
+                    if (f.getFocalX() != k.getFocalX()) mixed.add(cameraAttributes.getFocalX());
+                    if (f.getFocalY() != k.getFocalY()) mixed.add(cameraAttributes.getFocalY());
+                    if (f.getFocalZ() != k.getFocalZ()) mixed.add(cameraAttributes.getFocalZ());
+                    if (f.getPitch() != k.getPitch()) mixed.add(cameraAttributes.getPitchDeg());
+                    if (f.getYaw() != k.getYaw()) mixed.add(cameraAttributes.getYawDeg());
+                    if (f.getScale() != k.getScale()) mixed.add(cameraAttributes.getScale());
+                    if (!java.util.Objects.equals(f.getEase(), k.getEase())) mixed.add(cameraAttributes.getEase());
+                    if (f.getDurationTicks() != k.getDurationTicks()) mixed.add(cameraAttributes.getDurationTicks());
+                }
+                break;
+            }
+            case COLOUR:
+            {
+                com.creatorskit.swing.timesheet.keyframe.ColourKeyFrame f =
+                        (com.creatorskit.swing.timesheet.keyframe.ColourKeyFrame) first;
+                for (int i = 1; i < sameType.size(); i++)
+                {
+                    com.creatorskit.swing.timesheet.keyframe.ColourKeyFrame k =
+                            (com.creatorskit.swing.timesheet.keyframe.ColourKeyFrame) sameType.get(i);
+                    if (f.getColorRgb() != k.getColorRgb()) mixed.add(colourAttributes.getColour());
+                    if (f.getFadeInTicks() != k.getFadeInTicks()) mixed.add(colourAttributes.getFadeInTicks());
+                    if (f.getHoldTicks() != k.getHoldTicks()) mixed.add(colourAttributes.getHoldTicks());
+                    if (f.getFadeOutTicks() != k.getFadeOutTicks()) mixed.add(colourAttributes.getFadeOutTicks());
+                    if (!java.util.Objects.equals(f.getBlendMode(), k.getBlendMode())) mixed.add(colourAttributes.getBlendMode());
+                    if (f.isAffectSpotAnims() != k.isAffectSpotAnims()) mixed.add(colourAttributes.getAffectSpotAnims());
+                }
+                break;
+            }
+            case SOUND_1:
+            case SOUND_2:
+            case SOUND_3:
+            case SOUND_4:
+            {
+                com.creatorskit.swing.timesheet.attributes.SoundAttributes sa = soundAttributesFor(type);
+                com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame f =
+                        (com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame) first;
+                for (int i = 1; i < sameType.size(); i++)
+                {
+                    com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame k =
+                            (com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame) sameType.get(i);
+                    if (f.getSoundId() != k.getSoundId()) mixed.add(sa.getSoundId());
+                    if (f.getVolume() != k.getVolume()) mixed.add(sa.getVolume());
+                }
+                break;
+            }
+            default:
+                break;
+        }
+        return mixed;
+    }
+
+    /**
+     * Paints a single component with the "Mixed" visual: literal "Mixed"
+     * text on spinners / text fields / colour buttons, deselect + custom
+     * renderer on combo boxes, MIXED_BG tint + tooltip on every type
+     * (the only thing JCheckBox can carry).
+     *
+     * <p>Order matters: the text / index mutation must run BEFORE the
+     * background set, because each Attributes subclass's own change
+     * listener fires {@code setBackground(getRed())} on edit and would
+     * otherwise overwrite our MIXED_BG tint.
+     */
+    private void applyMixedDisplayFor(JComponent c)
+    {
+        if (c instanceof JSpinner)
+        {
+            JComponent editor = ((JSpinner) c).getEditor();
+            if (editor instanceof JSpinner.DefaultEditor)
+            {
+                javax.swing.JFormattedTextField tf = ((JSpinner.DefaultEditor) editor).getTextField();
+                tf.setText(MIXED_DISPLAY);
+            }
+        }
+        else if (c instanceof JTextField)
+        {
+            ((JTextField) c).setText(MIXED_DISPLAY);
+        }
+        else if (c instanceof javax.swing.JTextArea)
+        {
+            ((javax.swing.JTextArea) c).setText(MIXED_DISPLAY);
+        }
+        else if (c instanceof JComboBox)
+        {
+            JComboBox<?> cb = (JComboBox<?>) c;
+            ensureMixedRenderer(cb);
+            cb.setSelectedIndex(-1);
+        }
+        else if (c instanceof JButton)
+        {
+            ((JButton) c).setText(MIXED_DISPLAY);
+        }
+        c.setBackground(MIXED_BG);
+        c.setToolTipText(MIXED_TOOLTIP);
+    }
+
+    /**
+     * Resets background + tooltip on a component that's no longer mixed.
+     * Text / selection has already been refreshed by the {@link
+     * com.creatorskit.swing.timesheet.attributes.Attributes#setAttributes}
+     * call earlier in the load, so nothing else to restore here.
+     *
+     * <p>Skips the background reset when the field is currently in the
+     * post-edit green-flash fade -- otherwise the user's just-committed
+     * edit would lose its "did my edit land?" cue (the field-fade timer
+     * IS still running, so a partial flash would still appear at the next
+     * 33 ms tick, but the brief blip back to FIELD_BASE looked off).
+     */
+    private void clearMixedDisplayFor(JComponent c)
+    {
+        if (!recentlyEditedFields.containsKey(c))
+        {
+            c.setBackground(FIELD_BASE);
+        }
+        // Restoring tooltip to null is fine for the spinners / text fields
+        // -- their card-level tooltips (set in setupXxxCard) live on the
+        // card labels next to them, not on the field components themselves.
+        // The few fields that DO have field-level tooltips (e.g. Projectile
+        // target) are unaffected because their tooltip is re-applied on the
+        // first paint via their existing setToolTipText calls in the
+        // Attributes constructor.
+        c.setToolTipText(null);
+    }
+
+    /**
+     * Renderer for combo boxes that displays {@link #MIXED_DISPLAY} when the
+     * combo's current selection is null (= deselected for multi-select with
+     * differing values). Real items render via the default path so existing
+     * combo content is unaffected outside the mixed-state.
+     */
+    private static class MixedAwareRenderer extends javax.swing.DefaultListCellRenderer
+    {
+        @Override
+        public java.awt.Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus)
+        {
+            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+            if (value == null && index == -1)
+            {
+                // index == -1 means the combo box is rendering its button
+                // area (the "selected" cell), not a dropdown item. Real
+                // dropdown items always pass a non-null value.
+                setText(MIXED_DISPLAY);
+            }
+            return this;
+        }
+    }
+
+    /** Installs MixedAwareRenderer on the combo box if not already present. */
+    private void ensureMixedRenderer(JComboBox<?> cb)
+    {
+        if (!(cb.getRenderer() instanceof MixedAwareRenderer))
+        {
+            cb.setRenderer(new MixedAwareRenderer());
+        }
+    }
+
+    /**
+     * True if the field is currently tracked as mixed AND its visible text
+     * still equals the {@link #MIXED_DISPLAY} placeholder. Used by the
+     * JTextField focus-lost / action handler to avoid writing the literal
+     * string "Mixed" to every selected kf when the user clicks in and out
+     * without typing. False as soon as the user starts typing.
+     */
+    private boolean isMixedPlaceholder(JComponent c)
+    {
+        if (!mixedSinceSelection.contains(c)) return false;
+        if (c instanceof JTextField) return MIXED_DISPLAY.equals(((JTextField) c).getText());
+        if (c instanceof javax.swing.JTextArea) return MIXED_DISPLAY.equals(((javax.swing.JTextArea) c).getText());
+        return false;
     }
 
     /**
@@ -5290,6 +5832,11 @@ public class AttributePanel extends JPanel
         try
         {
             resetAttributesInner(character, tick);
+            // After setAttributes loaded the FIRST selected kf into the panel,
+            // overlay "Mixed" on any field whose value disagrees across the
+            // selection. Stays inside the suppress block so the setText /
+            // setSelectedIndex(-1) calls don't echo back as user edits.
+            applyMixedIndicators(timeSheetPanel == null ? null : timeSheetPanel.getSelectedKeyFrames());
         }
         finally
         {
