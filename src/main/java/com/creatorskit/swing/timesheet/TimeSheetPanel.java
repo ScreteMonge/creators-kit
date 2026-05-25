@@ -5284,9 +5284,35 @@ public class TimeSheetPanel extends JPanel
             previewArea.setCaretPosition(0);
         };
 
+        // Pre-declare the "sync source to field type" runnable so any of
+        // the change listeners below can call it. Toggles the source
+        // radios + enables/disables the slicing controls so the dialog
+        // visually narrows to the inputs that actually matter for the
+        // picked field. Numeric fields auto-switch to arithmetic (the
+        // typical "one value per kf" mode); the string field (Target)
+        // sticks with folder pattern, the v1 default.
+        Runnable syncSourceToField = () ->
+        {
+            String f = (String) fieldCombo.getSelectedItem();
+            boolean stringField = isIterableStringField(f);
+            // Wrap-in-f[...] is Projectile.Target specific; meaningless
+            // for numeric fields and for arithmetic source.
+            wrapFolderCheck.setEnabled(stringField && folderPatternRadio.isSelected());
+            // Folder pattern produces strings ("Tile (3)"); they can't
+            // parse as the numeric setters we wired in v2. Grey it out
+            // so the user can see it's not the right tool, without
+            // hiding the radio (preserves layout).
+            folderPatternRadio.setEnabled(stringField);
+            folderPatternField.setEnabled(stringField);
+            // Literal-list is permitted on numeric fields -- user can
+            // type "92, 91, 90" by hand if arithmetic doesn't fit.
+            // Arithmetic source is permitted on string fields too
+            // (would produce "0", "-1", "-2", ...). Both stay enabled
+            // for either field type so we don't lock out edge cases.
+        };
         // Wire every input to refresh the preview live.
-        folderPatternRadio.addActionListener(e -> refreshPreview.run());
-        literalListRadio.addActionListener(e -> refreshPreview.run());
+        folderPatternRadio.addActionListener(e -> { syncSourceToField.run(); refreshPreview.run(); });
+        literalListRadio.addActionListener(e -> { syncSourceToField.run(); refreshPreview.run(); });
         arithmeticRadio.addActionListener(e ->
         {
             // Auto-collapse window/stride to 1/1 when switching to the
@@ -5297,6 +5323,27 @@ public class TimeSheetPanel extends JPanel
                 windowSpinner.setValue(1);
                 strideSpinner.setValue(1);
             }
+            syncSourceToField.run();
+            refreshPreview.run();
+        });
+        // Field change auto-switches source: numeric fields jump to
+        // arithmetic (the user's likely intent for the Special bar
+        // "decrement Current Value by 1 each tick" use case); string
+        // fields jump back to folder pattern (v1 default).
+        fieldCombo.addActionListener(e ->
+        {
+            String f = (String) fieldCombo.getSelectedItem();
+            if (f != null && !isIterableStringField(f) && !arithmeticRadio.isSelected())
+            {
+                arithmeticRadio.setSelected(true);
+                windowSpinner.setValue(1);
+                strideSpinner.setValue(1);
+            }
+            else if (f != null && isIterableStringField(f) && arithmeticRadio.isSelected())
+            {
+                folderPatternRadio.setSelected(true);
+            }
+            syncSourceToField.run();
             refreshPreview.run();
         });
         wrapFolderCheck.addActionListener(e -> refreshPreview.run());
@@ -5344,7 +5391,17 @@ public class TimeSheetPanel extends JPanel
 
         JPanel headerPanel = new JPanel(new GridLayout(0, 2, 6, 6));
         headerPanel.add(new JLabel("Selection:"));
-        headerPanel.add(new JLabel(selectedKeyFrames.length + " kfs of type " + firstType.getName()));
+        // Bare count was confusing -- the tool writes ONE slice per
+        // selected kf, so a 1-kf selection means only one slice gets
+        // written (= one value). Hint the multi-select expectation
+        // inline so the user notices before clicking OK and seeing
+        // "wrote 1 of 1" when they actually wanted 30+.
+        String selSummary = selectedKeyFrames.length + " kfs of type " + firstType.getName();
+        if (selectedKeyFrames.length == 1)
+        {
+            selSummary += "  (only one -- multi-select the kfs to iterate across)";
+        }
+        headerPanel.add(new JLabel(selSummary));
         headerPanel.add(new JLabel("Field:"));
         headerPanel.add(fieldCombo);
         headerPanel.add(new JLabel("Format:"));
@@ -5360,6 +5417,18 @@ public class TimeSheetPanel extends JPanel
         content.add(top, BorderLayout.NORTH);
         content.add(previewScroll, BorderLayout.CENTER);
 
+        // Initial sync: if the default field is numeric (e.g. Special's
+        // first item "Current Value"), jump straight to arithmetic so
+        // the dialog opens with the source the user is most likely to
+        // want rather than the v1 folder-pattern default.
+        String initialField = (String) fieldCombo.getSelectedItem();
+        if (initialField != null && !isIterableStringField(initialField))
+        {
+            arithmeticRadio.setSelected(true);
+            windowSpinner.setValue(1);
+            strideSpinner.setValue(1);
+        }
+        syncSourceToField.run();
         refreshPreview.run();
 
         int result = JOptionPane.showConfirmDialog(this, content,
@@ -5693,6 +5762,18 @@ public class TimeSheetPanel extends JPanel
     {
         if (s == null) return null;
         try { return Double.parseDouble(s.trim()); } catch (NumberFormatException e) { return null; }
+    }
+
+    /**
+     * Returns true if the named iterable field expects a string value
+     * (currently just {@code Projectile.Target}). Used by the dialog to
+     * choose a sensible default source on open / field-change: numeric
+     * fields jump to the Arithmetic radio; string fields stick with
+     * folder pattern (v1 default).
+     */
+    private static boolean isIterableStringField(String field)
+    {
+        return "Target".equals(field);
     }
 
     /**
