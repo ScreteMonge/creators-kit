@@ -18,6 +18,8 @@ import lombok.Setter;
 public class ProjectileKeyFrame extends KeyFrame
 {
     public static final int DEFAULT_PROJECTILE_ID = 9; // SpotanimID.IRON_ARROW_TRAVEL — verified visible arrow projectile
+    public static final int DEFAULT_START_X = 0;
+    public static final int DEFAULT_START_Y = 0;
     public static final int DEFAULT_START_HEIGHT = 80;
     public static final int DEFAULT_END_HEIGHT = 80;
     public static final int DEFAULT_SLOPE = 15;
@@ -47,6 +49,22 @@ public class ProjectileKeyFrame extends KeyFrame
      */
     private String target;
 
+    /**
+     * Horizontal X offset (1/128-tile units) added to the source
+     * Character's X when computing the projectile's spawn point. 0 =
+     * spawn at the source tile centre; 128 = one tile east; -128 = one
+     * tile west. Pairs with {@link #startY} so the spawn can be nudged
+     * off-centre (e.g. to fire from a character's hand instead of their
+     * model origin).
+     */
+    private int startX;
+    /**
+     * Horizontal Y offset (1/128-tile units) added to the source
+     * Character's Y when computing the projectile's spawn point. 128 =
+     * one tile north; -128 = one tile south. Pre-existing saves load
+     * with 0 (Gson default) so behaviour is unchanged.
+     */
+    private int startY;
     private int startHeight;
     private int endHeight;
     private int slope;
@@ -76,9 +94,16 @@ public class ProjectileKeyFrame extends KeyFrame
 
     public ProjectileKeyFrame(double tick, int projectileId, String target, int startHeight, int endHeight, int slope, double durationTicks, boolean faceTrajectory, int radius)
     {
+        this(tick, projectileId, target, DEFAULT_START_X, DEFAULT_START_Y, startHeight, endHeight, slope, durationTicks, faceTrajectory, radius);
+    }
+
+    public ProjectileKeyFrame(double tick, int projectileId, String target, int startX, int startY, int startHeight, int endHeight, int slope, double durationTicks, boolean faceTrajectory, int radius)
+    {
         super(KeyFrameType.PROJECTILE, tick);
         this.projectileId = projectileId;
         this.target = target;
+        this.startX = startX;
+        this.startY = startY;
         this.startHeight = startHeight;
         this.endHeight = endHeight;
         this.slope = slope;

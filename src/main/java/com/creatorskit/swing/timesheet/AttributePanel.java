@@ -1197,6 +1197,8 @@ public class AttributePanel extends JPanel
                         tick,
                         (int) projectileAttributes.getProjectileId().getValue(),
                         projectileAttributes.getTargetValue(),
+                        (int) projectileAttributes.getStartX().getValue(),
+                        (int) projectileAttributes.getStartY().getValue(),
                         (int) projectileAttributes.getStartHeight().getValue(),
                         (int) projectileAttributes.getEndHeight().getValue(),
                         (int) projectileAttributes.getSlope().getValue(),
@@ -1520,6 +1522,8 @@ public class AttributePanel extends JPanel
                     ProjectileKeyFrame k = (ProjectileKeyFrame) sameType.get(i);
                     if (f.getProjectileId() != k.getProjectileId()) mixed.add(projectileAttributes.getProjectileId());
                     if (!java.util.Objects.equals(f.getTarget(), k.getTarget())) mixed.add(projectileAttributes.getTarget());
+                    if (f.getStartX() != k.getStartX()) mixed.add(projectileAttributes.getStartX());
+                    if (f.getStartY() != k.getStartY()) mixed.add(projectileAttributes.getStartY());
                     if (f.getStartHeight() != k.getStartHeight()) mixed.add(projectileAttributes.getStartHeight());
                     if (f.getEndHeight() != k.getEndHeight()) mixed.add(projectileAttributes.getEndHeight());
                     if (f.getSlope() != k.getSlope()) mixed.add(projectileAttributes.getSlope());
@@ -2055,6 +2059,12 @@ public class AttributePanel extends JPanel
                         wasEdited(projectileAttributes.getTarget())
                                 ? projectileAttributes.getTargetValue()
                                 : orig.getTarget(),
+                        wasEdited(projectileAttributes.getStartX())
+                                ? (int) projectileAttributes.getStartX().getValue()
+                                : orig.getStartX(),
+                        wasEdited(projectileAttributes.getStartY())
+                                ? (int) projectileAttributes.getStartY().getValue()
+                                : orig.getStartY(),
                         wasEdited(projectileAttributes.getStartHeight())
                                 ? (int) projectileAttributes.getStartHeight().getValue()
                                 : orig.getStartHeight(),
@@ -4552,27 +4562,55 @@ public class AttributePanel extends JPanel
         // all, and startDelayTicks was redundant with just placing the kf at
         // a different tick. Removed in favour of a simpler card.
 
+        // Row 5: Start X / Start Y horizontal spawn offsets. In 1/128-tile
+        // units, same as Start / End Height; pair lets the user nudge the
+        // projectile origin off the source tile centre (e.g. fire from a
+        // raised hand). Pre-existing saves load with 0 so the default
+        // origin remains "tile centre".
+        c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 5;
-        card.add(rightLabel("Duration:"), c);
+        card.add(rightLabel("Start X:"), c);
 
         c.gridx = 1;
         c.gridy = 5;
+        JSpinner startX = projectileAttributes.getStartX();
+        startX.setToolTipText("Horizontal X offset (1/128-tile units) from the source tile centre. 128 = one tile east.");
+        startX.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_START_X, -100000, 100000, 1));
+        card.add(startX, c);
+
+        c.gridx = 2;
+        c.gridy = 5;
+        card.add(rightLabel("Start Y:"), c);
+
+        c.gridx = 3;
+        c.gridy = 5;
+        JSpinner startY = projectileAttributes.getStartY();
+        startY.setToolTipText("Horizontal Y offset (1/128-tile units) from the source tile centre. 128 = one tile north.");
+        startY.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_START_Y, -100000, 100000, 1));
+        card.add(startY, c);
+
+        c.gridx = 0;
+        c.gridy = 6;
+        card.add(rightLabel("Duration:"), c);
+
+        c.gridx = 1;
+        c.gridy = 6;
         JSpinner duration = projectileAttributes.getDurationTicks();
         duration.setToolTipText("Game ticks the projectile takes to fly from source to target");
         duration.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_DURATION, 0.1, 100, 0.1));
         card.add(duration, c);
 
-        // Radius sits next to Duration on row 5 -- both scale the projectile
-        // (one in time, one in space), so grouping them visually keeps the
-        // "fly + size" controls together rather than wedging Radius into a
-        // lonely row of its own.
+        // Radius sits next to Duration -- both scale the projectile (one
+        // in time, one in space), so grouping them visually keeps the
+        // "fly + size" controls together rather than wedging Radius into
+        // a lonely row of its own.
         c.gridx = 2;
-        c.gridy = 5;
+        c.gridy = 6;
         card.add(rightLabel("Radius:"), c);
 
         c.gridx = 3;
-        c.gridy = 5;
+        c.gridy = 6;
         JSpinner radius = projectileAttributes.getRadius();
         radius.setToolTipText("Scale the projectile model's visible size. Larger = bigger.");
         radius.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_RADIUS, 1, 10000, 1));
@@ -4580,7 +4618,7 @@ public class AttributePanel extends JPanel
 
         c.gridwidth = 4;
         c.gridx = 0;
-        c.gridy = 6;
+        c.gridy = 7;
         JCheckBox faceTrajectory = projectileAttributes.getFaceTrajectory();
         faceTrajectory.setToolTipText("Pitch the projectile model along its arc (nose-up ascending, nose-down descending).");
         card.add(faceTrajectory, c);
@@ -4594,14 +4632,14 @@ public class AttributePanel extends JPanel
         // when PROJECTILE is the active card.
         c.gridwidth = 1;
         c.gridx = 0;
-        c.gridy = 7;
+        c.gridy = 8;
         JLabel projSearcherLabel = new JLabel("Projectiles: ");
         projSearcherLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(projSearcherLabel, c);
 
         c.gridwidth = 3;
         c.gridx = 1;
-        c.gridy = 7;
+        c.gridy = 8;
         JTextField projField = new JTextField("");
         projField.setToolTipText("Search cache spotanims; double-click a name to set Projectile ID.");
         projField.setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -4638,7 +4676,7 @@ public class AttributePanel extends JPanel
         c.weightx = 1;
         c.weighty = 1;
         c.gridx = 4;
-        c.gridy = 8;
+        c.gridy = 9;
         card.add(new JLabel(""), c);
     }
 

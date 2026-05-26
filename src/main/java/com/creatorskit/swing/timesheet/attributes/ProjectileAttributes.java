@@ -12,6 +12,8 @@ public class ProjectileAttributes extends Attributes
 {
     private final JSpinner projectileId = new JSpinner();
     private final JTextField target = new JTextField();
+    private final JSpinner startX = new JSpinner();
+    private final JSpinner startY = new JSpinner();
     private final JSpinner startHeight = new JSpinner();
     private final JSpinner endHeight = new JSpinner();
     private final JSpinner slope = new JSpinner();
@@ -46,6 +48,8 @@ public class ProjectileAttributes extends Attributes
         ProjectileKeyFrame kf = (ProjectileKeyFrame) keyFrame;
         projectileId.setValue(kf.getProjectileId());
         target.setText(kf.getTarget() == null ? "" : kf.getTarget());
+        startX.setValue(kf.getStartX());
+        startY.setValue(kf.getStartY());
         startHeight.setValue(kf.getStartHeight());
         endHeight.setValue(kf.getEndHeight());
         slope.setValue(kf.getSlope());
@@ -63,6 +67,8 @@ public class ProjectileAttributes extends Attributes
     {
         projectileId.setBackground(color);
         target.setBackground(color);
+        startX.setBackground(color);
+        startY.setBackground(color);
         startHeight.setBackground(color);
         endHeight.setBackground(color);
         slope.setBackground(color);
@@ -78,6 +84,8 @@ public class ProjectileAttributes extends Attributes
                 {
                         projectileId,
                         target,
+                        startX,
+                        startY,
                         startHeight,
                         endHeight,
                         slope,
@@ -91,6 +99,8 @@ public class ProjectileAttributes extends Attributes
     public void addChangeListeners()
     {
         projectileId.addChangeListener(e -> projectileId.setBackground(getRed()));
+        startX.addChangeListener(e -> startX.setBackground(getRed()));
+        startY.addChangeListener(e -> startY.setBackground(getRed()));
         startHeight.addChangeListener(e -> startHeight.setBackground(getRed()));
         endHeight.addChangeListener(e -> endHeight.setBackground(getRed()));
         slope.addChangeListener(e -> slope.setBackground(getRed()));
@@ -111,6 +121,8 @@ public class ProjectileAttributes extends Attributes
     {
         projectileId.setValue(ProjectileKeyFrame.DEFAULT_PROJECTILE_ID);
         target.setText("");
+        startX.setValue(ProjectileKeyFrame.DEFAULT_START_X);
+        startY.setValue(ProjectileKeyFrame.DEFAULT_START_Y);
         startHeight.setValue(ProjectileKeyFrame.DEFAULT_START_HEIGHT);
         endHeight.setValue(ProjectileKeyFrame.DEFAULT_END_HEIGHT);
         slope.setValue(ProjectileKeyFrame.DEFAULT_SLOPE);

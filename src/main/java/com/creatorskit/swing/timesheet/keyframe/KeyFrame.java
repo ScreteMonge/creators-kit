@@ -132,6 +132,8 @@ public class KeyFrame
                         tick,
                         projKF.getProjectileId(),
                         projKF.getTarget(),
+                        projKF.getStartX(),
+                        projKF.getStartY(),
                         projKF.getStartHeight(),
                         projKF.getEndHeight(),
                         projKF.getSlope(),

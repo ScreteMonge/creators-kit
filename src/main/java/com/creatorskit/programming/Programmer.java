@@ -1829,8 +1829,13 @@ public class Programmer
                 continue;
             }
 
-            int sx = sourceLp.getX();
-            int sy = sourceLp.getY();
+            // Apply the kf's horizontal Start X / Start Y offsets to the
+            // source position so the projectile can spawn off-centre
+            // (e.g. from a model's hand instead of its tile origin).
+            // Units are 1/128-tile, same as LocalPoint, so adding
+            // directly to sx / sy is correct.
+            int sx = sourceLp.getX() + kf.getStartX();
+            int sy = sourceLp.getY() + kf.getStartY();
             int tx = targetLp.getX();
             int ty = targetLp.getY();
 
