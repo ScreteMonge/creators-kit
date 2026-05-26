@@ -3017,7 +3017,8 @@ public class CreatorsPanel extends PluginPanel
                 null,
                 character.getExtraScale(),
                 null,
-                character.getColourKeyFrames());
+                character.getColourKeyFrames(),
+                character.getSoundKeyFrames());
     }
 
     public void openLoadSetupDialog()
@@ -3562,6 +3563,15 @@ public class CreatorsPanel extends PluginPanel
             if (save.getColourKeyFrames() != null)
             {
                 frames[KeyFrameType.getIndex(KeyFrameType.COLOUR)] = save.getColourKeyFrames();
+            }
+            // Null in saves predating the per-Character Sound keyframe (any
+            // build before 2.4). Gson defaults the missing field to null
+            // and the load path simply leaves the SOUND slot empty -- no
+            // migration warning, the user sees an empty Sound track and
+            // can add kfs as needed.
+            if (save.getSoundKeyFrames() != null)
+            {
+                frames[KeyFrameType.getIndex(KeyFrameType.SOUND)] = save.getSoundKeyFrames();
             }
 
             KeyFrameType[] summary;

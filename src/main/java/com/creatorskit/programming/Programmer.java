@@ -1411,6 +1411,9 @@ public class Programmer
         // fired in a prior play-through. Cheap: just walks the global
         // store's 4 sound arrays.
         soundController.onScrub(tick, plugin.getGlobalKeyFrames());
+        // Mirror the global scrub for the per-Character SOUND track so the
+        // next play-tick doesn't chirp on the landing tick.
+        soundController.onScrubLocal(tick, plugin.getCharacters());
         character.updateProgram(tick);
         character.setPlaying(playing);
         registerSpotAnimChanges(character, KeyFrameType.SPOTANIM, tick);
@@ -1750,11 +1753,12 @@ public class Programmer
             colourController.update(character, currentTime);
         }
 
-        // Sound kfs are GLOBAL -- not per-Character -- so the controller
-        // walks the central store once per play-tick (not per character).
-        // SoundController internally guards against re-firing the same kf
-        // within its activation window.
+        // Global Area Sound 1..4: walks the central store. Per-Character
+        // SOUND tracks: walks every active Character's SOUND kfs (uses the
+        // one-arg playSoundEffect so user SFX volume applies). Both methods
+        // are idempotent across re-firing the same kf within its window.
         soundController.onPlayTick(currentTime, plugin.getGlobalKeyFrames());
+        soundController.onPlayTickLocal(currentTime, plugin.getCharacters());
     }
 
     /**

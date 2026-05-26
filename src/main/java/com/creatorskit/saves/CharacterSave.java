@@ -99,5 +99,14 @@ public class CharacterSave
      * before any user-authored saves existed, so no migration shim is needed.
      */
     private ColourKeyFrame[] colourKeyFrames;
+    /**
+     * Per-Character sound keyframes. Null in saves predating this field --
+     * the load path treats null as "no Sound keyframes" so old saves load
+     * with an empty Sound track and no warning. Playback fires through the
+     * one-arg {@code Client.playSoundEffect(id)} so the user's in-game
+     * SFX volume applies (no per-kf volume override here; for that, use
+     * the global Area Sound 1/2/3/4 slots).
+     */
+    private SoundKeyFrame[] soundKeyFrames;
 }
 

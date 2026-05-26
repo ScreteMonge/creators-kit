@@ -111,6 +111,12 @@ public class AttributePanel extends JPanel
     public static final String SOUND_2_CARD = "Sound 2";
     public static final String SOUND_3_CARD = "Sound 3";
     public static final String SOUND_4_CARD = "Sound 4";
+    /**
+     * Card identifier for the per-Character Sound keyframe. Must match
+     * {@code KeyFrameType.SOUND.getName()} so the cardName -> type
+     * mapping in {@link #switchCards(String)} resolves.
+     */
+    public static final String SOUND_CARD = "Sound";
     public static final String MIXED_TYPES_CARD = "MixedTypes";
     public static final String NO_SELECTION_CARD = "NoSelection";
 
@@ -165,6 +171,12 @@ public class AttributePanel extends JPanel
     private final com.creatorskit.swing.timesheet.attributes.SoundAttributes sound2Attributes = new com.creatorskit.swing.timesheet.attributes.SoundAttributes();
     private final com.creatorskit.swing.timesheet.attributes.SoundAttributes sound3Attributes = new com.creatorskit.swing.timesheet.attributes.SoundAttributes();
     private final com.creatorskit.swing.timesheet.attributes.SoundAttributes sound4Attributes = new com.creatorskit.swing.timesheet.attributes.SoundAttributes();
+    /**
+     * Per-Character Sound card. Slimmer than the global SoundAttributes
+     * (soundId only, no volume) since per-Character playback respects the
+     * user's in-game SFX volume.
+     */
+    private final com.creatorskit.swing.timesheet.attributes.LocalSoundAttributes localSoundAttributes = new com.creatorskit.swing.timesheet.attributes.LocalSoundAttributes();
 
     private final Random random = new Random();
 
@@ -305,6 +317,10 @@ public class AttributePanel extends JPanel
         cardPanel.add(sound3Card, SOUND_3_CARD);
         JPanel sound4Card = new JPanel();
         cardPanel.add(sound4Card, SOUND_4_CARD);
+        // Per-Character Sound card. Slim form -- only the sound id is
+        // editable here; volume defers to the user's in-game SFX setting.
+        JPanel localSoundCard = new JPanel();
+        cardPanel.add(localSoundCard, SOUND_CARD);
 
         // Empty placeholder shown when the keyframe selection spans multiple types.
         // Using a CardLayout entry keeps the cardPanel at its normal height instead
@@ -357,6 +373,7 @@ public class AttributePanel extends JPanel
         setupSoundCard(sound2Card, KeyFrameType.SOUND_2);
         setupSoundCard(sound3Card, KeyFrameType.SOUND_3);
         setupSoundCard(sound4Card, KeyFrameType.SOUND_4);
+        setupLocalSoundCard(localSoundCard);
 
         // Wire up auto-update on every Attributes instance. Each card's setupXxxCard
         // already attached the "set red on change" listeners for the dirty-state
@@ -389,7 +406,8 @@ public class AttributePanel extends JPanel
                 projectileAttributes, shieldAttributes, specialAttributes,
                 screenFadeAttributes, screenShakeAttributes, cameraAttributes,
                 colourAttributes,
-                sound1Attributes, sound2Attributes, sound3Attributes, sound4Attributes
+                sound1Attributes, sound2Attributes, sound3Attributes, sound4Attributes,
+                localSoundAttributes
         };
     }
 
@@ -1294,6 +1312,17 @@ public class AttributePanel extends JPanel
                         ((Number) sa.getSoundId().getValue()).intValue(),
                         ((Number) sa.getVolume().getValue()).intValue());
             }
+            case SOUND:
+            {
+                // Per-Character sound. Volume parks at DEFAULT_VOLUME but
+                // playback uses the one-arg playSoundEffect overload so the
+                // value never reaches the audio mixer.
+                return new com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame(
+                        tick,
+                        KeyFrameType.SOUND,
+                        ((Number) localSoundAttributes.getSoundId().getValue()).intValue(),
+                        com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame.DEFAULT_VOLUME);
+            }
         }
     }
 
@@ -1642,6 +1671,21 @@ public class AttributePanel extends JPanel
                             (com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame) sameType.get(i);
                     if (f.getSoundId() != k.getSoundId()) mixed.add(sa.getSoundId());
                     if (f.getVolume() != k.getVolume()) mixed.add(sa.getVolume());
+                }
+                break;
+            }
+            case SOUND:
+            {
+                // Local sound only carries soundId in the card -- volume
+                // isn't user-editable here, so we don't mark it mixed even
+                // if the underlying kfs disagree.
+                com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame f =
+                        (com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame) first;
+                for (int i = 1; i < sameType.size(); i++)
+                {
+                    com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame k =
+                            (com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame) sameType.get(i);
+                    if (f.getSoundId() != k.getSoundId()) mixed.add(localSoundAttributes.getSoundId());
                 }
                 break;
             }
@@ -2279,6 +2323,22 @@ public class AttributePanel extends JPanel
                         wasEdited(sa.getVolume())
                                 ? ((Number) sa.getVolume().getValue()).intValue()
                                 : orig.getVolume()
+                );
+            }
+            case SOUND:
+            {
+                // Local sound: only soundId is user-editable. Preserve the
+                // existing volume verbatim so a future schema change that
+                // exposes it doesn't silently rewrite saves.
+                com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame orig =
+                        (com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame) original;
+                return new com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame(
+                        tick,
+                        KeyFrameType.SOUND,
+                        wasEdited(localSoundAttributes.getSoundId())
+                                ? ((Number) localSoundAttributes.getSoundId().getValue()).intValue()
+                                : orig.getSoundId(),
+                        orig.getVolume()
                 );
             }
         }
@@ -5604,6 +5664,138 @@ public class AttributePanel extends JPanel
     }
 
     /**
+     * Per-Character Sound card. Slim variant of {@link #setupSoundCard}: one
+     * field (cache sound id), one Preview button, plus the shared sound
+     * cache search popup. No volume spinner and no Duplicate-To column --
+     * per-Character playback runs through the one-arg
+     * {@code Client.playSoundEffect(id)} so the user's in-game SFX volume
+     * applies, and there's only a single local Sound slot per Character
+     * (multiple sound kfs at the same tick layer naturally because each
+     * playSoundEffect call returns immediately).
+     */
+    private void setupLocalSoundCard(JPanel card)
+    {
+        com.creatorskit.swing.timesheet.attributes.LocalSoundAttributes sa = localSoundAttributes;
+        Dimension spinnerSize = new Dimension(120, 25);
+
+        card.setLayout(new GridBagLayout());
+        card.setBorder(new EmptyBorder(4, 4, 4, 4));
+        card.setFocusable(true);
+        addMouseFocusListener(card);
+
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(2, 2, 2, 2);
+
+        c.gridwidth = 4;
+        c.gridheight = 1;
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 0;
+        JPanel titlePanel = new JPanel();
+        titlePanel.setLayout(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        card.add(titlePanel, c);
+
+        JLabel title = new JLabel(KeyFrameType.SOUND.getName());
+        title.setHorizontalAlignment(SwingConstants.LEFT);
+        title.setFont(FontManager.getRunescapeBoldFont());
+        titlePanel.add(title);
+
+        JLabel help = new JLabel(new ImageIcon(HELP));
+        help.setBorder(new EmptyBorder(0, 4, 0, 4));
+        help.setToolTipText("<html>Plays a cache sound effect when the playhead crosses this kf during playback."
+                + "<br>Per-Character keyframe -- attaches to this Character's Sound track. Multiple sound kfs"
+                + "<br>at the same tick layer naturally because each plays asynchronously."
+                + "<br>"
+                + "<br><b>Sound id</b>: cache sound effect id. Use the Sound Searcher (Cache Searcher tab) to"
+                + "<br>browse and audition before adding."
+                + "<br>"
+                + "<br>Volume follows the user's in-game SFX setting (no per-kf override). For an override that"
+                + "<br>plays even when SFX is muted, use the global Area Sound 1/2/3/4 slots instead.</html>");
+        titlePanel.add(help);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 1;
+        card.add(rightLabel("Sound id: "), c);
+        c.gridx = 1;
+        JSpinner id = sa.getSoundId();
+        id.setModel(new SpinnerNumberModel(-1, -1, 100000, 1));
+        id.setPreferredSize(spinnerSize);
+        id.setToolTipText("Set the cache sound effect ID. -1 = silence.");
+        card.add(id, c);
+
+        c.gridx = 0;
+        c.gridy = 2;
+        c.gridwidth = 2;
+        JButton preview = new JButton("Preview");
+        preview.setToolTipText("Play this sound now (respects the in-game volume setting).");
+        preview.addActionListener(e ->
+        {
+            try { id.commitEdit(); } catch (java.text.ParseException ignored) {}
+            int soundId = ((Number) id.getValue()).intValue();
+            if (soundId < 0 || client == null) return;
+            clientThread.invokeLater(() -> client.playSoundEffect(soundId));
+        });
+        card.add(preview, c);
+
+        // Inline sound name search -- same UX as the global Sound cards.
+        // Shares the soundPopup + soundTable already wired in
+        // setupSoundFinder(); the routing branch there checks for the
+        // SOUND slot and writes into localSoundAttributes.
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 3;
+        JLabel soundSearcherLabel = new JLabel("Sounds: ");
+        soundSearcherLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(soundSearcherLabel, c);
+
+        c.gridwidth = 3;
+        c.gridx = 1;
+        c.gridy = 3;
+        JTextField soundField = new JTextField("");
+        soundField.setToolTipText("Search cache sounds by name; double-click a row to load its id into this card.");
+        soundField.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        card.add(soundField, c);
+
+        KeyListener soundListener = new KeyListener()
+        {
+            @Override public void keyTyped(KeyEvent e) {}
+            @Override public void keyPressed(KeyEvent e) {}
+
+            @Override
+            public void keyReleased(KeyEvent e)
+            {
+                String text = soundField.getText();
+                soundTable.searchAndListEntries(text);
+                soundPopup.setVisible(true);
+                Point p = soundField.getLocationOnScreen();
+                soundPopup.setLocation(new Point((int) p.getX() + soundField.getWidth(), (int) p.getY()));
+            }
+        };
+        soundField.addKeyListener(soundListener);
+
+        soundField.addFocusListener(new FocusListener()
+        {
+            @Override public void focusGained(FocusEvent e) {}
+
+            @Override
+            public void focusLost(FocusEvent e)
+            {
+                soundPopup.setVisible(false);
+            }
+        });
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.weightx = 1;
+        c.weighty = 1;
+        c.gridx = 8;
+        c.gridy = 15;
+        card.add(new JLabel(""), c);
+    }
+
+    /**
      * Mirror of {@link #setupSpotAnimFinder} but for the Sound search popup.
      * One shared table feeds 4 JTextFields (one per Sound slot card). The
      * double-click handler loads the picked id into whichever sound card is
@@ -5621,7 +5813,8 @@ public class AttributePanel extends JPanel
 
                 KeyFrameType slot = selectedKeyFramePage;
                 if (slot != KeyFrameType.SOUND_1 && slot != KeyFrameType.SOUND_2
-                        && slot != KeyFrameType.SOUND_3 && slot != KeyFrameType.SOUND_4)
+                        && slot != KeyFrameType.SOUND_3 && slot != KeyFrameType.SOUND_4
+                        && slot != KeyFrameType.SOUND)
                 {
                     return;
                 }
@@ -5632,7 +5825,17 @@ public class AttributePanel extends JPanel
                     if (o instanceof SoundData)
                     {
                         SoundData data = (SoundData) o;
-                        soundAttributesFor(slot).getSoundId().setValue(data.getId());
+                        // Local SOUND routes to localSoundAttributes (no
+                        // volume); global SOUND_1..4 route through
+                        // soundAttributesFor.
+                        if (slot == KeyFrameType.SOUND)
+                        {
+                            localSoundAttributes.getSoundId().setValue(data.getId());
+                        }
+                        else
+                        {
+                            soundAttributesFor(slot).getSoundId().setValue(data.getId());
+                        }
                     }
                     soundPopup.setVisible(false);
                 }
@@ -5746,6 +5949,9 @@ public class AttributePanel extends JPanel
                 break;
             case SOUND_4_CARD:
                 type = KeyFrameType.SOUND_4;
+                break;
+            case SOUND_CARD:
+                type = KeyFrameType.SOUND;
         }
 
         switchCards(type);
@@ -6397,6 +6603,10 @@ public class AttributePanel extends JPanel
                 sa.setBackgroundColours(keyFrameState);
                 break;
             }
+            case SOUND:
+                localSoundAttributes.setAttributes(keyFrame);
+                localSoundAttributes.setBackgroundColours(keyFrameState);
+                break;
         }
     }
 
@@ -6486,6 +6696,9 @@ public class AttributePanel extends JPanel
             case SOUND_3:
             case SOUND_4:
                 soundAttributesFor(selectedKeyFramePage).resetAttributes(resetBackground);
+                break;
+            case SOUND:
+                localSoundAttributes.resetAttributes(resetBackground);
         }
     }
 

@@ -30,13 +30,19 @@ public enum KeyFrameType
     SCREEN_SHAKE("Screen Shake","SK"),
     CAMERA("Camera","CM"),
     // Renamed Sound 1..4 -> Area Sound 1..4 to clarify that these
-    // globals are area-positioned ambient sources, separate from any
-    // future per-Character sound property. Enum value names stay
-    // SOUND_1..4 so persistence + every code reference holds.
+    // globals are area-positioned ambient sources, separate from the
+    // per-Character SOUND row below. Enum value names stay SOUND_1..4
+    // so persistence + every code reference holds.
     SOUND_1("Area Sound 1","SD1"),
     SOUND_2("Area Sound 2","SD2"),
     SOUND_3("Area Sound 3","SD3"),
-    SOUND_4("Area Sound 4","SD4");
+    SOUND_4("Area Sound 4","SD4"),
+    /**
+     * Per-Character sound. Plays through {@code client.playSoundEffect(id)}
+     * (one-arg overload that respects the player's in-game volume setting)
+     * when the playhead crosses the kf's tick during play.
+     */
+    SOUND("Sound","SO");
 
     private final String name;
     private final String shortHand;
@@ -71,7 +77,8 @@ public enum KeyFrameType
             SOUND_1,
             SOUND_2,
             SOUND_3,
-            SOUND_4
+            SOUND_4,
+            SOUND
     };
 
     /**
@@ -84,6 +91,12 @@ public enum KeyFrameType
      */
     public static final KeyFrameType[] ALL_KEYFRAME_TYPES_ALPHABETICAL = new KeyFrameType[]{
             ANIMATION,
+            // Area Sound 1..4 sort under 'A' now that the display name
+            // changed; the underlying enum values stay SOUND_1..4.
+            SOUND_1,
+            SOUND_2,
+            SOUND_3,
+            SOUND_4,
             CAMERA,
             COLOUR,
             HEALTH,
@@ -99,10 +112,9 @@ public enum KeyFrameType
             SCREEN_FADE,
             SCREEN_SHAKE,
             SHIELD,
-            SOUND_1,
-            SOUND_2,
-            SOUND_3,
-            SOUND_4,
+            // Per-Character "Sound" sits between Shield and Spawn (S-H,
+            // S-O, S-P alphabetical).
+            SOUND,
             SPAWN,
             SPECIAL,
             SPOTANIM,
@@ -129,6 +141,9 @@ public enum KeyFrameType
             OVERHEAD,
             PROJECTILE,
             SHIELD,
+            // Per-Character "Sound" sits between Shield and Spawn
+            // (S-H, S-O, S-P alphabetical).
+            SOUND,
             SPAWN,
             SPECIAL,
             SPOTANIM,
@@ -256,6 +271,8 @@ public enum KeyFrameType
                 return 23;
             case SOUND_4:
                 return 24;
+            case SOUND:
+                return 25;
         }
     }
 
@@ -314,12 +331,14 @@ public enum KeyFrameType
                 return SOUND_3;
             case 24:
                 return SOUND_4;
+            case 25:
+                return SOUND;
         }
     }
 
     public static int getTotalFrameTypes()
     {
-        return 25;
+        return 26;
     }
 
     public static KeyFrameType[] createDefaultSummary()

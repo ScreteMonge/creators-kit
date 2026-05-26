@@ -1,5 +1,6 @@
 package com.creatorskit.programming;
 
+import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame;
 import net.runelite.api.Client;
@@ -8,6 +9,7 @@ import net.runelite.client.callback.ClientThread;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.EnumMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 
 /**
@@ -32,8 +34,15 @@ public class SoundController
 {
     private final Client client;
     private final ClientThread clientThread;
-    /** Last kf we fired per slot, so we don't re-trigger within its window. */
+    /** Last kf we fired per global slot, so we don't re-trigger within its window. */
     private final Map<KeyFrameType, SoundKeyFrame> lastFired = new EnumMap<>(KeyFrameType.class);
+    /**
+     * Per-Character "already fired" tracker for the local SOUND slot. Mirrors
+     * {@link #lastFired} but keyed by Character because each Character carries
+     * its own independent stream of Sound kfs. IdentityHashMap so a renamed /
+     * mutated Character still maps consistently across ticks.
+     */
+    private final Map<com.creatorskit.Character, SoundKeyFrame> lastFiredLocal = new IdentityHashMap<>();
 
     @Inject
     public SoundController(Client client, ClientThread clientThread)
@@ -105,6 +114,55 @@ public class SoundController
         // a possible future "reset on play start" hook.
     }
 
+    /**
+     * Per-Character SOUND playback. Iterates every active Character once per
+     * play-tick: for each, find the latest SOUND kf at-or-before {@code
+     * currentTick}; if it's a new one (different identity from the last we
+     * fired for that Character), play it and remember it.
+     *
+     * <p>Uses the one-arg {@code Client.playSoundEffect(int id)} so the
+     * user's in-game SFX volume applies. The volume field on the kf is
+     * ignored here -- for an override that bypasses the user's volume,
+     * authors should use a global Area Sound 1/2/3/4 slot instead.
+     */
+    public synchronized void onPlayTickLocal(double currentTick, java.util.List<com.creatorskit.Character> characters)
+    {
+        if (characters == null) return;
+        for (com.creatorskit.Character ch : characters)
+        {
+            if (ch == null) continue;
+            KeyFrame[] kfs = ch.getKeyFrames(KeyFrameType.SOUND);
+            SoundKeyFrame active = findActiveAtOrBefore(kfs, currentTick);
+            if (active == null) continue;
+            SoundKeyFrame prev = lastFiredLocal.get(ch);
+            if (prev == active) continue;
+            lastFiredLocal.put(ch, active);
+            final int id = active.getSoundId();
+            if (id < 0) continue;  // -1 = silence
+            // One-arg overload: respects the user's in-game SFX volume
+            // (returns silently if SFX is muted, matching the "use global
+            // Area Sound for override" boundary).
+            clientThread.invoke(() -> client.playSoundEffect(id));
+        }
+    }
+
+    /**
+     * Mirror of {@link #onScrub} for per-Character SOUND. Parks each
+     * Character's lastFired at the current active kf so the next play-tick
+     * doesn't chirp on the scrub-landing tick.
+     */
+    public synchronized void onScrubLocal(double currentTick, java.util.List<com.creatorskit.Character> characters)
+    {
+        if (characters == null) return;
+        for (com.creatorskit.Character ch : characters)
+        {
+            if (ch == null) continue;
+            KeyFrame[] kfs = ch.getKeyFrames(KeyFrameType.SOUND);
+            SoundKeyFrame active = findActiveAtOrBefore(kfs, currentTick);
+            lastFiredLocal.put(ch, active);
+        }
+    }
+
     private static SoundKeyFrame findActiveAtOrBefore(SoundKeyFrame[] arr, double tick)
     {
         if (arr == null) return null;
@@ -114,6 +172,25 @@ public class SoundController
             if (kf == null) continue;
             if (kf.getTick() > tick + 1e-9) continue;
             if (best == null || kf.getTick() > best.getTick()) best = kf;
+        }
+        return best;
+    }
+
+    /**
+     * Local-Sound variant of {@link #findActiveAtOrBefore} that accepts the
+     * generic {@code KeyFrame[]} returned by {@code Character.getKeyFrames}.
+     * Same scan, just with one cast at the end -- the per-Character SOUND
+     * track is always a SoundKeyFrame[] in practice.
+     */
+    private static SoundKeyFrame findActiveAtOrBefore(KeyFrame[] arr, double tick)
+    {
+        if (arr == null) return null;
+        SoundKeyFrame best = null;
+        for (KeyFrame kf : arr)
+        {
+            if (kf == null) continue;
+            if (kf.getTick() > tick + 1e-9) continue;
+            if (best == null || kf.getTick() > best.getTick()) best = (SoundKeyFrame) kf;
         }
         return best;
     }

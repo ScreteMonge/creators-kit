@@ -20,11 +20,12 @@ import java.awt.image.BufferedImage;
 import java.util.Arrays;
 
 /**
- * Per-Character (local) timeline sheet. Shows the 17 LOCAL_KEYFRAME_TYPES_ALPHABETICAL
- * rows for the currently-visible Characters. Globals (Camera / Screen Fade /
- * Screen Shake) live in {@link GlobalAttributeSheet} -- the toggle button in
- * the labels column switches between this sheet and that one, so each view
- * stays scoped to a single concern.
+ * Per-Character (local) timeline sheet. Shows the
+ * {@link KeyFrameType#LOCAL_KEYFRAME_TYPES_ALPHABETICAL} rows for the
+ * currently-visible Characters. Globals (Camera / Screen Fade / Screen
+ * Shake / Area Sound 1..4) live in {@link GlobalAttributeSheet} -- the
+ * toggle button in the labels column switches between this sheet and
+ * that one, so each view stays scoped to a single concern.
  */
 @Getter
 @Setter

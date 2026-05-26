@@ -210,6 +210,7 @@ public class KeyFrame
             case SOUND_2:
             case SOUND_3:
             case SOUND_4:
+            case SOUND:
                 SoundKeyFrame soundKF = (SoundKeyFrame) keyFrame;
                 return new SoundKeyFrame(
                         tick,

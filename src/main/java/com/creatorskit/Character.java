@@ -1435,6 +1435,31 @@ public class Character
         return keyFrame;
     }
 
+    /**
+     * Per-Character sound kfs (slot {@link KeyFrameType#SOUND}). Same shape
+     * as the other per-type getters: returns null when the underlying array
+     * is missing OR when every slot is null, so the save layer can write
+     * {@code null} into pre-existing saves without bloating the JSON.
+     */
+    public SoundKeyFrame[] getSoundKeyFrames()
+    {
+        KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.SOUND);
+        if (keyFrames == null)
+        {
+            return null;
+        }
+        SoundKeyFrame[] out = new SoundKeyFrame[keyFrames.length];
+        for (int i = 0; i < keyFrames.length; i++)
+        {
+            out[i] = (SoundKeyFrame) keyFrames[i];
+        }
+        if (Arrays.stream(out).allMatch(Objects::isNull))
+        {
+            return null;
+        }
+        return out;
+    }
+
     public ShieldKeyFrame[] getShieldKeyFrames()
     {
         KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.SHIELD);
