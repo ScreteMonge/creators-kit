@@ -484,64 +484,195 @@ public class AttributePanel extends JPanel
     }
 
     /**
-     * Ease combo selection handler. CUSTOM opens the spline editor; everything
-     * else falls through to the normal wireAutoUpdate commit. Sits BEFORE
-     * wireAutoUpdate's listener so we can revert the combo (and the auto-
-     * update reads the reverted value).
+     * Ease combo selection handler -- v2. Routes by the display string:
+     * <ul>
+     *   <li>"LINEAR".."EXPO" -- commit the built-in ease, clear any curve.</li>
+     *   <li>"Preset N" -- if slot non-empty, commit ease=CUSTOM + that
+     *       slot's curve (no dialog). If empty, open the editor with
+     *       slot N pre-active so Save lands on the right slot.</li>
+     *   <li>"Custom..." -- open the editor with the kf's current curve
+     *       (or identity).</li>
+     * </ul>
      *
-     * <p>Re-entrance: we set the combo back to lastCommittedEase on Discard.
-     * That fires a second action event, but by then mixedSinceSelection
-     * doesn't contain CUSTOM and the branch is a no-op.
+     * <p>This handler does the ENTIRE commit (flagFieldEdited +
+     * fireAutoUpdate). wireAutoUpdate skips the ease combo because
+     * JComboBox dispatches listeners in reverse-registration order, and
+     * a generic listener registered after this one would commit the
+     * pre-dialog combo value, locking in ease=CUSTOM with curve=null
+     * before the editor even opens.
      */
     private void handleEaseComboSelection()
     {
         if (suppressAutoUpdateDepth > 0) return;
-        JComboBox<com.creatorskit.swing.timesheet.keyframe.CameraEaseType> ease = cameraAttributes.getEase();
-        Object sel = ease.getSelectedItem();
-        if (sel != com.creatorskit.swing.timesheet.keyframe.CameraEaseType.CUSTOM)
+        JComboBox<String> ease = cameraAttributes.getEase();
+        String sel = (String) ease.getSelectedItem();
+        if (sel == null) return;
+
+        if ("Custom...".equals(sel))
         {
-            cameraAttributes.setLastCommittedEase((com.creatorskit.swing.timesheet.keyframe.CameraEaseType) sel);
+            // Seed with kf's current curve if already CUSTOM; identity
+            // otherwise. Pre-active slot = no caller selection.
+            handleEaseCustomDialog(currentCameraKfCurve(), -1);
             return;
         }
-        // Seed the editor with the current kf's curve if it's already on
-        // CUSTOM; otherwise start from identity. The seed is COPIED so the
-        // editor never mutates the kf directly.
-        com.creatorskit.swing.timesheet.keyframe.CustomEasingCurve seed = null;
-        KeyFrame current = findSelectedKeyFrameOfCurrentType();
-        if (current instanceof com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame)
+        if (sel.startsWith("Preset "))
         {
-            com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame ck =
-                    (com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame) current;
-            if (ck.getCustomCurve() != null) seed = ck.getCustomCurve().copy();
+            int slot;
+            try { slot = Integer.parseInt(sel.substring("Preset ".length())) - 1; }
+            catch (NumberFormatException ex) { return; }
+            handleEasePresetSelection(slot);
+            return;
         }
+        // Built-in ease. Commit ease=<type>, drop any curve.
+        cameraAttributes.setPendingCustomCurve(null);
+        try
+        {
+            com.creatorskit.swing.timesheet.keyframe.CameraEaseType type =
+                    com.creatorskit.swing.timesheet.keyframe.CameraEaseType.valueOf(sel);
+            cameraAttributes.setLastCommittedEase(type);
+        }
+        catch (IllegalArgumentException ignored)
+        {
+            // Unrecognised string; bail out without committing.
+            return;
+        }
+        commitEaseChange();
+    }
+
+    /** Returns the current camera kf's curve copy, or null. */
+    private com.creatorskit.swing.timesheet.keyframe.CustomEasingCurve currentCameraKfCurve()
+    {
+        KeyFrame current = findSelectedKeyFrameOfCurrentType();
+        if (!(current instanceof com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame)) return null;
+        com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame ck =
+                (com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame) current;
+        return ck.getCustomCurve() == null ? null : ck.getCustomCurve().copy();
+    }
+
+    /** Opens the curve editor seeded with {@code seed} and an optional active slot. */
+    private void handleEaseCustomDialog(com.creatorskit.swing.timesheet.keyframe.CustomEasingCurve seed, int initialSlot)
+    {
         com.creatorskit.swing.timesheet.keyframe.CustomEasingCurve result =
                 com.creatorskit.swing.timesheet.attributes.CurveEditorDialog.show(
-                        this, seed, timeSheetPanel.getPlugin().getConfigManager(), timeSheetPanel.getPlugin().getGson());
+                        this, seed,
+                        timeSheetPanel.getPlugin().getConfigManager(),
+                        timeSheetPanel.getPlugin().getGson(),
+                        initialSlot);
         if (result != null)
         {
-            // Stash the chosen curve so applyEditsTo's CAMERA branch can
-            // pick it up. The combo's selection is already CUSTOM, so the
-            // wireAutoUpdate action listener (which fires AFTER this one)
-            // will trigger the commit path normally.
             cameraAttributes.setPendingCustomCurve(result);
+            commitEaseChange();
         }
         else
         {
-            // Discard: revert the combo to the previously committed ease.
-            // Suppressed so wireAutoUpdate's listener (which is about to
-            // fire for the ORIGINAL CUSTOM selection event, AFTER this
-            // listener returns) reads the reverted value via getSelectedItem
-            // and writes that instead of CUSTOM.
-            suppressAutoUpdateDepth++;
-            try
-            {
-                ease.setSelectedItem(cameraAttributes.getLastCommittedEase());
-            }
-            finally
-            {
-                suppressAutoUpdateDepth--;
-            }
+            // Discard: reset the combo back to the kf's actual display
+            // string so the dropdown doesn't visibly stick on "Custom..."
+            // when the user changed nothing. Suppressed so the
+            // setSelectedItem doesn't re-enter this handler.
+            revertEaseComboDisplayToKfState();
         }
+    }
+
+    private void handleEasePresetSelection(int slot)
+    {
+        if (slot < 0 || slot >= com.creatorskit.swing.timesheet.attributes.CurveEditorDialog.presetCount()) return;
+        com.creatorskit.swing.timesheet.keyframe.CustomEasingCurve[] presets =
+                com.creatorskit.swing.timesheet.attributes.CurveEditorDialog.loadPresets(
+                        timeSheetPanel.getPlugin().getConfigManager(),
+                        timeSheetPanel.getPlugin().getGson());
+        com.creatorskit.swing.timesheet.keyframe.CustomEasingCurve slotCurve = presets[slot];
+        if (slotCurve == null)
+        {
+            // Empty slot: open the editor with this slot pre-active so the
+            // user can design + Save in two clicks.
+            handleEaseCustomDialog(currentCameraKfCurve(), slot);
+            return;
+        }
+        cameraAttributes.setPendingCustomCurve(slotCurve.copy());
+        commitEaseChange();
+    }
+
+    /**
+     * Manually triggers the per-property commit path (the wireAutoUpdate
+     * listener that would normally do this is bypassed for the ease combo).
+     * applyEditsTo's CAMERA branch reads the combo's getSelectedItem +
+     * pendingCustomCurve to produce the new kf.
+     */
+    private void commitEaseChange()
+    {
+        flagFieldEdited(cameraAttributes.getEase());
+        fireAutoUpdate();
+    }
+
+    private void revertEaseComboDisplayToKfState()
+    {
+        KeyFrame current = findSelectedKeyFrameOfCurrentType();
+        if (!(current instanceof com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame)) return;
+        com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame ck =
+                (com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame) current;
+        suppressAutoUpdateDepth++;
+        try
+        {
+            cameraAttributes.getEase().setSelectedItem(describeCameraEase(ck));
+        }
+        finally
+        {
+            suppressAutoUpdateDepth--;
+        }
+    }
+
+    /**
+     * Maps a Camera kf to the dropdown display string. CUSTOM kfs whose
+     * curve matches a saved preset slot show "Preset N"; all other CUSTOMs
+     * show "Custom..."; built-in eases show the enum name.
+     */
+    private String describeCameraEase(com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame kf)
+    {
+        com.creatorskit.swing.timesheet.keyframe.CameraEaseType e = kf.getEase();
+        if (e == com.creatorskit.swing.timesheet.keyframe.CameraEaseType.CUSTOM)
+        {
+            int slot = matchPresetSlot(kf.getCustomCurve());
+            return slot >= 0 ? ("Preset " + (slot + 1)) : "Custom...";
+        }
+        return e.name();
+    }
+
+    private int matchPresetSlot(com.creatorskit.swing.timesheet.keyframe.CustomEasingCurve curve)
+    {
+        if (curve == null) return -1;
+        com.creatorskit.swing.timesheet.keyframe.CustomEasingCurve[] presets =
+                com.creatorskit.swing.timesheet.attributes.CurveEditorDialog.loadPresets(
+                        timeSheetPanel.getPlugin().getConfigManager(),
+                        timeSheetPanel.getPlugin().getGson());
+        for (int i = 0; i < presets.length; i++)
+        {
+            if (presets[i] != null && curvesEqual(curve, presets[i])) return i;
+        }
+        return -1;
+    }
+
+    private static boolean curvesEqual(com.creatorskit.swing.timesheet.keyframe.CustomEasingCurve a,
+                                        com.creatorskit.swing.timesheet.keyframe.CustomEasingCurve b)
+    {
+        if (a == null || b == null) return a == b;
+        if (a.size() != b.size()) return false;
+        for (int i = 0; i < a.size(); i++)
+        {
+            if (Math.abs(a.xAt(i) - b.xAt(i)) > 1e-9) return false;
+            if (Math.abs(a.yAt(i) - b.yAt(i)) > 1e-9) return false;
+        }
+        return true;
+    }
+
+    /** Translates a dropdown display string to its CameraEaseType. */
+    static com.creatorskit.swing.timesheet.keyframe.CameraEaseType parseEaseDisplay(String display)
+    {
+        if (display == null || "Custom...".equals(display) || display.startsWith("Preset "))
+        {
+            return com.creatorskit.swing.timesheet.keyframe.CameraEaseType.CUSTOM;
+        }
+        try { return com.creatorskit.swing.timesheet.keyframe.CameraEaseType.valueOf(display); }
+        catch (IllegalArgumentException ex) { return com.creatorskit.swing.timesheet.keyframe.CameraEaseType.LINEAR; }
     }
 
     /**
@@ -562,6 +693,14 @@ public class AttributePanel extends JPanel
     {
         for (JComponent c : attrs.getAllComponents())
         {
+            // Ease combo on the Camera card commits via the dedicated
+            // handleEaseComboSelection path -- JComboBox fires listeners
+            // in REVERSE registration order, so a generic listener added
+            // here would beat the curve-editor handler to fireAutoUpdate
+            // and commit ease=CUSTOM with curve=null before the dialog
+            // even opens. Skipping the combo here keeps the curve write
+            // path single-sourced.
+            if (c == cameraAttributes.getEase()) continue;
             if (c instanceof JSpinner)
             {
                 JSpinner sp = (JSpinner) c;
@@ -1066,7 +1205,7 @@ public class AttributePanel extends JPanel
                                 Math.toRadians(((Number) cameraAttributes.getPitchDeg().getValue()).doubleValue()),
                                 Math.toRadians(((Number) cameraAttributes.getYawDeg().getValue()).doubleValue()),
                                 ((Number) cameraAttributes.getScale().getValue()).intValue(),
-                                (com.creatorskit.swing.timesheet.keyframe.CameraEaseType) cameraAttributes.getEase().getSelectedItem(),
+                                parseEaseDisplay((String) cameraAttributes.getEase().getSelectedItem()),
                                 ((Number) cameraAttributes.getDurationTicks().getValue()).doubleValue()
                         );
                 // Carry the dialog's chosen curve into a freshly-built kf
@@ -2010,7 +2149,7 @@ public class AttributePanel extends JPanel
                                 ? ((Number) cameraAttributes.getScale().getValue()).intValue()
                                 : orig.getScale(),
                         wasEdited(cameraAttributes.getEase())
-                                ? (com.creatorskit.swing.timesheet.keyframe.CameraEaseType) cameraAttributes.getEase().getSelectedItem()
+                                ? parseEaseDisplay((String) cameraAttributes.getEase().getSelectedItem())
                                 : orig.getEase(),
                         wasEdited(cameraAttributes.getDurationTicks())
                                 ? ((Number) cameraAttributes.getDurationTicks().getValue()).doubleValue()
@@ -4904,7 +5043,7 @@ public class AttributePanel extends JPanel
         JSpinner yawDeg = cameraAttributes.getYawDeg();
         JSpinner scale = cameraAttributes.getScale();
         JSpinner durationTicks = cameraAttributes.getDurationTicks();
-        JComboBox<com.creatorskit.swing.timesheet.keyframe.CameraEaseType> ease = cameraAttributes.getEase();
+        JComboBox<String> ease = cameraAttributes.getEase();
         JButton capture = cameraAttributes.getCapture();
 
         c.gridwidth = 1;
@@ -4983,12 +5122,29 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 4;
         ease.setToolTipText("<html>Easing curve from this keyframe to the next."
-                + "<br>Pick <b>Custom...</b> to open the spline editor and design your own.</html>");
-        // CUSTOM opens the curve editor. Registered BEFORE wireAutoUpdate's
-        // ActionListener so we see the event first, can block on the modal
-        // dialog, and (on Discard) revert the combo selection while the
-        // event is still being processed -- by the time wireAutoUpdate's
-        // listener fires, getSelectedItem() returns the reverted value.
+                + "<br>Pick <b>Preset 1..6</b> to apply a saved curve directly."
+                + "<br>Pick <b>Custom...</b> to open the spline editor and design / save one.</html>");
+        // Populate items: built-ins first, then preset slots, then the
+        // dialog trigger. The string-typed combo lets the dropdown carry
+        // preset references alongside the enum-typed eases without
+        // smuggling them into CameraEaseType.
+        ease.removeAllItems();
+        for (com.creatorskit.swing.timesheet.keyframe.CameraEaseType t : com.creatorskit.swing.timesheet.keyframe.CameraEaseType.values())
+        {
+            if (t == com.creatorskit.swing.timesheet.keyframe.CameraEaseType.CUSTOM) continue;
+            ease.addItem(t.name());
+        }
+        for (int i = 1; i <= com.creatorskit.swing.timesheet.attributes.CurveEditorDialog.presetCount(); i++)
+        {
+            ease.addItem("Preset " + i);
+        }
+        ease.addItem("Custom...");
+        // Combo skipped by wireAutoUpdate (see the skip there); the entire
+        // commit path lives in handleEaseComboSelection so the dialog can
+        // open BEFORE the kf is committed (the wireAutoUpdate listener
+        // fires before this one due to JComboBox's reverse-order dispatch,
+        // which previously committed ease=CUSTOM with curve=null before
+        // the dialog had a chance to set pendingCustomCurve).
         ease.addActionListener(e -> handleEaseComboSelection());
         card.add(ease, c);
 
@@ -5965,6 +6121,11 @@ public class AttributePanel extends JPanel
                 {
                     case CAMERA:
                         cameraAttributes.setAttributes(selectedGlobal);
+                        // setAttributes leaves the ease combo alone (it can't
+                        // do preset matching without config access); do it
+                        // here where configManager is reachable.
+                        cameraAttributes.getEase().setSelectedItem(
+                                describeCameraEase((com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame) selectedGlobal));
                         cameraAttributes.setBackgroundColours(s);
                         break;
                     case SCREEN_FADE:
@@ -6101,6 +6262,8 @@ public class AttributePanel extends JPanel
                 break;
             case CAMERA:
                 cameraAttributes.setAttributes(keyFrame);
+                cameraAttributes.getEase().setSelectedItem(
+                        describeCameraEase((com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame) keyFrame));
                 cameraAttributes.setBackgroundColours(keyFrameState);
                 break;
             case COLOUR:

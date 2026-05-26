@@ -64,12 +64,25 @@ public final class CurveEditorDialog
     public static CustomEasingCurve show(Component parent, CustomEasingCurve initial,
                                           ConfigManager configManager, Gson gson)
     {
+        return show(parent, initial, configManager, gson, -1);
+    }
+
+    /**
+     * Variant that pre-selects {@code initialActiveSlot} (0..5) so Save
+     * lands on the user's intended slot from the first click. Called by
+     * the Easing dropdown when the user picks an empty "Preset N" and
+     * the dialog opens to let them define it.
+     */
+    public static CustomEasingCurve show(Component parent, CustomEasingCurve initial,
+                                          ConfigManager configManager, Gson gson,
+                                          int initialActiveSlot)
+    {
         // Working copy so edits never leak into the caller's instance before
         // Select. The dialog mutates this; the caller gets it (copied) on
         // Select, or nothing on Discard.
         final CustomEasingCurve[] working = { initial == null ? new CustomEasingCurve() : initial.copy() };
         final CustomEasingCurve[] presets = loadPresets(configManager, gson);
-        final int[] activePreset = { -1 };
+        final int[] activePreset = { initialActiveSlot >= 0 && initialActiveSlot < PRESET_COUNT ? initialActiveSlot : -1 };
         final boolean[] selected = { false };
 
         JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(parent), "Edit custom easing curve", Dialog.ModalityType.APPLICATION_MODAL);
@@ -157,6 +170,13 @@ public final class CurveEditorDialog
         {
             b.addActionListener(e -> updateSaveEnabled.run());
         }
+        // Reflect any caller-supplied initialActiveSlot so Save is usable
+        // immediately and the matching preset button looks pressed.
+        if (activePreset[0] >= 0)
+        {
+            presetButtons[activePreset[0]].setSelected(true);
+            updateSaveEnabled.run();
+        }
 
         JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 6));
         buttonRow.add(saveButton);
@@ -178,7 +198,10 @@ public final class CurveEditorDialog
 
     // ===== Preset persistence ============================================
 
-    private static CustomEasingCurve[] loadPresets(ConfigManager configManager, Gson gson)
+    /** Public so AttributePanel can match a kf's curve against the saved slots. */
+    public static int presetCount() { return PRESET_COUNT; }
+
+    public static CustomEasingCurve[] loadPresets(ConfigManager configManager, Gson gson)
     {
         CustomEasingCurve[] presets = new CustomEasingCurve[PRESET_COUNT];
         if (configManager == null) return presets;

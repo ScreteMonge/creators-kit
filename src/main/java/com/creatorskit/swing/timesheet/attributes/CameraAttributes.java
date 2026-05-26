@@ -28,7 +28,17 @@ public class CameraAttributes extends Attributes
     private final JSpinner yawDeg = new JSpinner();
     private final JSpinner scale = new JSpinner();
     private final JSpinner durationTicks = new JSpinner();
-    private final JComboBox<CameraEaseType> ease = new JComboBox<>(CameraEaseType.values());
+    /**
+     * Ease combo. v2 holds strings instead of CameraEaseType so the items
+     * can mix built-in eases (LINEAR..EXPO), per-slot preset references
+     * (Preset 1..6), and the dialog-trigger Custom... entry. The display
+     * string maps back to a CameraEaseType + optional curve via
+     * {@link com.creatorskit.swing.timesheet.AttributePanel#parseEaseDisplay}.
+     * Items are populated by AttributePanel.setupCameraCard at panel
+     * construction, not here, because constructing the items needs the
+     * preset count + ordering, which is owned over there.
+     */
+    private final JComboBox<String> ease = new JComboBox<>();
 
     /**
      * "Capture from current camera" button. Wired up in AttributePanel.setupCameraCard
@@ -72,7 +82,10 @@ public class CameraAttributes extends Attributes
         yawDeg.setValue(Math.toDegrees(kf.getYaw()));
         scale.setValue(kf.getScale());
         durationTicks.setValue(kf.getDurationTicks());
-        ease.setSelectedItem(kf.getEase());
+        // The ease combo display string depends on preset matching, which
+        // CameraAttributes doesn't have config access for. AttributePanel
+        // sets the display via setCameraEaseDisplay AFTER this method
+        // returns. Leave the combo alone here.
         // Loading a fresh kf == start of a new edit batch. The pending
         // curve from a prior dialog session shouldn't bleed into the kf
         // being shown now.
@@ -124,7 +137,7 @@ public class CameraAttributes extends Attributes
         yawDeg.setValue(Math.toDegrees(CameraKeyFrame.DEFAULT_YAW));
         scale.setValue(CameraKeyFrame.DEFAULT_SCALE);
         durationTicks.setValue(CameraKeyFrame.DEFAULT_DURATION);
-        ease.setSelectedItem(CameraKeyFrame.DEFAULT_EASE);
+        ease.setSelectedItem(CameraKeyFrame.DEFAULT_EASE.name());
         super.resetAttributes(resetBackground);
     }
 }
