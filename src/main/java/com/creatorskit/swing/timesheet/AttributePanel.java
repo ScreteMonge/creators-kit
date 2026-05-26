@@ -804,6 +804,33 @@ public class AttributePanel extends JPanel
                     }
                 });
             }
+            else if (c instanceof javax.swing.JTextArea)
+            {
+                // JTextArea isn't a JTextField (sibling under JTextComponent),
+                // so it needs its own focus-lost wire. Enter inserts a newline
+                // here -- there's no Enter-commits semantic to wire. Mixed
+                // guard parallels the JTextField path.
+                javax.swing.JTextArea ta = (javax.swing.JTextArea) c;
+                ta.addFocusListener(new java.awt.event.FocusAdapter()
+                {
+                    @Override
+                    public void focusLost(java.awt.event.FocusEvent e)
+                    {
+                        if (!isMixedPlaceholder(ta))
+                        {
+                            flagFieldEdited(c);
+                            fireAutoUpdate();
+                        }
+                        javax.swing.SwingUtilities.invokeLater(() ->
+                        {
+                            if (mixedSinceSelection.contains(ta))
+                            {
+                                ta.setText(MIXED_DISPLAY);
+                            }
+                        });
+                    }
+                });
+            }
             // JButton intentionally not wired -- see method javadoc.
         }
     }
@@ -931,12 +958,20 @@ public class AttributePanel extends JPanel
     }
 
     /**
-     * Commits the current card values onto the selected keyframe(s). No-op when
-     * the panel itself just pushed values in (the guard counter is non-zero) or
-     * when there's no keyframe of the current type selected -- the seeker-fallback
-     * in {@link TimeSheetPanel#onUpdateButtonPressed()} would silently rewrite
-     * the keyframe under the playhead, which is exactly the surprise the new
-     * UX is trying to remove.
+     * Commits the current card values onto the selected keyframe(s). No-op
+     * when the panel itself just pushed values in (the guard counter is
+     * non-zero).
+     *
+     * <p>An earlier version also gated on "no marquee kf of the current
+     * type matches" to dodge a hypothetical seeker-fallback surprise. That
+     * gate broke routine single-Character editing: when the panel showed
+     * a kf via the seeker fallback (which is also how
+     * onUpdateButtonPressed locates the target tick), the user would type
+     * in a text field, focus-out, and watch the field "reset" because
+     * fireAutoUpdate early-returned and no commit happened. The inner
+     * onUpdateButtonPressed already returns early if neither the marquee
+     * nor the seeker fallback can resolve a tick, so the gate here just
+     * suppressed perfectly valid commits.
      */
     private void fireAutoUpdate()
     {
@@ -945,10 +980,6 @@ public class AttributePanel extends JPanel
             return;
         }
         if (timeSheetPanel == null)
-        {
-            return;
-        }
-        if (findSelectedKeyFrameOfCurrentType() == null)
         {
             return;
         }
