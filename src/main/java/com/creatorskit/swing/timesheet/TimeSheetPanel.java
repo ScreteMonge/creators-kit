@@ -112,6 +112,13 @@ public class TimeSheetPanel extends JPanel
     @Getter
     private final com.creatorskit.swing.timesheet.sheets.TimelineLocalRowLayout localRowLayout =
             new com.creatorskit.swing.timesheet.sheets.TimelineLocalRowLayout();
+    /**
+     * Flat row layout for the global view -- no groups yet, just the
+     * hidden-types set the Filters dialog mutates.
+     */
+    @Getter
+    private final com.creatorskit.swing.timesheet.sheets.TimelineGlobalRowLayout globalRowLayout =
+            new com.creatorskit.swing.timesheet.sheets.TimelineGlobalRowLayout();
     private static final String CONFIG_KEY_COLLAPSED_GROUPS = "collapsedTimelineGroups";
 
     private double zoom = 50;
@@ -2684,6 +2691,15 @@ public class TimeSheetPanel extends JPanel
         // toggle is reachable from either view. Each column is wrapped in
         // its own scroll pane; the CardLayout in labelCards swaps which is
         // visible based on userPrefersGlobalView.
+        // Wrap each scrollpane in a BorderLayout container so a Filters
+        // button can sit pinned at the bottom of the column without
+        // scrolling off when the row list overflows. The scrollpane
+        // itself still owns the row labels via its viewport.
+        JPanel localColumnContainer = new JPanel(new BorderLayout());
+        localColumnContainer.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        JPanel globalColumnContainer = new JPanel(new BorderLayout());
+        globalColumnContainer.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+
         labels = buildLabelColumn(labelScrollPane,
                 attributeSheet,
                 KeyFrameType.LOCAL_KEYFRAME_TYPES_ALPHABETICAL,
@@ -2693,13 +2709,19 @@ public class TimeSheetPanel extends JPanel
                 KeyFrameType.GLOBAL_KEYFRAME_TYPES_ALPHABETICAL,
                 /*ownsToggleButton=*/ false);
 
+        localColumnContainer.add(labelScrollPane, BorderLayout.CENTER);
+        localColumnContainer.add(makeFiltersButton(true), BorderLayout.SOUTH);
+
+        globalColumnContainer.add(globalLabelScrollPane, BorderLayout.CENTER);
+        globalColumnContainer.add(makeFiltersButton(false), BorderLayout.SOUTH);
+
         // Wire the two CardLayouts so the toggle button (built inside the
         // local column above) can swap both at once. Default to local view;
         // refreshGlobalRowsOnlyMode below picks the right view based on
         // selection state.
         labelCards.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        labelCards.add(labelScrollPane, VIEW_LOCAL);
-        labelCards.add(globalLabelScrollPane, VIEW_GLOBAL);
+        labelCards.add(localColumnContainer, VIEW_LOCAL);
+        labelCards.add(globalColumnContainer, VIEW_GLOBAL);
 
         sheetCards.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         sheetCards.add(attributeSheet, VIEW_LOCAL);
@@ -2820,17 +2842,95 @@ public class TimeSheetPanel extends JPanel
             // Build via the row layout (group parents + leaves).
             return rebuildLocalLabelRows(labelPanel, bodySheet);
         }
-        // Global view: flat list pass-through (existing behaviour).
-        JLabel[] result = new JLabel[types.length + 1];
-        result[0] = new JLabel(); // dummy for the +1 index alignment
+        // Global view: flat list, filtered by globalRowLayout.hidden.
+        return rebuildGlobalLabelRows(labelPanel, bodySheet);
+    }
 
-        for (int i = 0; i < types.length; i++)
+    /**
+     * Rebuilds the global label column based on the current
+     * {@link #globalRowLayout} state (only filtering, no grouping). Same
+     * shape as {@link #rebuildLocalLabelRows} so the Filters dialog can
+     * call into either symmetrically.
+     */
+    private JLabel[] rebuildGlobalLabelRows(JPanel labelPanel, TimeSheet bodySheet)
+    {
+        while (labelPanel.getComponentCount() > 1)
         {
-            JLabel label = makeRowLabel(types[i].getName(), false, null, false);
+            labelPanel.remove(1);
+        }
+        java.util.List<KeyFrameType> visible = globalRowLayout.visibleTypes();
+        JLabel[] result = new JLabel[visible.size() + 1];
+        result[0] = new JLabel();
+        for (int i = 0; i < visible.size(); i++)
+        {
+            JLabel label = makeRowLabel(visible.get(i).getName(), false, null, false);
             result[i + 1] = label;
             labelPanel.add(label);
         }
+        bodySheet.setContentRowCount(visible.size());
+        labelPanel.revalidate();
+        labelPanel.repaint();
+        bodySheet.repaint();
         return result;
+    }
+
+    /**
+     * Builds the "Filters..." button that pins to the bottom of a label
+     * column. Click opens the two-column filters dialog scoped to the
+     * column's view (local / global) and rewires the column rows on
+     * change.
+     */
+    private JButton makeFiltersButton(boolean isLocalView)
+    {
+        JButton filters = new JButton("Filters...");
+        filters.setFocusable(false);
+        filters.setForeground(Color.WHITE);
+        filters.setBackground(ColorScheme.DARK_GRAY_HOVER_COLOR);
+        filters.setOpaque(true);
+        filters.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1),
+                new EmptyBorder(0, 6, 0, 6)));
+        filters.setMargin(new java.awt.Insets(0, 4, 0, 4));
+        filters.setPreferredSize(new Dimension(LABEL_COL_WIDTH, 28));
+        filters.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        filters.setAlignmentX(Component.LEFT_ALIGNMENT);
+        filters.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        filters.addActionListener(e ->
+        {
+            if (isLocalView)
+            {
+                com.creatorskit.swing.timesheet.sheets.TimelineFiltersDialog.show(
+                        this,
+                        "Local property filters",
+                        KeyFrameType.LOCAL_KEYFRAME_TYPES_ALPHABETICAL,
+                        localRowLayout.getHidden(),
+                        h -> rebuildLocalAfterFilterChange());
+            }
+            else
+            {
+                com.creatorskit.swing.timesheet.sheets.TimelineFiltersDialog.show(
+                        this,
+                        "Global property filters",
+                        KeyFrameType.GLOBAL_KEYFRAME_TYPES_ALPHABETICAL,
+                        globalRowLayout.getHidden(),
+                        h -> rebuildGlobalAfterFilterChange());
+            }
+        });
+        return filters;
+    }
+
+    private void rebuildLocalAfterFilterChange()
+    {
+        JPanel labelPanel = (JPanel) labelScrollPane.getViewport().getView();
+        this.labels = rebuildLocalLabelRows(labelPanel, attributeSheet);
+        if (attributePanel != null) attributePanel.refreshKeyFrameSelectionState();
+    }
+
+    private void rebuildGlobalAfterFilterChange()
+    {
+        JPanel labelPanel = (JPanel) globalLabelScrollPane.getViewport().getView();
+        this.globalLabels = rebuildGlobalLabelRows(labelPanel, globalAttributeSheet);
+        if (attributePanel != null) attributePanel.refreshKeyFrameSelectionState();
     }
 
     /**

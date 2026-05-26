@@ -64,17 +64,20 @@ public class GlobalAttributeSheet extends TimeSheet
         pulseTimer.start();
     }
 
-    /** Position of {@code type} in the global-only row stack, or -1 if local. */
+    /**
+     * Position of {@code type} in the visible global row stack, or -1 if
+     * the type is local OR filtered out via the global Filters dialog.
+     */
     private int displayRowIndex(KeyFrameType type)
     {
-        return KeyFrameType.getGlobalDisplayIndex(type);
+        return getTimeSheetPanel().getGlobalRowLayout().rowIndexOf(type);
     }
 
     @Override
     protected KeyFrameType typeAtRowIndex(int contentRow)
     {
-        KeyFrameType[] types = KeyFrameType.GLOBAL_KEYFRAME_TYPES_ALPHABETICAL;
-        return (contentRow >= 0 && contentRow < types.length) ? types[contentRow] : null;
+        java.util.List<KeyFrameType> visible = getTimeSheetPanel().getGlobalRowLayout().visibleTypes();
+        return (contentRow >= 0 && contentRow < visible.size()) ? visible.get(contentRow) : null;
     }
 
     private float pulseAlpha()

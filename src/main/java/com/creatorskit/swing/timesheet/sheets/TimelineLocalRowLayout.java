@@ -32,6 +32,15 @@ public class TimelineLocalRowLayout
     private final List<Row> baseRows;
     /** Set of group names currently collapsed. */
     private final Set<String> collapsed = new java.util.HashSet<>();
+    /**
+     * Types currently hidden via the Filters dialog. Filtering is
+     * orthogonal to collapsing: a HITSPLAT type can be hidden even when
+     * its Hitsplats group is expanded; a hidden type just doesn't paint
+     * a row regardless of group state. Group parent rows themselves
+     * collapse to nothing when ALL their child types are hidden -- they
+     * stay visible if at least one child is still showing.
+     */
+    private final Set<KeyFrameType> hidden = new java.util.HashSet<>();
 
     public TimelineLocalRowLayout()
     {
@@ -90,30 +99,66 @@ public class TimelineLocalRowLayout
     }
 
     /**
-     * Visible row list, respecting current collapse state. Group parent
-     * rows are always visible; their children are hidden when the parent
-     * is collapsed.
+     * Visible row list, respecting current collapse + filter state.
+     * Hidden leaf types are dropped entirely. Group parent rows are
+     * visible if any of their children would still render -- a parent
+     * with every child hidden disappears too.
      */
     public List<Row> visibleRows()
     {
+        // Pass 1: collect leaves we'd emit, accounting for filter +
+        // collapse state. Pass 2: emit each leaf, prefixed by its
+        // group parent (once) if it has one and the group hasn't been
+        // emitted yet.
         List<Row> out = new ArrayList<>();
         Row currentGroup = null;
+        boolean groupParentEmitted = false;
         for (Row r : baseRows)
         {
             if (r.kind == Row.Kind.GROUP_PARENT)
             {
                 currentGroup = r;
-                out.add(r);
+                groupParentEmitted = false;
                 continue;
             }
-            // LEAF: include unless its owning group is collapsed.
-            if (currentGroup != null && currentGroup.childTypes.contains(r.type) && collapsed.contains(currentGroup.groupName))
+            // LEAF. Skip if filtered out.
+            if (hidden.contains(r.type)) continue;
+            // Skip if its group exists and is collapsed.
+            if (currentGroup != null
+                    && currentGroup.childTypes.contains(r.type)
+                    && collapsed.contains(currentGroup.groupName))
             {
+                // Still emit the parent ONCE so the user can re-expand.
+                if (!groupParentEmitted)
+                {
+                    out.add(currentGroup);
+                    groupParentEmitted = true;
+                }
                 continue;
+            }
+            // Emit parent the first time we hit a visible child.
+            if (currentGroup != null
+                    && currentGroup.childTypes.contains(r.type)
+                    && !groupParentEmitted)
+            {
+                out.add(currentGroup);
+                groupParentEmitted = true;
             }
             out.add(r);
         }
         return out;
+    }
+
+    public Set<KeyFrameType> getHidden()
+    {
+        return hidden;
+    }
+
+    /** Replace the hidden set in one shot (used by the filters dialog on Close). */
+    public void setHidden(Set<KeyFrameType> newHidden)
+    {
+        hidden.clear();
+        if (newHidden != null) hidden.addAll(newHidden);
     }
 
     /**

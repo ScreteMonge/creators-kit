@@ -5667,11 +5667,11 @@ public class AttributePanel extends JPanel
         // so the row index must be looked up against the corresponding array.
         boolean isGlobal = KeyFrameType.isGlobal(selectedKeyFramePage);
         JLabel[] labels = isGlobal ? timeSheetPanel.getGlobalLabels() : timeSheetPanel.getLabels();
-        // Local view's row index is dynamic (TimelineLocalRowLayout drives
-        // it -- a collapsed Hitsplats group hides HITSPLAT_1..4 rows).
-        // Global view is flat so the static enum index still works.
+        // Both views' row indices are dynamic now: local view via
+        // TimelineLocalRowLayout (Hitsplats collapse + filters); global
+        // view via TimelineGlobalRowLayout (filters only).
         int displayIdx = isGlobal
-                ? KeyFrameType.getGlobalDisplayIndex(selectedKeyFramePage)
+                ? timeSheetPanel.getGlobalRowLayout().rowIndexOf(selectedKeyFramePage)
                 : timeSheetPanel.getLocalRowIndex(selectedKeyFramePage);
         JLabel selectedLabel = (displayIdx >= 0 && displayIdx + 1 < labels.length)
                 ? labels[displayIdx + 1]
