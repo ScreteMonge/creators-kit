@@ -3685,7 +3685,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 2;
         JTextArea text = textAttributes.getText();
-        text.setToolTipText("The text to show overhead");
+        text.setToolTipText("The text to show overhead. Supports <col=HEX> tags.");
         text.setText("");
         text.setLineWrap(true);
         card.add(text, c);
