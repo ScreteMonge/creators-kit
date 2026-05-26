@@ -421,8 +421,8 @@ public class AttributePanel extends JPanel
      * card-level enable logic) had already greyed out stay greyed out
      * after play stops, instead of being globally re-enabled.
      *
-     * <p>Idempotent. Called from {@link Programmer#togglePlay} on play
-     * start and {@link Programmer#pause} on stop.
+     * <p>Idempotent. Called from {@link com.creatorskit.programming.Programmer#togglePlay()} on play
+     * start and {@link com.creatorskit.programming.Programmer#pause()} on stop.
      */
     public void setPlayLocked(boolean locked)
     {
@@ -2427,22 +2427,9 @@ public class AttributePanel extends JPanel
         pauseTicks.setModel(new SpinnerNumberModel(0, 0, 99999, 1));
         card.add(pauseTicks, c);
 
-        /*
-        c.gridx = 0;
-        c.gridy = 2;
-        JLabel stallLabel = new JLabel("Stall: ");
-        stallLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(stallLabel, c);
-
-        c.gridx = 1;
-        c.gridy = 2;
-        JComboBox<Toggle> stall = animAttributes.getStall();
-        stall.setFocusable(false);
-        stall.addItem(Toggle.DISABLE);
-        stall.addItem(Toggle.ENABLE);
-        card.add(stall, c);
-
-         */
+        // (Stall toggle UI removed -- the toggle was redundant with the
+        // existing Active spinner. The model still has the field; loading
+        // an old kf preserves whatever value was stored.)
 
         c.gridwidth = 4;
         c.gridx = 0;
@@ -3157,7 +3144,11 @@ public class AttributePanel extends JPanel
         JSpinner turnRate = oriAttributes.getTurnRate();
         turnRate.setToolTipText("<html>Determines the rate at which the Object rotates in JUnits/clientTick"
                 + "<br>Fractional values supported (precision down to 0.001).</html>");
-        turnRate.setModel(new SpinnerNumberModel((double) OrientationKeyFrame.TURN_RATE, 0.0, 2048.0, 0.1));
+        // (double) cast on TURN_RATE used to disambiguate the int / double
+        // SpinnerNumberModel overloads; now that the other args are
+        // double literals (0.0, 2048.0, 0.1) Java picks the double ctor
+        // by widening, so the explicit cast is redundant.
+        turnRate.setModel(new SpinnerNumberModel(OrientationKeyFrame.TURN_RATE, 0.0, 2048.0, 0.1));
         // Show 3 decimal places so fractional turn rates from the convert
         // arrow (which rounds to 0.001) display in full precision instead of
         // being truncated by the default formatter.
@@ -3294,7 +3285,6 @@ public class AttributePanel extends JPanel
         JTextField faceTarget = oriAttributes.getTargetCharacterName();
         faceTarget.setPreferredSize(spinnerSize);
         card.add(faceTarget, c);
-        c.gridwidth = 1;
 
         // Row 6: Compass -- clickable, paints End (red) indicator.
         // Spans the right two columns (like the old static compass JLabel did)
@@ -3586,7 +3576,9 @@ public class AttributePanel extends JPanel
             }
 
             customComboBox.setSelectedItem(selectedCharacter.getStoredModel());
-            radius.setValue((int) selectedCharacter.getRadiusSpinner().getValue());
+            // setValue takes Object; the spinner already holds an Integer
+            // so passing it through avoids the redundant unbox / re-box.
+            radius.setValue(selectedCharacter.getRadiusSpinner().getValue());
         });
 
         c.gridwidth = 1;
@@ -4570,7 +4562,6 @@ public class AttributePanel extends JPanel
                 + "<br>Recommended for high-slope arcs (e.g. Yama's overhead barrage) where"
                 + "<br>a fixed-pitch model looks unnatural at the top of the arc.</html>");
         card.add(faceTrajectory, c);
-        c.gridwidth = 1;
 
         c.gridwidth = 1;
         c.gridheight = 1;
@@ -5869,7 +5860,10 @@ public class AttributePanel extends JPanel
         int maxWidth = 275;
         while (metrics.stringWidth(name.toString()) > maxWidth)
         {
-            name = name.deleteCharAt(name.length() - 1);
+            // StringBuilder.deleteCharAt mutates in place and returns this,
+            // so the old `name = name.deleteCharAt(...)` was assigning the
+            // same reference back to itself.
+            name.deleteCharAt(name.length() - 1);
         }
 
         objectLabel.setText(name.toString());
