@@ -77,11 +77,35 @@ public final class CurveEditorDialog
                                           ConfigManager configManager, Gson gson,
                                           int initialActiveSlot)
     {
-        // Working copy so edits never leak into the caller's instance before
-        // Select. The dialog mutates this; the caller gets it (copied) on
-        // Select, or nothing on Discard.
-        final CustomEasingCurve[] working = { initial == null ? new CustomEasingCurve() : initial.copy() };
+        // Load presets first -- the working-curve choice below depends on
+        // whether the pre-selected slot has saved content.
         final CustomEasingCurve[] presets = loadPresets(configManager, gson);
+
+        // Working-curve precedence:
+        //   1. If a pre-selected slot has SAVED content, load that. This
+        //      satisfies the "Custom... always loads at least one preset"
+        //      contract: opening Custom on a kf using Preset N opens with
+        //      Preset N visible (so editing starts from a known shape).
+        //   2. Else if the caller passed a seed (e.g. the kf's existing
+        //      non-preset curve), use that.
+        //   3. Else identity (the fresh-start fallback).
+        // The dialog mutates working[0]; the caller gets it (copied) on
+        // Select, or nothing on Discard -- so case 1 doesn't risk losing
+        // the kf's curve unless the user explicitly Selects.
+        final CustomEasingCurve startCurve;
+        if (initialActiveSlot >= 0 && initialActiveSlot < PRESET_COUNT && presets[initialActiveSlot] != null)
+        {
+            startCurve = presets[initialActiveSlot].copy();
+        }
+        else if (initial != null)
+        {
+            startCurve = initial.copy();
+        }
+        else
+        {
+            startCurve = new CustomEasingCurve();
+        }
+        final CustomEasingCurve[] working = { startCurve };
         final int[] activePreset = { initialActiveSlot >= 0 && initialActiveSlot < PRESET_COUNT ? initialActiveSlot : -1 };
         final boolean[] selected = { false };
 

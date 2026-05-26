@@ -510,9 +510,16 @@ public class AttributePanel extends JPanel
 
         if ("Custom...".equals(sel))
         {
-            // Seed with kf's current curve if already CUSTOM; identity
-            // otherwise. Pre-active slot = no caller selection.
-            handleEaseCustomDialog(currentCameraKfCurve(), -1);
+            // Always open with a preset preloaded: the matching slot if
+            // the kf's current curve is one of the saved presets, else
+            // Preset 1 (slot 0). The dialog falls back to the kf's curve
+            // / identity when the chosen slot is empty (never saved), so
+            // this never bricks a user with a fully-empty preset bank.
+            int initialSlot = 0;
+            com.creatorskit.swing.timesheet.keyframe.CustomEasingCurve kfCurve = currentCameraKfCurve();
+            int matched = matchPresetSlot(kfCurve);
+            if (matched >= 0) initialSlot = matched;
+            handleEaseCustomDialog(kfCurve, initialSlot);
             return;
         }
         if (sel.startsWith("Preset "))
