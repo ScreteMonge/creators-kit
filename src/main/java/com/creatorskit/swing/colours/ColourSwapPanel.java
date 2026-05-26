@@ -163,7 +163,7 @@ public class ColourSwapPanel extends JPanel
         previewSwatch.setBorder(new LineBorder(java.awt.Color.BLACK, 1));
 
         JTextField hexField = new JTextField(7);
-        hexField.setToolTipText("<html>Hex colour code. Accepts #RRGGBB, RRGGBB, #RGB, or RGB.<br>Press Enter or click away to apply.</html>");
+        hexField.setToolTipText("Type a hex code (#RRGGBB or RGB). Enter to apply.");
         hexField.setText(formatHex(colourChooser.getColor()));
 
         previewRow.add(previewSwatch, BorderLayout.WEST);

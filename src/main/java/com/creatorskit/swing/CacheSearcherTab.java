@@ -1288,9 +1288,7 @@ public class CacheSearcherTab extends JPanel
         c.gridx = 0;
         c.gridy = 4;
         JButton addKeyFrame = new JButton("Add Sound KeyFrame");
-        addKeyFrame.setToolTipText("<html>Adds a Sound keyframe at the current playhead tick. Lands in the first"
-                + "<br>empty Sound 1..4 slot at that tick (Sound 1 if all 4 are occupied, overwriting)."
-                + "<br>Sounds layer because each slot plays in parallel during playback.</html>");
+        addKeyFrame.setToolTipText("Add a Sound keyframe at the playhead. Lands in the first empty Sound slot.");
         card.add(addKeyFrame, c);
 
         addKeyFrame.addActionListener(e ->

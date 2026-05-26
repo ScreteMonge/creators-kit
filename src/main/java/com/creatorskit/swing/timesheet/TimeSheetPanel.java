@@ -3740,14 +3740,11 @@ public class TimeSheetPanel extends JPanel
                 }
                 list = sb.toString();
             }
-            groupModeCheck.setToolTipText("<html>Apply one shared shift per copy to every Character in "
-                    + list + ".<br>Block duration spans the union of all members' selected keyframes,"
-                    + "<br>so collision math respects the full group footprint.</html>");
+            groupModeCheck.setToolTipText("<html>Apply one shared shift to every Character in " + list + ".</html>");
         }
         else
         {
-            groupModeCheck.setToolTipText("Click a folder in the manager tree to enable group mode "
-                    + "(this scatters every Character in the folder as one block).");
+            groupModeCheck.setToolTipText("Click a folder in the manager tree first to enable group mode.");
         }
 
         // Greys out the spinner pair that doesn't apply to the current mode.
@@ -5191,12 +5188,8 @@ public class TimeSheetPanel extends JPanel
         // kf at tick 10 with all the fields set, generate 92 more so the
         // bar drains 92 -> 0 across 93 ticks.
         javax.swing.JCheckBox generateMissingCheck = new javax.swing.JCheckBox("Generate missing kfs (single-template mode)");
-        generateMissingCheck.setToolTipText("<html>When ON: ignores any kfs after the first in the selection. Uses the<br>"
-                + "first selected kf as a template. For each value in the sequence (i=0..N-1):<br>"
-                + " - tick = template.tick + i * tickStep<br>"
-                + " - if a kf already exists at that tick on the template's Character: update it<br>"
-                + " - otherwise: create a new kf as a copy of the template with the iterated field replaced<br>"
-                + "All other fields are inherited from the template, so you get a uniform stream of kfs.</html>");
+        generateMissingCheck.setToolTipText("<html>Use the first selected kf as a template and generate one kf per sequence value, "
+                + "spaced by Tick step. Existing kfs at those ticks are overwritten.</html>");
         javax.swing.JSpinner tickStepSpinner = new javax.swing.JSpinner(new SpinnerNumberModel(1.0, 0.01, 1_000_000.0, 0.1));
         tickStepSpinner.setToolTipText("Tick interval between generated kfs. 1.0 = one kf per game tick.");
         tickStepSpinner.setEnabled(false);

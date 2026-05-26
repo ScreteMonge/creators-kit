@@ -137,8 +137,7 @@ public final class CurveEditorDialog
             final int slot = i;
             JToggleButton b = new JToggleButton("Preset " + (i + 1));
             b.setFocusable(false);
-            b.setToolTipText("<html>Click to <b>load</b> this preset into the editor.<br>"
-                    + "With the preset active, click <b>Save</b> to overwrite it with the current curve.</html>");
+            b.setToolTipText("<html>Click to load this preset. Click <b>Save</b> with it active to overwrite.</html>");
             b.addActionListener(e ->
             {
                 activePreset[0] = slot;

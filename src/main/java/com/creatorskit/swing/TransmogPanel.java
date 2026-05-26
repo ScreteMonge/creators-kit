@@ -152,11 +152,7 @@ public class TransmogPanel extends JPanel
         animationComboBox.addItem(TransmogAnimationMode.CUSTOM);
         animationComboBox.addItem(TransmogAnimationMode.NONE);
         animationComboBox.setFocusable(false);
-        animationComboBox.setToolTipText("<html>" + "Set how to handle your Transmog's animations" + "<br>" +
-                "1) Player: Copy your player character's animations," + "<br>" +
-                "2) Modified: Use all swaps indicated here; otherwise, copy your player character's animations," + "<br>" +
-                "3) Custom: Only use the animations indicated here," + "<br>" +
-                "4) None: Don't animate at all" + "<html>");
+        animationComboBox.setToolTipText("<html>Pick how the Transmog animates: copy your player, mix in custom swaps, custom-only, or none.</html>");
 
         animationComboBox.addItemListener(e -> animationMode = (TransmogAnimationMode) animationComboBox.getSelectedItem());
         rowHeaderPanel.add(animationComboBox, c);

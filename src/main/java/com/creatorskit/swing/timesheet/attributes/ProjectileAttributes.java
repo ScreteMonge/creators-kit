@@ -22,12 +22,8 @@ public class ProjectileAttributes extends Attributes
     public ProjectileAttributes()
     {
         addChangeListeners();
-        target.setToolTipText("<html>Target(s) the projectile flies to. Accepts:"
-                + "<br>- A single Character name (\"Player\")"
-                + "<br>- A comma-separated list (\"Player, NPC1, NPC2\")"
-                + "<br>- \"folder:Foldername\" to fan out to every Character under that folder"
-                + "<br>- \"f[Folder1, Folder2, ...]\" to fan out to multiple folders at once"
-                + "<br>Empty = no projectile fires.</html>");
+        target.setToolTipText("<html>Target(s) the projectile flies to.<br>"
+                + "Accepts a name, comma-separated names, <b>folder:Name</b>, or <b>f[F1, F2, ...]</b>.</html>");
     }
 
     /**

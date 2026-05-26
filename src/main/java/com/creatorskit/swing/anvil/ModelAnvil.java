@@ -245,11 +245,11 @@ public class ModelAnvil extends JPanel
         lightingSpinners[3] = lightYSpinner;
         lightingSpinners[4] = lightZSpinner;
 
-        ambSpinner.setToolTipText("<html>Set the ambient lighting level<br>Range: -1000 to 1000</html>");
-        conSpinner.setToolTipText("<html>Set the lighting contrast (higher is lower)<br>Range: 100 to 9999</html>");
-        lightXSpinner.setToolTipText("<html>Set the sun's x coordinate relative to the player<br>Range: -1000 to 1000</html>");
-        lightYSpinner.setToolTipText("<html>Set the sun's y coordinate relative to the player<br>Range: -1000 to 1000</html>");
-        lightZSpinner.setToolTipText("<html>Set the sun's z coordinate relative to the player<br>Range: -1000 to 1000</html>");
+        ambSpinner.setToolTipText("Set the ambient lighting level.");
+        conSpinner.setToolTipText("Set the lighting contrast. Higher = lower contrast.");
+        lightXSpinner.setToolTipText("Set the sun's X position relative to the player.");
+        lightYSpinner.setToolTipText("Set the sun's Y position relative to the player.");
+        lightZSpinner.setToolTipText("Set the sun's Z position relative to the player.");
 
         presetComboBox.addItem(LightingStyle.DEFAULT);
         presetComboBox.addItem(LightingStyle.ACTOR);

@@ -22,9 +22,7 @@ public class OriAttributes extends Attributes
     public OriAttributes()
     {
         addChangeListeners();
-        targetCharacterName.setToolTipText("<html>Optional Character name to face while this orientation keyframe is active."
-                + "<br>The Object snaps to face that Character every tick."
-                + "<br>Leave empty to use the start/end/duration angles below.</html>");
+        targetCharacterName.setToolTipText("Face this Character every tick. Leave empty to use the angle / duration / turn rate below.");
     }
 
     /**

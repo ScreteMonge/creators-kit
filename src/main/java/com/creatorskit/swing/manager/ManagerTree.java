@@ -1096,9 +1096,6 @@ public class ManagerTree extends JTree
         // mutual-exclusion + sidebar-checkbox sync.
         JCheckBoxMenuItem cameraLock = new JCheckBoxMenuItem("Lock camera to this character");
         cameraLock.setSelected(plugin.getCameraLockedCharacter() == character);
-        cameraLock.setToolTipText("<html>Locks the camera onto this Character so it follows them"
-                + " through movement keyframes,<br>just like the default game camera follows the local"
-                + " player. Re-click to release.</html>");
         cameraLock.addActionListener(e -> plugin.setCameraLockedCharacter(character));
         popup.add(cameraLock);
 

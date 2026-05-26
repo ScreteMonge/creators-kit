@@ -242,8 +242,7 @@ public class CreatorsPanel extends PluginPanel
         c.gridx = 0;
         c.gridy++;
         stepSpeedLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        stepSpeedLabel.setToolTipText("<html>Speed used when adding a new movement step."
-                + "<br>Hold the Add Program Step hotkey and scroll up/down to change in 0.5 increments.</html>");
+        stepSpeedLabel.setToolTipText("<html>Speed for new movement steps. Hold the Add Program Step hotkey and scroll to adjust.</html>");
         add(stepSpeedLabel, c);
 
         // Switched from hardcoded gridy values to c.gridy++ so subsequent additions
@@ -360,17 +359,12 @@ public class CreatorsPanel extends PluginPanel
 
         JCheckBox renderFixCheckBox = new JCheckBox();
         renderFixCheckBox.setText("Render fix");
-        renderFixCheckBox.setToolTipText("<html>Post-processes the animated model each frame.<br>"
-                + "Toggle this on for cache models whose animations look broken under default rendering.</html>");
+        renderFixCheckBox.setToolTipText("Toggle on if the cache model's animation looks broken.");
         renderFixCheckBox.setFocusable(false);
 
         JCheckBox cameraLockCheckBox = new JCheckBox();
         cameraLockCheckBox.setText("Camera lock");
-        cameraLockCheckBox.setToolTipText("<html>Locks the camera onto this Character so it follows them"
-                + "<br>through their movement keyframes, the same way the default"
-                + "<br>game camera follows the local player. Switches the camera into"
-                + "<br>free-camera mode while engaged; restores the previous mode on release."
-                + "<br>Only one Character can be locked at a time -- locking another auto-unlocks this one.</html>");
+        cameraLockCheckBox.setToolTipText("Lock the camera to this Character. Only one Character at a time.");
         cameraLockCheckBox.setFocusable(false);
 
         JButton colourButton = new JButton();
@@ -1854,11 +1848,7 @@ public class CreatorsPanel extends PluginPanel
         JSpinner countMaxSpinner = new JSpinner(new SpinnerNumberModel(2, 0, 100, 1));
         JSpinner shiftThresholdSpinner = new JSpinner(new SpinnerNumberModel(1.0, 0.0, 100000.0, 1.0));
         JCheckBox collisionCheck = new JCheckBox("Collision check (no two stamps on the same tile)", true);
-        collisionCheck.setToolTipText("<html>When on, every stamp picks a tile that hasn't been used yet in this Run.<br>"
-                + "If the pool is exhausted the Run stops early. Mirrors Scatter's<br>"
-                + "non-overlap planner so a finite tile area can't be flooded with<br>"
-                + "stacked stamps. Turn off if you DO want stacking (e.g. ramping<br>"
-                + "intensity at the same tile across multiple ticks).</html>");
+        collisionCheck.setToolTipText("Prevent two stamps from landing on the same tile. Uncheck to allow stacking.");
 
         JPanel form = new JPanel(new GridLayout(0, 2, 6, 6));
         form.add(new JLabel("Source folder:"));
