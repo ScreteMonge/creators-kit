@@ -70,6 +70,13 @@ public class GlobalAttributeSheet extends TimeSheet
         return KeyFrameType.getGlobalDisplayIndex(type);
     }
 
+    @Override
+    protected KeyFrameType typeAtRowIndex(int contentRow)
+    {
+        KeyFrameType[] types = KeyFrameType.GLOBAL_KEYFRAME_TYPES_ALPHABETICAL;
+        return (contentRow >= 0 && contentRow < types.length) ? types[contentRow] : null;
+    }
+
     private float pulseAlpha()
     {
         double t = (System.currentTimeMillis() % PULSE_PERIOD_MS) / (double) PULSE_PERIOD_MS;

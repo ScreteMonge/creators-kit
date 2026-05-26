@@ -29,10 +29,14 @@ public enum KeyFrameType
     SCREEN_FADE("Screen Fade","SF"),
     SCREEN_SHAKE("Screen Shake","SK"),
     CAMERA("Camera","CM"),
-    SOUND_1("Sound 1","SD1"),
-    SOUND_2("Sound 2","SD2"),
-    SOUND_3("Sound 3","SD3"),
-    SOUND_4("Sound 4","SD4");
+    // Renamed Sound 1..4 -> Area Sound 1..4 to clarify that these
+    // globals are area-positioned ambient sources, separate from any
+    // future per-Character sound property. Enum value names stay
+    // SOUND_1..4 so persistence + every code reference holds.
+    SOUND_1("Area Sound 1","SD1"),
+    SOUND_2("Area Sound 2","SD2"),
+    SOUND_3("Area Sound 3","SD3"),
+    SOUND_4("Area Sound 4","SD4");
 
     private final String name;
     private final String shortHand;

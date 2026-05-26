@@ -729,6 +729,17 @@ public class TimeSheet extends JPanel
 
     }
 
+    /**
+     * Maps a 0-based content-area row index to its owning
+     * {@link KeyFrameType}. Returns null when the row is a group parent
+     * (no type), or when the index is out of range. Subclasses override
+     * to consult their own row layout (local / global / summary).
+     */
+    protected KeyFrameType typeAtRowIndex(int contentRow)
+    {
+        return null;
+    }
+
     private void setMouseListeners(TimeSheet timeSheet)
     {
         addMouseListener(new MouseAdapter()
@@ -787,6 +798,21 @@ public class TimeSheet extends JPanel
                 {
                     allowRectangleSelect = true;
                     mousePointOnPressed = mousePosition;
+                }
+
+                // Clicking anywhere in a row's lane switches the
+                // AttributePanel card to that row's type. Mirrors the
+                // existing label-click behaviour so users can pick a
+                // property by clicking either the label OR its lane.
+                // The card switch is harmless for marquee-drag follow-
+                // ups; if the click ends up being a kf-click further
+                // down, updateSelectedKeyFrameOnPressed re-switches to
+                // the kf's own type (same call, idempotent).
+                int contentRow = (int) ((mousePosition.getY() + getVScroll() - rowHeightOffset) / rowHeight) - 1;
+                KeyFrameType laneType = typeAtRowIndex(contentRow);
+                if (laneType != null)
+                {
+                    attributePanel.switchCards(laneType.getName());
                 }
 
                 clickedKeyFrames = getKeyFrameClicked(mousePosition);

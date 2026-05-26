@@ -79,6 +79,18 @@ public class AttributeSheet extends TimeSheet
         return getTimeSheetPanel().getLocalRowIndex(type);
     }
 
+    @Override
+    protected KeyFrameType typeAtRowIndex(int contentRow)
+    {
+        java.util.List<com.creatorskit.swing.timesheet.sheets.TimelineLocalRowLayout.Row> visible =
+                getTimeSheetPanel().getLocalRowLayout().visibleRows();
+        if (contentRow < 0 || contentRow >= visible.size()) return null;
+        com.creatorskit.swing.timesheet.sheets.TimelineLocalRowLayout.Row r = visible.get(contentRow);
+        // Parent rows have no type -- clicking their lane shouldn't
+        // switch cards; the chevron toggle on the label handles them.
+        return r.kind == com.creatorskit.swing.timesheet.sheets.TimelineLocalRowLayout.Row.Kind.LEAF ? r.type : null;
+    }
+
     /**
      * Current breathing-pulse alpha in [0.55, 1.0] for the keyframe-selected
      * highlight. Sine wave over {@link #PULSE_PERIOD_MS}, floored at 0.55 so
