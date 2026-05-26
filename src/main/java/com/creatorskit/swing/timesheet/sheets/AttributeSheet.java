@@ -69,12 +69,14 @@ public class AttributeSheet extends TimeSheet
     /**
      * Returns the row index where {@code type} should be drawn, or -1 if
      * {@code type} is a global (which belongs in the GlobalAttributeSheet
-     * instead). Rows are ordered by display name -- see
-     * {@link KeyFrameType#LOCAL_KEYFRAME_TYPES_ALPHABETICAL}.
+     * instead) OR its containing group is currently collapsed (e.g.
+     * HITSPLAT_1..4 when "Hitsplats" is folded shut). Reads from the
+     * TimeSheetPanel's row layout so the order respects the user's
+     * latest collapse / expand toggle.
      */
     private int displayRowIndex(KeyFrameType type)
     {
-        return KeyFrameType.getLocalDisplayIndex(type);
+        return getTimeSheetPanel().getLocalRowIndex(type);
     }
 
     /**

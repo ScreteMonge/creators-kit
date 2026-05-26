@@ -100,8 +100,19 @@ public class TimeSheetPanel extends JPanel
     private static final int ZOOM_MIN = 5;
 
     private final String LABEL_OFFSET = "  ";
-    private JLabel[] labels = new JLabel[0]; // Local-view labels: labels[0] = spacer, labels[1..17] = type rows
+    private JLabel[] labels = new JLabel[0]; // Local-view labels: labels[0] = spacer, labels[1..N] = visible rows in display order
     private JLabel[] globalLabels = new JLabel[0]; // Global-view labels: globalLabels[0] = spacer, globalLabels[1..3] = type rows
+
+    /**
+     * Layout for the local view's row order + collapse state. v1 hosts a
+     * single group ("Hitsplats" -> HITSPLAT_1..4). Mutated by chevron
+     * clicks in the label column; AttributeSheet.displayRowIndex and
+     * AttributePanel's label-highlight lookup both read from here.
+     */
+    @Getter
+    private final com.creatorskit.swing.timesheet.sheets.TimelineLocalRowLayout localRowLayout =
+            new com.creatorskit.swing.timesheet.sheets.TimelineLocalRowLayout();
+    private static final String CONFIG_KEY_COLLAPSED_GROUPS = "collapsedTimelineGroups";
 
     private double zoom = 50;
     private double hScroll = 0;
@@ -2708,6 +2719,12 @@ public class TimeSheetPanel extends JPanel
      */
     private JLabel[] buildLabelColumn(JScrollPane scrollPane, TimeSheet bodySheet, KeyFrameType[] types, boolean ownsToggleButton)
     {
+        // Local view drives its row order through the TimelineLocalRowLayout
+        // (currently inserts a "Hitsplats" collapsible parent over
+        // HITSPLAT_1..4). Global keeps the flat types[] pass-through since
+        // it has no grouping concept yet.
+        boolean isLocalView = (types == KeyFrameType.LOCAL_KEYFRAME_TYPES_ALPHABETICAL);
+
         JPanel labelPanel = new JPanel();
         labelPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         labelPanel.setLayout(new BoxLayout(labelPanel, BoxLayout.Y_AXIS));
@@ -2736,7 +2753,9 @@ public class TimeSheetPanel extends JPanel
         // Body needs to know how many real rows live in the column so it can
         // draw the bottom edge-fade indicator at the right time (only when
         // there is actually content scrolled below the viewport).
-        bodySheet.setContentRowCount(types.length);
+        // Local view's row count depends on collapse state; global stays
+        // flat.
+        bodySheet.setContentRowCount(isLocalView ? localRowLayout.visibleRows().size() : types.length);
 
         scrollPane.addMouseWheelListener(new MouseAdapter()
         {
@@ -2796,75 +2815,185 @@ public class TimeSheetPanel extends JPanel
             this.globalViewToggleButton = toggle;
         }
 
+        if (isLocalView)
+        {
+            // Build via the row layout (group parents + leaves).
+            return rebuildLocalLabelRows(labelPanel, bodySheet);
+        }
+        // Global view: flat list pass-through (existing behaviour).
         JLabel[] result = new JLabel[types.length + 1];
         result[0] = new JLabel(); // dummy for the +1 index alignment
 
         for (int i = 0; i < types.length; i++)
         {
-            JLabel label = new JLabel();
-            label.setFocusable(true);
-            label.setHorizontalAlignment(SwingConstants.RIGHT);
-            label.setOpaque(true);
-            label.setPreferredSize(new Dimension(LABEL_COL_WIDTH, 24));
-            label.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
-            label.setAlignmentX(Component.LEFT_ALIGNMENT);
-            label.setBackground(i == 0 ? ColorScheme.MEDIUM_GRAY_COLOR : ColorScheme.DARKER_GRAY_COLOR);
-            // 18px right padding so the AS_NEEDED vertical scrollbar in
-            // the labels column (~14px wide depending on L&F) doesn't
-            // cover the right-aligned property text. Left padding kept
-            // minimal because the text aligns to the right edge.
-            label.setBorder(new EmptyBorder(0, 4, 0, 18));
-            label.setText(types[i].getName() + LABEL_OFFSET);
+            JLabel label = makeRowLabel(types[i].getName(), false, null, false);
+            result[i + 1] = label;
+            labelPanel.add(label);
+        }
+        return result;
+    }
 
+    /**
+     * Populates the local-view label column based on the current
+     * {@link #localRowLayout} state. Removes any previously-added label
+     * rows from {@code labelPanel} (keeping the toggle button at index 0)
+     * and rebuilds them. Returns the new label array.
+     *
+     * <p>Called from {@link #buildLabelColumn} at panel construction and
+     * from {@link #onToggleLocalGroup} whenever the user clicks the
+     * collapse chevron on a group parent.
+     */
+    private JLabel[] rebuildLocalLabelRows(JPanel labelPanel, TimeSheet bodySheet)
+    {
+        // Strip all label rows below the toggle button header
+        // (labelPanel.getComponent(0) is the viewToggleButton).
+        while (labelPanel.getComponentCount() > 1)
+        {
+            labelPanel.remove(1);
+        }
+
+        java.util.List<com.creatorskit.swing.timesheet.sheets.TimelineLocalRowLayout.Row> visible =
+                localRowLayout.visibleRows();
+        JLabel[] result = new JLabel[visible.size() + 1];
+        result[0] = new JLabel(); // dummy for the +1 spacer-row index alignment
+
+        for (int i = 0; i < visible.size(); i++)
+        {
+            com.creatorskit.swing.timesheet.sheets.TimelineLocalRowLayout.Row row = visible.get(i);
+            boolean isParent = row.kind == com.creatorskit.swing.timesheet.sheets.TimelineLocalRowLayout.Row.Kind.GROUP_PARENT;
+            String parentGroup = isParent ? row.groupName : null;
+            JLabel label = makeRowLabel(row.displayName(), isParent, parentGroup, row.isGroupChild);
+            result[i + 1] = label;
+            labelPanel.add(label);
+        }
+
+        bodySheet.setContentRowCount(visible.size());
+        labelPanel.revalidate();
+        labelPanel.repaint();
+        bodySheet.repaint();
+        return result;
+    }
+
+    /**
+     * Constructs a single label row. Branches by row kind:
+     * <ul>
+     *   <li>{@code parentGroup != null}: collapsible group parent row.
+     *       Renders a chevron prefix ({@code ▾} expanded / {@code ▸}
+     *       collapsed) and toggles the group on click.</li>
+     *   <li>{@code isChildOfGroup}: a leaf row that lives under a group.
+     *       Renders with a left-edge indent so the parent / child
+     *       relationship reads visually.</li>
+     *   <li>Otherwise: a plain leaf row (existing CTRL+click +
+     *       card-switch behaviour).</li>
+     * </ul>
+     */
+    private JLabel makeRowLabel(String displayName, boolean isParent, String parentGroup, boolean isChildOfGroup)
+    {
+        JLabel label = new JLabel();
+        label.setFocusable(true);
+        label.setHorizontalAlignment(SwingConstants.RIGHT);
+        label.setOpaque(true);
+        label.setPreferredSize(new Dimension(LABEL_COL_WIDTH, 24));
+        label.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
+        label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        label.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        // 18px right padding so the AS_NEEDED vertical scrollbar in the
+        // labels column doesn't cover the right-aligned property text.
+        label.setBorder(new EmptyBorder(0, 4, 0, 18));
+
+        if (isParent)
+        {
+            String chevron = localRowLayout.isCollapsed(parentGroup) ? "▸ " : "▾ ";
+            label.setText(chevron + displayName + LABEL_OFFSET);
+            final String groupNameFinal = parentGroup;
             label.addMouseListener(new MouseAdapter()
             {
                 @Override
                 public void mousePressed(MouseEvent e)
                 {
                     super.mousePressed(e);
-                    String name = label.getText().replaceAll(LABEL_OFFSET, "");
-                    if (e.isControlDown())
-                    {
-                        // CTRL+click on a property label: bulk-toggle every
-                        // keyframe of that property across selected Characters
-                        // (or globals from the central store). Mirrors the
-                        // manager tree CTRL multi-select model -- a click on
-                        // an already-fully-selected group deselects it; on a
-                        // partly / not selected group adds the missing ones.
-                        // Also switch the card so the user lands on the
-                        // attribute panel for the property they just acted on.
-                        KeyFrameType type = null;
-                        for (KeyFrameType t : KeyFrameType.values())
-                        {
-                            if (t.getName().equals(name)) { type = t; break; }
-                        }
-                        if (type != null)
-                        {
-                            toggleSelectAllOfProperty(type);
-                            attributePanel.switchCards(name);
-                        }
-                        label.requestFocusInWindow();
-                        return;
-                    }
-                    attributePanel.switchCards(name);
+                    onToggleLocalGroup(groupNameFinal);
                     label.requestFocusInWindow();
                 }
             });
-
-            label.addKeyListener(new KeyAdapter()
-            {
-                @Override
-                public void keyReleased(KeyEvent e)
-                {
-                    if (e.getKeyCode() == KeyEvent.VK_DOWN) scrollAttributePanel(1);
-                    if (e.getKeyCode() == KeyEvent.VK_UP) scrollAttributePanel(-1);
-                }
-            });
-
-            result[i + 1] = label;
-            labelPanel.add(label);
+            return label;
         }
-        return result;
+
+        // Leaf row (with optional group-child indent so the parent /
+        // child relationship reads from the column without a real branch
+        // line).
+        String indent = isChildOfGroup ? "    " : "";
+        label.setText(indent + displayName + LABEL_OFFSET);
+        label.addMouseListener(new MouseAdapter()
+        {
+            @Override
+            public void mousePressed(MouseEvent e)
+            {
+                super.mousePressed(e);
+                String name = label.getText().replaceAll(LABEL_OFFSET, "").trim();
+                if (e.isControlDown())
+                {
+                    // CTRL+click on a property label: bulk-toggle every
+                    // keyframe of that property across selected Characters
+                    // (or globals from the central store).
+                    KeyFrameType type = null;
+                    for (KeyFrameType t : KeyFrameType.values())
+                    {
+                        if (t.getName().equals(name)) { type = t; break; }
+                    }
+                    if (type != null)
+                    {
+                        toggleSelectAllOfProperty(type);
+                        attributePanel.switchCards(name);
+                    }
+                    label.requestFocusInWindow();
+                    return;
+                }
+                attributePanel.switchCards(name);
+                label.requestFocusInWindow();
+            }
+        });
+        label.addKeyListener(new KeyAdapter()
+        {
+            @Override
+            public void keyReleased(KeyEvent e)
+            {
+                if (e.getKeyCode() == KeyEvent.VK_DOWN) scrollAttributePanel(1);
+                if (e.getKeyCode() == KeyEvent.VK_UP) scrollAttributePanel(-1);
+            }
+        });
+        return label;
+    }
+
+    /**
+     * Toggle a local-view group's collapse state, rebuild the label
+     * column, and repaint. Wired to the group parent row's mouse
+     * listener.
+     */
+    private void onToggleLocalGroup(String groupName)
+    {
+        localRowLayout.toggleCollapsed(groupName);
+        // Find the local label scroll pane via the labels array's first
+        // component's parent. Simpler: walk attributeSheet's panel
+        // ancestor chain. We stashed the JPanel inside labelScrollPane
+        // when it was created; pull it back here.
+        java.awt.Container labelPanel = (java.awt.Container) labelScrollPane.getViewport().getView();
+        this.labels = rebuildLocalLabelRows((JPanel) labelPanel, attributeSheet);
+        // The attribute panel's selected-row highlight relies on the
+        // labels array; refresh it so the right label stays highlighted
+        // after the rebuild.
+        if (attributePanel != null) attributePanel.refreshKeyFrameSelectionState();
+    }
+
+    /**
+     * Returns the visible-row index for {@code type} in the local view
+     * (i.e. zero-based position in the label column ignoring the spacer
+     * header). -1 if the type is globally-owned or its containing group
+     * is collapsed -- callers use that as a "skip drawing" signal.
+     */
+    public int getLocalRowIndex(KeyFrameType type)
+    {
+        return localRowLayout.rowIndexOf(type);
     }
 
     private void setupScrollBar()
