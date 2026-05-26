@@ -1040,7 +1040,6 @@ public class ManagerTree extends JTree
         popup.addSeparator();
 
         JMenuItem rename = new JMenuItem("Rename...");
-        rename.setToolTipText("Edit this Character's display name.");
         rename.addActionListener(e -> promptRenameCharacter(character));
         popup.add(rename);
 
@@ -1114,10 +1113,6 @@ public class ManagerTree extends JTree
                 : (DefaultMutableTreeNode) characterNode.getParent();
         boolean parentIsFolder = parent != null && parent.getUserObject() instanceof Folder;
         JMenuItem collapseParent = new JMenuItem("Collapse parent folder");
-        collapseParent.setToolTipText(parentIsFolder
-                ? "Close \"" + ((Folder) parent.getUserObject()).getName()
-                        + "\" and every nested subfolder."
-                : "This Character sits at the tree root -- no parent folder to collapse.");
         collapseParent.setEnabled(parentIsFolder);
         if (parentIsFolder)
         {
@@ -1127,7 +1122,6 @@ public class ManagerTree extends JTree
         popup.add(collapseParent);
 
         JMenuItem deselect = new JMenuItem("Deselect");
-        deselect.setToolTipText("Clear the current selection. Useful for stepping out of multi-select without picking another Character.");
         deselect.addActionListener(e ->
         {
             selectionManager.clear();
@@ -1243,7 +1237,6 @@ public class ManagerTree extends JTree
         popup.addSeparator();
 
         JMenuItem rename = new JMenuItem("Rename...");
-        rename.setToolTipText("Edit this folder's display name.");
         rename.addActionListener(e -> promptRenameFolder(folderNode, folder));
         popup.add(rename);
 
@@ -1281,9 +1274,6 @@ public class ManagerTree extends JTree
         popup.addSeparator();
 
         JMenuItem randomSelect = new JMenuItem("Select N random Characters...");
-        randomSelect.setToolTipText("<html>Replace current selection with N randomly-picked direct children<br>"
-                + "of this folder (subfolders ignored). Useful for sampling a subset<br>"
-                + "before fanning out a keyframe edit.</html>");
         if (directChildren.isEmpty())
         {
             randomSelect.setEnabled(false);
@@ -1304,12 +1294,10 @@ public class ManagerTree extends JTree
         // directly so the visual state matches what right-click-then-arrow-keys
         // would produce.
         JMenuItem collapse = new JMenuItem("Collapse");
-        collapse.setToolTipText("Close this folder and every nested subfolder.");
         collapse.addActionListener(e -> setFolderExpanded(folderNode, false));
         popup.add(collapse);
 
         JMenuItem expand = new JMenuItem("Expand");
-        expand.setToolTipText("Open this folder and every nested subfolder.");
         expand.addActionListener(e -> setFolderExpanded(folderNode, true));
         popup.add(expand);
 

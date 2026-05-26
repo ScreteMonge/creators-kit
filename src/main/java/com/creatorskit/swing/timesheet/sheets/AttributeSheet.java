@@ -1031,9 +1031,8 @@ public class AttributeSheet extends TimeSheet
         }
         else
         {
-            selectAB = new JMenuItem("Select keyframes between A-B");
+            selectAB = new JMenuItem("Select keyframes between A-B (drop A and B first)");
             selectAB.setEnabled(false);
-            selectAB.setToolTipText("Drop both A and B markers first (Tools > A-B Loop, or shortcut).");
         }
         menu.add(selectAB);
 
@@ -1046,7 +1045,6 @@ public class AttributeSheet extends TimeSheet
         if (tsp.canReduceSelectionToKeyFrameOwners())
         {
             JMenuItem reduce = new JMenuItem("Reduce selection to keyframe owners");
-            reduce.setToolTipText("Drop any Characters from the multi-selection that don't own one of the currently-selected keyframes. Keyframe selection is unchanged.");
             reduce.addActionListener(e -> tsp.reduceSelectionToKeyFrameOwners());
             menu.add(reduce);
         }
@@ -1085,7 +1083,6 @@ public class AttributeSheet extends TimeSheet
         // Ripple Insert: counterpart to Ripple Delete. Inserts empty ticks
         // at the playhead and pushes every later keyframe forward.
         JMenuItem rippleInsert = new JMenuItem("Ripple Insert... (at playhead)");
-        rippleInsert.setToolTipText("Insert N empty ticks at the playhead; everything after shifts forward.");
         rippleInsert.addActionListener(e -> tsp.showRippleInsertDialogAtPlaybar());
         menu.add(rippleInsert);
 

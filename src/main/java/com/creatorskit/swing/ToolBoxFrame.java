@@ -430,31 +430,22 @@ public class ToolBoxFrame extends JFrame
         JMenu abLoop = new JMenu("A-B Loop");
         tools.add(abLoop);
 
+        // Per STRINGS_STYLE.md: menu items carry NO tooltips. The label is
+        // the doc; deeper explanation lives in the dialog the item opens.
         JMenuItem clearAB = new JMenuItem("Clear A-B Loop");
-        clearAB.setToolTipText("<html>Remove both A and B markers. Markers can also be removed individually<br>"
-                + "by clicking the X drawn on each marker chip in the timeline.</html>");
         clearAB.addActionListener(e -> timeSheetPanel.clearABLoop());
         abLoop.add(clearAB);
 
         JMenuItem setA = new JMenuItem("Set A marker at current tick");
-        setA.setToolTipText("<html>Sets the red A marker (loop start) at the current playhead tick.<br>"
-                + "Playback loops from A to B; if only B is set, A defaults to tick 0.</html>");
         setA.addActionListener(e -> timeSheetPanel.setALoopTick(timeSheetPanel.getCurrentTime()));
         abLoop.add(setA);
 
         JMenuItem setB = new JMenuItem("Set B marker at current tick");
-        setB.setToolTipText("<html>Sets the blue B marker (loop end) at the current playhead tick.<br>"
-                + "Playback pauses for 1 game tick at B before jumping back to A to avoid<br>"
-                + "load spikes from re-seeding everything at once.</html>");
         setB.addActionListener(e -> timeSheetPanel.setBLoopTick(timeSheetPanel.getCurrentTime()));
         abLoop.add(setB);
 
         // --- Hide GameObjects... (single-item, stays at root) ----------
         JMenuItem hideObjects = new JMenuItem("Hide GameObjects...");
-        hideObjects.setToolTipText("<html>Manage the list of in-game GameObjects suppressed from rendering.<br>"
-                + "Add via right-click &gt; Hide on any object; this dialog lets you<br>"
-                + "review the list and unhide entries you've added. Limited to<br>"
-                + "GameObjects (walls / decorations need a different mechanism).</html>");
         hideObjects.addActionListener(e -> plugin.showHideGameObjectsDialog());
         tools.add(hideObjects);
 
@@ -471,12 +462,6 @@ public class ToolBoxFrame extends JFrame
         // the Keyframes submenu is opened so the gate reflects the
         // current marquee without listening for every selection event.
         JMenuItem createBlock = new JMenuItem("Create Block...");
-        createBlock.setToolTipText("<html>Group the currently marquee-selected keyframes into a named, coloured<br>"
-                + "block (Premiere nested-clip equivalent). Requires at least 2 keyframes<br>"
-                + "and that for every property type in the selection, every keyframe of<br>"
-                + "that type in the selection's tick range is also included.<br>"
-                + "Per-Character: each selected Character gets its own block from its share<br>"
-                + "of the marquee.</html>");
         createBlock.addActionListener(e -> timeSheetPanel.showCreateBlockDialog());
         keyframesMenu.addMenuListener(new javax.swing.event.MenuListener()
         {
@@ -490,44 +475,18 @@ public class ToolBoxFrame extends JFrame
         keyframesMenu.add(createBlock);
 
         JMenuItem iterateFields = new JMenuItem("Iterate field values...");
-        iterateFields.setToolTipText("<html>Sliding-window iterator: write slices of a value sequence into<br>"
-                + "the same field on each of the currently-selected keyframes,<br>"
-                + "in tick order. v2 supports Projectile.Target, scalar bar fields<br>"
-                + "(Special / Shield / Health Current/Max/Duration/Order/Width),<br>"
-                + "Animation / Model / Orientation scalars, and Hitsplat damage.<br>"
-                + "Arithmetic source generates start + i*step sequences for<br>"
-                + "decrement / ramp use cases.</html>");
         iterateFields.addActionListener(e -> timeSheetPanel.showIterateFieldDialog());
         keyframesMenu.add(iterateFields);
 
         JMenuItem repeatSelection = new JMenuItem("Repeat selection...");
-        repeatSelection.setToolTipText("<html>Paste N copies of the currently-selected keyframes,<br>"
-                + "each starting immediately after the previous block's end<br>"
-                + "(tick of the latest selected kf + its duration), optionally<br>"
-                + "spaced by a gap of M ticks. Works across multiple Characters<br>"
-                + "-- each kf's copy goes to its own owner. Counterpart to<br>"
-                + "Scatter when you want a perfectly regular repetition<br>"
-                + "instead of a random spread.</html>");
         repeatSelection.addActionListener(e -> timeSheetPanel.showRepeatSelectionDialog());
         keyframesMenu.add(repeatSelection);
 
-        JMenuItem rippleDelete = new JMenuItem("Ripple Delete keyframes...");
-        rippleDelete.setToolTipText("<html>Remove every keyframe in [from, to] for the chosen scope, then<br>"
-                + "shift everything after the deleted span back by (to - from + 1)<br>"
-                + "so the gap collapses. Scope picks one property or all. Targets<br>"
-                + "are the multi-selected Characters if any, else the primary.<br>"
-                + "Globals (Camera / Fade / Shake) can be targeted by picking<br>"
-                + "their name as the scope -- no Character needed.</html>");
+        JMenuItem rippleDelete = new JMenuItem("Ripple Delete...");
         rippleDelete.addActionListener(e -> timeSheetPanel.showRippleDeleteDialog(0.0, 0.0, null));
         keyframesMenu.add(rippleDelete);
 
         JMenuItem rippleInsert = new JMenuItem("Ripple Insert...");
-        rippleInsert.setToolTipText("<html>Insert N empty ticks at the playhead. Every keyframe with<br>"
-                + "tick > playhead shifts forward by N. Keyframes at the playhead<br>"
-                + "exactly stay put (the gap opens to their right). Targets are<br>"
-                + "the multi-selected Characters if any, else the primary,<br>"
-                + "plus globals (Camera / Fade / Shake) from the central store.<br>"
-                + "Counterpart to Ripple Delete.</html>");
         rippleInsert.addActionListener(e -> timeSheetPanel.showRippleInsertDialog());
         keyframesMenu.add(rippleInsert);
 
@@ -540,20 +499,10 @@ public class ToolBoxFrame extends JFrame
         tools.add(layout);
 
         JMenuItem fillRect = new JMenuItem("Fill Rectangle...");
-        fillRect.setToolTipText("<html>With exactly 2 Characters selected as opposite corners, fill the<br>"
-                + "rectangle between them with duplicates of those Characters on every<br>"
-                + "tile (alternating checkerboard by tile parity). Stride spinner lets<br>"
-                + "you skip tiles for sparse fills. Duplicates land in a new folder so<br>"
-                + "you can collapse / select / delete them as a group.</html>");
         fillRect.addActionListener(e -> plugin.getCreatorsPanel().showFillRectangleDialog());
         layout.add(fillRect);
 
         JMenuItem hazardGrid = new JMenuItem("Random Hazard Grid...");
-        hazardGrid.setToolTipText("<html>Stamps copies of a folder (the directly-selected one in the manager tree)<br>"
-                + "across a rectangular tile area, advancing the timeline step by step.<br>"
-                + "Each stamp clones every Character in the folder at a random tile and<br>"
-                + "shifts its keyframes by the step tick. Useful for randomised choreographed<br>"
-                + "effects like ground-hazard grids in boss simulations.</html>");
         hazardGrid.addActionListener(e -> plugin.getCreatorsPanel().showRandomHazardGridDialog());
         layout.add(hazardGrid);
 
@@ -565,22 +514,14 @@ public class ToolBoxFrame extends JFrame
         tools.add(random);
 
         JMenuItem jitter = new JMenuItem("Jitter keyframe ticks...");
-        jitter.setToolTipText("<html>For every selected Character, shift each keyframe of the chosen<br>"
-                + "type by a uniform random delta in [-max, +max]. Useful for de-syncing<br>"
-                + "identical setups -- e.g. rain raindrops sharing the same spawn tick.</html>");
         jitter.addActionListener(e -> timeSheetPanel.showJitterDialog());
         random.add(jitter);
 
         JMenuItem randomSelect = new JMenuItem("Random Select...");
-        randomSelect.setToolTipText("<html>Replace selection with N randomly-picked direct children of<br>"
-                + "the currently-selected folder. Click a folder in the Manager Tree first.</html>");
         randomSelect.addActionListener(e -> managerPanel.getManagerTree().selectRandomFromActiveFolder());
         random.add(randomSelect);
 
         JMenuItem scatter = new JMenuItem("Scatter keyframe ticks...");
-        scatter.setToolTipText("<html>For every selected Character, SET each keyframe of the chosen<br>"
-                + "type to a uniform random tick in [from, to]. Useful for distributing<br>"
-                + "events across a time window without anchoring to existing ticks.</html>");
         scatter.addActionListener(e -> timeSheetPanel.showScatterDialog());
         random.add(scatter);
 
@@ -618,9 +559,6 @@ public class ToolBoxFrame extends JFrame
         help.addSeparator();
 
         JMenuItem debugLogging = new JMenuItem("Debug logging...");
-        debugLogging.setToolTipText("<html>Print Movement / Orientation diagnostic logs for a specific Character.<br>"
-                + "Logs go to the RuneLite log file (and IntelliJ console when running from source).<br>"
-                + "Helpful when reporting a kf-related bug -- copy the output and share it.</html>");
         debugLogging.addActionListener(e -> showDebugLoggingDialog());
         help.add(debugLogging);
 
