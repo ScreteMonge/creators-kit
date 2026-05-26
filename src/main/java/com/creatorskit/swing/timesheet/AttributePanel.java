@@ -2329,7 +2329,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 3;
         JSpinner turnRate = movementAttributes.getTurnRate();
-        turnRate.setToolTipText("Determines the rate at which the Object rotates during movement in JUnits/clientTick");
+        turnRate.setToolTipText("Set how fast the Object rotates during movement.");
         turnRate.setModel(new SpinnerNumberModel(OrientationKeyFrame.TURN_RATE, 0, 2048, 1));
         card.add(turnRate, c);
 
@@ -2396,7 +2396,7 @@ public class AttributePanel extends JPanel
         c.gridx = 2;
         c.gridy = 1;
         JButton randomize = new JButton("Random");
-        randomize.setToolTipText("Sets a random starting frame between 0 to the maximum number of frames for the animation that is currently playing");
+        randomize.setToolTipText("Pick a random starting frame for the current animation.");
         card.add(randomize, c);
 
         c.gridx = 0;
@@ -2448,7 +2448,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 4;
         JSpinner manual = animAttributes.getActive();
-        manual.setToolTipText("Set the Active animation. This animation overrides the Pose animation, and should be used when performing an action like an attack or emote");
+        manual.setToolTipText("Set the active animation. Overrides the Pose animation.");
         manual.setModel(new SpinnerNumberModel(-1, -1, 99999, 1));
         manual.setPreferredSize(spinnerSize);
         card.add(manual, c);
@@ -2493,7 +2493,7 @@ public class AttributePanel extends JPanel
         c.gridx = 5;
         c.gridy = 1;
         JSpinner animSpeed = animAttributes.getSpeed();
-        animSpeed.setToolTipText("Animation playback-rate multiplier. 1.0 = native speed, 2.0 = double speed, 0.5 = half speed. Range 0.25..4.0, 0.05 increments. Applies to both the Active and Pose animations on this keyframe.");
+        animSpeed.setToolTipText("Scale animation playback speed. 1.0 = native, 2.0 = double, 0.5 = half.");
         animSpeed.setModel(new SpinnerNumberModel(AnimationKeyFrame.DEFAULT_SPEED, 0.25, 4.0, 0.05));
         card.add(animSpeed, c);
 
@@ -3099,7 +3099,7 @@ public class AttributePanel extends JPanel
         c.gridx = 3;
         c.gridy = 1;
         JSpinner end = oriAttributes.getEnd();
-        end.setToolTipText("Set the orientation the KeyFrame will rotate toward (interpolates from the Character's live orientation at activation)");
+        end.setToolTipText("Set the orientation to rotate toward.");
         end.setModel(new SpinnerNumberModel(0, 0, 2048, 1));
         end.setPreferredSize(spinnerSize);
         card.add(end, c);
@@ -3135,15 +3135,12 @@ public class AttributePanel extends JPanel
         // only one that anyone occupied, so it stole all the leftover width
         // and pushed Turn Rate to the far right of the card.
         JSpinner duration = oriAttributes.getDuration();
-        duration.setToolTipText("<html>Set the duration for how long the Object will attempt to point towards its End orientation"
-                + "<br>If the Object reaches the End orientation, it will remain in that state until the Duration is over,"
-                + "<br>regardless of its movement trajectory</html>");
+        duration.setToolTipText("Set how long (in ticks) the Object aims toward End.");
         duration.setModel(new SpinnerNumberModel(1.0, 0, TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH, 0.1));
         duration.setPreferredSize(spinnerSize);
 
         JSpinner turnRate = oriAttributes.getTurnRate();
-        turnRate.setToolTipText("<html>Determines the rate at which the Object rotates in JUnits/clientTick"
-                + "<br>Fractional values supported (precision down to 0.001).</html>");
+        turnRate.setToolTipText("Set how fast the Object rotates. Fractional values supported.");
         // (double) cast on TURN_RATE used to disambiguate the int / double
         // SpinnerNumberModel overloads; now that the other args are
         // double literals (0.0, 2048.0, 0.1) Java picks the double ctor
@@ -3266,9 +3263,9 @@ public class AttributePanel extends JPanel
             turnDirCombo.addItem(td);
         }
         turnDirCombo.setSelectedItem(com.creatorskit.swing.timesheet.keyframe.TurnDirection.AUTO);
-        turnDirCombo.setToolTipText("<html><b>Auto</b>: shortest path (legacy behaviour)."
-                + "<br><b>Clockwise</b>: always rotate CW (increasing jagex), takes the long way around if needed."
-                + "<br><b>Counter-clockwise</b>: always rotate CCW (decreasing jagex), takes the long way around if needed.</html>");
+        turnDirCombo.setToolTipText("<html>Pick the rotation direction.<br>"
+                + "<b>Auto</b> takes the shortest path; <b>Clockwise</b> / <b>Counter-clockwise</b> force the direction "
+                + "and take the long way around if needed.</html>");
         card.add(turnDirCombo, c);
 
         // Row 5: Face target -- the override row.
@@ -3299,9 +3296,7 @@ public class AttributePanel extends JPanel
         c.anchor = GridBagConstraints.CENTER;
         com.creatorskit.swing.timesheet.attributes.CompassPanel compass =
                 new com.creatorskit.swing.timesheet.attributes.CompassPanel(COMPASS, start, end);
-        compass.setToolTipText("<html>Click any of the 8 directions to set <b>End</b> (red line)."
-                + "<br>The faint <b>green</b> line shows the kf's Start angle -- snapshotted from the"
-                + "<br>Character's live orientation when the kf activates. Read-only.</html>");
+        compass.setToolTipText("Click a direction to set End (red line). Green line shows the snapshotted Start angle.");
         card.add(compass, c);
         // Reset GridBag fill so any future rows added downstream don't inherit NONE/CENTER.
         c.fill = GridBagConstraints.HORIZONTAL;
@@ -3511,7 +3506,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 1;
         JComboBox<ModelToggle> modelOverride = modelAttributes.getModelOverride();
-        modelOverride.setToolTipText("Set whether to use a 3D model based on Model Id, or a Custom Model found via this plugin");
+        modelOverride.setToolTipText("Pick a cache Model ID or a Custom Model.");
         modelOverride.setFocusable(false);
         modelOverride.addItem(ModelToggle.CUSTOM_MODEL);
         modelOverride.addItem(ModelToggle.MODEL_ID);
@@ -3877,7 +3872,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 5;
         JSpinner orderSpinner = healthAttributes.getOrder();
-        orderSpinner.setToolTipText("Position in the HP/Shield/Special stack (0 = topmost, higher = lower). Default 0 keeps HP at the top.");
+        orderSpinner.setToolTipText("Set stack position. 0 = topmost, higher = lower.");
         orderSpinner.setModel(new SpinnerNumberModel(HealthKeyFrame.DEFAULT_ORDER, 0, 9, 1));
         card.add(orderSpinner, c);
 
@@ -3908,10 +3903,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 7;
         JCheckBox syncHitsplatsCheck = healthAttributes.getSyncHitsplats();
-        syncHitsplatsCheck.setToolTipText("<html>When ON (default), hitsplats whose sprite routes to the Health bar<br>"
-                + "automatically create a follow-up Health keyframe at the same tick<br>"
-                + "with their damage subtracted. Turn OFF to lock this Health bar<br>"
-                + "against incoming hitsplats so the bar stays at its declared value.</html>");
+        syncHitsplatsCheck.setToolTipText("Auto-subtract incoming hitsplats from this Health bar. Uncheck to lock the value.");
         card.add(syncHitsplatsCheck, c);
 
         c.gridwidth = 1;
@@ -3926,11 +3918,7 @@ public class AttributePanel extends JPanel
         c.gridy = 8;
         JSpinner fadeInSpinner = healthAttributes.getFadeInTicks();
         fadeInSpinner.setModel(new SpinnerNumberModel(0.0, 0.0, 100.0, 0.1));
-        fadeInSpinner.setToolTipText("<html><b>Boss healthbar only.</b><br>"
-                + "Fade the bar in over this many ticks at the very start of the bar's lifecycle<br>"
-                + "(= the earliest boss-health keyframe's tick). 0 = no fade, bar snaps in.<br>"
-                + "Sync-created follow-up keyframes inherit this value, so hitsplats don't<br>"
-                + "re-trigger the fade mid-fight.</html>");
+        fadeInSpinner.setToolTipText("<html>Fade the boss bar in over this many ticks. 0 = snap in. <b>Boss healthbar only.</b></html>");
         card.add(fadeInSpinner, c);
 
         c.gridwidth = 1;
@@ -3945,10 +3933,7 @@ public class AttributePanel extends JPanel
         c.gridy = 9;
         JSpinner fadeOutSpinner = healthAttributes.getFadeOutTicks();
         fadeOutSpinner.setModel(new SpinnerNumberModel(0.0, 0.0, 100.0, 0.1));
-        fadeOutSpinner.setToolTipText("<html><b>Boss healthbar only.</b><br>"
-                + "Fade the bar out over this many ticks at the very end of the bar's lifecycle<br>"
-                + "(= max tick+duration across every boss-health keyframe). 0 = no fade,<br>"
-                + "bar snaps out.</html>");
+        fadeOutSpinner.setToolTipText("<html>Fade the boss bar out over this many ticks. 0 = snap out. <b>Boss healthbar only.</b></html>");
         card.add(fadeOutSpinner, c);
 
         c.gridwidth = 1;
@@ -4284,7 +4269,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 1;
         JSpinner duration = attributes.getDuration();
-        duration.setToolTipText("Set the duration, in game ticks, for how long the Hitsplat lasts. -1 sets it to default value, which is 5/3 ticks. Fractional values allowed (0.1 increments).");
+        duration.setToolTipText("Set how long the Hitsplat lasts (in ticks). -1 uses the in-game default.");
         duration.setModel(new SpinnerNumberModel(-1.0, -1.0, 1000000.0, 0.1));
         card.add(duration, c);
 
@@ -4495,7 +4480,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 3;
         JSpinner startHeight = projectileAttributes.getStartHeight();
-        startHeight.setToolTipText("Z height at the source tile when the projectile spawns. Range supports extreme values for bosses like Yama that shoot straight up.");
+        startHeight.setToolTipText("Set the projectile's spawn height above the source tile.");
         startHeight.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_START_HEIGHT, -100000, 100000, 1));
         card.add(startHeight, c);
 
@@ -4517,7 +4502,7 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 4;
         JSpinner slope = projectileAttributes.getSlope();
-        slope.setToolTipText("Arc magnitude — higher = taller arc at the midpoint. Default 15. Large values (10000+) produce the extreme up-and-back-down arcs used by bosses like Yama.");
+        slope.setToolTipText("Set the arc height. Larger = taller arc at the midpoint.");
         slope.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_SLOPE, -100000, 100000, 1));
         card.add(slope, c);
 
@@ -4548,8 +4533,7 @@ public class AttributePanel extends JPanel
         c.gridx = 3;
         c.gridy = 5;
         JSpinner radius = projectileAttributes.getRadius();
-        radius.setToolTipText("<html>Render radius in 1/128-tile units. Scales the projectile model's visible size."
-                + "<br>Default 60 matches the renderer default. Larger = bigger.</html>");
+        radius.setToolTipText("Scale the projectile model's visible size. Larger = bigger.");
         radius.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_RADIUS, 1, 10000, 1));
         card.add(radius, c);
 
@@ -4557,10 +4541,7 @@ public class AttributePanel extends JPanel
         c.gridx = 0;
         c.gridy = 6;
         JCheckBox faceTrajectory = projectileAttributes.getFaceTrajectory();
-        faceTrajectory.setToolTipText("<html>When enabled, the projectile model pitches to follow the trajectory:"
-                + "<br>nose-up while ascending, nose-down while crashing back down."
-                + "<br>Recommended for high-slope arcs (e.g. Yama's overhead barrage) where"
-                + "<br>a fixed-pitch model looks unnatural at the top of the arc.</html>");
+        faceTrajectory.setToolTipText("Pitch the projectile model along its arc (nose-up ascending, nose-down descending).");
         card.add(faceTrajectory, c);
 
         c.gridwidth = 1;
@@ -5125,9 +5106,8 @@ public class AttributePanel extends JPanel
 
         c.gridx = 1;
         c.gridy = 4;
-        ease.setToolTipText("<html>Easing curve from this keyframe to the next."
-                + "<br>Pick <b>Preset 1..6</b> to apply a saved curve directly."
-                + "<br>Pick <b>Custom...</b> to open the spline editor and design / save one.</html>");
+        ease.setToolTipText("<html>Pick the easing curve to the next keyframe. "
+                + "<b>Preset 1..6</b> applies a saved curve; <b>Custom...</b> opens the spline editor.</html>");
         // Populate items: built-ins first, then preset slots, then the
         // dialog trigger. The string-typed combo lets the dropdown carry
         // preset references alongside the enum-typed eases without
@@ -5374,7 +5354,7 @@ public class AttributePanel extends JPanel
         JSpinner id = sa.getSoundId();
         id.setModel(new SpinnerNumberModel(-1, -1, 100000, 1));
         id.setPreferredSize(spinnerSize);
-        id.setToolTipText("Cache sound effect id. -1 = silence (kf does nothing). Browse via Cache Searcher > Sound Searcher.");
+        id.setToolTipText("Set the cache sound effect ID. -1 = silence.");
         card.add(id, c);
 
         c.gridx = 0;
