@@ -4186,8 +4186,14 @@ public class AttributePanel extends JPanel
             {
                 super.mouseClicked(e);
 
-                KeyFrameType spotAnimType = selectedKeyFramePage;
-                if (selectedKeyFramePage != KeyFrameType.SPOTANIM && selectedKeyFramePage != KeyFrameType.SPOTANIM2)
+                // The spotanim search table is shared by three cards:
+                // SpotAnim 1, SpotAnim 2, and Projectile (which uses
+                // spotanim ids for its graphic). Route the double-click
+                // target by the currently-active card.
+                KeyFrameType activeCard = selectedKeyFramePage;
+                if (activeCard != KeyFrameType.SPOTANIM
+                        && activeCard != KeyFrameType.SPOTANIM2
+                        && activeCard != KeyFrameType.PROJECTILE)
                 {
                     return;
                 }
@@ -4199,13 +4205,17 @@ public class AttributePanel extends JPanel
                     {
                         SpotanimData data = (SpotanimData) o;
                         JSpinner id;
-                        if (spotAnimType == KeyFrameType.SPOTANIM)
+                        if (activeCard == KeyFrameType.SPOTANIM)
                         {
                             id = spotAnimAttributes.getSpotAnimId();
                         }
-                        else
+                        else if (activeCard == KeyFrameType.SPOTANIM2)
                         {
                             id = spotAnim2Attributes.getSpotAnimId();
+                        }
+                        else // PROJECTILE
+                        {
+                            id = projectileAttributes.getProjectileId();
                         }
 
                         id.setValue(data.getId());
@@ -4575,12 +4585,60 @@ public class AttributePanel extends JPanel
         faceTrajectory.setToolTipText("Pitch the projectile model along its arc (nose-up ascending, nose-down descending).");
         card.add(faceTrajectory, c);
 
+        // Cache spotanim searcher row. Projectiles use spotanim graphics
+        // under the hood (Programmer.updateProjectiles routes the id
+        // through dataFinder.getSpotAnimData), so the shared spotanim
+        // search table doubles as the projectile picker. The mouse
+        // listener in setupSpotAnimFinder dispatches by
+        // selectedKeyFramePage and writes to the projectileId spinner
+        // when PROJECTILE is the active card.
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 7;
+        JLabel projSearcherLabel = new JLabel("Projectiles: ");
+        projSearcherLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(projSearcherLabel, c);
+
+        c.gridwidth = 3;
+        c.gridx = 1;
+        c.gridy = 7;
+        JTextField projField = new JTextField("");
+        projField.setToolTipText("Search cache spotanims; double-click a name to set Projectile ID.");
+        projField.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        card.add(projField, c);
+
+        KeyListener projListener = new KeyListener()
+        {
+            @Override public void keyTyped(KeyEvent e) {}
+            @Override public void keyPressed(KeyEvent e) {}
+            @Override
+            public void keyReleased(KeyEvent e)
+            {
+                String text = projField.getText();
+                spotanimTable.searchAndListEntries(text);
+                spotanimPopup.setVisible(true);
+                Point p = projField.getLocationOnScreen();
+                spotanimPopup.setLocation(new Point((int) p.getX() + projField.getWidth(), (int) p.getY()));
+            }
+        };
+        projField.addKeyListener(projListener);
+
+        projField.addFocusListener(new FocusListener()
+        {
+            @Override public void focusGained(FocusEvent e) {}
+            @Override
+            public void focusLost(FocusEvent e)
+            {
+                spotanimPopup.setVisible(false);
+            }
+        });
+
         c.gridwidth = 1;
         c.gridheight = 1;
         c.weightx = 1;
         c.weighty = 1;
         c.gridx = 4;
-        c.gridy = 7;
+        c.gridy = 8;
         card.add(new JLabel(""), c);
     }
 
