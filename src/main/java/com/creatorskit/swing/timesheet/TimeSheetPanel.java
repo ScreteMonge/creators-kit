@@ -1789,29 +1789,72 @@ public class TimeSheetPanel extends JPanel
     }
 
     /**
-     * Creates a ProjectileKeyFrame using the selected projectile spotanim's id, anchored
-     * at the current seeker tick on the selected Character. Other ProjectileKeyFrame
-     * fields (target, height, slope, etc.) default to the constants on the class so the
-     * user can edit them in the AttributePanel afterwards.
+     * Nudges the origin (Start X / Start Y / Start Height) of every
+     * targetable projectile keyframe by ({@code dx}, {@code dy},
+     * {@code dz}). Active only when the AttributePanel is currently
+     * showing the Projectile card -- otherwise returns false so the
+     * caller falls back to the regular per-Character nudge.
+     *
+     * <p>Targets resolve via the same rule as edit commits:
+     * marquee-selected projectile kfs win; if none, the seeker
+     * fallback picks the previous projectile kf at the playhead on the
+     * primary Character. The destination tile is untouched -- nudging
+     * only moves the spawn point so the user can align e.g. an arrow's
+     * origin with a bow held in the firing model's hand.
+     *
+     * @return true when projectile mode was active (regardless of
+     *   whether a kf was actually mutated), so the caller skips its
+     *   non-projectile fallback.
      */
-    public void addProjectileKeyFrameFromCache(SpotanimData spotanimData)
+    public boolean tryNudgeProjectileOrigin(int dx, int dy, int dz)
     {
-        if (selectedCharacter == null)
+        if (attributePanel == null) return false;
+        if (attributePanel.getSelectedKeyFramePage() != KeyFrameType.PROJECTILE) return false;
+
+        java.util.List<com.creatorskit.swing.timesheet.keyframe.ProjectileKeyFrame> targets = new java.util.ArrayList<>();
+        for (KeyFrame kf : selectedKeyFrames)
         {
-            return;
+            if (kf instanceof com.creatorskit.swing.timesheet.keyframe.ProjectileKeyFrame)
+            {
+                targets.add((com.creatorskit.swing.timesheet.keyframe.ProjectileKeyFrame) kf);
+            }
+        }
+        // Seeker fallback: the kf the panel is currently showing on the
+        // primary Character.
+        if (targets.isEmpty() && selectedCharacter != null)
+        {
+            KeyFrame fb = selectedCharacter.findPreviousKeyFrame(KeyFrameType.PROJECTILE, currentTime, true);
+            if (fb instanceof com.creatorskit.swing.timesheet.keyframe.ProjectileKeyFrame)
+            {
+                targets.add((com.creatorskit.swing.timesheet.keyframe.ProjectileKeyFrame) fb);
+            }
         }
 
-        ProjectileKeyFrame keyFrame = new ProjectileKeyFrame(
-                plugin.getCurrentTick(),
-                spotanimData.getId(),
-                "",
-                ProjectileKeyFrame.DEFAULT_START_HEIGHT,
-                ProjectileKeyFrame.DEFAULT_END_HEIGHT,
-                ProjectileKeyFrame.DEFAULT_SLOPE,
-                ProjectileKeyFrame.DEFAULT_DURATION,
-                ProjectileKeyFrame.DEFAULT_FACE_TRAJECTORY);
+        if (targets.isEmpty())
+        {
+            // No kf to nudge but the user IS in projectile mode -- still
+            // consume the hotkey so we don't accidentally nudge a
+            // selected Character behind the user's back.
+            return true;
+        }
 
-        addKeyFrameAction(new KeyFrame[]{keyFrame});
+        for (com.creatorskit.swing.timesheet.keyframe.ProjectileKeyFrame p : targets)
+        {
+            p.setStartX(p.getStartX() + dx);
+            p.setStartY(p.getStartY() + dy);
+            p.setStartHeight(p.getStartHeight() + dz);
+        }
+        // Push the new values into the playback path + refresh the
+        // panel so the spinners show the updated numbers.
+        if (toolBox != null && toolBox.getProgrammer() != null)
+        {
+            toolBox.getProgrammer().updatePrograms(currentTime);
+        }
+        if (selectedCharacter != null)
+        {
+            attributePanel.resetAttributes(selectedCharacter, currentTime);
+        }
+        return true;
     }
 
     public void duplicateHitsplatKeyFrame(KeyFrameType previousType, KeyFrameType targetType)

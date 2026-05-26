@@ -45,7 +45,6 @@ public class CacheSearcherTab extends JPanel
     private final String ITEM = "ITEM";
     private final String ANIM = "ANIM";
     private final String SPOTANIM = "SPOTANIM";
-    private final String PROJECTILE = "PROJECTILE";
     private final String SOUND = "SOUND";
     private String currentCard = NPC;
 
@@ -54,7 +53,6 @@ public class CacheSearcherTab extends JPanel
     private final JPanel itemPanel = new JPanel();
     private final JPanel animPanel = new JPanel();
     private final JPanel spotAnimPanel = new JPanel();
-    private final JPanel projectilePanel = new JPanel();
     private final JPanel soundPanel = new JPanel();
 
     private final JPanel previewPanel = new JPanel();
@@ -66,7 +64,6 @@ public class CacheSearcherTab extends JPanel
     private final JFilterableTable itemTable = new JFilterableTable("Items");
     private final JFilterableTable animTable = new JFilterableTable("Animations");
     private final JFilterableTable spotAnimTable = new JFilterableTable("SpotAnims");
-    private final JFilterableTable projectileTable = new JFilterableTable("Projectiles");
     private final JFilterableTable soundTable = new JFilterableTable("Sounds");
     private final JFilterableTable modelTable = new JFilterableTable("Model Id Breakdown");
 
@@ -91,7 +88,6 @@ public class CacheSearcherTab extends JPanel
         setupItemPanel();
         setupAnimPanel();
         setupSpotAnimPanel();
-        setupProjectilePanel();
         setupSoundPanel();
         setupDisplay();
         setupBreakdownTable();
@@ -119,10 +115,6 @@ public class CacheSearcherTab extends JPanel
         JPanel spotAnimCard = new JPanel();
         setupSpotAnimCard(spotAnimCard);
         display.add(spotAnimCard, SPOTANIM);
-
-        JPanel projectileCard = new JPanel();
-        setupProjectileCard(projectileCard);
-        display.add(projectileCard, PROJECTILE);
 
         JPanel animCard = new JPanel();
         setupAnimCard(animCard);
@@ -216,11 +208,7 @@ public class CacheSearcherTab extends JPanel
                     }
                     break;
                 case CACHE_SPOTANIM:
-                    // Either SpotAnim or Projectiles card; resolve from whichever
-                    // table currently has a selection.
-                    Object spotAnim = currentCard.equals(PROJECTILE)
-                            ? projectileTable.getSelectedObject()
-                            : spotAnimTable.getSelectedObject();
+                    Object spotAnim = spotAnimTable.getSelectedObject();
                     if (spotAnim instanceof SpotanimData)
                     {
                         SpotanimData data = (SpotanimData) spotAnim;
@@ -360,22 +348,18 @@ public class CacheSearcherTab extends JPanel
 
         c.gridx = 1;
         c.gridy = 4;
-        add(projectilePanel, c);
-
-        c.gridx = 1;
-        c.gridy = 5;
         add(animPanel, c);
 
         c.gridx = 1;
-        c.gridy = 6;
+        c.gridy = 5;
         add(soundPanel, c);
 
         c.gridx = 1;
-        c.gridy = 7;
+        c.gridy = 6;
         add(breakdownPanel, c);
 
         c.gridx = 1;
-        c.gridy = 8;
+        c.gridy = 7;
         c.weighty = 1;
         add(new JLabel(""), c);
 
@@ -1052,132 +1036,6 @@ public class CacheSearcherTab extends JPanel
         });
     }
 
-    private void setupProjectileCard(JPanel card)
-    {
-        card.setLayout(new GridBagLayout());
-        card.setBorder(new EmptyBorder(8, 8, 8, 8));
-        c.fill = GridBagConstraints.BOTH;
-        c.insets = new Insets(2, 2, 2, 2);
-
-        c.gridwidth = 1;
-        c.gridheight = 1;
-        c.weightx = 0;
-        c.weighty = 0;
-        c.gridx = 0;
-        c.gridy = 0;
-        JLabel title = new JLabel("Projectiles Found:");
-        title.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32));
-        title.setHorizontalAlignment(SwingConstants.LEFT);
-        card.add(title, c);
-
-        c.weightx = 1;
-        c.weighty = 1;
-        c.gridx = 0;
-        c.gridy = 1;
-        JScrollPane scrollPane = new JScrollPane(projectileTable);
-        scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
-        card.add(scrollPane, c);
-
-        c.weightx = 0;
-        c.weighty = 0;
-        c.gridwidth = 1;
-        c.gridx = 0;
-        c.gridy = 2;
-        JLabel buffer = new JLabel("                                                    ");
-        card.add(buffer, c);
-
-        c.gridx = 0;
-        c.gridy = 3;
-        JPanel grid = new JPanel();
-        grid.setLayout(new GridLayout(0, 3, 2, 0));
-        card.add(grid, c);
-
-        JButton addKeyFrame = new JButton("KeyFrame Projectile");
-        addKeyFrame.setToolTipText("Adds the selected projectile as a Projectile KeyFrame on the currently selected Character");
-        grid.add(addKeyFrame);
-
-        JButton addObject = new JButton("Store & Add");
-        addObject.setToolTipText("Stores the selected projectile spotanim as a Custom Model, then creates a new Object and attaches the model");
-        grid.add(addObject);
-
-        JButton addModel = new JButton("Store Only");
-        addModel.setToolTipText("Stores the selected projectile spotanim as a new Custom Model");
-        grid.add(addModel);
-
-        JButton addAnvil = new JButton("Add to Anvil");
-        addAnvil.setToolTipText("Sends the projectile's models to the Model Anvil");
-        grid.add(addAnvil);
-
-        JButton export = new JButton("Export 3D");
-        export.setToolTipText("Exports the selected 3D model");
-        grid.add(export);
-
-        addKeyFrame.addActionListener(e ->
-        {
-            if (plugin.getSelectedCharacter() == null)
-            {
-                return;
-            }
-            Object o = projectileTable.getSelectedObject();
-            if (o instanceof SpotanimData)
-            {
-                SpotanimData data = (SpotanimData) o;
-                plugin.getCreatorsPanel().getToolBox().getTimeSheetPanel().addProjectileKeyFrameFromCache(data);
-            }
-        });
-
-        addObject.addActionListener(e ->
-        {
-            Object o = projectileTable.getSelectedObject();
-            if (o instanceof SpotanimData)
-            {
-                SpotanimData data = (SpotanimData) o;
-                addSpotAnimObject(data);
-            }
-        });
-
-        addModel.addActionListener(e ->
-        {
-            Object o = projectileTable.getSelectedObject();
-            if (o instanceof SpotanimData)
-            {
-                SpotanimData data = (SpotanimData) o;
-                addCustomModel(CustomModelType.CACHE_SPOTANIM, data.getId());
-            }
-        });
-
-        addAnvil.addActionListener(e ->
-        {
-            Object o = projectileTable.getSelectedObject();
-            if (o instanceof SpotanimData)
-            {
-                SpotanimData data = (SpotanimData) o;
-                addToAnvil(CustomModelType.CACHE_SPOTANIM, data.getId());
-            }
-        });
-
-        export.addActionListener(e ->
-        {
-            Object o = projectileTable.getSelectedObject();
-            if (o instanceof SpotanimData)
-            {
-                SpotanimData data = (SpotanimData) o;
-                export3DModel(CustomModelType.CACHE_SPOTANIM, data.getId(), data.getName());
-            }
-        });
-
-        projectileTable.getSelectionModel().addListSelectionListener(e ->
-        {
-            Object o = projectileTable.getSelectedObject();
-            if (o instanceof SpotanimData)
-            {
-                SpotanimData data = (SpotanimData) o;
-                updateRenderPanel(CustomModelType.CACHE_SPOTANIM, data.getId(), true, -1);
-                updateModelBreakdownTable(new int[]{data.getModelId()});
-            }
-        });
-    }
-
     private void setupAnimCard(JPanel card)
     {
         card.setLayout(new GridBagLayout());
@@ -1383,9 +1241,6 @@ public class CacheSearcherTab extends JPanel
             case ITEM:
                 return (CustomModelType) itemType.getSelectedItem();
             case SPOTANIM:
-            case PROJECTILE:
-                // Projectiles are a curated subset of spotanims (cache-wise they ARE
-                // spotanims), so the model fetch / render goes through the same path.
                 return CustomModelType.CACHE_SPOTANIM;
         }
     }
@@ -1819,137 +1674,6 @@ public class CacheSearcherTab extends JPanel
                 spotAnimTable.initialize(list);
             });
         }
-    }
-
-    private void setupProjectilePanel()
-    {
-        projectilePanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        projectilePanel.setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1));
-        projectilePanel.setLayout(new BorderLayout());
-        JPanel holderPanel = new JPanel();
-        holderPanel.setBorder(new EmptyBorder(8, 8, 8, 8));
-        holderPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        holderPanel.setLayout(new GridBagLayout());
-        projectilePanel.add(holderPanel, BorderLayout.CENTER);
-
-        c.fill = GridBagConstraints.HORIZONTAL;
-        c.insets = new Insets(2, 2, 2, 2);
-
-        c.gridwidth = 2;
-        c.gridheight = 1;
-        c.weightx = 1;
-        c.weighty = 0;
-        c.gridx = 0;
-        c.gridy = 0;
-        JLabel title = new JLabel("Projectile Searcher");
-        title.setFont(FontManager.getRunescapeBoldFont());
-        holderPanel.add(title, c);
-
-        c.gridwidth = 1;
-        c.weightx = 0;
-        c.gridx = 0;
-        c.gridy = 1;
-        JLabel nameLabel = new JLabel("Projectile name: ");
-        nameLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        holderPanel.add(nameLabel, c);
-
-        c.gridwidth = 1;
-        c.weightx = 1;
-        c.gridx = 1;
-        c.gridy = 1;
-        JTextField field = new JTextField("");
-        field.setFont(FontManager.getRunescapeBoldFont());
-        field.setForeground(ColorScheme.BRAND_ORANGE);
-        holderPanel.add(field, c);
-
-        field.addFocusListener(new FocusListener()
-        {
-            @Override
-            public void focusGained(FocusEvent e)
-            {
-                switchCards(PROJECTILE);
-            }
-
-            @Override
-            public void focusLost(FocusEvent e)
-            {
-
-            }
-        });
-
-        field.addKeyListener(new KeyListener()
-        {
-            @Override
-            public void keyTyped(KeyEvent e) {}
-
-            @Override
-            public void keyPressed(KeyEvent e) {}
-
-            @Override
-            public void keyReleased(KeyEvent e)
-            {
-                switchCards(PROJECTILE);
-                projectileTable.searchAndListEntries(field.getText());
-            }
-        });
-
-        // Projectiles ARE spotanims in the cache -- they share the same data type,
-        // so we lazily filter the spotanim list by name pattern instead of loading
-        // a separate dataset. Names like IRON_ARROW_TRAVEL / BLOOD_BARRAGE_PROJECTILE
-        // are the moving visuals you'd pass to ProjectileKeyFrame.projectileId.
-        if (dataFinder.isDataLoaded(DataFinder.DataType.SPOTANIM))
-        {
-            populateProjectileTable();
-        }
-        else
-        {
-            dataFinder.addLoadCallback(DataFinder.DataType.SPOTANIM, this::populateProjectileTable);
-        }
-    }
-
-    /**
-     * Filters the loaded spotanim list to entries whose names mark them as projectile
-     * visuals (the spotanim that travels source -> target as opposed to the muzzle
-     * flash at the source or the impact at the target).
-     *
-     * <p>The cache itself doesn't tag projectiles, so we go by naming convention used
-     * in net.runelite.api.gameval.SpotanimID: {@code _TRAVEL} for thrown/fired weapons,
-     * {@code _PROJECTILE} for spell projectiles. {@code _LAUNCH}, {@code _SPLASH},
-     * {@code _IMPACT}, {@code _CAST}, {@code _HIT}, {@code _END} are explicitly excluded
-     * since those are start/end effects, not the moving thing.
-     */
-    private void populateProjectileTable()
-    {
-        List<SpotanimData> all = dataFinder.getSpotanimData();
-        List<Object> projectiles = new ArrayList<>();
-        for (SpotanimData sd : all)
-        {
-            if (looksLikeProjectile(sd.getName()))
-            {
-                projectiles.add(sd);
-            }
-        }
-        projectileTable.initialize(projectiles);
-    }
-
-    private static boolean looksLikeProjectile(String name)
-    {
-        if (name == null || name.isEmpty())
-        {
-            return false;
-        }
-        String n = name.toUpperCase();
-
-        // Exclude start/end effects up front so a name like
-        // BLOOD_BARRAGE_PROJECTILE_IMPACT (if it existed) wouldn't sneak in via
-        // the _PROJECTILE check below.
-        if (n.contains("LAUNCH") || n.contains("SPLASH") || n.contains("IMPACT")
-                || n.contains("CAST") || n.endsWith("_HIT") || n.contains("_END"))
-        {
-            return false;
-        }
-
-        return n.contains("TRAVEL") || n.contains("PROJECTILE");
     }
 
     private void setupAnimPanel()

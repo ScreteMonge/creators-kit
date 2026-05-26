@@ -2702,12 +2702,25 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 	}
 
+	/**
+	 * Each nudge hotkey first asks the timeline if the Projectile card is
+	 * active; if so, the kf's Start X / Y / Height get the delta and the
+	 * Character is left alone. Lets ALT+WASDRF / ALT+Scroll double as the
+	 * projectile-origin editor when the user is on that card.
+	 */
+	private boolean tryNudgeProjectile(int dx, int dy, int dz)
+	{
+		if (creatorsPanel == null) return false;
+		return creatorsPanel.getToolBox().getTimeSheetPanel().tryNudgeProjectileOrigin(dx, dy, dz);
+	}
+
 	private final HotkeyListener nudgeNorthListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_W, InputEvent.ALT_DOWN_MASK))
 	{
 		@Override
 		public void hotkeyPressed()
 		{
 			int step = config.nudgeStep();
+			if (tryNudgeProjectile(0, step, 0)) return;
 			nudgeSelectedCharacters(0, step, 0);
 		}
 	};
@@ -2718,6 +2731,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		public void hotkeyPressed()
 		{
 			int step = config.nudgeStep();
+			if (tryNudgeProjectile(0, -step, 0)) return;
 			nudgeSelectedCharacters(0, -step, 0);
 		}
 	};
@@ -2728,6 +2742,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		public void hotkeyPressed()
 		{
 			int step = config.nudgeStep();
+			if (tryNudgeProjectile(step, 0, 0)) return;
 			nudgeSelectedCharacters(step, 0, 0);
 		}
 	};
@@ -2738,6 +2753,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		public void hotkeyPressed()
 		{
 			int step = config.nudgeStep();
+			if (tryNudgeProjectile(-step, 0, 0)) return;
 			nudgeSelectedCharacters(-step, 0, 0);
 		}
 	};
@@ -2751,6 +2767,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		public void hotkeyPressed()
 		{
 			int step = config.nudgeStep();
+			if (tryNudgeProjectile(0, 0, step)) return;
 			nudgeSelectedCharacters(0, 0, step);
 		}
 	};
@@ -2761,6 +2778,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		public void hotkeyPressed()
 		{
 			int step = config.nudgeStep();
+			if (tryNudgeProjectile(0, 0, -step)) return;
 			nudgeSelectedCharacters(0, 0, -step);
 		}
 	};
@@ -2829,6 +2847,17 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			int rotation = event.getWheelRotation();
 			if (rotation == 0)
 			{
+				return event;
+			}
+			// When the Projectile card is the active timeline view, ALT
+			// + Scroll nudges the kf's Start Height instead of scaling
+			// the Character. Scroll up = wheelRotation -1 = raise; scroll
+			// down = wheelRotation +1 = lower. Step matches the
+			// WASDRF nudgeStep so the keyboard / scroll inputs feel
+			// consistent.
+			if (tryNudgeProjectile(0, 0, -rotation * config.nudgeStep()))
+			{
+				event.consume();
 				return event;
 			}
 			double stepPct = Math.max(1, Math.min(50, config.scaleStepPercent())) / 100.0;
