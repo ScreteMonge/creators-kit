@@ -179,7 +179,7 @@ public class KeyFrame
                         shakeKF.getDurationTicks());
             case CAMERA:
                 CameraKeyFrame camKF = (CameraKeyFrame) keyFrame;
-                return new CameraKeyFrame(
+                CameraKeyFrame camCopy = new CameraKeyFrame(
                         tick,
                         camKF.getFocalX(),
                         camKF.getFocalY(),
@@ -189,6 +189,10 @@ public class KeyFrame
                         camKF.getScale(),
                         camKF.getEase(),
                         camKF.getDurationTicks());
+                // Deep-copy the custom curve so editing it on one kf doesn't
+                // bleed into the other (CUSTOM kfs each own their own spline).
+                camCopy.setCustomCurve(camKF.getCustomCurve() == null ? null : camKF.getCustomCurve().copy());
+                return camCopy;
             case COLOUR:
                 ColourKeyFrame colourKF = (ColourKeyFrame) keyFrame;
                 return new ColourKeyFrame(

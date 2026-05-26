@@ -2,8 +2,10 @@ package com.creatorskit.swing.timesheet.attributes;
 
 import com.creatorskit.swing.timesheet.keyframe.CameraEaseType;
 import com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.CustomEasingCurve;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import lombok.Getter;
+import lombok.Setter;
 
 import javax.swing.*;
 import java.awt.*;
@@ -34,6 +36,27 @@ public class CameraAttributes extends Attributes
      */
     private final JButton capture = new JButton("Capture from camera");
 
+    /**
+     * In-flight curve produced by the CurveEditorDialog when the user picks
+     * "Custom..." and clicks Select. The CAMERA branch of applyEditsTo reads
+     * this when ease == CUSTOM and writes it into the new kf's customCurve,
+     * then clears it on the next setAttributes (= panel reload). Lets the
+     * dialog's output flow through the existing edit-commit pipeline without
+     * inventing a parallel write path.
+     */
+    @Setter
+    private CustomEasingCurve pendingCustomCurve;
+
+    /**
+     * Last ease the user actually committed (non-CUSTOM). The CUSTOM combo
+     * pick opens a dialog; clicking Discard there needs to revert the combo
+     * to whatever was selected before, which is this value. Updated each
+     * time setAttributes loads a non-CUSTOM kf or the user picks a non-
+     * CUSTOM item from the combo.
+     */
+    @Setter
+    private CameraEaseType lastCommittedEase = CameraEaseType.LINEAR;
+
     public CameraAttributes()
     {
     }
@@ -50,6 +73,14 @@ public class CameraAttributes extends Attributes
         scale.setValue(kf.getScale());
         durationTicks.setValue(kf.getDurationTicks());
         ease.setSelectedItem(kf.getEase());
+        // Loading a fresh kf == start of a new edit batch. The pending
+        // curve from a prior dialog session shouldn't bleed into the kf
+        // being shown now.
+        pendingCustomCurve = null;
+        if (kf.getEase() != CameraEaseType.CUSTOM)
+        {
+            lastCommittedEase = kf.getEase();
+        }
     }
 
     @Override

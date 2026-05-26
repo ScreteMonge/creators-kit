@@ -484,6 +484,67 @@ public class AttributePanel extends JPanel
     }
 
     /**
+     * Ease combo selection handler. CUSTOM opens the spline editor; everything
+     * else falls through to the normal wireAutoUpdate commit. Sits BEFORE
+     * wireAutoUpdate's listener so we can revert the combo (and the auto-
+     * update reads the reverted value).
+     *
+     * <p>Re-entrance: we set the combo back to lastCommittedEase on Discard.
+     * That fires a second action event, but by then mixedSinceSelection
+     * doesn't contain CUSTOM and the branch is a no-op.
+     */
+    private void handleEaseComboSelection()
+    {
+        if (suppressAutoUpdateDepth > 0) return;
+        JComboBox<com.creatorskit.swing.timesheet.keyframe.CameraEaseType> ease = cameraAttributes.getEase();
+        Object sel = ease.getSelectedItem();
+        if (sel != com.creatorskit.swing.timesheet.keyframe.CameraEaseType.CUSTOM)
+        {
+            cameraAttributes.setLastCommittedEase((com.creatorskit.swing.timesheet.keyframe.CameraEaseType) sel);
+            return;
+        }
+        // Seed the editor with the current kf's curve if it's already on
+        // CUSTOM; otherwise start from identity. The seed is COPIED so the
+        // editor never mutates the kf directly.
+        com.creatorskit.swing.timesheet.keyframe.CustomEasingCurve seed = null;
+        KeyFrame current = findSelectedKeyFrameOfCurrentType();
+        if (current instanceof com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame)
+        {
+            com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame ck =
+                    (com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame) current;
+            if (ck.getCustomCurve() != null) seed = ck.getCustomCurve().copy();
+        }
+        com.creatorskit.swing.timesheet.keyframe.CustomEasingCurve result =
+                com.creatorskit.swing.timesheet.attributes.CurveEditorDialog.show(
+                        this, seed, timeSheetPanel.getPlugin().getConfigManager(), timeSheetPanel.getPlugin().getGson());
+        if (result != null)
+        {
+            // Stash the chosen curve so applyEditsTo's CAMERA branch can
+            // pick it up. The combo's selection is already CUSTOM, so the
+            // wireAutoUpdate action listener (which fires AFTER this one)
+            // will trigger the commit path normally.
+            cameraAttributes.setPendingCustomCurve(result);
+        }
+        else
+        {
+            // Discard: revert the combo to the previously committed ease.
+            // Suppressed so wireAutoUpdate's listener (which is about to
+            // fire for the ORIGINAL CUSTOM selection event, AFTER this
+            // listener returns) reads the reverted value via getSelectedItem
+            // and writes that instead of CUSTOM.
+            suppressAutoUpdateDepth++;
+            try
+            {
+                ease.setSelectedItem(cameraAttributes.getLastCommittedEase());
+            }
+            finally
+            {
+                suppressAutoUpdateDepth--;
+            }
+        }
+    }
+
+    /**
      * Walks every component in {@code attrs}' card and attaches a "user edited"
      * listener that calls {@link #fireAutoUpdate()}. Skips {@link JButton}s
      * because their own action handlers do the right thing already (e.g. the
@@ -995,17 +1056,31 @@ public class AttributePanel extends JPanel
                         ((Number) screenShakeAttributes.getDurationTicks().getValue()).doubleValue()
                 );
             case CAMERA:
-                return new com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame(
-                        tick,
-                        ((Number) cameraAttributes.getFocalX().getValue()).doubleValue(),
-                        ((Number) cameraAttributes.getFocalY().getValue()).doubleValue(),
-                        ((Number) cameraAttributes.getFocalZ().getValue()).doubleValue(),
-                        Math.toRadians(((Number) cameraAttributes.getPitchDeg().getValue()).doubleValue()),
-                        Math.toRadians(((Number) cameraAttributes.getYawDeg().getValue()).doubleValue()),
-                        ((Number) cameraAttributes.getScale().getValue()).intValue(),
-                        (com.creatorskit.swing.timesheet.keyframe.CameraEaseType) cameraAttributes.getEase().getSelectedItem(),
-                        ((Number) cameraAttributes.getDurationTicks().getValue()).doubleValue()
-                );
+            {
+                com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame camKf =
+                        new com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame(
+                                tick,
+                                ((Number) cameraAttributes.getFocalX().getValue()).doubleValue(),
+                                ((Number) cameraAttributes.getFocalY().getValue()).doubleValue(),
+                                ((Number) cameraAttributes.getFocalZ().getValue()).doubleValue(),
+                                Math.toRadians(((Number) cameraAttributes.getPitchDeg().getValue()).doubleValue()),
+                                Math.toRadians(((Number) cameraAttributes.getYawDeg().getValue()).doubleValue()),
+                                ((Number) cameraAttributes.getScale().getValue()).intValue(),
+                                (com.creatorskit.swing.timesheet.keyframe.CameraEaseType) cameraAttributes.getEase().getSelectedItem(),
+                                ((Number) cameraAttributes.getDurationTicks().getValue()).doubleValue()
+                        );
+                // Carry the dialog's chosen curve into a freshly-built kf
+                // (e.g. when the user clicks "+ add camera kf" with CUSTOM
+                // already configured). pendingCustomCurve is the editor's
+                // most recent Select; leave it untouched here so a follow-
+                // up applyEditsTo can still consume it.
+                if (camKf.getEase() == com.creatorskit.swing.timesheet.keyframe.CameraEaseType.CUSTOM
+                        && cameraAttributes.getPendingCustomCurve() != null)
+                {
+                    camKf.setCustomCurve(cameraAttributes.getPendingCustomCurve().copy());
+                }
+                return camKf;
+            }
             case COLOUR:
                 return new com.creatorskit.swing.timesheet.keyframe.ColourKeyFrame(
                         tick,
@@ -1913,7 +1988,8 @@ public class AttributePanel extends JPanel
             {
                 com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame orig =
                         (com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame) original;
-                return new com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame(
+                com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame camKf =
+                new com.creatorskit.swing.timesheet.keyframe.CameraKeyFrame(
                         tick,
                         wasEdited(cameraAttributes.getFocalX())
                                 ? ((Number) cameraAttributes.getFocalX().getValue()).doubleValue()
@@ -1940,6 +2016,25 @@ public class AttributePanel extends JPanel
                                 ? ((Number) cameraAttributes.getDurationTicks().getValue()).doubleValue()
                                 : orig.getDurationTicks()
                 );
+                // Custom curve carry-through. Priority:
+                //   1. pendingCustomCurve set by the editor dialog this
+                //      session (= the user just clicked Select).
+                //   2. Original kf's curve, if it was already CUSTOM.
+                //   3. null -> playback falls back to linear.
+                com.creatorskit.swing.timesheet.keyframe.CustomEasingCurve curve = null;
+                if (camKf.getEase() == com.creatorskit.swing.timesheet.keyframe.CameraEaseType.CUSTOM)
+                {
+                    if (cameraAttributes.getPendingCustomCurve() != null)
+                    {
+                        curve = cameraAttributes.getPendingCustomCurve().copy();
+                    }
+                    else if (orig.getCustomCurve() != null)
+                    {
+                        curve = orig.getCustomCurve().copy();
+                    }
+                }
+                camKf.setCustomCurve(curve);
+                return camKf;
             }
             case COLOUR:
             {
@@ -4887,7 +4982,14 @@ public class AttributePanel extends JPanel
 
         c.gridx = 1;
         c.gridy = 4;
-        ease.setToolTipText("Easing curve from this keyframe to the next.");
+        ease.setToolTipText("<html>Easing curve from this keyframe to the next."
+                + "<br>Pick <b>Custom...</b> to open the spline editor and design your own.</html>");
+        // CUSTOM opens the curve editor. Registered BEFORE wireAutoUpdate's
+        // ActionListener so we see the event first, can block on the modal
+        // dialog, and (on Discard) revert the combo selection while the
+        // event is still being processed -- by the time wireAutoUpdate's
+        // listener fires, getSelectedItem() returns the reverted value.
+        ease.addActionListener(e -> handleEaseComboSelection());
         card.add(ease, c);
 
         c.gridx = 0;

@@ -55,6 +55,12 @@ public class CameraKeyFrame extends KeyFrame
      * keyframe exists, the actual interpolation duration is (next.tick - tick).
      */
     private double durationTicks;
+    /**
+     * User-authored spline used when {@link #ease} == {@link CameraEaseType#CUSTOM}.
+     * Null otherwise. Null on a CUSTOM kf falls back to linear at playback (so
+     * a half-configured kf doesn't crash).
+     */
+    private CustomEasingCurve customCurve;
 
     public CameraKeyFrame(double tick, double focalX, double focalY, double focalZ,
                           double pitch, double yaw, int scale, CameraEaseType ease,

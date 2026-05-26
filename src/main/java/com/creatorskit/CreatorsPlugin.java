@@ -140,6 +140,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private DataFinder dataFinder;
 
 	@Inject
+	@Getter
 	private Gson gson;
 
 	@Inject

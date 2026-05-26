@@ -18,7 +18,7 @@ public final class CameraEase
     {
         if (to == null) return from;
 
-        double factor = curve(from.getEase(), t);
+        double factor = curve(from.getEase(), t, from.getCustomCurve());
 
         // Yaw shortest-arc: if the delta exceeds half a turn, the linear path
         // would visibly sweep the long way around. Push one endpoint by 2pi
@@ -56,7 +56,7 @@ public final class CameraEase
         return (int) Math.round(radians * RADIANS_TO_JAU) % 2048;
     }
 
-    private static double curve(CameraEaseType ease, double t)
+    private static double curve(CameraEaseType ease, double t, CustomEasingCurve customCurve)
     {
         switch (ease)
         {
@@ -70,6 +70,11 @@ public final class CameraEase
                 if (t == 0) return 0;
                 if (t == 1) return 1;
                 return t < 0.5 ? Math.pow(2, 20 * t - 10) / 2 : (2 - Math.pow(2, -20 * t + 10)) / 2;
+            case CUSTOM:
+                // Half-configured kf (CUSTOM but no curve): silently fall back
+                // to linear rather than crash. The user gets a smooth ramp
+                // and can re-open the dialog to set a real curve.
+                return customCurve == null ? t : customCurve.evaluate(t);
             default: return t;
         }
     }
