@@ -424,24 +424,28 @@ public class ToolBoxFrame extends JFrame
         // Vertical loop markers on the timeline. Markers also removable via
         // X buttons drawn on the chips themselves (Premiere-style); this
         // submenu is the discoverable / hotkey-friendly entry point.
+        // Submenu has no tooltip on purpose -- tooltips only belong on leaf
+        // nodes; the relevant per-action context is spread across the three
+        // leaf items below.
         JMenu abLoop = new JMenu("A-B Loop");
-        abLoop.setToolTipText("<html>Loop playback between two markers. Red A = loop start,<br>"
-                + "blue B = loop end. Only B set => A defaults to tick 0.<br>"
-                + "Playback pauses for 1 game tick at B before jumping to A<br>"
-                + "to avoid load spikes from re-seeding everything at once.<br>"
-                + "Markers can be removed by clicking the X on each marker chip<br>"
-                + "or by clearing both from this menu.</html>");
         tools.add(abLoop);
 
         JMenuItem clearAB = new JMenuItem("Clear A-B Loop");
+        clearAB.setToolTipText("<html>Remove both A and B markers. Markers can also be removed individually<br>"
+                + "by clicking the X drawn on each marker chip in the timeline.</html>");
         clearAB.addActionListener(e -> timeSheetPanel.clearABLoop());
         abLoop.add(clearAB);
 
         JMenuItem setA = new JMenuItem("Set A marker at current tick");
+        setA.setToolTipText("<html>Sets the red A marker (loop start) at the current playhead tick.<br>"
+                + "Playback loops from A to B; if only B is set, A defaults to tick 0.</html>");
         setA.addActionListener(e -> timeSheetPanel.setALoopTick(timeSheetPanel.getCurrentTime()));
         abLoop.add(setA);
 
         JMenuItem setB = new JMenuItem("Set B marker at current tick");
+        setB.setToolTipText("<html>Sets the blue B marker (loop end) at the current playhead tick.<br>"
+                + "Playback pauses for 1 game tick at B before jumping back to A to avoid<br>"
+                + "load spikes from re-seeding everything at once.</html>");
         setB.addActionListener(e -> timeSheetPanel.setBLoopTick(timeSheetPanel.getCurrentTime()));
         abLoop.add(setB);
 
