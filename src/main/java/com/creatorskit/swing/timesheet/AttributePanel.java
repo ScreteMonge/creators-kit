@@ -475,7 +475,10 @@ public class AttributePanel extends JPanel
             cameraAttributes.getFocalZ().setValue(client.getCameraFocalPointZ());
             cameraAttributes.getPitchDeg().setValue(Math.toDegrees(client.getCameraFpPitch()));
             cameraAttributes.getYawDeg().setValue(Math.toDegrees(client.getCameraFpYaw()));
-            cameraAttributes.getScale().setValue(client.getVarcIntValue(net.runelite.api.VarClientInt.CAMERA_ZOOM_FIXED_VIEWPORT));
+            // CAMERA_ZOOM_FIXED_VIEWPORT (73) was renamed to CAMERA_ZOOM_SMALL
+            // in the gameval refactor; same varcint id, just relocated under
+            // the gameval package so the API surface matches the cache names.
+            cameraAttributes.getScale().setValue(client.getVarcIntValue(net.runelite.api.gameval.VarClientID.CAMERA_ZOOM_SMALL));
         }
         finally
         {
@@ -896,7 +899,7 @@ public class AttributePanel extends JPanel
                 else
                 {
                     float t = elapsed / (float) FIELD_FADE_MS;
-                    c.setBackground(lerpColor(FIELD_FLASH, FIELD_BASE, t));
+                    c.setBackground(flashFadeColor(t));
                 }
             }
             if (recentlyEditedFields.isEmpty())
@@ -909,11 +912,19 @@ public class AttributePanel extends JPanel
         fieldFadeTimer.start();
     }
 
-    private static Color lerpColor(Color a, Color b, float t)
+    /**
+     * Lerps from {@link #FIELD_FLASH} (t=0) to {@link #FIELD_BASE} (t=1).
+     * Hardcoded to the only colour pair this is ever called with -- a
+     * generic lerpColor(a, b, t) was misleading because callers only
+     * ever passed those two constants. The componentwise lerp is fine
+     * for sRGB; perceptual blending isn't worth it for a 700ms
+     * "did my edit land?" cue.
+     */
+    private static Color flashFadeColor(float t)
     {
-        int r = (int) (a.getRed()   + (b.getRed()   - a.getRed())   * t);
-        int g = (int) (a.getGreen() + (b.getGreen() - a.getGreen()) * t);
-        int bl = (int) (a.getBlue()  + (b.getBlue()  - a.getBlue())  * t);
+        int r  = (int) (FIELD_FLASH.getRed()   + (FIELD_BASE.getRed()   - FIELD_FLASH.getRed())   * t);
+        int g  = (int) (FIELD_FLASH.getGreen() + (FIELD_BASE.getGreen() - FIELD_FLASH.getGreen()) * t);
+        int bl = (int) (FIELD_FLASH.getBlue()  + (FIELD_BASE.getBlue()  - FIELD_FLASH.getBlue())  * t);
         return new Color(Math.max(0, Math.min(255, r)),
                 Math.max(0, Math.min(255, g)),
                 Math.max(0, Math.min(255, bl)));
@@ -3367,11 +3378,6 @@ public class AttributePanel extends JPanel
         double ticks = (double) difference / turnRate * Constants.CLIENT_TICK_LENGTH / Constants.GAME_TICK_LENGTH;
         int scale = (int) Math.pow(10, 1);
         return Math.abs(Math.ceil(ticks * scale) / scale);
-    }
-
-    public static double calculateOrientationTurnRate(int start, int end, double targetDuration)
-    {
-        return calculateOrientationTurnRate(start, end, targetDuration, com.creatorskit.swing.timesheet.keyframe.TurnDirection.AUTO);
     }
 
     /**
