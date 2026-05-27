@@ -15,6 +15,17 @@ def runeLiteVersion = 'latest.release'
 dependencies {
 	compileOnly group: 'net.runelite', name:'client', version: runeLiteVersion
 
+	// Bundled at runtime so the Cache Searcher can enumerate definitions
+	// (NpcManager / ObjectManager / ItemManager / SpriteManager + the
+	// definition loaders for spotanims) directly from the user's local
+	// main_file_cache.dat2. RuneLite's client.jar doesn't ship this
+	// module, so we have to include it ourselves. Excluding the bits
+	// we don't use (commons-cli, jna) keeps the plugin JAR lean.
+	implementation(group: 'net.runelite', name:'cache', version: runeLiteVersion) {
+		exclude group: 'commons-cli', module: 'commons-cli'
+		exclude group: 'net.java.dev.jna', module: 'jna'
+	}
+
 	compileOnly 'org.projectlombok:lombok:1.18.20'
 	annotationProcessor 'org.projectlombok:lombok:1.18.20'
 

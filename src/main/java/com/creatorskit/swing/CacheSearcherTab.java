@@ -1322,21 +1322,26 @@ public class CacheSearcherTab extends JPanel
         };
         field.addKeyListener(keyListener);
 
-        if (dataFinder.isDataLoaded(DataFinder.DataType.NPC))
+        Runnable npcInit = () ->
         {
             List<NPCData> dataList = dataFinder.getNpcData();
             List<Object> list = new ArrayList<>(dataList);
-            npcTable.initialize(list);
+            SwingUtilities.invokeLater(() -> npcTable.initialize(list));
+        };
+        if (dataFinder.isDataLoaded(DataFinder.DataType.NPC))
+        {
+            npcInit.run();
         }
         else
         {
-            dataFinder.addLoadCallback(DataFinder.DataType.NPC, () ->
-            {
-                List<NPCData> dataList = dataFinder.getNpcData();
-                List<Object> list = new ArrayList<>(dataList);
-                npcTable.initialize(list);
-            });
+            dataFinder.addLoadCallback(DataFinder.DataType.NPC, npcInit);
         }
+        // CacheLoader replaces the URL-derived list with cache-derived
+        // entries once it finishes (~1-2s after plugin start). Re-init
+        // the table when that happens so the user sees the complete
+        // set (including modern unnamed NPCs Jagex never published names
+        // for).
+        dataFinder.addReloadListener(DataFinder.DataType.NPC, npcInit);
     }
 
     private void setupObjectPanel()
@@ -1416,21 +1421,21 @@ public class CacheSearcherTab extends JPanel
         };
         field.addKeyListener(keyListener);
 
-        if (dataFinder.isDataLoaded(DataFinder.DataType.OBJECT))
+        Runnable objInit = () ->
         {
             List<ObjectData> dataList = dataFinder.getObjectData();
             List<Object> list = new ArrayList<>(dataList);
-            objectTable.initialize(list);
+            SwingUtilities.invokeLater(() -> objectTable.initialize(list));
+        };
+        if (dataFinder.isDataLoaded(DataFinder.DataType.OBJECT))
+        {
+            objInit.run();
         }
         else
         {
-            dataFinder.addLoadCallback(DataFinder.DataType.OBJECT, () ->
-            {
-                List<ObjectData> dataList = dataFinder.getObjectData();
-                List<Object> list = new ArrayList<>(dataList);
-                objectTable.initialize(list);
-            });
+            dataFinder.addLoadCallback(DataFinder.DataType.OBJECT, objInit);
         }
+        dataFinder.addReloadListener(DataFinder.DataType.OBJECT, objInit);
     }
 
     private void setupItemPanel()
@@ -1565,21 +1570,21 @@ public class CacheSearcherTab extends JPanel
         };
         field.addKeyListener(keyListener);
 
-        if (dataFinder.isDataLoaded(DataFinder.DataType.ITEM))
+        Runnable itemInit = () ->
         {
             List<ItemData> dataList = dataFinder.getItemData();
             List<Object> list = new ArrayList<>(dataList);
-            itemTable.initialize(list);
+            SwingUtilities.invokeLater(() -> itemTable.initialize(list));
+        };
+        if (dataFinder.isDataLoaded(DataFinder.DataType.ITEM))
+        {
+            itemInit.run();
         }
         else
         {
-            dataFinder.addLoadCallback(DataFinder.DataType.ITEM, () ->
-            {
-                List<ItemData> dataList = dataFinder.getItemData();
-                List<Object> list = new ArrayList<>(dataList);
-                itemTable.initialize(list);
-            });
+            dataFinder.addLoadCallback(DataFinder.DataType.ITEM, itemInit);
         }
+        dataFinder.addReloadListener(DataFinder.DataType.ITEM, itemInit);
     }
 
     private void setupSpotAnimPanel()
@@ -1659,21 +1664,21 @@ public class CacheSearcherTab extends JPanel
         };
         field.addKeyListener(keyListener);
 
-        if (dataFinder.isDataLoaded(DataFinder.DataType.SPOTANIM))
+        Runnable spotInit = () ->
         {
             List<SpotanimData> dataList = dataFinder.getSpotanimData();
             List<Object> list = new ArrayList<>(dataList);
-            spotAnimTable.initialize(list);
+            SwingUtilities.invokeLater(() -> spotAnimTable.initialize(list));
+        };
+        if (dataFinder.isDataLoaded(DataFinder.DataType.SPOTANIM))
+        {
+            spotInit.run();
         }
         else
         {
-            dataFinder.addLoadCallback(DataFinder.DataType.SPOTANIM, () ->
-            {
-                List<SpotanimData> dataList = dataFinder.getSpotanimData();
-                List<Object> list = new ArrayList<>(dataList);
-                spotAnimTable.initialize(list);
-            });
+            dataFinder.addLoadCallback(DataFinder.DataType.SPOTANIM, spotInit);
         }
+        dataFinder.addReloadListener(DataFinder.DataType.SPOTANIM, spotInit);
     }
 
     private void setupAnimPanel()

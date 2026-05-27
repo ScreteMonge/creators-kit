@@ -1,5 +1,6 @@
 package com.creatorskit.models;
 
+import com.creatorskit.cache.parser.CacheLoader;
 import com.creatorskit.models.datatypes.*;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -87,11 +88,26 @@ public class DataFinder
     private static final int WEAPON_IDX = 3;
     private static final int SHIELD_IDX = 5;
 
+    private final CacheLoader cacheLoader;
+
+    /**
+     * Reload-callbacks fire after CacheLoader replaces the URL-derived
+     * list with live-cache-derived entries. CacheSearcherTab listens
+     * here to re-initialise its JFilterableTable with the freshly
+     * complete dataset. Separate from {@link #loadCallbacks} because
+     * those clear themselves after the first fire, but reload may
+     * fire after that initial run.
+     */
+    private final ConcurrentHashMap<DataType, List<Runnable>> reloadListeners = new ConcurrentHashMap<>(){{
+        Arrays.stream(DataType.values()).forEach(d -> this.put(d, new ArrayList<>()));
+    }};
+
     @Inject
-    public DataFinder(Gson gson, OkHttpClient httpClient)
+    public DataFinder(Gson gson, OkHttpClient httpClient, CacheLoader cacheLoader)
     {
         this.gson = gson;
         this.httpClient = httpClient;
+        this.cacheLoader = cacheLoader;
 
         lookupNPCData();
         lookupObjectData();
@@ -102,6 +118,196 @@ public class DataFinder
         lookupAnimData();
         lookupWeaponAnimationData();
         lookupSoundData();
+
+        // Kick off the live-cache hydration on a background thread.
+        // CacheLoader.load() does the heavy lifting (~500ms-2s); when it
+        // finishes, we replace npcData / objectData / itemData /
+        // spotanimData with cache-derived entries and fire reload
+        // listeners so the searcher tables re-initialise. URL data
+        // stays as the fallback for anyone whose cache dir is missing.
+        Thread t = new Thread(this::hydrateFromLocalCache, "creatorskit-cache-loader");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    /**
+     * Subscribe to "data list was replaced with cache-derived entries"
+     * events. Listener runs on the cache-loader background thread; UI
+     * subscribers should marshal back to the EDT internally.
+     */
+    public void addReloadListener(DataType dataType, Runnable listener)
+    {
+        if (listener != null) reloadListeners.get(dataType).add(listener);
+    }
+
+    private void fireReload(DataType dataType)
+    {
+        for (Runnable l : new ArrayList<>(reloadListeners.get(dataType)))
+        {
+            try { l.run(); }
+            catch (Throwable t) { log.warn("DataFinder reload listener threw", t); }
+        }
+    }
+
+    /**
+     * Background-thread entry point. Loads the local cache via
+     * {@link CacheLoader}, converts each definition to its searcher
+     * data-type, REPLACES the URL-derived list, sorts by name, and
+     * fires the reload listeners.
+     */
+    private void hydrateFromLocalCache()
+    {
+        cacheLoader.load();
+        if (!cacheLoader.isLoaded())
+        {
+            log.debug("CacheLoader didn't load; cache searcher stays on URL data");
+            return;
+        }
+        rebuildNpcDataFromCache();
+        rebuildObjectDataFromCache();
+        rebuildItemDataFromCache();
+        rebuildSpotAnimDataFromCache();
+    }
+
+    private void rebuildNpcDataFromCache()
+    {
+        List<NPCData> rebuilt = new ArrayList<>(cacheLoader.getNpcs().size());
+        for (net.runelite.cache.definitions.NpcDefinition def : cacheLoader.getNpcs().values())
+        {
+            String name = (def.name == null || def.name.equalsIgnoreCase("null") || def.name.isEmpty())
+                    ? "Unnamed" : def.name;
+            rebuilt.add(new NPCData(
+                    def.id,
+                    name,
+                    def.models == null ? new int[0] : def.models,
+                    def.size,
+                    def.standingAnimation,
+                    def.walkingAnimation,
+                    def.runAnimation,
+                    def.idleRotateLeftAnimation,
+                    def.idleRotateRightAnimation,
+                    def.rotate180Animation,
+                    def.rotateLeftAnimation,
+                    def.rotateRightAnimation,
+                    def.widthScale,
+                    def.heightScale,
+                    toIntArray(def.recolorToReplace),
+                    toIntArray(def.recolorToFind)));
+        }
+        rebuilt.sort(Comparator.comparing(NPCData::getName));
+        synchronized (npcData) { npcData.clear(); npcData.addAll(rebuilt); }
+        fireReload(DataType.NPC);
+    }
+
+    private void rebuildObjectDataFromCache()
+    {
+        List<ObjectData> rebuilt = new ArrayList<>(cacheLoader.getObjects().size());
+        for (net.runelite.cache.definitions.ObjectDefinition def : cacheLoader.getObjects().values())
+        {
+            String n = def.getName();
+            String name = (n == null || n.equalsIgnoreCase("null") || n.isEmpty()) ? "Unnamed" : n;
+            rebuilt.add(new ObjectData(
+                    def.getId(),
+                    name,
+                    def.getAnimationID(),
+                    def.getObjectModels() == null ? new int[0] : def.getObjectModels(),
+                    def.getObjectTypes() == null ? new int[0] : def.getObjectTypes(),
+                    def.getModelSizeX(),
+                    def.getModelSizeY(),
+                    def.getModelSizeHeight(),
+                    def.getAmbient(),
+                    def.getContrast(),
+                    toIntArray(def.getRecolorToReplace()),
+                    toIntArray(def.getRecolorToFind()),
+                    toIntArray(def.getTextureToReplace()),
+                    toIntArray(def.getRetextureToFind())));
+        }
+        rebuilt.sort(Comparator.comparing(ObjectData::getName));
+        synchronized (objectData) { objectData.clear(); objectData.addAll(rebuilt); }
+        fireReload(DataType.OBJECT);
+    }
+
+    private void rebuildItemDataFromCache()
+    {
+        List<ItemData> rebuilt = new ArrayList<>(cacheLoader.getItems().size());
+        for (net.runelite.cache.definitions.ItemDefinition def : cacheLoader.getItems().values())
+        {
+            String name = (def.name == null || def.name.equalsIgnoreCase("null") || def.name.isEmpty())
+                    ? "Unnamed" : def.name;
+            rebuilt.add(new ItemData(
+                    def.id,
+                    name,
+                    def.inventoryModel,
+                    def.maleModel0,
+                    def.maleModel1,
+                    def.maleModel2,
+                    def.maleOffset,
+                    def.femaleModel0,
+                    def.femaleModel1,
+                    def.femaleModel2,
+                    0, 0, 0,  // wearPos0/1/2 -- not exposed on ItemDefinition
+                    def.femaleOffset,
+                    def.maleHeadModel,
+                    def.maleHeadModel2,
+                    def.femaleHeadModel,
+                    def.femaleHeadModel2,
+                    def.resizeX,
+                    def.resizeY,
+                    def.resizeZ,
+                    toIntArray(def.colorReplace),
+                    toIntArray(def.colorFind),
+                    toIntArray(def.textureReplace),
+                    toIntArray(def.textureFind)));
+        }
+        rebuilt.sort(Comparator.comparing(ItemData::getName));
+        synchronized (itemData) { itemData.clear(); itemData.addAll(rebuilt); }
+        fireReload(DataType.ITEM);
+    }
+
+    private void rebuildSpotAnimDataFromCache()
+    {
+        List<SpotanimData> rebuilt = new ArrayList<>(cacheLoader.getSpotAnims().size());
+        for (net.runelite.cache.definitions.SpotAnimDefinition def : cacheLoader.getSpotAnims().values())
+        {
+            // SpotAnimDefinition.debugName is only populated when Jagex
+            // shipped a name (rare for these); otherwise show "Unnamed".
+            String name = (def.debugName == null || def.debugName.isEmpty()) ? "Unnamed" : def.debugName;
+            rebuilt.add(new SpotanimData(
+                    name,
+                    def.id,
+                    def.modelId,
+                    def.animationId,
+                    def.resizeX,
+                    def.resizeY,
+                    def.ambient,
+                    def.contrast,
+                    toIntArray(def.recolorToReplace),
+                    toIntArray(def.recolorToFind)));
+        }
+        rebuilt.sort(Comparator.comparing(SpotanimData::getName));
+        synchronized (spotanimData) { spotanimData.clear(); spotanimData.addAll(rebuilt); }
+        fireReload(DataType.SPOTANIM);
+    }
+
+    /**
+     * Convert a {@code short[]} (Jagex colour / texture id storage) to
+     * the {@code int[]} our XData classes carry. Caller treats null as
+     * "no recolours". Sign-extends naturally since short -> int is the
+     * standard widening conversion -- the colour rebuild paths in
+     * findModelsForX downstream re-narrow to short and handle the
+     * 0xFFFF wraparound.
+     */
+    private static int[] toIntArray(short[] arr)
+    {
+        if (arr == null) return null;
+        int[] out = new int[arr.length];
+        for (int i = 0; i < arr.length; i++) out[i] = arr[i] & 0xFFFF;
+        return out;
+    }
+
+    private static int[] toIntArray(int[] arr)
+    {
+        return arr;  // already the right shape
     }
 
     /**
