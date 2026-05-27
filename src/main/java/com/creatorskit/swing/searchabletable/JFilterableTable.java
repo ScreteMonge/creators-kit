@@ -173,13 +173,13 @@ public class JFilterableTable extends JTable
     private void searchAndListCacheMode(Object searchFor)
     {
         String search = searchFor instanceof String ? (String) searchFor : "";
+        String searchLower = search.toLowerCase();
         List<Object> found = new ArrayList<>();
         for (Object o : this.itemBackup)
         {
             if (!(o instanceof CacheRow)) continue;
             CacheRow row = (CacheRow) o;
-            boolean textMatch = search.isEmpty()
-                    || row.toString().toLowerCase().matches("(?i).*" + Pattern.quote(search.toLowerCase()) + ".*");
+            boolean textMatch = search.isEmpty() || rowMatches(row, searchLower);
             if (!textMatch) continue;
             if (!passesTagFilter(row)) continue;
             // Hide-unavailable filter: drop empty-model rows entirely
@@ -191,6 +191,22 @@ public class JFilterableTable extends JTable
         }
         setModel(new DataTableModel(found.toArray(), true));
         installRowSorter();
+    }
+
+    /**
+     * Substring match against the row's displayed text. Checks both the
+     * underlying item.toString (the cache-default "Name (id)") AND the
+     * user-supplied rename if one exists -- so searching for a custom
+     * name like "Test" finds the entry even when the cache-default
+     * would have read "Unnamed (12345)". Tag names aren't matched here
+     * intentionally; the tag-filter dialog covers that case explicitly.
+     */
+    private boolean rowMatches(CacheRow row, String searchLower)
+    {
+        if (row.toString().toLowerCase().contains(searchLower)) return true;
+        if (metadataStore == null || cacheType == null) return false;
+        String custom = metadataStore.getRename(cacheType, idOf(row.getItem()));
+        return custom != null && custom.toLowerCase().contains(searchLower);
     }
 
     /**
