@@ -46,7 +46,7 @@ public class TransmogPanel extends JPanel
     private final File TRANSMOGS_DIR = new File(Paths.get(RuneLite.RUNELITE_DIR.getPath(), "creatorskit").toString(), "transmogs");
     private final GridBagConstraints c = new GridBagConstraints();
     private final JLabel transmogLabel = new JLabel("None");
-    private final JSpinner radiusSpinner = new JSpinner(new SpinnerNumberModel(60, 0, 99999, 1));
+    private final JSpinner radiusSpinner = new JSpinner(new SpinnerNumberModel(65, 0, 99999, 1));
     private final JComboBox<TransmogAnimationMode> animationComboBox = new JComboBox<>();
     private final JSpinner poseSpinner = new JSpinner(new SpinnerNumberModel(-1, -1, 99999, 1));
     private final JSpinner walkSpinner = new JSpinner(new SpinnerNumberModel(-1, -1, 99999, 1));
@@ -67,7 +67,7 @@ public class TransmogPanel extends JPanel
     private int shuffleRight = -1;
     private int shuffleLeft = -1;
     private int rotate = -1;
-    private int radius = 60;
+    private int radius = 65;
 
     @Inject
     public TransmogPanel(@Nullable Client client, ClientThread clientThread, CreatorsPlugin plugin, CreatorsConfig config, ModelUtilities modelUtilities)
@@ -119,7 +119,7 @@ public class TransmogPanel extends JPanel
         c.gridx = 1;
         c.gridy = 3;
         c.gridwidth = 1;
-        radiusSpinner.setToolTipText("Set the radius of your transmog. 60 is best for an object the size of 1 tile");
+        radiusSpinner.setToolTipText("Set the radius of your transmog. 65 is a sensible default for a 1-tile object.");
         radiusSpinner.addChangeListener(e -> {
             radius = (int) radiusSpinner.getValue();
             CKObject ckObject = plugin.getTransmog();

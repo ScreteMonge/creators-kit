@@ -3673,7 +3673,7 @@ public class AttributePanel extends JPanel
         c.gridy = 4;
         JSpinner radius = modelAttributes.getRadius();
         radius.setToolTipText("How far the Model should render vs clip with other tiles around it, measured in 1/128th tiles");
-        radius.setValue(60);
+        radius.setValue(65);
         radius.setPreferredSize(spinnerSize);
         card.add(radius, c);
 
@@ -4159,7 +4159,7 @@ public class AttributePanel extends JPanel
         c.gridy = 4;
         JSpinner radius = spAttributes.getRadius();
         radius.setToolTipText("How far the SpotAnim should render vs clip with other tiles around it, measured in 1/128th tiles");
-        radius.setModel(new SpinnerNumberModel(60, 0, 9999, 1));
+        radius.setModel(new SpinnerNumberModel(65, 0, 9999, 1));
         card.add(radius, c);
 
         c.gridx = 0;

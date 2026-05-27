@@ -1995,6 +1995,13 @@ public class CacheSearcherTab extends JPanel
 
         soundTable.getSelectionModel().addListSelectionListener(e ->
         {
+            // ListSelectionListener fires TWICE per mouse click -- once
+            // on press (selection clears) and once on release (selection
+            // installs). Without the isAdjusting guard the sound played
+            // twice in quick succession on every row click; previewing
+            // through a Sound keyframe didn't suffer because that path
+            // doesn't go through the selection model.
+            if (e.getValueIsAdjusting()) return;
             Object o = soundTable.getSelectedObject();
             if (o instanceof SoundData)
             {

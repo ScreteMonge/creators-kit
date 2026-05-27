@@ -285,7 +285,7 @@ public class CreatorsPanel extends PluginPanel
                 0,
                 -1,
                 -1,
-                60,
+                65,
                 new KeyFrame[KeyFrameType.getTotalFrameTypes()][0],
                 KeyFrameType.createDefaultSummary(),
                 getRandomColor(),

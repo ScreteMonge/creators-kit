@@ -84,7 +84,7 @@ public class SpotAnimAttributes extends Attributes
         spotAnimId.setValue(-1);
         loop.setSelectedItem(Toggle.DISABLE);
         height.setValue(92);
-        radius.setValue(60);
+        radius.setValue(65);
         super.resetAttributes(resetBackground);
     }
 }

@@ -86,7 +86,7 @@ public class ModelAttributes extends Attributes
         modelId.setValue(-1);
         modelOverride.setSelectedItem(ModelToggle.CUSTOM_MODEL);
         customModel.setSelectedItem(null);
-        radius.setValue(60);
+        radius.setValue(65);
         super.resetAttributes(resetBackground);
     }
 }
