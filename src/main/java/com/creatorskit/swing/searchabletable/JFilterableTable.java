@@ -2,6 +2,7 @@ package com.creatorskit.swing.searchabletable;
 
 import com.creatorskit.cache.metadata.CacheMetadataStore;
 import com.creatorskit.cache.metadata.CacheType;
+import com.creatorskit.cache.metadata.Tag;
 import com.creatorskit.cache.parser.CacheDateBuckets;
 import com.creatorskit.models.datatypes.AnimData;
 import com.creatorskit.models.datatypes.ItemData;
@@ -9,16 +10,21 @@ import com.creatorskit.models.datatypes.NPCData;
 import com.creatorskit.models.datatypes.ObjectData;
 import com.creatorskit.models.datatypes.SoundData;
 import com.creatorskit.models.datatypes.SpotanimData;
+import com.creatorskit.swing.tags.TagPickerPopup;
 
 import javax.swing.*;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableRowSorter;
+import java.awt.Point;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -259,6 +265,20 @@ public class JFilterableTable extends JTable
     }
 
     /**
+     * Display-only variant for the mini-searcher popups inside
+     * keyframe cards. Renames render in italic yellow, tag bullets
+     * paint after the name, but right-click does nothing -- per the
+     * spec, the mini popups don't host rename / tag / filter actions
+     * (those live exclusively in the main Cache Searcher tab).
+     */
+    public void setMetadataStoreDisplayOnly(CacheMetadataStore store)
+    {
+        if (cacheType == null) return;
+        renderer.setMetadataStore(store, cacheType);
+        store.addListener(() -> SwingUtilities.invokeLater(this::repaint));
+    }
+
+    /**
      * {@inheritDoc}
      *
      * <p>Re-attaches the rename editor after any model swap (each
@@ -326,23 +346,117 @@ public class JFilterableTable extends JTable
         });
         menu.add(rename);
 
-        // Set Tag(s) / Remove Tag(s) / Filter by tag(s) ship in phase 4b.
-        // Stubs are added here so users can see the eventual layout but
-        // they immediately close without firing yet.
+        // Set / Remove tag use the persistent TagPickerPopup -- not a
+        // JPopupMenu, because the popup needs to stay open while the
+        // user clicks multiple tag rows. Pre-compute the union of tags
+        // already assigned across the selection so the checkmarks read
+        // correctly even when the user right-clicked multiple rows.
+        List<Integer> selectedIds = getSelectedIds();
+        Set<String> unionAssigned = unionAssignedFor(selectedIds);
+
         JMenuItem setTag = new JMenuItem("Set Tag(s)...");
-        setTag.setEnabled(false);
+        setTag.setEnabled(!metadataStore.getTags().isEmpty() && !selectedIds.isEmpty());
+        setTag.addActionListener(ev -> openSetTagPopup(selectedIds, unionAssigned, e));
         menu.add(setTag);
 
         JMenuItem removeTag = new JMenuItem("Remove Tag(s)...");
-        removeTag.setEnabled(false);
+        removeTag.setEnabled(!unionAssigned.isEmpty() && !selectedIds.isEmpty());
+        removeTag.addActionListener(ev -> openRemoveTagPopup(selectedIds, unionAssigned, e));
         menu.add(removeTag);
 
         menu.addSeparator();
         JMenuItem filter = new JMenuItem("Filter by tag(s)...");
-        filter.setEnabled(false);
+        filter.setEnabled(false);  // ships in phase 4c
         menu.add(filter);
 
         menu.show(e.getComponent(), e.getX(), e.getY());
+    }
+
+    /**
+     * Walks the current view-selection, converts each view row to a
+     * model row, extracts the item id. Used by the tag actions to
+     * decide which entries the user is operating on.
+     */
+    private List<Integer> getSelectedIds()
+    {
+        int[] viewRows = getSelectedRows();
+        List<Integer> ids = new ArrayList<>(viewRows.length);
+        for (int viewRow : viewRows)
+        {
+            int modelRow = (getRowSorter() != null) ? getRowSorter().convertRowIndexToModel(viewRow) : viewRow;
+            Object raw = getModel().getValueAt(modelRow, 0);
+            if (raw instanceof CacheRow) ids.add(idOf(((CacheRow) raw).getItem()));
+        }
+        return ids;
+    }
+
+    /**
+     * Returns every tag name that's already applied to ANY of the
+     * selected ids. Used to seed the picker's checkmark column. We
+     * deliberately use union semantics (not intersection) because the
+     * Set/Remove menus operate per-entry, not per-cell -- the
+     * checkmark reads as "at least one selected entry has this tag".
+     */
+    private Set<String> unionAssignedFor(List<Integer> ids)
+    {
+        if (metadataStore == null || cacheType == null) return new HashSet<>();
+        Set<String> out = new LinkedHashSet<>();
+        for (Integer id : ids) out.addAll(metadataStore.getTagsFor(cacheType, id));
+        return out;
+    }
+
+    /**
+     * Builds + shows the Set Tag(s) popup. Clicking a tag row toggles
+     * the assignment ON every selected entry that doesn't have it yet
+     * (when isNowChecked is true), or OFF every selected entry that
+     * does (false). Empty case (no tags created yet) is guarded at
+     * menu-build time so we don't reach here.
+     */
+    private void openSetTagPopup(List<Integer> ids, Set<String> seedAssigned, MouseEvent srcEvent)
+    {
+        List<Tag> all = metadataStore.getTagsAlphabetical();
+        Point loc = screenLocationFor(srcEvent);
+        TagPickerPopup popup = new TagPickerPopup(this, "Set Tags", false, all, new LinkedHashSet<>(seedAssigned), (tag, isNowChecked) ->
+        {
+            for (Integer id : ids)
+            {
+                if (isNowChecked) metadataStore.addTagToEntry(cacheType, id, tag.getName());
+                else metadataStore.removeTagFromEntry(cacheType, id, tag.getName());
+            }
+        });
+        popup.showAt(loc);
+    }
+
+    /**
+     * Set Tag's removal-mode sibling. Lists only tags currently
+     * assigned to any of the selected entries; clicking a row strips
+     * the tag from every selected entry that holds it.
+     */
+    private void openRemoveTagPopup(List<Integer> ids, Set<String> seedAssigned, MouseEvent srcEvent)
+    {
+        List<Tag> assigned = new ArrayList<>();
+        for (Tag t : metadataStore.getTagsAlphabetical())
+        {
+            if (seedAssigned.contains(t.getName())) assigned.add(t);
+        }
+        Point loc = screenLocationFor(srcEvent);
+        TagPickerPopup popup = new TagPickerPopup(this, "Remove Tags", true, assigned, new LinkedHashSet<>(seedAssigned), (tag, isNowChecked) ->
+        {
+            // Remove mode: isNowChecked is always false from the picker.
+            for (Integer id : ids)
+            {
+                metadataStore.removeTagFromEntry(cacheType, id, tag.getName());
+            }
+        });
+        popup.showAt(loc);
+    }
+
+    /** Converts a table-relative mouse event to a screen point so the popup lands under the cursor. */
+    private Point screenLocationFor(MouseEvent e)
+    {
+        Point screen = new Point(e.getX(), e.getY());
+        SwingUtilities.convertPointToScreen(screen, e.getComponent());
+        return screen;
     }
 
     /**

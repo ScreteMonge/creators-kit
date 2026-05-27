@@ -130,6 +130,7 @@ public class TimeSheetPanel extends JPanel
     private boolean pauseScrollBarListener = false;
     private Character selectedCharacter;
     private final com.creatorskit.selection.SelectionManager selectionManager;
+    private final com.creatorskit.cache.metadata.CacheMetadataStore cacheMetadataStore;
 
     private ArrayList<KeyFrameAction> keyFrameStack = new ArrayList<>();
     private KeyFrame[] selectedKeyFrames = new KeyFrame[0];
@@ -363,7 +364,7 @@ public class TimeSheetPanel extends JPanel
     }
 
     @Inject
-    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, CreatorsConfig config, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, MovementManager movementManager, com.creatorskit.selection.SelectionManager selectionManager)
+    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, CreatorsConfig config, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, MovementManager movementManager, com.creatorskit.selection.SelectionManager selectionManager, com.creatorskit.cache.metadata.CacheMetadataStore cacheMetadataStore)
     {
         this.client = client;
         this.toolBox = toolBox;
@@ -374,6 +375,7 @@ public class TimeSheetPanel extends JPanel
         this.managerTree = managerTree;
         this.movementManager = movementManager;
         this.selectionManager = selectionManager;
+        this.cacheMetadataStore = cacheMetadataStore;
 
         setLayout(new BorderLayout());
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
@@ -2720,7 +2722,7 @@ public class TimeSheetPanel extends JPanel
 
     private void setupAttributePanel()
     {
-        attributePanel = new AttributePanel(client, clientThread, config, this, dataFinder, selectionManager);
+        attributePanel = new AttributePanel(client, clientThread, config, this, dataFinder, selectionManager, cacheMetadataStore);
         summarySheet = new SummarySheet(toolBox, config, managerTree, attributePanel);
         attributeSheet = new AttributeSheet(toolBox, config, managerTree, attributePanel);
         globalAttributeSheet = new com.creatorskit.swing.timesheet.sheets.GlobalAttributeSheet(toolBox, config, managerTree, attributePanel);

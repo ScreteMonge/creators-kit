@@ -185,7 +185,7 @@ public class AttributePanel extends JPanel
     private final Random random = new Random();
 
     @Inject
-    public AttributePanel(Client client, ClientThread clientThread, CreatorsConfig config, TimeSheetPanel timeSheetPanel, DataFinder dataFinder, SelectionManager selectionManager)
+    public AttributePanel(Client client, ClientThread clientThread, CreatorsConfig config, TimeSheetPanel timeSheetPanel, DataFinder dataFinder, SelectionManager selectionManager, com.creatorskit.cache.metadata.CacheMetadataStore cacheMetadataStore)
     {
         this.client = client;
         this.clientThread = clientThread;
@@ -194,6 +194,16 @@ public class AttributePanel extends JPanel
         this.dataFinder = dataFinder;
         this.selectionManager = selectionManager;
         selectionManager.addListener(mgr -> updateObjectLabel(mgr.getPrimary()));
+
+        // Mini-searcher popups inherit renames + tag bullets from the
+        // main Cache Searcher, but stay display-only (no right-click
+        // actions). The store reference flows through to the renderer;
+        // right-click handlers + rename editor stay unattached.
+        npcTable.setMetadataStoreDisplayOnly(cacheMetadataStore);
+        itemTable.setMetadataStoreDisplayOnly(cacheMetadataStore);
+        animTable.setMetadataStoreDisplayOnly(cacheMetadataStore);
+        spotanimTable.setMetadataStoreDisplayOnly(cacheMetadataStore);
+        soundTable.setMetadataStoreDisplayOnly(cacheMetadataStore);
 
         setLayout(new GridBagLayout());
         setBackground(ColorScheme.DARKER_GRAY_COLOR);

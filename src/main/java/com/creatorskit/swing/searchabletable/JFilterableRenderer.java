@@ -61,9 +61,11 @@ public class JFilterableRenderer extends JLabel implements TableCellRenderer
             CacheRow r = (CacheRow) value;
             String displayName = r.getItem().toString();
             boolean renamed = false;
+            String tagBulletsHtml = "";
             if (metadataStore != null && cacheType != null)
             {
-                String custom = metadataStore.getRename(cacheType, idOf(r.getItem()));
+                int id = idOf(r.getItem());
+                String custom = metadataStore.getRename(cacheType, id);
                 if (custom != null)
                 {
                     // Keep the "(id)" suffix so users can still see which
@@ -72,8 +74,23 @@ public class JFilterableRenderer extends JLabel implements TableCellRenderer
                     displayName = custom + idSuffix(r.getItem());
                     renamed = true;
                 }
+                // Tag bullets: one coloured "●" per tag, appended after
+                // the name with a single-space pad. No checkmark / name
+                // here -- the table cell is dense and the dropdown
+                // already shows the full tag info on right-click.
+                java.util.List<com.creatorskit.cache.metadata.Tag> tags = metadataStore.resolveTagsFor(cacheType, id);
+                if (!tags.isEmpty())
+                {
+                    StringBuilder b = new StringBuilder(" ");
+                    for (com.creatorskit.cache.metadata.Tag t : tags)
+                    {
+                        b.append("<span style=\"color:").append(t.getColor().hex)
+                                .append("; font-size: 14px;\">&#9679;</span>");
+                    }
+                    tagBulletsHtml = b.toString();
+                }
             }
-            renderNameCell(displayName, r.getSearchTerm(), r.isHasModels(), renamed);
+            renderNameCell(displayName, r.getSearchTerm(), r.isHasModels(), renamed, tagBulletsHtml);
             paintSelection(isSelected);
             return this;
         }
@@ -99,7 +116,7 @@ public class JFilterableRenderer extends JLabel implements TableCellRenderer
 
         // Legacy mode: value is Object[2] {item, searchTerm}.
         Object[] v = (Object[]) value;
-        renderNameCell(v[0].toString(), v[1].toString(), true, false);
+        renderNameCell(v[0].toString(), v[1].toString(), true, false, "");
         paintSelection(isSelected);
         return this;
     }
@@ -110,9 +127,11 @@ public class JFilterableRenderer extends JLabel implements TableCellRenderer
      * {@link #DIM_FG} + italic so the user can spot unrenderable
      * entries at a glance. When {@code renamed} is true the label
      * paints in italic {@link #RENAME_FG} (yellow) -- the convention
-     * is "user authored this name".
+     * is "user authored this name". {@code tagBulletsHtml} is the
+     * pre-built sequence of coloured "●" spans appended after the
+     * name; empty when no tags are assigned.
      */
-    private void renderNameCell(String s, String sf, boolean hasModels, boolean renamed)
+    private void renderNameCell(String s, String sf, boolean hasModels, boolean renamed, String tagBulletsHtml)
     {
         String lowerS = s.toLowerCase();
         String lowerSf = sf == null ? "" : sf.toLowerCase();
@@ -165,7 +184,7 @@ public class JFilterableRenderer extends JLabel implements TableCellRenderer
             color = NORMAL_FG;
             style = "";
         }
-        setText("<html><head></head><body style=\"color: " + color + ";" + style + "\">" + html + "</body></html>");
+        setText("<html><head></head><body style=\"color: " + color + ";" + style + "\">" + html + tagBulletsHtml + "</body></html>");
     }
 
     /** Per-type id extraction for the rename lookup. Mirrors JFilterableTable's idOf. */
