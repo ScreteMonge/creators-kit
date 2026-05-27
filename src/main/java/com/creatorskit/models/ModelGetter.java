@@ -73,7 +73,21 @@ public class ModelGetter
                             .setOption(ColorUtil.prependColorTag("Select", Color.ORANGE))
                             .setTarget(ColorUtil.colorTag(Color.GREEN) + character.getName())
                             .setType(MenuAction.RUNELITE)
-                            .onClick(e -> plugin.getCreatorsPanel().setSelectedCharacter(character));
+                            // MenuEntry.onClick fires on the CLIENT thread. The body of
+                            // setSelectedCharacter mutates Swing components on its way
+                            // through -- it updates the ManagerTree's JTree selection,
+                            // then SelectionManager.select fires listeners that update
+                            // the side panel border, TimeSheetPanel state, and the
+                            // AttributePanel object label. Touching JTree / JPanel from
+                            // off-EDT is a Swing thread-safety violation; in practice
+                            // it manifests as an intermittent OSRS client crash because
+                            // the engine doesn't survive uncaught exceptions thrown
+                            // from a menu callback into a paint. The Manager-tree path
+                            // doesn't see this because it originates on the EDT
+                            // already. Hop to the EDT so the right-click path behaves
+                            // identically to the Manager path.
+                            .onClick(e -> SwingUtilities.invokeLater(
+                                    () -> plugin.getCreatorsPanel().setSelectedCharacter(character)));
 
                     Menu menu = menuEntry.createSubMenu();
 
