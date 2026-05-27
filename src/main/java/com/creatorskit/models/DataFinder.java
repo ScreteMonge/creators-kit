@@ -1531,6 +1531,26 @@ public class DataFinder
         return null;
     }
 
+    /**
+     * Upstream {@code sounds.json} stops at id 10200 because Jagex stopped
+     * leaking sound config names after 26 Feb 2025 ("Game Jam: POH
+     * Improvements" update). The cache itself keeps growing with every
+     * weekly content drop -- the live OSRS cache on 2026-05-27 had
+     * non-empty entries up to id {@value #LIVE_CACHE_MAX_SOUND_ID} (read
+     * straight from {@code main_file_cache.idx4}). To let users pick
+     * those modern sounds from the searcher we append synthetic entries
+     * from {@link #FIRST_UNNAMED_SOUND_ID} through that cap with a
+     * placeholder name (e.g. {@code "sound_10250"}). Existing-id
+     * collisions from upstream win so the placeholders never clobber a
+     * real name if a future upstream dump expands past 10200.
+     *
+     * <p>Bump {@link #LIVE_CACHE_MAX_SOUND_ID} periodically as the live
+     * cache grows; the spinner already accepts up to 100,000 manually
+     * so users can punch in IDs above this cap when needed.
+     */
+    private static final int FIRST_UNNAMED_SOUND_ID = 10201;
+    private static final int LIVE_CACHE_MAX_SOUND_ID = 11524;
+
     private void lookupSoundData()
     {
         Request request = new Request.Builder().url("https://raw.githubusercontent.com/ScreteMonge/cache-converter/refs/heads/master/.venv/sounds.json").build();
@@ -1541,6 +1561,11 @@ public class DataFinder
             public void onFailure(Call call, IOException e)
             {
                 log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/refs/heads/master/.venv/sounds.json");
+                // Still emit the unnamed-tail entries so the searcher
+                // isn't completely empty when the URL fetch fails (e.g.
+                // offline). The user gets a usable picker even if it's
+                // only placeholders.
+                appendUnnamedSounds();
                 executeCallbacks(DataType.SOUND);
             }
 
@@ -1558,9 +1583,27 @@ public class DataFinder
                     soundData.addAll(list);
                     response.body().close();
                 }
+                appendUnnamedSounds();
                 executeCallbacks(DataType.SOUND);
             }
         });
+    }
+
+    /**
+     * Appends placeholder {@code "sound_NNNN"} entries for every id in
+     * {@code [FIRST_UNNAMED_SOUND_ID, LIVE_CACHE_MAX_SOUND_ID]} that the
+     * upstream JSON didn't already supply. Deduplicates by id so future
+     * upstream expansions don't get double-named.
+     */
+    private void appendUnnamedSounds()
+    {
+        java.util.Set<Integer> have = new java.util.HashSet<>();
+        for (SoundData d : soundData) have.add(d.getId());
+        for (int id = FIRST_UNNAMED_SOUND_ID; id <= LIVE_CACHE_MAX_SOUND_ID; id++)
+        {
+            if (have.contains(id)) continue;
+            soundData.add(new SoundData(id, "sound_" + id));
+        }
     }
 
     public String generateNameFromModel(int id)
