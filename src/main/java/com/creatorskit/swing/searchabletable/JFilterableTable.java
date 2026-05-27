@@ -1,5 +1,6 @@
 package com.creatorskit.swing.searchabletable;
 
+import com.creatorskit.cache.metadata.CacheMetadataStore;
 import com.creatorskit.cache.metadata.CacheType;
 import com.creatorskit.cache.parser.CacheDateBuckets;
 import com.creatorskit.models.datatypes.AnimData;
@@ -11,7 +12,10 @@ import com.creatorskit.models.datatypes.SpotanimData;
 
 import javax.swing.*;
 import javax.swing.table.JTableHeader;
+import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableRowSorter;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -35,6 +39,17 @@ public class JFilterableTable extends JTable
     private final CacheType cacheType;
     /** In cache mode this is List&lt;CacheRow&gt;; in legacy mode it stays as the original input list. */
     private List<Object> itemBackup;
+    /**
+     * Metadata store backing the rename / tags. Optional -- set via
+     * {@link #setMetadataStore} after construction. When null the
+     * right-click menu hides (display-only mode for the mini-searcher
+     * popups inside keyframe cards).
+     */
+    private CacheMetadataStore metadataStore;
+    /** The renderer instance so we can pass it the store reference for italic-yellow rendering. */
+    private final JFilterableRenderer renderer;
+
+    public CacheType getCacheType() { return cacheType; }
 
     public JFilterableTable(String name)
     {
@@ -46,7 +61,8 @@ public class JFilterableTable extends JTable
         super();
         this.setName(name);
         this.cacheType = cacheType;
-        this.setDefaultRenderer(Object.class, new JFilterableRenderer());
+        this.renderer = new JFilterableRenderer();
+        this.setDefaultRenderer(Object.class, renderer);
 
         if (cacheType != null)
         {
@@ -63,6 +79,21 @@ public class JFilterableTable extends JTable
             this.setTableHeader(new JTableHeader());
             setModel(new DataTableModel(new Object[0]));
         }
+    }
+
+    /**
+     * JTable defers to the underlying model for editability; we want
+     * column 0 (Name) to be editable in cache mode when a metadata
+     * store is attached. Returning true here doesn't auto-start an
+     * editor on click -- {@link #attachRenameEditor} configures the
+     * editor with click-count-to-start = MAX_VALUE so only explicit
+     * {@code editCellAt(row, 0)} calls (from the Rename context-menu
+     * action) fire it.
+     */
+    @Override
+    public boolean isCellEditable(int row, int column)
+    {
+        return metadataStore != null && cacheType != null && column == 0;
     }
 
     /**
@@ -204,6 +235,206 @@ public class JFilterableTable extends JTable
         if (raw instanceof CacheRow) return ((CacheRow) raw).getItem();
         if (raw instanceof Object[]) return ((Object[]) raw)[0];
         return raw;
+    }
+
+    /**
+     * Enables the right-click context menu (Rename / Set Tag(s) /
+     * Remove Tag(s) / Filter by tag(s)) for this table. Only meaningful
+     * in cache mode. The store reference is also handed to the renderer
+     * so italic-yellow renames + tag bullets pick up store updates.
+     *
+     * <p>Mini-searcher popups inside keyframe cards skip this call --
+     * they're display-only.
+     */
+    public void setMetadataStore(CacheMetadataStore store)
+    {
+        if (cacheType == null) return;
+        this.metadataStore = store;
+        renderer.setMetadataStore(store, cacheType);
+        attachRightClickHandler();
+        attachRenameEditor();
+        // Repaint whenever the store changes -- catches renames + tag
+        // updates initiated from any other panel.
+        store.addListener(() -> SwingUtilities.invokeLater(this::repaint));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Re-attaches the rename editor after any model swap (each
+     * search rebuilds the model). Without this the editor binding on
+     * column 0 vanishes the first time the user filters the table.
+     */
+    @Override
+    public void setModel(javax.swing.table.TableModel dataModel)
+    {
+        super.setModel(dataModel);
+        if (metadataStore != null && cacheType != null) attachRenameEditor();
+    }
+
+    /**
+     * Adds a mouse listener that opens the row-context popup on
+     * right-click. Right-click also "implicitly selects" the row under
+     * the cursor (matching typical OS file-manager behaviour), so the
+     * user doesn't have to left-click first to target a row.
+     */
+    private void attachRightClickHandler()
+    {
+        addMouseListener(new MouseAdapter()
+        {
+            @Override public void mousePressed(MouseEvent e) { maybeShow(e); }
+            @Override public void mouseReleased(MouseEvent e) { maybeShow(e); }
+
+            private void maybeShow(MouseEvent e)
+            {
+                if (!e.isPopupTrigger()) return;
+                int viewRow = rowAtPoint(e.getPoint());
+                if (viewRow < 0) return;
+                // Implicit row selection: if the clicked row isn't part
+                // of the existing selection, replace selection with it.
+                if (!isRowSelected(viewRow)) setRowSelectionInterval(viewRow, viewRow);
+                showContextMenu(e);
+            }
+        });
+    }
+
+    /**
+     * Builds + shows the right-click context menu. The Rename action
+     * targets only the currently focused row (in-place edit doesn't
+     * meaningfully multi-select); Set / Remove tags and Filter apply
+     * to the whole selection.
+     */
+    private void showContextMenu(MouseEvent e)
+    {
+        if (metadataStore == null || cacheType == null) return;
+        JPopupMenu menu = new JPopupMenu();
+
+        JMenuItem rename = new JMenuItem("Rename");
+        rename.addActionListener(ev ->
+        {
+            int viewRow = getSelectedRow();
+            if (viewRow < 0) return;
+            // editCellAt routes through the cell editor registered on
+            // column 0 (attachRenameEditor wires it). Editing finishes
+            // on Enter or focus-lost; the editor's stopCellEditing
+            // pushes the new name into the metadata store.
+            editCellAt(viewRow, 0);
+            // Pull keyboard focus into the editor so the user can type
+            // without an additional click.
+            java.awt.Component ed = getEditorComponent();
+            if (ed != null) ed.requestFocusInWindow();
+        });
+        menu.add(rename);
+
+        // Set Tag(s) / Remove Tag(s) / Filter by tag(s) ship in phase 4b.
+        // Stubs are added here so users can see the eventual layout but
+        // they immediately close without firing yet.
+        JMenuItem setTag = new JMenuItem("Set Tag(s)...");
+        setTag.setEnabled(false);
+        menu.add(setTag);
+
+        JMenuItem removeTag = new JMenuItem("Remove Tag(s)...");
+        removeTag.setEnabled(false);
+        menu.add(removeTag);
+
+        menu.addSeparator();
+        JMenuItem filter = new JMenuItem("Filter by tag(s)...");
+        filter.setEnabled(false);
+        menu.add(filter);
+
+        menu.show(e.getComponent(), e.getX(), e.getY());
+    }
+
+    /**
+     * Wires a cell editor for column 0 (Name). Cells are otherwise
+     * non-editable -- the editor only fires when {@code editCellAt} is
+     * called explicitly from the Rename context-menu action. On
+     * commit we push the new name to {@link CacheMetadataStore#rename}
+     * instead of mutating the table model (the model is rebuilt from
+     * the store on the next reload anyway; the renderer reads renames
+     * directly from the store).
+     */
+    private void attachRenameEditor()
+    {
+        if (cacheType == null) return;
+        JTextField field = new JTextField();
+        DefaultCellEditor editor = new DefaultCellEditor(field)
+        {
+            @Override public boolean isCellEditable(java.util.EventObject e)
+            {
+                // Suppress the default "double-click to edit" path. Only
+                // explicit editCellAt() from the Rename menu starts editing.
+                return e == null;
+            }
+
+            @Override public boolean stopCellEditing()
+            {
+                String newName = field.getText();
+                int viewRow = getEditingRow();
+                if (viewRow >= 0 && metadataStore != null)
+                {
+                    int modelRow = (getRowSorter() != null) ? getRowSorter().convertRowIndexToModel(viewRow) : viewRow;
+                    Object raw = getModel().getValueAt(modelRow, 0);
+                    if (raw instanceof CacheRow)
+                    {
+                        Object item = ((CacheRow) raw).getItem();
+                        int id = idOf(item);
+                        // Empty / unchanged input clears the rename (revert
+                        // to the cache-default name). Otherwise stores the
+                        // user's custom name.
+                        if (newName == null || newName.trim().isEmpty())
+                        {
+                            metadataStore.rename(cacheType, id, null);
+                        }
+                        else
+                        {
+                            metadataStore.rename(cacheType, id, newName);
+                        }
+                    }
+                }
+                return super.stopCellEditing();
+            }
+        };
+        // Pre-fill the editor with the current display name (rename if
+        // present, otherwise the underlying item's name).
+        editor.setClickCountToStart(Integer.MAX_VALUE);  // never start on click
+        TableCellEditor wrapped = new TableCellEditor()
+        {
+            @Override public java.awt.Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column)
+            {
+                String current = "";
+                if (value instanceof CacheRow)
+                {
+                    Object item = ((CacheRow) value).getItem();
+                    int id = idOf(item);
+                    String renamed = metadataStore != null ? metadataStore.getRename(cacheType, id) : null;
+                    if (renamed != null) current = renamed;
+                    else current = stripIdSuffix(item.toString());
+                }
+                field.setText(current);
+                field.selectAll();
+                return field;
+            }
+            @Override public Object getCellEditorValue() { return editor.getCellEditorValue(); }
+            @Override public boolean isCellEditable(java.util.EventObject e) { return editor.isCellEditable(e); }
+            @Override public boolean shouldSelectCell(java.util.EventObject e) { return editor.shouldSelectCell(e); }
+            @Override public boolean stopCellEditing() { return editor.stopCellEditing(); }
+            @Override public void cancelCellEditing() { editor.cancelCellEditing(); }
+            @Override public void addCellEditorListener(javax.swing.event.CellEditorListener l) { editor.addCellEditorListener(l); }
+            @Override public void removeCellEditorListener(javax.swing.event.CellEditorListener l) { editor.removeCellEditorListener(l); }
+        };
+        getColumnModel().getColumn(0).setCellEditor(wrapped);
+    }
+
+    /**
+     * Strips the trailing " (id)" suffix from an XData toString so the
+     * rename editor pre-fills with just the name. Falls back to the
+     * full string if no " (" is found.
+     */
+    private static String stripIdSuffix(String s)
+    {
+        int idx = s.lastIndexOf(" (");
+        return idx > 0 ? s.substring(0, idx) : s;
     }
 
     // ----- Per-type "does this entry render a model" check -----

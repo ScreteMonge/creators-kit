@@ -1,5 +1,13 @@
 package com.creatorskit.swing.searchabletable;
 
+import com.creatorskit.cache.metadata.CacheMetadataStore;
+import com.creatorskit.cache.metadata.CacheType;
+import com.creatorskit.models.datatypes.AnimData;
+import com.creatorskit.models.datatypes.ItemData;
+import com.creatorskit.models.datatypes.NPCData;
+import com.creatorskit.models.datatypes.ObjectData;
+import com.creatorskit.models.datatypes.SoundData;
+import com.creatorskit.models.datatypes.SpotanimData;
 import net.runelite.client.ui.ColorScheme;
 
 import javax.swing.*;
@@ -27,6 +35,22 @@ public class JFilterableRenderer extends JLabel implements TableCellRenderer
     private static final String NORMAL_FG = "#bfbfbf";
     /** Dimmer text color used when the row has no renderable models. */
     private static final String DIM_FG = "#5e5e5e";
+    /** Italic yellow used for user-renamed entries -- mirrors the spec. */
+    private static final String RENAME_FG = "#f1c40f";
+
+    private CacheMetadataStore metadataStore;
+    private CacheType cacheType;
+
+    /**
+     * Lets the rename / tag display read its data straight from the
+     * store on each render pass. Called once by JFilterableTable when
+     * setMetadataStore is invoked.
+     */
+    public void setMetadataStore(CacheMetadataStore store, CacheType type)
+    {
+        this.metadataStore = store;
+        this.cacheType = type;
+    }
 
     @Override
     public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
@@ -35,7 +59,21 @@ public class JFilterableRenderer extends JLabel implements TableCellRenderer
         if (value instanceof CacheRow)
         {
             CacheRow r = (CacheRow) value;
-            renderNameCell(r.getItem().toString(), r.getSearchTerm(), r.isHasModels());
+            String displayName = r.getItem().toString();
+            boolean renamed = false;
+            if (metadataStore != null && cacheType != null)
+            {
+                String custom = metadataStore.getRename(cacheType, idOf(r.getItem()));
+                if (custom != null)
+                {
+                    // Keep the "(id)" suffix so users can still see which
+                    // entry they renamed -- "Custom (8060)" instead of
+                    // just "Custom".
+                    displayName = custom + idSuffix(r.getItem());
+                    renamed = true;
+                }
+            }
+            renderNameCell(displayName, r.getSearchTerm(), r.isHasModels(), renamed);
             paintSelection(isSelected);
             return this;
         }
@@ -61,7 +99,7 @@ public class JFilterableRenderer extends JLabel implements TableCellRenderer
 
         // Legacy mode: value is Object[2] {item, searchTerm}.
         Object[] v = (Object[]) value;
-        renderNameCell(v[0].toString(), v[1].toString(), true);
+        renderNameCell(v[0].toString(), v[1].toString(), true, false);
         paintSelection(isSelected);
         return this;
     }
@@ -70,9 +108,11 @@ public class JFilterableRenderer extends JLabel implements TableCellRenderer
      * Renders the Name column text with search-term highlighting.
      * When {@code hasModels} is false the whole label dims to
      * {@link #DIM_FG} + italic so the user can spot unrenderable
-     * entries at a glance.
+     * entries at a glance. When {@code renamed} is true the label
+     * paints in italic {@link #RENAME_FG} (yellow) -- the convention
+     * is "user authored this name".
      */
-    private void renderNameCell(String s, String sf, boolean hasModels)
+    private void renderNameCell(String s, String sf, boolean hasModels, boolean renamed)
     {
         String lowerS = s.toLowerCase();
         String lowerSf = sf == null ? "" : sf.toLowerCase();
@@ -105,9 +145,47 @@ public class JFilterableRenderer extends JLabel implements TableCellRenderer
         }
         if (html.isEmpty()) html = s;
 
-        String color = hasModels ? NORMAL_FG : DIM_FG;
-        String style = hasModels ? "" : " font-style: italic;";
+        // Rename overrides the dim treatment -- a renamed entry is by
+        // definition user-curated, so it reads as italic yellow even if
+        // its underlying model array is empty.
+        String color;
+        String style;
+        if (renamed)
+        {
+            color = RENAME_FG;
+            style = " font-style: italic;";
+        }
+        else if (!hasModels)
+        {
+            color = DIM_FG;
+            style = " font-style: italic;";
+        }
+        else
+        {
+            color = NORMAL_FG;
+            style = "";
+        }
         setText("<html><head></head><body style=\"color: " + color + ";" + style + "\">" + html + "</body></html>");
+    }
+
+    /** Per-type id extraction for the rename lookup. Mirrors JFilterableTable's idOf. */
+    private static int idOf(Object item)
+    {
+        if (item instanceof NPCData) return ((NPCData) item).getId();
+        if (item instanceof ObjectData) return ((ObjectData) item).getId();
+        if (item instanceof ItemData) return ((ItemData) item).getId();
+        if (item instanceof SpotanimData) return ((SpotanimData) item).getId();
+        if (item instanceof AnimData) return ((AnimData) item).getId();
+        if (item instanceof SoundData) return ((SoundData) item).getId();
+        return 0;
+    }
+
+    /** Extracts the trailing " (id)" suffix from an XData toString so renamed labels keep it. */
+    private static String idSuffix(Object item)
+    {
+        String full = item.toString();
+        int idx = full.lastIndexOf(" (");
+        return idx > 0 ? full.substring(idx) : "";
     }
 
     private void paintSelection(boolean isSelected)

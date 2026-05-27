@@ -109,6 +109,18 @@ public class CacheSearcherTab extends JPanel
         setupTagManager();
         setupRenderPanel();
         setupLayout();
+
+        // Cache mode + metadata store: enables the right-click context
+        // menu (Rename now; Set / Remove tag / Filter ship in 4b-4c) and
+        // the italic-yellow rename rendering. Mini-searcher popups in
+        // AttributePanel intentionally do NOT call this -- they're
+        // display-only per spec.
+        npcTable.setMetadataStore(cacheMetadataStore);
+        objectTable.setMetadataStore(cacheMetadataStore);
+        itemTable.setMetadataStore(cacheMetadataStore);
+        animTable.setMetadataStore(cacheMetadataStore);
+        spotAnimTable.setMetadataStore(cacheMetadataStore);
+        soundTable.setMetadataStore(cacheMetadataStore);
     }
 
     /**
