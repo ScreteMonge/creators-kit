@@ -1456,21 +1456,21 @@ public class Character
      */
     public SoundKeyFrame[] getSoundKeyFrames()
     {
-        KeyFrame[] keyFrames = getKeyFrames(KeyFrameType.SOUND);
-        if (keyFrames == null)
+        // Collect kfs from all 4 per-Character sound slots into a single
+        // flat array (the save format stays 1D; each kf's slot field
+        // tells the load path which frames[] index to restore it into).
+        java.util.List<SoundKeyFrame> out = new java.util.ArrayList<>();
+        for (KeyFrameType slot : KeyFrameType.LOCAL_SOUND_TYPES)
         {
-            return null;
+            KeyFrame[] keyFrames = getKeyFrames(slot);
+            if (keyFrames == null) continue;
+            for (KeyFrame kf : keyFrames)
+            {
+                if (kf != null) out.add((SoundKeyFrame) kf);
+            }
         }
-        SoundKeyFrame[] out = new SoundKeyFrame[keyFrames.length];
-        for (int i = 0; i < keyFrames.length; i++)
-        {
-            out[i] = (SoundKeyFrame) keyFrames[i];
-        }
-        if (Arrays.stream(out).allMatch(Objects::isNull))
-        {
-            return null;
-        }
-        return out;
+        if (out.isEmpty()) return null;
+        return out.toArray(new SoundKeyFrame[0]);
     }
 
     public ShieldKeyFrame[] getShieldKeyFrames()

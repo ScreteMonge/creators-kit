@@ -33,6 +33,8 @@ public class TimelineLocalRowLayout
     public static final String HITSPLATS_GROUP_NAME = "Hitsplats";
     /** Display name shown in the label column for the SpotAnims parent row. */
     public static final String SPOTANIMS_GROUP_NAME = "SpotAnims";
+    /** Display name shown in the label column for the per-Character Sounds parent row. */
+    public static final String SOUNDS_GROUP_NAME = "Sounds";
 
     /**
      * Declarative table of the groups this view supports. Each entry maps a
@@ -50,6 +52,7 @@ public class TimelineLocalRowLayout
         java.util.LinkedHashMap<String, Set<KeyFrameType>> m = new java.util.LinkedHashMap<>();
         m.put(HITSPLATS_GROUP_NAME, new LinkedHashSet<>(Arrays.asList(KeyFrameType.HITSPLAT_TYPES)));
         m.put(SPOTANIMS_GROUP_NAME, new LinkedHashSet<>(Arrays.asList(KeyFrameType.SPOTANIM_TYPES)));
+        m.put(SOUNDS_GROUP_NAME, new LinkedHashSet<>(Arrays.asList(KeyFrameType.LOCAL_SOUND_TYPES)));
         return m;
     }
 

@@ -3571,7 +3571,31 @@ public class CreatorsPanel extends PluginPanel
             // can add kfs as needed.
             if (save.getSoundKeyFrames() != null)
             {
-                frames[KeyFrameType.getIndex(KeyFrameType.SOUND)] = save.getSoundKeyFrames();
+                // The save's soundKeyFrames was a flat single-slot array in
+                // the original ship (everything was SOUND). Saves authored
+                // after the Sound 1..4 split mix SOUND / SOUND_LOCAL_2/3/4
+                // entries in the same array; route each by its slot field
+                // into the matching frames[] index. Entries without a
+                // slot field (old saves) default to SOUND -- behaviour
+                // identical to the previous single-array storage.
+                java.util.Map<KeyFrameType, java.util.List<com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame>> bySlot =
+                        new java.util.EnumMap<>(KeyFrameType.class);
+                for (com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame sk : save.getSoundKeyFrames())
+                {
+                    if (sk == null) continue;
+                    KeyFrameType slot = sk.getKeyFrameType();
+                    if (slot != KeyFrameType.SOUND && slot != KeyFrameType.SOUND_LOCAL_2
+                            && slot != KeyFrameType.SOUND_LOCAL_3 && slot != KeyFrameType.SOUND_LOCAL_4)
+                    {
+                        slot = KeyFrameType.SOUND;  // legacy single-slot
+                    }
+                    bySlot.computeIfAbsent(slot, s -> new java.util.ArrayList<>()).add(sk);
+                }
+                for (java.util.Map.Entry<KeyFrameType, java.util.List<com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame>> e : bySlot.entrySet())
+                {
+                    frames[KeyFrameType.getIndex(e.getKey())] =
+                            e.getValue().toArray(new com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame[0]);
+                }
             }
 
             KeyFrameType[] summary;

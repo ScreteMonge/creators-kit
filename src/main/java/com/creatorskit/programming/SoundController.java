@@ -37,12 +37,25 @@ public class SoundController
     /** Last kf we fired per global slot, so we don't re-trigger within its window. */
     private final Map<KeyFrameType, SoundKeyFrame> lastFired = new EnumMap<>(KeyFrameType.class);
     /**
-     * Per-Character "already fired" tracker for the local SOUND slot. Mirrors
-     * {@link #lastFired} but keyed by Character because each Character carries
-     * its own independent stream of Sound kfs. IdentityHashMap so a renamed /
-     * mutated Character still maps consistently across ticks.
+     * Per-Character "already fired" tracker for the four local SOUND slots.
+     * Nested: outer key is the Character (identity-keyed so renames /
+     * mutated copies don't shadow each other); inner key is the slot
+     * type (SOUND / SOUND_LOCAL_2 / 3 / 4). Each slot tracks its own
+     * lastFired independently so layered sounds at the same tick across
+     * slots all play once.
      */
-    private final Map<com.creatorskit.Character, SoundKeyFrame> lastFiredLocal = new IdentityHashMap<>();
+    private final Map<com.creatorskit.Character, EnumMap<KeyFrameType, SoundKeyFrame>> lastFiredLocal = new IdentityHashMap<>();
+
+    private SoundKeyFrame getLastFiredLocal(com.creatorskit.Character ch, KeyFrameType slot)
+    {
+        EnumMap<KeyFrameType, SoundKeyFrame> m = lastFiredLocal.get(ch);
+        return m == null ? null : m.get(slot);
+    }
+
+    private void putLastFiredLocal(com.creatorskit.Character ch, KeyFrameType slot, SoundKeyFrame kf)
+    {
+        lastFiredLocal.computeIfAbsent(ch, k -> new EnumMap<>(KeyFrameType.class)).put(slot, kf);
+    }
 
     @Inject
     public SoundController(Client client, ClientThread clientThread)
@@ -136,25 +149,31 @@ public class SoundController
         for (com.creatorskit.Character ch : new java.util.ArrayList<>(characters))
         {
             if (ch == null) continue;
-            KeyFrame[] kfs = ch.getKeyFrames(KeyFrameType.SOUND);
-            SoundKeyFrame active = findActiveAtOrBefore(kfs, currentTick);
-            if (active == null) continue;
-            SoundKeyFrame prev = lastFiredLocal.get(ch);
-            if (prev == active) continue;
-            lastFiredLocal.put(ch, active);
-            final int id = active.getSoundId();
-            if (id < 0) continue;  // -1 = silence
-            // One-arg overload: respects the user's in-game SFX volume
-            // (returns silently if SFX is muted, matching the "use global
-            // Area Sound for override" boundary).
-            clientThread.invoke(() -> client.playSoundEffect(id));
+            // Walk all 4 local sound slots so layered sounds (same tick,
+            // different slot) all play. Each slot tracks its own
+            // lastFired so re-entering the slot's window doesn't re-fire.
+            for (KeyFrameType slot : KeyFrameType.LOCAL_SOUND_TYPES)
+            {
+                KeyFrame[] kfs = ch.getKeyFrames(slot);
+                SoundKeyFrame active = findActiveAtOrBefore(kfs, currentTick);
+                if (active == null) continue;
+                SoundKeyFrame prev = getLastFiredLocal(ch, slot);
+                if (prev == active) continue;
+                putLastFiredLocal(ch, slot, active);
+                final int id = active.getSoundId();
+                if (id < 0) continue;  // -1 = silence
+                // One-arg overload: respects the user's in-game SFX volume
+                // (returns silently if SFX is muted, matching the "use global
+                // Area Sound for override" boundary).
+                clientThread.invoke(() -> client.playSoundEffect(id));
+            }
         }
     }
 
     /**
      * Mirror of {@link #onScrub} for per-Character SOUND. Parks each
-     * Character's lastFired at the current active kf so the next play-tick
-     * doesn't chirp on the scrub-landing tick.
+     * (Character, slot) pair's lastFired at the current active kf so
+     * the next play-tick doesn't chirp on the scrub-landing tick.
      */
     public synchronized void onScrubLocal(double currentTick, java.util.List<com.creatorskit.Character> characters)
     {
@@ -163,9 +182,12 @@ public class SoundController
         for (com.creatorskit.Character ch : new java.util.ArrayList<>(characters))
         {
             if (ch == null) continue;
-            KeyFrame[] kfs = ch.getKeyFrames(KeyFrameType.SOUND);
-            SoundKeyFrame active = findActiveAtOrBefore(kfs, currentTick);
-            lastFiredLocal.put(ch, active);
+            for (KeyFrameType slot : KeyFrameType.LOCAL_SOUND_TYPES)
+            {
+                KeyFrame[] kfs = ch.getKeyFrames(slot);
+                SoundKeyFrame active = findActiveAtOrBefore(kfs, currentTick);
+                putLastFiredLocal(ch, slot, active);
+            }
         }
     }
 

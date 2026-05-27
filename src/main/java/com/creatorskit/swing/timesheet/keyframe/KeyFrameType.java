@@ -38,11 +38,20 @@ public enum KeyFrameType
     SOUND_3("Area Sound 3","SD3"),
     SOUND_4("Area Sound 4","SD4"),
     /**
-     * Per-Character sound. Plays through {@code client.playSoundEffect(id)}
+     * Per-Character sound, slot 1. Plays through {@code client.playSoundEffect(id)}
      * (one-arg overload that respects the player's in-game volume setting)
-     * when the playhead crosses the kf's tick during play.
+     * when the playhead crosses the kf's tick during play. The enum value
+     * NAME stays {@code SOUND} for save back-compat (the field was
+     * single-slot when first shipped); the display name shifts to
+     * "Sound 1" now that {@link #SOUND_LOCAL_2}/3/4 are alongside it.
      */
-    SOUND("Sound","SO");
+    SOUND("Sound 1","S1L"),
+    /** Per-Character sound slot 2; mirrors {@link #SOUND}. */
+    SOUND_LOCAL_2("Sound 2","S2L"),
+    /** Per-Character sound slot 3; mirrors {@link #SOUND}. */
+    SOUND_LOCAL_3("Sound 3","S3L"),
+    /** Per-Character sound slot 4; mirrors {@link #SOUND}. */
+    SOUND_LOCAL_4("Sound 4","S4L");
 
     private final String name;
     private final String shortHand;
@@ -78,7 +87,10 @@ public enum KeyFrameType
             SOUND_2,
             SOUND_3,
             SOUND_4,
-            SOUND
+            SOUND,
+            SOUND_LOCAL_2,
+            SOUND_LOCAL_3,
+            SOUND_LOCAL_4
     };
 
     /**
@@ -112,9 +124,13 @@ public enum KeyFrameType
             SCREEN_FADE,
             SCREEN_SHAKE,
             SHIELD,
-            // Per-Character "Sound" sits between Shield and Spawn (S-H,
-            // S-O, S-P alphabetical).
+            // Per-Character sound slots sit between Shield and Spawn
+            // (S-H < S-O < S-P alphabetical). All four slots share the
+            // "Sound N" display family and stack together here.
             SOUND,
+            SOUND_LOCAL_2,
+            SOUND_LOCAL_3,
+            SOUND_LOCAL_4,
             SPAWN,
             SPECIAL,
             SPOTANIM,
@@ -141,15 +157,24 @@ public enum KeyFrameType
             OVERHEAD,
             PROJECTILE,
             SHIELD,
-            // Per-Character "Sound" sits between Shield and Spawn
-            // (S-H, S-O, S-P alphabetical).
+            // Per-Character sound slots cluster between Shield and Spawn
+            // (S-H < S-O < S-P alphabetical). All four wrap under a
+            // "Sounds" collapsible group in TimelineLocalRowLayout the
+            // same way HITSPLAT_1..4 wrap under "Hitsplats".
             SOUND,
+            SOUND_LOCAL_2,
+            SOUND_LOCAL_3,
+            SOUND_LOCAL_4,
             SPAWN,
             SPECIAL,
             SPOTANIM,
             SPOTANIM2,
             TEXT
     };
+
+    /** All 4 per-Character sound slots in display order. */
+    public static final KeyFrameType[] LOCAL_SOUND_TYPES = new KeyFrameType[]{
+            SOUND, SOUND_LOCAL_2, SOUND_LOCAL_3, SOUND_LOCAL_4};
 
     /**
      * Global types in alphabetical display order. Drives the row layout of
@@ -273,6 +298,12 @@ public enum KeyFrameType
                 return 24;
             case SOUND:
                 return 25;
+            case SOUND_LOCAL_2:
+                return 26;
+            case SOUND_LOCAL_3:
+                return 27;
+            case SOUND_LOCAL_4:
+                return 28;
         }
     }
 
@@ -333,12 +364,18 @@ public enum KeyFrameType
                 return SOUND_4;
             case 25:
                 return SOUND;
+            case 26:
+                return SOUND_LOCAL_2;
+            case 27:
+                return SOUND_LOCAL_3;
+            case 28:
+                return SOUND_LOCAL_4;
         }
     }
 
     public static int getTotalFrameTypes()
     {
-        return 26;
+        return 29;
     }
 
     public static KeyFrameType[] createDefaultSummary()

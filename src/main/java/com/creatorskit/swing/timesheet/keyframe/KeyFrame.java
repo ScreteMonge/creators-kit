@@ -211,6 +211,9 @@ public class KeyFrame
             case SOUND_3:
             case SOUND_4:
             case SOUND:
+            case SOUND_LOCAL_2:
+            case SOUND_LOCAL_3:
+            case SOUND_LOCAL_4:
                 SoundKeyFrame soundKF = (SoundKeyFrame) keyFrame;
                 return new SoundKeyFrame(
                         tick,
