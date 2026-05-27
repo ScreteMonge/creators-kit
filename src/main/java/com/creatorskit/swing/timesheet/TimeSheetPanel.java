@@ -3040,9 +3040,14 @@ public class TimeSheetPanel extends JPanel
         label.setMaximumSize(new Dimension(Integer.MAX_VALUE, 24));
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
         label.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        // 18px right padding so the AS_NEEDED vertical scrollbar in the
-        // labels column doesn't cover the right-aligned property text.
-        label.setBorder(new EmptyBorder(0, 4, 0, 18));
+        // 18px right padding (default) clears the AS_NEEDED vertical scrollbar
+        // in the labels column. Child-of-group rows bump the right padding to
+        // 30px so their text floats noticeably LEFT of the column edge,
+        // creating the parent / child indent. (The labels are right-aligned,
+        // so a leading-space "indent" would be invisible -- we push the text
+        // away from the right edge instead.)
+        int rightPad = isChildOfGroup ? 30 : 18;
+        label.setBorder(new EmptyBorder(0, 4, 0, rightPad));
 
         if (isParent)
         {
@@ -3062,11 +3067,9 @@ public class TimeSheetPanel extends JPanel
             return label;
         }
 
-        // Leaf row (with optional group-child indent so the parent /
-        // child relationship reads from the column without a real branch
-        // line).
-        String indent = isChildOfGroup ? "    " : "";
-        label.setText(indent + displayName + LABEL_OFFSET);
+        // Leaf row. The indent for group children comes from the right
+        // padding bump above, not from in-text spacing.
+        label.setText(displayName + LABEL_OFFSET);
         label.addMouseListener(new MouseAdapter()
         {
             @Override

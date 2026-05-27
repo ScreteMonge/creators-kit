@@ -10,24 +10,58 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Row layout for the LOCAL timeline view. v1 introduces a single
- * collapsible group: <b>Hitsplats</b>, wrapping HITSPLAT_1..4.
+ * Row layout for the LOCAL timeline view. Supports collapsible groups
+ * that wrap a set of related rows under a single parent. Current
+ * groups: <b>Hitsplats</b> (HITSPLAT_1..4) and <b>SpotAnims</b>
+ * (SPOTANIM, SPOTANIM2).
  *
  * <p>The underlying row order is still
  * {@link KeyFrameType#LOCAL_KEYFRAME_TYPES_ALPHABETICAL}; the layout
- * just inserts a synthetic parent row at the alphabetical position of
- * the group's name ("Hitsplats" sits between "Health" and "Model").
- * When the parent is collapsed, its child rows are hidden -- the
- * canvas's {@code displayRowIndex(type)} returns -1 for collapsed
- * children, so their keyframes don't render.
+ * inserts a synthetic parent row at the alphabetical position of each
+ * group's display name (e.g. "Hitsplats" between "Health" and "Model",
+ * "SpotAnims" between "Spawn" and "Special"). When a parent is
+ * collapsed, its child rows are hidden -- the canvas's
+ * {@code displayRowIndex(type)} returns -1 for collapsed children, so
+ * their keyframes don't render.
  *
  * <p>State is per-instance; persistence (config roundtrip of the
  * collapsed-set) is owned by the caller.
  */
 public class TimelineLocalRowLayout
 {
-    /** Display name shown in the label column for the group parent row. */
+    /** Display name shown in the label column for the Hitsplats parent row. */
     public static final String HITSPLATS_GROUP_NAME = "Hitsplats";
+    /** Display name shown in the label column for the SpotAnims parent row. */
+    public static final String SPOTANIMS_GROUP_NAME = "SpotAnims";
+
+    /**
+     * Declarative table of the groups this view supports. Each entry maps a
+     * display name to the set of child types that belong under it. Adding a
+     * new group is a one-line append here -- {@link #buildBaseRows} and
+     * {@link Row#leaf} both read from this table, so they pick it up
+     * automatically. Order matters only for tie-breaks within a single
+     * alphabetical slot; in practice each parent inserts at its own unique
+     * slot in the type list so collisions don't happen.
+     */
+    private static final java.util.LinkedHashMap<String, Set<KeyFrameType>> GROUPS = buildGroupTable();
+
+    private static java.util.LinkedHashMap<String, Set<KeyFrameType>> buildGroupTable()
+    {
+        java.util.LinkedHashMap<String, Set<KeyFrameType>> m = new java.util.LinkedHashMap<>();
+        m.put(HITSPLATS_GROUP_NAME, new LinkedHashSet<>(Arrays.asList(KeyFrameType.HITSPLAT_TYPES)));
+        m.put(SPOTANIMS_GROUP_NAME, new LinkedHashSet<>(Arrays.asList(KeyFrameType.SPOTANIM_TYPES)));
+        return m;
+    }
+
+    /** All types that belong to any group; cached so leaf-construction can check membership without walking GROUPS each call. */
+    private static final Set<KeyFrameType> ALL_GROUPED_TYPES = buildAllGroupedTypes();
+
+    private static Set<KeyFrameType> buildAllGroupedTypes()
+    {
+        Set<KeyFrameType> out = new java.util.HashSet<>();
+        for (Set<KeyFrameType> children : GROUPS.values()) out.addAll(children);
+        return out;
+    }
 
     private final List<Row> baseRows;
     /** Set of group names currently collapsed. */
@@ -48,32 +82,38 @@ public class TimelineLocalRowLayout
     }
 
     /**
-     * Constructs the canonical row order, inserting the group parent at
-     * the alphabetical slot of its name ("Hitsplats" lands between
-     * "Health" and "Model"). Children follow immediately after the
-     * parent in their existing order.
+     * Constructs the canonical row order, inserting each declared group's
+     * parent row at the alphabetical slot of its first child. Children
+     * follow immediately after their parent in their existing order; the
+     * rendering layer hides them when the parent is collapsed.
      */
     private static List<Row> buildBaseRows()
     {
-        // The 4 hitsplat types as a Set for membership checks.
-        Set<KeyFrameType> hitsplatChildren = new LinkedHashSet<>(Arrays.asList(KeyFrameType.HITSPLAT_TYPES));
-
-        // Walk the alphabetical list. When we'd output the first hitsplat
-        // child, output the parent group first. Subsequent hitsplat
-        // children are still emitted as LEAF rows -- the rendering layer
-        // hides them when the parent is collapsed.
+        // Track which group parents have already been emitted so we don't
+        // re-emit them on subsequent children of the same group.
+        Set<String> emittedParents = new java.util.HashSet<>();
         List<Row> rows = new ArrayList<>();
-        boolean emittedHitsplatsParent = false;
         for (KeyFrameType t : KeyFrameType.LOCAL_KEYFRAME_TYPES_ALPHABETICAL)
         {
-            if (hitsplatChildren.contains(t) && !emittedHitsplatsParent)
+            String owningGroup = groupNameFor(t);
+            if (owningGroup != null && !emittedParents.contains(owningGroup))
             {
-                rows.add(Row.parent(HITSPLATS_GROUP_NAME, hitsplatChildren));
-                emittedHitsplatsParent = true;
+                rows.add(Row.parent(owningGroup, GROUPS.get(owningGroup)));
+                emittedParents.add(owningGroup);
             }
             rows.add(Row.leaf(t));
         }
         return Collections.unmodifiableList(rows);
+    }
+
+    /** Returns the group name owning {@code type} from {@link #GROUPS}, or null. */
+    private static String groupNameFor(KeyFrameType type)
+    {
+        for (java.util.Map.Entry<String, Set<KeyFrameType>> e : GROUPS.entrySet())
+        {
+            if (e.getValue().contains(type)) return e.getKey();
+        }
+        return null;
     }
 
     public Set<String> getCollapsed()
@@ -232,7 +272,10 @@ public class TimelineLocalRowLayout
 
         static Row leaf(KeyFrameType type)
         {
-            boolean inGroup = Arrays.asList(KeyFrameType.HITSPLAT_TYPES).contains(type);
+            // Membership reads from the centralised GROUPS table so adding a
+            // new group anywhere automatically flags its children for the
+            // indent treatment.
+            boolean inGroup = ALL_GROUPED_TYPES.contains(type);
             return new Row(Kind.LEAF, type, null, null, inGroup);
         }
 
