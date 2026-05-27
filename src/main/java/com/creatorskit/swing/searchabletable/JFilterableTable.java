@@ -61,6 +61,8 @@ public class JFilterableTable extends JTable
     private TagFilterDialog.Mode filterMode = TagFilterDialog.Mode.AND;
     /** Listener fired on filter-state changes so the cache panel can update its "(filtered)" title suffix. */
     private Runnable filterChangedListener;
+    /** When true, rows whose model array is null / empty are dropped entirely instead of just dimmed. */
+    private boolean hideUnavailable = false;
 
     public CacheType getCacheType() { return cacheType; }
 
@@ -174,6 +176,10 @@ public class JFilterableTable extends JTable
                     || row.toString().toLowerCase().matches("(?i).*" + Pattern.quote(search.toLowerCase()) + ".*");
             if (!textMatch) continue;
             if (!passesTagFilter(row)) continue;
+            // Hide-unavailable filter: drop empty-model rows entirely
+            // instead of just dimming them. Toggled via the right-click
+            // menu item; off by default so users see the full set.
+            if (hideUnavailable && !row.isHasModels()) continue;
             row.setSearchTerm(search);
             found.add(row);
         }
@@ -406,6 +412,18 @@ public class JFilterableTable extends JTable
         filter.setEnabled(!metadataStore.getTags().isEmpty());
         filter.addActionListener(ev -> openFilterDialog());
         menu.add(filter);
+
+        // Toggle: dim VS drop empty-model rows entirely. Checkbox menu
+        // item so the current state reads at a glance. Re-runs the
+        // filter pass on change.
+        JCheckBoxMenuItem hideUnav = new JCheckBoxMenuItem("Hide unavailable", hideUnavailable);
+        hideUnav.setToolTipText("Drop rows with no models (map markers, area placeholders) from the list entirely instead of just dimming them.");
+        hideUnav.addActionListener(ev ->
+        {
+            hideUnavailable = !hideUnavailable;
+            searchAndListEntries("");
+        });
+        menu.add(hideUnav);
 
         menu.show(e.getComponent(), e.getX(), e.getY());
     }

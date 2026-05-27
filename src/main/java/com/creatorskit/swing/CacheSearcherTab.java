@@ -155,6 +155,52 @@ public class CacheSearcherTab extends JPanel
         }
     }
 
+    /**
+     * Adds an in-card search field at the bottom of {@code card},
+     * wired to {@code table.searchAndListEntries} on every keystroke.
+     * Lives under the action buttons (high gridY so it always sinks
+     * to the bottom regardless of how many rows the card has) and
+     * mirrors the side-panel search so the user never has to look
+     * away from the results list to filter it.
+     *
+     * <p>Typing here also clears any prior side-panel search state
+     * (the two share the table's filter pass, so whichever fired
+     * last wins). Empty input restores the full list.
+     */
+    private void addBottomSearchBar(JPanel card, JFilterableTable table, String placeholder)
+    {
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.insets = new Insets(2, 2, 2, 2);
+        c.weightx = 1;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 20;  // intentionally high -- sinks below every action row
+        c.gridwidth = 1;
+
+        JPanel row = new JPanel(new BorderLayout(6, 0));
+        row.setBorder(new EmptyBorder(8, 0, 0, 0));
+        row.setBackground(ColorScheme.DARK_GRAY_COLOR);
+
+        JLabel lbl = new JLabel("Search: ");
+        lbl.setForeground(Color.LIGHT_GRAY);
+        row.add(lbl, BorderLayout.WEST);
+
+        JTextField field = new JTextField();
+        field.setToolTipText("Filter " + placeholder + " by name or id substring. Matches the side-panel search field.");
+        field.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        field.setForeground(ColorScheme.BRAND_ORANGE);
+        field.addKeyListener(new java.awt.event.KeyAdapter()
+        {
+            @Override public void keyReleased(java.awt.event.KeyEvent e)
+            {
+                table.searchAndListEntries(field.getText());
+            }
+        });
+        row.add(field, BorderLayout.CENTER);
+
+        card.add(row, c);
+    }
+
     private void setupDisplay()
     {
         display.setLayout(new CardLayout());
@@ -618,6 +664,8 @@ public class CacheSearcherTab extends JPanel
                 updateModelBreakdownTable(data.getModels());
             }
         });
+
+        addBottomSearchBar(card, npcTable, "NPCs");
     }
 
     private void setupObjectCard(JPanel card)
@@ -733,6 +781,8 @@ public class CacheSearcherTab extends JPanel
                 updateModelBreakdownTable(data.getObjectModels());
             }
         });
+
+        addBottomSearchBar(card, objectTable, "Objects");
     }
 
     private void setupItemCard(JPanel card)
@@ -993,6 +1043,8 @@ public class CacheSearcherTab extends JPanel
                 }
             }
         });
+
+        addBottomSearchBar(card, itemTable, "Items");
     }
 
     private void setupSpotAnimCard(JPanel card)
@@ -1124,6 +1176,8 @@ public class CacheSearcherTab extends JPanel
                 updateModelBreakdownTable(new int[]{data.getModelId()});
             }
         });
+
+        addBottomSearchBar(card, spotAnimTable, "SpotAnims");
     }
 
     private void setupAnimCard(JPanel card)
@@ -1196,6 +1250,8 @@ public class CacheSearcherTab extends JPanel
         c.gridy = 3;
         JLabel instructionLabel = new JLabel("Double click any Animation to preview it on the selected Object (without applying)");
         card.add(instructionLabel, c);
+
+        addBottomSearchBar(card, animTable, "Animations");
     }
 
     private void setupSoundCard(JPanel card)
@@ -1311,6 +1367,8 @@ public class CacheSearcherTab extends JPanel
                 });
             }
         }));
+
+        addBottomSearchBar(card, soundTable, "Sounds");
     }
 
     private void switchCards(String cardName)
