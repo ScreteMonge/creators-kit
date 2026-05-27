@@ -1834,12 +1834,27 @@ public class Programmer
             }
 
             // Apply the kf's horizontal Start X / Start Y offsets to the
-            // source position so the projectile can spawn off-centre
-            // (e.g. from a model's hand instead of its tile origin).
-            // Units are 1/128-tile, same as LocalPoint, so adding
-            // directly to sx / sy is correct.
-            int sx = sourceLp.getX() + kf.getStartX();
-            int sy = sourceLp.getY() + kf.getStartY();
+            // source position. Offsets are stored in the Character's
+            // LOCAL frame -- +Y = forward (the direction the model is
+            // currently facing), +X = right. The offset is rotated by
+            // the live ckObject orientation before being added to the
+            // world LocalPoint, so the projectile origin pivots with
+            // the model as it rotates instead of being glued to a
+            // fixed scene-space point. JAU 0 = facing south, 1024 =
+            // north, 2048 = full circle (OSRS convention).
+            CKObject ck = character.getCkObject();
+            int ori = ck != null ? ck.getOrientation() : 0;
+            double angle = ori * (2.0 * Math.PI / 2048.0);
+            double cosA = Math.cos(angle);
+            double sinA = Math.sin(angle);
+            int ox = kf.getStartX();
+            int oy = kf.getStartY();
+            // forward(theta) = (-sin, -cos); right(theta) = (-cos, sin).
+            // world = ox * right + oy * forward.
+            int dxOff = (int) Math.round(ox * (-cosA) + oy * (-sinA));
+            int dyOff = (int) Math.round(ox * sinA   + oy * (-cosA));
+            int sx = sourceLp.getX() + dxOff;
+            int sy = sourceLp.getY() + dyOff;
             int tx = targetLp.getX();
             int ty = targetLp.getY();
 
