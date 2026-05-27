@@ -3065,12 +3065,13 @@ public class TimeSheetPanel extends JPanel
         label.setAlignmentX(Component.LEFT_ALIGNMENT);
         label.setBackground(ColorScheme.DARKER_GRAY_COLOR);
         // 18px right padding (default) clears the AS_NEEDED vertical scrollbar
-        // in the labels column. Child-of-group rows bump the right padding to
-        // 30px so their text floats noticeably LEFT of the column edge,
-        // creating the parent / child indent. (The labels are right-aligned,
-        // so a leading-space "indent" would be invisible -- we push the text
-        // away from the right edge instead.)
-        int rightPad = isChildOfGroup ? 30 : 18;
+        // in the labels column. Group PARENT rows bump the right padding to
+        // 30px so the parent text floats LEFT of the column edge -- child
+        // rows stay at the default padding, so the children visually sit
+        // RIGHTWARD of their parent. (The labels are right-aligned, so a
+        // leading-space "indent" would be invisible -- the visual indent is
+        // achieved by varying the right padding instead.)
+        int rightPad = isParent ? 30 : 18;
         label.setBorder(new EmptyBorder(0, 4, 0, rightPad));
 
         if (isParent)
