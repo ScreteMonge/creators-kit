@@ -68,10 +68,14 @@ public class AttributePanel extends JPanel
     private final JButton updateButton = new JButton("Update");
     private final JButton resetButton = new JButton();
 
-    private final JFilterableTable npcTable = new JFilterableTable("NPCs");
-    private final JFilterableTable itemTable = new JFilterableTable("Items");
-    private final JFilterableTable animTable = new JFilterableTable("Animations");
-    private final JFilterableTable spotanimTable = new JFilterableTable("SpotAnims");
+    // CacheType arg enables 2-col display (Name + Date Added) + per-row
+    // dimming in the mini-searcher popups, matching the main Cache
+    // Searcher tab. Right-click actions (rename / tag / filter) stay
+    // OFF in the mini popups -- they're display-only here.
+    private final JFilterableTable npcTable = new JFilterableTable("NPCs", com.creatorskit.cache.metadata.CacheType.NPC);
+    private final JFilterableTable itemTable = new JFilterableTable("Items", com.creatorskit.cache.metadata.CacheType.ITEM);
+    private final JFilterableTable animTable = new JFilterableTable("Animations", com.creatorskit.cache.metadata.CacheType.ANIM);
+    private final JFilterableTable spotanimTable = new JFilterableTable("SpotAnims", com.creatorskit.cache.metadata.CacheType.SPOTANIM);
     /**
      * One shared table backing the per-card sound search fields. Identical
      * pattern to {@link #spotanimTable} -- there's a JTextField per Sound 1/4
@@ -79,7 +83,7 @@ public class AttributePanel extends JPanel
      * routes to whichever sound slot is currently selected via
      * {@link #selectedKeyFramePage}.
      */
-    private final JFilterableTable soundTable = new JFilterableTable("Sounds");
+    private final JFilterableTable soundTable = new JFilterableTable("Sounds", com.creatorskit.cache.metadata.CacheType.SOUND);
 
     private final JPopupMenu spotanimPopup = new JPopupMenu("SpotAnims");
     private final JPopupMenu soundPopup = new JPopupMenu("Sounds");

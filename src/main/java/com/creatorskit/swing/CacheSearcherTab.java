@@ -59,12 +59,16 @@ public class CacheSearcherTab extends JPanel
     private final JPanel breakdownPanel = new JPanel();
     private RenderPanel renderPanel;
 
-    private final JFilterableTable npcTable = new JFilterableTable("NPCs");
-    private final JFilterableTable objectTable = new JFilterableTable("Objects");
-    private final JFilterableTable itemTable = new JFilterableTable("Items");
-    private final JFilterableTable animTable = new JFilterableTable("Animations");
-    private final JFilterableTable spotAnimTable = new JFilterableTable("SpotAnims");
-    private final JFilterableTable soundTable = new JFilterableTable("Sounds");
+    // CacheType arg enables the 2-column (Name + Date Added) variant
+    // with per-row dimming for empty-model entries. modelTable is the
+    // model-id breakdown for a single Object, so it stays in legacy
+    // single-column mode without a date or dim behaviour.
+    private final JFilterableTable npcTable = new JFilterableTable("NPCs", com.creatorskit.cache.metadata.CacheType.NPC);
+    private final JFilterableTable objectTable = new JFilterableTable("Objects", com.creatorskit.cache.metadata.CacheType.OBJECT);
+    private final JFilterableTable itemTable = new JFilterableTable("Items", com.creatorskit.cache.metadata.CacheType.ITEM);
+    private final JFilterableTable animTable = new JFilterableTable("Animations", com.creatorskit.cache.metadata.CacheType.ANIM);
+    private final JFilterableTable spotAnimTable = new JFilterableTable("SpotAnims", com.creatorskit.cache.metadata.CacheType.SPOTANIM);
+    private final JFilterableTable soundTable = new JFilterableTable("Sounds", com.creatorskit.cache.metadata.CacheType.SOUND);
     private final JFilterableTable modelTable = new JFilterableTable("Model Id Breakdown");
 
     private final JComboBox<CustomModelType> itemType = new JComboBox<>();
