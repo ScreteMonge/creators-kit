@@ -78,6 +78,12 @@ public class JFilterableTable extends JTable
         this.cacheType = cacheType;
         this.renderer = new JFilterableRenderer();
         this.setDefaultRenderer(Object.class, renderer);
+        // Make the table draw through the full viewport even when it
+        // has zero rows. Without this an empty filtered list collapses
+        // to 0px and right-clicks in the visually-empty viewport area
+        // go to the scrollpane instead of the table -- so the
+        // "right-click empty list to clear filters" path wouldn't fire.
+        this.setFillsViewportHeight(true);
 
         if (cacheType != null)
         {
@@ -212,6 +218,19 @@ public class JFilterableTable extends JTable
 
     /** Lets the cache panel listen for filter-state changes so the title can be updated. */
     public void setFilterChangedListener(Runnable listener) { this.filterChangedListener = listener; }
+
+    /**
+     * Drops every active tag filter and re-runs the search pass.
+     * Called from the title-row "Clear filters" button + the right-click
+     * menu's "Clear filters" item. No-op when no filter is active.
+     */
+    public void clearFilters()
+    {
+        if (activeFilterTags.isEmpty()) return;
+        activeFilterTags.clear();
+        searchAndListEntries("");
+        if (filterChangedListener != null) filterChangedListener.run();
+    }
 
     /** Legacy single-column path: matches the pre-refactor behaviour exactly. */
     private void searchAndListLegacy(Object searchFor)
@@ -352,10 +371,23 @@ public class JFilterableTable extends JTable
             {
                 if (!e.isPopupTrigger()) return;
                 int viewRow = rowAtPoint(e.getPoint());
-                if (viewRow < 0) return;
-                // Implicit row selection: if the clicked row isn't part
-                // of the existing selection, replace selection with it.
-                if (!isRowSelected(viewRow)) setRowSelectionInterval(viewRow, viewRow);
+                if (viewRow >= 0)
+                {
+                    // Implicit row selection: clicking a row that isn't
+                    // already part of the selection replaces selection with
+                    // it. Matches OS file-manager conventions.
+                    if (!isRowSelected(viewRow)) setRowSelectionInterval(viewRow, viewRow);
+                }
+                else
+                {
+                    // Empty-area right-click. Clear any prior selection so
+                    // Rename / Set Tag / Remove Tag correctly grey out --
+                    // they need a target row to operate on. Filter / Hide /
+                    // Clear filters still apply, which is the main reason
+                    // to expose this menu on empty space (e.g. clearing an
+                    // active tag filter that left zero matching rows).
+                    clearSelection();
+                }
                 showContextMenu(e);
             }
         });
@@ -373,6 +405,10 @@ public class JFilterableTable extends JTable
         JPopupMenu menu = new JPopupMenu();
 
         JMenuItem rename = new JMenuItem("Rename");
+        // Rename only meaningful when a single row is selected -- the
+        // editor binds to one cell at a time. Empty-area right-click
+        // greys this out (we cleared selection in attachRightClickHandler).
+        rename.setEnabled(getSelectedRow() >= 0);
         rename.addActionListener(ev ->
         {
             int viewRow = getSelectedRow();
@@ -412,6 +448,14 @@ public class JFilterableTable extends JTable
         filter.setEnabled(!metadataStore.getTags().isEmpty());
         filter.addActionListener(ev -> openFilterDialog());
         menu.add(filter);
+
+        // Always available when at least one tag filter is currently
+        // active. Useful when the filter empties the visible list and
+        // the user wants to recover without re-opening the dialog.
+        JMenuItem clearFilters = new JMenuItem("Clear filters");
+        clearFilters.setEnabled(isFilterActive());
+        clearFilters.addActionListener(ev -> clearFilters());
+        menu.add(clearFilters);
 
         // Toggle: dim VS drop empty-model rows entirely. Checkbox menu
         // item so the current state reads at a glance. Re-runs the

@@ -156,6 +156,47 @@ public class CacheSearcherTab extends JPanel
     }
 
     /**
+     * Builds the top-of-card title row: section label on the left,
+     * "Clear filters" button pinned right. The button is hidden when no
+     * tag filter is active and revealed (with the {@code (filtered)}
+     * suffix on the title) when a filter is set. Click clears all
+     * active filter tags for the wrapped table.
+     *
+     * <p>Same {@code filterChangedListener} drives both the title text
+     * and the button visibility, so they always agree on state.
+     */
+    private JPanel buildCardTitleRow(String baseTitle, JFilterableTable table)
+    {
+        JPanel row = new JPanel(new BorderLayout());
+        row.setOpaque(false);
+
+        JLabel title = new JLabel(baseTitle + ":");
+        title.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32));
+        title.setHorizontalAlignment(SwingConstants.LEFT);
+        row.add(title, BorderLayout.WEST);
+
+        JButton clearBtn = new JButton("Clear filters");
+        clearBtn.setToolTipText("Drop every active tag filter on this list.");
+        clearBtn.setVisible(false);
+        clearBtn.addActionListener(e -> table.clearFilters());
+        // Wrap in a flow panel so the button doesn't stretch with the
+        // BorderLayout's EAST slot.
+        JPanel east = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        east.setOpaque(false);
+        east.add(clearBtn);
+        row.add(east, BorderLayout.EAST);
+
+        table.setFilterChangedListener(() -> SwingUtilities.invokeLater(() ->
+        {
+            boolean active = table.isFilterActive();
+            refreshFilteredTitle(title, baseTitle, active);
+            clearBtn.setVisible(active);
+        }));
+
+        return row;
+    }
+
+    /**
      * Adds an in-card search field at the bottom of {@code card},
      * wired to {@code table.searchAndListEntries} on every keystroke.
      * Lives under the action buttons (high gridY so it always sinks
@@ -518,13 +559,7 @@ public class CacheSearcherTab extends JPanel
         c.weighty = 0;
         c.gridx = 0;
         c.gridy = 0;
-        JLabel title = new JLabel("NPCs Found:");
-        final JLabel titleRef = title;
-        npcTable.setFilterChangedListener(() -> SwingUtilities.invokeLater(
-                () -> refreshFilteredTitle(titleRef, "NPCs Found", npcTable.isFilterActive())));
-        title.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32));
-        title.setHorizontalAlignment(SwingConstants.LEFT);
-        card.add(title, c);
+        card.add(buildCardTitleRow("NPCs Found", npcTable), c);
 
         c.weightx = 1;
         c.weighty = 1;
@@ -681,13 +716,7 @@ public class CacheSearcherTab extends JPanel
         c.weighty = 0;
         c.gridx = 0;
         c.gridy = 0;
-        JLabel title = new JLabel("Objects Found:");
-        final JLabel titleRef = title;
-        objectTable.setFilterChangedListener(() -> SwingUtilities.invokeLater(
-                () -> refreshFilteredTitle(titleRef, "Objects Found", objectTable.isFilterActive())));
-        title.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32));
-        title.setHorizontalAlignment(SwingConstants.LEFT);
-        card.add(title, c);
+        card.add(buildCardTitleRow("Objects Found", objectTable), c);
 
         c.weightx = 1;
         c.weighty = 1;
@@ -798,13 +827,7 @@ public class CacheSearcherTab extends JPanel
         c.weighty = 0;
         c.gridx = 0;
         c.gridy = 0;
-        JLabel title = new JLabel("Items Found:");
-        final JLabel titleRef = title;
-        itemTable.setFilterChangedListener(() -> SwingUtilities.invokeLater(
-                () -> refreshFilteredTitle(titleRef, "Items Found", itemTable.isFilterActive())));
-        title.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32));
-        title.setHorizontalAlignment(SwingConstants.LEFT);
-        card.add(title, c);
+        card.add(buildCardTitleRow("Items Found", itemTable), c);
 
         c.weightx = 1;
         c.weighty = 1;
@@ -1060,13 +1083,7 @@ public class CacheSearcherTab extends JPanel
         c.weighty = 0;
         c.gridx = 0;
         c.gridy = 0;
-        JLabel title = new JLabel("SpotAnims Found:");
-        final JLabel titleRef = title;
-        spotAnimTable.setFilterChangedListener(() -> SwingUtilities.invokeLater(
-                () -> refreshFilteredTitle(titleRef, "SpotAnims Found", spotAnimTable.isFilterActive())));
-        title.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32));
-        title.setHorizontalAlignment(SwingConstants.LEFT);
-        card.add(title, c);
+        card.add(buildCardTitleRow("SpotAnims Found", spotAnimTable), c);
 
         c.weightx = 1;
         c.weighty = 1;
@@ -1193,13 +1210,7 @@ public class CacheSearcherTab extends JPanel
         c.weighty = 0;
         c.gridx = 0;
         c.gridy = 0;
-        JLabel title = new JLabel("Animations Found:");
-        final JLabel titleRef = title;
-        animTable.setFilterChangedListener(() -> SwingUtilities.invokeLater(
-                () -> refreshFilteredTitle(titleRef, "Animations Found", animTable.isFilterActive())));
-        title.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32));
-        title.setHorizontalAlignment(SwingConstants.LEFT);
-        card.add(title, c);
+        card.add(buildCardTitleRow("Animations Found", animTable), c);
 
         c.weightx = 1;
         c.weighty = 1;
@@ -1267,13 +1278,7 @@ public class CacheSearcherTab extends JPanel
         c.weighty = 0;
         c.gridx = 0;
         c.gridy = 0;
-        JLabel title = new JLabel("Sounds Found:");
-        final JLabel titleRef = title;
-        soundTable.setFilterChangedListener(() -> SwingUtilities.invokeLater(
-                () -> refreshFilteredTitle(titleRef, "Sounds Found", soundTable.isFilterActive())));
-        title.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32));
-        title.setHorizontalAlignment(SwingConstants.LEFT);
-        card.add(title, c);
+        card.add(buildCardTitleRow("Sounds Found", soundTable), c);
 
         c.weightx = 1;
         c.weighty = 1;
