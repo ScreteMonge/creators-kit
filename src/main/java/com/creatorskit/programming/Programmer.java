@@ -1386,6 +1386,18 @@ public class Programmer
             timeSheetPanel.getAttributePanel().setPlayLocked(true);
             double currentTime = timeSheetPanel.getCurrentTime();
 
+            // Seed the SoundController's lastFired markers at the playhead
+            // so the FIRST onPlayTick after this call sees prev == active
+            // and doesn't re-fire a sound the user already heard (e.g. a
+            // kf at tick 0 when the playhead is sitting at tick 0). Without
+            // this seed, fresh plugin sessions and post-save-load plays
+            // both replay the playhead's current sound kf on press-play
+            // because lastFired was either empty or holding orphan
+            // references from before the array swap. Mirrors the scrub
+            // path's seed (see updateProgram).
+            soundController.onScrub(currentTime, plugin.getGlobalKeyFrames());
+            soundController.onScrubLocal(currentTime, plugin.getCharacters());
+
             ArrayList<Character> characters = plugin.getCharacters();
             for (int i = 0; i < characters.size(); i++)
             {

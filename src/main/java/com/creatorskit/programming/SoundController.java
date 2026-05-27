@@ -78,8 +78,19 @@ public class SoundController
             SoundKeyFrame[] kfs = store.getSoundKeyFramesSafe(slot);
             SoundKeyFrame active = findActiveAtOrBefore(kfs, currentTick);
             if (active == null) continue;
+            // Compare by TICK rather than object identity. The previous
+            // `prev == active` check broke whenever the kf-array contents
+            // got swapped for fresh instances even though the authored
+            // kf was logically the same -- the most common offender being
+            // save reload (the GlobalKeyFrames load path replaces the kf
+            // arrays wholesale, so lastFired keeps pointing at orphan
+            // objects). Symptom the user saw: long area sound replayed
+            // twice on press-play, the first cut off when the second
+            // started. Ticks are unique per slot (the GlobalKeyFrames.add
+            // / insertSorted path overwrites same-tick entries), so tick
+            // equality safely captures "we already fired this kf."
             SoundKeyFrame prev = lastFired.get(slot);
-            if (prev == active) continue;
+            if (prev != null && Double.compare(prev.getTick(), active.getTick()) == 0) continue;
             lastFired.put(slot, active);
             final int id = active.getSoundId();
             final int vol = active.getVolume();
@@ -200,8 +211,12 @@ public class SoundController
                 KeyFrame[] kfs = ch.getKeyFrames(slot);
                 SoundKeyFrame active = findActiveAtOrBefore(kfs, currentTick);
                 if (active == null) continue;
+                // Tick-based dedup, same rationale as onPlayTick: object
+                // identity breaks when the per-Character SOUND array gets
+                // rebuilt by save-load (CreatorsPanel's slot-routing pass)
+                // or any other path that materialises fresh kf instances.
                 SoundKeyFrame prev = getLastFiredLocal(ch, slot);
-                if (prev == active) continue;
+                if (prev != null && Double.compare(prev.getTick(), active.getTick()) == 0) continue;
                 putLastFiredLocal(ch, slot, active);
                 final int id = active.getSoundId();
                 final int vol = active.getVolume();
