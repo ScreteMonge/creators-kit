@@ -1840,10 +1840,32 @@ public class TimeSheetPanel extends JPanel
             return true;
         }
 
+        // (dx, dy) arrive in WORLD frame (ALT+W = +Y north, ALT+D = +X
+        // east, etc. -- see the hotkey listeners in CreatorsPlugin).
+        // The kf stores its offset in the source character's LOCAL frame
+        // so the spotanim pivots with the model on rotation, so we have
+        // to project the world delta onto the local axes before adding.
+        //
+        // local_x = world . right(theta) = -cos(theta)*dx + sin(theta)*dy
+        // local_y = world . forward(theta) = -sin(theta)*dx + -cos(theta)*dy
+        //
+        // where theta = orientation * 2pi/2048 (JAU 0 = south,
+        // forward = (0,-1); JAU 1024 = north, forward = (0,1); etc.)
+        // -- same convention Programmer.updateProjectiles uses for the
+        // local->world rotation, just the inverse direction here.
+        int ori = (selectedCharacter != null && selectedCharacter.getCkObject() != null)
+                ? selectedCharacter.getCkObject().getOrientation()
+                : 0;
+        double angle = ori * (2.0 * Math.PI / 2048.0);
+        double cosA = Math.cos(angle);
+        double sinA = Math.sin(angle);
+        int localDx = (int) Math.round(-cosA * dx + sinA * dy);
+        int localDy = (int) Math.round(-sinA * dx - cosA * dy);
+
         for (com.creatorskit.swing.timesheet.keyframe.ProjectileKeyFrame p : targets)
         {
-            p.setStartX(p.getStartX() + dx);
-            p.setStartY(p.getStartY() + dy);
+            p.setStartX(p.getStartX() + localDx);
+            p.setStartY(p.getStartY() + localDy);
             p.setStartHeight(p.getStartHeight() + dz);
         }
         // Push the new values into the playback path + refresh the
