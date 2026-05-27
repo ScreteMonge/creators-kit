@@ -755,9 +755,11 @@ public class Character
 
     private static boolean isGlobalType(KeyFrameType type)
     {
-        return type == KeyFrameType.CAMERA
-                || type == KeyFrameType.SCREEN_FADE
-                || type == KeyFrameType.SCREEN_SHAKE;
+        // Mirror the canonical predicate so SOUND_1..4 route to the global
+        // store too -- otherwise adding an Area Sound while a Character is
+        // selected would write the kf to that Character's per-type frames
+        // array, where the global timeline never looks for it.
+        return KeyFrameType.isGlobal(type);
     }
 
     public KeyFrame[] getKeyFrames(KeyFrameType type)
@@ -769,6 +771,10 @@ public class Character
                 case CAMERA:       return globalKeyFramesStore.getCameraKeyFramesSafe();
                 case SCREEN_FADE:  return globalKeyFramesStore.getScreenFadeKeyFramesSafe();
                 case SCREEN_SHAKE: return globalKeyFramesStore.getScreenShakeKeyFramesSafe();
+                case SOUND_1:
+                case SOUND_2:
+                case SOUND_3:
+                case SOUND_4:      return globalKeyFramesStore.getSoundKeyFramesSafe(type);
                 default:           break;
             }
         }
@@ -805,6 +811,13 @@ public class Character
                 case SCREEN_SHAKE:
                     globalKeyFramesStore.setScreenShakeKeyFrames(
                             toTypedArray(keyFrames, com.creatorskit.swing.timesheet.keyframe.ScreenShakeKeyFrame.class));
+                    return;
+                case SOUND_1:
+                case SOUND_2:
+                case SOUND_3:
+                case SOUND_4:
+                    globalKeyFramesStore.setSoundKeyFrames(type,
+                            toTypedArray(keyFrames, com.creatorskit.swing.timesheet.keyframe.SoundKeyFrame.class));
                     return;
                 default: break;
             }
