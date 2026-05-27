@@ -8,20 +8,21 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Card-state for the per-Character Sound keyframe (slot {@code KeyFrameType.SOUND}).
- * One field only: the cache sound effect id. Playback uses the one-arg
- * {@code Client.playSoundEffect(id)} so the user's in-game SFX volume is
- * respected -- there is no per-kf volume override the way global
- * {@link SoundAttributes} carries.
+ * Card-state for the per-Character Sound keyframe slots (SOUND /
+ * SOUND_LOCAL_2 / 3 / 4). Two fields: cache sound id, per-kf volume.
  *
- * <p>The kf still serializes through {@link SoundKeyFrame}; the volume
- * field on the underlying kf is parked at {@link SoundKeyFrame#DEFAULT_VOLUME}
- * and ignored on read.
+ * <p>Per-kf volume is treated as a MULTIPLIER over the user's in-game
+ * SFX preference -- {@code SoundController} scales the kf's
+ * {@code volume} field by the live {@code SoundEffectVolume} setting
+ * before passing the result to {@code Client.playSoundEffect(id, vol)}.
+ * Default is {@link SoundKeyFrame#DEFAULT_VOLUME} (127 = max), so a
+ * fresh kf plays at exactly the user's in-game volume.
  */
 @Getter
 public class LocalSoundAttributes extends Attributes
 {
     private final JSpinner soundId = new JSpinner();
+    private final JSpinner volume = new JSpinner();
 
     public LocalSoundAttributes()
     {
@@ -33,30 +34,34 @@ public class LocalSoundAttributes extends Attributes
     {
         SoundKeyFrame kf = (SoundKeyFrame) keyFrame;
         soundId.setValue(kf.getSoundId());
+        volume.setValue(kf.getVolume());
     }
 
     @Override
     public void setBackgroundColours(Color color)
     {
         soundId.setBackground(color);
+        volume.setBackground(color);
     }
 
     @Override
     public JComponent[] getAllComponents()
     {
-        return new JComponent[]{soundId};
+        return new JComponent[]{soundId, volume};
     }
 
     @Override
     public void addChangeListeners()
     {
         soundId.addChangeListener(e -> soundId.setBackground(getRed()));
+        volume.addChangeListener(e -> volume.setBackground(getRed()));
     }
 
     @Override
     public void resetAttributes(boolean resetBackground)
     {
         soundId.setValue(-1);
+        volume.setValue(SoundKeyFrame.DEFAULT_VOLUME);
         super.resetAttributes(resetBackground);
     }
 }

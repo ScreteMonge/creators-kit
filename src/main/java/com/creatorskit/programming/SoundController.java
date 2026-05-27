@@ -84,12 +84,55 @@ public class SoundController
             final int id = active.getSoundId();
             final int vol = active.getVolume();
             if (id < 0) continue;  // -1 = silence
-            // playSoundEffect must run on the client thread. The volume
-            // overload plays the sound even when the player has muted SFX
-            // -- desirable for cinematics where the timeline asks for a
-            // sound regardless of the user's normal mute preference.
-            clientThread.invoke(() -> client.playSoundEffect(id, vol));
+            // Per-kf volume is a multiplier over the in-game Area Sound
+            // preference -- the in-game slider is the master, so muting
+            // SFX in-game silences the kf regardless of its stored
+            // volume. Effective = kfVol * areaSoundPref / 127.
+            clientThread.invoke(() -> playScaled(id, vol, areaSoundPreferenceVolume()));
         }
+    }
+
+    /**
+     * Reads the user's in-game Area Sound preference (0-127) so per-kf
+     * volume can be scaled. Defaults to max if the preferences object
+     * is unavailable, matching the legacy "play at the kf's stored
+     * volume" behaviour rather than going silent on a null read.
+     */
+    private int areaSoundPreferenceVolume()
+    {
+        try
+        {
+            return client.getPreferences().getAreaSoundEffectVolume();
+        }
+        catch (Throwable t) { return 127; }
+    }
+
+    /**
+     * Reads the user's in-game Sound Effects preference (0-127) for the
+     * per-Character (local) sound playback path. Falls back to max if
+     * unreadable.
+     */
+    private int sfxPreferenceVolume()
+    {
+        try
+        {
+            return client.getPreferences().getSoundEffectVolume();
+        }
+        catch (Throwable t) { return 127; }
+    }
+
+    /**
+     * Computes {@code (kfVolume * inGameVolume) / 127} and fires
+     * playSoundEffect with the resulting volume. Skips the call when
+     * the scaled volume is 0 -- that's the in-game-muted case, where
+     * we want full silence rather than a zero-volume API ping.
+     */
+    private void playScaled(int id, int kfVolume, int inGameVolume)
+    {
+        int effective = (int) Math.round(kfVolume * (inGameVolume / 127.0));
+        if (effective <= 0) return;
+        if (effective > 127) effective = 127;
+        client.playSoundEffect(id, effective);
     }
 
     /**
@@ -161,11 +204,12 @@ public class SoundController
                 if (prev == active) continue;
                 putLastFiredLocal(ch, slot, active);
                 final int id = active.getSoundId();
+                final int vol = active.getVolume();
                 if (id < 0) continue;  // -1 = silence
-                // One-arg overload: respects the user's in-game SFX volume
-                // (returns silently if SFX is muted, matching the "use global
-                // Area Sound for override" boundary).
-                clientThread.invoke(() -> client.playSoundEffect(id));
+                // Per-kf volume scales the user's in-game SFX preference.
+                // The in-game slider is master, so a muted SFX setting
+                // silences this kf regardless of its stored volume.
+                clientThread.invoke(() -> playScaled(id, vol, sfxPreferenceVolume()));
             }
         }
     }
