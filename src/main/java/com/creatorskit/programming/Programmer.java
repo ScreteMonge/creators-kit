@@ -2650,11 +2650,19 @@ public class Programmer
                 Model model = modelUtilities.constructModelFromCache(stats, new int[0], false, LightingStyle.CUSTOM, cl);
 
                 ckObject.setModel(model);
-                // Plumb the kf's user-set speed multiplier into the same
-                // CKObject.animationSpeed accumulator the Character anim
-                // card uses. The 9-arg overload forwards animSpeed; the
-                // 8-arg back-compat shim hard-codes 1.0 and isn't used
-                // here anymore now that spotanims expose the lever.
+                // Speed has TWO consumers and we have to feed both:
+                //   1. setActiveAnimationFrame's animSpeed arg → getAnimFrame,
+                //      which is the scrub-time math that computes which frame
+                //      to land on given (currentTime - startTick).
+                //   2. CKObject.animationSpeed → the per-tick playback
+                //      accumulator in CKAnimationController. Without (2)
+                //      the spotanim renders the right frame on entry but
+                //      then auto-advances at 1.0 regardless of the kf's
+                //      multiplier, so the user sees no effect.
+                // The Character anim card sets both on its path (see
+                // registerActiveAnimationChanges); spotanims need the same
+                // pair-set to actually honour the field.
+                ckObject.setAnimationSpeed(animSpeed);
                 setActiveAnimationFrame(ckObject, data.getAnimationId(), currentTime, startTick, 0, loop, false, true, animSpeed);
             });
         }
