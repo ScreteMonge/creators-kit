@@ -111,10 +111,15 @@ public class AttributePanel extends JPanel
     // Card identifier whose STRING VALUE must match KeyFrameType.COLOUR.getName()
     // so the cardName <-> type mapping resolves.
     public static final String COLOUR_CARD = "Colour";
-    public static final String SOUND_1_CARD = "Sound 1";
-    public static final String SOUND_2_CARD = "Sound 2";
-    public static final String SOUND_3_CARD = "Sound 3";
-    public static final String SOUND_4_CARD = "Sound 4";
+    // String values MUST match KeyFrameType.SOUND_1..4.getName() ("Area
+    // Sound 1" / "Area Sound 2" / ...) -- those are what the global row
+    // labels in TimeSheetPanel display, and switchCards(String) routes
+    // by string equality. Keeping these in sync with the enum names is
+    // why the rows are selectable + the CardLayout finds the right card.
+    public static final String SOUND_1_CARD = "Area Sound 1";
+    public static final String SOUND_2_CARD = "Area Sound 2";
+    public static final String SOUND_3_CARD = "Area Sound 3";
+    public static final String SOUND_4_CARD = "Area Sound 4";
     /**
      * Card identifier for the per-Character Sound keyframe. Must match
      * {@code KeyFrameType.SOUND.getName()} so the cardName -> type
