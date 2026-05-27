@@ -282,10 +282,18 @@ public class CacheSearcherTab extends JPanel
         Object all = "All";
         dataList.add(all);
 
-        for (int i : modelIds)
+        // modelIds can be null: cache definitions occasionally ship with
+        // no objectModels (notably some non-rendered triggers like map
+        // markers and area placeholders). The selection listener still
+        // fires for those rows, so we just show the "All" placeholder
+        // and skip the per-model breakdown rather than NPE'ing the EDT.
+        if (modelIds != null)
         {
-            Object e = i;
-            dataList.add(e);
+            for (int i : modelIds)
+            {
+                Object e = i;
+                dataList.add(e);
+            }
         }
 
         List<Object> list = new ArrayList<>(dataList);
