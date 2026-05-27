@@ -137,13 +137,46 @@ public class SoundController
      * playSoundEffect with the resulting volume. Skips the call when
      * the scaled volume is 0 -- that's the in-game-muted case, where
      * we want full silence rather than a zero-volume API ping.
+     *
+     * <p>Uses the "metronome pattern" (the canonical RuneLite trick): the
+     * 2-arg {@code Client.playSoundEffect(id, volume)} only honours the
+     * volume argument when the user's in-game SFX preference is muted --
+     * otherwise the engine plays at the user's preference and the
+     * argument is silently ignored. To actually drive playback at our
+     * computed effective volume we temporarily set the in-game SFX
+     * preference to {@code effective}, fire the sound, then restore the
+     * user's previous setting. Runs on the client thread so the
+     * save / set / play / restore sequence isn't interleaved with the
+     * engine's own SFX writes. The 1-arg restore path is cheap (just a
+     * field write) and the user's settings panel snaps back instantly.
+     *
+     * <p>If the user's SFX is fully muted (pref = 0) we still want the
+     * kf to obey the master -- treat that as "be silent." We can detect
+     * it cheaply: {@code effective <= 0} captures both the kf-vol == 0
+     * case and the muted-master case.
      */
     private void playScaled(int id, int kfVolume, int inGameVolume)
     {
         int effective = (int) Math.round(kfVolume * (inGameVolume / 127.0));
         if (effective <= 0) return;
         if (effective > 127) effective = 127;
-        client.playSoundEffect(id, effective);
+        net.runelite.api.Preferences prefs;
+        try { prefs = client.getPreferences(); }
+        catch (Throwable t) { prefs = null; }
+        if (prefs == null)
+        {
+            // No preferences object available -- fall back to a plain 2-arg
+            // call so we at least play the sound at *something*. The volume
+            // arg will probably be ignored on a real client (see method
+            // doc) but on the off chance the engine honours it we'd rather
+            // make a sound than not.
+            client.playSoundEffect(id, effective);
+            return;
+        }
+        int prevSfx = prefs.getSoundEffectVolume();
+        prefs.setSoundEffectVolume(effective);
+        try { client.playSoundEffect(id, effective); }
+        finally { prefs.setSoundEffectVolume(prevSfx); }
     }
 
     /**
