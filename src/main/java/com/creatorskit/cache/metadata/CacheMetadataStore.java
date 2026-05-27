@@ -59,7 +59,7 @@ public class CacheMetadataStore
     private static final File DATA_FILE = new File(Paths.get(DATA_DIR.getPath(), "cache-metadata.json").toString());
 
     /** Max length of a tag name as enforced by addTag. Mirror in UI input field. */
-    public static final int MAX_TAG_NAME_LENGTH = 8;
+    public static final int MAX_TAG_NAME_LENGTH = 20;
 
     private final Gson gson = new Gson();
     /** Preserves creation order; used by the Tag Manager's "latest-created" field. */

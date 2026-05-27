@@ -21,7 +21,7 @@ import java.util.List;
  * <ul>
  *   <li>Six clickable colour swatches; clicking one selects the
  *       colour for the next Create Tag.</li>
- *   <li>8-char-max text field for the tag name (truncated harder by
+ *   <li>20-char-max text field for the tag name (truncated harder by
  *       the store; the UI also reject typed overflow).</li>
  *   <li><b>Create Tag</b> button -- adds a new tag with the current
  *       name + colour, then resets the name field. Disabled when the
@@ -119,7 +119,10 @@ public class TagManagerPanel extends JPanel
     private void buildNameField()
     {
         nameField.setFont(FontManager.getRunescapeFont());
-        nameField.setColumns(8);
+        // Layout-only sizing hint (~chars wide). The hard cap on actual
+        // accepted input comes from CacheMetadataStore.MAX_TAG_NAME_LENGTH
+        // via the DocumentFilter below.
+        nameField.setColumns(12);
         // Hard cap: every keystroke past 8 chars is dropped. The store
         // ALSO trims defensively to the same length.
         ((javax.swing.text.AbstractDocument) nameField.getDocument()).setDocumentFilter(
