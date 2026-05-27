@@ -3296,6 +3296,17 @@ public class CreatorsPanel extends PluginPanel
             target.setCameraKeyFrames(topLevel.getCameraKeyFramesSafe());
             target.setScreenFadeKeyFrames(topLevel.getScreenFadeKeyFramesSafe());
             target.setScreenShakeKeyFrames(topLevel.getScreenShakeKeyFramesSafe());
+            // Restore the four Area Sound slots. The save path serializes these
+            // alongside camera / fade / shake via Gson on the GlobalKeyFrames
+            // object, but the load path used to forget them -- the user would
+            // place Area Sound 1..4 kfs, save, reload, and find them all gone.
+            // Pre-4-slot saves only carried sound1KeyFrames (the others were
+            // null), and the *Safe getters normalise null to an empty array,
+            // so this is also forward-compatible for older save files.
+            target.setSound1KeyFrames(topLevel.getSound1KeyFramesSafe());
+            target.setSound2KeyFrames(topLevel.getSound2KeyFramesSafe());
+            target.setSound3KeyFrames(topLevel.getSound3KeyFramesSafe());
+            target.setSound4KeyFrames(topLevel.getSound4KeyFramesSafe());
             return;
         }
 
