@@ -45,14 +45,22 @@ public final class TagFilterDialog
         JPanel content = new JPanel(new BorderLayout(8, 8));
         content.setBorder(new EmptyBorder(8, 8, 8, 8));
 
-        // AND / OR toggle row
-        JPanel modeRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        modeRow.setBorder(new EmptyBorder(0, 0, 4, 0));
+        // AND / OR toggle. Stacked vertically because the verbose
+        // labels ("every filter must match" / "any filter matches")
+        // don't fit on a single FlowLayout row at the dialog's 420px
+        // width -- the OR button used to clip behind the columns
+        // panel below. BoxLayout.Y_AXIS keeps the helper text visible.
+        JPanel modeRow = new JPanel();
+        modeRow.setLayout(new BoxLayout(modeRow, BoxLayout.Y_AXIS));
+        modeRow.setBorder(new EmptyBorder(0, 0, 6, 0));
         JLabel modeLabel = new JLabel("Mode:");
         modeLabel.setForeground(Color.LIGHT_GRAY);
+        modeLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         modeRow.add(modeLabel);
-        JRadioButton andBtn = new JRadioButton("AND (every filter must match)");
-        JRadioButton orBtn = new JRadioButton("OR (any filter matches)");
+        JRadioButton andBtn = new JRadioButton("AND  (every filter must match)");
+        JRadioButton orBtn = new JRadioButton("OR  (any filter matches)");
+        andBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        orBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
         ButtonGroup grp = new ButtonGroup();
         grp.add(andBtn);
         grp.add(orBtn);
@@ -140,7 +148,9 @@ public final class TagFilterDialog
         content.add(bottomRow, BorderLayout.SOUTH);
 
         dialog.add(content, BorderLayout.CENTER);
-        dialog.setPreferredSize(new Dimension(420, 380));
+        // Height bumped from 380 -> 420 to absorb the extra row the
+        // vertically-stacked AND/OR radios eat at the top.
+        dialog.setPreferredSize(new Dimension(420, 420));
         dialog.pack();
         dialog.setLocationRelativeTo(parent);
         dialog.setVisible(true);
