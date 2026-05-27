@@ -229,7 +229,7 @@ public class DataFinder
 
                     response.body().close();
                 }
-                appendUnnamedAnims();
+                appendUnnamedAnims();  // extend past URL max using live idx0 size
                 executeCallbacks(DataType.ANIM);
             }
         });
@@ -721,7 +721,6 @@ public class DataFinder
             public void onFailure(Call call, IOException e)
             {
                 log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/spotanims.json");
-                appendUnnamedSpotAnims();
                 executeCallbacks(DataType.SPOTANIM);
             }
 
@@ -738,7 +737,6 @@ public class DataFinder
                     spotanimData.addAll(list);
                     response.body().close();
                 }
-                appendUnnamedSpotAnims();
                 executeCallbacks(DataType.SPOTANIM);
             }
         });
@@ -919,8 +917,6 @@ public class DataFinder
             public void onFailure(Call call, IOException e)
             {
                 log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/npc_defs.json");
-                appendUnnamedNpcs();
-                npcData.sort(Comparator.comparing(NPCData::getName));
                 executeCallbacks(DataType.NPC);
             }
 
@@ -935,10 +931,6 @@ public class DataFinder
                     List<NPCData> list = gson.fromJson(reader, listType);
 
                     npcData.addAll(list);
-                    // Append placeholders BEFORE the alphabetical sort so
-                    // they integrate with the named entries instead of
-                    // landing in a contiguous "Unnamed*" tail.
-                    appendUnnamedNpcs();
                     npcData.sort(Comparator.comparing(NPCData::getName));
                     response.body().close();
                 }
@@ -1156,8 +1148,6 @@ public class DataFinder
             public void onFailure(Call call, IOException e)
             {
                 log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/object_defs.json");
-                appendUnnamedObjects();
-                objectData.sort(Comparator.comparing(ObjectData::getName));
                 executeCallbacks(DataType.OBJECT);
             }
 
@@ -1173,8 +1163,6 @@ public class DataFinder
                     List<ObjectData> list = gson.fromJson(reader, listType);
 
                     objectData.addAll(list);
-                    // Pre-sort append so placeholders mix with named entries.
-                    appendUnnamedObjects();
                     objectData.sort(Comparator.comparing(ObjectData::getName));
                     response.body().close();
                 }
@@ -1321,8 +1309,6 @@ public class DataFinder
             public void onFailure(Call call, IOException e)
             {
                 log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/item_defs.json");
-                appendUnnamedItems();
-                itemData.sort(Comparator.comparing(ItemData::getName));
                 countDownLatch.countDown();
                 executeCallbacks(DataType.ITEM);
             }
@@ -1336,8 +1322,6 @@ public class DataFinder
                     Type listType = new TypeToken<List<ItemData>>() {}.getType();
                     List<ItemData> list = gson.fromJson(reader, listType);
                     itemData.addAll(list);
-                    // Pre-sort append so placeholders mix with named entries.
-                    appendUnnamedItems();
                     itemData.sort(Comparator.comparing(ItemData::getName));
 
                     response.body().close();
@@ -1549,43 +1533,12 @@ public class DataFinder
         return null;
     }
 
-    /**
-     * Placeholder-extension caps for each cache searcher. Upstream
-     * {@code <type>.json} dumps stop at whatever id Jagex's last
-     * config-name leak covered (sounds capped at 10200 after the 26 Feb
-     * 2025 "Game Jam: POH Improvements" update; the other dumps cap
-     * around the same era's max ids). The live OSRS cache keeps
-     * growing with every weekly content drop, so anything past the
-     * dump's max is unnamed binary -- this class appends synthetic
-     * {@code "Unnamed NNNN"} entries up to the {@code LIVE_CACHE_MAX_*}
-     * caps below so users can still pick those modern entries from the
-     * searcher.
-     *
-     * <p>Sound's cap comes from reading {@code main_file_cache.idx4} on
-     * 2026-05-27 (11525 slots, last non-empty id 11524). The
-     * non-sound caps are conservative upper bounds based on the
-     * historical content cadence -- bump them when the live cache
-     * outgrows. None of these are hard limits: the spinners and Cache
-     * Searcher don't enforce them, so users can always punch in higher
-     * IDs manually when a cap lags reality.
-     *
-     * <p>The {@code FIRST_UNNAMED_*_FALLBACK} values matter only when
-     * the upstream URL fetch fails -- in the success path we start
-     * appending past whatever max id the dump actually returned, so
-     * future upstream expansions never get double-named.
-     */
-    private static final int LIVE_CACHE_MAX_SOUND_ID    = 11524;
-    private static final int LIVE_CACHE_MAX_NPC_ID      = 15000;
-    private static final int LIVE_CACHE_MAX_OBJECT_ID   = 70000;
-    private static final int LIVE_CACHE_MAX_ITEM_ID     = 35000;
-    private static final int LIVE_CACHE_MAX_SPOTANIM_ID = 4000;
-    private static final int LIVE_CACHE_MAX_ANIM_ID     = 14000;
-    private static final int FIRST_UNNAMED_SOUND_FALLBACK    = 10201;
-    private static final int FIRST_UNNAMED_NPC_FALLBACK      = 14000;
-    private static final int FIRST_UNNAMED_OBJECT_FALLBACK   = 60000;
-    private static final int FIRST_UNNAMED_ITEM_FALLBACK     = 30000;
-    private static final int FIRST_UNNAMED_SPOTANIM_FALLBACK = 3000;
-    private static final int FIRST_UNNAMED_ANIM_FALLBACK     = 12000;
+    // Placeholder caps for the Sound + Anim searchers. These two indices
+    // are read directly from main_file_cache.idx{N} at runtime, so the
+    // cap reflects whatever the user's live cache actually holds rather
+    // than a hardcoded guess. Falls back to a defensive cap of 0 if the
+    // idx file can't be opened (in which case no placeholders are added
+    // and the URL dump's range is all the user sees).
 
     private void lookupSoundData()
     {
@@ -1626,105 +1579,77 @@ public class DataFinder
     }
 
     /**
-     * Common shape for all six {@code appendUnnamedX()} methods. Returns
-     * the first id past which we should start adding placeholders -- the
-     * higher of (max id in the loaded list + 1) or the fallback. When the
-     * URL fetch failed, the loaded list is empty so {@code maxLoaded}
-     * stays at -1 and we use the fallback directly.
+     * Reads {@code main_file_cache.idx<n>}'s entry count to determine
+     * the live cache's max id for indices that map 1:1 (id -> file).
+     * Each idx entry is 6 bytes (3-byte size + 3-byte first sector);
+     * dividing the file's length gives the slot count, and (count - 1)
+     * is the highest valid id. Returns -1 when the file can't be
+     * opened so callers fall back to URL-only data.
+     *
+     * <p>This works directly only for "flat" indices like sounds (idx4)
+     * and anims (idx0). Configs (NPCs/Objects/Items/SpotAnims) live
+     * inside compressed archives in idx2 and require a cache parser
+     * -- those are NOT extended past the URL range here.
      */
-    private static int placeholderStart(int maxLoaded, int fallback)
+    private static int readLiveMaxIdFromIdx(int indexNumber)
     {
-        return maxLoaded < 0 ? fallback : maxLoaded + 1;
+        try
+        {
+            java.io.File idx = new java.io.File(net.runelite.client.RuneLite.RUNELITE_DIR,
+                    "jagexcache/oldschool/LIVE/main_file_cache.idx" + indexNumber);
+            if (!idx.exists()) return -1;
+            long len = idx.length();
+            if (len <= 0) return -1;
+            return (int) (len / 6) - 1;  // count - 1 = max valid id
+        }
+        catch (Exception e)
+        {
+            log.debug("Failed to read idx{} size for live cap", indexNumber, e);
+            return -1;
+        }
     }
 
-    /** Placeholder name shown by every appendUnnamedX path. Kept central so the format stays consistent. */
-    private static String placeholderName(int id)
-    {
-        return "Unnamed " + id;
-    }
-
+    /**
+     * Appends {@code "Unnamed"} placeholders to {@link #soundData} for
+     * every id between the URL dump's max + 1 and the live cache's idx4
+     * max (read from disk). Items already present at the same id in the
+     * URL dump are skipped. Sound entries past id 10200 lost their
+     * config names in the 26 Feb 2025 update -- this lets users still
+     * pick those modern sounds by id from the searcher.
+     */
     private void appendUnnamedSounds()
     {
+        int liveMax = readLiveMaxIdFromIdx(4);
+        if (liveMax < 0) return;
         int maxNamed = -1;
         java.util.Set<Integer> have = new java.util.HashSet<>();
         for (SoundData d : soundData) { have.add(d.getId()); if (d.getId() > maxNamed) maxNamed = d.getId(); }
-        int start = placeholderStart(maxNamed, FIRST_UNNAMED_SOUND_FALLBACK);
-        for (int id = start; id <= LIVE_CACHE_MAX_SOUND_ID; id++)
+        int start = maxNamed < 0 ? 0 : maxNamed + 1;
+        for (int id = start; id <= liveMax; id++)
         {
             if (have.contains(id)) continue;
-            soundData.add(new SoundData(id, placeholderName(id)));
+            soundData.add(new SoundData(id, "Unnamed"));
         }
     }
 
-    private void appendUnnamedNpcs()
-    {
-        int maxNamed = -1;
-        java.util.Set<Integer> have = new java.util.HashSet<>();
-        for (NPCData d : npcData) { have.add(d.getId()); if (d.getId() > maxNamed) maxNamed = d.getId(); }
-        int start = placeholderStart(maxNamed, FIRST_UNNAMED_NPC_FALLBACK);
-        for (int id = start; id <= LIVE_CACHE_MAX_NPC_ID; id++)
-        {
-            if (have.contains(id)) continue;
-            // NPCData's 16-arg ctor: id, name, models[], size, 8x anim ids,
-            // widthScale, heightScale, recolor[], recolor[]. Placeholders
-            // carry zero / null for every non-display field -- they're only
-            // useful for picking + tagging in the searcher, not for
-            // instantiating actual game objects.
-            npcData.add(new NPCData(id, placeholderName(id), null, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 128, null, null));
-        }
-    }
-
-    private void appendUnnamedObjects()
-    {
-        int maxNamed = -1;
-        java.util.Set<Integer> have = new java.util.HashSet<>();
-        for (ObjectData d : objectData) { have.add(d.getId()); if (d.getId() > maxNamed) maxNamed = d.getId(); }
-        int start = placeholderStart(maxNamed, FIRST_UNNAMED_OBJECT_FALLBACK);
-        for (int id = start; id <= LIVE_CACHE_MAX_OBJECT_ID; id++)
-        {
-            if (have.contains(id)) continue;
-            objectData.add(new ObjectData(id, placeholderName(id), -1, null, null, 128, 128, 128, 0, 0, null, null, null, null));
-        }
-    }
-
-    private void appendUnnamedItems()
-    {
-        int maxNamed = -1;
-        java.util.Set<Integer> have = new java.util.HashSet<>();
-        for (ItemData d : itemData) { have.add(d.getId()); if (d.getId() > maxNamed) maxNamed = d.getId(); }
-        int start = placeholderStart(maxNamed, FIRST_UNNAMED_ITEM_FALLBACK);
-        for (int id = start; id <= LIVE_CACHE_MAX_ITEM_ID; id++)
-        {
-            if (have.contains(id)) continue;
-            // ItemData's 25-arg ctor: id, name, then 23 model / scale / recolor fields.
-            itemData.add(new ItemData(id, placeholderName(id), -1, -1, -1, -1, 0, -1, -1, -1, 0, 0, 0, 0, -1, -1, -1, -1, 128, 128, 128, null, null, null, null));
-        }
-    }
-
-    private void appendUnnamedSpotAnims()
-    {
-        int maxNamed = -1;
-        java.util.Set<Integer> have = new java.util.HashSet<>();
-        for (SpotanimData d : spotanimData) { have.add(d.getId()); if (d.getId() > maxNamed) maxNamed = d.getId(); }
-        int start = placeholderStart(maxNamed, FIRST_UNNAMED_SPOTANIM_FALLBACK);
-        for (int id = start; id <= LIVE_CACHE_MAX_SPOTANIM_ID; id++)
-        {
-            if (have.contains(id)) continue;
-            // SpotanimData ctor places name FIRST, then id, then model / anim / scale / recolor.
-            spotanimData.add(new SpotanimData(placeholderName(id), id, -1, -1, 128, 128, 0, 0, null, null));
-        }
-    }
-
+    /**
+     * Anim siblings to {@link #appendUnnamedSounds}. idx0 also maps
+     * id -> file 1:1 so the size-based extraction works directly.
+     * Anim's only display fields are (id, name) so no model hydration
+     * is needed -- the placeholder data is complete on its own.
+     */
     private void appendUnnamedAnims()
     {
+        int liveMax = readLiveMaxIdFromIdx(0);
+        if (liveMax < 0) return;
         int maxNamed = -1;
         java.util.Set<Integer> have = new java.util.HashSet<>();
         for (AnimData d : animData) { have.add(d.getId()); if (d.getId() > maxNamed) maxNamed = d.getId(); }
-        int start = placeholderStart(maxNamed, FIRST_UNNAMED_ANIM_FALLBACK);
-        for (int id = start; id <= LIVE_CACHE_MAX_ANIM_ID; id++)
+        int start = maxNamed < 0 ? 0 : maxNamed + 1;
+        for (int id = start; id <= liveMax; id++)
         {
             if (have.contains(id)) continue;
-            animData.add(new AnimData(id, placeholderName(id)));
+            animData.add(new AnimData(id, "Unnamed"));
         }
     }
 
