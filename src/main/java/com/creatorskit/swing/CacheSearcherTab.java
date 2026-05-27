@@ -138,6 +138,23 @@ public class CacheSearcherTab extends JPanel
         tagPanelHolder.setBackground(ColorScheme.DARK_GRAY_COLOR);
     }
 
+    /**
+     * Adds "(filtered)" in red after the base text when the table's
+     * tag filter is active, otherwise just the base text + colon.
+     * Called from each table's filter-changed listener.
+     */
+    private static void refreshFilteredTitle(JLabel label, String base, boolean filterActive)
+    {
+        if (filterActive)
+        {
+            label.setText("<html>" + base + ": <span style=\"color: red;\">(filtered)</span></html>");
+        }
+        else
+        {
+            label.setText(base + ":");
+        }
+    }
+
     private void setupDisplay()
     {
         display.setLayout(new CardLayout());
@@ -456,6 +473,9 @@ public class CacheSearcherTab extends JPanel
         c.gridx = 0;
         c.gridy = 0;
         JLabel title = new JLabel("NPCs Found:");
+        final JLabel titleRef = title;
+        npcTable.setFilterChangedListener(() -> SwingUtilities.invokeLater(
+                () -> refreshFilteredTitle(titleRef, "NPCs Found", npcTable.isFilterActive())));
         title.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32));
         title.setHorizontalAlignment(SwingConstants.LEFT);
         card.add(title, c);
@@ -614,6 +634,9 @@ public class CacheSearcherTab extends JPanel
         c.gridx = 0;
         c.gridy = 0;
         JLabel title = new JLabel("Objects Found:");
+        final JLabel titleRef = title;
+        objectTable.setFilterChangedListener(() -> SwingUtilities.invokeLater(
+                () -> refreshFilteredTitle(titleRef, "Objects Found", objectTable.isFilterActive())));
         title.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32));
         title.setHorizontalAlignment(SwingConstants.LEFT);
         card.add(title, c);
@@ -726,6 +749,9 @@ public class CacheSearcherTab extends JPanel
         c.gridx = 0;
         c.gridy = 0;
         JLabel title = new JLabel("Items Found:");
+        final JLabel titleRef = title;
+        itemTable.setFilterChangedListener(() -> SwingUtilities.invokeLater(
+                () -> refreshFilteredTitle(titleRef, "Items Found", itemTable.isFilterActive())));
         title.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32));
         title.setHorizontalAlignment(SwingConstants.LEFT);
         card.add(title, c);
@@ -983,6 +1009,9 @@ public class CacheSearcherTab extends JPanel
         c.gridx = 0;
         c.gridy = 0;
         JLabel title = new JLabel("SpotAnims Found:");
+        final JLabel titleRef = title;
+        spotAnimTable.setFilterChangedListener(() -> SwingUtilities.invokeLater(
+                () -> refreshFilteredTitle(titleRef, "SpotAnims Found", spotAnimTable.isFilterActive())));
         title.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32));
         title.setHorizontalAlignment(SwingConstants.LEFT);
         card.add(title, c);
@@ -1111,6 +1140,9 @@ public class CacheSearcherTab extends JPanel
         c.gridx = 0;
         c.gridy = 0;
         JLabel title = new JLabel("Animations Found:");
+        final JLabel titleRef = title;
+        animTable.setFilterChangedListener(() -> SwingUtilities.invokeLater(
+                () -> refreshFilteredTitle(titleRef, "Animations Found", animTable.isFilterActive())));
         title.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32));
         title.setHorizontalAlignment(SwingConstants.LEFT);
         card.add(title, c);
@@ -1180,6 +1212,9 @@ public class CacheSearcherTab extends JPanel
         c.gridx = 0;
         c.gridy = 0;
         JLabel title = new JLabel("Sounds Found:");
+        final JLabel titleRef = title;
+        soundTable.setFilterChangedListener(() -> SwingUtilities.invokeLater(
+                () -> refreshFilteredTitle(titleRef, "Sounds Found", soundTable.isFilterActive())));
         title.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 32));
         title.setHorizontalAlignment(SwingConstants.LEFT);
         card.add(title, c);

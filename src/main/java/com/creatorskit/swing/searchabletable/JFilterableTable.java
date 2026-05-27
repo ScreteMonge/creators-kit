@@ -10,6 +10,7 @@ import com.creatorskit.models.datatypes.NPCData;
 import com.creatorskit.models.datatypes.ObjectData;
 import com.creatorskit.models.datatypes.SoundData;
 import com.creatorskit.models.datatypes.SpotanimData;
+import com.creatorskit.swing.tags.TagFilterDialog;
 import com.creatorskit.swing.tags.TagPickerPopup;
 
 import javax.swing.*;
@@ -54,6 +55,12 @@ public class JFilterableTable extends JTable
     private CacheMetadataStore metadataStore;
     /** The renderer instance so we can pass it the store reference for italic-yellow rendering. */
     private final JFilterableRenderer renderer;
+    /** Names of tags currently used as a row filter, in left-to-right order from the dialog. */
+    private final Set<String> activeFilterTags = new LinkedHashSet<>();
+    /** AND -> entry must have every active filter tag; OR -> any one of them. */
+    private TagFilterDialog.Mode filterMode = TagFilterDialog.Mode.AND;
+    /** Listener fired on filter-state changes so the cache panel can update its "(filtered)" title suffix. */
+    private Runnable filterChangedListener;
 
     public CacheType getCacheType() { return cacheType; }
 
@@ -146,10 +153,14 @@ public class JFilterableTable extends JTable
 
     /**
      * Cache-mode filter pass. Walks {@link #itemBackup} (which holds
-     * {@link CacheRow}s in this mode), keeps rows whose item.toString
-     * contains the search substring, and rebuilds the model with the
-     * matched rows + their search term so the renderer can do its
-     * highlight pass.
+     * {@link CacheRow}s in this mode), keeps rows that pass BOTH the
+     * search-text substring check AND the active-tag filter, then
+     * rebuilds the model with the matched rows + their search term
+     * so the renderer can do its highlight pass.
+     *
+     * <p>Tag filter semantics: AND keeps an entry only if it has every
+     * active filter tag; OR keeps it if it has any one. Empty filter
+     * set (no tags chosen yet) is a pass-through.
      */
     private void searchAndListCacheMode(Object searchFor)
     {
@@ -159,16 +170,42 @@ public class JFilterableTable extends JTable
         {
             if (!(o instanceof CacheRow)) continue;
             CacheRow row = (CacheRow) o;
-            if (search.isEmpty()
-                    || row.toString().toLowerCase().matches("(?i).*" + Pattern.quote(search.toLowerCase()) + ".*"))
-            {
-                row.setSearchTerm(search);
-                found.add(row);
-            }
+            boolean textMatch = search.isEmpty()
+                    || row.toString().toLowerCase().matches("(?i).*" + Pattern.quote(search.toLowerCase()) + ".*");
+            if (!textMatch) continue;
+            if (!passesTagFilter(row)) continue;
+            row.setSearchTerm(search);
+            found.add(row);
         }
         setModel(new DataTableModel(found.toArray(), true));
         installRowSorter();
     }
+
+    /**
+     * Tag-filter predicate per {@link #filterMode}. Pulls the entry's
+     * assigned tags from the store on each call -- cheap enough at
+     * searcher-list size, avoids stale data when the user mutates
+     * assignments while a filter is active.
+     */
+    private boolean passesTagFilter(CacheRow row)
+    {
+        if (activeFilterTags.isEmpty()) return true;
+        if (metadataStore == null || cacheType == null) return true;
+        Set<String> rowTags = metadataStore.getTagsFor(cacheType, idOf(row.getItem()));
+        if (filterMode == TagFilterDialog.Mode.AND)
+        {
+            return rowTags.containsAll(activeFilterTags);
+        }
+        // OR
+        for (String f : activeFilterTags) if (rowTags.contains(f)) return true;
+        return false;
+    }
+
+    /** True when the cache panel's title should append "(filtered)". */
+    public boolean isFilterActive() { return !activeFilterTags.isEmpty(); }
+
+    /** Lets the cache panel listen for filter-state changes so the title can be updated. */
+    public void setFilterChangedListener(Runnable listener) { this.filterChangedListener = listener; }
 
     /** Legacy single-column path: matches the pre-refactor behaviour exactly. */
     private void searchAndListLegacy(Object searchFor)
@@ -366,10 +403,32 @@ public class JFilterableTable extends JTable
 
         menu.addSeparator();
         JMenuItem filter = new JMenuItem("Filter by tag(s)...");
-        filter.setEnabled(false);  // ships in phase 4c
+        filter.setEnabled(!metadataStore.getTags().isEmpty());
+        filter.addActionListener(ev -> openFilterDialog());
         menu.add(filter);
 
         menu.show(e.getComponent(), e.getX(), e.getY());
+    }
+
+    /**
+     * Opens the two-column tag filter dialog. Caller's state is the
+     * source of truth -- the dialog only mutates {@link #activeFilterTags}
+     * + {@link #filterMode} via the change callback, and after every
+     * mutation we re-run the search pass so the visible rows reflect
+     * the new filter.
+     */
+    private void openFilterDialog()
+    {
+        List<Tag> all = metadataStore.getTagsAlphabetical();
+        TagFilterDialog.show(this, all, activeFilterTags, filterMode, state ->
+        {
+            activeFilterTags.clear();
+            activeFilterTags.addAll(state.activeFilterNames);
+            filterMode = state.mode;
+            // Re-run the current search through the new filter.
+            searchAndListEntries("");
+            if (filterChangedListener != null) filterChangedListener.run();
+        });
     }
 
     /**
