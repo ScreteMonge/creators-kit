@@ -2056,24 +2056,42 @@ public class CacheSearcherTab extends JPanel
             });
         }
 
-        // Preview on DOUBLE-click rather than every selection change.
-        // The previous selection-listener approach made the sound chirp
-        // on every arrow-key navigation through the list, which got
-        // annoying when scrolling the list while the searcher was open.
-        // Mirrors the Animation card's double-click preview UX. Every
-        // double-click re-plays so the user can audition the same row
-        // multiple times in a row.
+        // Preview fires on:
+        //   - double-click (every double-click re-plays)
+        //   - arrow up / arrow down navigation between rows
+        // NOT on single-click. The original selection-listener approach
+        // also triggered on plain single-click + on the dual mouseDown
+        // /mouseUp selection events, which double-played + chirped on
+        // every click. Splitting into mouseClicked (double-only) +
+        // keyReleased (arrow only) keeps both audition flows working
+        // while skipping the single-click case.
+        Runnable previewSelected = () ->
+        {
+            Object o = soundTable.getSelectedObject();
+            if (o instanceof SoundData)
+            {
+                SoundData data = (SoundData) o;
+                clientThread.invokeLater(() -> plugin.getClient().playSoundEffect(data.getId()));
+            }
+        };
         soundTable.addMouseListener(new MouseAdapter()
         {
             @Override
             public void mouseClicked(MouseEvent e)
             {
                 if (e.getClickCount() != 2 || e.getButton() != MouseEvent.BUTTON1) return;
-                Object o = soundTable.getSelectedObject();
-                if (o instanceof SoundData)
+                previewSelected.run();
+            }
+        });
+        soundTable.addKeyListener(new java.awt.event.KeyAdapter()
+        {
+            @Override
+            public void keyReleased(java.awt.event.KeyEvent e)
+            {
+                int kc = e.getKeyCode();
+                if (kc == java.awt.event.KeyEvent.VK_UP || kc == java.awt.event.KeyEvent.VK_DOWN)
                 {
-                    SoundData data = (SoundData) o;
-                    clientThread.invokeLater(() -> plugin.getClient().playSoundEffect(data.getId()));
+                    previewSelected.run();
                 }
             }
         });
