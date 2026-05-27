@@ -2925,12 +2925,25 @@ public class TimeSheetPanel extends JPanel
         {
             labelPanel.remove(1);
         }
-        java.util.List<KeyFrameType> visible = globalRowLayout.visibleTypes();
+        java.util.List<com.creatorskit.swing.timesheet.sheets.TimelineGlobalRowLayout.Row> visible =
+                globalRowLayout.visibleRows();
         JLabel[] result = new JLabel[visible.size() + 1];
         result[0] = new JLabel();
+
         for (int i = 0; i < visible.size(); i++)
         {
-            JLabel label = makeRowLabel(visible.get(i).getName(), false, null, false);
+            com.creatorskit.swing.timesheet.sheets.TimelineGlobalRowLayout.Row row = visible.get(i);
+            boolean isParent = row.kind == com.creatorskit.swing.timesheet.sheets.TimelineGlobalRowLayout.Row.Kind.GROUP_PARENT;
+            String parentGroup = isParent ? row.groupName : null;
+            // Capture group name once for the closures.
+            final String groupNameFinal = parentGroup;
+            JLabel label = makeRowLabel(
+                    row.displayName(),
+                    isParent,
+                    parentGroup,
+                    row.isGroupChild,
+                    isParent ? () -> onToggleGlobalGroup(groupNameFinal) : null,
+                    isParent ? () -> globalRowLayout.isCollapsed(groupNameFinal) : null);
             result[i + 1] = label;
             labelPanel.add(label);
         }
@@ -2939,6 +2952,20 @@ public class TimeSheetPanel extends JPanel
         labelPanel.repaint();
         bodySheet.repaint();
         return result;
+    }
+
+    /**
+     * Toggle a global-view group's collapse state, rebuild the global
+     * label column, repaint, and refresh the attribute-panel selection
+     * highlight. Wired to each global group parent row's mouse listener.
+     */
+    private void onToggleGlobalGroup(String groupName)
+    {
+        if (groupName == null) return;
+        globalRowLayout.toggleCollapsed(groupName);
+        java.awt.Container labelPanel = (java.awt.Container) globalLabelScrollPane.getViewport().getView();
+        this.globalLabels = rebuildGlobalLabelRows((JPanel) labelPanel, globalAttributeSheet);
+        if (attributePanel != null) attributePanel.refreshKeyFrameSelectionState();
     }
 
     /**
@@ -3029,7 +3056,14 @@ public class TimeSheetPanel extends JPanel
             com.creatorskit.swing.timesheet.sheets.TimelineLocalRowLayout.Row row = visible.get(i);
             boolean isParent = row.kind == com.creatorskit.swing.timesheet.sheets.TimelineLocalRowLayout.Row.Kind.GROUP_PARENT;
             String parentGroup = isParent ? row.groupName : null;
-            JLabel label = makeRowLabel(row.displayName(), isParent, parentGroup, row.isGroupChild);
+            final String groupNameFinal = parentGroup;
+            JLabel label = makeRowLabel(
+                    row.displayName(),
+                    isParent,
+                    parentGroup,
+                    row.isGroupChild,
+                    isParent ? () -> onToggleLocalGroup(groupNameFinal) : null,
+                    isParent ? () -> localRowLayout.isCollapsed(groupNameFinal) : null);
             result[i + 1] = label;
             labelPanel.add(label);
         }
@@ -3046,15 +3080,22 @@ public class TimeSheetPanel extends JPanel
      * <ul>
      *   <li>{@code parentGroup != null}: collapsible group parent row.
      *       Renders a chevron prefix ({@code ▾} expanded / {@code ▸}
-     *       collapsed) and toggles the group on click.</li>
+     *       collapsed) and fires {@code toggleAction} on click; the
+     *       chevron direction is decided by {@code collapsedQuery}.</li>
      *   <li>{@code isChildOfGroup}: a leaf row that lives under a group.
-     *       Renders with a left-edge indent so the parent / child
-     *       relationship reads visually.</li>
+     *       Renders with the parent / child padding shift so the
+     *       hierarchy reads visually.</li>
      *   <li>Otherwise: a plain leaf row (existing CTRL+click +
      *       card-switch behaviour).</li>
      * </ul>
+     *
+     * <p>{@code toggleAction} and {@code collapsedQuery} are unused for
+     * leaf rows and may be null. The local and global label-rebuild
+     * paths pass their respective row-layout's toggle + isCollapsed
+     * hooks here, so the same method serves both views.
      */
-    private JLabel makeRowLabel(String displayName, boolean isParent, String parentGroup, boolean isChildOfGroup)
+    private JLabel makeRowLabel(String displayName, boolean isParent, String parentGroup, boolean isChildOfGroup,
+                                  Runnable toggleAction, java.util.function.BooleanSupplier collapsedQuery)
     {
         JLabel label = new JLabel();
         label.setFocusable(true);
@@ -3076,16 +3117,15 @@ public class TimeSheetPanel extends JPanel
 
         if (isParent)
         {
-            String chevron = localRowLayout.isCollapsed(parentGroup) ? "▸ " : "▾ ";
+            String chevron = collapsedQuery != null && collapsedQuery.getAsBoolean() ? "▸ " : "▾ ";
             label.setText(chevron + displayName + LABEL_OFFSET);
-            final String groupNameFinal = parentGroup;
             label.addMouseListener(new MouseAdapter()
             {
                 @Override
                 public void mousePressed(MouseEvent e)
                 {
                     super.mousePressed(e);
-                    onToggleLocalGroup(groupNameFinal);
+                    if (toggleAction != null) toggleAction.run();
                     label.requestFocusInWindow();
                 }
             });
