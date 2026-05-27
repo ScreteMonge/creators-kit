@@ -163,6 +163,23 @@ public class DataFinder
             log.debug("CacheLoader didn't load; cache searcher stays on URL data");
             return;
         }
+
+        // Block until the URL fetches finish (or hit a safety cap). The
+        // rebuild path reads existing entries from each XData list to
+        // preserve URL-supplied names through the cache replacement --
+        // particularly important for SpotAnims, where
+        // SpotAnimDefinition.debugName is null for the vast majority of
+        // entries even though the upstream JSON dump did name them.
+        // 30s is just a deadlock safety -- in practice the URL fetches
+        // resolve in well under a second on a normal connection.
+        java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(4);
+        addLoadCallback(DataType.NPC, latch::countDown);
+        addLoadCallback(DataType.OBJECT, latch::countDown);
+        addLoadCallback(DataType.ITEM, latch::countDown);
+        addLoadCallback(DataType.SPOTANIM, latch::countDown);
+        try { latch.await(30, java.util.concurrent.TimeUnit.SECONDS); }
+        catch (InterruptedException ie) { Thread.currentThread().interrupt(); return; }
+
         rebuildNpcDataFromCache();
         rebuildObjectDataFromCache();
         rebuildItemDataFromCache();
@@ -266,12 +283,34 @@ public class DataFinder
 
     private void rebuildSpotAnimDataFromCache()
     {
+        // Snapshot the URL-loaded names BEFORE we clear and rebuild.
+        // SpotAnimDefinition.debugName is null for the vast majority of
+        // cache entries -- Jagex barely populated it. Without this
+        // pass the cache replacement would wipe every name supplied by
+        // the upstream JSON dump and the entire SpotAnim searcher
+        // would read as "Unnamed".
+        java.util.Map<Integer, String> urlNames = new java.util.HashMap<>();
+        synchronized (spotanimData)
+        {
+            for (SpotanimData d : spotanimData)
+            {
+                String n = d.getName();
+                if (n != null && !n.isEmpty() && !n.equalsIgnoreCase("Unnamed"))
+                {
+                    urlNames.put(d.getId(), n);
+                }
+            }
+        }
+
         List<SpotanimData> rebuilt = new ArrayList<>(cacheLoader.getSpotAnims().size());
         for (net.runelite.cache.definitions.SpotAnimDefinition def : cacheLoader.getSpotAnims().values())
         {
-            // SpotAnimDefinition.debugName is only populated when Jagex
-            // shipped a name (rare for these); otherwise show "Unnamed".
-            String name = (def.debugName == null || def.debugName.isEmpty()) ? "Unnamed" : def.debugName;
+            // Name priority: upstream JSON > cache debugName > "Unnamed".
+            String name = urlNames.get(def.id);
+            if (name == null)
+            {
+                name = (def.debugName == null || def.debugName.isEmpty()) ? "Unnamed" : def.debugName;
+            }
             rebuilt.add(new SpotanimData(
                     name,
                     def.id,
