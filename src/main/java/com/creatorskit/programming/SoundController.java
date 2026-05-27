@@ -128,7 +128,12 @@ public class SoundController
     public synchronized void onPlayTickLocal(double currentTick, java.util.List<com.creatorskit.Character> characters)
     {
         if (characters == null) return;
-        for (com.creatorskit.Character ch : characters)
+        // Snapshot before iterating -- the caller's list (plugin.getCharacters())
+        // can mutate mid-walk when a tick callback fires while a Character is
+        // being constructed (e.g. toolbox-open, setup-load). ArrayList's
+        // iterator throws ConcurrentModificationException on detection;
+        // copying once per call is cheap and removes the race.
+        for (com.creatorskit.Character ch : new java.util.ArrayList<>(characters))
         {
             if (ch == null) continue;
             KeyFrame[] kfs = ch.getKeyFrames(KeyFrameType.SOUND);
@@ -154,7 +159,8 @@ public class SoundController
     public synchronized void onScrubLocal(double currentTick, java.util.List<com.creatorskit.Character> characters)
     {
         if (characters == null) return;
-        for (com.creatorskit.Character ch : characters)
+        // Snapshot before iterating; see onPlayTickLocal for the race.
+        for (com.creatorskit.Character ch : new java.util.ArrayList<>(characters))
         {
             if (ch == null) continue;
             KeyFrame[] kfs = ch.getKeyFrames(KeyFrameType.SOUND);
