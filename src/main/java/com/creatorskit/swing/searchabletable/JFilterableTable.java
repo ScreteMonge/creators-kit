@@ -63,6 +63,8 @@ public class JFilterableTable extends JTable
     private Runnable filterChangedListener;
     /** When true, rows whose model array is null / empty are dropped entirely instead of just dimmed. */
     private boolean hideUnavailable = false;
+    /** When true, only rows the user has explicitly renamed via the right-click action remain visible. */
+    private boolean showOnlyRenamed = false;
 
     public CacheType getCacheType() { return cacheType; }
 
@@ -186,6 +188,10 @@ public class JFilterableTable extends JTable
             // instead of just dimming them. Toggled via the right-click
             // menu item; off by default so users see the full set.
             if (hideUnavailable && !row.isHasModels()) continue;
+            // Show-only-renamed filter: keep ONLY rows the user has
+            // assigned a custom name to. Useful as a "show me my
+            // curated list" view in the busy unnamed-heavy tabs.
+            if (showOnlyRenamed && !hasRename(row)) continue;
             row.setSearchTerm(search);
             found.add(row);
         }
@@ -207,6 +213,13 @@ public class JFilterableTable extends JTable
         if (metadataStore == null || cacheType == null) return false;
         String custom = metadataStore.getRename(cacheType, idOf(row.getItem()));
         return custom != null && custom.toLowerCase().contains(searchLower);
+    }
+
+    /** True when the user has assigned a custom name to this row's id. */
+    private boolean hasRename(CacheRow row)
+    {
+        if (metadataStore == null || cacheType == null) return false;
+        return metadataStore.getRename(cacheType, idOf(row.getItem())) != null;
     }
 
     /**
@@ -449,6 +462,24 @@ public class JFilterableTable extends JTable
         List<Integer> selectedIds = getSelectedIds();
         Set<String> unionAssigned = unionAssignedFor(selectedIds);
 
+        // Unname clears the user's custom name and reverts to the
+        // cache-default. Works across the whole selection -- click on
+        // multi-row select to bulk-revert. Enabled only when at least
+        // one selected row currently carries a rename.
+        boolean anyRenamed = false;
+        for (Integer id : selectedIds)
+        {
+            if (metadataStore.getRename(cacheType, id) != null) { anyRenamed = true; break; }
+        }
+        JMenuItem unname = new JMenuItem("Unname");
+        unname.setToolTipText("Drop the custom name and revert to the cache-default for the selected row(s).");
+        unname.setEnabled(anyRenamed);
+        unname.addActionListener(ev ->
+        {
+            for (Integer id : selectedIds) metadataStore.rename(cacheType, id, null);
+        });
+        menu.add(unname);
+
         JMenuItem setTag = new JMenuItem("Set Tag(s)...");
         setTag.setEnabled(!metadataStore.getTags().isEmpty() && !selectedIds.isEmpty());
         setTag.addActionListener(ev -> openSetTagPopup(selectedIds, unionAssigned, e));
@@ -484,6 +515,18 @@ public class JFilterableTable extends JTable
             searchAndListEntries("");
         });
         menu.add(hideUnav);
+
+        // Toggle: restrict the list to rows the user has renamed. Pairs
+        // with Rename / Unname as a way to surface the user's curated
+        // entries quickly without scrolling past every Unnamed row.
+        JCheckBoxMenuItem onlyRenamed = new JCheckBoxMenuItem("Show only renamed", showOnlyRenamed);
+        onlyRenamed.setToolTipText("Show only rows you've given a custom name to via Rename.");
+        onlyRenamed.addActionListener(ev ->
+        {
+            showOnlyRenamed = !showOnlyRenamed;
+            searchAndListEntries("");
+        });
+        menu.add(onlyRenamed);
 
         menu.show(e.getComponent(), e.getX(), e.getY());
     }
