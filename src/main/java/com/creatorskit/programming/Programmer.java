@@ -2568,10 +2568,17 @@ public class Programmer
         LocalPoint lp = ckObject.getLocation();
         int plane = ckObject.getLevel();
 
-        updateSpotAnim(keyFrameType, spotAnimKeyFrame.getSpotAnimId(), spotAnimKeyFrame.getHeight(), spotAnimKeyFrame.getRadius(), character, currentTime, spotAnimKeyFrame.getTick(), spotAnimKeyFrame.isLoop(), lp, plane, ckObject.getOrientation());
+        // Resolve the kf's animation-speed multiplier. Old saves predating
+        // the field deserialize as 0.0; treat <= 0 as "use 1.0" so legacy
+        // scenes don't suddenly play at 0x (frozen). Same back-compat
+        // contract as the radius field directly above.
+        double animSpeed = spotAnimKeyFrame.getAnimationSpeed();
+        if (animSpeed <= 0) animSpeed = SpotAnimKeyFrame.DEFAULT_ANIMATION_SPEED;
+
+        updateSpotAnim(keyFrameType, spotAnimKeyFrame.getSpotAnimId(), spotAnimKeyFrame.getHeight(), spotAnimKeyFrame.getRadius(), character, currentTime, spotAnimKeyFrame.getTick(), spotAnimKeyFrame.isLoop(), lp, plane, ckObject.getOrientation(), animSpeed);
     }
 
-    private void updateSpotAnim(KeyFrameType keyFrameType, int spotAnimId, int height, int radius, Character character, double currentTime, double startTick, boolean loop, LocalPoint lp, int plane, int orientation)
+    private void updateSpotAnim(KeyFrameType keyFrameType, int spotAnimId, int height, int radius, Character character, double currentTime, double startTick, boolean loop, LocalPoint lp, int plane, int orientation, double animSpeed)
     {
         CKObject spotAnim;
         if (keyFrameType == KeyFrameType.SPOTANIM)
@@ -2643,7 +2650,12 @@ public class Programmer
                 Model model = modelUtilities.constructModelFromCache(stats, new int[0], false, LightingStyle.CUSTOM, cl);
 
                 ckObject.setModel(model);
-                setActiveAnimationFrame(ckObject, data.getAnimationId(), currentTime, startTick, 0, loop, false, true);
+                // Plumb the kf's user-set speed multiplier into the same
+                // CKObject.animationSpeed accumulator the Character anim
+                // card uses. The 9-arg overload forwards animSpeed; the
+                // 8-arg back-compat shim hard-codes 1.0 and isn't used
+                // here anymore now that spotanims expose the lever.
+                setActiveAnimationFrame(ckObject, data.getAnimationId(), currentTime, startTick, 0, loop, false, true, animSpeed);
             });
         }
     }

@@ -1944,7 +1944,8 @@ public class TimeSheetPanel extends JPanel
                     src.getSpotAnimId(),
                     src.isLoop(),
                     src.getHeight(),
-                    src.getRadius());
+                    src.getRadius(),
+                    src.getAnimationSpeed());
             kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(spkf, c, KeyFrameCharacterActionType.ADD));
             KeyFrame replaced = addKeyFrame(c, spkf);
             if (replaced != null)

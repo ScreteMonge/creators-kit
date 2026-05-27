@@ -17,6 +17,12 @@ public class SpotAnimAttributes extends Attributes
     private final JComboBox<Toggle> loop = new JComboBox<>();
     private final JSpinner height = new JSpinner();
     private final JSpinner radius = new JSpinner();
+    /**
+     * Animation-speed multiplier over the spotanim's baked cache rate.
+     * 1.0 = unchanged; 2.0 = double-time; 0.5 = half-speed. Plumbed into
+     * CKObject.setAnimationSpeed via the SpotAnim playback path.
+     */
+    private final JSpinner animationSpeed = new JSpinner();
 
     public SpotAnimAttributes()
     {
@@ -31,6 +37,11 @@ public class SpotAnimAttributes extends Attributes
         loop.setSelectedItem(kf.isLoop() ? Toggle.ENABLE : Toggle.DISABLE);
         height.setValue(kf.getHeight());
         radius.setValue(kf.getRadius());
+        // Old saves predating the field deserialize as 0.0; surface the
+        // default (1.0) in the spinner instead so the user sees the
+        // effective speed rather than a misleading "0".
+        double speed = kf.getAnimationSpeed();
+        animationSpeed.setValue(speed > 0 ? speed : SpotAnimKeyFrame.DEFAULT_ANIMATION_SPEED);
     }
 
     @Override
@@ -40,6 +51,7 @@ public class SpotAnimAttributes extends Attributes
         loop.setBackground(color);
         height.setBackground(color);
         radius.setBackground(color);
+        animationSpeed.setBackground(color);
     }
 
     @Override
@@ -50,7 +62,8 @@ public class SpotAnimAttributes extends Attributes
                         spotAnimId,
                         loop,
                         height,
-                        radius
+                        radius,
+                        animationSpeed
                 };
     }
 
@@ -76,6 +89,11 @@ public class SpotAnimAttributes extends Attributes
         {
             radius.setBackground(getRed());
         });
+
+        animationSpeed.addChangeListener(e ->
+        {
+            animationSpeed.setBackground(getRed());
+        });
     }
 
     @Override
@@ -85,6 +103,7 @@ public class SpotAnimAttributes extends Attributes
         loop.setSelectedItem(Toggle.DISABLE);
         height.setValue(92);
         radius.setValue(65);
+        animationSpeed.setValue(SpotAnimKeyFrame.DEFAULT_ANIMATION_SPEED);
         super.resetAttributes(resetBackground);
     }
 }

@@ -1244,7 +1244,8 @@ public class AttributePanel extends JPanel
                         (int) spAttributes.getSpotAnimId().getValue(),
                         spAttributes.getLoop().getSelectedItem() == Toggle.ENABLE,
                         (int) spAttributes.getHeight().getValue(),
-                        (int) spAttributes.getRadius().getValue()
+                        (int) spAttributes.getRadius().getValue(),
+                        ((Number) spAttributes.getAnimationSpeed().getValue()).doubleValue()
                 );
             case HITSPLAT_1:
             case HITSPLAT_2:
@@ -1585,6 +1586,7 @@ public class AttributePanel extends JPanel
                     if (f.isLoop() != k.isLoop()) mixed.add(sp.getLoop());
                     if (f.getHeight() != k.getHeight()) mixed.add(sp.getHeight());
                     if (f.getRadius() != k.getRadius()) mixed.add(sp.getRadius());
+                    if (Double.compare(f.getAnimationSpeed(), k.getAnimationSpeed()) != 0) mixed.add(sp.getAnimationSpeed());
                 }
                 break;
             }
@@ -2132,7 +2134,10 @@ public class AttributePanel extends JPanel
                                 : orig.getHeight(),
                         wasEdited(spAttributes.getRadius())
                                 ? (int) spAttributes.getRadius().getValue()
-                                : orig.getRadius()
+                                : orig.getRadius(),
+                        wasEdited(spAttributes.getAnimationSpeed())
+                                ? ((Number) spAttributes.getAnimationSpeed().getValue()).doubleValue()
+                                : orig.getAnimationSpeed()
                 );
             }
             case HITSPLAT_1:
@@ -4229,15 +4234,34 @@ public class AttributePanel extends JPanel
         radius.setModel(new SpinnerNumberModel(65, 0, 9999, 1));
         card.add(radius, c);
 
+        // Animation-speed spinner. SpotAnims ship with their own baked-in
+        // animation from the cache; this multiplier scales how fast that
+        // animation plays without changing the kf's duration. 1.0 = native
+        // cache rate; 2.0 = double-speed; 0.5 = half. Min is 0.01 (instead
+        // of 0) so the user can't accidentally freeze the spotanim by
+        // typing 0 -- "stop animating" is what the kf simply ending does.
         c.gridx = 0;
         c.gridy = 5;
+        JLabel animSpeedLabel = new JLabel("Anim Speed: ");
+        animSpeedLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(animSpeedLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 5;
+        JSpinner animationSpeed = spAttributes.getAnimationSpeed();
+        animationSpeed.setToolTipText("<html>Multiplier over the SpotAnim's baked cache animation rate.<br>1.0 = native; 2.0 = 2x faster; 0.5 = half speed.</html>");
+        animationSpeed.setModel(new SpinnerNumberModel(1.0, 0.01, 100.0, 0.1));
+        card.add(animationSpeed, c);
+
+        c.gridx = 0;
+        c.gridy = 6;
         JLabel searcherLabel = new JLabel("SpotAnims: ");
         searcherLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(searcherLabel, c);
 
         c.gridwidth = 3;
         c.gridx = 1;
-        c.gridy = 5;
+        c.gridy = 6;
         JTextField spotanimField = new JTextField("");
         spotanimField.setToolTipText("Find all SpotAnims from the cache, and double click the name to apply its Id");
         spotanimField.setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -4286,14 +4310,14 @@ public class AttributePanel extends JPanel
         c.weightx = 1;
         c.weighty = 1;
         c.gridx = 2;
-        c.gridy = 6;
+        c.gridy = 7;
         JLabel empty1 = new JLabel("");
         card.add(empty1, c);
 
         c.weightx = 0;
         c.weighty = 0;
         c.gridx = 3;
-        c.gridy = 7;
+        c.gridy = 8;
         JPanel duplicatePanel = new JPanel();
         duplicatePanel.setLayout(new GridLayout(0, 1, 2, 2));
         card.add(duplicatePanel, c);
