@@ -413,6 +413,15 @@ public class Character
             ckObject.setAnimation(AnimationType.ACTIVE, animation);
             ckObject.setAnimationFrame(AnimationType.ACTIVE, 0, random, false, false);
             ckObject.setPlaying(true);
+            // Reset every playback modifier that a prior keyframe might
+            // have left lingering on the ckObject. Preview is always:
+            // 1x speed, frame 0 -> natural end, no loop, no pause-on-end,
+            // no freeze. Without this reset a Character that last ran a
+            // 0.5x looping anim with a clamped last-frame would preview
+            // the new id under those stale settings.
+            ckObject.setAnimationSpeed(1.0);
+            ckObject.setAnimationRange(0, 0, 0);  // first=0 + last=0 = "use natural range"; pauseTicks=0
+            ckObject.setFreeze(false);
             // loop=false is the whole point -- the default onFinished handler
             // in CKObject.setOnFinished() will reset animation to -1 when the
             // cycle ends, so preview is truly transient.

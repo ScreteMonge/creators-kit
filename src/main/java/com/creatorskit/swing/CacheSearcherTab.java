@@ -2056,20 +2056,25 @@ public class CacheSearcherTab extends JPanel
             });
         }
 
-        soundTable.getSelectionModel().addListSelectionListener(e ->
+        // Preview on DOUBLE-click rather than every selection change.
+        // The previous selection-listener approach made the sound chirp
+        // on every arrow-key navigation through the list, which got
+        // annoying when scrolling the list while the searcher was open.
+        // Mirrors the Animation card's double-click preview UX. Every
+        // double-click re-plays so the user can audition the same row
+        // multiple times in a row.
+        soundTable.addMouseListener(new MouseAdapter()
         {
-            // ListSelectionListener fires TWICE per mouse click -- once
-            // on press (selection clears) and once on release (selection
-            // installs). Without the isAdjusting guard the sound played
-            // twice in quick succession on every row click; previewing
-            // through a Sound keyframe didn't suffer because that path
-            // doesn't go through the selection model.
-            if (e.getValueIsAdjusting()) return;
-            Object o = soundTable.getSelectedObject();
-            if (o instanceof SoundData)
+            @Override
+            public void mouseClicked(MouseEvent e)
             {
-                SoundData data = (SoundData) o;
-                clientThread.invokeLater(() -> plugin.getClient().playSoundEffect(data.getId()));
+                if (e.getClickCount() != 2 || e.getButton() != MouseEvent.BUTTON1) return;
+                Object o = soundTable.getSelectedObject();
+                if (o instanceof SoundData)
+                {
+                    SoundData data = (SoundData) o;
+                    clientThread.invokeLater(() -> plugin.getClient().playSoundEffect(data.getId()));
+                }
             }
         });
     }
