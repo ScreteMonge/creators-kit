@@ -58,6 +58,43 @@ public class Programmer
      */
     private final java.util.IdentityHashMap<CKObject, Integer> projectileLoadedIds = new java.util.IdentityHashMap<>();
 
+    /**
+     * Per-source-Character snapshot of where the active projectile flight
+     * was "fired from." Once a projectile is airborne it must stop reading
+     * the source actor -- if the caster turns or steps mid-flight, the
+     * arrow shouldn't drag along with it. Matches the real-OSRS model
+     * where {@code client.createProjectile(...)} takes a fixed start and
+     * never re-resolves.
+     *
+     * <p>Snapshot is captured on the first within-window observation of a
+     * given {@link ProjectileKeyFrame}, cleared when the kf goes out of
+     * window or the active kf identity changes (scrub backward across
+     * the start tick re-enters the window and re-snapshots from the
+     * source's then-current state).
+     */
+    private final java.util.IdentityHashMap<Character, ProjectileSourceSnapshot> projectileSourceSnapshots = new java.util.IdentityHashMap<>();
+
+    /** Frozen-at-firing-time source state for an in-flight ProjectileKeyFrame. */
+    private static final class ProjectileSourceSnapshot
+    {
+        final ProjectileKeyFrame kf;
+        final int sourceX;
+        final int sourceY;
+        final int sourceTileZ;
+        final int level;
+        final int orientation;
+
+        ProjectileSourceSnapshot(ProjectileKeyFrame kf, int sourceX, int sourceY, int sourceTileZ, int level, int orientation)
+        {
+            this.kf = kf;
+            this.sourceX = sourceX;
+            this.sourceY = sourceY;
+            this.sourceTileZ = sourceTileZ;
+            this.level = level;
+            this.orientation = orientation;
+        }
+    }
+
     @Getter
     @Setter
     private boolean playing = false;
@@ -1779,6 +1816,7 @@ public class Programmer
         if (kf == null)
         {
             deactivateProjectileObjects(projObjs, 0);
+            projectileSourceSnapshots.remove(character);
             return;
         }
 
@@ -1789,21 +1827,42 @@ public class Programmer
         if (currentTime < startTime || currentTime > endTime)
         {
             deactivateProjectileObjects(projObjs, 0);
+            projectileSourceSnapshots.remove(character);
             return;
         }
 
         if (kf.getTarget() == null || kf.getTarget().trim().isEmpty())
         {
             deactivateProjectileObjects(projObjs, 0);
+            projectileSourceSnapshots.remove(character);
             return;
         }
 
         WorldView worldView = client.getTopLevelWorldView();
-        LocalPoint sourceLp = resolveCharacterLocalPoint(character, worldView);
-        if (sourceLp == null)
+
+        // Acquire or refresh the per-flight source snapshot. The snapshot
+        // freezes the caster's contribution -- position, orientation,
+        // plane, and tile-Z -- at the moment the projectile is fired so
+        // that turning or moving the caster mid-flight doesn't visibly
+        // tug the airborne projectile. We refresh only when the active
+        // kf identity changes (a different flight is now active) or the
+        // snapshot was cleared by a previous out-of-window pass.
+        ProjectileSourceSnapshot snap = projectileSourceSnapshots.get(character);
+        if (snap == null || snap.kf != kf)
         {
-            deactivateProjectileObjects(projObjs, 0);
-            return;
+            LocalPoint sourceLp = resolveCharacterLocalPoint(character, worldView);
+            if (sourceLp == null)
+            {
+                deactivateProjectileObjects(projObjs, 0);
+                projectileSourceSnapshots.remove(character);
+                return;
+            }
+            int snapLevel = character.getCkObject() != null ? character.getCkObject().getLevel() : worldView.getPlane();
+            int snapSourceTileZ = Perspective.getTileHeight(client, sourceLp, snapLevel);
+            CKObject ck = character.getCkObject();
+            int snapOri = ck != null ? ck.getOrientation() : 0;
+            snap = new ProjectileSourceSnapshot(kf, sourceLp.getX(), sourceLp.getY(), snapSourceTileZ, snapLevel, snapOri);
+            projectileSourceSnapshots.put(character, snap);
         }
 
         java.util.List<Character> targets = resolveProjectileTargets(kf.getTarget());
@@ -1817,8 +1876,11 @@ public class Programmer
         if (t < 0) t = 0;
         if (t > 1) t = 1;
 
-        int level = character.getCkObject() != null ? character.getCkObject().getLevel() : worldView.getPlane();
-        int sourceTileZ = Perspective.getTileHeight(client, sourceLp, level);
+        // Hoist snapshot fields into locals for downstream readability.
+        // These mirror the previous live reads (`sourceLp.getX/Y`, live
+        // `level`, etc.) but are now flight-stable.
+        int level = snap.level;
+        int sourceTileZ = snap.sourceTileZ;
 
         int slot = 0;
         for (Character target : targets)
@@ -1837,14 +1899,13 @@ public class Programmer
             // source position. Offsets are stored in the Character's
             // LOCAL frame -- +Y = forward (the direction the model is
             // currently facing), +X = right. The offset is rotated by
-            // the live ckObject orientation before being added to the
-            // world LocalPoint, so the projectile origin pivots with
-            // the model as it rotates instead of being glued to a
-            // fixed scene-space point. JAU 0 = facing south, 1024 =
-            // north, 2048 = full circle (OSRS convention).
-            CKObject ck = character.getCkObject();
-            int ori = ck != null ? ck.getOrientation() : 0;
-            double angle = ori * (2.0 * Math.PI / 2048.0);
+            // the SNAPSHOT orientation (the orientation at firing time)
+            // rather than the live ckObject orientation, so the
+            // projectile origin stays fixed in scene space once the
+            // shot is airborne; turning the caster mid-flight no longer
+            // drags the projectile with them. JAU 0 = facing south,
+            // 1024 = north, 2048 = full circle (OSRS convention).
+            double angle = snap.orientation * (2.0 * Math.PI / 2048.0);
             double cosA = Math.cos(angle);
             double sinA = Math.sin(angle);
             int ox = kf.getStartX();
@@ -1853,15 +1914,15 @@ public class Programmer
             // world = ox * right + oy * forward.
             int dxOff = (int) Math.round(ox * (-cosA) + oy * (-sinA));
             int dyOff = (int) Math.round(ox * sinA   + oy * (-cosA));
-            int sx = sourceLp.getX() + dxOff;
-            int sy = sourceLp.getY() + dyOff;
+            int sx = snap.sourceX + dxOff;
+            int sy = snap.sourceY + dyOff;
             int tx = targetLp.getX();
             int ty = targetLp.getY();
 
             int x = (int) Math.round(sx + (tx - sx) * t);
             int y = (int) Math.round(sy + (ty - sy) * t);
 
-            LocalPoint here = new LocalPoint(x, y, sourceLp.getWorldView());
+            LocalPoint here = new LocalPoint(x, y, worldView);
             int tileZ;
             if (here.isInScene())
             {
