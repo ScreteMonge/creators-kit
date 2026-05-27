@@ -2,10 +2,12 @@ package com.creatorskit.swing;
 
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
+import com.creatorskit.cache.metadata.CacheMetadataStore;
 import com.creatorskit.models.*;
 import com.creatorskit.models.datatypes.*;
 import com.creatorskit.swing.renderer.RenderPanel;
 import com.creatorskit.swing.searchabletable.JFilterableTable;
+import com.creatorskit.swing.tags.TagManagerPanel;
 import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
@@ -73,16 +75,25 @@ public class CacheSearcherTab extends JPanel
 
     private final JComboBox<CustomModelType> itemType = new JComboBox<>();
     private final JPanel display = new JPanel();
+    /**
+     * Tag-manager panel container. Built collapsible (default expanded)
+     * and slotted under the model-breakdown panel in the left column.
+     * Field rather than local so the layout pass can position it.
+     */
+    private final JPanel tagPanelHolder = new JPanel(new BorderLayout());
     public static final File SOUNDS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/sound-exports");
 
+    private final CacheMetadataStore cacheMetadataStore;
+
     @Inject
-    public CacheSearcherTab(CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ModelUtilities modelUtilities, OkHttpClient httpClient)
+    public CacheSearcherTab(CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ModelUtilities modelUtilities, OkHttpClient httpClient, CacheMetadataStore cacheMetadataStore)
     {
         this.plugin = plugin;
         this.clientThread = clientThread;
         this.dataFinder = dataFinder;
         this.modelUtilities = modelUtilities;
         this.httpClient = httpClient;
+        this.cacheMetadataStore = cacheMetadataStore;
 
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
         setLayout(new GridBagLayout());
@@ -95,8 +106,24 @@ public class CacheSearcherTab extends JPanel
         setupSoundPanel();
         setupDisplay();
         setupBreakdownTable();
+        setupTagManager();
         setupRenderPanel();
         setupLayout();
+    }
+
+    /**
+     * Builds the Tag Manager collapsible. Wraps a {@link TagManagerPanel}
+     * (which owns the swatches / name field / Create-Delete / dropdown)
+     * in a {@link CollapsiblePanel} headed "Tag Manager". Default
+     * expanded so the user can see it without hunting -- collapse
+     * manually if they want extra vertical room.
+     */
+    private void setupTagManager()
+    {
+        TagManagerPanel tmp = new TagManagerPanel(cacheMetadataStore);
+        CollapsiblePanel collapsible = new CollapsiblePanel("Tag Manager", tmp, false);
+        tagPanelHolder.add(collapsible, BorderLayout.CENTER);
+        tagPanelHolder.setBackground(ColorScheme.DARK_GRAY_COLOR);
     }
 
     private void setupDisplay()
@@ -131,14 +158,24 @@ public class CacheSearcherTab extends JPanel
 
     private void setupBreakdownTable()
     {
+        // breakdownPanel is the outer container the layout pass adds to
+        // grid (gridx=1, gridy=6). The actual chrome -- title + body --
+        // is wrapped in a CollapsiblePanel so users can hide the
+        // breakdown when they don't need it. Starts collapsed since
+        // most usage doesn't need to see per-id model parts; the user
+        // expands it on demand.
         breakdownPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        breakdownPanel.setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1));
         breakdownPanel.setLayout(new BorderLayout());
+
         JPanel holderPanel = new JPanel();
         holderPanel.setBorder(new EmptyBorder(8, 8, 8, 8));
         holderPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         holderPanel.setLayout(new GridBagLayout());
-        breakdownPanel.add(holderPanel, BorderLayout.CENTER);
+
+        // CollapsiblePanel's own header already shows "Model Id Breakdown"
+        // -- no separate title label needed inside holderPanel.
+        CollapsiblePanel collapsible = new CollapsiblePanel("Model Id Breakdown", holderPanel, true);
+        breakdownPanel.add(collapsible, BorderLayout.CENTER);
 
         c.fill = GridBagConstraints.HORIZONTAL;
         c.insets = new Insets(2, 2, 2, 2);
@@ -146,15 +183,8 @@ public class CacheSearcherTab extends JPanel
         c.gridwidth = 1;
         c.gridheight = 1;
         c.weightx = 1;
-        c.weighty = 0;
         c.gridx = 0;
         c.gridy = 0;
-        JLabel title = new JLabel("Model Id Breakdown");
-        title.setFont(FontManager.getRunescapeBoldFont());
-        holderPanel.add(title, c);
-
-        c.gridx = 0;
-        c.gridy = 1;
         c.weighty = 1;
         modelTable.getSelectionModel().addListSelectionListener(e ->
         {
@@ -370,8 +400,15 @@ public class CacheSearcherTab extends JPanel
         c.gridy = 6;
         add(breakdownPanel, c);
 
+        // Tag Manager slots immediately below Model Id Breakdown in the
+        // same narrow left column. Both are collapsibles -- breakdown
+        // starts collapsed, tag manager starts expanded.
         c.gridx = 1;
         c.gridy = 7;
+        add(tagPanelHolder, c);
+
+        c.gridx = 1;
+        c.gridy = 8;
         c.weighty = 1;
         add(new JLabel(""), c);
 
