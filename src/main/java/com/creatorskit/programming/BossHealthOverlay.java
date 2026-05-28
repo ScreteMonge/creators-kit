@@ -24,9 +24,11 @@ import java.util.ArrayList;
 
 /**
  * Pinned boss-style HP bar drawn at the top centre of the canvas. Active when
- * any Character holds a {@link HealthKeyFrame} whose
- * {@link HealthbarSprite#BOSS_HEALTH} style is selected and whose tick window
- * contains the current tick. When several overlap (multiple "scene controller"
+ * any Character holds a {@link HealthKeyFrame} whose style reports
+ * {@link HealthbarSprite#isBoss()} -- i.e. {@link HealthbarSprite#BOSS_HEALTH}
+ * (pinned bar only) or {@link HealthbarSprite#BOTH} (pinned bar plus the
+ * overhead sprite bar drawn by BarOverlay) -- and whose tick window contains
+ * the current tick. When several overlap (multiple "scene controller"
  * Characters), the most-recently-started one wins -- matches the
  * {@link ScreenFadeOverlay}/screen-shake pattern.
  *
@@ -138,7 +140,7 @@ public class BossHealthOverlay extends Overlay
         {
             Character c = characters.get(i);
             HealthKeyFrame kf = (HealthKeyFrame) c.getCurrentKeyFrame(KeyFrameType.HEALTH);
-            if (kf == null || kf.getHealthbarSprite() != HealthbarSprite.BOSS_HEALTH)
+            if (kf == null || !kf.getHealthbarSprite().isBoss())
             {
                 continue;
             }
@@ -326,7 +328,7 @@ public class BossHealthOverlay extends Overlay
         {
             if (!(kf instanceof HealthKeyFrame)) continue;
             HealthKeyFrame h = (HealthKeyFrame) kf;
-            if (h.getHealthbarSprite() != HealthbarSprite.BOSS_HEALTH) continue;
+            if (!h.getHealthbarSprite().isBoss()) continue;
             double start = h.getTick();
             double end = h.getTick() + h.getDuration();
             if (start < lifecycleStart) { lifecycleStart = start; first = h; }
@@ -375,7 +377,7 @@ public class BossHealthOverlay extends Overlay
                 continue;
             }
             HealthKeyFrame hkf = (HealthKeyFrame) kf;
-            if (hkf.getHealthbarSprite() != HealthbarSprite.BOSS_HEALTH)
+            if (!hkf.getHealthbarSprite().isBoss())
             {
                 continue;
             }

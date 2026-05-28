@@ -4014,6 +4014,7 @@ public class AttributePanel extends JPanel
         healthbarSprite.setFocusable(false);
         healthbarSprite.addItem(HealthbarSprite.DEFAULT);
         healthbarSprite.addItem(HealthbarSprite.BOSS_HEALTH);
+        healthbarSprite.addItem(HealthbarSprite.BOTH);
         card.add(healthbarSprite, c);
 
         c.gridwidth = 1;
