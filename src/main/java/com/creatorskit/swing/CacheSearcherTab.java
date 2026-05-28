@@ -304,6 +304,15 @@ public class CacheSearcherTab extends JPanel
         c.weighty = 1;
         modelTable.getSelectionModel().addListSelectionListener(e ->
         {
+            // ListSelectionListener fires TWICE per selection change in
+            // Swing (valueIsAdjusting=true then =false) and once per
+            // arrow-key step. Without this guard every interaction
+            // queued duplicate clientThread work to rebuild a ModelData
+            // from the cache. Over a long session the resulting churn
+            // co-incides with a G1 SEGV we saw in jvm.dll while walking
+            // the heap; cutting the churn in half is a cheap mitigation
+            // and the user UX is unchanged.
+            if (e.getValueIsAdjusting()) return;
             boolean renderAll = false;
             int modelId = 0;
 
@@ -404,8 +413,16 @@ public class CacheSearcherTab extends JPanel
             ModelStats[] allModelStats = modelStats;
             clientThread.invokeLater(() ->
             {
+                // constructModelDataFromCache MUST run on the client
+                // thread (it calls client.loadModelData). The resulting
+                // ModelData write into renderPanel.model + repaint
+                // hops back to the EDT so we don't race the paint
+                // loop's read of the same field. The torn-read window
+                // was thin but real, and was a candidate suspect for
+                // the JVM SEGV the user hit after rapid spotanim
+                // selection churn.
                 ModelData md = modelUtilities.constructModelDataFromCache(allModelStats, new int[0], false);
-                renderPanel.updateModel(md);
+                SwingUtilities.invokeLater(() -> renderPanel.updateModel(md));
             });
             return;
         }
@@ -417,7 +434,7 @@ public class CacheSearcherTab extends JPanel
                 clientThread.invokeLater(() ->
                 {
                     ModelData md = modelUtilities.constructModelDataFromCache(new ModelStats[]{modelStat}, new int[0], false);
-                    renderPanel.updateModel(md);
+                    SwingUtilities.invokeLater(() -> renderPanel.updateModel(md));
                 });
                 return;
             }
@@ -681,6 +698,7 @@ public class CacheSearcherTab extends JPanel
 
         npcTable.getSelectionModel().addListSelectionListener(e ->
         {
+            if (e.getValueIsAdjusting()) return;  // see modelTable listener for rationale
             Object o = npcTable.getSelectedObject();
             if (o instanceof NPCData)
             {
@@ -801,6 +819,7 @@ public class CacheSearcherTab extends JPanel
 
         objectTable.getSelectionModel().addListSelectionListener(e ->
         {
+            if (e.getValueIsAdjusting()) return;  // see modelTable listener for rationale
             Object o = objectTable.getSelectedObject();
             if (o instanceof ObjectData)
             {
@@ -981,6 +1000,7 @@ public class CacheSearcherTab extends JPanel
 
         itemTable.getSelectionModel().addListSelectionListener(e ->
         {
+            if (e.getValueIsAdjusting()) return;  // see modelTable listener for rationale
             Object o = itemTable.getSelectedObject();
             if (o instanceof ItemData)
             {
@@ -1184,6 +1204,7 @@ public class CacheSearcherTab extends JPanel
 
         spotAnimTable.getSelectionModel().addListSelectionListener(e ->
         {
+            if (e.getValueIsAdjusting()) return;  // see modelTable listener for rationale
             Object o = spotAnimTable.getSelectedObject();
             if (o instanceof SpotanimData)
             {
