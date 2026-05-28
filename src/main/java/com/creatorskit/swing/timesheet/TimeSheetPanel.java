@@ -555,6 +555,88 @@ public class TimeSheetPanel extends JPanel
         return lastKeyFrame;
     }
 
+    /**
+     * Latest keyframe tick across every Character AND the global store
+     * (camera / fade / shake / area sounds). Used by {@link #preRenderTimeline}
+     * to know how far to sweep. Returns 0 when the scene is empty.
+     */
+    private double computeSequenceEndTick()
+    {
+        double max = 0;
+
+        KeyFrame lastLocal = getLastKeyFrame();
+        if (lastLocal != null)
+        {
+            max = Math.max(max, lastLocal.getTick());
+        }
+
+        com.creatorskit.saves.GlobalKeyFrames store = plugin.getGlobalKeyFrames();
+        if (store != null)
+        {
+            for (KeyFrameType type : KeyFrameType.GLOBAL_KEYFRAME_TYPES_ALPHABETICAL)
+            {
+                KeyFrame[] arr = store.getGlobalKeyFramesByType(type);
+                if (arr == null)
+                {
+                    continue;
+                }
+                for (KeyFrame kf : arr)
+                {
+                    if (kf != null)
+                    {
+                        max = Math.max(max, kf.getTick());
+                    }
+                }
+            }
+        }
+
+        return max;
+    }
+
+    /**
+     * Sweeps the playhead from tick 0 through the end of the sequence once,
+     * driving the full SCRUB path ({@code setCurrentTime(t, false)} ->
+     * {@code Programmer.updatePrograms}) at every step so all the per-tick
+     * registers run: spotanim / projectile / character model loads get
+     * queued onto the client thread and warmed into the engine's cache,
+     * and movement / orientation state is recomputed from scratch.
+     *
+     * <p>This fixes the long-standing "things don't settle into their right
+     * positions / orientations until I've played the timeline twice" gripe.
+     * The root cause is that model loads are asynchronous
+     * ({@code clientThread.invokeLater}) -- on a cold first play the models
+     * referenced by spotanim / projectile keyframes aren't in the engine
+     * cache yet, so the first pass renders stale or absent visuals and only
+     * the second pass (after the loads completed) looks right. Pre-rendering
+     * front-loads every model the timeline touches.
+     *
+     * <p>Steps at 1.0-tick granularity rather than the play loop's 0.1: model
+     * loads only need each keyframe crossed once, and a keyframe sitting at a
+     * fractional tick still gets processed at the next integer step (the
+     * scrub registers act on "the kf at or before this tick"). Coarser steps
+     * keep the synchronous sweep snappy on long timelines. The playhead is
+     * restored to where it started so this is visually a no-op afterwards.
+     */
+    public void preRenderTimeline()
+    {
+        // Make sure we aren't fighting an in-flight play loop -- the sweep is
+        // a scrub and must own the playhead for its duration.
+        toolBox.getProgrammer().pause();
+
+        double endTick = computeSequenceEndTick();
+        double original = currentTime;
+
+        // Sweep one tick past the end so a keyframe sitting on a fractional
+        // tick (e.g. 7.3) is still crossed by the last integer step (8).
+        for (double t = 0; t <= endTick + 1.0; t = round(t + 1.0))
+        {
+            setCurrentTime(t, false);
+        }
+
+        // Land back where the user was so pre-render is visually a no-op.
+        setCurrentTime(original, false);
+    }
+
     private KeyFrame getFirstKeyFrame()
     {
         ArrayList<Character> characters = plugin.getCharacters();
@@ -2696,6 +2778,18 @@ public class TimeSheetPanel extends JPanel
         forwardAttributeSheet.setPreferredSize(new Dimension(50, 35));
         forwardAttributeSheet.addActionListener(e -> onAttributeSkipForward());
 
+        // Pre-render sweeps the whole timeline once (scrub path) to warm
+        // model loads + movement/orientation state so the FIRST real
+        // playback renders correctly -- avoids the "have to play it twice"
+        // gripe. See preRenderTimeline().
+        JButton preRenderButton = new JButton("Pre-render");
+        preRenderButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        preRenderButton.setPreferredSize(new Dimension(90, 35));
+        preRenderButton.setToolTipText("<html>Step through the whole timeline once to warm up model loads and"
+                + "<br>movement / orientation state, so the <b>first</b> playback renders correctly."
+                + "<br>Use this if things don't settle into their right positions until you've played twice.</html>");
+        preRenderButton.addActionListener(e -> preRenderTimeline());
+
         c.weightx = 1;
         c.weighty = 1;
         c.gridx = 2;
@@ -2705,6 +2799,7 @@ public class TimeSheetPanel extends JPanel
         controls.add(backAttributeSheet);
         controls.add(playButton);
         controls.add(forwardAttributeSheet);
+        controls.add(preRenderButton);
         controlPanel.add(controls, c);
     }
 
