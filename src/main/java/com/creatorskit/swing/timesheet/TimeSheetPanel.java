@@ -1407,6 +1407,27 @@ public class TimeSheetPanel extends JPanel
             return;
         }
 
+        // Refuse to overwrite if a Movement kf already sits at the
+        // playhead. Per user spec: "warn the player to move the playhead
+        // or clear the keyframe." We could just overwrite (initializeMovementKeyFrame
+        // already calls addKeyFrame which returns the displaced kf), but
+        // silently replacing the user's authored kf is exactly the kind
+        // of data-loss surprise the warn-and-bail flow was designed to
+        // prevent. Check is up here before we mutate anything (setInScene,
+        // setActive) so a refused add is fully a no-op.
+        KeyFrame existing = selectedCharacter == null
+                ? null
+                : selectedCharacter.findKeyFrame(KeyFrameType.MOVEMENT, currentTime);
+        if (existing != null)
+        {
+            JOptionPane.showMessageDialog(this,
+                    "A Movement keyframe already sits at the current playhead tick.\n"
+                            + "Move the playhead or clear that keyframe before adding a step.",
+                    "Movement keyframe occupied",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
         selectedCharacter.setInScene(true);
         selectedCharacter.setActive(true, true, true, clientThread);
 
@@ -1432,170 +1453,114 @@ public class TimeSheetPanel extends JPanel
         // how many tiles per tick the path walks.
         int defaultMovementTurnRate = OrientationKeyFrame.TURN_RATE;
 
-        MovementKeyFrame previous = findLastMovementKeyFrame(selectedCharacter);
-        if (newKeyFrame || previous == null)
+        // Both the menu-option path (newKeyFrame=true) and the hotkey path
+        // (newKeyFrame=false) now place the new kf at the playhead. The
+        // previous chained-mode logic placed the new kf at
+        // previous.tick + prevDuration which only matched the playhead
+        // by accident (the prior add auto-advanced the playhead to that
+        // exact tick). A user who scrubbed between hotkey presses would
+        // see the new step land at the old chain point instead of where
+        // they were looking. Always honour the playhead -- if the user
+        // wants to extend a sequence they can move the playhead to its
+        // end first, and the source-tile resolution below picks up the
+        // Character's position-at-playhead so the path connects cleanly.
+        //
+        // Source tile resolution order:
+        //   1. The live CKObject location. After scrub this reflects the
+        //      Character's position AT the playhead tick, so a new step
+        //      starting at the playhead naturally chains from where the
+        //      Character actually is. Covers both "first step" (initial
+        //      spawn point) and "extend sequence" (end of prior path)
+        //      transparently because the Programmer's scrub already
+        //      handled the bookkeeping.
+        //   2. The saved instancedPoint (POH) / nonInstancedPoint (world).
+        //      Used when the Character has been added but not yet drawn
+        //      in scene; otherwise srcX/srcY fall through to the clicked
+        //      tile and the pathfinder returns an empty path, producing
+        //      a 0-length keyframe at the clicked tile.
+        //   3. The clicked tile itself. Last resort -- the addProgramStep
+        //      pathfinder will return a 1-tile path and we'll bail on
+        //      the length<=1 check below without placing anything.
+        int srcX = x;
+        int srcY = y;
+        boolean resolvedSrc = false;
+        CKObject ckObject = selectedCharacter.getCkObject();
+        LocalPoint sourceLp = ckObject == null ? null : ckObject.getLocation();
+        if (sourceLp != null && sourceLp.isInScene())
         {
-            // First step: resolve a real source tile and pathfind from there to the
-            // click. Source-resolution order:
-            //   1. The Character's live CKObject location (valid once spawned in scene).
-            //   2. The Character's saved instancedPoint (POH) or nonInstancedPoint
-            //      (world). Used when the Character has been added but not yet drawn
-            //      in the scene -- otherwise srcX/srcY would fall through to the
-            //      clicked tile and the pathfinder would return an empty path,
-            //      producing a 0-length keyframe at the clicked tile.
-            //   3. Last resort: the clicked tile itself (path will be 1-tile = no
-            //      movement; the chained-step branch on the next add-step will pick
-            //      up from here).
-            int srcX = x;
-            int srcY = y;
-            boolean resolvedSrc = false;
-            CKObject ckObject = selectedCharacter.getCkObject();
-            LocalPoint sourceLp = ckObject == null ? null : ckObject.getLocation();
-            if (sourceLp != null && sourceLp.isInScene())
+            if (poh)
             {
-                if (poh)
-                {
-                    srcX = sourceLp.getSceneX();
-                    srcY = sourceLp.getSceneY();
-                }
-                else
-                {
-                    WorldPoint sourceWp = WorldPoint.fromLocalInstance(client, sourceLp, worldView.getPlane());
-                    srcX = sourceWp.getX();
-                    srcY = sourceWp.getY();
-                }
-                resolvedSrc = true;
-            }
-            if (!resolvedSrc)
-            {
-                if (poh)
-                {
-                    LocalPoint savedLp = selectedCharacter.getInstancedPoint();
-                    if (savedLp != null)
-                    {
-                        srcX = savedLp.getSceneX();
-                        srcY = savedLp.getSceneY();
-                        resolvedSrc = true;
-                    }
-                }
-                else
-                {
-                    WorldPoint savedWp = selectedCharacter.getNonInstancedPoint();
-                    if (savedWp != null)
-                    {
-                        srcX = savedWp.getX();
-                        srcY = savedWp.getY();
-                        resolvedSrc = true;
-                    }
-                }
-            }
-
-            MovementKeyFrame seed = new MovementKeyFrame(
-                    0,
-                    worldView.getPlane(),
-                    poh,
-                    new int[][]{new int[]{srcX, srcY}},
-                    0,
-                    0,
-                    false,
-                    stepSpeed,
-                    0);
-            int[][] path = movementManager.addProgramStep(seed, worldView, localPoint);
-
-            // Skip the no-movement degenerate case: if pathfinder returned no steps
-            // (source == destination, or src resolution failed entirely), don't create
-            // a 0-length keyframe at tick 0. The user wanted "skip the 0-length and
-            // add the program step at tick 1 instead", which falls out naturally:
-            // returning here means no keyframe is created, and the next add-step is
-            // still treated as a "first step" (previous == null) so it lands on the
-            // seeker's current tick with real movement.
-            if (path.length <= 1)
-            {
-                return;
-            }
-
-            // Place the first keyframe at exactly the seeker's current tick. Tick 0
-            // is valid (the saved-position fallback above ensures the path has real
-            // movement even if the Character hasn't been drawn yet, so we never
-            // produce a 0-length placeholder here).
-            initializeMovementKeyFrame(selectedCharacter, currentTime, worldView.getPlane(), poh, path, false, stepSpeed, defaultMovementTurnRate);
-
-            // Auto-advance the seeker to the end of the keyframe we just placed so the
-            // next add-step lands chained immediately after. Ceil the duration so the
-            // seeker lands on an integer tick that matches AttributeSheet's
-            // ceil()-rounded movement-bar width -- without this, fractional durations
-            // (e.g. 3 tiles at speed 2 = 1.5 ticks) put the seeker between integer
-            // ticks while the visual bar extends to the next integer, looking like
-            // a 0.5-tick overlap for whatever step the user adds next.
-            double tilesMoved = Math.max(0, path.length - 1);
-            double newDuration = Math.ceil(tilesMoved / Math.max(0.0001, stepSpeed));
-            setCurrentTime(currentTime + newDuration, false);
-        }
-        else
-        {
-            // Chained step: pathfind from the previous keyframe's end tile to the
-            // clicked tile. The new MovementKeyFrame's path is the FULL pathfinder
-            // output (multiple tiles for far-away clicks), so a 10-tile click takes
-            // ~10 ticks at speed 1 instead of teleporting in one tick.
-            int[] prevEnd = previous.getPath()[previous.getPath().length - 1];
-            MovementKeyFrame pathfindSeed = new MovementKeyFrame(
-                    0,
-                    previous.getPlane(),
-                    previous.isPoh(),
-                    new int[][]{prevEnd},
-                    0,
-                    0,
-                    false,
-                    stepSpeed,
-                    0);
-            int[][] newPath = movementManager.addProgramStep(pathfindSeed, worldView, localPoint);
-
-            // Schedule the new keyframe right after the previous one finishes.
-            // Ceil the duration to an integer tick: AttributeSheet draws the
-            // movement bar at ceil(steps/speed) wide when nothing follows, so
-            // a fractional duration like 1.5 (3 tiles at speed 2) gets visually
-            // rounded up to a 2-tick bar. Placing the next keyframe at the
-            // exact 1.5 then puts it under that bar -- the user sees a 0.5-tick
-            // overlap and has to drag the new step out by 1 tick. Snapping the
-            // chained tick to the same ceil() the renderer uses keeps them in
-            // sync at integer ticks.
-            int prevTiles = previous.getPath().length;
-            double prevDuration;
-            if (prevTiles <= 1)
-            {
-                prevDuration = 1.0;
+                srcX = sourceLp.getSceneX();
+                srcY = sourceLp.getSceneY();
             }
             else
             {
-                prevDuration = Math.ceil((prevTiles - 1) / Math.max(0.0001, previous.getSpeed()));
+                WorldPoint sourceWp = WorldPoint.fromLocalInstance(client, sourceLp, worldView.getPlane());
+                srcX = sourceWp.getX();
+                srcY = sourceWp.getY();
             }
-            double newTick = previous.getTick() + prevDuration;
-
-            initializeMovementKeyFrame(selectedCharacter, newTick, worldView.getPlane(), poh, newPath, false, stepSpeed, defaultMovementTurnRate);
-
-            // Auto-advance the seeker to the end of this just-placed keyframe.
-            // Same ceil reason as above -- keeps the seeker on an integer tick
-            // that lines up with the bar's drawn end.
-            double tilesMoved = Math.max(0, newPath.length - 1);
-            double newDuration = Math.ceil(tilesMoved / Math.max(0.0001, stepSpeed));
-            setCurrentTime(newTick + newDuration, false);
+            resolvedSrc = true;
         }
+        if (!resolvedSrc)
+        {
+            if (poh)
+            {
+                LocalPoint savedLp = selectedCharacter.getInstancedPoint();
+                if (savedLp != null)
+                {
+                    srcX = savedLp.getSceneX();
+                    srcY = savedLp.getSceneY();
+                    resolvedSrc = true;
+                }
+            }
+            else
+            {
+                WorldPoint savedWp = selectedCharacter.getNonInstancedPoint();
+                if (savedWp != null)
+                {
+                    srcX = savedWp.getX();
+                    srcY = savedWp.getY();
+                    resolvedSrc = true;
+                }
+            }
+        }
+
+        MovementKeyFrame seed = new MovementKeyFrame(
+                0,
+                worldView.getPlane(),
+                poh,
+                new int[][]{new int[]{srcX, srcY}},
+                0,
+                0,
+                false,
+                stepSpeed,
+                0);
+        int[][] path = movementManager.addProgramStep(seed, worldView, localPoint);
+
+        // Skip the no-movement degenerate case: pathfinder returned no
+        // steps (source == destination, or src resolution failed and
+        // we fell back to the clicked tile). Don't create a 0-length
+        // keyframe; just no-op and let the user try a different tile.
+        if (path.length <= 1)
+        {
+            return;
+        }
+
+        initializeMovementKeyFrame(selectedCharacter, currentTime, worldView.getPlane(), poh, path, false, stepSpeed, defaultMovementTurnRate);
+
+        // Auto-advance the seeker to the end of the kf we just placed so
+        // consecutive add-step presses chain naturally. Ceil the duration
+        // so the seeker lands on an integer tick that matches
+        // AttributeSheet's ceil()-rounded movement-bar width -- without
+        // this, fractional durations (e.g. 3 tiles at speed 2 = 1.5
+        // ticks) put the seeker between integer ticks while the visual
+        // bar extends to the next integer, looking like a 0.5-tick
+        // overlap for whatever step the user adds next.
+        double tilesMoved = Math.max(0, path.length - 1);
+        double newDuration = Math.ceil(tilesMoved / Math.max(0.0001, stepSpeed));
+        setCurrentTime(currentTime + newDuration, false);
 
         programmer.register3DChanges(selectedCharacter);
-    }
-
-    /**
-     * Returns the latest-in-time MovementKeyFrame for the Character, or null if there
-     * are none. Used by onAddMovement to chain a new step after the existing path.
-     */
-    private MovementKeyFrame findLastMovementKeyFrame(Character character)
-    {
-        KeyFrame[] frames = character.getKeyFrames(KeyFrameType.MOVEMENT);
-        if (frames == null || frames.length == 0)
-        {
-            return null;
-        }
-        return (MovementKeyFrame) frames[frames.length - 1];
     }
 
     public void initializeMovementKeyFrame(Character character, double tick, int plane, boolean poh, int[][] path, boolean loop, double speed, int turnRate)
