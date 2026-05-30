@@ -98,7 +98,6 @@ public class BlockEditDialog
         JPanel namePanel = new JPanel(new BorderLayout());
         namePanel.setOpaque(false);
         namePanel.add(fields, BorderLayout.NORTH);
-        content.add(namePanel, BorderLayout.CENTER);
 
         // 4x3 swatch grid. Each swatch is a JPanel painted with the palette
         // colour; clicking selects it. Selected swatch gets a white border.
@@ -158,7 +157,17 @@ public class BlockEditDialog
         swatchLabel.setBorder(new EmptyBorder(0, 0, 4, 0));
         swatchWrap.add(swatchLabel, BorderLayout.NORTH);
         swatchWrap.add(swatches, BorderLayout.CENTER);
-        content.add(swatchWrap, BorderLayout.CENTER);
+
+        // Both the fields panel and the swatch grid want the CENTER region, but
+        // BorderLayout only lays out ONE component per region -- adding both to
+        // `content` directly silently dropped the fields panel (so the label
+        // text box never appeared). Stack them in a shared parent instead:
+        // fields on top, swatches filling the rest.
+        JPanel centerStack = new JPanel(new BorderLayout(0, 8));
+        centerStack.setOpaque(false);
+        centerStack.add(namePanel, BorderLayout.NORTH);
+        centerStack.add(swatchWrap, BorderLayout.CENTER);
+        content.add(centerStack, BorderLayout.CENTER);
 
         int choice = JOptionPane.showConfirmDialog(parent, content, title,
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);

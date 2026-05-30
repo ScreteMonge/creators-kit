@@ -44,6 +44,14 @@ public class AttributeSheet extends TimeSheet
     /** Period in ms for one full breathing cycle (dim -> bright -> dim). */
     private static final int PULSE_PERIOD_MS = 1500;
 
+    /**
+     * Alpha (0-255) for a label's translucent body fill -- the faint coloured
+     * band that drops from the Labels row down through the keyframe rows so the
+     * time slice reads as "belonging to" that label (Premiere clip style). The
+     * label strip in the Labels row stays fully opaque as the header.
+     */
+    private static final int BLOCK_BODY_ALPHA = 70;
+
     public AttributeSheet(ToolBoxFrame toolBox, CreatorsConfig config, ManagerTree tree, AttributePanel attributePanel)
     {
         super(toolBox, config, tree, attributePanel);
@@ -164,13 +172,20 @@ public class AttributeSheet extends TimeSheet
         g2.setFont(FontManager.getRunescapeBoldFont());
         FontMetrics fm = g2.getFontMetrics();
 
-        // Labels render as a single coloured strip in the TOP row of the
-        // timeline (one row tall), spanning [startTick, endTick] with the
-        // label text centred on it. No full-height body and no interactivity
-        // -- they're purely organizational markers. Multiple labels may
-        // overlap; later ones simply draw on top.
+        // Labels render as an opaque coloured strip in the dedicated Labels
+        // row (the header -- carries the text), PLUS a faint translucent body
+        // that drops through the keyframe rows below it, so the spanned time
+        // slice reads as "belonging to" the label. That's the Premiere-clip
+        // look the old Blocks had. Still non-interactive -- purely
+        // organizational. Multiple labels may overlap; later ones draw on top
+        // (their translucent bodies stack).
         int stripTop = labelStripTop();
         int stripH = rowHeight;
+        // Body starts just under the Labels strip (the first keyframe row) and
+        // runs to the bottom of the sheet; keyframe icons paint on top of it
+        // since drawBlocks() runs before drawKeyFrames().
+        int bodyTop = stripTop + stripH;
+        int bodyH = Math.max(0, this.getHeight() - bodyTop);
 
         for (Character c : visible)
         {
@@ -187,6 +202,16 @@ public class AttributeSheet extends TimeSheet
                 int rectW = Math.max(1, rightX - leftX);
 
                 Color baseColour = new Color(label.getColorRgb());
+
+                // Translucent body under the keyframe rows.
+                if (bodyH > 0)
+                {
+                    g2.setColor(new Color(baseColour.getRed(), baseColour.getGreen(),
+                            baseColour.getBlue(), BLOCK_BODY_ALPHA));
+                    g2.fillRect(leftX, bodyTop, rectW, bodyH);
+                }
+
+                // Opaque header strip in the dedicated Labels row.
                 g2.setColor(baseColour);
                 g2.fillRect(leftX, stripTop, rectW, stripH);
                 g2.setColor(baseColour.darker());
