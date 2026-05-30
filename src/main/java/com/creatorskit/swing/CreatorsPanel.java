@@ -3252,7 +3252,9 @@ public class CreatorsPanel extends PluginPanel
                 comps,
                 folderNodeSave,
                 new CharacterSave[0],
-                plugin.getGlobalKeyFrames());
+                plugin.getGlobalKeyFrames(),
+                toolBox.getTimeSheetPanel().getALoopTick(),
+                toolBox.getTimeSheetPanel().getBLoopTick());
 
         try
         {
@@ -3451,7 +3453,8 @@ public class CreatorsPanel extends PluginPanel
                 character.getExtraScale(),
                 null,
                 character.getColourKeyFrames(),
-                character.getSoundKeyFrames());
+                character.getSoundKeyFrames(),
+                character.getBlocks());
     }
 
     public void openLoadSetupDialog()
@@ -3574,6 +3577,14 @@ public class CreatorsPanel extends PluginPanel
         // BEFORE the character/folder walk so any code that reads the central
         // store during load sees the migrated values.
         installGlobalKeyFramesFromSave(saveFile, folderNodeSave);
+
+        // Restore the timeline A / B loop markers. Clear first so loading a
+        // setup with no markers doesn't leave the previous scene's stale; then
+        // apply the saved ticks (A before B so the >=A clamp on B is a no-op).
+        TimeSheetPanel tsp = toolBox.getTimeSheetPanel();
+        tsp.clearABLoop();
+        if (saveFile.getALoopTick() != null) tsp.setALoopTick(saveFile.getALoopTick());
+        if (saveFile.getBLoopTick() != null) tsp.setBLoopTick(saveFile.getBLoopTick());
 
         for (int i = 0; i < comps.length; i++)
         {
@@ -4097,6 +4108,12 @@ public class CreatorsPanel extends PluginPanel
             // so treat that as "no scaling set" and use the natural 1.0.
             double savedExtraScale = save.getExtraScale();
             character.setExtraScale(savedExtraScale > 0 ? savedExtraScale : 1.0);
+
+            // Timeline Labels (null in saves predating the feature).
+            if (save.getBlocks() != null)
+            {
+                character.setBlocks(save.getBlocks());
+            }
 
             addPanel(parentPanel, character, node, false, false);
         }

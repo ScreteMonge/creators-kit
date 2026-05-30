@@ -108,5 +108,12 @@ public class CharacterSave
      * the global Area Sound 1/2/3/4 slots).
      */
     private SoundKeyFrame[] soundKeyFrames;
+    /**
+     * Per-Character timeline Labels (colored, named time-range markers shown
+     * in the top row, organizational only). Null in saves predating the
+     * feature -- the load path treats null as "no labels". Last field so
+     * Lombok's @AllArgsConstructor appends it as the final positional arg.
+     */
+    private java.util.List<Block> blocks;
 }
 

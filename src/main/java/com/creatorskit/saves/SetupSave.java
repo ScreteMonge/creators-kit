@@ -24,4 +24,12 @@ public class SetupSave
      * round-trip the file.
      */
     private GlobalKeyFrames globalKeyFrames;
+    /**
+     * Timeline A / B loop marker ticks (nullable). Timeline-global, not
+     * per-Character, so they live here. Null in saves predating this field --
+     * the load path leaves the markers unset in that case. Added at the end so
+     * Lombok's @AllArgsConstructor appends them as the final positional args.
+     */
+    private Double aLoopTick;
+    private Double bLoopTick;
 }
