@@ -696,6 +696,13 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 	private CKObject transmog;
 	private CKObject previewObject;
+	/**
+	 * Extra ghost objects for the multi-Character CTRL+click move preview --
+	 * one per selected Character beyond the anchor (which reuses
+	 * {@link #previewObject}). Lazily grown and reused; entries are only ever
+	 * deactivated, never destroyed.
+	 */
+	private final java.util.List<CKObject> previewObjects = new java.util.ArrayList<>();
 	private Random random = new Random();
 	private Model previewArrow;
 	private CustomModel transmogModel;
@@ -1508,11 +1515,18 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			Character selectedCharacter = getSelectedCharacter();
 			if (selectedCharacter != null)
 			{
+				// With more than one Character selected, "Relocate" moves the
+				// whole group rigidly (anchor = centre-most lands on the hovered
+				// tile). The target text reflects how many will move.
+				int selCount = selectionManager.getSelected().size();
+				String relocateTarget = selCount > 1
+						? ColorUtil.colorTag(Color.GREEN) + selCount + " Characters"
+						: ColorUtil.colorTag(Color.GREEN) + selectedCharacter.getName();
 				client.getMenu().createMenuEntry(-1)
 						.setOption(ColorUtil.prependColorTag("Relocate", Color.ORANGE))
-						.setTarget(ColorUtil.colorTag(Color.GREEN) + selectedCharacter.getName())
+						.setTarget(relocateTarget)
 						.setType(MenuAction.RUNELITE)
-						.onClick(e -> setLocation(selectedCharacter, false, true, ActiveOption.ACTIVE, LocationOption.TO_HOVERED_TILE));
+						.onClick(e -> relocateSelection());
 
 				MenuEntry me = client.getMenu().createMenuEntry(-2)
 						.setOption(ColorUtil.prependColorTag("Keyframe", Color.ORANGE))
@@ -1967,6 +1981,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		if (!config.enableCtrlHotkeys())
 		{
 			previewObject.setActive(false);
+			deactivateExtraGhosts();
 			return;
 		}
 
@@ -1977,8 +1992,25 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			|| selectedCharacter == null)
 		{
 			previewObject.setActive(false);
+			deactivateExtraGhosts();
 			return;
 		}
+
+		// Multi-select placement preview: when more than one Character is
+		// selected and the user isn't drag-aiming an orientation, ghost EVERY
+		// selected Character at the hovered tile + its offset from the centre-
+		// most (anchor) Character -- the same layout the multi-move commits.
+		// Overworld only; in a POH/instance we fall through to the single ghost.
+		java.util.Collection<Character> selectedAll = selectionManager.getSelected();
+		if (selectedAll.size() > 1
+			&& !mousePressed
+			&& !MovementManager.useLocalLocations(client.getTopLevelWorldView()))
+		{
+			renderMultiGhosts(new java.util.ArrayList<>(selectedAll), tile);
+			return;
+		}
+		// Single-select / drag-to-aim path: make sure stale extra ghosts are off.
+		deactivateExtraGhosts();
 
 		CKObject ckObject = selectedCharacter.getCkObject();
 		if (ckObject == null)
@@ -2093,6 +2125,249 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		// size and you can't see what the next paste will actually look like.
 		previewObject.setExtraScale(ckObject.getExtraScale());
 		previewObject.setActive(true);
+	}
+
+	/** Resolves the Model a Character's ghost should render (custom model, or cache model id). */
+	private Model resolvePreviewModel(Character src)
+	{
+		if (src.isCustomMode())
+		{
+			if (src.getStoredModel() == null)
+			{
+				return client.loadModel(GOLDEN_CHIN);
+			}
+			return src.getStoredModel().getModel();
+		}
+		return client.loadModel((int) src.getModelSpinner().getValue());
+	}
+
+	/**
+	 * The "centre-most" Character of a selection: the one whose tile is closest
+	 * to the selection's tile centroid. This is the anchor for a multi-move --
+	 * it lands on the hovered tile while everything else keeps its offset from
+	 * it. Overworld coords (WorldPoint); returns null if none have a position.
+	 */
+	private Character centerMostSelected(java.util.Collection<Character> chars)
+	{
+		double cx = 0, cy = 0;
+		int n = 0;
+		for (Character c : chars)
+		{
+			WorldPoint wp = c.getNonInstancedPoint();
+			if (wp == null) continue;
+			cx += wp.getX();
+			cy += wp.getY();
+			n++;
+		}
+		if (n == 0) return null;
+		cx /= n;
+		cy /= n;
+		Character best = null;
+		double bestD = Double.MAX_VALUE;
+		for (Character c : chars)
+		{
+			WorldPoint wp = c.getNonInstancedPoint();
+			if (wp == null) continue;
+			double dx = wp.getX() - cx;
+			double dy = wp.getY() - cy;
+			double d = dx * dx + dy * dy;
+			if (d < bestD)
+			{
+				bestD = d;
+				best = c;
+			}
+		}
+		return best;
+	}
+
+	/** Lazily grows {@link #previewObjects} to index {@code i} and returns that ghost (client-thread). */
+	private CKObject ensurePoolGhost(int i)
+	{
+		while (previewObjects.size() <= i)
+		{
+			CKObject g = new CKObject(client);
+			client.registerRuneLiteObject(g);
+			g.setActive(false);
+			previewObjects.add(g);
+		}
+		return previewObjects.get(i);
+	}
+
+	/** Deactivates every extra (pool) ghost. Called whenever we're not in the multi-ghost path. */
+	private void deactivateExtraGhosts()
+	{
+		for (CKObject g : previewObjects)
+		{
+			if (g != null && g.isActive())
+			{
+				g.setActive(false);
+			}
+		}
+	}
+
+	/** Configures one ghost to mirror {@code src} at {@code lp} (placement look, no arrow). */
+	private void configureGhost(CKObject ghost, Character src, CKObject srcCk, LocalPoint lp, int plane)
+	{
+		Model model = resolvePreviewModel(src);
+		if (model == null)
+		{
+			ghost.setActive(false);
+			return;
+		}
+		ghost.setModel(model);
+		ghost.setOrientation(srcCk.getOrientation());
+		ghost.setAnimation(AnimationType.ACTIVE, srcCk.getAnimationId());
+		ghost.setAnimationFrame(AnimationType.ACTIVE, srcCk.getAnimationFrame(AnimationType.ACTIVE), random, false, true);
+		ghost.setOffsetX(srcCk.getOffsetX());
+		ghost.setOffsetY(srcCk.getOffsetY());
+		ghost.setOffsetZ(srcCk.getOffsetZ());
+		ghost.setLocation(lp, plane);
+		ghost.setRadius(srcCk.getRadius());
+		ghost.setRenderFix(srcCk.isRenderFix());
+		ghost.setWidthScale(srcCk.getWidthScale());
+		ghost.setHeightScale(srcCk.getHeightScale());
+		ghost.setExtraScale(srcCk.getExtraScale());
+		ghost.setActive(true);
+	}
+
+	/**
+	 * Renders a ghost for EVERY selected Character at (hovered tile + its tile
+	 * offset from the centre-most anchor), so the user previews exactly where
+	 * the whole group will land. The anchor reuses {@link #previewObject}; the
+	 * others use the {@link #previewObjects} pool. Overworld only.
+	 */
+	private void renderMultiGhosts(java.util.List<Character> selected, Tile tile)
+	{
+		WorldView wv = client.getTopLevelWorldView();
+		Character anchor = centerMostSelected(selected);
+		LocalPoint hoveredLp = tile.getLocalLocation();
+		if (anchor == null || hoveredLp == null || anchor.getNonInstancedPoint() == null)
+		{
+			previewObject.setActive(false);
+			deactivateExtraGhosts();
+			return;
+		}
+		WorldPoint anchorWp = anchor.getNonInstancedPoint();
+		int plane = wv.getPlane();
+
+		int poolIdx = 0;
+		for (Character c : selected)
+		{
+			WorldPoint cWp = c.getNonInstancedPoint();
+			CKObject ck = c.getCkObject();
+			if (cWp == null || ck == null)
+			{
+				continue;
+			}
+			int offX = cWp.getX() - anchorWp.getX();
+			int offY = cWp.getY() - anchorWp.getY();
+			// One tile = 128 local units; the hovered tile is a scene LocalPoint,
+			// so adding the tile offset * 128 places each ghost at its relative
+			// scene position.
+			LocalPoint lp = new LocalPoint(hoveredLp.getX() + offX * 128, hoveredLp.getY() + offY * 128, wv);
+
+			CKObject ghost = (c == anchor) ? previewObject : ensurePoolGhost(poolIdx++);
+			if (lp == null || !lp.isInScene())
+			{
+				ghost.setActive(false);
+				continue;
+			}
+			configureGhost(ghost, c, ck, lp, plane);
+		}
+
+		// Deactivate any pool ghosts left over from a larger previous selection.
+		for (int i = poolIdx; i < previewObjects.size(); i++)
+		{
+			CKObject g = previewObjects.get(i);
+			if (g != null && g.isActive())
+			{
+				g.setActive(false);
+			}
+		}
+	}
+
+	/**
+	 * CTRL+click "Relocate": moves the WHOLE selection to the hovered tile. The
+	 * centre-most Character (anchor) lands on the hovered tile; every other
+	 * selected Character keeps its tile offset from the anchor, so the group
+	 * translates rigidly. Records one CTRL+Z layout-undo for the batch.
+	 *
+	 * <p>Falls back to the single-Character move for a 1-Character selection or
+	 * when in a POH/instance (multi-move is overworld-only for now).
+	 */
+	private void relocateSelection()
+	{
+		java.util.Collection<Character> selected = selectionManager.getSelected();
+		Character primary = getSelectedCharacter();
+		WorldView wv = client.getTopLevelWorldView();
+		boolean inPOH = MovementManager.useLocalLocations(wv);
+
+		if (selected.size() <= 1 || inPOH || primary == null)
+		{
+			if (primary != null)
+			{
+				setLocation(primary, false, true, ActiveOption.ACTIVE, LocationOption.TO_HOVERED_TILE);
+			}
+			return;
+		}
+
+		Tile tile = wv.getSelectedSceneTile();
+		if (tile == null || tile.getLocalLocation() == null)
+		{
+			return;
+		}
+		WorldPoint hoveredWp = WorldPoint.fromLocalInstance(client, tile.getLocalLocation());
+		Character anchor = centerMostSelected(selected);
+		if (hoveredWp == null || anchor == null || anchor.getNonInstancedPoint() == null)
+		{
+			return;
+		}
+		WorldPoint anchorWp = anchor.getNonInstancedPoint();
+
+		java.util.List<Runnable> reverts = new java.util.ArrayList<>();
+		int moved = 0;
+		for (Character c : selected)
+		{
+			WorldPoint cWp = c.getNonInstancedPoint();
+			if (cWp == null)
+			{
+				continue;
+			}
+			int offX = cWp.getX() - anchorWp.getX();
+			int offY = cWp.getY() - anchorWp.getY();
+			WorldPoint target = new WorldPoint(hoveredWp.getX() + offX, hoveredWp.getY() + offY, hoveredWp.getPlane());
+
+			final Character fc = c;
+			final WorldPoint oldWp = cWp;
+			// setLocation(..., transplant=true, TO_SAVED_LOCATION) repositions the
+			// CKObject (via clientThread) and transplants any movement path to the
+			// saved point, so both static and walking Characters land correctly
+			// without an explicit register3DChanges (which the undo path runs on
+			// the EDT, where it isn't safe). Mirrors the Rotate undo.
+			reverts.add(() ->
+			{
+				fc.setNonInstancedPoint(oldWp);
+				setLocation(fc, false, true, ActiveOption.ACTIVE, LocationOption.TO_SAVED_LOCATION);
+			});
+
+			c.setNonInstancedPoint(target);
+			setLocation(c, false, true, ActiveOption.ACTIVE, LocationOption.TO_SAVED_LOCATION);
+			moved++;
+		}
+
+		if (!reverts.isEmpty())
+		{
+			final int cnt = moved;
+			creatorsPanel.recordLayoutUndo(() ->
+			{
+				for (Runnable r : reverts)
+				{
+					r.run();
+				}
+				sendChatMessage("Undid move (" + cnt + " Character" + (cnt == 1 ? "" : "s") + " restored).");
+			});
+		}
+		sendChatMessage("Moved " + moved + " Character" + (moved == 1 ? "" : "s") + " around anchor '" + anchor.getName() + "'. (CTRL+Z to undo)");
 	}
 
 	public ArrayList<ComplexPanel> getComplexPanels()

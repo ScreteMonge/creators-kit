@@ -1345,6 +1345,7 @@ public class CreatorsPanel extends PluginPanel
      * own keyframe undo).
      */
     private final java.util.Deque<Runnable> layoutUndoStack = new java.util.ArrayDeque<>();
+    private final Object layoutUndoLock = new Object();
     private static final int LAYOUT_UNDO_LIMIT = 25;
 
     private void pushLayoutUndo(Runnable revert)
@@ -1353,27 +1354,51 @@ public class CreatorsPanel extends PluginPanel
         {
             return;
         }
-        layoutUndoStack.push(revert);
-        while (layoutUndoStack.size() > LAYOUT_UNDO_LIMIT)
+        // Pushed from the EDT (Rotate dialog) AND the client thread (CTRL+click
+        // multi-move), so guard the deque -- ArrayDeque isn't thread-safe.
+        synchronized (layoutUndoLock)
         {
-            layoutUndoStack.removeLast();
+            layoutUndoStack.push(revert);
+            while (layoutUndoStack.size() > LAYOUT_UNDO_LIMIT)
+            {
+                layoutUndoStack.removeLast();
+            }
         }
     }
 
     /** True when there's a layout operation that CTRL+Z can revert. */
     public boolean hasLayoutUndo()
     {
-        return !layoutUndoStack.isEmpty();
+        synchronized (layoutUndoLock)
+        {
+            return !layoutUndoStack.isEmpty();
+        }
     }
 
     /** Reverts the most recent layout operation (Rotate / multi-move), if any. */
     public void undoLayout()
     {
-        Runnable revert = layoutUndoStack.poll();
+        Runnable revert;
+        synchronized (layoutUndoLock)
+        {
+            revert = layoutUndoStack.poll();
+        }
+        // Run the revert OUTSIDE the lock -- it touches the client thread and
+        // shouldn't hold the undo lock while doing engine work.
         if (revert != null)
         {
             revert.run();
         }
+    }
+
+    /**
+     * Public hook so spatial ops outside this class (e.g. the plugin's
+     * multi-Character CTRL+click move) can register a single-CTRL+Z revert on
+     * the shared layout-undo stack.
+     */
+    public void recordLayoutUndo(Runnable revert)
+    {
+        pushLayoutUndo(revert);
     }
 
     /**
