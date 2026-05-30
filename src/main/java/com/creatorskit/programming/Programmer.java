@@ -2002,6 +2002,18 @@ public class Programmer
             // existing scenes aren't suddenly clipped to a 0-tile box on
             // load. Same convention SpotAnim's render path uses.
             final int finalRadius = kf.getRadius() > 0 ? kf.getRadius() : ProjectileKeyFrame.DEFAULT_RADIUS;
+            // Custom-model projectiles drive their animation FRAME from the
+            // timeline, synced to the kf's tick: frame 0 lands exactly on the
+            // keyframe (so a Projectile on T100 starts its animation at T100),
+            // and it stays scrub-correct because we recompute the frame from
+            // (currentTime - startTime) every tick instead of free-running on
+            // the client clock. Cache (spotanim-graphic) projectiles keep their
+            // own baked animation set at slot-build time. animSpeed is fixed at
+            // 1.0 -- the projectile card has no speed field.
+            final boolean syncCustomAnim = kf.isUseCustomModel() && kf.getAnimationId() >= 0;
+            final int finalAnimId = kf.getAnimationId();
+            final double animStart = startTime;
+            final double animNow = currentTime;
             clientThread.invokeLater(() ->
             {
                 if (!finalHere.isInScene())
@@ -2020,6 +2032,13 @@ public class Programmer
                 if (!obj.isActive())
                 {
                     obj.setActive(true);
+                }
+                if (syncCustomAnim)
+                {
+                    // loop so the animation repeats across the whole flight;
+                    // despawnOnFinished=false so the projectile isn't torn down
+                    // mid-arc if a non-looping clip would otherwise "finish".
+                    setActiveAnimationFrame(obj, finalAnimId, animNow, animStart, 0, true, false, false, 1.0);
                 }
             });
 
@@ -2084,18 +2103,13 @@ public class Programmer
             projObjs.set(slot, obj);
             projectileLoadedIds.put(obj, sig);
 
+            // Build the model here; the animation FRAME is driven per-tick from
+            // the timeline in updateProjectiles (synced to the kf's tick), not
+            // free-run from slot-build time. So we deliberately don't set an
+            // animation here -- updateProjectiles' setActiveAnimationFrame loads
+            // and frames it on the first render tick.
             final Model model = cm.getModel();
-            final int animId = kf.getAnimationId();
-            clientThread.invokeLater(() ->
-            {
-                obj.setModel(model);
-                if (animId >= 0)
-                {
-                    obj.setAnimation(AnimationType.ACTIVE, animId);
-                    obj.setLoop(true);
-                    obj.setPlaying(true);
-                }
-            });
+            clientThread.invokeLater(() -> obj.setModel(model));
             return;
         }
 
