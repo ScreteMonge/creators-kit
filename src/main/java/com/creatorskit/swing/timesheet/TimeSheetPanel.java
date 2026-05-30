@@ -24,7 +24,6 @@ import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameCharacte
 import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameActionType;
 import com.creatorskit.swing.timesheet.keyframe.settings.HealthbarSprite;
 import com.creatorskit.swing.timesheet.sheets.AttributeSheet;
-import com.creatorskit.swing.timesheet.sheets.SummarySheet;
 import com.creatorskit.swing.timesheet.sheets.TimeSheet;
 import lombok.Getter;
 import lombok.Setter;
@@ -62,7 +61,6 @@ public class TimeSheetPanel extends JPanel
     private final GridBagConstraints c = new GridBagConstraints();
     private final ToolBoxFrame toolBox;
     private final DataFinder dataFinder;
-    private SummarySheet summarySheet;
     private AttributeSheet attributeSheet;
     /** Dedicated sheet for Camera / Fade / Shake. Toggle button swaps it in/out of view. */
     private com.creatorskit.swing.timesheet.sheets.GlobalAttributeSheet globalAttributeSheet;
@@ -2434,7 +2432,6 @@ public class TimeSheetPanel extends JPanel
     public void setSelectedCharacter(Character character)
     {
         selectedCharacter = character;
-        summarySheet.setSelectedCharacter(character);
         attributeSheet.setSelectedCharacter(character);
         if (globalAttributeSheet != null) globalAttributeSheet.setSelectedCharacter(character);
         attributePanel.setSelectedCharacter(character);
@@ -2558,7 +2555,6 @@ public class TimeSheetPanel extends JPanel
 
         currentTime = tick;
         attributeSheet.setCurrentTime(currentTime);
-        summarySheet.setCurrentTime(currentTime);
         if (globalAttributeSheet != null) globalAttributeSheet.setCurrentTime(currentTime);
 
         triggerTimeSpinnerChange = false;
@@ -2598,9 +2594,7 @@ public class TimeSheetPanel extends JPanel
         // collapses the two indicators visually; clearing the pressed flag
         // makes sure subsequent renders skip the preview pass entirely.
         attributeSheet.setPreviewTime(tick);
-        summarySheet.setPreviewTime(tick);
         attributeSheet.setTimeIndicatorPressed(false);
-        summarySheet.setTimeIndicatorPressed(false);
         if (globalAttributeSheet != null)
         {
             globalAttributeSheet.setPreviewTime(tick);
@@ -2679,7 +2673,6 @@ public class TimeSheetPanel extends JPanel
     public void updatePreviewTime(double tick)
     {
         attributeSheet.setPreviewTime(tick);
-        summarySheet.setPreviewTime(tick);
         if (globalAttributeSheet != null) globalAttributeSheet.setPreviewTime(tick);
     }
 
@@ -2810,7 +2803,6 @@ public class TimeSheetPanel extends JPanel
     private void setupAttributePanel()
     {
         attributePanel = new AttributePanel(client, clientThread, config, this, dataFinder, selectionManager, cacheMetadataStore);
-        summarySheet = new SummarySheet(toolBox, config, managerTree, attributePanel);
         attributeSheet = new AttributeSheet(toolBox, config, managerTree, attributePanel);
         globalAttributeSheet = new com.creatorskit.swing.timesheet.sheets.GlobalAttributeSheet(toolBox, config, managerTree, attributePanel);
     }
@@ -3649,17 +3641,16 @@ public class TimeSheetPanel extends JPanel
      * <pre>
      * +----------------+----------------------------+
      * |                |                            |
-     * |  Tree section  |  Summary section           |
-     * |                |                            |
-     * +- - - - - - - - +- - - - - - - - - - - - - -+
-     * |                |                            |
-     * |  Attribute     |  Timeline body section     |
-     * |  section       |  (scrollbar + controls +   |
+     * |  Tree section  |                            |
+     * |                |  Timeline body section     |
+     * +- - - - - - - - +  (scrollbar + controls +   |
      * |                |   labels | sheet)          |
+     * |  Attribute     |                            |
+     * |  section       |                            |
      * |                |                            |
      * +----------------+----------------------------+
-     *  ^ leftSplit       ^ rightSplit
-     *      (vertical)        (vertical)
+     *  ^ leftSplit       ^ timelineSection
+     *      (vertical)
      *  Both wrapped in a horizontal rootSplit.
      * </pre>
      *
@@ -3672,15 +3663,6 @@ public class TimeSheetPanel extends JPanel
         // boundaries read as actual UI regions instead of just gaps.
         JPanel treeSection = wrapInSection(treeScrollPane);
         JPanel attrSection = wrapInSection(attributePanel);
-
-        JPanel summarySection = new JPanel(new BorderLayout());
-        summarySection.setBorder(SECTION_BORDER);
-        summarySection.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        JLabel summaryLabel = new JLabel("Summary");
-        summaryLabel.setFont(FontManager.getRunescapeBoldFont());
-        summaryLabel.setBorder(new EmptyBorder(1, 4, 2, 2));
-        summarySection.add(summaryLabel, BorderLayout.NORTH);
-        summarySection.add(summarySheet, BorderLayout.CENTER);
 
         // Timeline section: horizontal scrollbar + transport controls
         // stack on top of the labels|sheet body. Keeping them inside the
@@ -3710,18 +3692,16 @@ public class TimeSheetPanel extends JPanel
         // narrow some content clips, which is their explicit choice.
         treeSection.setMinimumSize(SECTION_MIN);
         attrSection.setMinimumSize(SECTION_MIN);
-        summarySection.setMinimumSize(SECTION_MIN);
         timelineSection.setMinimumSize(SECTION_MIN);
 
-        // Three nested split panes. Default proportions from the user spec:
-        //   rootSplit  (horizontal):  left 30% | right 70%
-        //   leftSplit  (vertical):    tree 70% / attr 30%
-        //   rightSplit (vertical):    summary 30% / timeline 70%
+        // Two split panes (the Summary section that used to occupy the top-
+        // right was removed). Default proportions:
+        //   rootSplit (horizontal):  left 30% | timeline 70%
+        //   leftSplit (vertical):    tree 70% / attr 30%
         // Persistence keys + defaults are wired in makeSplit -- divider
         // positions saved on drag and restored on next launch.
-        JSplitPane leftSplit  = makeSplit(JSplitPane.VERTICAL_SPLIT,   treeSection,    attrSection,     0.7, 0.7, DIV_KEY_LEFT);
-        JSplitPane rightSplit = makeSplit(JSplitPane.VERTICAL_SPLIT,   summarySection, timelineSection, 0.3, 0.3, DIV_KEY_RIGHT);
-        JSplitPane rootSplit  = makeSplit(JSplitPane.HORIZONTAL_SPLIT, leftSplit,      rightSplit,      0.3, 0.3, DIV_KEY_ROOT);
+        JSplitPane leftSplit  = makeSplit(JSplitPane.VERTICAL_SPLIT,   treeSection, attrSection,     0.7, 0.7, DIV_KEY_LEFT);
+        JSplitPane rootSplit  = makeSplit(JSplitPane.HORIZONTAL_SPLIT, leftSplit,   timelineSection, 0.3, 0.3, DIV_KEY_ROOT);
 
         add(rootSplit, BorderLayout.CENTER);
     }
@@ -3735,7 +3715,6 @@ public class TimeSheetPanel extends JPanel
      *  (0..1) so they scale when the toolbox window size changes. */
     private static final String DIV_KEY_ROOT  = "timelineDivider_root";
     private static final String DIV_KEY_LEFT  = "timelineDivider_left";
-    private static final String DIV_KEY_RIGHT = "timelineDivider_right";
     private static final String DIV_CFG_GROUP = "creatorssuite";
 
     /** Wraps any component in a fixed-border section panel so the user
@@ -3900,8 +3879,6 @@ public class TimeSheetPanel extends JPanel
 
     private void updateSheets()
     {
-        summarySheet.setHScroll(hScroll);
-        summarySheet.setZoom(zoom);
         attributeSheet.setHScroll(hScroll);
         attributeSheet.setZoom(zoom);
         if (globalAttributeSheet != null)
@@ -6496,7 +6473,6 @@ public class TimeSheetPanel extends JPanel
         character.getBlocks().remove(block);
         clearBlockSelection();
         attributeSheet.repaint();
-        summarySheet.repaint();
     }
 
     /** Shows a confirmation dialog then deletes both the block AND every
@@ -6543,7 +6519,6 @@ public class TimeSheetPanel extends JPanel
         block.setName(result.name);
         block.setColorRgb(result.colorRgb);
         attributeSheet.repaint();
-        summarySheet.repaint();
     }
 
     // ===== Blocks (Phase 1: create + render) ============================
@@ -6674,6 +6649,5 @@ public class TimeSheetPanel extends JPanel
         // Refresh the visible attribute sheets so the new block paints.
         attributeSheet.repaint();
         if (globalAttributeSheet != null) globalAttributeSheet.repaint();
-        summarySheet.repaint();
     }
 }

@@ -794,11 +794,6 @@ public class ManagerTree extends JTree
         toolBox.getManagerPanel().repaint();
     }
 
-    public void onPanelScrolled(int scroll)
-    {
-        toolBox.getTimeSheetPanel().getSummarySheet().onVerticalScrollEvent(scroll);
-    }
-
     public void setTreeSelection(Character character)
     {
         if (character == null)
@@ -938,23 +933,15 @@ public class ManagerTree extends JTree
         updateTreeSelectionIndex();
     }
 
+    /**
+     * No-op since the Summary section was removed. The tree selection used to
+     * mirror its highlighted row into the SummarySheet; with no summary there's
+     * nothing to sync. Kept (rather than deleting) because it has many callers
+     * across ManagerTree and CreatorsPanel -- a single empty method is cheaper
+     * and lower-risk than unwiring all of them.
+     */
     public void updateTreeSelectionIndex()
     {
-        int[] rows = getSelectionRows();
-        int current = getLeadSelectionRow();
-        if (current == -1)
-        {
-            toolBox.getTimeSheetPanel().getSummarySheet().setSelectedIndex(-1);
-            return;
-        }
-
-        int row = 0;
-        if (rows != null && rows.length > 0)
-        {
-            row = rows[0];
-        }
-
-        toolBox.getTimeSheetPanel().getSummarySheet().setSelectedIndex(row);
     }
 
     private void setMouseListeners()
@@ -1047,11 +1034,6 @@ public class ManagerTree extends JTree
         recolour.addActionListener(e ->
                 plugin.getCreatorsPanel().showColorPickerAt(this, x, y, character));
         popup.add(recolour);
-
-        JMenuItem keyframes = new JMenuItem("Show keyframes...");
-        keyframes.addActionListener(e ->
-                toolBox.getTimeSheetPanel().getSummarySheet().showSummaryPopup(this, character, x, y));
-        popup.add(keyframes);
 
         popup.addSeparator();
 

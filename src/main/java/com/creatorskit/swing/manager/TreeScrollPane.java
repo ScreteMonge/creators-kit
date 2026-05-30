@@ -27,9 +27,6 @@ public class TreeScrollPane extends JScrollPane
 
         JPanel folderHeader = setupFolderHeader();
         setColumnHeaderView(folderHeader);
-
-        JScrollBar scrollBar = getVerticalScrollBar();
-        scrollBar.addAdjustmentListener(e -> tree.onPanelScrolled(scrollBar.getValue()));
     }
 
     private JPanel setupFolderHeader()
