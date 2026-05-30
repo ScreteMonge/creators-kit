@@ -2178,6 +2178,34 @@ public class Programmer
     }
 
     /**
+     * SpotAnim sibling of {@link #resolveProjectileCustomModel}. Returns the live
+     * {@link CustomModel} for a custom-model spotanim keyframe, re-resolving the
+     * transient ref from the global stored-model list by comp name after a load.
+     */
+    private CustomModel resolveSpotAnimCustomModel(SpotAnimKeyFrame kf)
+    {
+        CustomModel cm = kf.getCustomModel();
+        if (cm != null)
+        {
+            return cm;
+        }
+        String name = kf.getCustomModelName();
+        if (name == null || name.isEmpty())
+        {
+            return null;
+        }
+        for (CustomModel m : plugin.getStoredModels())
+        {
+            if (m != null && m.getComp() != null && name.equals(m.getComp().getName()))
+            {
+                kf.setCustomModel(m);
+                return m;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Updates the pitch the {@link ProjectileCKObject} applies after animation in its
      * getModel() override. baseModel is never mutated -- the rotation is layered on top
      * of the animation pipeline output each frame, so animation skinning stays correct
@@ -2669,10 +2697,10 @@ public class Programmer
         double animSpeed = spotAnimKeyFrame.getAnimationSpeed();
         if (animSpeed <= 0) animSpeed = SpotAnimKeyFrame.DEFAULT_ANIMATION_SPEED;
 
-        updateSpotAnim(keyFrameType, spotAnimKeyFrame.getSpotAnimId(), spotAnimKeyFrame.getHeight(), spotAnimKeyFrame.getRadius(), character, currentTime, spotAnimKeyFrame.getTick(), spotAnimKeyFrame.isLoop(), lp, plane, ckObject.getOrientation(), animSpeed);
+        updateSpotAnim(keyFrameType, spotAnimKeyFrame, spotAnimKeyFrame.getSpotAnimId(), spotAnimKeyFrame.getHeight(), spotAnimKeyFrame.getRadius(), character, currentTime, spotAnimKeyFrame.getTick(), spotAnimKeyFrame.isLoop(), lp, plane, ckObject.getOrientation(), animSpeed);
     }
 
-    private void updateSpotAnim(KeyFrameType keyFrameType, int spotAnimId, int height, int radius, Character character, double currentTime, double startTick, boolean loop, LocalPoint lp, int plane, int orientation, double animSpeed)
+    private void updateSpotAnim(KeyFrameType keyFrameType, SpotAnimKeyFrame kf, int spotAnimId, int height, int radius, Character character, double currentTime, double startTick, boolean loop, LocalPoint lp, int plane, int orientation, double animSpeed)
     {
         CKObject spotAnim;
         if (keyFrameType == KeyFrameType.SPOTANIM)
@@ -2682,6 +2710,61 @@ public class Programmer
         else
         {
             spotAnim = character.getSpotAnim2();
+        }
+
+        // Custom-model branch: build the spotanim CKObject from a user Custom
+        // Model + an explicit animation id, instead of a cache SpotAnim graphic.
+        // Mirrors the Projectile card's custom-model path. The `height` field is
+        // a cache-spotanim concept (baked into model translateZ) and isn't applied
+        // here -- custom models sit at the Character's origin; use ALT+nudge to
+        // offset. Orientation / radius / loop / animation-speed all still apply.
+        if (kf != null && kf.isUseCustomModel())
+        {
+            CustomModel cm = resolveSpotAnimCustomModel(kf);
+            if (cm == null || cm.getModel() == null)
+            {
+                if (spotAnim != null)
+                {
+                    final CKObject sa = spotAnim;
+                    clientThread.invokeLater(() -> sa.setActive(false));
+                }
+                return;
+            }
+            final Model model = cm.getModel();
+            final int animId = kf.getAnimationId();
+            clientThread.invokeLater(() ->
+            {
+                CKObject ckObject;
+                if (spotAnim == null)
+                {
+                    ckObject = new CKObject(client);
+                    client.registerRuneLiteObject(ckObject);
+                    ckObject.setDrawFrontTilesFirst(true);
+                    ckObject.setDespawnOnFinish(true);
+                    ckObject.setHasAnimKeyFrame(true);
+                    ckObject.setOffsetX(character.getOffsetX());
+                    ckObject.setOffsetY(character.getOffsetY());
+                    ckObject.setOffsetZ(character.getOffsetZ());
+                    ckObject.setExtraScale(character.getExtraScale());
+                    character.setSpotAnim(ckObject, keyFrameType);
+                }
+                else
+                {
+                    ckObject = spotAnim;
+                }
+
+                ckObject.setOrientation(orientation);
+                ckObject.setRadius(radius > 0 ? radius : 60);
+                ckObject.setPlaying(playing);
+                ckObject.setActive(false);
+                ckObject.setActive(true);
+                ckObject.setModel(model);
+                // Pair-set animationSpeed (live accumulator) + the animSpeed arg
+                // (scrub-time frame math) -- see the cache branch below for why.
+                ckObject.setAnimationSpeed(animSpeed);
+                setActiveAnimationFrame(ckObject, animId, currentTime, startTick, 0, loop, false, true, animSpeed);
+            });
+            return;
         }
 
         if (spotAnim == null)

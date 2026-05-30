@@ -2590,12 +2590,22 @@ public class CreatorsPanel extends PluginPanel
                 .getCustomModel()
                 .addItem(model);
 
-        // Projectile card's custom-model combo mirrors the Model card's --
-        // keep it populated with the same models so a projectile can fly as
-        // any custom model the user has created.
+        // Projectile + SpotAnim 1/2 cards each mirror the Model card's custom-
+        // model combo -- keep them populated with the same models so a projectile
+        // or spotanim can render as any custom model the user has created.
         toolBox.getTimeSheetPanel()
                 .getAttributePanel()
                 .getProjectileAttributes()
+                .getCustomModel()
+                .addItem(model);
+        toolBox.getTimeSheetPanel()
+                .getAttributePanel()
+                .getSpotAnimAttributes()
+                .getCustomModel()
+                .addItem(model);
+        toolBox.getTimeSheetPanel()
+                .getAttributePanel()
+                .getSpotAnim2Attributes()
                 .getCustomModel()
                 .addItem(model);
 
@@ -2637,6 +2647,16 @@ public class CreatorsPanel extends PluginPanel
         toolBox.getTimeSheetPanel()
                 .getAttributePanel()
                 .getProjectileAttributes()
+                .getCustomModel()
+                .removeItem(model);
+        toolBox.getTimeSheetPanel()
+                .getAttributePanel()
+                .getSpotAnimAttributes()
+                .getCustomModel()
+                .removeItem(model);
+        toolBox.getTimeSheetPanel()
+                .getAttributePanel()
+                .getSpotAnim2Attributes()
                 .getCustomModel()
                 .removeItem(model);
 

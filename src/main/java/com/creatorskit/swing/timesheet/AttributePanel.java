@@ -1245,7 +1245,11 @@ public class AttributePanel extends JPanel
                         spAttributes.getLoop().getSelectedItem() == Toggle.ENABLE,
                         (int) spAttributes.getHeight().getValue(),
                         (int) spAttributes.getRadius().getValue(),
-                        ((Number) spAttributes.getAnimationSpeed().getValue()).doubleValue()
+                        ((Number) spAttributes.getAnimationSpeed().getValue()).doubleValue(),
+                        spAttributes.getModelSource().getSelectedItem() == SpotAnimToggle.CUSTOM_MODEL,
+                        (CustomModel) spAttributes.getCustomModel().getSelectedItem(),
+                        null,
+                        ((Number) spAttributes.getAnimationId().getValue()).intValue()
                 );
             case HITSPLAT_1:
             case HITSPLAT_2:
@@ -1587,6 +1591,9 @@ public class AttributePanel extends JPanel
                 {
                     SpotAnimKeyFrame k = (SpotAnimKeyFrame) sameType.get(i);
                     if (f.getSpotAnimId() != k.getSpotAnimId()) mixed.add(sp.getSpotAnimId());
+                    if (f.isUseCustomModel() != k.isUseCustomModel()) mixed.add(sp.getModelSource());
+                    if (!java.util.Objects.equals(f.getCustomModelName(), k.getCustomModelName())) mixed.add(sp.getCustomModel());
+                    if (f.getAnimationId() != k.getAnimationId()) mixed.add(sp.getAnimationId());
                     if (f.isLoop() != k.isLoop()) mixed.add(sp.getLoop());
                     if (f.getHeight() != k.getHeight()) mixed.add(sp.getHeight());
                     if (f.getRadius() != k.getRadius()) mixed.add(sp.getRadius());
@@ -2146,7 +2153,22 @@ public class AttributePanel extends JPanel
                                 : orig.getRadius(),
                         wasEdited(spAttributes.getAnimationSpeed())
                                 ? ((Number) spAttributes.getAnimationSpeed().getValue()).doubleValue()
-                                : orig.getAnimationSpeed()
+                                : orig.getAnimationSpeed(),
+                        wasEdited(spAttributes.getModelSource())
+                                ? spAttributes.getModelSource().getSelectedItem() == SpotAnimToggle.CUSTOM_MODEL
+                                : orig.isUseCustomModel(),
+                        wasEdited(spAttributes.getCustomModel())
+                                ? (CustomModel) spAttributes.getCustomModel().getSelectedItem()
+                                : orig.getCustomModel(),
+                        // Carry the original's persistent name when the combo
+                        // wasn't touched, so a post-load kf (live ref null) keeps
+                        // its identity through an unrelated edit.
+                        wasEdited(spAttributes.getCustomModel())
+                                ? null
+                                : orig.getCustomModelName(),
+                        wasEdited(spAttributes.getAnimationId())
+                                ? ((Number) spAttributes.getAnimationId().getValue()).intValue()
+                                : orig.getAnimationId()
                 );
             }
             case HITSPLAT_1:
@@ -4199,30 +4221,103 @@ public class AttributePanel extends JPanel
         manualTitleHelp.setToolTipText("Set the SpotAnim (like spell effects) to play on the Object");
         manualTitlePanel.add(manualTitleHelp);
 
+        // SpotAnim Type chooser: cache SpotAnim graphic vs Custom Model.
+        // Mirrors the Model / Projectile cards. Custom Model greys out the
+        // SpotAnim id spinner and lights up the Custom Model combo +
+        // Animation ID spinner (a cache spotanim carries its own baked
+        // animation; a custom model needs one specified).
         c.weightx = 0;
         c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 1;
+        JLabel typeLabel = new JLabel("SpotAnim Type: ");
+        typeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(typeLabel, c);
+
+        c.gridwidth = 2;
+        c.gridx = 1;
+        c.gridy = 1;
+        JComboBox<SpotAnimToggle> modelSource = spAttributes.getModelSource();
+        modelSource.setToolTipText("Render the SpotAnim as a cache graphic, or as one of your Custom Models.");
+        modelSource.setFocusable(false);
+        if (modelSource.getItemCount() == 0)
+        {
+            modelSource.addItem(SpotAnimToggle.SPOTANIM_ID);
+            modelSource.addItem(SpotAnimToggle.CUSTOM_MODEL);
+        }
+        card.add(modelSource, c);
+
+        c.weightx = 0;
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 2;
         JLabel idLabel = new JLabel("SpotAnim: ");
         idLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(idLabel, c);
 
         c.gridwidth = 1;
         c.gridx = 1;
-        c.gridy = 1;
+        c.gridy = 2;
         JSpinner id = spAttributes.getSpotAnimId();
         id.setValue(-1);
         card.add(id, c);
 
+        c.gridx = 0;
+        c.gridy = 3;
+        JLabel customLabel = new JLabel("Custom Model: ");
+        customLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(customLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 3;
+        JComboBox<CustomModel> spCustomModel = spAttributes.getCustomModel();
+        spCustomModel.setToolTipText("The Custom Model to play as the SpotAnim, when SpotAnim Type is Custom Model.");
+        spCustomModel.setFocusable(false);
+        card.add(spCustomModel, c);
+
+        c.gridx = 0;
+        c.gridy = 4;
+        JLabel spAnimIdLabel = new JLabel("Animation ID: ");
+        spAnimIdLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(spAnimIdLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 4;
+        JSpinner spAnimationId = spAttributes.getAnimationId();
+        spAnimationId.setToolTipText("<html>Cache animation id played on the Custom Model. -1 = no animation (static model)."
+                + "<br>Ignored when SpotAnim Type is SpotAnim ID (the cache graphic plays its own baked animation).</html>");
+        spAnimationId.setModel(new SpinnerNumberModel(SpotAnimKeyFrame.DEFAULT_ANIMATION_ID, -1, 99999, 1));
+        card.add(spAnimationId, c);
+
+        // Enable/disable the SpotAnim-vs-Custom fields based on the chooser.
+        // Runs once now to seed the initial state, then on every selection
+        // change. setAttributes() selects the combo when a kf loads, which
+        // fires this and keeps the enabled state in sync with the kf.
+        Runnable syncSpotAnimTypeFields = () ->
+        {
+            boolean custom = modelSource.getSelectedItem() == SpotAnimToggle.CUSTOM_MODEL;
+            id.setEnabled(!custom);
+            spCustomModel.setEnabled(custom);
+            spAnimationId.setEnabled(custom);
+        };
+        modelSource.addItemListener(e ->
+        {
+            if (e.getStateChange() == java.awt.event.ItemEvent.SELECTED)
+            {
+                syncSpotAnimTypeFields.run();
+            }
+        });
+        syncSpotAnimTypeFields.run();
+
         c.gridwidth = 1;
         c.gridx = 0;
-        c.gridy = 2;
+        c.gridy = 5;
         JLabel loop1Label = new JLabel("Loop: ");
         loop1Label.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(loop1Label, c);
 
         c.gridx = 1;
-        c.gridy = 2;
+        c.gridy = 5;
         JComboBox<Toggle> loop = spAttributes.getLoop();
         loop.setToolTipText("Set whether the SpotAnim animation should loop");
         loop.setFocusable(false);
@@ -4231,15 +4326,15 @@ public class AttributePanel extends JPanel
         card.add(loop, c);
 
         c.gridx = 0;
-        c.gridy = 3;
+        c.gridy = 6;
         JLabel heightLabel = new JLabel("Height");
         heightLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(heightLabel, c);
 
         c.gridx = 1;
-        c.gridy = 3;
+        c.gridy = 6;
         JSpinner height = spAttributes.getHeight();
-        height.setToolTipText("Sets the height at which the SpotAnim spawns");
+        height.setToolTipText("Sets the height at which the SpotAnim spawns. Applies to cache SpotAnim graphics; Custom Models position at the Character's origin (use ALT+nudge to offset).");
         height.setModel(new SpinnerNumberModel(92, 0, 9999, 1));
         card.add(height, c);
 
@@ -4247,13 +4342,13 @@ public class AttributePanel extends JPanel
         // can match the spotanim's clip radius to wide / tall models the same
         // way they would on a standalone Character placement.
         c.gridx = 0;
-        c.gridy = 4;
+        c.gridy = 7;
         JLabel radiusLabel = new JLabel("Radius: ");
         radiusLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(radiusLabel, c);
 
         c.gridx = 1;
-        c.gridy = 4;
+        c.gridy = 7;
         JSpinner radius = spAttributes.getRadius();
         radius.setToolTipText("How far the SpotAnim should render vs clip with other tiles around it, measured in 1/128th tiles");
         radius.setModel(new SpinnerNumberModel(65, 0, 9999, 1));
@@ -4265,28 +4360,29 @@ public class AttributePanel extends JPanel
         // cache rate; 2.0 = double-speed; 0.5 = half. Min is 0.01 (instead
         // of 0) so the user can't accidentally freeze the spotanim by
         // typing 0 -- "stop animating" is what the kf simply ending does.
+        // Applies to both cache and custom-model animations.
         c.gridx = 0;
-        c.gridy = 5;
+        c.gridy = 8;
         JLabel animSpeedLabel = new JLabel("Anim Speed: ");
         animSpeedLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(animSpeedLabel, c);
 
         c.gridx = 1;
-        c.gridy = 5;
+        c.gridy = 8;
         JSpinner animationSpeed = spAttributes.getAnimationSpeed();
         animationSpeed.setToolTipText("<html>Multiplier over the SpotAnim's baked cache animation rate.<br>1.0 = native; 2.0 = 2x faster; 0.5 = half speed.</html>");
         animationSpeed.setModel(new SpinnerNumberModel(1.0, 0.01, 100.0, 0.1));
         card.add(animationSpeed, c);
 
         c.gridx = 0;
-        c.gridy = 6;
+        c.gridy = 9;
         JLabel searcherLabel = new JLabel("SpotAnims: ");
         searcherLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(searcherLabel, c);
 
         c.gridwidth = 3;
         c.gridx = 1;
-        c.gridy = 6;
+        c.gridy = 9;
         JTextField spotanimField = new JTextField("");
         spotanimField.setToolTipText("Find all SpotAnims from the cache, and double click the name to apply its Id");
         spotanimField.setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -4335,14 +4431,14 @@ public class AttributePanel extends JPanel
         c.weightx = 1;
         c.weighty = 1;
         c.gridx = 2;
-        c.gridy = 7;
+        c.gridy = 10;
         JLabel empty1 = new JLabel("");
         card.add(empty1, c);
 
         c.weightx = 0;
         c.weighty = 0;
         c.gridx = 3;
-        c.gridy = 8;
+        c.gridy = 11;
         JPanel duplicatePanel = new JPanel();
         duplicatePanel.setLayout(new GridLayout(0, 1, 2, 2));
         card.add(duplicatePanel, c);
