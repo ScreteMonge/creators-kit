@@ -1337,6 +1337,105 @@ public class CreatorsPanel extends PluginPanel
      * grouped in one folder ready for Tools &gt; Random &gt; Scatter.
      */
     /**
+     * Undo stack for spatial "layout" operations (Rotate, multi-move) that the
+     * keyframe undo system doesn't cover. Each entry is a Runnable that fully
+     * reverts one operation (restores every affected Character's position +
+     * orientation). LIFO; capped so it can't grow unbounded. Driven by CTRL+Z
+     * when the toolbox is on a non-timesheet tab (the timesheet tab keeps its
+     * own keyframe undo).
+     */
+    private final java.util.Deque<Runnable> layoutUndoStack = new java.util.ArrayDeque<>();
+    private static final int LAYOUT_UNDO_LIMIT = 25;
+
+    private void pushLayoutUndo(Runnable revert)
+    {
+        if (revert == null)
+        {
+            return;
+        }
+        layoutUndoStack.push(revert);
+        while (layoutUndoStack.size() > LAYOUT_UNDO_LIMIT)
+        {
+            layoutUndoStack.removeLast();
+        }
+    }
+
+    /** True when there's a layout operation that CTRL+Z can revert. */
+    public boolean hasLayoutUndo()
+    {
+        return !layoutUndoStack.isEmpty();
+    }
+
+    /** Reverts the most recent layout operation (Rotate / multi-move), if any. */
+    public void undoLayout()
+    {
+        Runnable revert = layoutUndoStack.poll();
+        if (revert != null)
+        {
+            revert.run();
+        }
+    }
+
+    /**
+     * Confirmation dialog for the Rotate layout tool. Names the pivot (the
+     * primary / last-clicked selection) so there's no ambiguity about the
+     * centre of rotation, and lets the user pick direction + angle before
+     * committing. Delegates to {@link #rotateSelectionAroundPivot(int)} with
+     * the clockwise-equivalent angle.
+     */
+    public void showRotateDialog()
+    {
+        java.util.Collection<Character> selected = selectionManager.getSelected();
+        if (selected.size() < 2)
+        {
+            JOptionPane.showMessageDialog(this,
+                    "Rotate needs the pivot plus at least one other Character selected.\n"
+                            + "The pivot is the primary (last-clicked) selection -- it stays put while the rest rotate around it.",
+                    "Rotate", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        Character pivot = selectionManager.getPrimary();
+        if (pivot == null)
+        {
+            pivot = selected.iterator().next();
+        }
+
+        JComboBox<String> directionBox = new JComboBox<>(new String[]{"Clockwise", "Counter-clockwise"});
+        JComboBox<String> angleBox = new JComboBox<>(new String[]{"90°", "180°", "270°"});
+
+        JPanel panel = new JPanel(new GridLayout(0, 2, 6, 6));
+        panel.add(new JLabel("Pivot (stays put):"));
+        panel.add(new JLabel("<html><b>" + pivot.getName() + "</b></html>"));
+        panel.add(new JLabel("Rotating:"));
+        panel.add(new JLabel((selected.size() - 1) + " other Character(s)"));
+        panel.add(new JLabel("Direction:"));
+        panel.add(directionBox);
+        panel.add(new JLabel("Angle:"));
+        panel.add(angleBox);
+
+        int result = JOptionPane.showConfirmDialog(this, panel,
+                "Rotate around '" + pivot.getName() + "'",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        if (result != JOptionPane.OK_OPTION)
+        {
+            return;
+        }
+
+        int angle = (angleBox.getSelectedIndex() + 1) * 90; // 90 / 180 / 270
+        boolean clockwise = directionBox.getSelectedIndex() == 0;
+        // The core rotates clockwise; a counter-clockwise turn is the same as
+        // the complementary clockwise turn (CCW 90 == CW 270, CCW 270 == CW 90,
+        // 180 is its own mirror).
+        int cwDegrees = clockwise ? angle : (360 - angle) % 360;
+        if (cwDegrees == 0)
+        {
+            cwDegrees = 180; // defensive; angle is always 90/180/270 so this never hits
+        }
+        rotateSelectionAroundPivot(cwDegrees);
+    }
+
+    /**
      * Rotates the selected Characters around the primary-selected "pivot"
      * Character by {@code degrees} (90 / 180 / 270, clockwise viewed top-down).
      * The pivot is the centre of rotation and stays put; every other selected
@@ -1435,6 +1534,12 @@ public class CreatorsPanel extends PluginPanel
         int oriDelta = 512 * (degrees / 90);
         WorldView wv = client.getTopLevelWorldView();
 
+        // Per-Character revert closures captured BEFORE mutation. WorldPoint /
+        // LocalPoint are immutable, so the references we grab here stay valid
+        // snapshots after we overwrite the fields. Bundled into one undo entry
+        // so a single CTRL+Z reverses the whole rotate.
+        java.util.List<Runnable> reverts = new java.util.ArrayList<>();
+
         int moved = 0;
         for (Character c : selected)
         {
@@ -1459,6 +1564,28 @@ public class CreatorsPanel extends PluginPanel
                 y = wp.getY();
             }
 
+            // Snapshot pre-rotation state for undo.
+            final Character fc = c;
+            final WorldPoint oldWp = inPOH ? null : c.getNonInstancedPoint();
+            final LocalPoint oldLp = inPOH ? c.getInstancedPoint() : null;
+            final int oldPlane = c.getInstancedPlane();
+            final int prevOri = ((Number) c.getOrientationSpinner().getValue()).intValue();
+            final boolean fInPOH = inPOH;
+            reverts.add(() ->
+            {
+                if (fInPOH)
+                {
+                    fc.setInstancedPoint(oldLp);
+                    fc.setInstancedPlane(oldPlane);
+                }
+                else
+                {
+                    fc.setNonInstancedPoint(oldWp);
+                }
+                plugin.setOrientation(fc, prevOri);
+                plugin.setLocation(fc, false, false, ActiveOption.UNCHANGED, LocationOption.TO_SAVED_LOCATION);
+            });
+
             // Rotate (dx, dy) about the pivot. OSRS +x = east, +y = north;
             // 90 deg CW sends east -> south, i.e. (dx,dy) -> (dy,-dx).
             int dx = x - px;
@@ -1482,8 +1609,7 @@ public class CreatorsPanel extends PluginPanel
                 c.setNonInstancedPoint(new WorldPoint(nx, ny, plane));
             }
 
-            int oldOri = ((Number) c.getOrientationSpinner().getValue()).intValue();
-            int newOri = (((oldOri + oriDelta) % 2048) + 2048) % 2048;
+            int newOri = (((prevOri + oriDelta) % 2048) + 2048) % 2048;
             plugin.setOrientation(c, newOri);
 
             // Re-render at the just-updated saved point (no active-state change).
@@ -1491,8 +1617,21 @@ public class CreatorsPanel extends PluginPanel
             moved++;
         }
 
+        if (!reverts.isEmpty())
+        {
+            final int undoneCount = reverts.size();
+            pushLayoutUndo(() ->
+            {
+                for (Runnable r : reverts)
+                {
+                    r.run();
+                }
+                plugin.sendChatMessage("Undid rotate (" + undoneCount + " Character" + (undoneCount == 1 ? "" : "s") + " restored).");
+            });
+        }
+
         plugin.sendChatMessage("Rotated " + moved + " Character" + (moved == 1 ? "" : "s")
-                + " " + degrees + "° around pivot '" + pivot.getName() + "'.");
+                + " " + degrees + "° around pivot '" + pivot.getName() + "'. (CTRL+Z to undo)");
     }
 
     public void showFillRectangleDialog()

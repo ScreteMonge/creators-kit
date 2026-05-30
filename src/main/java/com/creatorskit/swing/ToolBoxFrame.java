@@ -363,9 +363,17 @@ public class ToolBoxFrame extends JFrame
         JMenuItem undo = new JMenuItem("Undo");
         undo.addActionListener(e ->
         {
+            // Tab-contextual: the timesheet tab owns keyframe undo; everywhere
+            // else CTRL+Z reverts the last spatial "layout" op (Rotate, multi-
+            // move). Layout ops are scene/manager actions, so undoing them
+            // while looking at the scene is the predictable behaviour.
             if (tabbedPane.getSelectedComponent() == timeSheetPanel)
             {
                 timeSheetPanel.undo();
+            }
+            else
+            {
+                plugin.getCreatorsPanel().undoLayout();
             }
         });
         undo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Z, InputEvent.CTRL_DOWN_MASK));
@@ -507,19 +515,12 @@ public class ToolBoxFrame extends JFrame
         layout.add(hazardGrid);
 
         // Rotate the whole selection rigidly around the primary-selected
-        // (pivot) Character. Clockwise viewed top-down; the pivot stays put
-        // while every other selected Character orbits it and turns to match.
-        JMenu rotate = new JMenu("Rotate");
+        // (pivot) Character. Opens a dialog that names the pivot and lets the
+        // user pick direction + angle, so there's no ambiguity about the
+        // centre of rotation. CTRL+Z reverts it (layout undo).
+        JMenuItem rotate = new JMenuItem("Rotate...");
         rotate.setToolTipText("Rotate all selected Characters around the primary-selected (pivot) Character. The pivot stays put; everything else orbits + turns with it.");
-        JMenuItem rotate90 = new JMenuItem("90° clockwise");
-        rotate90.addActionListener(e -> plugin.getCreatorsPanel().rotateSelectionAroundPivot(90));
-        rotate.add(rotate90);
-        JMenuItem rotate180 = new JMenuItem("180°");
-        rotate180.addActionListener(e -> plugin.getCreatorsPanel().rotateSelectionAroundPivot(180));
-        rotate.add(rotate180);
-        JMenuItem rotate270 = new JMenuItem("270° clockwise");
-        rotate270.addActionListener(e -> plugin.getCreatorsPanel().rotateSelectionAroundPivot(270));
-        rotate.add(rotate270);
+        rotate.addActionListener(e -> plugin.getCreatorsPanel().showRotateDialog());
         layout.add(rotate);
 
         // --- Random ----------------------------------------------------
