@@ -506,6 +506,22 @@ public class ToolBoxFrame extends JFrame
         hazardGrid.addActionListener(e -> plugin.getCreatorsPanel().showRandomHazardGridDialog());
         layout.add(hazardGrid);
 
+        // Rotate the whole selection rigidly around the primary-selected
+        // (pivot) Character. Clockwise viewed top-down; the pivot stays put
+        // while every other selected Character orbits it and turns to match.
+        JMenu rotate = new JMenu("Rotate");
+        rotate.setToolTipText("Rotate all selected Characters around the primary-selected (pivot) Character. The pivot stays put; everything else orbits + turns with it.");
+        JMenuItem rotate90 = new JMenuItem("90° clockwise");
+        rotate90.addActionListener(e -> plugin.getCreatorsPanel().rotateSelectionAroundPivot(90));
+        rotate.add(rotate90);
+        JMenuItem rotate180 = new JMenuItem("180°");
+        rotate180.addActionListener(e -> plugin.getCreatorsPanel().rotateSelectionAroundPivot(180));
+        rotate.add(rotate180);
+        JMenuItem rotate270 = new JMenuItem("270° clockwise");
+        rotate270.addActionListener(e -> plugin.getCreatorsPanel().rotateSelectionAroundPivot(270));
+        rotate.add(rotate270);
+        layout.add(rotate);
+
         // --- Random ----------------------------------------------------
         // Stochastic ops on selection / ticks. Spatial randomness lives
         // under Layout (Random Hazard Grid) so this group stays focused

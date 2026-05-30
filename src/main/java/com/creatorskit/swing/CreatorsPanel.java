@@ -6,6 +6,8 @@ import com.creatorskit.programming.AnimationType;
 import com.creatorskit.saves.CharacterSave;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.Character;
+import com.creatorskit.ActiveOption;
+import com.creatorskit.LocationOption;
 import com.creatorskit.saves.FolderNodeSave;
 import com.creatorskit.saves.ModelKeyFrameSave;
 import com.creatorskit.saves.SetupSave;
@@ -1334,6 +1336,165 @@ public class CreatorsPanel extends PluginPanel
      * Fill Rectangle. Now there's a raindrop on every tile in the area, all
      * grouped in one folder ready for Tools &gt; Random &gt; Scatter.
      */
+    /**
+     * Rotates the selected Characters around the primary-selected "pivot"
+     * Character by {@code degrees} (90 / 180 / 270, clockwise viewed top-down).
+     * The pivot is the centre of rotation and stays put; every other selected
+     * Character has BOTH its tile orbited around the pivot AND its facing
+     * turned by the same angle, so the formation rotates as a rigid body.
+     *
+     * <p>All selected Characters must share the pivot's instance context (all
+     * overworld, or all inside a POH/instance) and plane -- the coordinate
+     * systems don't line up otherwise (same constraint as Fill Rectangle).
+     * 90/180/270 keep every tile on the integer grid, so there's no rounding.
+     */
+    public void rotateSelectionAroundPivot(int degrees)
+    {
+        java.util.Collection<Character> selected = selectionManager.getSelected();
+        if (selected.size() < 2)
+        {
+            JOptionPane.showMessageDialog(this,
+                    "Rotate needs the pivot plus at least one other Character selected.\n"
+                            + "The pivot is the primary (last-clicked) selection -- it stays put while the rest rotate around it.",
+                    "Rotate", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        Character pivot = selectionManager.getPrimary();
+        if (pivot == null)
+        {
+            pivot = selected.iterator().next();
+        }
+
+        boolean inPOH = pivot.isInPOH();
+
+        // Pivot anchor coords + plane, in this context's native units:
+        // overworld = WorldPoint tile units; POH = LocalPoint 1/128 units.
+        // Rotating in native units keeps sub-tile POH placement intact and
+        // is identical math either way.
+        int px, py, plane;
+        if (inPOH)
+        {
+            LocalPoint plp = pivot.getInstancedPoint();
+            if (plp == null)
+            {
+                JOptionPane.showMessageDialog(this, "Couldn't read the pivot's instance position.", "Rotate", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            px = plp.getX();
+            py = plp.getY();
+            plane = pivot.getInstancedPlane();
+        }
+        else
+        {
+            WorldPoint pwp = pivot.getNonInstancedPoint();
+            if (pwp == null)
+            {
+                JOptionPane.showMessageDialog(this, "Couldn't read the pivot's world position.", "Rotate", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            px = pwp.getX();
+            py = pwp.getY();
+            plane = pwp.getPlane();
+        }
+
+        // Uniform-context guard (mirrors Fill Rectangle): all selected must
+        // share the pivot's POH/overworld state and plane.
+        for (Character c : selected)
+        {
+            if (c.isInPOH() != inPOH)
+            {
+                JOptionPane.showMessageDialog(this,
+                        "All selected Characters must share the pivot's instance state\n(all overworld, or all inside a POH/instance).",
+                        "Rotate", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            int cPlane;
+            if (inPOH)
+            {
+                cPlane = c.getInstancedPlane();
+            }
+            else
+            {
+                WorldPoint cwp = c.getNonInstancedPoint();
+                cPlane = cwp != null ? cwp.getPlane() : plane;
+            }
+            if (cPlane != plane)
+            {
+                JOptionPane.showMessageDialog(this,
+                        "All selected Characters must be on the pivot's plane.",
+                        "Rotate", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        }
+
+        // JAU increases clockwise (north-up): S=0, W=512, N=1024, E=1536, and
+        // 90 deg = 512 JAU. So a clockwise position rotation pairs with +512
+        // per 90 deg of facing, keeping each Character pointing the same way
+        // relative to the rotated formation.
+        int oriDelta = 512 * (degrees / 90);
+        WorldView wv = client.getTopLevelWorldView();
+
+        int moved = 0;
+        for (Character c : selected)
+        {
+            if (c == pivot)
+            {
+                continue;
+            }
+
+            int x, y;
+            if (inPOH)
+            {
+                LocalPoint lp = c.getInstancedPoint();
+                if (lp == null) continue;
+                x = lp.getX();
+                y = lp.getY();
+            }
+            else
+            {
+                WorldPoint wp = c.getNonInstancedPoint();
+                if (wp == null) continue;
+                x = wp.getX();
+                y = wp.getY();
+            }
+
+            // Rotate (dx, dy) about the pivot. OSRS +x = east, +y = north;
+            // 90 deg CW sends east -> south, i.e. (dx,dy) -> (dy,-dx).
+            int dx = x - px;
+            int dy = y - py;
+            int ndx, ndy;
+            switch (degrees)
+            {
+                case 90:  ndx =  dy; ndy = -dx; break;
+                case 180: ndx = -dx; ndy = -dy; break;
+                default:  ndx = -dy; ndy =  dx; break; // 270
+            }
+            int nx = px + ndx;
+            int ny = py + ndy;
+
+            if (inPOH)
+            {
+                c.setInstancedPoint(new LocalPoint(nx, ny, wv));
+            }
+            else
+            {
+                c.setNonInstancedPoint(new WorldPoint(nx, ny, plane));
+            }
+
+            int oldOri = ((Number) c.getOrientationSpinner().getValue()).intValue();
+            int newOri = (((oldOri + oriDelta) % 2048) + 2048) % 2048;
+            plugin.setOrientation(c, newOri);
+
+            // Re-render at the just-updated saved point (no active-state change).
+            plugin.setLocation(c, false, false, ActiveOption.UNCHANGED, LocationOption.TO_SAVED_LOCATION);
+            moved++;
+        }
+
+        plugin.sendChatMessage("Rotated " + moved + " Character" + (moved == 1 ? "" : "s")
+                + " " + degrees + "° around pivot '" + pivot.getName() + "'.");
+    }
+
     public void showFillRectangleDialog()
     {
         java.util.Collection<Character> selected = selectionManager.getSelected();
