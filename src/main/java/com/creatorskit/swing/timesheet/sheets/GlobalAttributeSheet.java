@@ -48,7 +48,9 @@ public class GlobalAttributeSheet extends TimeSheet
         this.tree = tree;
         this.attributePanel = attributePanel;
 
-        setIndexBuffers(0);
+        // 2 reserved top bands (header chip + the reserved Labels-row band, kept
+        // for layout parity with the local view). Keyframe rows start at band 2.
+        setIndexBuffers(2);
         setSelectedIndex(1);
         this.rowHeightOffset = 1;
         this.rowHeight = 24;
@@ -109,7 +111,7 @@ public class GlobalAttributeSheet extends TimeSheet
         {
             return; // active card isn't a global -- nothing to highlight here
         }
-        int row = dr + 1; // +1 for the spacer header row above the labels
+        int row = dr + 2; // +2 reserved top bands (header chip + Labels row)
         g.setColor(Color.DARK_GRAY);
         g.fillRect(0, row * rowHeight + rowHeightOffset - getVScroll(), this.getWidth(), rowHeight);
     }
@@ -153,7 +155,7 @@ public class GlobalAttributeSheet extends TimeSheet
             }
 
             int x = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor);
-            int y = rowHeightOffset + rowHeight + rowHeight * displayRow - getVScroll() - yImageOffset;
+            int y = rowHeightOffset + rowHeight * 2 + rowHeight * displayRow - getVScroll() - yImageOffset;
 
             switch (type)
             {
@@ -246,7 +248,7 @@ public class GlobalAttributeSheet extends TimeSheet
             if (displayRow < 0) continue;
 
             int x = (int) ((keyFrame.getTick() + getHScroll() + change) * zoomFactor);
-            int y = rowHeightOffset + rowHeight + rowHeight * displayRow - getVScroll() - yImageOffset;
+            int y = rowHeightOffset + rowHeight * 2 + rowHeight * displayRow - getVScroll() - yImageOffset;
 
             switch (type)
             {
@@ -320,7 +322,7 @@ public class GlobalAttributeSheet extends TimeSheet
         if (keyFrames == null || keyFrames.length == 0) return null;
         int displayRow = displayRowIndex(type);
         if (displayRow < 0) return null;
-        int y1 = rowHeightOffset + rowHeight + rowHeight * displayRow - getVScroll() - yImageOffset;
+        int y1 = rowHeightOffset + rowHeight * 2 + rowHeight * displayRow - getVScroll() - yImageOffset;
         int y2 = y1 + image.getHeight();
         if (point.getY() < y1 || point.getY() > y2) return null;
         for (KeyFrame keyFrame : keyFrames)
@@ -414,7 +416,7 @@ public class GlobalAttributeSheet extends TimeSheet
         if (keyFrames == null || keyFrames.length == 0) return foundKeyFrames;
         int displayRow = displayRowIndex(type);
         if (displayRow < 0) return foundKeyFrames;
-        int ky1 = rowHeightOffset + rowHeight + rowHeight * displayRow - getVScroll() - yImageOffset;
+        int ky1 = rowHeightOffset + rowHeight * 2 + rowHeight * displayRow - getVScroll() - yImageOffset;
         for (KeyFrame keyFrame : keyFrames)
         {
             boolean alreadyContains = false;
@@ -444,7 +446,7 @@ public class GlobalAttributeSheet extends TimeSheet
     {
         if (getKeyFrameClicked(p) != null) return;
 
-        int displayRow = (int) Math.floor((p.getY() + getVScroll() - rowHeightOffset - rowHeight) / (double) rowHeight);
+        int displayRow = (int) Math.floor((p.getY() + getVScroll() - rowHeightOffset - rowHeight * 2) / (double) rowHeight);
         if (displayRow < 0 || displayRow >= KeyFrameType.GLOBAL_KEYFRAME_TYPES_ALPHABETICAL.length) return;
         KeyFrameType type = KeyFrameType.GLOBAL_KEYFRAME_TYPES_ALPHABETICAL[displayRow];
 

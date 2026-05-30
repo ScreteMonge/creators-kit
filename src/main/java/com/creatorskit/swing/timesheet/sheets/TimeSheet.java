@@ -52,7 +52,10 @@ public class TimeSheet extends JPanel
     public int rowHeight = 28;
     public int rowHeightOffset = 0;
     public final int TEXT_HEIGHT_OFFSET = 5;
-    private int indexBuffers = 1;
+    // 2 reserved top bands: band 0 = time-header chip, band 1 = the Labels
+    // row. Keyframe content rows start at band 2. (Was 1 before the Labels
+    // row was given its own dedicated row instead of sharing band 1.)
+    private int indexBuffers = 2;
 
     /**
      * How many *real* property rows the timeline has (set by TimeSheetPanel
@@ -330,10 +333,10 @@ public class TimeSheet extends JPanel
         int h = getHeight();
         int v = getVScroll();
         int fadeHeight = Math.min(rowHeight, 18);
-        // Don't overlap the header row (y=0..rowHeight) which carries the
-        // time indicator chip / tick numbers; start the top fade below it.
-        int topFadeY = rowHeight + rowHeightOffset;
-        int contentBottom = (contentRowCount + 1) * rowHeight + rowHeightOffset;
+        // Don't overlap the two reserved top bands (header chip + Labels row);
+        // start the top fade below them.
+        int topFadeY = rowHeight * 2 + rowHeightOffset;
+        int contentBottom = (contentRowCount + 2) * rowHeight + rowHeightOffset;
 
         if (v > 0)
         {
@@ -808,7 +811,7 @@ public class TimeSheet extends JPanel
                 // ups; if the click ends up being a kf-click further
                 // down, updateSelectedKeyFrameOnPressed re-switches to
                 // the kf's own type (same call, idempotent).
-                int contentRow = (int) ((mousePosition.getY() + getVScroll() - rowHeightOffset) / rowHeight) - 1;
+                int contentRow = (int) ((mousePosition.getY() + getVScroll() - rowHeightOffset) / rowHeight) - 2;
                 KeyFrameType laneType = typeAtRowIndex(contentRow);
                 if (laneType != null)
                 {

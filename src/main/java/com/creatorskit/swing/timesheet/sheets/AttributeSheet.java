@@ -51,7 +51,9 @@ public class AttributeSheet extends TimeSheet
         this.tree = tree;
         this.attributePanel = attributePanel;
 
-        setIndexBuffers(0);
+        // 2 reserved top bands: time-header chip + the Labels row. Keyframe
+        // rows start at band 2, so the highlight fallback offsets by 2.
+        setIndexBuffers(2);
         setSelectedIndex(1);
         this.rowHeightOffset = 1;
         this.rowHeight = 24;
@@ -137,7 +139,7 @@ public class AttributeSheet extends TimeSheet
             {
                 return;
             }
-            row = dr + 1; // +1 for the spacer header row at labels[0]
+            row = dr + 2; // +2 reserved top bands (header chip + Labels row)
         }
         else
         {
@@ -275,7 +277,7 @@ public class AttributeSheet extends TimeSheet
                 }
 
                 int x = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor);
-                int y = rowHeightOffset + rowHeight + rowHeight * displayRow - getVScroll() - yImageOffset;
+                int y = rowHeightOffset + rowHeight * 2 + rowHeight * displayRow - getVScroll() - yImageOffset;
 
                 Color tailColor = g.getColor();
                 if (multi && character.getColor() != null)
@@ -456,7 +458,7 @@ public class AttributeSheet extends TimeSheet
             }
 
             int x = (int) ((keyFrame.getTick() + getHScroll() + change) * zoomFactor);
-            int y = rowHeightOffset + rowHeight + rowHeight * displayRow - getVScroll() - yImageOffset;
+            int y = rowHeightOffset + rowHeight * 2 + rowHeight * displayRow - getVScroll() - yImageOffset;
 
             switch (type)
             {
@@ -586,7 +588,7 @@ public class AttributeSheet extends TimeSheet
                     KeyFrame keyFrame = keyFrames[e];
                     int x1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
                     int x2 = x1 + image.getWidth();
-                    int y1 = rowHeightOffset + rowHeight + rowHeight * displayRow - getVScroll() - yImageOffset;
+                    int y1 = rowHeightOffset + rowHeight * 2 + rowHeight * displayRow - getVScroll() - yImageOffset;
                     int y2 = y1 + image.getHeight();
 
                     if (point.getX() >= x1 && point.getX() <= x2)
@@ -641,7 +643,7 @@ public class AttributeSheet extends TimeSheet
                     KeyFrame keyFrame = keyFrames[e];
                     int x1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
                     int x2 = x1 + image.getWidth();
-                    int y1 = rowHeightOffset + rowHeight + rowHeight * displayRow - getVScroll() - yImageOffset;
+                    int y1 = rowHeightOffset + rowHeight * 2 + rowHeight * displayRow - getVScroll() - yImageOffset;
                     int y2 = y1 + image.getHeight();
 
                     if (point.getX() >= x1 && point.getX() <= x2
@@ -814,7 +816,7 @@ public class AttributeSheet extends TimeSheet
                     }
 
                     int kx1 = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor - xImageOffset);
-                    int ky1 = rowHeightOffset + rowHeight + rowHeight * displayRow - getVScroll() - yImageOffset;
+                    int ky1 = rowHeightOffset + rowHeight * 2 + rowHeight * displayRow - getVScroll() - yImageOffset;
 
                     Rectangle2D frameRect = new Rectangle(kx1, ky1, image.getWidth(), image.getHeight());
 
@@ -850,9 +852,9 @@ public class AttributeSheet extends TimeSheet
         if (tryHandleBlockRightClick(p)) return;
 
         // Row math is the inverse of the y1 formula used by drawKeyFrames /
-        // getKeyFrameClicked: y1 = rowHeightOffset + rowHeight + rowHeight*dr - vScroll.
-        // The first data row sits one rowHeight below the header chip row.
-        int displayRow = (int) Math.floor((p.getY() + getVScroll() - rowHeightOffset - rowHeight) / (double) rowHeight);
+        // getKeyFrameClicked: y1 = rowHeightOffset + rowHeight*2 + rowHeight*dr - vScroll.
+        // Data rows sit TWO bands below the top (header chip + Labels row).
+        int displayRow = (int) Math.floor((p.getY() + getVScroll() - rowHeightOffset - rowHeight * 2) / (double) rowHeight);
         if (displayRow < 0 || displayRow >= KeyFrameType.LOCAL_KEYFRAME_TYPES_ALPHABETICAL.length) return;
         KeyFrameType type = KeyFrameType.LOCAL_KEYFRAME_TYPES_ALPHABETICAL[displayRow];
 
@@ -927,15 +929,25 @@ public class AttributeSheet extends TimeSheet
         TimeSheetPanel tsp = getTimeSheetPanel();
         if (tsp == null) return false;
 
-        // Right-clicking an existing label -> Edit / Delete. Otherwise fall
-        // through (return false) so the row right-click menu still appears --
-        // it carries the "New label..." item, which is how labels are created
-        // (the top label strip shares the first keyframe row, so consuming the
-        // click here would steal that row's context menu).
+        // Right-clicking an existing label -> Edit / Delete.
         BlockHit hit = findBlockAt(p);
         if (hit != null)
         {
             showLabelContextMenu(p, hit);
+            return true;
+        }
+
+        // Right-clicking the empty Labels row (its own dedicated band now, so
+        // no conflict with a keyframe row) -> create a new label for the
+        // visible Character(s).
+        int stripTop = labelStripTop();
+        if (p.getY() >= stripTop && p.getY() <= stripTop + rowHeight)
+        {
+            javax.swing.JPopupMenu menu = new javax.swing.JPopupMenu();
+            javax.swing.JMenuItem create = new javax.swing.JMenuItem("New label...");
+            create.addActionListener(e -> tsp.createLabelFromSelection());
+            menu.add(create);
+            menu.show(this, (int) p.getX(), (int) p.getY());
             return true;
         }
         return false;

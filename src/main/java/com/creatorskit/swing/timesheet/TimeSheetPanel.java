@@ -2976,6 +2976,10 @@ public class TimeSheetPanel extends JPanel
         {
             labelPanel.remove(1);
         }
+        // Reserved band 1 spacer to match the sheet's extra top row (the global
+        // view has no Labels, but the row math reserves the band for both views).
+        labelPanel.add(makeLabelHeaderRow(bodySheet, ""));
+
         java.util.List<com.creatorskit.swing.timesheet.sheets.TimelineGlobalRowLayout.Row> visible =
                 globalRowLayout.visibleRows();
         JLabel[] result = new JLabel[visible.size() + 1];
@@ -3097,6 +3101,12 @@ public class TimeSheetPanel extends JPanel
             labelPanel.remove(1);
         }
 
+        // Dedicated "Labels" row, aligned with the sheet's reserved band 1
+        // (one rowHeight tall, matching the sheet) -- this is where per-Character
+        // Labels render. Added as label-column component 1 (after the toggle at
+        // component 0), before the keyframe-type rows.
+        labelPanel.add(makeLabelHeaderRow(bodySheet, "Labels "));
+
         java.util.List<com.creatorskit.swing.timesheet.sheets.TimelineLocalRowLayout.Row> visible =
                 localRowLayout.visibleRows();
         JLabel[] result = new JLabel[visible.size() + 1];
@@ -3145,6 +3155,28 @@ public class TimeSheetPanel extends JPanel
      * paths pass their respective row-layout's toggle + isCollapsed
      * hooks here, so the same method serves both views.
      */
+    /**
+     * The dedicated "Labels" row label in the left column. One {@code rowHeight}
+     * tall so it lines up with the sheet's reserved top band (band 1). Plain
+     * and non-interactive -- it's a section header, not a keyframe-type row.
+     */
+    private JLabel makeLabelHeaderRow(TimeSheet bodySheet, String text)
+    {
+        JLabel label = new JLabel(text);
+        label.setHorizontalAlignment(SwingConstants.RIGHT);
+        label.setOpaque(true);
+        label.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        label.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+        label.setFont(FontManager.getRunescapeSmallFont());
+        int h = bodySheet.rowHeight;
+        label.setPreferredSize(new Dimension(LABEL_COL_WIDTH, h));
+        label.setMaximumSize(new Dimension(Integer.MAX_VALUE, h));
+        label.setMinimumSize(new Dimension(0, h));
+        label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        label.setBorder(new EmptyBorder(0, 4, 0, 18));
+        return label;
+    }
+
     private JLabel makeRowLabel(String displayName, boolean isParent, String parentGroup, boolean isChildOfGroup,
                                   Runnable toggleAction, java.util.function.BooleanSupplier collapsedQuery)
     {
