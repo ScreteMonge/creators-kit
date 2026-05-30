@@ -1348,6 +1348,9 @@ public class CreatorsPanel extends PluginPanel
     private final Object layoutUndoLock = new Object();
     private static final int LAYOUT_UNDO_LIMIT = 25;
 
+    /** The open modeless Rotate dialog, or null. Tracked so we don't stack duplicates. */
+    private JDialog rotateDialog;
+
     private void pushLayoutUndo(Runnable revert)
     {
         if (revert == null)
@@ -1408,86 +1411,156 @@ public class CreatorsPanel extends PluginPanel
      * committing. Delegates to {@link #rotateSelectionAroundPivot(int)} with
      * the clockwise-equivalent angle.
      */
+    /**
+     * Opens the Rotate tool as a MODELESS dialog so the user can still click in
+     * the Manager / scene while it's up. The group to rotate is snapshotted at
+     * open time (so picking the pivot can't shrink it); the pivot starts as
+     * "None" and OK stays disabled until the user explicitly clicks one of the
+     * group's Characters to designate it. Fixes the old flaw where the pivot
+     * was silently the last-clicked selection.
+     */
     public void showRotateDialog()
     {
-        java.util.Collection<Character> selected = selectionManager.getSelected();
-        if (selected.size() < 2)
+        java.util.Collection<Character> current = selectionManager.getSelected();
+        if (current.size() < 2)
         {
             JOptionPane.showMessageDialog(this,
-                    "Rotate needs the pivot plus at least one other Character selected.\n"
-                            + "The pivot is the primary (last-clicked) selection -- it stays put while the rest rotate around it.",
+                    "Select at least 2 Characters first -- the group you want to rotate.\n"
+                            + "You'll pick which one is the pivot inside the dialog.",
                     "Rotate", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        Character pivot = selectionManager.getPrimary();
-        if (pivot == null)
+        if (rotateDialog != null && rotateDialog.isShowing())
         {
-            pivot = selected.iterator().next();
-        }
-
-        JComboBox<String> directionBox = new JComboBox<>(new String[]{"Clockwise", "Counter-clockwise"});
-        JComboBox<String> angleBox = new JComboBox<>(new String[]{"90°", "180°", "270°"});
-
-        JPanel panel = new JPanel(new GridLayout(0, 2, 6, 6));
-        panel.add(new JLabel("Pivot (stays put):"));
-        panel.add(new JLabel("<html><b>" + pivot.getName() + "</b></html>"));
-        panel.add(new JLabel("Rotating:"));
-        panel.add(new JLabel((selected.size() - 1) + " other Character(s)"));
-        panel.add(new JLabel("Direction:"));
-        panel.add(directionBox);
-        panel.add(new JLabel("Angle:"));
-        panel.add(angleBox);
-
-        int result = JOptionPane.showConfirmDialog(this, panel,
-                "Rotate around '" + pivot.getName() + "'",
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if (result != JOptionPane.OK_OPTION)
-        {
+            rotateDialog.toFront();
             return;
         }
 
-        int angle = (angleBox.getSelectedIndex() + 1) * 90; // 90 / 180 / 270
-        boolean clockwise = directionBox.getSelectedIndex() == 0;
-        // The core rotates clockwise; a counter-clockwise turn is the same as
-        // the complementary clockwise turn (CCW 90 == CW 270, CCW 270 == CW 90,
-        // 180 is its own mirror).
-        int cwDegrees = clockwise ? angle : (360 - angle) % 360;
-        if (cwDegrees == 0)
+        // Snapshot the group NOW. The user designates the pivot by clicking a
+        // Character, which replaces the live selection -- but we rotate this
+        // fixed snapshot, so picking the pivot never shrinks the group.
+        final java.util.List<Character> rotateSet = new java.util.ArrayList<>(current);
+
+        Window owner = SwingUtilities.getWindowAncestor(this);
+        final JDialog dialog = new JDialog(owner, "Rotate selection", Dialog.ModalityType.MODELESS);
+        rotateDialog = dialog;
+
+        final Character[] pivot = new Character[]{null};
+
+        JComboBox<String> directionBox = new JComboBox<>(new String[]{"Clockwise", "Counter-clockwise"});
+        JComboBox<String> angleBox = new JComboBox<>(new String[]{"90°", "180°", "270°"});
+        JLabel pivotValue = new JLabel("None");
+        pivotValue.setForeground(ColorScheme.PROGRESS_ERROR_COLOR);
+        JButton okButton = new JButton("Rotate");
+        okButton.setEnabled(false);
+        JButton cancelButton = new JButton("Cancel");
+
+        JPanel form = new JPanel(new GridLayout(0, 2, 6, 6));
+        form.add(new JLabel("Group to rotate:"));
+        form.add(new JLabel(rotateSet.size() + " Characters"));
+        form.add(new JLabel("Pivot (stays put):"));
+        form.add(pivotValue);
+        form.add(new JLabel("Direction:"));
+        form.add(directionBox);
+        form.add(new JLabel("Angle:"));
+        form.add(angleBox);
+
+        JLabel hint = new JLabel("<html><body style='width:240px'>Click one of the selected Characters (in the Manager,"
+                + " or right-click &rarr; Select in the scene) to set it as the pivot.</body></html>");
+        hint.setBorder(new EmptyBorder(0, 0, 8, 0));
+
+        JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttons.add(okButton);
+        buttons.add(cancelButton);
+
+        JPanel content = new JPanel(new BorderLayout());
+        content.setBorder(new EmptyBorder(8, 8, 8, 8));
+        content.add(hint, BorderLayout.NORTH);
+        content.add(form, BorderLayout.CENTER);
+        content.add(buttons, BorderLayout.SOUTH);
+        dialog.setContentPane(content);
+
+        // While open, adopt any clicked group member as the pivot. Clicks that
+        // land outside the group are ignored (pivot unchanged), so the user
+        // can't accidentally pick a Character that isn't part of the rotation.
+        final SelectionManager.SelectionListener listener = mgr ->
         {
-            cwDegrees = 180; // defensive; angle is always 90/180/270 so this never hits
-        }
-        rotateSelectionAroundPivot(cwDegrees);
+            Character p = mgr.getPrimary();
+            if (p != null && rotateSet.contains(p))
+            {
+                pivot[0] = p;
+                pivotValue.setText(p.getName());
+                pivotValue.setForeground(ColorScheme.PROGRESS_COMPLETE_COLOR);
+                okButton.setEnabled(true);
+            }
+        };
+        selectionManager.addListener(listener);
+
+        Runnable cleanup = () ->
+        {
+            selectionManager.removeListener(listener);
+            if (rotateDialog == dialog)
+            {
+                rotateDialog = null;
+            }
+            dialog.dispose();
+        };
+
+        okButton.addActionListener(e ->
+        {
+            Character chosenPivot = pivot[0];
+            if (chosenPivot == null)
+            {
+                return;
+            }
+            int angle = (angleBox.getSelectedIndex() + 1) * 90; // 90 / 180 / 270
+            boolean clockwise = directionBox.getSelectedIndex() == 0;
+            // The core rotates clockwise; a counter-clockwise turn equals the
+            // complementary clockwise one (CCW 90 == CW 270, etc.; 180 mirrors).
+            int cwDegrees = clockwise ? angle : (360 - angle) % 360;
+            if (cwDegrees == 0)
+            {
+                cwDegrees = 180; // defensive; angle is always 90/180/270
+            }
+            cleanup.run();
+            rotateSelectionAroundPivot(rotateSet, chosenPivot, cwDegrees);
+            // Re-select the group so a follow-up rotate starts from the same set.
+            selectionManager.selectAll(rotateSet);
+        });
+
+        cancelButton.addActionListener(e -> cleanup.run());
+        dialog.addWindowListener(new WindowAdapter()
+        {
+            @Override
+            public void windowClosing(WindowEvent e)
+            {
+                cleanup.run();
+            }
+        });
+
+        dialog.pack();
+        dialog.setLocationRelativeTo(owner);
+        dialog.setVisible(true);
     }
 
     /**
-     * Rotates the selected Characters around the primary-selected "pivot"
-     * Character by {@code degrees} (90 / 180 / 270, clockwise viewed top-down).
-     * The pivot is the centre of rotation and stays put; every other selected
-     * Character has BOTH its tile orbited around the pivot AND its facing
-     * turned by the same angle, so the formation rotates as a rigid body.
+     * Rotates {@code rotateSet} around {@code pivot} by {@code degrees} (90 /
+     * 180 / 270, clockwise viewed top-down). The pivot is the centre of
+     * rotation and stays put; every other Character in the set has BOTH its
+     * tile orbited around the pivot AND its facing turned by the same angle, so
+     * the formation rotates as a rigid body.
      *
-     * <p>All selected Characters must share the pivot's instance context (all
+     * <p>All Characters in the set must share the pivot's instance context (all
      * overworld, or all inside a POH/instance) and plane -- the coordinate
      * systems don't line up otherwise (same constraint as Fill Rectangle).
      * 90/180/270 keep every tile on the integer grid, so there's no rounding.
      */
-    public void rotateSelectionAroundPivot(int degrees)
+    private void rotateSelectionAroundPivot(java.util.List<Character> rotateSet, Character pivot, int degrees)
     {
-        java.util.Collection<Character> selected = selectionManager.getSelected();
-        if (selected.size() < 2)
+        if (rotateSet == null || rotateSet.size() < 2 || pivot == null)
         {
-            JOptionPane.showMessageDialog(this,
-                    "Rotate needs the pivot plus at least one other Character selected.\n"
-                            + "The pivot is the primary (last-clicked) selection -- it stays put while the rest rotate around it.",
-                    "Rotate", JOptionPane.WARNING_MESSAGE);
             return;
-        }
-
-        Character pivot = selectionManager.getPrimary();
-        if (pivot == null)
-        {
-            pivot = selected.iterator().next();
         }
 
         boolean inPOH = pivot.isInPOH();
@@ -1522,9 +1595,9 @@ public class CreatorsPanel extends PluginPanel
             plane = pwp.getPlane();
         }
 
-        // Uniform-context guard (mirrors Fill Rectangle): all selected must
-        // share the pivot's POH/overworld state and plane.
-        for (Character c : selected)
+        // Uniform-context guard (mirrors Fill Rectangle): every Character in the
+        // group must share the pivot's POH/overworld state and plane.
+        for (Character c : rotateSet)
         {
             if (c.isInPOH() != inPOH)
             {
@@ -1566,7 +1639,7 @@ public class CreatorsPanel extends PluginPanel
         java.util.List<Runnable> reverts = new java.util.ArrayList<>();
 
         int moved = 0;
-        for (Character c : selected)
+        for (Character c : rotateSet)
         {
             if (c == pivot)
             {
