@@ -1,7 +1,9 @@
 package com.creatorskit.swing.timesheet.attributes;
 
+import com.creatorskit.models.CustomModel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.ProjectileKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.settings.ProjectileToggle;
 import lombok.Getter;
 
 import javax.swing.*;
@@ -11,6 +13,12 @@ import java.awt.*;
 public class ProjectileAttributes extends Attributes
 {
     private final JSpinner projectileId = new JSpinner();
+    /** SpotAnim ID vs Custom Model chooser -- mirrors the Model card's modelOverride. */
+    private final JComboBox<ProjectileToggle> projectileType = new JComboBox<>();
+    /** Custom model picked when projectileType == CUSTOM_MODEL. */
+    private final JComboBox<CustomModel> customModel = new JComboBox<>();
+    /** Cache animation id played on the custom model (-1 = none). */
+    private final JSpinner animationId = new JSpinner();
     private final JTextField target = new JTextField();
     private final JSpinner startX = new JSpinner();
     private final JSpinner startY = new JSpinner();
@@ -47,6 +55,27 @@ public class ProjectileAttributes extends Attributes
     {
         ProjectileKeyFrame kf = (ProjectileKeyFrame) keyFrame;
         projectileId.setValue(kf.getProjectileId());
+        projectileType.setSelectedItem(kf.isUseCustomModel() ? ProjectileToggle.CUSTOM_MODEL : ProjectileToggle.SPOTANIM_ID);
+        // Show the right custom-model selection. After a save reload the live
+        // ref (kf.getCustomModel()) is null -- the persistent identity is the
+        // comp name, so resolve it against the combo's items (which ARE the
+        // global CustomModel instances). Selecting by name gives the exact
+        // instance so the combo highlights correctly.
+        CustomModel cm = kf.getCustomModel();
+        if (cm == null && kf.getCustomModelName() != null && !kf.getCustomModelName().isEmpty())
+        {
+            for (int i = 0; i < customModel.getItemCount(); i++)
+            {
+                CustomModel item = customModel.getItemAt(i);
+                if (item != null && item.getComp() != null && kf.getCustomModelName().equals(item.getComp().getName()))
+                {
+                    cm = item;
+                    break;
+                }
+            }
+        }
+        customModel.setSelectedItem(cm);
+        animationId.setValue(kf.getAnimationId());
         target.setText(kf.getTarget() == null ? "" : kf.getTarget());
         startX.setValue(kf.getStartX());
         startY.setValue(kf.getStartY());
@@ -66,6 +95,9 @@ public class ProjectileAttributes extends Attributes
     public void setBackgroundColours(Color color)
     {
         projectileId.setBackground(color);
+        projectileType.setBackground(color);
+        customModel.setBackground(color);
+        animationId.setBackground(color);
         target.setBackground(color);
         startX.setBackground(color);
         startY.setBackground(color);
@@ -83,6 +115,9 @@ public class ProjectileAttributes extends Attributes
         return new JComponent[]
                 {
                         projectileId,
+                        projectileType,
+                        customModel,
+                        animationId,
                         target,
                         startX,
                         startY,
@@ -99,6 +134,9 @@ public class ProjectileAttributes extends Attributes
     public void addChangeListeners()
     {
         projectileId.addChangeListener(e -> projectileId.setBackground(getRed()));
+        projectileType.addItemListener(e -> projectileType.setBackground(getRed()));
+        customModel.addItemListener(e -> customModel.setBackground(getRed()));
+        animationId.addChangeListener(e -> animationId.setBackground(getRed()));
         startX.addChangeListener(e -> startX.setBackground(getRed()));
         startY.addChangeListener(e -> startY.setBackground(getRed()));
         startHeight.addChangeListener(e -> startHeight.setBackground(getRed()));
@@ -120,6 +158,9 @@ public class ProjectileAttributes extends Attributes
     public void resetAttributes(boolean resetBackground)
     {
         projectileId.setValue(ProjectileKeyFrame.DEFAULT_PROJECTILE_ID);
+        projectileType.setSelectedItem(ProjectileToggle.SPOTANIM_ID);
+        customModel.setSelectedItem(null);
+        animationId.setValue(ProjectileKeyFrame.DEFAULT_ANIMATION_ID);
         target.setText("");
         startX.setValue(ProjectileKeyFrame.DEFAULT_START_X);
         startY.setValue(ProjectileKeyFrame.DEFAULT_START_Y);

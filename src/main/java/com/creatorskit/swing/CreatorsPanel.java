@@ -2590,6 +2590,15 @@ public class CreatorsPanel extends PluginPanel
                 .getCustomModel()
                 .addItem(model);
 
+        // Projectile card's custom-model combo mirrors the Model card's --
+        // keep it populated with the same models so a projectile can fly as
+        // any custom model the user has created.
+        toolBox.getTimeSheetPanel()
+                .getAttributePanel()
+                .getProjectileAttributes()
+                .getCustomModel()
+                .addItem(model);
+
         for (JComboBox<CustomModel> comboBox : comboBoxes)
         {
             comboBox.addItem(model);
@@ -2622,6 +2631,12 @@ public class CreatorsPanel extends PluginPanel
         toolBox.getTimeSheetPanel()
                 .getAttributePanel()
                 .getModelAttributes()
+                .getCustomModel()
+                .removeItem(model);
+
+        toolBox.getTimeSheetPanel()
+                .getAttributePanel()
+                .getProjectileAttributes()
                 .getCustomModel()
                 .removeItem(model);
 

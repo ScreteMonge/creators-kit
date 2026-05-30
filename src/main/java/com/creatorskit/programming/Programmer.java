@@ -52,11 +52,14 @@ public class Programmer
     private final int TILE_DIAGONAL = 181; //Math.sqrt(Math.pow(128, 2) + Math.pow(128, 2))
 
     /**
-     * Tracks which projectile spotanim id each slot's CKObject was built from, so
-     * ensureProjectileSlot can detect when the keyframe's projectileId has changed
-     * and rebuild the model instead of stalely reusing the previous one.
+     * Tracks the "build signature" each slot's projectile CKObject was built from,
+     * so ensureProjectileSlot can detect when the keyframe's source changed and
+     * rebuild the model instead of stalely reusing the previous one. The signature
+     * encodes BOTH the model source and (for custom models) the animation, e.g.
+     * {@code "S:119"} for SpotAnim 119 or {@code "C:My Model:808"} for a custom
+     * model named "My Model" animating with id 808. See {@link #projectileBuildSignature}.
      */
-    private final java.util.IdentityHashMap<CKObject, Integer> projectileLoadedIds = new java.util.IdentityHashMap<>();
+    private final java.util.IdentityHashMap<CKObject, String> projectileLoadedIds = new java.util.IdentityHashMap<>();
 
     /**
      * Per-source-Character snapshot of where the active projectile flight
@@ -1985,7 +1988,7 @@ public class Programmer
                 }
             }
 
-            ensureProjectileSlot(character, projObjs, slot, kf.getProjectileId());
+            ensureProjectileSlot(character, projObjs, slot, kf);
 
             CKObject obj = projObjs.get(slot);
             final int finalZ = zFinal;
@@ -2027,31 +2030,33 @@ public class Programmer
     }
 
     /**
-     * Lazily allocates a CKObject for the given projectile slot, loads its model from the
-     * spotanim cache, and registers it with the scene. Rebuilds the slot's CKObject when
-     * the projectile id has changed since it was last loaded — without this, editing the
-     * keyframe's Projectile ID (or deleting and re-adding the keyframe) would keep
+     * Lazily allocates a CKObject for the given projectile slot, loads its model
+     * (from the SpotAnim cache or a Custom Model, per the keyframe), and registers
+     * it with the scene. Rebuilds the slot's CKObject when the keyframe's build
+     * signature has changed since it was last loaded — without this, editing the
+     * keyframe's source (SpotAnim ID, Custom Model, or Animation ID) would keep
      * rendering the original model because the slot was non-null and the previous
      * implementation early-returned on null check alone.
      */
-    private void ensureProjectileSlot(Character character, java.util.List<CKObject> projObjs, int slot, int projectileId)
+    private void ensureProjectileSlot(Character character, java.util.List<CKObject> projObjs, int slot, ProjectileKeyFrame kf)
     {
         while (projObjs.size() <= slot)
         {
             projObjs.add(null);
         }
 
+        String sig = projectileBuildSignature(kf);
+
         CKObject existing = projObjs.get(slot);
         if (existing != null)
         {
-            Integer loadedId = projectileLoadedIds.get(existing);
-            if (loadedId != null && loadedId == projectileId)
+            String loadedSig = projectileLoadedIds.get(existing);
+            if (loadedSig != null && loadedSig.equals(sig))
             {
                 return; // Slot is up to date.
             }
-            // Projectile id has changed — tear down the old CKObject so a fresh one
-            // gets built with the new spotanim's model. Done on the client thread to
-            // avoid racing with the renderer.
+            // Source changed — tear down the old CKObject so a fresh one gets
+            // built. Done on the client thread to avoid racing with the renderer.
             final CKObject oldObj = existing;
             projectileLoadedIds.remove(oldObj);
             clientThread.invokeLater(() ->
@@ -2064,7 +2069,37 @@ public class Programmer
             projObjs.set(slot, null);
         }
 
-        SpotanimData data = dataFinder.getSpotAnimData(projectileId);
+        if (kf.isUseCustomModel())
+        {
+            CustomModel cm = resolveProjectileCustomModel(kf);
+            if (cm == null || cm.getModel() == null)
+            {
+                return; // No model to build yet (e.g. unresolved name); try again next tick.
+            }
+            // Use ProjectileCKObject so face-trajectory pitch can be applied AFTER
+            // animation in getModel() rather than by pre-rotating baseModel vertices.
+            ProjectileCKObject obj = new ProjectileCKObject(client);
+            obj.setDrawFrontTilesFirst(true);
+            obj.setHasAnimKeyFrame(true);
+            projObjs.set(slot, obj);
+            projectileLoadedIds.put(obj, sig);
+
+            final Model model = cm.getModel();
+            final int animId = kf.getAnimationId();
+            clientThread.invokeLater(() ->
+            {
+                obj.setModel(model);
+                if (animId >= 0)
+                {
+                    obj.setAnimation(AnimationType.ACTIVE, animId);
+                    obj.setLoop(true);
+                    obj.setPlaying(true);
+                }
+            });
+            return;
+        }
+
+        SpotanimData data = dataFinder.getSpotAnimData(kf.getProjectileId());
         if (data == null)
         {
             return;
@@ -2078,7 +2113,7 @@ public class Programmer
         obj.setDrawFrontTilesFirst(true);
         obj.setHasAnimKeyFrame(true);
         projObjs.set(slot, obj);
-        projectileLoadedIds.put(obj, projectileId);
+        projectileLoadedIds.put(obj, sig);
 
         clientThread.invokeLater(() ->
         {
@@ -2093,6 +2128,53 @@ public class Programmer
                 obj.setPlaying(true);
             }
         });
+    }
+
+    /**
+     * Encodes a projectile keyframe's model source into a string so
+     * {@link #ensureProjectileSlot} can detect when a rebuild is needed.
+     * SpotAnim shots key on the spotanim id; custom-model shots key on the
+     * model's persistent name plus the animation id (so changing either the
+     * model or its animation triggers a rebuild).
+     */
+    private String projectileBuildSignature(ProjectileKeyFrame kf)
+    {
+        if (kf.isUseCustomModel())
+        {
+            String name = kf.getCustomModelName() == null ? "" : kf.getCustomModelName();
+            return "C:" + name + ":" + kf.getAnimationId();
+        }
+        return "S:" + kf.getProjectileId();
+    }
+
+    /**
+     * Resolves a projectile keyframe's live {@link CustomModel}. The live ref is
+     * set directly when the user picks a model in the UI, but it's null after a
+     * save reload (it's transient). In that case we re-resolve from the global
+     * stored-model list by the persistent comp name and cache the result back on
+     * the keyframe so subsequent ticks skip the lookup.
+     */
+    private CustomModel resolveProjectileCustomModel(ProjectileKeyFrame kf)
+    {
+        CustomModel cm = kf.getCustomModel();
+        if (cm != null)
+        {
+            return cm;
+        }
+        String name = kf.getCustomModelName();
+        if (name == null || name.isEmpty())
+        {
+            return null;
+        }
+        for (CustomModel m : plugin.getStoredModels())
+        {
+            if (m != null && m.getComp() != null && name.equals(m.getComp().getName()))
+            {
+                kf.setCustomModel(m);
+                return m;
+            }
+        }
+        return null;
     }
 
     /**

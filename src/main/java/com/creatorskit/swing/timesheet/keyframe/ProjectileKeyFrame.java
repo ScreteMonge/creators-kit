@@ -1,5 +1,6 @@
 package com.creatorskit.swing.timesheet.keyframe;
 
+import com.creatorskit.models.CustomModel;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -25,6 +26,8 @@ public class ProjectileKeyFrame extends KeyFrame
     public static final int DEFAULT_SLOPE = 15;
     public static final double DEFAULT_DURATION = 2.0;
     public static final boolean DEFAULT_FACE_TRAJECTORY = false;
+    /** Default custom-model animation id. -1 = play no animation (static model). */
+    public static final int DEFAULT_ANIMATION_ID = -1;
     /**
      * Render-radius default, in 1/128-tile units. Matches {@link
      * com.creatorskit.swing.timesheet.keyframe.SpotAnimKeyFrame}'s default
@@ -86,6 +89,38 @@ public class ProjectileKeyFrame extends KeyFrame
      * followed by a single boss-size impactor).
      */
     private int radius;
+    /**
+     * When true the projectile renders a {@link #customModel} instead of the
+     * SpotAnim graphic identified by {@link #projectileId}. Mirrors
+     * {@link ModelKeyFrame#isUseCustomModel()}. Old saves predate the field and
+     * Gson defaults it to {@code false}, so they keep their SpotAnim look.
+     */
+    private boolean useCustomModel;
+    /**
+     * Live custom-model reference used when {@link #useCustomModel} is true.
+     * <b>transient</b> on purpose: a {@link CustomModel} wraps a native
+     * {@code Model} that can't be Gson-serialized. The persistent identity is
+     * {@link #customModelName}; this live ref is re-resolved from the global
+     * model list on first render after a load (see
+     * {@code Programmer.resolveProjectileCustomModel}).
+     */
+    private transient CustomModel customModel;
+    /**
+     * Serializable identity of {@link #customModel} -- the model's
+     * {@code CustomModelComp} name. Survives save/load (it's a plain String)
+     * and is resolved back to a live {@link CustomModel} at render time.
+     * Null when no custom model is selected.
+     */
+    private String customModelName;
+    /**
+     * Cache animation id played on the custom model. Only consulted when
+     * {@link #useCustomModel} is true -- the SpotAnim path uses the spotanim's
+     * own baked animation. -1 = no animation (static model). Old saves default
+     * to 0 via Gson; the render path treats anything {@code < 0} as "none" and
+     * 0 is a valid (if rarely-used) animation id, so no migration is needed --
+     * old saves never set useCustomModel so this field is never read for them.
+     */
+    private int animationId;
 
     public ProjectileKeyFrame(double tick, int projectileId, String target, int startHeight, int endHeight, int slope, double durationTicks, boolean faceTrajectory)
     {
@@ -99,6 +134,11 @@ public class ProjectileKeyFrame extends KeyFrame
 
     public ProjectileKeyFrame(double tick, int projectileId, String target, int startX, int startY, int startHeight, int endHeight, int slope, double durationTicks, boolean faceTrajectory, int radius)
     {
+        this(tick, projectileId, target, startX, startY, startHeight, endHeight, slope, durationTicks, faceTrajectory, radius, false, null, null, DEFAULT_ANIMATION_ID);
+    }
+
+    public ProjectileKeyFrame(double tick, int projectileId, String target, int startX, int startY, int startHeight, int endHeight, int slope, double durationTicks, boolean faceTrajectory, int radius, boolean useCustomModel, CustomModel customModel, String customModelName, int animationId)
+    {
         super(KeyFrameType.PROJECTILE, tick);
         this.projectileId = projectileId;
         this.target = target;
@@ -110,5 +150,16 @@ public class ProjectileKeyFrame extends KeyFrame
         this.durationTicks = durationTicks;
         this.faceTrajectory = faceTrajectory;
         this.radius = radius;
+        this.useCustomModel = useCustomModel;
+        this.customModel = customModel;
+        // Prefer the live model's comp name as the persistent identity; fall
+        // back to the explicitly-passed name (used when re-creating a kf whose
+        // live ref hasn't been resolved yet -- e.g. createCopy of a just-loaded
+        // kf). Gson bypasses this constructor entirely on load, so a loaded
+        // kf's customModelName comes straight from JSON.
+        this.customModelName = customModel != null && customModel.getComp() != null
+                ? customModel.getComp().getName()
+                : customModelName;
+        this.animationId = animationId;
     }
 }

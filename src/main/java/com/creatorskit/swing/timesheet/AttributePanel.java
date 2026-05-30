@@ -1288,7 +1288,11 @@ public class AttributePanel extends JPanel
                         (int) projectileAttributes.getSlope().getValue(),
                         ((Number) projectileAttributes.getDurationTicks().getValue()).doubleValue(),
                         projectileAttributes.getFaceTrajectory().isSelected(),
-                        (int) projectileAttributes.getRadius().getValue()
+                        (int) projectileAttributes.getRadius().getValue(),
+                        projectileAttributes.getProjectileType().getSelectedItem() == ProjectileToggle.CUSTOM_MODEL,
+                        (CustomModel) projectileAttributes.getCustomModel().getSelectedItem(),
+                        null,
+                        ((Number) projectileAttributes.getAnimationId().getValue()).intValue()
                 );
             case SHIELD:
                 return new ShieldKeyFrame(
@@ -1622,6 +1626,11 @@ public class AttributePanel extends JPanel
                 {
                     ProjectileKeyFrame k = (ProjectileKeyFrame) sameType.get(i);
                     if (f.getProjectileId() != k.getProjectileId()) mixed.add(projectileAttributes.getProjectileId());
+                    if (f.isUseCustomModel() != k.isUseCustomModel()) mixed.add(projectileAttributes.getProjectileType());
+                    // Compare by persistent name so post-load kfs (live ref null)
+                    // still diff correctly.
+                    if (!java.util.Objects.equals(f.getCustomModelName(), k.getCustomModelName())) mixed.add(projectileAttributes.getCustomModel());
+                    if (f.getAnimationId() != k.getAnimationId()) mixed.add(projectileAttributes.getAnimationId());
                     if (!java.util.Objects.equals(f.getTarget(), k.getTarget())) mixed.add(projectileAttributes.getTarget());
                     if (f.getStartX() != k.getStartX()) mixed.add(projectileAttributes.getStartX());
                     if (f.getStartY() != k.getStartY()) mixed.add(projectileAttributes.getStartY());
@@ -2206,7 +2215,22 @@ public class AttributePanel extends JPanel
                                 : orig.isFaceTrajectory(),
                         wasEdited(projectileAttributes.getRadius())
                                 ? (int) projectileAttributes.getRadius().getValue()
-                                : orig.getRadius()
+                                : orig.getRadius(),
+                        wasEdited(projectileAttributes.getProjectileType())
+                                ? projectileAttributes.getProjectileType().getSelectedItem() == ProjectileToggle.CUSTOM_MODEL
+                                : orig.isUseCustomModel(),
+                        wasEdited(projectileAttributes.getCustomModel())
+                                ? (CustomModel) projectileAttributes.getCustomModel().getSelectedItem()
+                                : orig.getCustomModel(),
+                        // When the custom-model combo wasn't touched, carry the
+                        // original's persistent name so a post-load kf whose
+                        // live ref is still null keeps its identity through the edit.
+                        wasEdited(projectileAttributes.getCustomModel())
+                                ? null
+                                : orig.getCustomModelName(),
+                        wasEdited(projectileAttributes.getAnimationId())
+                                ? ((Number) projectileAttributes.getAnimationId().getValue()).intValue()
+                                : orig.getAnimationId()
                 );
             }
             case SHIELD:
@@ -4666,58 +4690,124 @@ public class AttributePanel extends JPanel
                 + "<br>Target accepts: single name, comma-separated list, \"folder:Foldername\", or \"f[Folder1,Folder2,...]\".</html>");
         titlePanel.add(titleHelp);
 
+        // Projectile Type chooser: SpotAnim ID (native projectile graphic)
+        // vs Custom Model. Mirrors the Model card's Model Type combo. When
+        // Custom Model is picked the SpotAnim ID spinner greys out and the
+        // Custom Model combo + Animation ID spinner light up (wired by the
+        // ItemListener below).
         c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 1;
-        card.add(rightLabel("Projectile ID:"), c);
+        card.add(rightLabel("Projectile Type:"), c);
 
+        c.gridwidth = 2;
         c.gridx = 1;
         c.gridy = 1;
+        JComboBox<ProjectileToggle> projectileType = projectileAttributes.getProjectileType();
+        projectileType.setToolTipText("Render the projectile as a cache SpotAnim graphic, or as one of your Custom Models.");
+        projectileType.setFocusable(false);
+        if (projectileType.getItemCount() == 0)
+        {
+            projectileType.addItem(ProjectileToggle.SPOTANIM_ID);
+            projectileType.addItem(ProjectileToggle.CUSTOM_MODEL);
+        }
+        card.add(projectileType, c);
+
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = 2;
+        card.add(rightLabel("SpotAnim ID:"), c);
+
+        c.gridx = 1;
+        c.gridy = 2;
         JSpinner projectileId = projectileAttributes.getProjectileId();
         projectileId.setToolTipText("SpotanimID of the projectile graphic (e.g. 119 = fireball travel, 9 = iron arrow travel)");
         projectileId.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_PROJECTILE_ID, -1, 99999, 1));
         card.add(projectileId, c);
 
         c.gridx = 0;
-        c.gridy = 2;
+        c.gridy = 3;
+        card.add(rightLabel("Custom Model:"), c);
+
+        c.gridx = 1;
+        c.gridy = 3;
+        JComboBox<CustomModel> projCustomModel = projectileAttributes.getCustomModel();
+        projCustomModel.setToolTipText("The Custom Model to fly as the projectile, when Projectile Type is Custom Model.");
+        projCustomModel.setFocusable(false);
+        card.add(projCustomModel, c);
+
+        c.gridx = 0;
+        c.gridy = 4;
+        card.add(rightLabel("Animation ID:"), c);
+
+        c.gridx = 1;
+        c.gridy = 4;
+        JSpinner projAnimationId = projectileAttributes.getAnimationId();
+        projAnimationId.setToolTipText("<html>Cache animation id played on the Custom Model in flight. -1 = no animation (static model)."
+                + "<br>Ignored when Projectile Type is SpotAnim ID (the SpotAnim plays its own baked animation).</html>");
+        projAnimationId.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_ANIMATION_ID, -1, 99999, 1));
+        card.add(projAnimationId, c);
+
+        // Enable/disable the SpotAnim-vs-Custom fields based on the chooser.
+        // Runs once now to seed the initial state, then on every selection
+        // change. setAttributes() selects the combo when a kf loads, which
+        // fires this and keeps the enabled state in sync with the kf.
+        Runnable syncProjectileTypeFields = () ->
+        {
+            boolean custom = projectileType.getSelectedItem() == ProjectileToggle.CUSTOM_MODEL;
+            projectileId.setEnabled(!custom);
+            projCustomModel.setEnabled(custom);
+            projAnimationId.setEnabled(custom);
+        };
+        projectileType.addItemListener(e ->
+        {
+            if (e.getStateChange() == java.awt.event.ItemEvent.SELECTED)
+            {
+                syncProjectileTypeFields.run();
+            }
+        });
+        syncProjectileTypeFields.run();
+
+        c.gridx = 0;
+        c.gridy = 5;
         card.add(rightLabel("Target:"), c);
 
         c.gridwidth = 3;
         c.gridx = 1;
-        c.gridy = 2;
+        c.gridy = 5;
         JTextField target = projectileAttributes.getTarget();
         target.setToolTipText(titleHelp.getToolTipText());
         card.add(target, c);
         c.gridwidth = 1;
 
         c.gridx = 0;
-        c.gridy = 3;
+        c.gridy = 6;
         card.add(rightLabel("Start Height:"), c);
 
         c.gridx = 1;
-        c.gridy = 3;
+        c.gridy = 6;
         JSpinner startHeight = projectileAttributes.getStartHeight();
         startHeight.setToolTipText("Set the projectile's spawn height above the source tile.");
         startHeight.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_START_HEIGHT, -100000, 100000, 1));
         card.add(startHeight, c);
 
         c.gridx = 2;
-        c.gridy = 3;
+        c.gridy = 6;
         card.add(rightLabel("End Height:"), c);
 
         c.gridx = 3;
-        c.gridy = 3;
+        c.gridy = 6;
         JSpinner endHeight = projectileAttributes.getEndHeight();
         endHeight.setToolTipText("Z height at the target tile when the projectile impacts");
         endHeight.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_END_HEIGHT, -100000, 100000, 1));
         card.add(endHeight, c);
 
         c.gridx = 0;
-        c.gridy = 4;
+        c.gridy = 7;
         card.add(rightLabel("Slope:"), c);
 
         c.gridx = 1;
-        c.gridy = 4;
+        c.gridy = 7;
         JSpinner slope = projectileAttributes.getSlope();
         slope.setToolTipText("Set the arc height. Larger = taller arc at the midpoint.");
         slope.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_SLOPE, -100000, 100000, 1));
@@ -4735,33 +4825,33 @@ public class AttributePanel extends JPanel
         // origin remains "tile centre".
         c.gridwidth = 1;
         c.gridx = 0;
-        c.gridy = 5;
+        c.gridy = 8;
         card.add(rightLabel("Start X:"), c);
 
         c.gridx = 1;
-        c.gridy = 5;
+        c.gridy = 8;
         JSpinner startX = projectileAttributes.getStartX();
         startX.setToolTipText("Horizontal X offset (1/128-tile units) from the source tile centre. 128 = one tile east.");
         startX.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_START_X, -100000, 100000, 1));
         card.add(startX, c);
 
         c.gridx = 2;
-        c.gridy = 5;
+        c.gridy = 8;
         card.add(rightLabel("Start Y:"), c);
 
         c.gridx = 3;
-        c.gridy = 5;
+        c.gridy = 8;
         JSpinner startY = projectileAttributes.getStartY();
         startY.setToolTipText("Horizontal Y offset (1/128-tile units) from the source tile centre. 128 = one tile north.");
         startY.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_START_Y, -100000, 100000, 1));
         card.add(startY, c);
 
         c.gridx = 0;
-        c.gridy = 6;
+        c.gridy = 9;
         card.add(rightLabel("Duration:"), c);
 
         c.gridx = 1;
-        c.gridy = 6;
+        c.gridy = 9;
         JSpinner duration = projectileAttributes.getDurationTicks();
         duration.setToolTipText("Game ticks the projectile takes to fly from source to target");
         duration.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_DURATION, 0.1, 100, 0.1));
@@ -4772,11 +4862,11 @@ public class AttributePanel extends JPanel
         // "fly + size" controls together rather than wedging Radius into
         // a lonely row of its own.
         c.gridx = 2;
-        c.gridy = 6;
+        c.gridy = 9;
         card.add(rightLabel("Radius:"), c);
 
         c.gridx = 3;
-        c.gridy = 6;
+        c.gridy = 9;
         JSpinner radius = projectileAttributes.getRadius();
         radius.setToolTipText("Scale the projectile model's visible size. Larger = bigger.");
         radius.setModel(new SpinnerNumberModel(ProjectileKeyFrame.DEFAULT_RADIUS, 1, 10000, 1));
@@ -4784,7 +4874,7 @@ public class AttributePanel extends JPanel
 
         c.gridwidth = 4;
         c.gridx = 0;
-        c.gridy = 7;
+        c.gridy = 10;
         JCheckBox faceTrajectory = projectileAttributes.getFaceTrajectory();
         faceTrajectory.setToolTipText("Pitch the projectile model along its arc (nose-up ascending, nose-down descending).");
         card.add(faceTrajectory, c);
@@ -4798,16 +4888,16 @@ public class AttributePanel extends JPanel
         // when PROJECTILE is the active card.
         c.gridwidth = 1;
         c.gridx = 0;
-        c.gridy = 8;
+        c.gridy = 11;
         JLabel projSearcherLabel = new JLabel("Projectiles: ");
         projSearcherLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(projSearcherLabel, c);
 
         c.gridwidth = 3;
         c.gridx = 1;
-        c.gridy = 8;
+        c.gridy = 11;
         JTextField projField = new JTextField("");
-        projField.setToolTipText("Search cache spotanims; double-click a name to set Projectile ID.");
+        projField.setToolTipText("Search cache spotanims; double-click a name to set SpotAnim ID.");
         projField.setBackground(ColorScheme.DARK_GRAY_COLOR);
         card.add(projField, c);
 
@@ -4842,7 +4932,7 @@ public class AttributePanel extends JPanel
         c.weightx = 1;
         c.weighty = 1;
         c.gridx = 4;
-        c.gridy = 9;
+        c.gridy = 12;
         card.add(new JLabel(""), c);
     }
 

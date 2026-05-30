@@ -140,7 +140,11 @@ public class KeyFrame
                         projKF.getSlope(),
                         projKF.getDurationTicks(),
                         projKF.isFaceTrajectory(),
-                        projKF.getRadius());
+                        projKF.getRadius(),
+                        projKF.isUseCustomModel(),
+                        projKF.getCustomModel(),
+                        projKF.getCustomModelName(),
+                        projKF.getAnimationId());
             case SHIELD:
                 ShieldKeyFrame shieldKF = (ShieldKeyFrame) keyFrame;
                 return new ShieldKeyFrame(
