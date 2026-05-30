@@ -1,47 +1,36 @@
 package com.creatorskit.swing.timesheet.keyframe;
 
-import com.creatorskit.Character;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
- * A user-defined time-range grouping of keyframes on a single Character --
- * the Premiere nested-clip equivalent.
+ * Data model for a timeline <b>Label</b>: a colored, named time-range marker
+ * shown in the top row of the timeline purely for organization -- it makes
+ * clear to the viewer what a slice of time represents. Labels have NO
+ * interactivity (clicking one does nothing) and no relationship to the
+ * keyframes underneath them; they're a per-Character annotation
+ * ({@code Character.blocks}).
  *
- * <p>"Dumb" range-based model: a block stores its own name, colour, and
- * an absolute tick range {@code [startTick, endTick]}. Its <b>members</b>
- * are derived on demand at any time as "every keyframe on the owning
- * Character whose tick falls inside that range". There is no separate
- * member list to keep in sync -- moving a keyframe into or out of the
- * range is the same as adding / removing it from the block.
- *
- * <p>Trade-off vs the previous per-keyframe membership model: the user
- * can't keep a kf inside the range OUT of the block. If you don't want
- * it in the block, move it out of the range. In exchange the block
- * renders as a simple full-height time-range strip with no "did the
- * rect cover a row I didn't include?" confusion.
- *
- * <p>Two blocks on the same Character may not overlap in tick range
- * (validated at creation -- see {@link BlockValidator#overlapsExistingBlock}).
+ * <p>The class is still named {@code Block} for historical reasons (it
+ * replaced an earlier interactive "Block" grouping feature); {@code name} is
+ * the label text and {@code startTick}/{@code endTick} are the From/To range.
  */
 @Getter
 @Setter
 public class Block
 {
+    /** Label text shown on the marker. */
     private String name;
     /** Packed RGB int (Gson-friendly, no awt.Color save adapter required). */
     private int colorRgb;
-    /** Inclusive left bound of the block's tick range. */
+    /** "From" tick -- inclusive left bound of the label's range. */
     private double startTick;
-    /** Inclusive right bound of the block's tick range. */
+    /** "To" tick -- inclusive right bound of the label's range. */
     private double endTick;
 
     public Block()
     {
-        // Default constructor for future Gson use.
+        // Default constructor for Gson.
     }
 
     public Block(String name, int colorRgb, double startTick, double endTick)
@@ -50,36 +39,5 @@ public class Block
         this.colorRgb = colorRgb;
         this.startTick = startTick;
         this.endTick = endTick;
-    }
-
-    /** True if {@code tick} is inside the block's closed range. */
-    public boolean containsTick(double tick)
-    {
-        return tick >= startTick && tick <= endTick;
-    }
-
-    /**
-     * Walks {@code character}'s frame matrix and returns every keyframe whose
-     * tick falls inside the block's range. Used by click-to-select-members,
-     * delete-block-with-keyframes, and any other operation that needs the
-     * live member set. Cheap enough to call repeatedly -- the matrix is
-     * small (20 type rows, typically &lt;100 kfs total per Character).
-     */
-    public List<KeyFrame> resolveMembers(Character character)
-    {
-        List<KeyFrame> out = new ArrayList<>();
-        if (character == null) return out;
-        KeyFrame[][] frames = character.getFrames();
-        if (frames == null) return out;
-        for (KeyFrame[] row : frames)
-        {
-            if (row == null) continue;
-            for (KeyFrame kf : row)
-            {
-                if (kf == null) continue;
-                if (containsTick(kf.getTick())) out.add(kf);
-            }
-        }
-        return out;
     }
 }

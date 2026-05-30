@@ -12,13 +12,15 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 /**
- * Modal dialog for block create / rename / recolour. Shows a name field at
- * the top and a 4x3 grid of {@link BlockPalette} swatches below; user picks
- * one swatch (highlighted with a border) and presses OK.
+ * Modal dialog for creating / editing a timeline <b>Label</b> (the colored,
+ * non-interactive organizational marker that replaced the old interactive
+ * Blocks). Fields: a read-only context header ("Label for &lt;name&gt;" /
+ * "&lt;X Characters&gt;"), an editable label text field, a 4x3 grid of
+ * {@link BlockPalette} swatches, and From / To timestamp spinners.
  *
- * <p>No RGB / HSV chooser per the spec -- the palette is the whole point of
- * the constraint, so blocks stay visually consistent across saves and the
- * user doesn't have to fiddle with sliders for every block.
+ * <p>No RGB / HSV chooser per the spec -- the palette keeps labels visually
+ * consistent. Range validation (To &gt;= From, and the To==From no-op) is the
+ * caller's job; this dialog just collects the values.
  */
 public class BlockEditDialog
 {
@@ -27,36 +29,76 @@ public class BlockEditDialog
     {
         public final String name;
         public final int colorRgb;
-        public Result(String name, int colorRgb)
+        public final double fromTick;
+        public final double toTick;
+        public Result(String name, int colorRgb, double fromTick, double toTick)
         {
             this.name = name;
             this.colorRgb = colorRgb;
+            this.fromTick = fromTick;
+            this.toTick = toTick;
         }
     }
 
     /**
-     * Opens the dialog modally on top of {@code parent}. {@code initialName}
-     * pre-fills the name field; {@code initialColorRgb} pre-selects the
-     * matching swatch (falls back to {@link BlockPalette#DEFAULT_RGB} if no
-     * palette entry matches). Returns null when the user cancels.
+     * Opens the dialog modally on top of {@code parent}. {@code header} is the
+     * read-only context line; {@code initialName} pre-fills the text field;
+     * {@code initialColorRgb} pre-selects the matching swatch; {@code initialFrom}
+     * / {@code initialTo} seed the From / To spinners. Returns null on cancel.
      */
-    public static Result show(JComponent parent, String title, String initialName, int initialColorRgb)
+    public static Result show(JComponent parent, String title, String header,
+                              String initialName, int initialColorRgb,
+                              double initialFrom, double initialTo)
     {
         final int[] picked = new int[]{initialColorRgb};
         final JTextField nameField = new JTextField(initialName == null ? "" : initialName, 18);
+        final JSpinner fromSpinner = new JSpinner(new SpinnerNumberModel(initialFrom, 0.0, 1_000_000.0, 1.0));
+        final JSpinner toSpinner = new JSpinner(new SpinnerNumberModel(initialTo, 0.0, 1_000_000.0, 1.0));
 
         JPanel content = new JPanel(new BorderLayout(8, 8));
         content.setBorder(new EmptyBorder(8, 8, 8, 8));
         content.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
-        JPanel namePanel = new JPanel(new BorderLayout(6, 0));
-        namePanel.setOpaque(false);
-        JLabel nameLabel = new JLabel("Name:");
+        // Read-only context header at the very top.
+        JLabel headerLabel = new JLabel(header == null ? "Label" : header);
+        headerLabel.setForeground(Color.WHITE);
+        headerLabel.setFont(FontManager.getRunescapeBoldFont());
+        headerLabel.setBorder(new EmptyBorder(0, 0, 6, 0));
+        content.add(headerLabel, BorderLayout.NORTH);
+
+        JPanel fields = new JPanel(new GridBagLayout());
+        fields.setOpaque(false);
+        GridBagConstraints gc = new GridBagConstraints();
+        gc.insets = new Insets(2, 2, 2, 2);
+        gc.fill = GridBagConstraints.HORIZONTAL;
+        gc.anchor = GridBagConstraints.WEST;
+
+        gc.gridx = 0; gc.gridy = 0; gc.weightx = 0;
+        JLabel nameLabel = new JLabel("Label:");
         nameLabel.setForeground(Color.WHITE);
         nameLabel.setFont(FontManager.getRunescapeBoldFont());
-        namePanel.add(nameLabel, BorderLayout.WEST);
-        namePanel.add(nameField, BorderLayout.CENTER);
-        content.add(namePanel, BorderLayout.NORTH);
+        fields.add(nameLabel, gc);
+        gc.gridx = 1; gc.weightx = 1;
+        fields.add(nameField, gc);
+
+        gc.gridx = 0; gc.gridy = 1; gc.weightx = 0;
+        JLabel fromLabel = new JLabel("From:");
+        fromLabel.setForeground(Color.WHITE);
+        fields.add(fromLabel, gc);
+        gc.gridx = 1; gc.weightx = 1;
+        fields.add(fromSpinner, gc);
+
+        gc.gridx = 0; gc.gridy = 2; gc.weightx = 0;
+        JLabel toLabel = new JLabel("To:");
+        toLabel.setForeground(Color.WHITE);
+        fields.add(toLabel, gc);
+        gc.gridx = 1; gc.weightx = 1;
+        fields.add(toSpinner, gc);
+
+        JPanel namePanel = new JPanel(new BorderLayout());
+        namePanel.setOpaque(false);
+        namePanel.add(fields, BorderLayout.NORTH);
+        content.add(namePanel, BorderLayout.CENTER);
 
         // 4x3 swatch grid. Each swatch is a JPanel painted with the palette
         // colour; clicking selects it. Selected swatch gets a white border.
@@ -125,8 +167,10 @@ public class BlockEditDialog
         String name = nameField.getText();
         if (name == null) name = "";
         name = name.trim();
-        if (name.isEmpty()) name = "Block";
+        if (name.isEmpty()) name = "Label";
 
-        return new Result(name, picked[0]);
+        double from = ((Number) fromSpinner.getValue()).doubleValue();
+        double to = ((Number) toSpinner.getValue()).doubleValue();
+        return new Result(name, picked[0], from, to);
     }
 }

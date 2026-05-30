@@ -147,14 +147,6 @@ public class AttributeSheet extends TimeSheet
         g.fillRect(0, row * rowHeight + rowHeightOffset - getVScroll(), this.getWidth(), rowHeight);
     }
 
-    /** Header strip height (above the rows) where the block name renders
-     *  at full opacity. The rest of the block fill is translucent so the
-     *  keyframe icons inside stay visible. */
-    private static final int BLOCK_HEADER_HEIGHT = 18;
-    /** Alpha for the body fill of a block rect. Low enough that the
-     *  alternating row colours + keyframe icons inside still read; high
-     *  enough that the block is unambiguous. */
-    private static final int BLOCK_BODY_ALPHA = 70;
 
     @Override
     public void drawBlocks(Graphics g)
@@ -170,65 +162,42 @@ public class AttributeSheet extends TimeSheet
         g2.setFont(FontManager.getRunescapeBoldFont());
         FontMetrics fm = g2.getFontMetrics();
 
-        // Full body span: from the top of row 0 (just under the time-header
-        // chip) down to the bottom of the last keyframe-type row. Range
-        // covers every row whether or not the block has a kf in it -- the
-        // dumb range-based model says "everything in [startTick, endTick]
-        // is a member", and the visual matches that.
-        int bodyTop = rowHeightOffset + rowHeight - getVScroll();
-        int bodyBottom = rowHeightOffset + rowHeight
-                + rowHeight * KeyFrameType.LOCAL_KEYFRAME_TYPES_ALPHABETICAL.length
-                - getVScroll();
-        if (bodyBottom > this.getHeight()) bodyBottom = this.getHeight();
+        // Labels render as a single coloured strip in the TOP row of the
+        // timeline (one row tall), spanning [startTick, endTick] with the
+        // label text centred on it. No full-height body and no interactivity
+        // -- they're purely organizational markers. Multiple labels may
+        // overlap; later ones simply draw on top.
+        int stripTop = labelStripTop();
+        int stripH = rowHeight;
 
         for (Character c : visible)
         {
-            java.util.List<com.creatorskit.swing.timesheet.keyframe.Block> blocks = c.getBlocks();
-            if (blocks == null || blocks.isEmpty()) continue;
-            for (com.creatorskit.swing.timesheet.keyframe.Block block : blocks)
+            java.util.List<com.creatorskit.swing.timesheet.keyframe.Block> labels = c.getBlocks();
+            if (labels == null || labels.isEmpty()) continue;
+            for (com.creatorskit.swing.timesheet.keyframe.Block label : labels)
             {
-                if (block == null) continue;
+                if (label == null) continue;
 
-                double startTick = block.getStartTick();
-                double endTick = block.getEndTick();
+                double startTick = label.getStartTick();
+                double endTick = label.getEndTick();
                 int leftX = (int) ((startTick + getHScroll()) * zoomFactor) - xImageOffset;
                 int rightX = (int) ((endTick + getHScroll()) * zoomFactor) + xImageOffset;
                 int rectW = Math.max(1, rightX - leftX);
-                int rectH = Math.max(1, bodyBottom - bodyTop);
-                if (rectH <= 0) continue;
 
-                Color baseColour = new Color(block.getColorRgb());
-
-                // Body: translucent fill across the full timeline height so
-                // keyframe icons inside the block stay visible (tinted).
-                Color body = new Color(baseColour.getRed(), baseColour.getGreen(),
-                        baseColour.getBlue(), BLOCK_BODY_ALPHA);
-                g2.setColor(body);
-                g2.fillRect(leftX, bodyTop, rectW, rectH);
-
-                // Header strip: opaque colour with the block name, sits at
-                // the top of the rows. Drawn AFTER the body so it covers
-                // the body's alpha in the header region.
-                int hdrTop = bodyTop;
-                int hdrH = Math.min(BLOCK_HEADER_HEIGHT, rectH);
+                Color baseColour = new Color(label.getColorRgb());
                 g2.setColor(baseColour);
-                g2.fillRect(leftX, hdrTop, rectW, hdrH);
-                // 1px darker outline around the entire block rect so it
-                // separates from neighbours and from the background.
+                g2.fillRect(leftX, stripTop, rectW, stripH);
                 g2.setColor(baseColour.darker());
-                g2.drawRect(leftX, bodyTop, rectW - 1, rectH - 1);
+                g2.drawRect(leftX, stripTop, rectW - 1, stripH - 1);
 
-                // Name label centred in the header strip. White with a
-                // 1px black shadow so it reads on every palette colour.
-                // Clipped to the header rect to prevent overrun.
-                String name = block.getName();
+                String name = label.getName();
                 if (name != null && !name.isEmpty())
                 {
                     java.awt.Shape oldClip = g2.getClip();
-                    g2.setClip(leftX, hdrTop, rectW, hdrH);
+                    g2.setClip(leftX, stripTop, rectW, stripH);
                     int textW = fm.stringWidth(name);
                     int textX = leftX + (rectW - textW) / 2;
-                    int textY = hdrTop + (hdrH + fm.getAscent()) / 2 - 2;
+                    int textY = stripTop + (stripH + fm.getAscent()) / 2 - 2;
                     g2.setColor(Color.BLACK);
                     g2.drawString(name, textX + 1, textY + 1);
                     g2.setColor(Color.WHITE);
@@ -238,6 +207,12 @@ public class AttributeSheet extends TimeSheet
             }
         }
         g2.setFont(origFont);
+    }
+
+    /** Y of the top of the single-row label strip (top-most row of the body). */
+    private int labelStripTop()
+    {
+        return rowHeightOffset + rowHeight - getVScroll();
     }
 
     @Override
@@ -903,13 +878,10 @@ public class AttributeSheet extends TimeSheet
         int xImageOffset = keyImg.getWidth() / 2;
         double zoomFactor = (double) this.getWidth() / getZoom();
 
-        // Same body span as drawBlocks -- full timeline height, since
-        // range-based blocks cover all rows in their time range.
-        int bodyTop = rowHeightOffset + rowHeight - getVScroll();
-        int bodyBottom = rowHeightOffset + rowHeight
-                + rowHeight * KeyFrameType.LOCAL_KEYFRAME_TYPES_ALPHABETICAL.length
-                - getVScroll();
-        if (p.getY() < bodyTop || p.getY() > bodyBottom) return null;
+        // Labels live in the single top row strip -- hit-test only that band.
+        int stripTop = labelStripTop();
+        int stripBottom = stripTop + rowHeight;
+        if (p.getY() < stripTop || p.getY() > stripBottom) return null;
 
         for (Character c : visible)
         {
@@ -943,53 +915,44 @@ public class AttributeSheet extends TimeSheet
     @Override
     public boolean tryHandleBlockLeftClick(Point p, boolean shiftDown)
     {
-        BlockHit hit = findBlockAt(p);
-        if (hit == null) return false;
-        TimeSheetPanel tsp = getTimeSheetPanel();
-        if (tsp == null) return false;
-        // Resolve members live -- range-based block means "every kf on
-        // this Character with tick in [startTick, endTick]". Selecting all
-        // of them mirrors the previous block-membership behaviour without
-        // a separately-tracked member list. setSelectedBlock fires after
-        // setSelectedKeyFrames since the latter clears block selection.
-        java.util.List<com.creatorskit.swing.timesheet.keyframe.KeyFrame> members =
-                hit.block.resolveMembers(hit.character);
-        tsp.setSelectedKeyFrames(members.toArray(new com.creatorskit.swing.timesheet.keyframe.KeyFrame[0]));
-        tsp.setSelectedBlock(hit.block, hit.character);
-        return true;
+        // Labels are non-interactive: a left-click on one does nothing special
+        // (no select-all). Return false so the click falls through to normal
+        // keyframe handling.
+        return false;
     }
 
     @Override
     public boolean tryHandleBlockRightClick(Point p)
     {
+        TimeSheetPanel tsp = getTimeSheetPanel();
+        if (tsp == null) return false;
+
+        // Right-clicking an existing label -> Edit / Delete. Otherwise fall
+        // through (return false) so the row right-click menu still appears --
+        // it carries the "New label..." item, which is how labels are created
+        // (the top label strip shares the first keyframe row, so consuming the
+        // click here would steal that row's context menu).
         BlockHit hit = findBlockAt(p);
-        if (hit == null) return false;
-        showBlockContextMenu(p, hit);
-        return true;
+        if (hit != null)
+        {
+            showLabelContextMenu(p, hit);
+            return true;
+        }
+        return false;
     }
 
-    private void showBlockContextMenu(Point p, BlockHit hit)
+    private void showLabelContextMenu(Point p, BlockHit hit)
     {
         TimeSheetPanel tsp = getTimeSheetPanel();
         if (tsp == null) return;
         javax.swing.JPopupMenu menu = new javax.swing.JPopupMenu();
 
-        javax.swing.JMenuItem enter = new javax.swing.JMenuItem("Enter block (nested view) -- coming soon");
-        enter.setEnabled(false);
-        menu.add(enter);
+        javax.swing.JMenuItem edit = new javax.swing.JMenuItem("Edit label...");
+        edit.addActionListener(e -> tsp.editLabel(hit.character, hit.block));
+        menu.add(edit);
 
-        menu.addSeparator();
-
-        javax.swing.JMenuItem rename = new javax.swing.JMenuItem("Rename / Recolour...");
-        rename.addActionListener(e -> tsp.editBlockNameAndColour(hit.character, hit.block));
-        menu.add(rename);
-
-        javax.swing.JMenuItem dissolve = new javax.swing.JMenuItem("Dissolve block (keep keyframes)");
-        dissolve.addActionListener(e -> tsp.dissolveBlock(hit.character, hit.block));
-        menu.add(dissolve);
-
-        javax.swing.JMenuItem delete = new javax.swing.JMenuItem("Delete block + keyframes...");
-        delete.addActionListener(e -> tsp.deleteBlockWithConfirm(hit.character, hit.block));
+        javax.swing.JMenuItem delete = new javax.swing.JMenuItem("Delete label");
+        delete.addActionListener(e -> tsp.deleteLabel(hit.character, hit.block));
         menu.add(delete);
 
         menu.show(this, (int) p.getX(), (int) p.getY());
@@ -1066,16 +1029,13 @@ public class AttributeSheet extends TimeSheet
 
         menu.addSeparator();
 
-        // Blocks: only show when the marquee selection forms a valid block
-        // on at least one Character. Cheap to test (canCreateBlockFromSelection
-        // just iterates the selection once).
-        if (tsp.canCreateBlockFromSelection())
-        {
-            JMenuItem createBlock = new JMenuItem("Create Block...");
-            createBlock.addActionListener(e -> tsp.showCreateBlockDialog());
-            menu.add(createBlock);
-            menu.addSeparator();
-        }
+        // Labels: create a label for the selected Character(s). From / To
+        // default to the current keyframe selection's tick extent (or 0/0 if
+        // nothing is selected -- the user sets the range in the dialog).
+        JMenuItem createLabel = new JMenuItem("New label...");
+        createLabel.addActionListener(e -> tsp.createLabelFromSelection());
+        menu.add(createLabel);
+        menu.addSeparator();
 
         JMenuItem oneItem = new JMenuItem(
                 String.format("Ripple delete gap on %s  [%.1f-%.1f]", type.getName(), from, to));

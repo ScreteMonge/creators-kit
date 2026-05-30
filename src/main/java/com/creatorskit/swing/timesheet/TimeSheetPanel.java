@@ -2452,12 +2452,6 @@ public class TimeSheetPanel extends JPanel
     public void setSelectedKeyFrames(KeyFrame[] keyFrames)
     {
         this.selectedKeyFrames = keyFrames;
-        // Any keyframe-selection change clears the block selection -- the
-        // block-click path explicitly re-sets it after this call returns.
-        // Marquee / keyframe-click / programmatic paths leave it cleared so
-        // Delete-key behaviour reverts to "delete just keyframes" instead
-        // of accidentally triggering the block-delete confirmation.
-        clearBlockSelection();
         refreshGlobalRowsOnlyMode();
         if (attributePanel != null)
         {
@@ -3596,23 +3590,6 @@ public class TimeSheetPanel extends JPanel
 
     public void onDeleteKeyPressed()
     {
-        // Block selection takes precedence: if the user clicked a block
-        // and then hit Delete, treat it as "delete the block + its
-        // keyframes" with a confirmation (matches the right-click menu).
-        if (selectedBlocks != null && !selectedBlocks.isEmpty())
-        {
-            for (int i = 0; i < selectedBlocks.size(); i++)
-            {
-                com.creatorskit.swing.timesheet.keyframe.Block b = selectedBlocks.get(i);
-                Character owner = i < selectedBlockOwners.size() ? selectedBlockOwners.get(i) : null;
-                if (owner != null && b != null)
-                {
-                    deleteBlockWithConfirm(owner, b);
-                }
-            }
-            return;
-        }
-
         if (selectedKeyFrames == null || selectedKeyFrames.length == 0)
         {
             return;
@@ -6533,217 +6510,125 @@ public class TimeSheetPanel extends JPanel
         return kfa;
     }
 
-    // ===== Blocks (Phase 1) ============================================
+    // ===== Labels (non-interactive organizational markers) =============
+    // Backed by the per-Character Block list; "Block" is the legacy data
+    // class name. Labels are colored, named time-range markers in the top
+    // row of the timeline. They have NO interactivity -- clicking does not
+    // select keyframes. Created/edited via the dialog below.
 
     /**
-     * Block(s) the user has selected via left-click on the block rect.
-     * Parallel to {@link #selectedKeyFrames}: clicking a block sets BOTH
-     * the keyframe selection (to the block's members) AND this list so the
-     * Delete-key handler can offer the "delete block + its keyframes"
-     * confirmation. Cleared the moment any other selection path fires
-     * (marquee, keyframe click, Tools action).
+     * Opens the label dialog seeded from the current keyframe selection:
+     * From / To default to the earliest / latest selected keyframe tick (0/0
+     * if none), and the label is created on every Character that owns a
+     * selected keyframe. Right-click-with-selection entry point.
      */
-    @Getter
-    private java.util.List<com.creatorskit.swing.timesheet.keyframe.Block> selectedBlocks = new java.util.ArrayList<>();
-    /** Parallel list of the Character that owns each selected block. */
-    private java.util.List<Character> selectedBlockOwners = new java.util.ArrayList<>();
-
-    public void setSelectedBlock(com.creatorskit.swing.timesheet.keyframe.Block block, Character owner)
+    public void createLabelFromSelection()
     {
-        selectedBlocks = new java.util.ArrayList<>(java.util.Collections.singletonList(block));
-        selectedBlockOwners = new java.util.ArrayList<>(java.util.Collections.singletonList(owner));
-    }
-
-    public void clearBlockSelection()
-    {
-        selectedBlocks = new java.util.ArrayList<>();
-        selectedBlockOwners = new java.util.ArrayList<>();
-    }
-
-    /** Removes the block grouping from {@code character} but leaves all
-     *  member keyframes in place. The user's "dissolve" action -- the
-     *  keyframes go back to ungrouped life on the timeline. */
-    public void dissolveBlock(Character character, com.creatorskit.swing.timesheet.keyframe.Block block)
-    {
-        if (character == null || block == null) return;
-        character.getBlocks().remove(block);
-        clearBlockSelection();
-        attributeSheet.repaint();
-    }
-
-    /** Shows a confirmation dialog then deletes both the block AND every
-     *  member keyframe. The "Delete block + keyframes..." action -- routes
-     *  the kf removals through {@link #addKeyFrameActions} so undo can
-     *  restore them in one step. Members are resolved live from the
-     *  Character's frame matrix using the block's [startTick, endTick]
-     *  range (range-based block model). */
-    public void deleteBlockWithConfirm(Character character, com.creatorskit.swing.timesheet.keyframe.Block block)
-    {
-        if (character == null || block == null) return;
-        java.util.List<com.creatorskit.swing.timesheet.keyframe.KeyFrame> members =
-                block.resolveMembers(character);
-        int n = members.size();
-        int choice = JOptionPane.showConfirmDialog(this,
-                "Delete block \"" + (block.getName() == null ? "(unnamed)" : block.getName())
-                        + "\" and its " + n + " keyframe" + (n == 1 ? "" : "s") + "?",
-                "Delete block",
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
-        if (choice != JOptionPane.OK_OPTION) return;
-
-        KeyFrameAction[] kfa = new KeyFrameAction[0];
-        for (com.creatorskit.swing.timesheet.keyframe.KeyFrame kf : members)
+        java.util.List<Character> targets;
+        double from = 0, to = 0;
+        if (selectedKeyFrames != null && selectedKeyFrames.length > 0)
         {
-            if (kf == null) continue;
-            character.removeKeyFrame(kf);
-            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(kf, character, KeyFrameCharacterActionType.REMOVE));
-        }
-        character.getBlocks().remove(block);
-        if (kfa.length > 0) addKeyFrameActions(kfa);
-        clearBlockSelection();
-        setSelectedKeyFrames(new com.creatorskit.swing.timesheet.keyframe.KeyFrame[0]);
-    }
-
-    /** Pops the BlockEditDialog pre-filled with the block's current name
-     *  and colour. On OK, writes back; on cancel, leaves the block as-is. */
-    public void editBlockNameAndColour(Character character, com.creatorskit.swing.timesheet.keyframe.Block block)
-    {
-        if (block == null) return;
-        com.creatorskit.swing.timesheet.blocks.BlockEditDialog.Result result =
-                com.creatorskit.swing.timesheet.blocks.BlockEditDialog.show(this,
-                        "Rename / Recolour block", block.getName(), block.getColorRgb());
-        if (result == null) return;
-        block.setName(result.name);
-        block.setColorRgb(result.colorRgb);
-        attributeSheet.repaint();
-    }
-
-    // ===== Blocks (Phase 1: create + render) ============================
-
-    /**
-     * Whether the current marquee selection forms at least one valid block
-     * on at least one Character. Drives the enabled state of Tools > Create
-     * Block and the right-click "Create Block" context menu item.
-     */
-    public boolean canCreateBlockFromSelection()
-    {
-        if (selectedKeyFrames == null || selectedKeyFrames.length < 2) return false;
-        java.util.Map<Character, java.util.List<KeyFrame>> byOwner = groupSelectedKeyFramesByOwner();
-        for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> e : byOwner.entrySet())
-        {
-            if (com.creatorskit.swing.timesheet.keyframe.BlockValidator.isValidSelection(e.getKey(), e.getValue()))
+            double min = Double.MAX_VALUE, max = -Double.MAX_VALUE;
+            for (KeyFrame kf : selectedKeyFrames)
             {
-                double[] range = com.creatorskit.swing.timesheet.keyframe.BlockValidator.tickRange(e.getValue());
-                if (!com.creatorskit.swing.timesheet.keyframe.BlockValidator.overlapsExistingBlock(e.getKey(), range[0], range[1]))
-                {
-                    return true;
-                }
+                if (kf == null) continue;
+                min = Math.min(min, kf.getTick());
+                max = Math.max(max, kf.getTick());
             }
+            if (min != Double.MAX_VALUE)
+            {
+                from = min;
+                to = max;
+            }
+            targets = new java.util.ArrayList<>(groupSelectedKeyFramesByOwner().keySet());
         }
-        return false;
+        else
+        {
+            targets = labelTargetCharacters();
+        }
+        showLabelCreateDialog(targets, from, to);
     }
 
-    /**
-     * Tools > Create Block / right-click "Create Block". Groups the marquee
-     * by owner, runs the validator per Character, surfaces a count of
-     * valid blocks vs total Characters with a selection, then prompts the
-     * user once for a shared name + colour. Per the design: one prompt,
-     * same name and colour for every Character that contributes a valid
-     * block; Characters whose selection is invalid (gaps) or overlaps an
-     * existing block are skipped with a warning.
-     */
-    public void showCreateBlockDialog()
+    /** Selected Characters (fallback: the primary) -- who a row-level label applies to. */
+    private java.util.List<Character> labelTargetCharacters()
     {
-        if (selectedKeyFrames == null || selectedKeyFrames.length < 2)
+        java.util.List<Character> out = new java.util.ArrayList<>(selectionManager.getSelected());
+        if (out.isEmpty() && selectedCharacter != null)
+        {
+            out.add(selectedCharacter);
+        }
+        return out;
+    }
+
+    private void showLabelCreateDialog(java.util.List<Character> targets, double defaultFrom, double defaultTo)
+    {
+        if (targets == null || targets.isEmpty())
         {
             JOptionPane.showMessageDialog(this,
-                    "Select at least 2 keyframes (the easiest way is to marquee-drag a rectangle) before creating a block.",
-                    "Create block", JOptionPane.INFORMATION_MESSAGE);
+                    "Select a Character first -- labels are a per-Character property.",
+                    "Label", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
-
-        java.util.Map<Character, java.util.List<KeyFrame>> byOwner = groupSelectedKeyFramesByOwner();
-        if (byOwner.isEmpty())
+        String header = targets.size() == 1
+                ? "Label for " + targets.get(0).getName()
+                : "Label for " + targets.size() + " Characters";
+        com.creatorskit.swing.timesheet.blocks.BlockEditDialog.Result r =
+                com.creatorskit.swing.timesheet.blocks.BlockEditDialog.show(this, "New label", header,
+                        "", com.creatorskit.swing.timesheet.keyframe.BlockPalette.DEFAULT_RGB,
+                        defaultFrom, defaultTo);
+        if (r == null) return;
+        if (r.toTick < r.fromTick)
         {
-            JOptionPane.showMessageDialog(this,
-                    "Couldn't resolve any owners for the selected keyframes.",
-                    "Create block", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "\"To\" must be greater than or equal to \"From\".",
+                    "Label", JOptionPane.WARNING_MESSAGE);
             return;
         }
-
-        // Partition into "valid for block" and "invalid" with a reason
-        // string per invalid Character so the warning surfaces specifics.
-        java.util.LinkedHashMap<Character, java.util.List<KeyFrame>> validByOwner = new java.util.LinkedHashMap<>();
-        java.util.LinkedHashMap<Character, String> invalidReasons = new java.util.LinkedHashMap<>();
-        for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> e : byOwner.entrySet())
+        if (r.toTick == r.fromTick)
         {
-            Character c = e.getKey();
-            java.util.List<KeyFrame> sel = e.getValue();
-            if (!com.creatorskit.swing.timesheet.keyframe.BlockValidator.isValidSelection(c, sel))
-            {
-                invalidReasons.put(c, "selection has gaps in an included property");
-                continue;
-            }
-            double[] range = com.creatorskit.swing.timesheet.keyframe.BlockValidator.tickRange(sel);
-            if (com.creatorskit.swing.timesheet.keyframe.BlockValidator.overlapsExistingBlock(c, range[0], range[1]))
-            {
-                invalidReasons.put(c, "range overlaps an existing block");
-                continue;
-            }
-            validByOwner.put(c, sel);
+            return; // zero-length range -> no-op per spec
         }
-
-        if (validByOwner.isEmpty())
+        for (Character c : targets)
         {
-            StringBuilder msg = new StringBuilder("No valid blocks can be created from this selection:\n");
-            for (java.util.Map.Entry<Character, String> e : invalidReasons.entrySet())
-            {
-                msg.append("\n - ").append(e.getKey().getName()).append(": ").append(e.getValue());
-            }
-            JOptionPane.showMessageDialog(this, msg.toString(),
-                    "Create block", JOptionPane.WARNING_MESSAGE);
-            return;
+            c.getBlocks().add(new com.creatorskit.swing.timesheet.keyframe.Block(
+                    r.name, r.colorRgb, r.fromTick, r.toTick));
         }
-
-        // Confirmation with the "X blocks across Y Characters" headline the
-        // spec asked for. Invalid Characters get a tail message so the user
-        // knows they were skipped.
-        StringBuilder warn = new StringBuilder();
-        warn.append("Create ").append(validByOwner.size()).append(" block");
-        if (validByOwner.size() != 1) warn.append("s");
-        warn.append(" across ").append(validByOwner.size()).append(" Character");
-        if (validByOwner.size() != 1) warn.append("s");
-        warn.append("?");
-        if (!invalidReasons.isEmpty())
-        {
-            warn.append("\n\nSkipping ").append(invalidReasons.size())
-                    .append(" Character").append(invalidReasons.size() == 1 ? "" : "s")
-                    .append(" with invalid selections:");
-            for (java.util.Map.Entry<Character, String> e : invalidReasons.entrySet())
-            {
-                warn.append("\n  - ").append(e.getKey().getName()).append(": ").append(e.getValue());
-            }
-        }
-        int confirm = JOptionPane.showConfirmDialog(this, warn.toString(),
-                "Create block", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
-        if (confirm != JOptionPane.OK_OPTION) return;
-
-        // Name + colour prompt: shared across every Character per spec.
-        com.creatorskit.swing.timesheet.blocks.BlockEditDialog.Result result =
-                com.creatorskit.swing.timesheet.blocks.BlockEditDialog.show(this, "New block",
-                        "Block " + (validByOwner.values().iterator().next().size()) + " keyframes",
-                        com.creatorskit.swing.timesheet.keyframe.BlockPalette.DEFAULT_RGB);
-        if (result == null) return; // user cancelled
-
-        for (java.util.Map.Entry<Character, java.util.List<KeyFrame>> e : validByOwner.entrySet())
-        {
-            double[] range = com.creatorskit.swing.timesheet.keyframe.BlockValidator.tickRange(e.getValue());
-            com.creatorskit.swing.timesheet.keyframe.Block block =
-                    new com.creatorskit.swing.timesheet.keyframe.Block(
-                            result.name, result.colorRgb, range[0], range[1]);
-            e.getKey().getBlocks().add(block);
-        }
-        // Refresh the visible attribute sheets so the new block paints.
         attributeSheet.repaint();
-        if (globalAttributeSheet != null) globalAttributeSheet.repaint();
     }
+
+    /** Re-opens the dialog for an existing label (right-click the label). */
+    public void editLabel(Character owner, com.creatorskit.swing.timesheet.keyframe.Block label)
+    {
+        if (owner == null || label == null) return;
+        com.creatorskit.swing.timesheet.blocks.BlockEditDialog.Result r =
+                com.creatorskit.swing.timesheet.blocks.BlockEditDialog.show(this, "Edit label",
+                        "Label for " + owner.getName(), label.getName(), label.getColorRgb(),
+                        label.getStartTick(), label.getEndTick());
+        if (r == null) return;
+        if (r.toTick < r.fromTick)
+        {
+            JOptionPane.showMessageDialog(this, "\"To\" must be greater than or equal to \"From\".",
+                    "Label", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (r.toTick == r.fromTick)
+        {
+            return; // zero-length range -> leave the label unchanged
+        }
+        label.setName(r.name);
+        label.setColorRgb(r.colorRgb);
+        label.setStartTick(r.fromTick);
+        label.setEndTick(r.toTick);
+        attributeSheet.repaint();
+    }
+
+    /** Removes a label (right-click the label -> Delete). */
+    public void deleteLabel(Character owner, com.creatorskit.swing.timesheet.keyframe.Block label)
+    {
+        if (owner == null || label == null) return;
+        owner.getBlocks().remove(label);
+        attributeSheet.repaint();
+    }
+
+    // ===== (removed: legacy Block create/dissolve/delete/recolour) =====
+
 }

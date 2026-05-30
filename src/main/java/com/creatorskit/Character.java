@@ -119,11 +119,11 @@ public class Character
      */
     private double extraScale = 1.0;
     /**
-     * User-defined block groupings for this Character's keyframes. Empty
-     * (not null) for fresh Characters and for pre-blocks-feature saves. See
-     * {@link com.creatorskit.swing.timesheet.keyframe.Block} for the data
-     * model and {@link com.creatorskit.swing.timesheet.keyframe.BlockValidator}
-     * for the no-gaps + no-overlap rules a candidate selection must satisfy.
+     * User-defined timeline <b>Labels</b> for this Character -- colored, named
+     * time-range markers shown in the top row of the timeline, purely for
+     * organization (no interactivity). Empty (not null) for fresh Characters
+     * and for old saves. See {@link com.creatorskit.swing.timesheet.keyframe.Block}
+     * (the legacy class name) for the data model.
      *
      * <p>Positioned at the END of the field list so Lombok's
      * {@code @AllArgsConstructor} adds the new arg as the LAST parameter --

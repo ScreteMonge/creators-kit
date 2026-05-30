@@ -463,24 +463,10 @@ public class ToolBoxFrame extends JFrame
         JMenu keyframesMenu = new JMenu("Keyframes");
         tools.add(keyframesMenu);
 
-        // Blocks: Premiere-style nested-clip grouping of keyframes. Greyed
-        // out when the marquee selection isn't a valid block on at least
-        // one Character (the per-Character no-gaps + no-overlap rules
-        // live in BlockValidator). Enable state is recomputed every time
-        // the Keyframes submenu is opened so the gate reflects the
-        // current marquee without listening for every selection event.
-        JMenuItem createBlock = new JMenuItem("Create Block...");
-        createBlock.addActionListener(e -> timeSheetPanel.showCreateBlockDialog());
-        keyframesMenu.addMenuListener(new javax.swing.event.MenuListener()
-        {
-            @Override public void menuSelected(javax.swing.event.MenuEvent e)
-            {
-                createBlock.setEnabled(timeSheetPanel.canCreateBlockFromSelection());
-            }
-            @Override public void menuDeselected(javax.swing.event.MenuEvent e) {}
-            @Override public void menuCanceled(javax.swing.event.MenuEvent e) {}
-        });
-        keyframesMenu.add(createBlock);
+        // Labels (formerly interactive Blocks) are created by right-clicking
+        // the timeline -- the top label row for a row-level label, or a
+        // keyframe selection for a span label -- so there's no Tools-menu
+        // entry for them anymore.
 
         JMenuItem iterateFields = new JMenuItem("Iterate field values...");
         iterateFields.addActionListener(e -> timeSheetPanel.showIterateFieldDialog());
