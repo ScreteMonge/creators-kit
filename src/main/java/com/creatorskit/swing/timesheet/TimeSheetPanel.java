@@ -3378,6 +3378,16 @@ public class TimeSheetPanel extends JPanel
                 double newTime = round(keyFrame.getTick() - firstTick + currentTime);
                 KeyFrame copy = KeyFrame.createCopy(keyFrame, newTime);
 
+                // Movement is position-relative on paste: re-base the copied
+                // path so it starts where the TARGET Character stands at the
+                // paste tick, instead of replaying the source's absolute tiles.
+                // So "move 3 east" pasted onto a Character 3 tiles south of the
+                // source ends 3 tiles south-east of the source's origin.
+                if (copy instanceof MovementKeyFrame)
+                {
+                    rebasePastedMovement((MovementKeyFrame) copy, c, newTime);
+                }
+
                 if (isPrimary)
                 {
                     selectedKeyFrames = ArrayUtils.add(selectedKeyFrames, copy);
@@ -3394,6 +3404,92 @@ public class TimeSheetPanel extends JPanel
         }
 
         addKeyFrameActions(kfa);
+    }
+
+    /**
+     * Re-bases a freshly-pasted Movement keyframe so its path begins at where
+     * the target Character stands at the paste tick, rather than replaying the
+     * source Character's absolute tiles. The path shape (its relative deltas)
+     * is preserved -- only the origin shifts -- so the movement is effectively
+     * stored relative to the Character it lands on.
+     *
+     * <p>Base tile resolution:
+     * <ul>
+     *   <li>the END of the target's most recent Movement keyframe before
+     *       {@code tick} (so consecutive pasted movements chain naturally), or</li>
+     *   <li>the target's spawn position (non-instanced world tile, or instanced
+     *       scene tile in a POH) when it has no earlier movement.</li>
+     * </ul>
+     *
+     * <p>No-op when the path is empty, or when the source movement's instance
+     * context (POH vs overworld) differs from the target's -- the coordinate
+     * systems wouldn't line up, so we leave the pasted path untouched.
+     */
+    private void rebasePastedMovement(MovementKeyFrame mkf, Character target, double tick)
+    {
+        int[][] path = mkf.getPath();
+        if (path == null || path.length == 0 || path[0] == null || path[0].length < 2)
+        {
+            return;
+        }
+        boolean poh = mkf.isPoh();
+        if (poh != target.isInPOH())
+        {
+            return;
+        }
+
+        int baseX, baseY, basePlane;
+        KeyFrame prev = target.findPreviousKeyFrame(KeyFrameType.MOVEMENT, tick, false);
+        if (prev instanceof MovementKeyFrame
+                && ((MovementKeyFrame) prev).getPath() != null
+                && ((MovementKeyFrame) prev).getPath().length > 0)
+        {
+            MovementKeyFrame pm = (MovementKeyFrame) prev;
+            int[] last = pm.getPath()[pm.getPath().length - 1];
+            baseX = last[0];
+            baseY = last[1];
+            basePlane = pm.getPlane();
+        }
+        else if (poh)
+        {
+            LocalPoint lp = target.getInstancedPoint();
+            if (lp == null)
+            {
+                return;
+            }
+            baseX = lp.getSceneX();
+            baseY = lp.getSceneY();
+            basePlane = target.getInstancedPlane();
+        }
+        else
+        {
+            WorldPoint wp = target.getNonInstancedPoint();
+            if (wp == null)
+            {
+                return;
+            }
+            baseX = wp.getX();
+            baseY = wp.getY();
+            basePlane = wp.getPlane();
+        }
+
+        int dx = baseX - path[0][0];
+        int dy = baseY - path[0][1];
+        if (dx != 0 || dy != 0)
+        {
+            for (int[] step : path)
+            {
+                if (step == null || step.length < 2)
+                {
+                    continue;
+                }
+                step[0] += dx;
+                step[1] += dy;
+            }
+        }
+        // Render the movement on the target's plane (matters for a cross-plane
+        // paste; a no-op when source and target share a plane).
+        mkf.setPlane(basePlane);
     }
 
     private void setKeyBindings()
