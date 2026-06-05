@@ -694,32 +694,41 @@ public class Character
      */
     private int orientationOfOriAt(OrientationKeyFrame okf, double atTick)
     {
-        // Face Target (FOLLOW) keyframes don't turn toward a fixed end -- they
-        // track a moving target, so the start->end clamp below is meaningless.
-        // Keep the stored end angle for them (the prior behaviour). The
-        // incomplete-turn resolution is only meaningful for fixed-angle (POINT)
-        // turns. (A FOLLOW kf's OWN start is still resolved correctly -- that
-        // path runs computeOrientationStartFor on ITS prior, not this branch.)
-        String targetName = okf.getTargetCharacterName();
-        if (targetName != null && !targetName.trim().isEmpty())
-        {
-            return okf.getEnd();
-        }
-
         double ticksPassed = atTick - okf.getTick();
         if (ticksPassed < 0) ticksPassed = 0;
         if (ticksPassed > okf.getDuration()) ticksPassed = okf.getDuration();
 
         int start = computeOrientationStartFor(okf);
-        int end = okf.getEnd();
+
+        // Where this keyframe's turn is heading. A POINT keyframe aims at its
+        // stored end angle. A Face Target (FOLLOW) keyframe tracks a MOVING
+        // target, so its real heading is the LIVE angle to that target
+        // (resolved via the injected hook), NOT the stored end field. Using the
+        // live angle is what makes a keyframe that FOLLOWS a Face Target -- a
+        // second Face Target back-to-back included -- start from where the
+        // character was actually facing the target. Falls back to the stored
+        // end when the target can't be resolved (no resolver / missing /
+        // off-scene / same tile). The same turn-rate clamp then applies, so an
+        // unfinished acquisition still yields a part-way angle.
+        int goalAngle = okf.getEnd();
+        String targetName = okf.getTargetCharacterName();
+        if (targetName != null && !targetName.trim().isEmpty() && faceAngleResolver != null)
+        {
+            Integer resolved = faceAngleResolver.resolve(this, targetName);
+            if (resolved != null)
+            {
+                goalAngle = resolved;
+            }
+        }
+
         int difference = com.creatorskit.programming.orientation.Orientation
-                .directionalDifference(start, end, okf.getTurnDirection());
+                .directionalDifference(start, goalAngle, okf.getTurnDirection());
         double rotation = okf.getTurnRate() * ticksPassed
                 * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH;
 
         if (difference > -rotation && difference < rotation)
         {
-            return end;
+            return goalAngle;
         }
         if (difference > 0)
         {
@@ -810,6 +819,30 @@ public class Character
     public static void setDebugHook(java.util.function.BiConsumer<Character, String> hook)
     {
         debugHook = hook;
+    }
+
+    /**
+     * Resolves the JAU angle a {@code source} Character would face to look at a
+     * named target Character, from their LIVE scene positions. Injected by the
+     * plugin because Character can't reach the character list / Orientation
+     * helpers for a cross-character lookup. Returns null when the target can't
+     * be resolved (no match, off-scene, or on the same tile as the source).
+     *
+     * <p>Used by {@link #orientationOfOriAt}: a keyframe FOLLOWING a Face Target
+     * keyframe -- including a second Face Target back-to-back -- must start from
+     * the angle the character was actually facing the (moving) target, not the
+     * Face Target's meaningless stored end field.
+     */
+    public interface FaceAngleResolver
+    {
+        Integer resolve(Character source, String targetName);
+    }
+
+    private static FaceAngleResolver faceAngleResolver;
+
+    public static void setFaceAngleResolver(FaceAngleResolver resolver)
+    {
+        faceAngleResolver = resolver;
     }
 
     private void debug(String fmt, Object... args)

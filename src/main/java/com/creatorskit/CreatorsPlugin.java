@@ -769,6 +769,38 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			}
 		});
 
+		// Resolves the live angle from a source Character to a named target, so
+		// a keyframe that FOLLOWS a Face Target keyframe (e.g. a second Face
+		// Target back-to-back) starts from the angle the character was actually
+		// facing the moving target, instead of the Face Target's stored end
+		// field. Mirrors the target-angle math in Programmer.applyFaceTarget.
+		Character.setFaceAngleResolver((source, targetName) ->
+		{
+			if (source == null || targetName == null || source.getCkObject() == null)
+			{
+				return null;
+			}
+			net.runelite.api.coords.LocalPoint sl = source.getCkObject().getLocation();
+			if (sl == null)
+			{
+				return null;
+			}
+			for (Character c : getCharacters())
+			{
+				if (c == source || c.getName() == null || !targetName.equals(c.getName()) || c.getCkObject() == null)
+				{
+					continue;
+				}
+				net.runelite.api.coords.LocalPoint tl = c.getCkObject().getLocation();
+				if (tl == null || (sl.getX() == tl.getX() && sl.getY() == tl.getY()))
+				{
+					continue;
+				}
+				return (int) com.creatorskit.programming.orientation.Orientation.getAngleBetween(sl, tl);
+			}
+			return null;
+		});
+
 		// Restore the persisted hide-list before any GameObjectSpawned events
 		// fire (login spawns the initial scene, which we want filtered).
 		loadHiddenGameObjectIds();
