@@ -694,6 +694,18 @@ public class Character
      */
     private int orientationOfOriAt(OrientationKeyFrame okf, double atTick)
     {
+        // Face Target (FOLLOW) keyframes don't turn toward a fixed end -- they
+        // track a moving target, so the start->end clamp below is meaningless.
+        // Keep the stored end angle for them (the prior behaviour). The
+        // incomplete-turn resolution is only meaningful for fixed-angle (POINT)
+        // turns. (A FOLLOW kf's OWN start is still resolved correctly -- that
+        // path runs computeOrientationStartFor on ITS prior, not this branch.)
+        String targetName = okf.getTargetCharacterName();
+        if (targetName != null && !targetName.trim().isEmpty())
+        {
+            return okf.getEnd();
+        }
+
         double ticksPassed = atTick - okf.getTick();
         if (ticksPassed < 0) ticksPassed = 0;
         if (ticksPassed > okf.getDuration()) ticksPassed = okf.getDuration();

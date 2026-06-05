@@ -467,6 +467,17 @@ public class AttributeSheet extends TimeSheet
                 ? keyFrames[e + 1].getTick() - okf.getTick()
                 : Double.POSITIVE_INFINITY;
 
+        // Face Target (FOLLOW) keyframes track a MOVING target for their whole
+        // duration -- there's no fixed end angle to complete a turn toward, so
+        // the red/green diagnostic doesn't apply (and would mis-paint the
+        // intended tracking time as red "excess"). Draw the plain tracking bar.
+        String faceTargetName = okf.getTargetCharacterName();
+        if (faceTargetName != null && !faceTargetName.trim().isEmpty())
+        {
+            drawTailRange(g, normalColor, lineY, x, 0, Math.min(duration, tickLimit), zoomFactor);
+            return;
+        }
+
         double turnRate = okf.getTurnRate();
         int difference = com.creatorskit.programming.orientation.Orientation
                 .directionalDifference(okf.getStart(), okf.getEnd(), okf.getTurnDirection());
