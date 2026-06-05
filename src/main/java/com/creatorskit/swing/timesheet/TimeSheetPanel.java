@@ -1500,11 +1500,18 @@ public class TimeSheetPanel extends JPanel
                 : selectedCharacter.findKeyFrame(KeyFrameType.MOVEMENT, currentTime);
         if (existing != null)
         {
-            JOptionPane.showMessageDialog(this,
+            // onAddMovement runs on the CLIENT THREAD (reached from
+            // onClientTick -> addProgramStep, and from the right-click menu's
+            // client-thread onClick). A modal JOptionPane shown directly here
+            // blocks the client thread -- i.e. the whole game loop -- until
+            // it's dismissed, which freezes the ENTIRE client. Marshal the
+            // dialog to the EDT so it's modal to Swing only. The add is a
+            // no-op anyway (we bail before mutating anything).
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this,
                     "A Movement keyframe already sits at the current playhead tick.\n"
                             + "Move the playhead or clear that keyframe before adding a step.",
                     "Movement keyframe occupied",
-                    JOptionPane.WARNING_MESSAGE);
+                    JOptionPane.WARNING_MESSAGE));
             return;
         }
 
@@ -1628,16 +1635,24 @@ public class TimeSheetPanel extends JPanel
 
         initializeMovementKeyFrame(selectedCharacter, currentTime, worldView.getPlane(), poh, path, false, stepSpeed, defaultMovementTurnRate);
 
-        // Leave the playhead exactly where the user put it. Placing a step
-        // used to auto-advance the seeker to the end of the new keyframe (to
-        // chain consecutive presses), but that "force scrub" fought the user
-        // and, worse, made the occupied-tick guard above dead code -- the
-        // playhead always jumped past the kf it just created, so a follow-up
-        // press never saw it sitting there. Per the original spec ("start
-        // from the playhead; if it's already occupied, warn the player to
-        // move the playhead"), the user owns the playhead: it stays put, and
-        // a second add-step at the same tick hits the warning until they
-        // move it themselves.
+        // Auto-advance the seeker to the end of the kf we just placed so
+        // consecutive add-step presses chain naturally. Ceil the duration
+        // so the seeker lands on an integer tick that matches
+        // AttributeSheet's ceil()-rounded movement-bar width -- without
+        // this, fractional durations (e.g. 3 tiles at speed 2 = 1.5
+        // ticks) put the seeker between integer ticks while the visual
+        // bar extends to the next integer, looking like a 0.5-tick
+        // overlap for whatever step the user adds next.
+        //
+        // This runs on the CLIENT THREAD (onAddMovement is reached from
+        // onClientTick -> addProgramStep and from the right-click menu's
+        // client-thread onClick). setCurrentTime is safe there -- play and
+        // the A-B loop jump call it on the client thread every tick. The
+        // landing tick clears the previous keyframe, so the occupied-tick
+        // guard above does NOT fire on the chained next press.
+        double tilesMoved = Math.max(0, path.length - 1);
+        double newDuration = Math.ceil(tilesMoved / Math.max(0.0001, stepSpeed));
+        setCurrentTime(currentTime + newDuration, false);
 
         programmer.register3DChanges(selectedCharacter);
     }
