@@ -3007,7 +3007,14 @@ public class CreatorsPanel extends PluginPanel
                 .getCustomModel()
                 .addItem(model);
 
-        for (JComboBox<CustomModel> comboBox : comboBoxes)
+        // Iterate a snapshot, not the live list. addItem() on an empty combo
+        // auto-selects its first item, which fires that combo's ItemListener;
+        // setSelectedItem() below does the same. Those handlers can end up
+        // creating a Character, and createCharacter() appends to `comboBoxes`
+        // (see comboBoxes.add near line 727). Mutating the list we're
+        // iterating threw ConcurrentModificationException -- the copy makes
+        // this loop immune to that re-entrancy.
+        for (JComboBox<CustomModel> comboBox : new java.util.ArrayList<>(comboBoxes))
         {
             comboBox.addItem(model);
             if (!setComboBox || selectedCharacter == null)
@@ -3058,7 +3065,10 @@ public class CreatorsPanel extends PluginPanel
                 .getCustomModel()
                 .removeItem(model);
 
-        for (JComboBox<CustomModel> comboBox : comboBoxes)
+        // Snapshot for the same reason as addModelOption: removeItem() can
+        // shift the selection and fire ItemListeners that re-enter and mutate
+        // `comboBoxes`. Iterate a copy so we can't ConcurrentModification.
+        for (JComboBox<CustomModel> comboBox : new java.util.ArrayList<>(comboBoxes))
         {
             comboBox.removeItem(model);
         }

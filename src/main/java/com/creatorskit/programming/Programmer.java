@@ -1991,6 +1991,18 @@ public class Programmer
             ensureProjectileSlot(character, projObjs, slot, kf);
 
             CKObject obj = projObjs.get(slot);
+            if (obj == null)
+            {
+                // ensureProjectileSlot couldn't build the model this tick --
+                // e.g. a custom-model shot whose CustomModel hasn't resolved
+                // yet (transient ref null right after a save reload), or a
+                // spotanim id with no cache data. It retries next tick. Skip
+                // rendering for now, but still advance the slot so each
+                // keyframe keeps a stable slot index (otherwise the next
+                // projectile would clobber this one's slot/signature).
+                slot++;
+                continue;
+            }
             final int finalZ = zFinal;
             final int finalOrientation = orientation;
             final LocalPoint finalHere = here;
