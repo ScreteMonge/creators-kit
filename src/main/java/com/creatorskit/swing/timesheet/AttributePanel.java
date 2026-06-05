@@ -6717,6 +6717,24 @@ public class AttributePanel extends JPanel
 
     public void resetAttributes(Character character, double tick)
     {
+        // This rebuilds the whole attribute card -- dozens of spinner.setValue
+        // calls, each firing Swing ChangeListeners and background-flash
+        // repaints. That is EDT-only work, but it can be reached OFF the EDT:
+        // adding a movement step runs on the CLIENT THREAD (onClientTick ->
+        // addProgramStep, and the right-click menu's onClick), and that path
+        // scrubs the playhead -- setCurrentTime -> onCurrentTimeChanged lands
+        // here on the client thread. Mutating Swing there contends for the AWT
+        // tree lock against the render/EDT and hangs the ENTIRE client (the
+        // freeze when placing a movement keyframe). Marshal to the EDT when
+        // we're not already on it; every on-EDT caller is unaffected.
+        if (!SwingUtilities.isEventDispatchThread())
+        {
+            final Character c = character;
+            final double t = tick;
+            SwingUtilities.invokeLater(() -> resetAttributes(c, t));
+            return;
+        }
+
         // Loading a fresh kf into the panel == start of a new edit batch.
         // The per-property multi-select commit reads this set to know which
         // fields to write through; clearing here means user edits made AFTER
