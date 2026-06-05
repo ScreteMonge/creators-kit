@@ -1628,17 +1628,16 @@ public class TimeSheetPanel extends JPanel
 
         initializeMovementKeyFrame(selectedCharacter, currentTime, worldView.getPlane(), poh, path, false, stepSpeed, defaultMovementTurnRate);
 
-        // Auto-advance the seeker to the end of the kf we just placed so
-        // consecutive add-step presses chain naturally. Ceil the duration
-        // so the seeker lands on an integer tick that matches
-        // AttributeSheet's ceil()-rounded movement-bar width -- without
-        // this, fractional durations (e.g. 3 tiles at speed 2 = 1.5
-        // ticks) put the seeker between integer ticks while the visual
-        // bar extends to the next integer, looking like a 0.5-tick
-        // overlap for whatever step the user adds next.
-        double tilesMoved = Math.max(0, path.length - 1);
-        double newDuration = Math.ceil(tilesMoved / Math.max(0.0001, stepSpeed));
-        setCurrentTime(currentTime + newDuration, false);
+        // Leave the playhead exactly where the user put it. Placing a step
+        // used to auto-advance the seeker to the end of the new keyframe (to
+        // chain consecutive presses), but that "force scrub" fought the user
+        // and, worse, made the occupied-tick guard above dead code -- the
+        // playhead always jumped past the kf it just created, so a follow-up
+        // press never saw it sitting there. Per the original spec ("start
+        // from the playhead; if it's already occupied, warn the player to
+        // move the playhead"), the user owns the playhead: it stays put, and
+        // a second add-step at the same tick hits the warning until they
+        // move it themselves.
 
         programmer.register3DChanges(selectedCharacter);
     }
