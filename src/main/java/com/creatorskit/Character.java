@@ -738,6 +738,74 @@ public class Character
     }
 
     /**
+     * The character's resolved orientation when ENTERING a Movement keyframe
+     * that starts at {@code movementTick}, IF an Orientation keyframe was the
+     * most recent thing driving its rotation -- its real, turn-rate-clamped end
+     * angle (POINT or Face Target, via {@link #orientationOfOriAt}). Returns
+     * null when no Orientation keyframe precedes the movement, OR when a
+     * Movement keyframe ended more recently than that Orientation keyframe (in
+     * which case the prior movement's own direction is the real entry, which
+     * the movement auto-orient already handles -- so we leave it unchanged).
+     *
+     * <p>Lets a Movement's auto-orient TURN from where an Orientation keyframe
+     * left the character toward the first path segment, instead of snapping --
+     * the Orientation -&gt; Movement chaining counterpart of the start fix.
+     */
+    public Integer orientationEnteringMovement(double movementTick)
+    {
+        OrientationKeyFrame priorOri = null;
+        KeyFrame[] oris = getKeyFrames(KeyFrameType.ORIENTATION);
+        if (oris != null)
+        {
+            for (KeyFrame kf : oris)
+            {
+                if (kf == null) continue;
+                if (kf.getTick() < movementTick
+                        && (priorOri == null || kf.getTick() > priorOri.getTick()))
+                {
+                    priorOri = (OrientationKeyFrame) kf;
+                }
+            }
+        }
+        if (priorOri == null)
+        {
+            return null;
+        }
+
+        double oriEnd = priorOri.getTick() + priorOri.getDuration();
+
+        // If a Movement keyframe drove rotation more recently than the prior
+        // Orientation keyframe, that movement's final direction is the real
+        // entry -- not the stale ori. Leave the auto-orient unchanged then.
+        MovementKeyFrame priorMkf = null;
+        KeyFrame[] mkfs = getKeyFrames(KeyFrameType.MOVEMENT);
+        if (mkfs != null)
+        {
+            for (KeyFrame kf : mkfs)
+            {
+                if (kf == null || kf.getTick() >= movementTick) continue;
+                if (priorMkf == null || kf.getTick() > priorMkf.getTick())
+                {
+                    priorMkf = (MovementKeyFrame) kf;
+                }
+            }
+        }
+        if (priorMkf != null
+                && priorMkf.getPath() != null
+                && priorMkf.getPath().length >= 2
+                && priorMkf.getSpeed() > 0)
+        {
+            double mkfEnd = priorMkf.getTick() + Math.ceil((priorMkf.getPath().length - 1) / priorMkf.getSpeed());
+            if (mkfEnd > oriEnd)
+            {
+                return null;
+            }
+        }
+
+        return orientationOfOriAt(priorOri, movementTick);
+    }
+
+    /**
      * Direction angle of the movement kf's final segment -- where its
      * auto-orient leaves the character pointing once the path is fully
      * walked. Returns the idle spinner value when the path is too short

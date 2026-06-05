@@ -1202,7 +1202,14 @@ public class Programmer
             }
 
             //Only relevant when OrientationAction.SET, in other words, when setting the time manually and not playing
-            int orientationFromTick = getOrientationFromTick(previous, start, angle, clientTicksPassed, currentStep, keyFrame.getSpeed(), turnRate);
+            // At the path start (previous == null) the character may be entering
+            // from an Orientation keyframe -- turn from where it left the
+            // character rather than snapping to the first segment. Only computed
+            // at step 0 (the only place it's used) to keep scrub cheap.
+            Integer entryOrientation = previous == null
+                    ? character.orientationEnteringMovement(keyFrame.getTick())
+                    : null;
+            int orientationFromTick = getOrientationFromTick(previous, start, angle, clientTicksPassed, currentStep, keyFrame.getSpeed(), turnRate, entryOrientation);
             return new MovementComposition(true, lp, OrientationAction.SET, orientationFromTick, (int) angle);
         }
 
@@ -1229,15 +1236,26 @@ public class Programmer
         return new MovementComposition(false, start, OrientationAction.SET, (int) angle, 0);
     }
 
-    private int getOrientationFromTick(LocalPoint previous, LocalPoint start, double angle, int clientTicksPassed, int currentStep, double speed, double turnRate)
+    private int getOrientationFromTick(LocalPoint previous, LocalPoint start, double angle, int clientTicksPassed, int currentStep, double speed, double turnRate, Integer entryOrientation)
     {
+        double originalAngle;
         if (previous == null)
         {
-            return (int) angle;
+            // Start of the path -- no prior segment to turn from. If the
+            // character ENTERED the movement facing a known angle (an
+            // Orientation keyframe just before it left it pointing there),
+            // turn FROM that angle toward the first segment at the movement's
+            // turn rate instead of snapping. Otherwise keep the old snap.
+            if (entryOrientation == null)
+            {
+                return (int) angle;
+            }
+            originalAngle = entryOrientation;
         }
-
-        double originalAngle = Orientation.getAngleBetween(previous, start);
-
+        else
+        {
+            originalAngle = Orientation.getAngleBetween(previous, start);
+        }
 
         int angleDifference = Orientation.subtract((int) angle, (int) originalAngle);
         if (angleDifference == 0)
