@@ -701,8 +701,15 @@ public class Programmer
             return new OrientationInstruction(KeyFrameType.ORIENTATION, false);
         }
 
-        boolean setOrientation = Math.round(clientTicksForCurrentTime - oriEndClientTick) == 1;
-        return new OrientationInstruction(KeyFrameType.MOVEMENT, setOrientation);
+        // Movement has taken over from the finished orientation kf while the
+        // path is still running. Do NOT snap to the movement direction on the
+        // first post-handoff tick (the old behaviour -- and the reason play
+        // "didn't turn from where the orientation ended"). Returning false
+        // keeps OrientationAction.ADJUST, which eases from the character's
+        // CURRENT angle -- where the orientation kf left it -- toward the
+        // movement direction at the turn rate, matching the scrub path's
+        // Orientation -> Movement chaining.
+        return new OrientationInstruction(KeyFrameType.MOVEMENT, false);
     }
 
 
