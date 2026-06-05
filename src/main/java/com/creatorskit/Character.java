@@ -623,9 +623,10 @@ public class Character
         // Only one candidate -> use it.
         if (!mkfUsable)
         {
-            debug("computeOrientationStartFor newKfTick=%.2f: only priorOri (ends %.2f) -> ori.end=%d",
-                    newKfTick, oriEnd, priorOri.getEnd());
-            return priorOri.getEnd();
+            int v = orientationOfOriAt(priorOri, newKfTick);
+            debug("computeOrientationStartFor newKfTick=%.2f: only priorOri (ends %.2f) -> resolved=%d (goal end=%d)",
+                    newKfTick, oriEnd, v, priorOri.getEnd());
+            return v;
         }
         if (priorOri == null)
         {
@@ -656,9 +657,10 @@ public class Character
         // (mkfEnd > oriEnd is strict).
         if (newKfTick <= oriEnd)
         {
-            debug("computeOrientationStartFor newKfTick=%.2f: priorOri ends %.2f (within window) -> ORI wins (end=%d)",
-                    newKfTick, oriEnd, priorOri.getEnd());
-            return priorOri.getEnd();
+            int v = orientationOfOriAt(priorOri, newKfTick);
+            debug("computeOrientationStartFor newKfTick=%.2f: priorOri ends %.2f (within window) -> ORI wins (resolved=%d, goal end=%d)",
+                    newKfTick, oriEnd, v, priorOri.getEnd());
+            return v;
         }
         if (mkfEnd > oriEnd)
         {
@@ -667,9 +669,51 @@ public class Character
                     newKfTick, oriEnd, mkfEnd, v);
             return v;
         }
-        debug("computeOrientationStartFor newKfTick=%.2f: priorOri ended %.2f, priorMkf ends %.2f (oriEnd >= mkfEnd) -> ORI wins (end=%d)%s",
-                newKfTick, oriEnd, mkfEnd, priorOri.getEnd(), (mkfEnd == oriEnd ? " [TIE]" : ""));
-        return priorOri.getEnd();
+        int v = orientationOfOriAt(priorOri, newKfTick);
+        debug("computeOrientationStartFor newKfTick=%.2f: priorOri ended %.2f, priorMkf ends %.2f (oriEnd >= mkfEnd) -> ORI wins (resolved=%d, goal end=%d)%s",
+                newKfTick, oriEnd, mkfEnd, v, priorOri.getEnd(), (mkfEnd == oriEnd ? " [TIE]" : ""));
+        return v;
+    }
+
+    /**
+     * The orientation a prior OrientationKeyFrame has ACTUALLY produced by the
+     * time {@code atTick} arrives: it interpolates from {@code okf}'s own
+     * (recursively resolved) start toward its end at its turn rate, clamped to
+     * {@code okf}'s duration. Unlike {@code okf.getEnd()}, this reflects an
+     * INCOMPLETE turn -- when the keyframe's duration was too short for its turn
+     * rate to reach the goal, the character only got part-way, and a FOLLOWING
+     * keyframe must start from where the character really is, not from a goal it
+     * never reached. (That mismatch was the "uses last-known orientation, not
+     * current orientation" bug.)
+     *
+     * <p>Recursion is bounded: {@link #computeOrientationStartFor} only ever
+     * looks at keyframes with a strictly smaller tick, so the chain terminates
+     * at the first orientation keyframe (whose start falls back to a movement
+     * segment or the idle spinner). The rotation math mirrors
+     * {@code Programmer.getOrientationStatic} so scrub and play agree.
+     */
+    private int orientationOfOriAt(OrientationKeyFrame okf, double atTick)
+    {
+        double ticksPassed = atTick - okf.getTick();
+        if (ticksPassed < 0) ticksPassed = 0;
+        if (ticksPassed > okf.getDuration()) ticksPassed = okf.getDuration();
+
+        int start = computeOrientationStartFor(okf);
+        int end = okf.getEnd();
+        int difference = com.creatorskit.programming.orientation.Orientation
+                .directionalDifference(start, end, okf.getTurnDirection());
+        double rotation = okf.getTurnRate() * ticksPassed
+                * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH;
+
+        if (difference > -rotation && difference < rotation)
+        {
+            return end;
+        }
+        if (difference > 0)
+        {
+            return com.creatorskit.programming.orientation.Orientation.boundOrientation((int) (start + rotation));
+        }
+        return com.creatorskit.programming.orientation.Orientation.boundOrientation((int) (start - rotation));
     }
 
     /**

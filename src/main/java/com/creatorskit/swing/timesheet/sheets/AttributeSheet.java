@@ -340,7 +340,7 @@ public class AttributeSheet extends TimeSheet
                         break;
                     case ORIENTATION:
                         OrientationKeyFrame okf = (OrientationKeyFrame) keyFrame;
-                        drawTail(g, e, keyFrames, okf.getDuration(), zoomFactor, okf.getTick(), x, y, imageHeight);
+                        drawOrientationTail(g, e, keyFrames, okf, zoomFactor, x, y, imageHeight);
                         break;
                     case TEXT:
                         TextKeyFrame tkf = (TextKeyFrame) keyFrame;
@@ -427,6 +427,98 @@ public class AttributeSheet extends TimeSheet
 
         int pathLength = (int) (duration * zoomFactor);
         g.drawLine(x, y + imageHeight / 2, x + pathLength - 1, y + imageHeight / 2);
+    }
+
+    /** Phantom-completion colour: the turn needs MORE time than the authored
+     *  duration gives it, so this green line shows where it would finish. */
+    private static final Color PHANTOM_GREEN = new Color(60, 200, 90);
+    /** Excess colour: the authored duration is LONGER than the turn needs, so
+     *  this red line marks the leftover time where the turn is already done. */
+    private static final Color EXCESS_RED = new Color(220, 70, 60);
+
+    /**
+     * Orientation tail with a duration-vs-turn-rate diagnostic. The turn needs
+     * {@code |directionalDifference(start,end)| / (turnRate * gameTicksPerClientTick)}
+     * timeline ticks to finish (mirrors Programmer.getOrientationStatic). We
+     * draw the authored duration in the normal colour up to where the turn
+     * completes, then:
+     * <ul>
+     *   <li>duration LONGER than needed -&gt; the excess is drawn {@link #EXCESS_RED};</li>
+     *   <li>duration SHORTER than needed -&gt; a phantom {@link #PHANTOM_GREEN}
+     *       line extends past the bar to where the turn would actually finish.</li>
+     * </ul>
+     * They line up exactly (all normal colour) when duration == needed. Letting
+     * the turn finish is what keeps a FOLLOWING keyframe's start equal to the
+     * character's real orientation (see Character.orientationOfOriAt) -- so this
+     * tail is the authoring guide for avoiding the "starts from last-known
+     * orientation" jump.
+     */
+    private void drawOrientationTail(Graphics g, int e, KeyFrame[] keyFrames,
+            OrientationKeyFrame okf, double zoomFactor, int x, int y, int imageHeight)
+    {
+        int lineY = y + imageHeight / 2;
+        Color normalColor = g.getColor();
+        double duration = okf.getDuration();
+
+        // Right edge of the SOLID (authored) bar is clamped to the next
+        // keyframe so adjacent tails don't overlap -- same rule drawTail uses.
+        // POSITIVE_INFINITY when there's no following keyframe.
+        double tickLimit = (e + 1 < keyFrames.length)
+                ? keyFrames[e + 1].getTick() - okf.getTick()
+                : Double.POSITIVE_INFINITY;
+
+        double turnRate = okf.getTurnRate();
+        int difference = com.creatorskit.programming.orientation.Orientation
+                .directionalDifference(okf.getStart(), okf.getEnd(), okf.getTurnDirection());
+        double ratio = (double) net.runelite.api.Constants.GAME_TICK_LENGTH
+                / net.runelite.api.Constants.CLIENT_TICK_LENGTH;
+
+        // No turn to make, or a turn rate that can never resolve -> plain bar.
+        if (difference == 0 || turnRate <= 0)
+        {
+            drawTailRange(g, normalColor, lineY, x, 0, Math.min(duration, tickLimit), zoomFactor);
+            return;
+        }
+
+        double needed = Math.abs(difference) / (turnRate * ratio);
+
+        // Normal portion: icon -> min(duration, needed), never past the next kf.
+        drawTailRange(g, normalColor, lineY, x, 0,
+                Math.min(Math.min(duration, needed), tickLimit), zoomFactor);
+
+        if (duration > needed)
+        {
+            // Duration too long: red excess [needed, duration] (clamped to next kf).
+            drawTailRange(g, EXCESS_RED, lineY, x, needed, Math.min(duration, tickLimit), zoomFactor);
+        }
+        else if (duration < needed)
+        {
+            // Duration too short: green phantom [duration, needed]. Allowed past
+            // the next keyframe (capped at the component edge) so the overflow
+            // -- the signal the turn can't finish in time -- stays visible.
+            drawTailRange(g, PHANTOM_GREEN, lineY, x, duration, needed, zoomFactor);
+        }
+
+        g.setColor(normalColor);
+    }
+
+    /**
+     * Draws a horizontal tail segment over the tick range [fromTicks, toTicks),
+     * measured from the keyframe icon at pixel {@code x}. No-op for an empty
+     * range; the right edge is capped at the component width so a long phantom
+     * line never paints off-canvas.
+     */
+    private void drawTailRange(Graphics g, Color color, int lineY, int x,
+            double fromTicks, double toTicks, double zoomFactor)
+    {
+        if (toTicks <= fromTicks) return;
+        int x0 = x + (int) (fromTicks * zoomFactor);
+        int x1 = x + (int) (toTicks * zoomFactor);
+        int maxX = getWidth();
+        if (x1 > maxX) x1 = maxX;
+        if (x1 <= x0) return;
+        g.setColor(color);
+        g.drawLine(x0, lineY, x1 - 1, lineY);
     }
 
     @Override
