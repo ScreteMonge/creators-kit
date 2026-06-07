@@ -736,18 +736,21 @@ public class Character
     }
 
     /**
-     * The character's resolved orientation when ENTERING a Movement keyframe
-     * that starts at {@code movementTick}, IF an Orientation keyframe was the
-     * most recent thing driving its rotation -- its real, turn-rate-clamped end
-     * angle (POINT or Face Target, via {@link #orientationOfOriAt}). Returns
-     * null when no Orientation keyframe precedes the movement, OR when a
-     * Movement keyframe ended more recently than that Orientation keyframe (in
-     * which case the prior movement's own direction is the real entry, which
-     * the movement auto-orient already handles -- so we leave it unchanged).
-     *
-     * <p>Lets a Movement's auto-orient TURN from where an Orientation keyframe
-     * left the character toward the first path segment, instead of snapping --
-     * the Orientation -&gt; Movement chaining counterpart of the start fix.
+     * The character's orientation when ENTERING a Movement keyframe that starts
+     * at {@code movementTick}: the angle of whichever source last drove its
+     * rotation, so the movement's auto-orient can TURN from there toward the
+     * first path segment instead of snapping. Picks the source that ENDED LAST
+     * (ties to orientation, matching {@link #computeOrientationStartFor}):
+     * <ul>
+     *   <li>an Orientation keyframe -&gt; its resolved end angle (POINT or Face
+     *       Target, via {@link #orientationOfOriAt});</li>
+     *   <li>a Movement keyframe -&gt; its final-segment direction
+     *       ({@link #movementFinalDirection}) -- this is what chains
+     *       movement-&gt;movement so sub-1-tick steps turn from the previous
+     *       step's facing instead of snapping/skipping.</li>
+     * </ul>
+     * Returns null only when nothing precedes the movement (the auto-orient then
+     * keeps its snap-to-first-segment default).
      */
     public Integer orientationEnteringMovement(double movementTick)
     {
@@ -765,16 +768,7 @@ public class Character
                 }
             }
         }
-        if (priorOri == null)
-        {
-            return null;
-        }
 
-        double oriEnd = priorOri.getTick() + priorOri.getDuration();
-
-        // If a Movement keyframe drove rotation more recently than the prior
-        // Orientation keyframe, that movement's final direction is the real
-        // entry -- not the stale ori. Leave the auto-orient unchanged then.
         MovementKeyFrame priorMkf = null;
         KeyFrame[] mkfs = getKeyFrames(KeyFrameType.MOVEMENT);
         if (mkfs != null)
@@ -788,19 +782,30 @@ public class Character
                 }
             }
         }
-        if (priorMkf != null
+        boolean mkfUsable = priorMkf != null
                 && priorMkf.getPath() != null
                 && priorMkf.getPath().length >= 2
-                && priorMkf.getSpeed() > 0)
+                && priorMkf.getSpeed() > 0;
+
+        if (priorOri == null && !mkfUsable)
         {
-            double mkfEnd = priorMkf.getTick() + (priorMkf.getPath().length - 1) / priorMkf.getSpeed();
-            if (mkfEnd > oriEnd)
-            {
-                return null;
-            }
+            return null;
         }
 
-        return orientationOfOriAt(priorOri, movementTick);
+        double oriEnd = priorOri != null
+                ? priorOri.getTick() + priorOri.getDuration()
+                : Double.NEGATIVE_INFINITY;
+        double mkfEnd = mkfUsable
+                ? priorMkf.getTick() + (priorMkf.getPath().length - 1) / priorMkf.getSpeed()
+                : Double.NEGATIVE_INFINITY;
+
+        // Whichever source ended LAST is where the character is actually facing
+        // as the new movement begins. Ties go to the orientation keyframe.
+        if (priorOri != null && oriEnd >= mkfEnd)
+        {
+            return orientationOfOriAt(priorOri, movementTick);
+        }
+        return movementFinalDirection(priorMkf);
     }
 
     /**
