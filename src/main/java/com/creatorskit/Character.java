@@ -602,14 +602,12 @@ public class Character
                 && priorMkf.getSpeed() > 0;
         if (mkfUsable)
         {
-            // Match Programmer.findLastOrientation's pathDuration formula
-            // (Math.ceil((length - 1) / speed)) so the "end tick" computed
-            // here lines up exactly with the play-loop's notion of when
-            // movement finishes. Without ceil, fractional speeds make this
-            // value slightly less than the play loop's, so the tie check
-            // below can fire "true tie" when one side thinks they're
-            // tied and the other thinks movement ends later.
-            double pathDur = Math.ceil((priorMkf.getPath().length - 1) / priorMkf.getSpeed());
+            // Exact (fractional) movement length: (steps) / speed, no ceil.
+            // Movements can finish in less than a whole tick, and the play
+            // loop finishes them at exactly this fractional tick -- so the
+            // "ended last" comparison uses the real end. Mirrors
+            // Programmer.findLastOrientation, which also drops the ceil.
+            double pathDur = (priorMkf.getPath().length - 1) / priorMkf.getSpeed();
             mkfEnd = priorMkf.getTick() + pathDur;
         }
 
@@ -795,7 +793,7 @@ public class Character
                 && priorMkf.getPath().length >= 2
                 && priorMkf.getSpeed() > 0)
         {
-            double mkfEnd = priorMkf.getTick() + Math.ceil((priorMkf.getPath().length - 1) / priorMkf.getSpeed());
+            double mkfEnd = priorMkf.getTick() + (priorMkf.getPath().length - 1) / priorMkf.getSpeed();
             if (mkfEnd > oriEnd)
             {
                 return null;

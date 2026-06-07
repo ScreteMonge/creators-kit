@@ -693,7 +693,10 @@ public class Programmer
             return new OrientationInstruction(KeyFrameType.ORIENTATION, false);
         }
 
-        double pathDuration = Math.ceil((mkf.getPath().length - 1) / mkf.getSpeed());
+        // Exact fractional length (no ceil): the movement finishes at this
+        // tick during playback, so the orientation handoff uses the real end
+        // rather than a 1-tick-floored one.
+        double pathDuration = (mkf.getPath().length - 1) / mkf.getSpeed();
         double movementEndTick = (mkf.getTick() + pathDuration) * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH;
 
         if (oriEndClientTick >= movementEndTick)
@@ -2603,7 +2606,10 @@ public class Programmer
             return KeyFrameType.ORIENTATION;
         }
 
-        double pathDuration = Math.ceil((mkf.getPath().length - 1) / mkf.getSpeed());
+        // Exact fractional length (no ceil): the movement finishes at this
+        // tick during playback, so the orientation handoff uses the real end
+        // rather than a 1-tick-floored one.
+        double pathDuration = (mkf.getPath().length - 1) / mkf.getSpeed();
         double movementEndTick = mkf.getTick() + pathDuration;
 
         if (oriEndTick >= movementEndTick)

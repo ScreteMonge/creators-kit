@@ -1636,13 +1636,11 @@ public class TimeSheetPanel extends JPanel
         initializeMovementKeyFrame(selectedCharacter, currentTime, worldView.getPlane(), poh, path, false, stepSpeed, defaultMovementTurnRate);
 
         // Auto-advance the seeker to the end of the kf we just placed so
-        // consecutive add-step presses chain naturally. Ceil the duration
-        // so the seeker lands on an integer tick that matches
-        // AttributeSheet's ceil()-rounded movement-bar width -- without
-        // this, fractional durations (e.g. 3 tiles at speed 2 = 1.5
-        // ticks) put the seeker between integer ticks while the visual
-        // bar extends to the next integer, looking like a 0.5-tick
-        // overlap for whatever step the user adds next.
+        // consecutive add-step presses chain naturally. Use the EXACT
+        // (fractional) duration -- no ceil -- so the seeker lands on the
+        // movement's real end and matches the (now also un-ceiled) bar width.
+        // Movements can be shorter than a whole tick; we no longer floor them
+        // to 1 tick.
         //
         // This runs on the CLIENT THREAD (onAddMovement is reached from
         // onClientTick -> addProgramStep and from the right-click menu's
@@ -1651,8 +1649,10 @@ public class TimeSheetPanel extends JPanel
         // landing tick clears the previous keyframe, so the occupied-tick
         // guard above does NOT fire on the chained next press.
         double tilesMoved = Math.max(0, path.length - 1);
-        double newDuration = Math.ceil(tilesMoved / Math.max(0.0001, stepSpeed));
-        setCurrentTime(currentTime + newDuration, false);
+        double newDuration = tilesMoved / Math.max(0.0001, stepSpeed);
+        // round() snaps to the timeline's 0.1 granularity (what play steps in),
+        // so the seeker lands on-grid -- but it is NOT floored to a whole tick.
+        setCurrentTime(round(currentTime + newDuration), false);
 
         programmer.register3DChanges(selectedCharacter);
     }
