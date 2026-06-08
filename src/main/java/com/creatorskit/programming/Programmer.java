@@ -1243,7 +1243,14 @@ public class Programmer
         }
 
         double angle = Orientation.getAngleBetween(previous, start);
-        return new MovementComposition(false, start, OrientationAction.SET, (int) angle, 0);
+        // Last tile of the path (no destination beyond it). Honour the caller's
+        // orientationAction instead of hard-coding SET: during PLAY this is
+        // ADJUST, so the facing EASES from the live angle toward the final
+        // segment instead of snapping. Snapping here made each chained movement
+        // jump to its own direction at its end -- the play-path "skipping" on
+        // sub-1-tick steps. Scrub still passes SET, so its behaviour is
+        // unchanged.
+        return new MovementComposition(false, start, orientationAction, (int) angle, 0);
     }
 
     private int getOrientationFromTick(LocalPoint previous, LocalPoint start, double angle, int clientTicksPassed, int currentStep, double speed, double turnRate, Integer entryOrientation)
