@@ -1273,7 +1273,16 @@ public class Programmer
             return (int) angle;
         }
 
-        double ticksSinceLastStep = (clientTicksPassed * speed) - (((double) currentStep) * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH);
+        // Client ticks elapsed WITHIN the current step. Step k is reached at
+        // (k / speed) game ticks = k * (GAME/CLIENT) / speed client ticks, so
+        // ticks-into-step = clientTicksPassed - that. The old formula multiplied
+        // clientTicksPassed by speed instead of dividing the step boundary by
+        // it, which over-scaled the turn by `speed`: for speed > 1 the facing
+        // raced to the goal ("skipping ahead"); only speed == 1 was correct.
+        // turnRate is JUnits per client tick, so change is the JUnits turned so
+        // far in this step -- a constant angular rate that matches the play path.
+        double ratio = Constants.GAME_TICK_LENGTH / (double) Constants.CLIENT_TICK_LENGTH;
+        double ticksSinceLastStep = clientTicksPassed - (currentStep * ratio / speed);
         double change = turnRate * ticksSinceLastStep;
 
         if (angleDifference > (change * -1) && angleDifference < change)
