@@ -293,22 +293,14 @@ public class Programmer
                 continue;
             }
 
-            double endSpeed = (pathLength - 1) - (Math.floor(((pathLength - 1) / tileSpeed)) * tileSpeed);
+            // Constant-speed movement: traverse the whole path at tileSpeed.
+            // The old "endSpeed" slowdown stretched a final step that wasn't a
+            // whole multiple of the speed to a full tick (OSRS whole-tile-per-
+            // tick), so e.g. 1 tile at speed 2 crept at speed 1 and only reached
+            // 0.5 tiles at its (fractional, 0.5-tick) end. Dropping it lets the
+            // model cover the full distance in the fractional duration that
+            // matches the bar / placement seeker.
             double finalSpeed = tileSpeed;
-
-            if (stepsComplete + endSpeed > pathLength - 1)
-            {
-                double jumps = (pathLength - 1) % tileSpeed;
-                if (jumps != 0)
-                {
-                    double ticksPreSlowdown = (pathLength - 1 - endSpeed) / tileSpeed;
-                    double stepsPreSlowdown = ticksPreSlowdown * tileSpeed;
-
-                    stepsComplete = ((clientTicksPassed) - (ticksPreSlowdown * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH)) * endSpeed * Constants.CLIENT_TICK_LENGTH / Constants.GAME_TICK_LENGTH + stepsPreSlowdown;
-                    currentStep = (int) (stepsComplete);
-                    finalSpeed = endSpeed;
-                }
-            }
 
             if (currentStep > pathLength)
             {
@@ -2540,22 +2532,11 @@ public class Programmer
         int clientTicksPassed = (int) (timePassed * Constants.GAME_TICK_LENGTH / Constants.CLIENT_TICK_LENGTH);
         double stepsComplete = timePassed * tileSpeed;
         int currentStep = (int) Math.floor(stepsComplete);
-        double endSpeed = (pathLength - 1) - (Math.floor(((pathLength - 1) / tileSpeed)) * tileSpeed);
+        // Constant-speed movement (see updateCharacter3D): no end-of-path
+        // slowdown, so a step that isn't a whole multiple of the speed (e.g.
+        // 1 tile at speed 2) still covers its full distance in its fractional
+        // duration instead of being slowed to a whole-tile-per-tick OSRS run.
         double finalSpeed = tileSpeed;
-
-        if (stepsComplete + endSpeed > pathLength - 1)
-        {
-            double jumps = (pathLength - 1) % tileSpeed;
-            if (jumps != 0)
-            {
-                double ticksPreSlowdown = (pathLength - 1 - endSpeed) / tileSpeed;
-                double stepsPreSlowdown = ticksPreSlowdown * tileSpeed;
-
-                stepsComplete = (timePassed - ticksPreSlowdown) * endSpeed + stepsPreSlowdown;
-                currentStep = (int) (stepsComplete);
-                finalSpeed = endSpeed;
-            }
-        }
 
         if (currentStep > pathLength)
         {
