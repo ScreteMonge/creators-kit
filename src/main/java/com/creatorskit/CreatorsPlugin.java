@@ -31,6 +31,8 @@ import net.runelite.client.config.Keybind;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.externalplugins.ExternalPluginManager;
+import net.runelite.client.externalplugins.PluginHubManifest;
 import net.runelite.client.input.KeyManager;
 import net.runelite.client.input.MouseListener;
 import net.runelite.client.input.MouseManager;
@@ -938,6 +940,18 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	public ArrayList<ComplexPanel> getComplexPanels()
 	{
 		return creatorsPanel.getModelAnvil().getComplexPanels();
+	}
+
+	public static String getPluginVersion()
+	{
+		PluginHubManifest.DisplayData displayData = ExternalPluginManager.getDisplayData(CreatorsPlugin.class);
+
+		if (displayData != null && displayData.getVersion() != null)
+		{
+			return displayData.getVersion();
+		}
+
+		return "1000.0.0";
 	}
 
 	private final HotkeyListener overlayKeyListener = new HotkeyListener(() -> config.toggleOverlaysHotkey())

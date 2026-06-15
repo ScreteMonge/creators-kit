@@ -1296,7 +1296,7 @@ public class CreatorsPanel extends PluginPanel
         //Get Folder structure and all characters contained within
         FolderNodeSave folderNodeSave = getFolders(comps);
 
-        SetupSave saveFile = new SetupSave(getPluginVersion(), comps, folderNodeSave, new CharacterSave[0]);
+        SetupSave saveFile = new SetupSave(CreatorsPlugin.getPluginVersion(), comps, folderNodeSave, new CharacterSave[0]);
 
         try
         {
@@ -1885,26 +1885,6 @@ public class CreatorsPanel extends PluginPanel
         {
             File selectedFile = fileChooser.getSelectedFile();
             toolBox.getModelUtilities().loadCustomModel(selectedFile);
-        }
-    }
-
-    private String getPluginVersion()
-    {
-        try (InputStream is = CreatorsPlugin.class.getResourceAsStream("/version.txt"))
-        {
-            if (is == null)
-            {
-                return "0.0.0";
-            }
-
-            String text = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8)).readLine();
-            String version = text.split("=")[1];
-            is.close();
-            return version;
-        }
-        catch (IOException e)
-        {
-            return "0.0.0";
         }
     }
 
