@@ -197,6 +197,18 @@ public class ToolBoxFrame extends JFrame
             int x = Integer.parseInt(point[0]);
             int y = Integer.parseInt(point[1]);
             setLocation(x, y);
+
+            Point frameAnchor = new Point(0, 0);
+            SwingUtilities.convertPointToScreen(frameAnchor, this);
+
+            GraphicsConfiguration gc = getGraphicsConfiguration();
+            Rectangle screenBounds = gc.getBounds();
+
+            if (!screenBounds.contains(frameAnchor))
+            {
+                setLocation(0, 0);
+                System.out.println("Resetting");
+            }
         }
         catch (Exception e)
         {
