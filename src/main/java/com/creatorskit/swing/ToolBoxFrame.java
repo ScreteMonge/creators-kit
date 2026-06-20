@@ -207,7 +207,6 @@ public class ToolBoxFrame extends JFrame
             if (!screenBounds.contains(frameAnchor))
             {
                 setLocation(0, 0);
-                System.out.println("Resetting");
             }
         }
         catch (Exception e)
