@@ -409,7 +409,7 @@ public class ModelAnvil extends JPanel
             }
             else
             {
-                renderPanel.updateModel(md, getLightingSettings());
+                renderPanel.updateModel(md, getLightingSettings(), true);
             }
         });
     }

@@ -129,26 +129,31 @@ public class RenderPanel extends JPanel
     public void updateAnimation(Animation animation)
     {
         ac.setAnimation(animation);
+        Model animated = ac.animate(model);
+        updateModelParameters(animated);
         repaint();
     }
 
-    public void updateModel(ModelData md, LightingStyle ls)
+    public void updateModel(ModelData md, LightingStyle ls, boolean shouldRepaint)
     {
-        updateModel(md, new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getY(), ls.getZ()));
+        updateModel(md, new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getY(), ls.getZ()), shouldRepaint);
     }
 
-    public void updateModel(ModelData md, CustomLighting ls)
+    public void updateModel(ModelData md, CustomLighting ls, boolean shouldRepaint)
     {
         Model m = md.light(ls.getAmbient(), ls.getContrast(), ls.getX(), -ls.getZ(), ls.getY());
-        updateModel(m);
+        updateModel(m, shouldRepaint);
     }
 
-    public void updateModel(Model m)
+    public void updateModel(Model m, boolean shouldRepaint)
     {
         model = m;
         modelExists = true;
         updateModelParameters(model);
-        repaint();
+        if (shouldRepaint)
+        {
+            repaint();
+        }
     }
 
     public void toggleAnimations(boolean enable)

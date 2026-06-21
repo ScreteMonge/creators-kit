@@ -138,7 +138,7 @@ public class ModelOrganizer extends JPanel
             if (o instanceof CustomModel)
             {
                 CustomModel model = (CustomModel) o;
-                clientThread.invokeLater(() -> renderPanel.updateModel(model.getModel()));
+                clientThread.invokeLater(() -> renderPanel.updateModel(model.getModel(), true));
             }
         });
         add(scrollPane, c);

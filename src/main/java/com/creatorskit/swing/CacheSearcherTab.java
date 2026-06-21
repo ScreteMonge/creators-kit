@@ -10,6 +10,7 @@ import com.creatorskit.swing.searchabletable.TableRenderStyle;
 import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import net.runelite.api.Animation;
 import net.runelite.api.Client;
 import net.runelite.api.ModelData;
 import net.runelite.client.RuneLite;
@@ -69,9 +70,11 @@ public class CacheSearcherTab extends JPanel
 
     private final JComboBox<CustomModelType> itemType = new JComboBox<>();
     private final JPanel display = new JPanel();
+    private final JCheckBox defaultAnimations = new JCheckBox("Default Animations");
     public static final File SOUNDS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/sound-exports");
 
     private CustomModelType selectedType;
+    private int lastDefaultAnimation = -1;
 
     @Inject
     public CacheSearcherTab(Client client, CreatorsPlugin plugin, ClientThread clientThread, DataFinder dataFinder, ModelUtilities modelUtilities, OkHttpClient httpClient)
@@ -188,7 +191,7 @@ public class CacheSearcherTab extends JPanel
                     if (npc instanceof NPCData)
                     {
                         NPCData data = (NPCData) npc;
-                        updateRenderPanel(CustomModelType.CACHE_NPC, data.getId(), renderAll, modelId);
+                        updateRenderPanel(CustomModelType.CACHE_NPC, data.getId(), renderAll, modelId, data.getStandingAnimation());
                     }
                     break;
                 case CACHE_OBJECT:
@@ -196,7 +199,7 @@ public class CacheSearcherTab extends JPanel
                     if (object instanceof ObjectData)
                     {
                         ObjectData data = (ObjectData) object;
-                        updateRenderPanel(CustomModelType.CACHE_OBJECT, data.getId(), renderAll, modelId);
+                        updateRenderPanel(CustomModelType.CACHE_OBJECT, data.getId(), renderAll, modelId, data.getAnimationId());
                     }
                     break;
                 case CACHE_GROUND_ITEM:
@@ -206,7 +209,7 @@ public class CacheSearcherTab extends JPanel
                     if (item instanceof ItemData)
                     {
                         ItemData data = (ItemData) item;
-                        updateRenderPanel(selectedType, data.getId(), renderAll, modelId);
+                        updateRenderPanel(selectedType, data.getId(), renderAll, modelId, -1);
                     }
                     break;
                 case CACHE_SPOTANIM:
@@ -214,7 +217,7 @@ public class CacheSearcherTab extends JPanel
                     if (spotAnim instanceof SpotanimData)
                     {
                         SpotanimData data = (SpotanimData) spotAnim;
-                        updateRenderPanel(selectedType, data.getId(), renderAll, modelId);
+                        updateRenderPanel(selectedType, data.getId(), renderAll, modelId, data.getAnimationId());
                     }
                     break;
                 default:
@@ -225,8 +228,9 @@ public class CacheSearcherTab extends JPanel
         holderPanel.add(modelTable, c);
     }
 
-    private void updateRenderPanel(CustomModelType type, int id, boolean renderAll, int modelId)
+    private void updateRenderPanel(CustomModelType type, int id, boolean renderAll, int modelId, int defaultAnimation)
     {
+        lastDefaultAnimation = defaultAnimation;
         ModelStats[] modelStats = new ModelStats[0];
         LightingStyle ls = LightingStyle.DEFAULT;
 
@@ -255,6 +259,18 @@ public class CacheSearcherTab extends JPanel
             return;
         }
 
+        int animId = defaultAnimation;
+        if (!defaultAnimations.isSelected())
+        {
+            Object o = animTable.getSelectedObject();
+            if (o instanceof AnimData)
+            {
+                AnimData data = (AnimData) o;
+                animId = data.getId();
+            }
+        }
+
+        final int anim = animId;
         LightingStyle finalLs = ls;
         if (renderAll)
         {
@@ -262,7 +278,9 @@ public class CacheSearcherTab extends JPanel
             clientThread.invokeLater(() ->
             {
                 ModelData md = modelUtilities.constructModelDataFromCache(allModelStats, new int[0], false);
-                renderPanel.updateModel(md, finalLs);
+                Animation animation = client.loadAnimation(anim);
+                renderPanel.updateModel(md, finalLs, false);
+                renderPanel.updateAnimation(animation);
             });
             return;
         }
@@ -274,7 +292,9 @@ public class CacheSearcherTab extends JPanel
                 clientThread.invokeLater(() ->
                 {
                     ModelData md = modelUtilities.constructModelDataFromCache(new ModelStats[]{modelStat}, new int[0], false);
-                    renderPanel.updateModel(md, finalLs);
+                    Animation animation = client.loadAnimation(anim);
+                    renderPanel.updateModel(md, finalLs, false);
+                    renderPanel.updateAnimation(animation);
                 });
                 return;
             }
@@ -332,6 +352,11 @@ public class CacheSearcherTab extends JPanel
         animate.setSelected(true);
         animate.addActionListener(e -> clientThread.invokeLater(() -> renderPanel.toggleAnimations(animate.isSelected())));
         controlPanel.add(animate);
+
+        defaultAnimations.setSelected(false);
+        defaultAnimations.setToolTipText("Display and Store/Add with default animations");
+        defaultAnimations.addActionListener(e -> clientThread.invokeLater(() -> renderPanel.updateAnimation(client.loadAnimation(lastDefaultAnimation))));
+        controlPanel.add(defaultAnimations);
 
         JPanel buttonPanel = new JPanel(new GridLayout(0, 3, 3, 3));
         footer.add(buttonPanel, BorderLayout.SOUTH);
@@ -512,7 +537,7 @@ public class CacheSearcherTab extends JPanel
                 idleLeft.setText("Idle Left: " + data.getIdleRotateLeftAnimation());
 
                 selectedType = CustomModelType.CACHE_NPC;
-                updateRenderPanel(CustomModelType.CACHE_NPC, data.getId(), true, -1);
+                updateRenderPanel(CustomModelType.CACHE_NPC, data.getId(), true, -1, data.getStandingAnimation());
                 updateModelBreakdownTable(data.getModels());
             }
         });
@@ -560,7 +585,7 @@ public class CacheSearcherTab extends JPanel
                 ObjectData data = (ObjectData) o;
 
                 selectedType = CustomModelType.CACHE_OBJECT;
-                updateRenderPanel(CustomModelType.CACHE_OBJECT, data.getId(), true, -1);
+                updateRenderPanel(CustomModelType.CACHE_OBJECT, data.getId(), true, -1, data.getAnimationId());
                 updateModelBreakdownTable(data.getObjectModels());
             }
         });
@@ -679,7 +704,7 @@ public class CacheSearcherTab extends JPanel
                 int itemId = data.getId();
 
                 selectedType = (CustomModelType) itemType.getSelectedItem();
-                updateRenderPanel(selectedType, itemId, true, -1);
+                updateRenderPanel(selectedType, itemId, true, -1, -1);
 
                 int[] modelIds;
                 switch (selectedType)
@@ -822,7 +847,7 @@ public class CacheSearcherTab extends JPanel
                 SpotanimData data = (SpotanimData) o;
 
                 selectedType = CustomModelType.CACHE_SPOTANIM;
-                updateRenderPanel(CustomModelType.CACHE_SPOTANIM, data.getId(), true, -1);
+                updateRenderPanel(CustomModelType.CACHE_SPOTANIM, data.getId(), true, -1, data.getAnimationId());
                 updateModelBreakdownTable(new int[]{data.getModelId()});
             }
         });
@@ -856,12 +881,15 @@ public class CacheSearcherTab extends JPanel
 
         animTable.getSelectionModel().addListSelectionListener(e ->
         {
-            Object o = animTable.getSelectedObject();
-            if (o instanceof AnimData)
+            if (!defaultAnimations.isSelected())
             {
-                AnimData data = (AnimData) o;
-                int animId = data.getId();
-                clientThread.invokeLater(() -> renderPanel.updateAnimation(client.loadAnimation(animId)));
+                Object o = animTable.getSelectedObject();
+                if (o instanceof AnimData)
+                {
+                    AnimData data = (AnimData) o;
+                    int animId = data.getId();
+                    clientThread.invokeLater(() -> renderPanel.updateAnimation(client.loadAnimation(animId)));
+                }
             }
         });
 
@@ -1251,7 +1279,7 @@ public class CacheSearcherTab extends JPanel
                 ItemData data = (ItemData) o;
 
                 CustomModelType type = (CustomModelType) itemType.getSelectedItem();
-                updateRenderPanel(type, data.getId(), true, -1);
+                updateRenderPanel(type, data.getId(), true, -1, -1);
 
                 int[] modelIds;
                 switch (type)
@@ -1748,11 +1776,14 @@ public class CacheSearcherTab extends JPanel
                 }
         }
 
-        Object anim = animTable.getSelectedObject();
-        if (anim instanceof AnimData)
+        if (!defaultAnimations.isSelected())
         {
-            AnimData data = (AnimData) anim;
-            animId = data.getId();
+            Object anim = animTable.getSelectedObject();
+            if (anim instanceof AnimData)
+            {
+                AnimData data = (AnimData) anim;
+                animId = data.getId();
+            }
         }
 
         modelUtilities.cacheToCustomModel(selectedType, id, -1, size, name, animId, addObject, akf);
