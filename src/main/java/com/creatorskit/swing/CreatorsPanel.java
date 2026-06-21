@@ -44,7 +44,6 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.LocalTime;
 import java.util.*;
@@ -1131,57 +1130,64 @@ public class CreatorsPanel extends PluginPanel
         jPanel.setBorder(defaultBorder);
     }
 
-    public void addModelOption(CustomModel model, boolean setComboBox)
+    public void addModelOptions(CustomModel[] models, boolean setComboBox)
     {
-        modelOrganizer.createModelPanel(model);
+        modelOrganizer.addModels(models);
         Character selectedCharacter = plugin.getSelectedCharacter();
 
-        toolBox.getTimeSheetPanel()
-                .getAttributePanel()
-                .getModelAttributes()
-                .getCustomModel()
-                .addItem(model);
-
-        for (JComboBox<CustomModel> comboBox : comboBoxes)
+        for (CustomModel model : models)
         {
-            comboBox.addItem(model);
-            if (!setComboBox || selectedCharacter == null)
-            {
-                continue;
-            }
+            toolBox.getTimeSheetPanel()
+                    .getAttributePanel()
+                    .getModelAttributes()
+                    .getCustomModel()
+                    .addItem(model);
 
-            JComboBox<CustomModel> selectedBox = selectedCharacter.getComboBox();
-            if (comboBox == selectedBox)
+            for (JComboBox<CustomModel> comboBox : comboBoxes)
             {
-                comboBox.setSelectedItem(model);
-                selectedCharacter.setCustomMode(true);
-                selectedCharacter.getModelButton().setText("Custom");
-
-                if (selectedCharacter.getModelSpinner().isVisible() || comboBox.isVisible())
+                comboBox.addItem(model);
+                if (!setComboBox || selectedCharacter == null)
                 {
-                    comboBox.setVisible(true);
-                    selectedCharacter.getModelSpinner().setVisible(false);
+                    continue;
                 }
-            }
 
-            selectedCharacter.setStoredModel(model);
-            selectedCharacter.setToBaseModel(client, clientThread, true, -1);
+                JComboBox<CustomModel> selectedBox = selectedCharacter.getComboBox();
+                if (comboBox == selectedBox)
+                {
+                    comboBox.setSelectedItem(model);
+                    selectedCharacter.setCustomMode(true);
+                    selectedCharacter.getModelButton().setText("Custom");
+
+                    if (selectedCharacter.getModelSpinner().isVisible() || comboBox.isVisible())
+                    {
+                        comboBox.setVisible(true);
+                        selectedCharacter.getModelSpinner().setVisible(false);
+                    }
+                }
+
+                selectedCharacter.setStoredModel(model);
+                selectedCharacter.setToBaseModel(client, clientThread, true, -1);
+            }
         }
     }
 
-    public void removeModelOption(CustomModel model)
+    public void removeModelOptions(CustomModel[] models)
     {
-        toolBox.getTimeSheetPanel()
-                .getAttributePanel()
-                .getModelAttributes()
-                .getCustomModel()
-                .removeItem(model);
-
-        for (JComboBox<CustomModel> comboBox : comboBoxes)
+        for (CustomModel model : models)
         {
-            comboBox.removeItem(model);
+            toolBox.getTimeSheetPanel()
+                    .getAttributePanel()
+                    .getModelAttributes()
+                    .getCustomModel()
+                    .removeItem(model);
+
+            for (JComboBox<CustomModel> comboBox : comboBoxes)
+            {
+                comboBox.removeItem(model);
+            }
         }
-        modelOrganizer.removeModelPanel(model);
+
+        modelOrganizer.removeModels(models);
     }
 
     public Color getRandomColor()
@@ -1610,9 +1616,10 @@ public class CreatorsPanel extends PluginPanel
                     customModel = new CustomModel(model, comp);
             }
 
-            modelUtilities.addCustomModel(customModel, false);
             customModels[i] = customModel;
         }
+
+        modelUtilities.addCustomModels(customModels, false);
 
         ManagerTree managerTree = toolBox.getManagerPanel().getManagerTree();
         DefaultMutableTreeNode rootNode = managerTree.getRootNode();

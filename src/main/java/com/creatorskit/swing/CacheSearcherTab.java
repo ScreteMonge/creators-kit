@@ -6,6 +6,7 @@ import com.creatorskit.models.*;
 import com.creatorskit.models.datatypes.*;
 import com.creatorskit.swing.renderer.RenderPanel;
 import com.creatorskit.swing.searchabletable.JFilterableTable;
+import com.creatorskit.swing.searchabletable.TableRenderStyle;
 import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -58,13 +59,13 @@ public class CacheSearcherTab extends JPanel
     @Getter
     private RenderPanel renderPanel;
 
-    private final JFilterableTable npcTable = new JFilterableTable("NPCs");
-    private final JFilterableTable objectTable = new JFilterableTable("Objects");
-    private final JFilterableTable itemTable = new JFilterableTable("Items");
-    private final JFilterableTable animTable = new JFilterableTable("Animations");
-    private final JFilterableTable spotAnimTable = new JFilterableTable("SpotAnims");
-    private final JFilterableTable soundTable = new JFilterableTable("Sounds");
-    private final JFilterableTable modelTable = new JFilterableTable("Model Id Breakdown");
+    private final JFilterableTable npcTable = new JFilterableTable("NPCs", TableRenderStyle.HIGHLIGHT_SEARCH);
+    private final JFilterableTable objectTable = new JFilterableTable("Objects", TableRenderStyle.HIGHLIGHT_SEARCH);
+    private final JFilterableTable itemTable = new JFilterableTable("Items", TableRenderStyle.HIGHLIGHT_SEARCH);
+    private final JFilterableTable animTable = new JFilterableTable("Animations", TableRenderStyle.HIGHLIGHT_SEARCH);
+    private final JFilterableTable spotAnimTable = new JFilterableTable("SpotAnims", TableRenderStyle.HIGHLIGHT_SEARCH);
+    private final JFilterableTable soundTable = new JFilterableTable("Sounds", TableRenderStyle.HIGHLIGHT_SEARCH);
+    private final JFilterableTable modelTable = new JFilterableTable("Model Id Breakdown", TableRenderStyle.HIGHLIGHT_SEARCH);
 
     private final JComboBox<CustomModelType> itemType = new JComboBox<>();
     private final JPanel display = new JPanel();

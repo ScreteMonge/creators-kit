@@ -1,17 +1,16 @@
 package com.creatorskit.swing;
 
 import com.creatorskit.Character;
-import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
-import com.creatorskit.CKObject;
 import com.creatorskit.models.ModelImporter;
 import com.creatorskit.models.*;
 import com.creatorskit.models.exporters.ModelExporter;
-import com.creatorskit.programming.AnimationType;
+import com.creatorskit.swing.renderer.RenderPanel;
+import com.creatorskit.swing.searchabletable.JFilterableTable;
+import com.creatorskit.swing.searchabletable.TableRenderStyle;
 import com.creatorskit.swing.timesheet.keyframe.ModelKeyFrame;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
-import net.runelite.api.coords.LocalPoint;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
@@ -25,267 +24,278 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.filechooser.FileFilter;
 import java.awt.*;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.List;
 
 @Slf4j
 public class ModelOrganizer extends JPanel
 {
     private final Client client;
     private final CreatorsPlugin plugin;
-    private final CreatorsConfig config;
     private final ClientThread clientThread;
     private final ModelImporter modelImporter;
     private final ModelExporter modelExporter;
     private final ModelUtilities modelUtilities;
+
+    private final JFilterableTable table = new JFilterableTable("Custom Models", TableRenderStyle.DEFAULT);
+    private List<CustomModel> customModels = new ArrayList<>();
+    private RenderPanel renderPanel;
 
     private final BufferedImage CLEAR = ImageUtil.loadImageResource(getClass(), "/Clear.png");
     private final BufferedImage ANVIL = ImageUtil.loadImageResource(getClass(), "/Anvil.png");
     private final BufferedImage SAVE = ImageUtil.loadImageResource(getClass(), "/Save.png");
     private final BufferedImage TRANSMOG = ImageUtil.loadImageResource(getClass(), "/Transmog.png");
     private final BufferedImage EXPORT = ImageUtil.loadImageResource(getClass(), "/Export.png");
-    private final Dimension buttonDimension = new Dimension(30, 25);
-    private final HashMap<CustomModel, JPanel> panelMap = new HashMap<>();
-    private final JPanel modelPanel = new JPanel();
     private final GridBagConstraints c = new GridBagConstraints();
     public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
 
     @Inject
-    public ModelOrganizer(Client client, CreatorsPlugin plugin, CreatorsConfig config, ClientThread clientThread, ModelImporter modelImporter, ModelExporter modelExporter, ModelUtilities modelUtilities)
+    public ModelOrganizer(Client client, CreatorsPlugin plugin, ClientThread clientThread, ModelImporter modelImporter, ModelExporter modelExporter, ModelUtilities modelUtilities)
     {
         this.client = client;
         this.plugin = plugin;
-        this.config = config;
         this.clientThread = clientThread;
         this.modelImporter = modelImporter;
         this.modelExporter = modelExporter;
         this.modelUtilities = modelUtilities;
 
+        setupLayout();
+    }
+
+    private void setupLayout()
+    {
         setBackground(ColorScheme.DARK_GRAY_COLOR);
-        setLayout(new BorderLayout());
-
-        JScrollPane scrollPane = new JScrollPane();
-        JPanel headerPanel = new JPanel();
-        headerPanel.setLayout(new GridBagLayout());
-        headerPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        scrollPane.setColumnHeaderView(headerPanel);
-        add(scrollPane);
-
-        JPanel viewport = new JPanel();
-        viewport.setBorder(new EmptyBorder(6, 4, 6, 4));
-        viewport.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        viewport.setLayout(new GridBagLayout());
-        scrollPane.setViewportView(viewport);
-
-        c.weightx = 1;
-        c.weighty = 0;
-        c.gridx = 0;
-        c.gridy = 0;
-        modelPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        modelPanel.setLayout(new GridLayout(0, 8, 8, 8));
-        viewport.add(modelPanel, c);
-
-        c.gridx = 0;
-        c.gridy = 1;
-        c.weightx = 1;
-        c.weighty = 1;
-        JLabel emptyLabel = new JLabel("");
-        viewport.add(emptyLabel, c);
+        setLayout(new GridBagLayout());
 
         c.fill = GridBagConstraints.BOTH;
-        c.insets = new Insets(4, 4, 4, 4);
-        c.weighty = 0;
+        c.insets = new Insets(2, 2, 2, 2);
 
+        c.gridwidth = 2;
+        c.gridheight = 3;
+        c.weightx = 0;
+        c.weighty = 0;
         c.gridx = 0;
         c.gridy = 0;
-        c.gridheight = 4;
-        c.weightx = 10;
-        JLabel organizerLabel = new JLabel("Model Organizer");
+        JLabel organizerLabel = new JLabel("Custom Models");
         organizerLabel.setHorizontalAlignment(SwingConstants.CENTER);
         organizerLabel.setFont(FontManager.getRunescapeBoldFont());
-        headerPanel.add(organizerLabel, c);
+        add(organizerLabel, c);
 
+        c.gridwidth = 2;
+        c.gridheight = 1;
         c.gridx = 2;
         c.gridy = 0;
-        c.gridheight = 1;
-        c.gridwidth = 2;
-        c.weightx = 0.5;
         JButton loadCustomButton = new JButton("Load Saved Model");
         loadCustomButton.setToolTipText("Loads a previously forged and saved Custom Model");
-        headerPanel.add(loadCustomButton, c);
+        add(loadCustomButton, c);
         loadCustomButton.addActionListener(e -> openLoadDialog());
 
-        c.gridx = 2;
-        c.gridy = 1;
         c.gridheight = 1;
         c.gridwidth = 1;
-        c.weightx = 0.5;
+        c.gridx = 2;
+        c.gridy = 1;
         JButton loadBlenderButton = new JButton("Load Blender Model");
         loadBlenderButton.setToolTipText("Loads a model exported from Blender");
-        headerPanel.add(loadBlenderButton, c);
+        add(loadBlenderButton, c);
         loadBlenderButton.addActionListener(e -> modelImporter.openLoadDialog());
 
-        c.gridx = 3;
-        c.gridy = 1;
         c.gridheight = 1;
         c.gridwidth = 1;
-        c.weightx = 0;
+        c.gridx = 3;
+        c.gridy = 1;
         JButton quickLoadBlenderButton = new JButton("Quick");
         quickLoadBlenderButton.setToolTipText("Loads the latest model exported from Blender in the " + RuneLite.RUNELITE_DIR + "\\creatorskit\\blender-models folder");
-        headerPanel.add(quickLoadBlenderButton, c);
+        add(quickLoadBlenderButton, c);
         quickLoadBlenderButton.addActionListener(e -> modelImporter.openLatestFile());
 
+        c.gridheight = 1;
+        c.gridwidth = 2;
         c.gridx = 2;
         c.gridy = 2;
-        c.gridheight = 2;
-        c.gridwidth = 2;
-        c.weightx = 0.5;
         JButton clearButton = new JButton("Clear Unused Models");
         clearButton.setToolTipText("Clears all unused models from Custom Model dropdown menus");
-        headerPanel.add(clearButton, c);
-        clearButton.addActionListener(e ->
+        add(clearButton, c);
+        clearButton.addActionListener(e -> onClearButtonPressed());
+
+        c.gridwidth = 2;
+        c.weightx = 1;
+        c.weighty = 1;
+        c.gridheight = 1;
+        c.gridx = 0;
+        c.gridy = 4;
+        JScrollPane scrollPane = new JScrollPane();
+        scrollPane.setBorder(new LineBorder(ColorScheme.DARK_GRAY_COLOR));
+        table.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        scrollPane.setViewportView(table);
+
+        table.getSelectionModel().addListSelectionListener(e ->
         {
-            ArrayList<CustomModel> unusedModels = new ArrayList<>();
-            CustomModel transmogModel = plugin.getTransmogModel();
-            ArrayList<Character> characters = plugin.getCharacters();
-
-            ArrayList<CustomModel> storedModels = plugin.getStoredModels();
-            for (int i = 0; i < storedModels.size(); i++)
+            Object o = table.getSelectedObject();
+            if (o instanceof CustomModel)
             {
-                CustomModel customModel = storedModels.get(i);
-
-                if (customModel == transmogModel)
-                    continue;
-
-                boolean isBeingUsed = false;
-                for (int x = 0; x < characters.size(); x++)
-                {
-                    Character character = characters.get(x);
-                    if (character.getStoredModel() == customModel)
-                    {
-                        isBeingUsed = true;
-                        break;
-                    }
-
-                    ModelKeyFrame[] modelKeyFrames = character.getModelKeyFrames();
-                    if (modelKeyFrames == null || modelKeyFrames.length == 0)
-                    {
-                        continue;
-                    }
-
-                    for (int f = 0; f < modelKeyFrames.length; f++)
-                    {
-                        ModelKeyFrame keyFrame = modelKeyFrames[f];
-                        if (keyFrame.isUseCustomModel() && keyFrame.getCustomModel() == customModel)
-                        {
-                            isBeingUsed = true;
-                            break;
-                        }
-                    }
-
-                    if (isBeingUsed)
-                    {
-                        break;
-                    }
-                }
-
-                if (!isBeingUsed)
-                    unusedModels.add(customModel);
+                CustomModel model = (CustomModel) o;
+                clientThread.invokeLater(() -> renderPanel.updateModel(model.getModel()));
             }
-
-            for (CustomModel customModel : unusedModels)
-                modelUtilities.removeCustomModel(customModel);
         });
+        add(scrollPane, c);
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.gridx = 0;
+        c.gridy = 5;
+        c.weightx = 1;
+        c.weighty = 0;
+        JLabel tools = new JLabel("Tools");
+        tools.setHorizontalAlignment(SwingConstants.CENTER);
+        tools.setFont(FontManager.getRunescapeBoldFont());
+        add(tools, c);
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.gridx = 1;
+        c.gridy = 5;
+        c.weightx = 0;
+        c.weighty = 0;
+        JPanel buttons = new JPanel();
+        setupButtons(buttons);
+        add(buttons, c);
+
+        c.gridwidth = 2;
+        c.gridheight = 2;
+        c.weightx = 1;
+        c.gridx = 2;
+        c.gridy = 4;
+        JPanel previewPanel = new JPanel();
+        setupRenderPanel(previewPanel);
+        add(previewPanel, c);
 
         revalidate();
     }
 
-    public void createModelPanel(CustomModel model)
+    private CustomModel getSelectedCustomModel()
     {
-        JPanel panel = new JPanel();
-        panel.setLayout(new GridBagLayout());
-        panel.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        panel.setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1));
-        modelPanel.add(panel);
+        Object o = table.getSelectedObject();
+        if (o instanceof CustomModel)
+        {
+            return (CustomModel) o;
+        }
 
-        c.fill = GridBagConstraints.HORIZONTAL;
-        c.weightx = 1;
-        c.weighty = 0;
-        c.gridwidth = 1;
-        c.gridheight = 1;
-        c.insets = new Insets(2, 2, 2, 2);
+        return null;
+    }
 
-        TransmogPanel transmogPanel = plugin.getCreatorsPanel().getToolBox().getTransmogPanel();
+    public void setupButtons(JPanel master)
+    {
+        master.setLayout(new BorderLayout());
 
-        c.gridx = 0;
-        c.gridy = 0;
+        JPanel buttons =  new JPanel();
+        buttons.setLayout(new GridLayout(0, 3, 4, 4));
+        master.add(buttons, BorderLayout.CENTER);
+
+        JPanel textPanel = new JPanel(new BorderLayout());
+        textPanel.setBorder(new EmptyBorder(4, 4, 4, 4));
+        JLabel textHeader = new JLabel("Rename:");
+        textPanel.add(textHeader, BorderLayout.LINE_START);
+
         JTextField textField = new JTextField();
-        textField.setText(model.getComp().getName());
-        textField.setHorizontalAlignment(SwingConstants.CENTER);
-        panel.add(textField, c);
-        panelMap.put(model, panel);
+        textPanel.add(textField, BorderLayout.CENTER);
+        master.add(textPanel, BorderLayout.PAGE_END);
+
         textField.addActionListener(e ->
         {
             String text = StringHandler.cleanString(textField.getText());
             textField.setText(text);
+
+            CustomModel model = getSelectedCustomModel();
+            if (model == null)
+            {
+                return;
+            }
+
             model.getComp().setName(text);
             modelUtilities.updatePanelComboBoxes();
+
+            TransmogPanel transmogPanel = plugin.getCreatorsPanel().getToolBox().getTransmogPanel();
             transmogPanel.getTransmogLabel().setText(text);
+            repaint();
         });
-        textField.addFocusListener(new FocusListener() {
-            @Override
-            public void focusGained(FocusEvent e) {
-            }
-
-            @Override
-            public void focusLost(FocusEvent e) {
-                String text = StringHandler.cleanString(textField.getText());
-                textField.setText(text);
-                model.getComp().setName(text);
-            }
-        });
-
-        c.gridx = 0;
-        c.gridy = 1;
-        JPanel buttonsPanel = new JPanel(new GridLayout(1, 0, 4, 4));
-        panel.add(buttonsPanel, c);
 
         JButton deleteButton = new JButton(new ImageIcon(CLEAR));
-        deleteButton.setPreferredSize(buttonDimension);
+        deleteButton.setText("Delete");
         deleteButton.setToolTipText("Remove this model from all Objects and dropdown menus");
-        deleteButton.addActionListener(e -> modelUtilities.removeCustomModel(model));
-        buttonsPanel.add(deleteButton);
+        deleteButton.addActionListener(e ->
+        {
+            CustomModel model = getSelectedCustomModel();
+            if (model == null)
+            {
+                return;
+            }
+
+            modelUtilities.removeCustomModels(new CustomModel[]{model});
+        });
+        buttons.add(deleteButton);
 
         JButton anvilButton = new JButton(new ImageIcon(ANVIL));
-        anvilButton.setPreferredSize(buttonDimension);
+        anvilButton.setText("Send to Anvil");
         anvilButton.setToolTipText("Send this model to the Anvil");
-        buttonsPanel.add(anvilButton);
-        anvilButton.addActionListener(e -> modelUtilities.customModelToAnvil(model));
+        buttons.add(anvilButton);
+        anvilButton.addActionListener(e ->
+        {
+            CustomModel model = getSelectedCustomModel();
+            if (model == null)
+            {
+                return;
+            }
+
+            modelUtilities.customModelToAnvil(model);
+        });
 
         JButton saveButton = new JButton(new ImageIcon(SAVE));
-        saveButton.setPreferredSize(buttonDimension);
+        saveButton.setText("Save");
         saveButton.setToolTipText("Save this model for future use");
-        buttonsPanel.add(saveButton);
-        saveButton.addActionListener(e -> openSaveDialog(model, textField.getText()));
+        buttons.add(saveButton);
+        saveButton.addActionListener(e ->
+        {
+            CustomModel model = getSelectedCustomModel();
+            if (model == null)
+            {
+                return;
+            }
+
+            openSaveDialog(model, model.getComp().getName());
+        });
 
         JButton transmogButton = new JButton(new ImageIcon(TRANSMOG));
-        transmogButton.setPreferredSize(buttonDimension);
+        transmogButton.setText("Set as Transmog");
         transmogButton.setToolTipText("Set this as your player transmog");
-        buttonsPanel.add(transmogButton);
-        transmogButton.addActionListener(e -> transmogPanel.setTransmog(model));
+        buttons.add(transmogButton);
+        transmogButton.addActionListener(e ->
+        {
+            CustomModel model = getSelectedCustomModel();
+            if (model == null)
+            {
+                return;
+            }
+
+            TransmogPanel transmogPanel = plugin.getCreatorsPanel().getToolBox().getTransmogPanel();
+            transmogPanel.setTransmog(model);
+        });
 
         JButton exportButton = new JButton(new ImageIcon(EXPORT));
-        exportButton.setPreferredSize(buttonDimension);
+        exportButton.setText("Export 3D Model");
         exportButton.setToolTipText("Export this model to a 3D format based on the Model Exporter settings in the config");
-        buttonsPanel.add(exportButton);
+        buttons.add(exportButton);
         exportButton.addActionListener(e ->
         {
+            CustomModel model = getSelectedCustomModel();
+            if (model == null)
+            {
+                return;
+            }
+
             clientThread.invokeLater(() ->
             {
                 String name = model.getComp().getName();
@@ -293,18 +303,118 @@ public class ModelOrganizer extends JPanel
                 modelExporter.saveToFile(name, blenderModel);
             });
         });
-
-        revalidate();
-        repaint();
     }
 
-    public void removeModelPanel(CustomModel model)
+    private void onClearButtonPressed()
     {
-        JPanel panel = panelMap.get(model);
-        modelPanel.remove(panel);
-        panelMap.remove(model);
-        revalidate();
-        repaint();
+        CustomModel[] unusedModels = new CustomModel[0];
+        CustomModel transmogModel = plugin.getTransmogModel();
+        ArrayList<Character> characters = plugin.getCharacters();
+
+        ArrayList<CustomModel> storedModels = plugin.getStoredModels();
+        for (int i = 0; i < storedModels.size(); i++)
+        {
+            CustomModel customModel = storedModels.get(i);
+
+            if (customModel == transmogModel)
+                continue;
+
+            boolean isBeingUsed = false;
+            for (int x = 0; x < characters.size(); x++)
+            {
+                Character character = characters.get(x);
+                if (character.getStoredModel() == customModel)
+                {
+                    isBeingUsed = true;
+                    break;
+                }
+
+                ModelKeyFrame[] modelKeyFrames = character.getModelKeyFrames();
+                if (modelKeyFrames == null || modelKeyFrames.length == 0)
+                {
+                    continue;
+                }
+
+                for (int f = 0; f < modelKeyFrames.length; f++)
+                {
+                    ModelKeyFrame keyFrame = modelKeyFrames[f];
+                    if (keyFrame.isUseCustomModel() && keyFrame.getCustomModel() == customModel)
+                    {
+                        isBeingUsed = true;
+                        break;
+                    }
+                }
+
+                if (isBeingUsed)
+                {
+                    break;
+                }
+            }
+
+            if (!isBeingUsed)
+            {
+                unusedModels = ArrayUtils.add(unusedModels, customModel);
+            }
+        }
+
+        modelUtilities.removeCustomModels(unusedModels);
+    }
+
+    private void setupRenderPanel(JPanel previewPanel)
+    {
+        previewPanel.setLayout(new BorderLayout());
+        previewPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+        previewPanel.setBorder(new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1));
+
+        JSlider fovSlider = new JSlider(1, 179, RenderPanel.FOV_DEFAULT);
+        previewPanel.add(fovSlider, BorderLayout.NORTH);
+
+        renderPanel = new RenderPanel(client, clientThread, fovSlider);
+        previewPanel.add(renderPanel, BorderLayout.CENTER);
+
+        JPanel footer = new JPanel();
+        footer.setLayout(new BorderLayout());
+        previewPanel.add(footer, BorderLayout.SOUTH);
+
+        JPanel controlPanel = new JPanel(new FlowLayout());
+        footer.add(controlPanel, BorderLayout.NORTH);
+
+        JButton resetButton = new JButton("Reset Camera View");
+        resetButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        resetButton.addActionListener(e -> renderPanel.resetCameraView());
+        controlPanel.add(resetButton);
+
+        JCheckBox animate = new JCheckBox("Enable Animations");
+        animate.setSelected(true);
+        animate.addActionListener(e -> clientThread.invokeLater(() -> renderPanel.toggleAnimations(animate.isSelected())));
+        controlPanel.add(animate);
+
+        JPanel buttonPanel = new JPanel(new GridLayout(0, 3, 3, 3));
+        footer.add(buttonPanel, BorderLayout.SOUTH);
+    }
+
+    public void addModels(CustomModel[] models)
+    {
+        for (CustomModel customModel : models)
+        {
+            customModels.add(customModel);
+        }
+
+        List<Object> list = new ArrayList<>(customModels);
+        table.initialize(list);
+        table.resetView();
+    }
+
+    public void removeModels(CustomModel[] models)
+    {
+        for (CustomModel customModel : models)
+        {
+            customModels.remove(customModel);
+        }
+
+        List<Object> list = new ArrayList<>(customModels);
+        table.initialize(list);
+        table.resetView();
     }
 
     private void openLoadDialog()

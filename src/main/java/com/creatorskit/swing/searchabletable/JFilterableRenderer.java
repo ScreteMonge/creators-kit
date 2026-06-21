@@ -9,6 +9,13 @@ import java.util.ArrayList;
 
 public class JFilterableRenderer extends JLabel implements TableCellRenderer
 {
+    private final TableRenderStyle renderStyle;
+
+    public JFilterableRenderer(TableRenderStyle renderStyle)
+    {
+        this.renderStyle = renderStyle;
+    }
+
     @Override
     public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column)
     {
@@ -17,6 +24,23 @@ public class JFilterableRenderer extends JLabel implements TableCellRenderer
         String lowerS = s.toLowerCase();
         String sf = v[1].toString();
         String lowerSf = sf.toLowerCase();
+
+        if (renderStyle == TableRenderStyle.DEFAULT)
+        {
+            this.setText(s);
+            if (isSelected)
+            {
+                setOpaque(true);
+                setBackground(Color.DARK_GRAY);
+            }
+            else
+            {
+                setBackground(ColorScheme.DARKER_GRAY_COLOR);
+            }
+
+            return this;
+        }
+
         ArrayList<String> notMatching = new ArrayList<>();
 
         if (!sf.equals(""))

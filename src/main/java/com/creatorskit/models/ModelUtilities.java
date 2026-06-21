@@ -350,7 +350,7 @@ public class ModelUtilities
             {
                 Model model = constructModelFromCache(modelStats, new int[0], false, cl);
                 CustomModel customModel = new CustomModel(model, comp);
-                addCustomModel(customModel, false);
+                addCustomModels(new CustomModel[]{customModel}, false);
                 sendChatMessage("Model stored: " + name);
 
                 if (addObject)
@@ -468,8 +468,17 @@ public class ModelUtilities
             CustomModelComp comp = customModel.getComp();
             sendChatMessage("Model sent to Anvil: " + comp.getName());
 
+            LightingStyle ls;
             CustomLighting cl = comp.getCustomLighting();
-            LightingStyle ls = LightingStyle.fromCustomLighting(cl);
+            if (cl == null)
+            {
+                ls = LightingStyle.DEFAULT;
+                cl = new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getZ(), ls.getY());
+            }
+            else
+            {
+                ls = LightingStyle.fromCustomLighting(cl);
+            }
 
             modelAnvil.setLightingSettings(
                     ls,
@@ -556,7 +565,7 @@ public class ModelUtilities
 
                 Model model = createComplexModel(comp.getDetailedModels(), comp.isPriority(), cl, true);
                 CustomModel customModel = new CustomModel(model, comp);
-                addCustomModel(customModel, false);
+                addCustomModels(new CustomModel[]{customModel}, false);
             });
             reader.close();
         }
@@ -616,7 +625,7 @@ public class ModelUtilities
 
                     Model model = createComplexModel(comp.getDetailedModels(), comp.isPriority(), cl, false);
                     CustomModel customModel = new CustomModel(model, comp);
-                    addCustomModel(customModel, false);
+                    addCustomModels(new CustomModel[]{customModel}, false);
                     transmogPanel.setTransmog(customModel);
                 });
             }
@@ -627,16 +636,24 @@ public class ModelUtilities
         }
     }
 
-    public void addCustomModel(CustomModel customModel, boolean setComboBox)
+    public void addCustomModels(CustomModel[] models, boolean setComboBox)
     {
-        SwingUtilities.invokeLater(() -> plugin.getCreatorsPanel().addModelOption(customModel, setComboBox));
-        plugin.getStoredModels().add(customModel);
+        SwingUtilities.invokeLater(() -> plugin.getCreatorsPanel().addModelOptions(models, setComboBox));
+
+        for (CustomModel customModel : models)
+        {
+            plugin.getStoredModels().add(customModel);
+        }
     }
 
-    public void removeCustomModel(CustomModel customModel)
+    public void removeCustomModels(CustomModel[] models)
     {
-        plugin.getCreatorsPanel().removeModelOption(customModel);
-        plugin.getStoredModels().remove(customModel);
+        plugin.getCreatorsPanel().removeModelOptions(models);
+
+        for (CustomModel customModel : models)
+        {
+            plugin.getStoredModels().remove(customModel);
+        }
     }
 
     public void updatePanelComboBoxes()

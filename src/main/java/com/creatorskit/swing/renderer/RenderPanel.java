@@ -139,7 +139,13 @@ public class RenderPanel extends JPanel
 
     public void updateModel(ModelData md, CustomLighting ls)
     {
-        model = md.light(ls.getAmbient(), ls.getContrast(), ls.getX(), -ls.getZ(), ls.getY());
+        Model m = md.light(ls.getAmbient(), ls.getContrast(), ls.getX(), -ls.getZ(), ls.getY());
+        updateModel(m);
+    }
+
+    public void updateModel(Model m)
+    {
+        model = m;
         modelExists = true;
         updateModelParameters(model);
         repaint();

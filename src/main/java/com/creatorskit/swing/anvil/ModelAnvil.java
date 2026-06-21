@@ -1030,7 +1030,7 @@ public class ModelAnvil extends JPanel
 
             CustomModelComp comp = new CustomModelComp(CustomModelType.FORGED, -1, null, null, detailedModels, null, lighting, setPriority, nameField.getText());
             CustomModel customModel = new CustomModel(model, comp);
-            modelUtilities.addCustomModel(customModel, forgeAndSet);
+            modelUtilities.addCustomModels(new CustomModel[]{customModel}, forgeAndSet);
         });
     }
 

@@ -200,7 +200,7 @@ public class ModelImporter
 
         CustomModelComp comp = new CustomModelComp(CustomModelType.BLENDER, -1, null, null, null, blenderModel, cl, false, name);
         CustomModel customModel = new CustomModel(model, comp);
-        modelUtilities.addCustomModel(customModel, false);
+        modelUtilities.addCustomModels(new CustomModel[]{customModel}, false);
     }
 
     public Model createModel(BlenderModel blenderModel, CustomLighting cl)

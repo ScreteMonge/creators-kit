@@ -10,6 +10,7 @@ import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.programming.orientation.OrientationGoal;
 import com.creatorskit.swing.searchabletable.JFilterableTable;
+import com.creatorskit.swing.searchabletable.TableRenderStyle;
 import com.creatorskit.swing.timesheet.attributes.*;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import com.creatorskit.swing.timesheet.keyframe.settings.*;
@@ -56,10 +57,10 @@ public class AttributePanel extends JPanel
     private final JComboBox<KeyFrameType> cardComboBox = new JComboBox<>();
     private final JButton keyFramed = new JButton();
 
-    private final JFilterableTable npcTable = new JFilterableTable("NPCs");
-    private final JFilterableTable itemTable = new JFilterableTable("Items");
-    private final JFilterableTable animTable = new JFilterableTable("Animations");
-    private final JFilterableTable spotanimTable = new JFilterableTable("SpotAnims");
+    private final JFilterableTable npcTable = new JFilterableTable("NPCs", TableRenderStyle.HIGHLIGHT_SEARCH);
+    private final JFilterableTable itemTable = new JFilterableTable("Items", TableRenderStyle.HIGHLIGHT_SEARCH);
+    private final JFilterableTable animTable = new JFilterableTable("Animations", TableRenderStyle.HIGHLIGHT_SEARCH);
+    private final JFilterableTable spotanimTable = new JFilterableTable("SpotAnims", TableRenderStyle.HIGHLIGHT_SEARCH);
 
     private final JPopupMenu spotanimPopup = new JPopupMenu("SpotAnims");
 
