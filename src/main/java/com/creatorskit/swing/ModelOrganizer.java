@@ -24,6 +24,8 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.filechooser.FileFilter;
 import java.awt.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileWriter;
@@ -41,7 +43,7 @@ public class ModelOrganizer extends JPanel
     private final ModelExporter modelExporter;
     private final ModelUtilities modelUtilities;
 
-    private final JFilterableTable table = new JFilterableTable("Custom Models", TableRenderStyle.DEFAULT);
+    private final JFilterableTable table = new JFilterableTable("Custom Models", TableRenderStyle.HIGHLIGHT_SEARCH);
     private List<CustomModel> customModels = new ArrayList<>();
     private RenderPanel renderPanel;
 
@@ -75,7 +77,7 @@ public class ModelOrganizer extends JPanel
         c.insets = new Insets(2, 2, 2, 2);
 
         c.gridwidth = 2;
-        c.gridheight = 3;
+        c.gridheight = 2;
         c.weightx = 0;
         c.weighty = 0;
         c.gridx = 0;
@@ -120,6 +122,43 @@ public class ModelOrganizer extends JPanel
         clearButton.setToolTipText("Clears all unused models from Custom Model dropdown menus");
         add(clearButton, c);
         clearButton.addActionListener(e -> onClearButtonPressed());
+
+        c.gridwidth = 1;
+        c.gridheight = 1;
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 0;
+        c.gridy = 2;
+        JLabel headerLabel = new JLabel("Search: ");
+        headerLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        add(headerLabel, c);
+
+        c.weightx = 0;
+        c.weighty = 0;
+        c.gridx = 1;
+        c.gridy = 2;
+        JTextField field = new JTextField();
+        add(field, c);
+
+        KeyListener keyListener = new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e)
+            {
+                String text = field.getText();
+                table.searchAndListEntries(text);
+            }
+        };
+        field.addKeyListener(keyListener);
 
         c.gridwidth = 2;
         c.weightx = 1;
@@ -167,6 +206,7 @@ public class ModelOrganizer extends JPanel
         c.gridwidth = 2;
         c.gridheight = 2;
         c.weightx = 1;
+        c.weighty = 1;
         c.gridx = 2;
         c.gridy = 4;
         JPanel previewPanel = new JPanel();

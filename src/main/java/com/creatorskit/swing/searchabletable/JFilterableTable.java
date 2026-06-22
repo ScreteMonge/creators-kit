@@ -45,6 +45,11 @@ public class JFilterableTable extends JTable
 
     public void searchAndListEntries(Object searchFor)
     {
+        if (itemBackup == null || itemBackup.isEmpty())
+        {
+            return;
+        }
+
         List<Object> found = new ArrayList<>();
 
         //showingAll = false;
