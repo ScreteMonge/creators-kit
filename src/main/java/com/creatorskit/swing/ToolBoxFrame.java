@@ -242,6 +242,10 @@ public class ToolBoxFrame extends JFrame
         JMenu file = new JMenu("File");
         jMenuBar.add(file);
 
+        JMenuItem newSetup = new JMenuItem("New Setup");
+        newSetup.addActionListener(e -> createNewSetup(true, false));
+        file.add(newSetup);
+
         JMenuItem save = new JMenuItem("Save Setup");
         save.addActionListener(e -> plugin.getCreatorsPanel().quickSaveToFile());
         save.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK));
@@ -251,10 +255,18 @@ public class ToolBoxFrame extends JFrame
         saveAs.addActionListener(e -> plugin.getCreatorsPanel().openSaveDialog());
         file.add(saveAs);
 
-        JMenuItem load = new JMenuItem("Load Setup");
-        load.addActionListener(e -> plugin.getCreatorsPanel().openLoadSetupDialog());
+        JMenuItem load = new JMenuItem("Open Setup");
+        load.addActionListener(e ->
+        {
+            createNewSetup(false, true);
+        });
         load.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_DOWN_MASK));
         file.add(load);
+
+        JMenuItem loadOnTop = new JMenuItem("Open Setup On Top");
+        loadOnTop.addActionListener(e -> plugin.getCreatorsPanel().openLoadSetupDialog(false));
+        loadOnTop.setToolTipText("Load a Setup on top of the current one instead of replacing it");
+        file.add(loadOnTop);
 
         JMenu timeSheet = new JMenu("Timeline");
         jMenuBar.add(timeSheet);
@@ -399,5 +411,30 @@ public class ToolBoxFrame extends JFrame
         {
             plugin.sendChatMessage("Failed to open link.");
         }
+    }
+
+    public void createNewSetup(boolean warning, boolean loadNewSetup)
+    {
+        Thread thread = new Thread(() ->
+        {
+            if (warning)
+            {
+                int result = JOptionPane.showConfirmDialog(null, "Are you sure you want to create a new Setup file? All unsaved changes will be lost");
+                if (result != JOptionPane.YES_OPTION)
+                {
+                    return;
+                }
+            }
+
+            managerPanel.getManagerTree().removeAllNodes();
+            modelUtilities.clearCustomModels();
+
+            if (loadNewSetup)
+            {
+                plugin.getCreatorsPanel().openLoadSetupDialog(true);
+            }
+        });
+
+        thread.start();
     }
 }

@@ -23,6 +23,7 @@ import javax.swing.*;
 import java.io.File;
 import java.io.Reader;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 public class ModelUtilities
@@ -654,6 +655,13 @@ public class ModelUtilities
         {
             plugin.getStoredModels().remove(customModel);
         }
+    }
+
+    public void clearCustomModels()
+    {
+        ArrayList<CustomModel> models = plugin.getStoredModels();
+        plugin.getCreatorsPanel().removeModelOptions(models.toArray(new CustomModel[0]));
+        plugin.getStoredModels().clear();
     }
 
     public void updatePanelComboBoxes()

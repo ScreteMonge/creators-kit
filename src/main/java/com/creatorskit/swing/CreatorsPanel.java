@@ -192,11 +192,7 @@ public class CreatorsPanel extends PluginPanel
         newSetupButton.setFocusable(false);
         newSetupButton.setToolTipText("Create a new Setup file");
         add(newSetupButton, c);
-        newSetupButton.addActionListener(e ->
-        {
-            Thread thread = new Thread(() -> toolBox.getManagerPanel().getManagerTree().removeAllNodes());
-            thread.start();
-        });
+        newSetupButton.addActionListener(e -> toolBox.createNewSetup(true, false));
 
         c.gridwidth = 3;
         c.gridx = 0;
@@ -1484,7 +1480,7 @@ public class CreatorsPanel extends PluginPanel
                 character.getSummary());
     }
 
-    public void openLoadSetupDialog()
+    public void openLoadSetupDialog(boolean updateLastLoadedFile)
     {
         SwingUtilities.invokeLater(() ->
         {
@@ -1535,7 +1531,7 @@ public class CreatorsPanel extends PluginPanel
                     Reader reader = Files.newBufferedReader(selectedFile.toPath());
                     SetupSave saveFile = plugin.getGson().fromJson(reader, SetupSave.class);
                     File finalSelectedFile = selectedFile;
-                    clientThread.invokeLater(() -> loadSetup(finalSelectedFile, saveFile));
+                    clientThread.invokeLater(() -> loadSetup(finalSelectedFile, saveFile, updateLastLoadedFile));
                     reader.close();
                     LocalTime time = LocalTime.now();
                     plugin.sendChatMessage("[" + time.getHour() + ":" + time.getMinute() + "] Loaded file: " + getFileName(finalSelectedFile));
@@ -1548,13 +1544,13 @@ public class CreatorsPanel extends PluginPanel
         });
     }
 
-    public void loadSetup(File file)
+    public void loadSetup(File file, boolean updateLastLoadedFile)
     {
         try
         {
             Reader reader = Files.newBufferedReader(file.toPath());
             SetupSave saveFile = plugin.getGson().fromJson(reader, SetupSave.class);
-            clientThread.invokeLater(() -> loadSetup(file, saveFile));
+            clientThread.invokeLater(() -> loadSetup(file, saveFile, updateLastLoadedFile));
             reader.close();
             LocalTime time = LocalTime.now();
             plugin.sendChatMessage("[" + time.getHour() + ":" + time.getMinute() + "] Loaded file: " + getFileName(file));
@@ -1565,10 +1561,15 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
-    private void loadSetup(File file, SetupSave saveFile)
+    private void loadSetup(File file, SetupSave saveFile, boolean updateLastLoadedFile)
     {
         ModelUtilities modelUtilities = toolBox.getModelUtilities();
-        updateLoadedFile(file);
+
+        if (updateLastLoadedFile || lastFileLoaded == null)
+        {
+            updateLoadedFile(file);
+        }
+
         CustomModelComp[] comps = saveFile.getComps();
         FolderNodeSave folderNodeSave = saveFile.getMasterFolderNode();
         CustomModel[] customModels = new CustomModel[comps.length];
@@ -1961,7 +1962,7 @@ public class CreatorsPanel extends PluginPanel
             @Override
             public void actionPerformed(ActionEvent e)
             {
-                plugin.getCreatorsPanel().openLoadSetupDialog();
+                plugin.getCreatorsPanel().openLoadSetupDialog(true);
             }
         });
     }

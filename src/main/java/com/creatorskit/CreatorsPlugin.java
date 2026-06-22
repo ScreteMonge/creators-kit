@@ -221,7 +221,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			if (SETUP_DIR.exists())
 			{
-				creatorsPanel.loadSetup(SETUP_DIR);
+				creatorsPanel.loadSetup(SETUP_DIR, true);
 			}
 			else
 			{
@@ -1267,7 +1267,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			creatorsPanel.openLoadSetupDialog();
+			creatorsPanel.openLoadSetupDialog(true);
 		}
 	};
 
