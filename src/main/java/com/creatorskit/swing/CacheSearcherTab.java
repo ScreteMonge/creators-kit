@@ -333,7 +333,7 @@ public class CacheSearcherTab extends JPanel
         JSlider fovSlider = new JSlider(1, 179, RenderPanel.FOV_DEFAULT);
         previewPanel.add(fovSlider, BorderLayout.NORTH);
 
-        renderPanel = new RenderPanel(client, clientThread, fovSlider);
+        renderPanel = new RenderPanel(client, fovSlider);
         previewPanel.add(renderPanel, BorderLayout.CENTER);
 
         JPanel footer = new JPanel();

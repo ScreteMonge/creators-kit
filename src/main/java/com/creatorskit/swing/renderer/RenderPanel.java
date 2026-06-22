@@ -49,19 +49,10 @@ public class RenderPanel extends JPanel
     private double mouseX = 0;
     private double mouseY = 0;
 
-    public RenderPanel(Client client, ClientThread clientThread, JSlider fovSlider)
+    public RenderPanel(Client client, JSlider fovSlider)
     {
         this.fovSlider = fovSlider;
         this.client = client;
-
-        clientThread.invokeLater(() ->
-        {
-            this.ac = new AnimationController(client, -1);
-            ac.setOnFinished(e ->
-            {
-                ac.reset();
-            });
-        });
 
         addMouseListener(new MouseAdapter()
         {
@@ -109,7 +100,7 @@ public class RenderPanel extends JPanel
             return;
         }
 
-        if (!modelExists || ac.getAnimation() == null || !enableAnimations)
+        if (!modelExists || ac == null || ac.getAnimation() == null || !enableAnimations)
         {
             return;
         }
@@ -128,6 +119,15 @@ public class RenderPanel extends JPanel
 
     public void updateAnimation(Animation animation)
     {
+        if (ac == null)
+        {
+            this.ac = new AnimationController(client, -1);
+            ac.setOnFinished(e ->
+            {
+                ac.reset();
+            });
+        }
+
         ac.setAnimation(animation);
         Model animated = ac.animate(model);
         updateModelParameters(animated);
@@ -147,6 +147,11 @@ public class RenderPanel extends JPanel
 
     public void updateModel(Model m, boolean shouldRepaint)
     {
+        if (m == null)
+        {
+            return;
+        }
+
         model = m;
         modelExists = true;
         updateModelParameters(model);

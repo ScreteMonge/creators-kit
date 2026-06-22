@@ -247,12 +247,6 @@ public class ManagerTree extends JTree
 
     public void removeAllNodes()
     {
-        int result = JOptionPane.showConfirmDialog(null, "Are you sure you want to create a new Setup file? All unsaved changes will be lost");
-        if (result != JOptionPane.YES_OPTION)
-        {
-            return;
-        }
-
         TreePath[] treePaths = new TreePath[]{new TreePath(rootNode.getPath())};
         removeNodes(treePaths, false);
 
