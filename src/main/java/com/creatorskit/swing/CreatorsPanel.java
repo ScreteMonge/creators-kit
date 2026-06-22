@@ -70,7 +70,7 @@ public class CreatorsPanel extends PluginPanel
 
     public static final File SETUP_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/setups");
     public static final File CREATORS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
-    public File lastFileLoaded;
+    private File lastFileLoaded;
 
     private final Pattern pattern = Pattern.compile("\\(\\d+\\)\\Z");
     private int npcPanels = 0;
@@ -1954,7 +1954,7 @@ public class CreatorsPanel extends PluginPanel
             @Override
             public void actionPerformed(ActionEvent e)
             {
-                plugin.getCreatorsPanel().quickSaveToFile();
+                quickSaveToFile();
             }
         });
 
@@ -1964,7 +1964,7 @@ public class CreatorsPanel extends PluginPanel
             @Override
             public void actionPerformed(ActionEvent e)
             {
-                plugin.getCreatorsPanel().openLoadSetupDialog(true);
+                toolBox.createNewSetup(false, true);
             }
         });
     }

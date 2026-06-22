@@ -417,9 +417,11 @@ public class ToolBoxFrame extends JFrame
     {
         Thread thread = new Thread(() ->
         {
-            if (warning)
+            String warningMessage = loadNewSetup ? "Are you sure you want to open another Setup file? All unsaved changes will be lost" : "Are you sure you want to create a new Setup file? All unsaved changes will be lost";
+
+            if (warning || plugin.getCreatorsPanel().getLastFileLoaded() != null)
             {
-                int result = JOptionPane.showConfirmDialog(null, "Are you sure you want to create a new Setup file? All unsaved changes will be lost");
+                int result = JOptionPane.showConfirmDialog(null, warningMessage);
                 if (result != JOptionPane.YES_OPTION)
                 {
                     return;
