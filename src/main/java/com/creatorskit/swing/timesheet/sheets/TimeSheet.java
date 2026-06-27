@@ -147,14 +147,16 @@ public class TimeSheet extends JPanel
         vScroll = scroll;
     }
 
+    @Override
     public void paintComponent(Graphics g)
     {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
         g2.setStroke(new BasicStroke(1));
         drawBackground(g2);
-        drawBackgroundText(g2);
         drawHighlight(g2);
+        draw3DPreview(g2);
+        drawBackgroundText(g2);
         drawBackgroundLines(g2);
         drawRectangleSelect(g2);
         drawKeyFrames(g2);
@@ -162,7 +164,7 @@ public class TimeSheet extends JPanel
         drawTextHeader(g2);
         drawTimeIndicator(g2);
         drawPreviewTimeIndicator(g2);
-        revalidate();
+        drawRowLabels(g2);
         repaint();
     }
 
@@ -265,7 +267,17 @@ public class TimeSheet extends JPanel
         }
     }
 
+    public void draw3DPreview(Graphics g)
+    {
+
+    }
+
     public void drawBackgroundText(Graphics g)
+    {
+
+    }
+
+    public void drawRowLabels(Graphics g)
     {
 
     }
@@ -521,7 +533,7 @@ public class TimeSheet extends JPanel
                 }
 
                 clickedKeyFrames = getKeyFrameClicked(mousePosition);
-                keyFrameClicked = clickedKeyFrames != null;
+                keyFrameClicked = clickedKeyFrames != null && clickedKeyFrames.length > 0;
                 if (keyFrameClicked)
                 {
                     allowRectangleSelect = false;
@@ -556,11 +568,6 @@ public class TimeSheet extends JPanel
                     setCurrentTime(time, false);
                     timeIndicatorPressed = false;
                     return;
-                }
-
-                if (e.getClickCount() == 2)
-                {
-                    onMouseButton1DoublePressed(mousePosition);
                 }
 
                 if (keyFrameClicked)
@@ -641,8 +648,13 @@ public class TimeSheet extends JPanel
 
                 if (allowRectangleSelect)
                 {
-                    checkRectangleForKeyFrames(mousePosition, e.isShiftDown());
+                    boolean rectangleSelected = checkRectangleForKeyFrames(mousePosition, e.isShiftDown());
                     allowRectangleSelect = false;
+
+                    if (!rectangleSelected)
+                    {
+                        updateTableSelection(mousePosition);
+                    }
                 }
             }
         });
@@ -746,7 +758,7 @@ public class TimeSheet extends JPanel
 
     public void onMouseButton3Pressed(Point p) {};
 
-    public void onMouseButton1DoublePressed(Point p) {};
+    public void updateTableSelection(Point p) {};
 
     public KeyFrame[] getKeyFrameClicked(Point point)
     {
@@ -758,9 +770,22 @@ public class TimeSheet extends JPanel
 
     }
 
-    public void checkRectangleForKeyFrames(Point point, boolean shiftKey)
+    public boolean checkRectangleForKeyFrames(Point point, boolean shiftKey)
     {
+        Point absoluteMouse = MouseInfo.getPointerInfo().getLocation();
+        Point rectangleSelectStart = getMousePointOnPressed();
 
+        int x1 = (int) rectangleSelectStart.getX();
+        int x2 = (int) (absoluteMouse.getX() - getLocationOnScreen().getX());
+        int y1 = (int) rectangleSelectStart.getY();
+        int y2 = (int) (absoluteMouse.getY() - getLocationOnScreen().getY());
+
+        if (Math.abs(x1 - x2) < 10 && Math.abs(y1 - y2) < 10)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private double getTimeIndicatorPosition()
@@ -828,6 +853,13 @@ public class TimeSheet extends JPanel
             }
         }
         getTimeSheetPanel().setSelectedKeyFrames(keyFrames);
+        if (keyFrames == null || keyFrames.length != 1)
+        {
+            return;
+        }
+
+        KeyFrameType type = keyFrames[0].getKeyFrameType();
+        attributePanel.switchCards(type);
     }
 
     private void updatePreviewTime(double time)

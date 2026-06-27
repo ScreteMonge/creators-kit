@@ -3,6 +3,7 @@ package com.creatorskit.swing;
 import com.creatorskit.CKObject;
 import com.creatorskit.CreatorsConfig;
 import com.creatorskit.programming.AnimationType;
+import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.saves.CharacterSave;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.Character;
@@ -47,7 +48,6 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.LocalTime;
 import java.util.*;
@@ -76,7 +76,7 @@ public class CreatorsPanel extends PluginPanel
 
     public static final File SETUP_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/setups");
     public static final File CREATORS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
-    public File lastFileLoaded;
+    private File lastFileLoaded;
 
     private final Pattern pattern = Pattern.compile("\\(\\d+\\)\\Z");
     private int npcPanels = 0;
@@ -200,11 +200,7 @@ public class CreatorsPanel extends PluginPanel
         newSetupButton.setFocusable(false);
         newSetupButton.setToolTipText("Create a new Setup file");
         add(newSetupButton, c);
-        newSetupButton.addActionListener(e ->
-        {
-            Thread thread = new Thread(() -> toolBox.getManagerPanel().getManagerTree().removeAllNodes());
-            thread.start();
-        });
+        newSetupButton.addActionListener(e -> toolBox.createNewSetup(true, false));
 
         c.gridwidth = 3;
         c.gridx = 0;
@@ -276,7 +272,7 @@ public class CreatorsPanel extends PluginPanel
                               boolean transplant,
                               boolean setHoveredLocation)
     {
-        JPanel objectPanel = new JPanel();
+        ObjectPanel objectPanel = new ObjectPanel();
         objectPanel.setLayout(new GridBagLayout());
 
         JTextField textField = new JTextField(name);
@@ -583,22 +579,22 @@ public class CreatorsPanel extends PluginPanel
         modelSpinner.addChangeListener(e ->
         {
             int modelNumber = (int) modelSpinner.getValue();
-            plugin.setModel(character, false, modelNumber);
+            character.setToBaseModel(client, clientThread, false, modelNumber);
             propagateSpinner(character, modelNumber, Character::getModelSpinner);
         });
 
-        modelComboBox.addItemListener(e ->
+        modelComboBox.addActionListener(e ->
         {
             CustomModel m = (CustomModel) modelComboBox.getSelectedItem();
             character.setStoredModel(m);
             if (modelComboBox.isVisible() && character == plugin.getSelectedCharacter())
-                plugin.setModel(character, true, -1);
+                character.setToBaseModel(client, clientThread, true, -1);
             propagateCustomModel(character, m);
         });
 
         orientationSpinner.addChangeListener(e ->
         {
-            int orient = (int) orientationSpinner.getValue();
+            int orient = Orientation.boundOrientation((int) orientationSpinner.getValue());
             plugin.setOrientation(character, orient);
             propagateSpinner(character, orient, Character::getOrientationSpinner);
         });
@@ -1505,57 +1501,66 @@ public class CreatorsPanel extends PluginPanel
         jPanel.setBorder(defaultBorder);
     }
 
-    public void addModelOption(CustomModel model, boolean setComboBox)
+    public void addModelOptions(CustomModel[] models, boolean setComboBox)
     {
-        modelOrganizer.createModelPanel(model);
+        modelOrganizer.addModels(models);
         Character selectedCharacter = plugin.getSelectedCharacter();
 
-        toolBox.getTimeSheetPanel()
+        JComboBox<CustomModel> modelAttributesBox = toolBox.getTimeSheetPanel()
                 .getAttributePanel()
                 .getModelAttributes()
-                .getCustomModel()
-                .addItem(model);
+                .getCustomModel();
 
-        for (JComboBox<CustomModel> comboBox : comboBoxes)
+        for (CustomModel model : models)
         {
-            comboBox.addItem(model);
-            if (!setComboBox || selectedCharacter == null)
-            {
-                continue;
-            }
+            modelAttributesBox.addItem(model);
 
-            JComboBox<CustomModel> selectedBox = selectedCharacter.getComboBox();
-            if (comboBox == selectedBox)
+            for (JComboBox<CustomModel> comboBox : comboBoxes)
             {
-                comboBox.setSelectedItem(model);
-                selectedCharacter.setCustomMode(true);
-                selectedCharacter.getModelButton().setText("Custom");
-
-                if (selectedCharacter.getModelSpinner().isVisible() || comboBox.isVisible())
+                comboBox.addItem(model);
+                if (!setComboBox || selectedCharacter == null)
                 {
-                    comboBox.setVisible(true);
-                    selectedCharacter.getModelSpinner().setVisible(false);
+                    continue;
                 }
-            }
 
-            selectedCharacter.setStoredModel(model);
-            plugin.setModel(selectedCharacter, true, -1);
+                JComboBox<CustomModel> selectedBox = selectedCharacter.getComboBox();
+                if (comboBox == selectedBox)
+                {
+                    comboBox.setSelectedItem(model);
+                    selectedCharacter.setCustomMode(true);
+                    selectedCharacter.getModelButton().setText("Custom");
+
+                    if (selectedCharacter.getModelSpinner().isVisible() || comboBox.isVisible())
+                    {
+                        comboBox.setVisible(true);
+                        selectedCharacter.getModelSpinner().setVisible(false);
+                    }
+                }
+
+                selectedCharacter.setStoredModel(model);
+                selectedCharacter.setToBaseModel(client, clientThread, true, -1);
+            }
         }
     }
 
-    public void removeModelOption(CustomModel model)
+    public void removeModelOptions(CustomModel[] models)
     {
-        toolBox.getTimeSheetPanel()
+        JComboBox<CustomModel> modelAttributesBox = toolBox.getTimeSheetPanel()
                 .getAttributePanel()
                 .getModelAttributes()
-                .getCustomModel()
-                .removeItem(model);
+                .getCustomModel();
 
-        for (JComboBox<CustomModel> comboBox : comboBoxes)
+        for (CustomModel model : models)
         {
-            comboBox.removeItem(model);
+            modelAttributesBox.removeItem(model);
+
+            for (JComboBox<CustomModel> comboBox : comboBoxes)
+            {
+                comboBox.removeItem(model);
+            }
         }
-        modelOrganizer.removeModelPanel(model);
+
+        modelOrganizer.removeModels(models);
     }
 
     public Color getRandomColor()
@@ -1670,7 +1675,7 @@ public class CreatorsPanel extends PluginPanel
         //Get Folder structure and all characters contained within
         FolderNodeSave folderNodeSave = getFolders(comps);
 
-        SetupSave saveFile = new SetupSave(getPluginVersion(), comps, folderNodeSave, new CharacterSave[0]);
+        SetupSave saveFile = new SetupSave(CreatorsPlugin.getPluginVersion(), comps, folderNodeSave, new CharacterSave[0]);
 
         try
         {
@@ -1852,7 +1857,7 @@ public class CreatorsPanel extends PluginPanel
                 character.getSummary());
     }
 
-    public void openLoadSetupDialog()
+    public void openLoadSetupDialog(boolean updateLastLoadedFile)
     {
         SwingUtilities.invokeLater(() ->
         {
@@ -1903,7 +1908,7 @@ public class CreatorsPanel extends PluginPanel
                     Reader reader = Files.newBufferedReader(selectedFile.toPath());
                     SetupSave saveFile = plugin.getGson().fromJson(reader, SetupSave.class);
                     File finalSelectedFile = selectedFile;
-                    clientThread.invokeLater(() -> loadSetup(finalSelectedFile, saveFile));
+                    clientThread.invokeLater(() -> loadSetup(finalSelectedFile, saveFile, updateLastLoadedFile));
                     reader.close();
                     LocalTime time = LocalTime.now();
                     plugin.sendChatMessage("[" + time.getHour() + ":" + time.getMinute() + "] Loaded file: " + getFileName(finalSelectedFile));
@@ -1916,13 +1921,13 @@ public class CreatorsPanel extends PluginPanel
         });
     }
 
-    public void loadSetup(File file)
+    public void loadSetup(File file, boolean updateLastLoadedFile)
     {
         try
         {
             Reader reader = Files.newBufferedReader(file.toPath());
             SetupSave saveFile = plugin.getGson().fromJson(reader, SetupSave.class);
-            clientThread.invokeLater(() -> loadSetup(file, saveFile));
+            clientThread.invokeLater(() -> loadSetup(file, saveFile, updateLastLoadedFile));
             reader.close();
             LocalTime time = LocalTime.now();
             plugin.sendChatMessage("[" + time.getHour() + ":" + time.getMinute() + "] Loaded file: " + getFileName(file));
@@ -1933,10 +1938,15 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
-    private void loadSetup(File file, SetupSave saveFile)
+    private void loadSetup(File file, SetupSave saveFile, boolean updateLastLoadedFile)
     {
         ModelUtilities modelUtilities = toolBox.getModelUtilities();
-        updateLoadedFile(file);
+
+        if (updateLastLoadedFile || lastFileLoaded == null)
+        {
+            updateLoadedFile(file);
+        }
+
         CustomModelComp[] comps = saveFile.getComps();
         FolderNodeSave folderNodeSave = saveFile.getMasterFolderNode();
         CustomModel[] customModels = new CustomModel[comps.length];
@@ -1956,17 +1966,17 @@ public class CreatorsPanel extends PluginPanel
             switch (comp.getType())
             {
                 case FORGED:
-                    model = modelUtilities.createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getLightingStyle(), comp.getCustomLighting(), false);
+                    model = modelUtilities.createComplexModel(comp.getDetailedModels(), comp.isPriority(), comp.getCustomLighting(), false);
                     customModel = new CustomModel(model, comp);
                     break;
                 case CACHE_NPC:
                     modelStats = comp.getModelStats();
-                    model = modelUtilities.constructModelFromCache(modelStats, new int[0], false, LightingStyle.ACTOR, null);
+                    model = modelUtilities.constructModelFromCache(modelStats, new int[0], false, CustomLighting.fromLightingStyle(LightingStyle.ACTOR));
                     customModel = new CustomModel(model, comp);
                     break;
                 case CACHE_PLAYER:
                     modelStats = comp.getModelStats();
-                    model = modelUtilities.constructModelFromCache(modelStats, comp.getKitRecolours(), true, LightingStyle.ACTOR, null);
+                    model = modelUtilities.constructModelFromCache(modelStats, comp.getKitRecolours(), true, CustomLighting.fromLightingStyle(LightingStyle.ACTOR));
                     customModel = new CustomModel(model, comp);
                     break;
                 default:
@@ -1976,17 +1986,18 @@ public class CreatorsPanel extends PluginPanel
                 case CACHE_MAN_WEAR:
                 case CACHE_WOMAN_WEAR:
                     modelStats = comp.getModelStats();
-                    model = modelUtilities.constructModelFromCache(modelStats, null, false, LightingStyle.DEFAULT, null);
+                    model = modelUtilities.constructModelFromCache(modelStats, null, false, CustomLighting.fromLightingStyle(LightingStyle.DEFAULT));
                     customModel = new CustomModel(model, comp);
                     break;
                 case BLENDER:
-                    model = modelImporter.createModel(comp.getBlenderModel(), comp.getLightingStyle());
+                    model = modelImporter.createModel(comp.getBlenderModel(), comp.getCustomLighting());
                     customModel = new CustomModel(model, comp);
             }
 
-            modelUtilities.addCustomModel(customModel, false);
             customModels[i] = customModel;
         }
+
+        modelUtilities.addCustomModels(customModels, false);
 
         ManagerTree managerTree = toolBox.getManagerPanel().getManagerTree();
         DefaultMutableTreeNode rootNode = managerTree.getRootNode();
@@ -2262,26 +2273,6 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
-    private String getPluginVersion()
-    {
-        try (InputStream is = CreatorsPlugin.class.getResourceAsStream("/version.txt"))
-        {
-            if (is == null)
-            {
-                return "0.0.0";
-            }
-
-            String text = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8)).readLine();
-            String version = text.split("=")[1];
-            is.close();
-            return version;
-        }
-        catch (IOException e)
-        {
-            return "0.0.0";
-        }
-    }
-
     private boolean isVersionLessThan(String version1, String version2)
     {
         String[] split1 = version1.split("\\.");
@@ -2338,7 +2329,7 @@ public class CreatorsPanel extends PluginPanel
             @Override
             public void actionPerformed(ActionEvent e)
             {
-                plugin.getCreatorsPanel().quickSaveToFile();
+                quickSaveToFile();
             }
         });
 
@@ -2348,7 +2339,7 @@ public class CreatorsPanel extends PluginPanel
             @Override
             public void actionPerformed(ActionEvent e)
             {
-                plugin.getCreatorsPanel().openLoadSetupDialog();
+                toolBox.createNewSetup(false, true);
             }
         });
     }

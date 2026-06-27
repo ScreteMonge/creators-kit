@@ -106,11 +106,7 @@ public class TreeScrollPane extends JScrollPane
         newSetupButton.setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR));
         newSetupButton.setToolTipText("Create a new Setup file");
         newSetupButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        newSetupButton.addActionListener(e ->
-        {
-            Thread thread = new Thread(tree::removeAllNodes);
-            thread.start();
-        });
+        newSetupButton.addActionListener(e -> tree.getToolBox().createNewSetup(true, false));
         folderHeader.add(newSetupButton, c);
 
         c.gridx = 4;

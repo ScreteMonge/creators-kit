@@ -252,12 +252,6 @@ public class ManagerTree extends JTree
 
     public void removeAllNodes()
     {
-        int result = JOptionPane.showConfirmDialog(null, "Are you sure you want to create a new Setup file? All unsaved changes will be lost");
-        if (result != JOptionPane.YES_OPTION)
-        {
-            return;
-        }
-
         TreePath[] treePaths = new TreePath[]{new TreePath(rootNode.getPath())};
         removeNodes(treePaths, false);
 
@@ -819,6 +813,13 @@ public class ManagerTree extends JTree
         int y = (int) p.getY();
         int row = getClosestRowForLocation(x, y);
 
+        Rectangle rect = getRowBounds(row);
+
+        if (!rect.contains(rect.getX(), y))
+        {
+            return;
+        }
+
         TreePath path = getPathForRow(row);
         if (path == null)
         {
@@ -833,6 +834,13 @@ public class ManagerTree extends JTree
         int x = (int) p.getX();
         int y = (int) p.getY();
         int row = getClosestRowForLocation(x, y);
+
+        Rectangle rect = getRowBounds(row);
+
+        if (!rect.contains(rect.getX(), y))
+        {
+            return;
+        }
 
         TreePath path = getPathForRow(row);
         if (path == null)

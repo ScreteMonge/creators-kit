@@ -1394,7 +1394,7 @@ public class Programmer
 
         if (modelKeyFrame == null)
         {
-            plugin.setModel(character, character.isCustomMode(), (int) character.getModelSpinner().getValue());
+            character.resetToBaseModel(client, clientThread);
             ckObject.setRadius((int) character.getRadiusSpinner().getValue());
             return;
         }
@@ -1521,7 +1521,7 @@ public class Programmer
                     ms.setTranslateZ(height);
                 }
 
-                Model model = modelUtilities.constructModelFromCache(stats, new int[0], false, LightingStyle.CUSTOM, cl);
+                Model model = modelUtilities.constructModelFromCache(stats, new int[0], false, cl);
 
                 ckObject.setModel(model);
                 setActiveAnimationFrame(ckObject, data.getAnimationId(), currentTime, startTick, 0, loop, false, true);

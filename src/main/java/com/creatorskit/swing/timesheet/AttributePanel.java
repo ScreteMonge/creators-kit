@@ -11,6 +11,7 @@ import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.programming.orientation.OrientationGoal;
 import com.creatorskit.selection.SelectionManager;
 import com.creatorskit.swing.searchabletable.JFilterableTable;
+import com.creatorskit.swing.searchabletable.TableRenderStyle;
 import com.creatorskit.swing.timesheet.attributes.*;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import com.creatorskit.swing.timesheet.keyframe.settings.*;
@@ -55,15 +56,15 @@ public class AttributePanel extends JPanel
     private final GridBagConstraints c = new GridBagConstraints();
     private final JPanel cardPanel = new JPanel();
     private final JLabel objectLabel = new JLabel("[No Object Selected]");
-    private final JLabel cardLabel = new JLabel("");
+    private final JComboBox<KeyFrameType> cardComboBox = new JComboBox<>();
     private final JButton keyFramed = new JButton();
     private final JButton updateButton = new JButton("Update");
     private final JButton resetButton = new JButton();
 
-    private final JFilterableTable npcTable = new JFilterableTable("NPCs");
-    private final JFilterableTable itemTable = new JFilterableTable("Items");
-    private final JFilterableTable animTable = new JFilterableTable("Animations");
-    private final JFilterableTable spotanimTable = new JFilterableTable("SpotAnims");
+    private final JFilterableTable npcTable = new JFilterableTable("NPCs", TableRenderStyle.HIGHLIGHT_SEARCH);
+    private final JFilterableTable itemTable = new JFilterableTable("Items", TableRenderStyle.HIGHLIGHT_SEARCH);
+    private final JFilterableTable animTable = new JFilterableTable("Animations", TableRenderStyle.HIGHLIGHT_SEARCH);
+    private final JFilterableTable spotanimTable = new JFilterableTable("SpotAnims", TableRenderStyle.HIGHLIGHT_SEARCH);
 
     private final JPopupMenu spotanimPopup = new JPopupMenu("SpotAnims");
 
@@ -145,10 +146,21 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 0;
         c.weightx = 0;
-        cardLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        cardLabel.setFont(FontManager.getRunescapeBoldFont());
-        cardLabel.setText(MOVE_CARD);
-        add(cardLabel, c);
+        cardComboBox.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        KeyFrameType[] types = KeyFrameType.ALL_KEYFRAME_TYPES;
+        for (KeyFrameType type : types)
+        {
+            cardComboBox.addItem(type);
+        }
+        cardComboBox.addActionListener(e ->
+                {
+                    if (e.getSource() instanceof JComboBox)
+                    {
+                        switchCards((KeyFrameType) cardComboBox.getSelectedItem());
+                    }
+                });
+        cardComboBox.setFont(FontManager.getRunescapeBoldFont());
+        add(cardComboBox, c);
 
         c.gridx = 2;
         c.gridy = 0;
@@ -1536,14 +1548,18 @@ public class AttributePanel extends JPanel
         duration.setModel(new SpinnerNumberModel(5.0, 0, 1000000, 0.1));
         card.add(duration, c);
 
-        c.gridwidth = 1;
+        c.gridx = 2;
+        c.gridy = 1;
+        JLabel empty = new JLabel();
+        empty.setPreferredSize(new Dimension(300, 25));
+        card.add(empty, c);
+
         c.gridx = 0;
         c.gridy = 2;
         JLabel textLabel = new JLabel("Overhead Text: ");
         textLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         card.add(textLabel, c);
 
-        c.weightx = 1;
         c.gridwidth = 2;
         c.gridx = 1;
         c.gridy = 2;
@@ -1551,6 +1567,7 @@ public class AttributePanel extends JPanel
         text.setToolTipText("The text to show overhead");
         text.setText("");
         text.setLineWrap(true);
+        text.setWrapStyleWord(true);
         card.add(text, c);
 
         c.gridwidth = 1;
@@ -2289,7 +2306,6 @@ public class AttributePanel extends JPanel
         activeCard = cardName;
         CardLayout cl = (CardLayout)(cardPanel.getLayout());
         cl.show(cardPanel, cardName);
-        cardLabel.setText(cardName);
 
         JLabel[] labels = timeSheetPanel.getLabels();
         JLabel selectedLabel;

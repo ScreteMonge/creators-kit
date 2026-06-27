@@ -2,6 +2,7 @@ package com.creatorskit.swing.searchabletable;
 
 import javax.swing.*;
 import javax.swing.table.JTableHeader;
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -10,11 +11,11 @@ public class JFilterableTable extends JTable
 {
     private List<Object> itemBackup;
 
-    public JFilterableTable(String name)
+    public JFilterableTable(String name, TableRenderStyle renderStyle)
     {
         super();
         this.setName(name);
-        this.setDefaultRenderer(Object.class, new JFilterableRenderer());
+        this.setDefaultRenderer(Object.class, new JFilterableRenderer(renderStyle));
         this.setTableHeader(new JTableHeader());
         setModel(new DataTableModel(new Object[0]));
     }
@@ -24,8 +25,31 @@ public class JFilterableTable extends JTable
         itemBackup = list;
     }
 
+    public void resetView()
+    {
+        List<Object> entry = new ArrayList<>();
+
+        for (int i = 0; i < this.itemBackup.size(); i++)
+        {
+            Object tmp = this.itemBackup.get(i);
+            if (tmp == null)
+            {
+                continue;
+            }
+
+            entry.add(new Object[]{tmp, ""});
+        }
+
+        setModel(new DataTableModel(entry.toArray()));
+    }
+
     public void searchAndListEntries(Object searchFor)
     {
+        if (itemBackup == null || itemBackup.isEmpty())
+        {
+            return;
+        }
+
         List<Object> found = new ArrayList<>();
 
         //showingAll = false;

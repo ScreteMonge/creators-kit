@@ -134,7 +134,7 @@ public class ModelAnvil extends JPanel
         JSlider fovSlider = new JSlider(1, 179, RenderPanel.FOV_DEFAULT);
         previewPanel.add(fovSlider, BorderLayout.NORTH);
 
-        renderPanel = new RenderPanel(fovSlider);
+        renderPanel = new RenderPanel(client, fovSlider);
         previewPanel.add(renderPanel, BorderLayout.CENTER);
 
         JButton resetButton = new JButton("Reset Camera View");
@@ -249,6 +249,11 @@ public class ModelAnvil extends JPanel
         lightXSpinner.setToolTipText("<html>Set the sun's x coordinate relative to the player<br>Range: -1000 to 1000</html>");
         lightYSpinner.setToolTipText("<html>Set the sun's y coordinate relative to the player<br>Range: -1000 to 1000</html>");
         lightZSpinner.setToolTipText("<html>Set the sun's z coordinate relative to the player<br>Range: -1000 to 1000</html>");
+
+        for (JSpinner spinner : lightingSpinners)
+        {
+            spinner.addChangeListener(e -> updateRenderPanel());
+        }
 
         presetComboBox.addItem(LightingStyle.DEFAULT);
         presetComboBox.addItem(LightingStyle.ACTOR);
@@ -404,7 +409,7 @@ public class ModelAnvil extends JPanel
             }
             else
             {
-                renderPanel.updateModel(md);
+                renderPanel.updateModel(md, getLightingSettings(), true);
             }
         });
     }
@@ -987,17 +992,21 @@ public class ModelAnvil extends JPanel
 
     private void onForgeButtonPressed(Client client, JTextField nameField, boolean forgeAndSet)
     {
-        CustomLighting lighting = new CustomLighting(
+        CustomLighting lighting = getLightingSettings();
+        if (lighting.getX() == 0 && lighting.getY() == 0 && lighting.getZ() == 0)
+            lighting.setZ(1);
+
+        forgeModel(client, nameField, priorityCheckBox.isSelected(), lighting, forgeAndSet);
+    }
+
+    private CustomLighting getLightingSettings()
+    {
+        return new CustomLighting(
                 (int) lightingSpinners[0].getValue(),
                 (int) lightingSpinners[1].getValue(),
                 (int) lightingSpinners[2].getValue(),
                 (int) lightingSpinners[3].getValue(),
                 (int) lightingSpinners[4].getValue());
-
-        if (lighting.getX() == 0 && lighting.getY() == 0 && lighting.getZ() == 0)
-            lighting.setZ(1);
-
-        forgeModel(client, nameField, priorityCheckBox.isSelected(), lighting, forgeAndSet);
     }
 
     private void forgeModel(Client client, JTextField nameField, boolean setPriority, CustomLighting lighting, boolean forgeAndSet)
@@ -1013,21 +1022,21 @@ public class ModelAnvil extends JPanel
         clientThread.invokeLater(() ->
         {
             DetailedModel[] detailedModels = panelsToDetailedModels();
-            Model model = forgeComplexModel(setPriority, detailedModels, LightingStyle.CUSTOM, lighting);
+            Model model = forgeComplexModel(setPriority, detailedModels, lighting);
             if (model == null)
             {
                 return;
             }
 
-            CustomModelComp comp = new CustomModelComp(plugin.getStoredModels().size(), CustomModelType.FORGED, -1, null, null, detailedModels, null, LightingStyle.CUSTOM, lighting, setPriority, nameField.getText());
+            CustomModelComp comp = new CustomModelComp(CustomModelType.FORGED, -1, null, null, detailedModels, null, lighting, setPriority, nameField.getText());
             CustomModel customModel = new CustomModel(model, comp);
-            modelUtilities.addCustomModel(customModel, forgeAndSet);
+            modelUtilities.addCustomModels(new CustomModel[]{customModel}, forgeAndSet);
         });
     }
 
-    public Model forgeComplexModel(boolean setPriority, DetailedModel[] detailedModels, LightingStyle lightingStyle, CustomLighting lighting)
+    public Model forgeComplexModel(boolean setPriority, DetailedModel[] detailedModels, CustomLighting lighting)
     {
-        return modelUtilities.createComplexModel(detailedModels, setPriority, lightingStyle, lighting, true);
+        return modelUtilities.createComplexModel(detailedModels, setPriority, lighting, true);
     }
 
     private DetailedModel[] panelsToDetailedModels()
@@ -1140,17 +1149,17 @@ public class ModelAnvil extends JPanel
             {
                 selectedFile = new File(selectedFile.getPath() + ".json");
             }
-            saveToFile(selectedFile, name, priority, lightingStyle, lighting);
+            saveToFile(selectedFile, name, priority, lighting);
         }
     }
 
-    public void saveToFile(File file, String name, boolean priority, LightingStyle lightingStyle, CustomLighting lighting)
+    public void saveToFile(File file, String name, boolean priority, CustomLighting lighting)
     {
         try {
             FileWriter writer = new FileWriter(file, false);
 
             DetailedModel[] detailedModels = panelsToDetailedModels();
-            CustomModelComp comp = new CustomModelComp(0, CustomModelType.FORGED, -1, null, null, detailedModels, null, lightingStyle, lighting, priority, name);
+            CustomModelComp comp = new CustomModelComp(CustomModelType.FORGED, -1, null, null, detailedModels, null, lighting, priority, name);
             String string = plugin.getGson().toJson(comp);
             writer.write(string);
             writer.close();

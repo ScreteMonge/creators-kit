@@ -92,9 +92,9 @@ public class ToolBoxFrame extends JFrame
         MovementManager movementManager = new MovementManager(client, config, pathFinder);
 
         setupMenuBar();
-        this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, config, clientThread, dataFinder, managerTree, movementManager, selectionManager);
+        this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, config, configManager, clientThread, dataFinder, managerTree, movementManager, selectionManager);
         this.managerPanel = new ManagerPanel(client, plugin, objectHolder, managerTree);
-        this.cacheSearcher = new CacheSearcherTab(plugin, clientThread, dataFinder, modelUtilities, httpClient);
+        this.cacheSearcher = new CacheSearcherTab(client, plugin, clientThread, dataFinder, modelUtilities, httpClient);
         this.programmer = new Programmer(client, config, clientThread, plugin, timeSheetPanel, dataFinder, modelUtilities);
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -198,6 +198,17 @@ public class ToolBoxFrame extends JFrame
             int x = Integer.parseInt(point[0]);
             int y = Integer.parseInt(point[1]);
             setLocation(x, y);
+
+            Point frameAnchor = new Point(0, 0);
+            SwingUtilities.convertPointToScreen(frameAnchor, this);
+
+            GraphicsConfiguration gc = getGraphicsConfiguration();
+            Rectangle screenBounds = gc.getBounds();
+
+            if (!screenBounds.contains(frameAnchor))
+            {
+                setLocation(0, 0);
+            }
         }
         catch (Exception e)
         {
@@ -232,6 +243,10 @@ public class ToolBoxFrame extends JFrame
         JMenu file = new JMenu("File");
         jMenuBar.add(file);
 
+        JMenuItem newSetup = new JMenuItem("New Setup");
+        newSetup.addActionListener(e -> createNewSetup(true, false));
+        file.add(newSetup);
+
         JMenuItem save = new JMenuItem("Save Setup");
         save.addActionListener(e -> plugin.getCreatorsPanel().quickSaveToFile());
         save.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK));
@@ -241,10 +256,18 @@ public class ToolBoxFrame extends JFrame
         saveAs.addActionListener(e -> plugin.getCreatorsPanel().openSaveDialog());
         file.add(saveAs);
 
-        JMenuItem load = new JMenuItem("Load Setup");
-        load.addActionListener(e -> plugin.getCreatorsPanel().openLoadSetupDialog());
+        JMenuItem load = new JMenuItem("Open Setup");
+        load.addActionListener(e ->
+        {
+            createNewSetup(false, true);
+        });
         load.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_DOWN_MASK));
         file.add(load);
+
+        JMenuItem loadOnTop = new JMenuItem("Open Setup On Top");
+        loadOnTop.addActionListener(e -> plugin.getCreatorsPanel().openLoadSetupDialog(false));
+        loadOnTop.setToolTipText("Load a Setup on top of the current one instead of replacing it");
+        file.add(loadOnTop);
 
         JMenu timeSheet = new JMenu("Timeline");
         jMenuBar.add(timeSheet);
@@ -389,5 +412,32 @@ public class ToolBoxFrame extends JFrame
         {
             plugin.sendChatMessage("Failed to open link.");
         }
+    }
+
+    public void createNewSetup(boolean warning, boolean loadNewSetup)
+    {
+        Thread thread = new Thread(() ->
+        {
+            String warningMessage = loadNewSetup ? "Are you sure you want to open another Setup file? All unsaved changes will be lost" : "Are you sure you want to create a new Setup file? All unsaved changes will be lost";
+
+            if (warning || plugin.getCreatorsPanel().getLastFileLoaded() != null)
+            {
+                int result = JOptionPane.showConfirmDialog(null, warningMessage);
+                if (result != JOptionPane.YES_OPTION)
+                {
+                    return;
+                }
+            }
+
+            managerPanel.getManagerTree().removeAllNodes();
+            modelUtilities.clearCustomModels();
+
+            if (loadNewSetup)
+            {
+                plugin.getCreatorsPanel().openLoadSetupDialog(true);
+            }
+        });
+
+        thread.start();
     }
 }

@@ -32,6 +32,8 @@ import net.runelite.client.config.Keybind;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.externalplugins.ExternalPluginManager;
+import net.runelite.client.externalplugins.PluginHubManifest;
 import net.runelite.client.input.KeyManager;
 import net.runelite.client.input.MouseListener;
 import net.runelite.client.input.MouseManager;
@@ -151,7 +153,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private Random random = new Random();
 	private Model previewArrow;
 	private CustomModel transmogModel;
-	private final int GOLDEN_CHIN = 29757;
 	private int savedRegion = -1;
 	private int savedPlane = -1;
 	private AutoRotate autoRotateYaw = AutoRotate.OFF;
@@ -176,8 +177,12 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				.panel(creatorsPanel)
 				.build();
 
-		eventBus.register(creatorsPanel.getToolBox().getProgrammer());
-		eventBus.register(creatorsPanel.getToolBox().getTransmogPanel());
+		ToolBoxFrame toolBox = creatorsPanel.getToolBox();
+
+		eventBus.register(toolBox.getProgrammer());
+		eventBus.register(toolBox.getTimeSheetPanel().getSummarySheet());
+		eventBus.register(toolBox.getTransmogPanel());
+		eventBus.register(toolBox.getCacheSearcher().getRenderPanel());
 
 		clientToolbar.addNavigation(navigationButton);
 		overlayManager.add(overlay);
@@ -236,7 +241,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			if (SETUP_DIR.exists())
 			{
-				creatorsPanel.loadSetup(SETUP_DIR);
+				creatorsPanel.loadSetup(SETUP_DIR, true);
 			}
 			else
 			{
@@ -288,10 +293,13 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	{
 		creatorsPanel.clearSidePanels(false);
 		creatorsPanel.clearManagerPanels();
-		creatorsPanel.getToolBox().dispose();
 
-		eventBus.unregister(creatorsPanel.getToolBox().getProgrammer());
-		eventBus.unregister(creatorsPanel.getToolBox().getTransmogPanel());
+		ToolBoxFrame toolBox = creatorsPanel.getToolBox();
+		eventBus.unregister(toolBox.getProgrammer());
+		eventBus.unregister(toolBox.getTimeSheetPanel().getSummarySheet());
+		eventBus.unregister(toolBox.getTransmogPanel());
+		eventBus.unregister(toolBox.getCacheSearcher().getRenderPanel());
+		toolBox.dispose();
 
 		clientToolbar.removeNavigation(navigationButton);
 		overlayManager.remove(overlay);
@@ -736,28 +744,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		return creatorsPanel.getToolBox().getTimeSheetPanel().getCurrentTime();
 	}
 
-	public void setModel(Character character, boolean modelMode, int modelId)
-	{
-		CKObject ckObject = character.getCkObject();
-		if (ckObject == null)
-		{
-			return;
-		}
-
-		clientThread.invokeLater(() -> {
-			if (modelMode)
-			{
-				CustomModel customModel = character.getStoredModel();
-				Model model = customModel == null ? client.loadModel(GOLDEN_CHIN) : customModel.getModel();
-				ckObject.setModel(model);
-				return;
-			}
-
-			Model model = client.loadModel(modelId);
-			ckObject.setModel(model);
-		});
-	}
-
 	public void setRadius(Character character, int radius)
 	{
 		CKObject ckObject = character.getCkObject();
@@ -797,7 +783,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 			boolean active = character.isActive();
 
-			setModel(character, character.isCustomMode(), (int) character.getModelSpinner().getValue());
+			character.resetToBaseModel(client, clientThread);
 			character.setAnimation(client, random, AnimationType.ACTIVE, (int) character.getAnimationSpinner().getValue(), (int) character.getAnimationFrameSpinner().getValue(), config.randomizeStartFrame(), true);
 
 			LocationOption locationOption = setHoveredTile ? LocationOption.TO_HOVERED_TILE : LocationOption.TO_SAVED_LOCATION;
@@ -976,6 +962,18 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	public ArrayList<ComplexPanel> getComplexPanels()
 	{
 		return creatorsPanel.getModelAnvil().getComplexPanels();
+	}
+
+	public static String getPluginVersion()
+	{
+		PluginHubManifest.DisplayData displayData = ExternalPluginManager.getDisplayData(CreatorsPlugin.class);
+
+		if (displayData != null && displayData.getVersion() != null)
+		{
+			return displayData.getVersion();
+		}
+
+		return "1000.0.0";
 	}
 
 	private final HotkeyListener overlayKeyListener = new HotkeyListener(() -> config.toggleOverlaysHotkey())
@@ -1298,7 +1296,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		@Override
 		public void hotkeyPressed()
 		{
-			creatorsPanel.openLoadSetupDialog();
+			creatorsPanel.openLoadSetupDialog(true);
 		}
 	};
 

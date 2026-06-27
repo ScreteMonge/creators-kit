@@ -24,19 +24,9 @@ dependencies {
 }
 
 group = 'com.creatorssuite'
-version = '2.1.9'
+version = '2.1.21'
 sourceCompatibility = '1.9'
 
 tasks.withType(JavaCompile) {
 	options.encoding = 'UTF-8'
-}
-
-task createProperties(dependsOn: processResources) {
-	doLast {
-		new File("$buildDir/resources/main/version.txt").text = "version=$project.version"
-	}
-}
-
-classes {
-	dependsOn createProperties
 }

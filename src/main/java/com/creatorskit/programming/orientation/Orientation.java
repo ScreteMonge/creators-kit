@@ -159,4 +159,9 @@ public class Orientation
         double differenceY = secondY - firstY;
         return Orientation.radiansToJAngle(Math.atan(differenceY / differenceX), differenceX, differenceY);
     }
+
+    public static int jAngleToDegrees(int jAngle)
+    {
+        return jAngle * 180 / 1024;
+    }
 }

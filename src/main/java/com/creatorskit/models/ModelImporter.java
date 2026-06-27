@@ -91,7 +91,8 @@ public class ModelImporter
             File[] files = fileChooser.getSelectedFiles();
             for (File selectedFile : files)
             {
-                loadBlenderModel(selectedFile, (LightingStyle) comboBox.getSelectedItem());
+                LightingStyle ls = (LightingStyle) comboBox.getSelectedItem();
+                loadBlenderModel(selectedFile, CustomLighting.fromLightingStyle(ls));
             }
         }
     }
@@ -126,10 +127,10 @@ public class ModelImporter
             return;
         }
 
-        loadBlenderModel(chosenFile, LightingStyle.ACTOR);
+        loadBlenderModel(chosenFile, CustomLighting.fromLightingStyle(LightingStyle.ACTOR));
     }
 
-    private void loadBlenderModel(File file, LightingStyle lightingStyle)
+    private void loadBlenderModel(File file, CustomLighting cl)
     {
         if (!file.exists())
         {
@@ -178,7 +179,7 @@ public class ModelImporter
                 return;
             }
 
-            addModel(blenderModel, lightingStyle, finalName);
+            addModel(blenderModel, cl, finalName);
         });
     }
 
@@ -191,20 +192,18 @@ public class ModelImporter
         return string.substring(0, lastIndex) + tail;
     }
 
-    public void addModel(BlenderModel blenderModel, LightingStyle lightingStyle, String name)
+    public void addModel(BlenderModel blenderModel, CustomLighting cl, String name)
     {
-        Model model = createModel(blenderModel, lightingStyle);
+        Model model = createModel(blenderModel, cl);
         if (model == null)
             return;
 
-        CustomLighting lighting = new CustomLighting(lightingStyle.getAmbient(), lightingStyle.getContrast(), lightingStyle.getX(), lightingStyle.getY(), lightingStyle.getZ());
-
-        CustomModelComp comp = new CustomModelComp(0, CustomModelType.BLENDER, -1, null, null, null, blenderModel, lightingStyle, lighting, false, name);
+        CustomModelComp comp = new CustomModelComp(CustomModelType.BLENDER, -1, null, null, null, blenderModel, cl, false, name);
         CustomModel customModel = new CustomModel(model, comp);
-        modelUtilities.addCustomModel(customModel, false);
+        modelUtilities.addCustomModels(new CustomModel[]{customModel}, false);
     }
 
-    public Model createModel(BlenderModel blenderModel, LightingStyle lightingStyle)
+    public Model createModel(BlenderModel blenderModel, CustomLighting cl)
     {
         int vertexCount = blenderModel.getVertices().length;
         int[] verticesX = new int[vertexCount];
@@ -311,11 +310,11 @@ public class ModelImporter
         }
 
         Model model = modelData.light(
-                lightingStyle.getAmbient(),
-                lightingStyle.getContrast(),
-                lightingStyle.getX(),
-                lightingStyle.getZ() * -1,
-                lightingStyle.getY());
+                cl.getAmbient(),
+                cl.getContrast(),
+                cl.getX(),
+                cl.getZ() * -1,
+                cl.getY());
 
         if (blenderModel.isUseVertexColours())
         {
