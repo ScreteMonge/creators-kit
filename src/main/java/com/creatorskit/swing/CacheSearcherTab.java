@@ -633,7 +633,7 @@ public class CacheSearcherTab extends JPanel
 
         addKeyFrame.addActionListener(e ->
         {
-            if (plugin.getSelectionManager().getFirstSelected() == null)
+            if (plugin.getSelectionManager().getPrimary() == null)
             {
                 return;
             }
@@ -826,7 +826,7 @@ public class CacheSearcherTab extends JPanel
 
         addKeyFrame.addActionListener(e ->
         {
-            if (plugin.getSelectionManager().getFirstSelected() == null)
+            if (plugin.getSelectionManager().getPrimary() == null)
             {
                 return;
             }
@@ -904,7 +904,7 @@ public class CacheSearcherTab extends JPanel
                     if (o instanceof AnimData)
                     {
                         AnimData data = (AnimData) o;
-                        Character character = plugin.getSelectionManager().getFirstSelected();
+                        Character character = plugin.getSelectionManager().getPrimary();
                         if (character != null)
                         {
                             int animId = data.getId();

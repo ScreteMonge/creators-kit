@@ -10,6 +10,7 @@ import com.creatorskit.models.datatypes.WeaponAnimData;
 import com.creatorskit.models.exporters.ModelExporter;
 import com.creatorskit.programming.AnimationType;
 import com.creatorskit.selection.SelectionManager;
+import com.creatorskit.selection.SelectionOrigin;
 import com.creatorskit.swing.CreatorsPanel;
 import com.creatorskit.swing.ParentPanel;
 import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
@@ -76,7 +77,7 @@ public class ModelGetter
                             .setOption(ColorUtil.prependColorTag("Select", Color.ORANGE))
                             .setTarget(ColorUtil.colorTag(Color.GREEN) + character.getName())
                             .setType(MenuAction.RUNELITE)
-                            .onClick(e -> selectionManager.select(character));
+                            .onClick(e -> selectionManager.select(character, SelectionOrigin.DIRECT));
 
                     Menu menu = menuEntry.createSubMenu();
 

@@ -136,7 +136,7 @@ public class TimeSheetPanel extends JSplitPane
         setupLayout();
         setKeyBindings();
         setMouseListeners();
-        selectionManager.addListener(mgr -> setSelectedCharacter(mgr.getFirstSelected()));
+        selectionManager.addListener((manager, origin) -> updateSelectedCharacter(manager.getPrimary()));
     }
 
     public void onAttributeSkipForward()
@@ -1073,7 +1073,7 @@ public class TimeSheetPanel extends JSplitPane
         }
     }
 
-    public void setSelectedCharacter(Character character)
+    public void updateSelectedCharacter(Character character)
     {
         selectedCharacter = character;
         summarySheet.setSelectedCharacter(character);

@@ -118,7 +118,7 @@ public class AttributePanel extends JPanel
         this.timeSheetPanel = timeSheetPanel;
         this.dataFinder = dataFinder;
         this.selectionManager = selectionManager;
-        selectionManager.addListener(mgr -> updateObjectLabel(mgr.getFirstSelected()));
+        selectionManager.addListener((manager, origin) -> updateObjectLabel(manager.getPrimary()));
 
         setLayout(new GridBagLayout());
         setBackground(ColorScheme.DARKER_GRAY_COLOR);

@@ -3,6 +3,7 @@ package com.creatorskit.swing.manager;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.selection.SelectionManager;
+import com.creatorskit.selection.SelectionOrigin;
 import com.creatorskit.swing.*;
 import lombok.Getter;
 import net.runelite.client.ui.ColorScheme;
@@ -60,14 +61,14 @@ public class ManagerTree extends JTree
         this.rootNode = rootNode;
         this.sidePanelNode = sidePanelNode;
         this.managerNode = managerNode;
-        selectionManager.addListener(mgr ->
+        selectionManager.addListener((manager, origin) ->
         {
-            if (!triggerTreeSelectionListener)
+            if (origin == SelectionOrigin.MANAGER_TREE)
             {
                 return;
             }
 
-            setTreeSelection(mgr.getSelected());
+            setTreeSelection(manager.getSelected());
         });
 
         setBorder(new LineBorder(ColorScheme.DARKER_GRAY_COLOR, 1));
@@ -453,9 +454,7 @@ public class ManagerTree extends JTree
             TreePath[] treePaths = getSelectionPaths();
             if (treePaths == null)
             {
-                triggerTreeSelectionListener = false;
-                selectionManager.clear();
-                triggerTreeSelectionListener = true;
+                selectionManager.clear(SelectionOrigin.MANAGER_TREE);
                 return;
             }
 
@@ -478,9 +477,7 @@ public class ManagerTree extends JTree
             getPanelsToShow(panelsToAdd, folders, ParentPanel.MANAGER);
 
             selectedFolders = folders;
-            triggerTreeSelectionListener = false;
-            selectionManager.selectAll(characters);
-            triggerTreeSelectionListener = true;
+            selectionManager.selectAll(characters, SelectionOrigin.MANAGER_TREE);
 
             resetObjectHolder(panelsToAdd);
         }
@@ -602,13 +599,12 @@ public class ManagerTree extends JTree
         toolBox.getTimeSheetPanel().getSummarySheet().onVerticalScrollEvent(scroll);
     }
 
-    private boolean triggerTreeSelectionListener = true;
-
     public void setTreeSelection(Set<Character> selected)
     {
         List<Character> characters = new ArrayList<>(selected);
         if (characters.isEmpty())
         {
+            setSelectionPath(null);
             updateTreeSelectionIndex();
             return;
         }
@@ -627,9 +623,7 @@ public class ManagerTree extends JTree
             paths = ArrayUtils.add(paths, new TreePath(folder.getLinkedManagerNode().getPath()));
         }
 
-        triggerTreeSelectionListener = false;
         setSelectionPaths(paths);
-        triggerTreeSelectionListener = true;
         updateTreeSelectionIndex();
     }
 
@@ -827,7 +821,7 @@ public class ManagerTree extends JTree
             }
 
             selectedFolders = folders;
-            plugin.getSelectionManager().selectAll(characters);
+            plugin.getSelectionManager().selectAll(characters, SelectionOrigin.MANAGER_TREE);
         });
         popup.add(selectAll);
 

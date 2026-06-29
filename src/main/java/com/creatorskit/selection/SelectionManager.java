@@ -14,9 +14,9 @@ import java.util.Set;
 @Singleton
 public class SelectionManager
 {
-	private final LinkedHashSet<Character> selected = new LinkedHashSet<>();
 	@Getter
-    private Character firstSelected;
+    private Character primary;
+	private final LinkedHashSet<Character> selected = new LinkedHashSet<>();
 	private final List<SelectionListener> listeners = new ArrayList<>();
 
     public Set<Character> getSelected()
@@ -39,34 +39,34 @@ public class SelectionManager
 		return selected.size();
 	}
 
-	public void select(Character c)
+	public void select(Character c, SelectionOrigin origin)
 	{
 		if (c == null)
 		{
-			clear();
+			clear(origin);
 			return;
 		}
 
-		if (selected.size() == 1 && firstSelected == c)
+		if (selected.size() == 1 && primary == c)
 		{
 			return;
 		}
 
-		selected.clear();
+		clear(origin);
 		selected.add(c);
-		firstSelected = c;
-		fireChanged();
+		primary = c;
+		fireChanged(origin);
 	}
 
-	public void selectAll(Collection<Character> characters)
+	public void selectAll(Collection<Character> characters, SelectionOrigin origin)
 	{
 		if (characters == null || characters.isEmpty())
 		{
-			clear();
+			clear(origin);
 			return;
 		}
 
-		selected.clear();
+		clear(origin);
 		Character last = null;
 		for (Character c : characters)
 		{
@@ -76,37 +76,33 @@ public class SelectionManager
 			}
 		}
 
-		firstSelected = last;
-		fireChanged();
+		primary = last;
+		fireChanged(origin);
 	}
 
-	public void add(Character c)
+	public void add(Character c, SelectionOrigin origin)
 	{
-		if (!selected.add(c))
-		{
-			return;
-		}
-
-		firstSelected = c;
-		fireChanged();
+		primary = c;
+		selected.add(c);
+		fireChanged(origin);
 	}
 
-	public void remove(Character c)
+	public void remove(Character c, SelectionOrigin origin)
 	{
 		if (!selected.remove(c))
 		{
 			return;
 		}
 
-		if (firstSelected == c)
+		if (primary == c)
 		{
-			firstSelected = lastInSet();
+			primary = lastInSet();
 		}
 
-		fireChanged();
+		fireChanged(origin);
 	}
 
-	public void toggle(Character c)
+	public void toggle(Character c, SelectionOrigin origin)
 	{
 		if (c == null)
 		{
@@ -114,19 +110,19 @@ public class SelectionManager
 		}
 		if (selected.contains(c))
 		{
-			remove(c);
+			remove(c, origin);
 		}
 		else
 		{
-			add(c);
+			add(c,origin);
 		}
 	}
 
-	public void clear()
+	public void clear(SelectionOrigin origin)
 	{
 		selected.clear();
-		firstSelected = null;
-		fireChanged();
+		primary = null;
+		fireChanged(origin);
 	}
 
 	public void addListener(SelectionListener listener)
@@ -134,11 +130,11 @@ public class SelectionManager
 		listeners.add(listener);
 	}
 
-	private void fireChanged()
+	private void fireChanged(SelectionOrigin origin)
 	{
 		for (SelectionListener l : new ArrayList<>(listeners))
 		{
-			l.selectionChanged(this);
+			l.selectionChanged(this, origin);
 		}
 	}
 
@@ -154,6 +150,6 @@ public class SelectionManager
 
 	public interface SelectionListener
 	{
-		void selectionChanged(SelectionManager manager);
+		void selectionChanged(SelectionManager manager, SelectionOrigin origin);
 	}
 }

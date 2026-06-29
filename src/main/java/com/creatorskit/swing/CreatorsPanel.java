@@ -12,12 +12,12 @@ import com.creatorskit.saves.ModelKeyFrameSave;
 import com.creatorskit.saves.SetupSave;
 import com.creatorskit.models.*;
 import com.creatorskit.selection.SelectionManager;
+import com.creatorskit.selection.SelectionOrigin;
 import com.creatorskit.swing.anvil.ModelAnvil;
 import com.creatorskit.swing.manager.Folder;
 import com.creatorskit.swing.manager.FolderType;
 import com.creatorskit.swing.manager.ManagerPanel;
 import com.creatorskit.swing.manager.ManagerTree;
-import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -69,7 +69,6 @@ public class CreatorsPanel extends PluginPanel
     private final DataFinder dataFinder;
     private final ModelImporter modelImporter;
     private final SelectionManager selectionManager;
-    private boolean bulkEditing = false;
 
     private final JButton addObjectButton = new JButton();
     private final JPanel sidePanel = new JPanel();
@@ -91,9 +90,13 @@ public class CreatorsPanel extends PluginPanel
     private final BufferedImage FIND = ImageUtil.loadImageResource(getClass(), "/Find.png");
     private final BufferedImage CUSTOM_MODEL = ImageUtil.loadImageResource(getClass(), "/Custom model.png");
     public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
+
     private final LineBorder defaultBorder = new LineBorder(ColorScheme.MEDIUM_GRAY_COLOR, 1);
     private final LineBorder hoveredBorder = new LineBorder(ColorScheme.LIGHT_GRAY_COLOR, 1);
-    private final LineBorder selectedBorder = new LineBorder(Color.WHITE, 1);
+    private final LineBorder selectedBorder = new LineBorder(ColorScheme.BRAND_ORANGE, 1);
+    private final LineBorder firstBorder = new LineBorder(Color.WHITE, 1);
+
+    private boolean bulkEditing = false;
 
     @Inject
     public CreatorsPanel(@Nullable Client client, CreatorsConfig config, ClientThread clientThread, CreatorsPlugin plugin, ToolBoxFrame toolBox, DataFinder dataFinder, ModelImporter modelImporter, SelectionManager selectionManager)
@@ -108,7 +111,7 @@ public class CreatorsPanel extends PluginPanel
         this.dataFinder = dataFinder;
         this.modelImporter = modelImporter;
         this.selectionManager = selectionManager;
-        selectionManager.addListener(mgr -> refreshSelectionBorders());
+        selectionManager.addListener((manager, origin) -> refreshSelectionBorders());
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setLayout(new GridBagLayout());
@@ -565,7 +568,7 @@ public class CreatorsPanel extends PluginPanel
         {
             CustomModel m = (CustomModel) modelComboBox.getSelectedItem();
             character.setStoredModel(m);
-            if (modelComboBox.isVisible() && character == selectionManager.getFirstSelected())
+            if (modelComboBox.isVisible() && character == selectionManager.getPrimary())
                 character.setToBaseModel(client, clientThread, true, -1);
             propagateCustomModel(character, m);
         });
@@ -774,7 +777,7 @@ public class CreatorsPanel extends PluginPanel
             npcPanels++;
         }
 
-        selectionManager.select(character);
+        selectionManager.select(character, SelectionOrigin.AUTOMATED);
     }
 
     public void onSwitchButtonPressed(Character character)
@@ -900,10 +903,9 @@ public class CreatorsPanel extends PluginPanel
     public void deleteCharacters(Character[] charactersToRemove)
     {
         removePanels(charactersToRemove);
-        TimeSheetPanel timeSheetPanel = toolBox.getTimeSheetPanel();
 
         ArrayList<Character> characters = plugin.getCharacters();
-        Character selectedCharacter = selectionManager.getFirstSelected();
+        Character selectedCharacter = selectionManager.getPrimary();
 
         for (Character c : charactersToRemove)
         {
@@ -926,7 +928,7 @@ public class CreatorsPanel extends PluginPanel
             characters.remove(c);
             if (c == selectedCharacter)
             {
-                selectionManager.clear();
+                selectionManager.clear(SelectionOrigin.AUTOMATED);
             }
 
             toolBox.getTimeSheetPanel().removeKeyFrameActions(c);
@@ -1009,7 +1011,7 @@ public class CreatorsPanel extends PluginPanel
 
         for (Character character : sidePanelCharacters)
         {
-            selectionManager.remove(character);
+            selectionManager.remove(character, SelectionOrigin.AUTOMATED);
         }
 
         Character[] charactersToRemove = sidePanelCharacters.toArray(new Character[sidePanelCharacters.size()]);
@@ -1027,7 +1029,7 @@ public class CreatorsPanel extends PluginPanel
         ManagerPanel managerPanel = toolBox.getManagerPanel();
         JPanel objectHolder = managerPanel.getObjectHolder();
         ArrayList<Character> managerCharacters = managerPanel.getManagerCharacters();
-        selectionManager.clear();
+        selectionManager.clear(SelectionOrigin.AUTOMATED);
 
         Character[] charactersToRemove = managerCharacters.toArray(new Character[managerCharacters.size()]);
 
@@ -1056,13 +1058,25 @@ public class CreatorsPanel extends PluginPanel
 
     public void onCharacterPanelClicked(Character character, MouseEvent e)
     {
-        if (e.isControlDown())
+        if (e.getButton() == MouseEvent.BUTTON3)
         {
-            selectionManager.toggle(character);
+            if (e.isControlDown())
+            {
+                selectionManager.remove(character, SelectionOrigin.DIRECT);
+                return;
+            }
+
+            selectionManager.clear(SelectionOrigin.DIRECT);
             return;
         }
 
-        selectionManager.select(character);
+        if (e.isControlDown())
+        {
+            selectionManager.add(character, SelectionOrigin.DIRECT);
+            return;
+        }
+
+        selectionManager.select(character, SelectionOrigin.DIRECT);
     }
 
     private static Border buildNameFieldBorder(Border inner, Color accent)
@@ -1097,10 +1111,7 @@ public class CreatorsPanel extends PluginPanel
         {
             JButton swatch = new JButton();
             swatch.setBackground(c);
-            swatch.setOpaque(true);
-            swatch.setBorderPainted(false);
             swatch.setPreferredSize(swatchSize);
-            swatch.setFocusable(false);
             swatch.addActionListener(ev ->
             {
                 applyColorToTargets(target, c);
@@ -1111,7 +1122,6 @@ public class CreatorsPanel extends PluginPanel
 
         JButton random = new JButton("?");
         random.setPreferredSize(swatchSize);
-        random.setFocusable(false);
         random.setToolTipText("Random colour");
         random.addActionListener(ev ->
         {
@@ -1144,51 +1154,38 @@ public class CreatorsPanel extends PluginPanel
         {
             return;
         }
+
         bulkEditing = true;
-        try
+        for (Character c : targets)
         {
-            for (Character c : targets)
+            if (c == source)
             {
-                if (c == source)
-                {
-                    continue;
-                }
-                JSpinner s = getter.apply(c);
-                if (s != null && !Objects.equals(s.getValue(), value))
-                {
-                    s.setValue(value);
-                }
+                continue;
+            }
+            JSpinner s = getter.apply(c);
+            if (!Objects.equals(s.getValue(), value))
+            {
+                s.setValue(value);
             }
         }
-        finally
-        {
-            bulkEditing = false;
-        }
+
+        bulkEditing = false;
     }
 
     private void applyModelMode(Character c, boolean customMode, JButton modelBtn, JSpinner modelSp, JComboBox<CustomModel> modelCb)
     {
         c.setCustomMode(customMode);
-        if (modelBtn != null)
-        {
-            modelBtn.setText(customMode ? "Custom" : "Id");
-        }
-        if (modelSp != null)
-        {
-            modelSp.setVisible(!customMode);
-        }
-        if (modelCb != null)
-        {
-            modelCb.setVisible(customMode);
-        }
+        modelBtn.setText(customMode ? "Custom" : "Id");
+        modelSp.setVisible(!customMode);
+        modelCb.setVisible(customMode);
+
         if (customMode)
         {
             c.setToBaseModel(client, clientThread, true, -1);
         }
         else
         {
-            int idValue = modelSp != null ? (int) modelSp.getValue() : 0;
-            c.setToBaseModel(client, clientThread, false, idValue);
+            c.setToBaseModel(client, clientThread, false, (int) modelSp.getValue());
         }
     }
 
@@ -1198,36 +1195,36 @@ public class CreatorsPanel extends PluginPanel
         {
             return;
         }
+
         Set<Character> targets = getBulkTargets(source);
         if (targets.size() == 1)
         {
             return;
         }
+
         bulkEditing = true;
-        try
+        for (Character c : targets)
         {
-            for (Character c : targets)
+            if (c == source)
             {
-                if (c == source)
-                {
-                    continue;
-                }
-                c.setStoredModel(m);
-                JComboBox<CustomModel> cb = c.getComboBox();
-                if (cb != null && cb.getSelectedItem() != m)
-                {
-                    cb.setSelectedItem(m);
-                }
-                if (c.isCustomMode())
-                {
-                    c.setToBaseModel(client, clientThread, true, -1);
-                }
+                continue;
+            }
+
+            c.setStoredModel(m);
+            JComboBox<CustomModel> cb = c.getComboBox();
+
+            if (cb.getSelectedItem() != m)
+            {
+                cb.setSelectedItem(m);
+            }
+
+            if (c.isCustomMode())
+            {
+                c.setToBaseModel(client, clientThread, true, -1);
             }
         }
-        finally
-        {
-            bulkEditing = false;
-        }
+
+        bulkEditing = false;
     }
 
     private void propagateActive(Character source, boolean active)
@@ -1236,35 +1233,30 @@ public class CreatorsPanel extends PluginPanel
         {
             return;
         }
+
         Set<Character> targets = getBulkTargets(source);
         if (targets.size() == 1)
         {
             return;
         }
+
         bulkEditing = true;
-        try
+        for (Character c : targets)
         {
-            for (Character c : targets)
+            if (c == source)
             {
-                if (c == source)
-                {
-                    continue;
-                }
-                if (c.isActive() != active)
-                {
-                    JCheckBox cb = c.getSpawnCheckBox();
-                    if (cb != null)
-                    {
-                        cb.setSelected(active);
-                    }
-                    c.setActive(active, active, true, clientThread);
-                }
+                continue;
+            }
+
+            if (c.isActive() != active)
+            {
+                JCheckBox cb = c.getSpawnCheckBox();
+                cb.setSelected(active);
+                c.setActive(active, active, true, clientThread);
             }
         }
-        finally
-        {
-            bulkEditing = false;
-        }
+
+        bulkEditing = false;
     }
 
     public void applyColorToTargets(Character clicked, Color color)
@@ -1292,32 +1284,45 @@ public class CreatorsPanel extends PluginPanel
         nameField.setBorder(buildNameFieldBorder(inner, color));
     }
 
-    /**
-     * Iterates every Character panel and applies the correct border based on
-     * whether it's selected (per SelectionManager) or hovered.
-     */
     public void refreshSelectionBorders()
     {
         ArrayList<Character> characters = plugin.getCharacters();
         Character hovered = plugin.getHoveredCharacter();
+        Character first = selectionManager.getPrimary();
 
         for (int i = 0; i < characters.size(); i++)
         {
             Character c = characters.get(i);
             JPanel panel = c.getObjectPanel();
 
-            if (selectionManager.contains(c))
+            if (c == first)
             {
-                panel.setBorder(selectedBorder);
-            }
-            else if (c == hovered)
-            {
-                panel.setBorder(hoveredBorder);
+                panel.setBackground(ColorScheme.DARK_GRAY_COLOR.brighter());
             }
             else
             {
-                panel.setBorder(defaultBorder);
+                panel.setBackground(ColorScheme.DARK_GRAY_COLOR);
             }
+
+            if (c == first)
+            {
+                panel.setBorder(firstBorder);
+                continue;
+            }
+
+            if (selectionManager.contains(c))
+            {
+                panel.setBorder(selectedBorder);
+                continue;
+            }
+
+            if (c == hovered)
+            {
+                panel.setBorder(hoveredBorder);
+                continue;
+            }
+
+            panel.setBorder(defaultBorder);
         }
     }
 
@@ -1354,7 +1359,7 @@ public class CreatorsPanel extends PluginPanel
     public void addModelOptions(CustomModel[] models, boolean setComboBox)
     {
         modelOrganizer.addModels(models);
-        Character selectedCharacter = selectionManager.getFirstSelected();
+        Character selectedCharacter = selectionManager.getPrimary();
 
         JComboBox<CustomModel> modelAttributesBox = toolBox.getTimeSheetPanel()
                 .getAttributePanel()
