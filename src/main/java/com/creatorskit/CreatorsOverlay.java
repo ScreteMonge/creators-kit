@@ -10,6 +10,8 @@ import net.runelite.api.Point;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.gameval.ObjectID;
+import net.runelite.client.ui.ColorScheme;
+import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
@@ -27,8 +29,9 @@ public class CreatorsOverlay extends Overlay
     private final CreatorsConfig config;
     private final SelectionManager selectionManager;
     private static final Color HOVERED_COLOUR = new Color(146, 206, 193, 255);
-    private static final Color SELECTED_COLOUR = new Color(220, 253, 245);
-    private static final Color GAME_OBJECT_COLOUR = new Color(255, 138, 18);
+    private static final Color PRIMARY_COLOUR = new Color(220, 253, 245);
+    private static final Color SELECTED_COLOUR = ColorScheme.BRAND_ORANGE;
+    private static final Color GAME_OBJECT_COLOUR = new Color(204, 18, 255);
     private static final Color DYNAMIC_OBJECT_COLOUR = new Color(255, 190, 130);
     private static final Color GROUND_OBJECT_COLOUR = new Color(73, 255, 0);
     private static final Color WALL_OBJECT_COLOUR = new Color(255, 70, 70);
@@ -157,6 +160,11 @@ public class CreatorsOverlay extends Overlay
             if (selectedCharacter)
             {
                 color = SELECTED_COLOUR;
+            }
+
+            if (character == selectionManager.getPrimary())
+            {
+                color = PRIMARY_COLOUR;
             }
 
             if (path.length > 0)
@@ -297,6 +305,11 @@ public class CreatorsOverlay extends Overlay
             if (selectedCharacter)
             {
                 color = SELECTED_COLOUR;
+            }
+
+            if (character == selectionManager.getPrimary())
+            {
+                color = PRIMARY_COLOUR;
             }
 
             int[][] path = keyFrame.getPath();
@@ -488,6 +501,7 @@ public class CreatorsOverlay extends Overlay
     public void renderSelectedRLObject(Graphics2D graphics, WorldView worldView)
     {
         boolean poh = MovementManager.useLocalLocations(worldView);
+        graphics.setFont(FontManager.getRunescapeBoldFont());
 
         for (Character character : selectionManager.getSelected())
         {
@@ -521,10 +535,12 @@ public class CreatorsOverlay extends Overlay
 
             model.calculateBoundsCylinder();
 
+            Color c = character == selectionManager.getPrimary() ? PRIMARY_COLOUR : SELECTED_COLOUR;
+
             Point p = Perspective.getCanvasTextLocation(client, graphics, lp, character.getName(), model.getModelHeight());
             if (p != null)
             {
-                OverlayUtil.renderTextLocation(graphics, p, character.getName(), SELECTED_COLOUR);
+                OverlayUtil.renderTextLocation(graphics, p, character.getName(), c);
             }
         }
     }
@@ -559,6 +575,7 @@ public class CreatorsOverlay extends Overlay
             }
 
             model.calculateBoundsCylinder();
+            graphics.setFont(selectionManager.contains(character) ? FontManager.getRunescapeBoldFont() : FontManager.getRunescapeSmallFont());
 
             Point point = Perspective.getCanvasTextLocation(client, graphics, lp, name, model.getModelHeight());
 
@@ -574,7 +591,9 @@ public class CreatorsOverlay extends Overlay
                     continue;
                 }
 
-                OverlayUtil.renderTextLocation(graphics, point, name, SELECTED_COLOUR);
+                Color c = character == selectionManager.getPrimary() ? PRIMARY_COLOUR : SELECTED_COLOUR;
+
+                OverlayUtil.renderTextLocation(graphics, point, name, c);
                 continue;
             }
 
