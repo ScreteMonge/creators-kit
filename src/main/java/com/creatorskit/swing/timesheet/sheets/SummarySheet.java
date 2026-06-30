@@ -151,14 +151,11 @@ public class SummarySheet extends TimeSheet
         {
             index++;
 
-            TreePath path = tree.getPathForRow(index);
-            if (path == null)
-            {
-                continue;
-            }
+            TreePath path = new TreePath(node.getPath());
 
             if (!tree.isVisible(path))
             {
+                index--;
                 continue;
             }
 
