@@ -1084,7 +1084,7 @@ public class TimeSheetPanel extends JSplitPane
 
     public void onSelectedKeyFramesChanged()
     {
-        attributePanel.refreshKeyFrameSelectionState();
+        attributePanel.showCardForSelectedKeyFrameType();
         if (selectedCharacter != null)
         {
             attributePanel.resetAttributes(selectedCharacter, currentTime);

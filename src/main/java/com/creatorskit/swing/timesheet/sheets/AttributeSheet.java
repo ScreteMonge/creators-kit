@@ -361,13 +361,20 @@ public class AttributeSheet extends TimeSheet
             return;
         }
 
-        if (!shiftDown && kfsm.isEmpty())
+        Map.Entry<Character, KeyFrame[]> firstEntry = clickedKeyFrames.entrySet().iterator().next();
+        Character character = firstEntry.getKey();
+        KeyFrame[] keyFrames = firstEntry.getValue(); //only registers for the first clicked keyframe
+
+        if (!shiftDown)
         {
-            kfsm.clear();
+            if (!kfsm.containsKeyFrame(keyFrames))
+            {
+                kfsm.clear();
+            }
         }
 
-        Map.Entry<Character, KeyFrame[]> firstEntry = clickedKeyFrames.entrySet().iterator().next();
-        kfsm.add(firstEntry.getKey(), firstEntry.getValue());
+        kfsm.add(character, keyFrames);
+        getTimeSheetPanel().onSelectedKeyFramesChanged();
     }
 
     @Override

@@ -83,7 +83,6 @@ public class AttributePanel extends JPanel
     public static final String HITSPLAT_2_CARD = "Hitsplat 2";
     public static final String HITSPLAT_3_CARD = "Hitsplat 3";
     public static final String HITSPLAT_4_CARD = "Hitsplat 4";
-    public static final String MIXED_TYPES_CARD = "MixedTypes";
 
     private final String NO_OBJECT_SELECTED = "[No Object Selected]";
     private String activeCard = MOVE_CARD;
@@ -207,7 +206,6 @@ public class AttributePanel extends JPanel
         JPanel hitsplat2Card = new JPanel();
         JPanel hitsplat3Card = new JPanel();
         JPanel hitsplat4Card = new JPanel();
-        JPanel mixedTypesCard = new JPanel();
         cardPanel.add(moveCard, MOVE_CARD);
         cardPanel.add(animCard, ANIM_CARD);
         cardPanel.add(oriCard, ORI_CARD);
@@ -222,7 +220,6 @@ public class AttributePanel extends JPanel
         cardPanel.add(hitsplat2Card, HITSPLAT_2_CARD);
         cardPanel.add(hitsplat3Card, HITSPLAT_3_CARD);
         cardPanel.add(hitsplat4Card, HITSPLAT_4_CARD);
-        cardPanel.add(mixedTypesCard, MIXED_TYPES_CARD);
 
         setupMoveCard(moveCard);
         setupAnimCard(animCard);
@@ -2353,51 +2350,23 @@ public class AttributePanel extends JPanel
         resetAttributes(character, tick);
     }
 
-    public void refreshKeyFrameSelectionState()
+    public void showCardForSelectedKeyFrameType()
     {
         LinkedHashMap<Character, KeyFrame[]> selected = kfsm.getSelected();
-        Iterator<Map.Entry<Character, KeyFrame[]>> iterator =
-                selected.entrySet().iterator();
-
-        boolean mixedTypes = false;
-        KeyFrameType type = KeyFrameType.NULL;
-        while (iterator.hasNext())
+        if (selected.size() == 1)
         {
-            Map.Entry<Character, KeyFrame[]> entry = iterator.next();
-
-            for (KeyFrame keyFrame : entry.getValue())
+            selected.forEach((character, keyFrames) ->
             {
-                if (type == KeyFrameType.NULL)
+                if (keyFrames.length != 1)
                 {
-                    type = keyFrame.getKeyFrameType();
+                    return;
                 }
 
-                if (type != keyFrame.getKeyFrameType())
-                {
-                    mixedTypes = true;
-                    break;
-                }
-            }
-
-            if (mixedTypes)
-            {
-                break;
-            }
+                KeyFrame keyFrame = keyFrames[0];
+                CardLayout cl = (CardLayout) cardPanel.getLayout();
+                cl.show(cardPanel, keyFrame.getKeyFrameType().getName());
+            });
         }
-
-        CardLayout cl = (CardLayout) cardPanel.getLayout();
-        if (mixedTypes)
-        {
-            cl.show(cardPanel, MIXED_TYPES_CARD);
-        }
-        else
-        {
-            cl.show(cardPanel, activeCard);
-        }
-
-        updateButton.setEnabled(!mixedTypes);
-        resetButton.setEnabled(!mixedTypes);
-        keyFramed.setEnabled(!mixedTypes);
     }
 
     public void updateObjectLabel(Character character)

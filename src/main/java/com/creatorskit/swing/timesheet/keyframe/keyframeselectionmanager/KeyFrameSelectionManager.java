@@ -16,6 +16,25 @@ public class KeyFrameSelectionManager
         return selectedKeyFrames;
     }
 
+    public boolean containsCharacter(Character c)
+    {
+        return selectedKeyFrames.containsKey(c);
+    }
+
+    public boolean containsKeyFrame(KeyFrame[] keyFrames)
+    {
+        return selectedKeyFrames.values().stream()
+                .flatMap(Arrays::stream)
+                .anyMatch(kf -> Arrays.asList(keyFrames).contains(kf));
+    }
+
+    public boolean containsKeyFrame(KeyFrame kf)
+    {
+        return selectedKeyFrames.values().stream()
+                .flatMap(Arrays::stream)
+                .anyMatch(keyFrame -> keyFrame.equals(kf));
+    }
+
     public boolean isEmpty()
     {
         return selectedKeyFrames.isEmpty();

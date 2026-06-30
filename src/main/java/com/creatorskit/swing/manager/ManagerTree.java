@@ -85,7 +85,7 @@ public class ManagerTree extends JTree
         getSelectionModel().setSelectionMode(TreeSelectionModel.DISCONTIGUOUS_TREE_SELECTION);
         setShowsRootHandles(true);
         setRootVisible(false);
-        setDragEnabled(false);
+        setDragEnabled(true);
         setDropMode(DropMode.ON_OR_INSERT);
         setTransferHandler(new ManagerTreeTransferHandler(plugin, toolBox));
         addTreeSelectionListener(new MyTreeSelectionListener());
@@ -625,11 +625,6 @@ public class ManagerTree extends JTree
 
         setSelectionPaths(paths);
         updateTreeSelectionIndex();
-    }
-
-    public void setReorderMode(boolean enabled)
-    {
-        setDragEnabled(enabled);
     }
 
     public void scrollSelectedIndex(int direction)
