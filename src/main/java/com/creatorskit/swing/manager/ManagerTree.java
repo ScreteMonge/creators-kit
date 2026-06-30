@@ -820,7 +820,7 @@ public class ManagerTree extends JTree
             }
 
             selectedFolders = folders;
-            plugin.getSelectionManager().selectAll(characters, SelectionOrigin.MANAGER_TREE);
+            plugin.getSelectionManager().selectAll(characters, SelectionOrigin.DIRECT);
         });
         popup.add(selectAll);
 

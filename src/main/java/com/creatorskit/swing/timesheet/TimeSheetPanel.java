@@ -1639,10 +1639,19 @@ public class TimeSheetPanel extends JSplitPane
         for (Character character : selectionManager.getSelected())
         {
             KeyFrame[][] frames = character.getFrames();
-            KeyFrame[] keyFrames = Arrays.stream(frames)
-                    .flatMap(Arrays::stream)
-                    .toArray(KeyFrame[]::new);
-            kfsm.add(character, keyFrames);
+            List<KeyFrame> keyFrames = new ArrayList<>();
+
+            for (KeyFrame[] frame : frames)
+            {
+                if (frame == null)
+                {
+                    continue;
+                }
+
+                keyFrames.addAll(Arrays.asList(frame));
+            }
+
+            kfsm.add(character, keyFrames.toArray(new KeyFrame[0]));
         }
 
         onSelectedKeyFramesChanged();
