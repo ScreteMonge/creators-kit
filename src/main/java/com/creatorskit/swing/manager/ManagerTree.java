@@ -108,9 +108,13 @@ public class ManagerTree extends JTree
         actionMap.put("cut", null);
         actionMap.put("copy", null);
         actionMap.put("paste", null);
+        actionMap.put("toggleAndAnchor", null);
+        actionMap.put("selectAll", null);
         actionMap.getParent().put("cut", null);
         actionMap.getParent().put("copy", null);
         actionMap.getParent().put("paste", null);
+        actionMap.getParent().put("toggleAndAnchor", null);
+        actionMap.getParent().put("selectAll", null);
 
         ManagerTreeCellRenderer renderer = new ManagerTreeCellRenderer();
         setCellRenderer(renderer);
