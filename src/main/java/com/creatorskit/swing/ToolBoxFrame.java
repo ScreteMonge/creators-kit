@@ -14,6 +14,7 @@ import com.creatorskit.swing.manager.FolderType;
 import com.creatorskit.swing.manager.ManagerPanel;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
+import com.creatorskit.swing.timesheet.keyframe.keyframeselectionmanager.KeyFrameSelectionManager;
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
@@ -59,7 +60,7 @@ public class ToolBoxFrame extends JFrame
     private final BufferedImage ICON = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
 
     @Inject
-    public ToolBoxFrame(Client client, EventBus eventBus, ClientThread clientThread, CreatorsPlugin plugin, CreatorsConfig config, ConfigManager configManager, DataFinder dataFinder, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, TransmogPanel transmogPanel, PathFinder pathFinder, ModelUtilities modelUtilities, OkHttpClient httpClient, SelectionManager selectionManager)
+    public ToolBoxFrame(Client client, EventBus eventBus, ClientThread clientThread, CreatorsPlugin plugin, CreatorsConfig config, ConfigManager configManager, DataFinder dataFinder, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, TransmogPanel transmogPanel, PathFinder pathFinder, ModelUtilities modelUtilities, OkHttpClient httpClient, SelectionManager selectionManager, KeyFrameSelectionManager keyFrameSelectionManager)
     {
         this.client = client;
         this.clientThread = clientThread;
@@ -92,7 +93,7 @@ public class ToolBoxFrame extends JFrame
         MovementManager movementManager = new MovementManager(client, config, pathFinder);
 
         setupMenuBar();
-        this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, config, configManager, clientThread, dataFinder, managerTree, movementManager, selectionManager);
+        this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, config, configManager, clientThread, dataFinder, managerTree, movementManager, selectionManager, keyFrameSelectionManager);
         this.managerPanel = new ManagerPanel(client, plugin, objectHolder, managerTree);
         this.cacheSearcher = new CacheSearcherTab(client, plugin, clientThread, dataFinder, modelUtilities, httpClient);
         this.programmer = new Programmer(client, config, clientThread, plugin, timeSheetPanel, dataFinder, modelUtilities);

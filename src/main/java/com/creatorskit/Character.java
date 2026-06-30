@@ -554,6 +554,20 @@ public class Character
         return keyFrames[keyFrames.length - 1];
     }
 
+    public boolean containsKeyFrame(KeyFrame keyFrame)
+    {
+        KeyFrameType type = keyFrame.getKeyFrameType();
+        for (KeyFrame frame : getKeyFrames(type))
+        {
+            if (keyFrame == frame)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * Adds the keyframe to a specific character, or replaces a keyframe if the tick matches exactly
      * @param keyFrame the keyframe to add or modify for the character

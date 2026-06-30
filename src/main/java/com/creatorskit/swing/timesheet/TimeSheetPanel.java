@@ -22,6 +22,7 @@ import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameCharacte
 import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameAction;
 import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameCharacterActionType;
 import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameActionType;
+import com.creatorskit.swing.timesheet.keyframe.keyframeselectionmanager.KeyFrameSelectionManager;
 import com.creatorskit.swing.timesheet.keyframe.settings.HealthbarSprite;
 import com.creatorskit.swing.timesheet.sheets.AttributeSheet;
 import com.creatorskit.swing.timesheet.sheets.SummarySheet;
@@ -44,10 +45,11 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
+import java.awt.Point;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
 
 @Getter
@@ -68,6 +70,7 @@ public class TimeSheetPanel extends JSplitPane
     private final ManagerTree managerTree;
     private MovementManager movementManager;
     private final SelectionManager selectionManager;
+    private final KeyFrameSelectionManager kfsm;
 
     private JSplitPane leftSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, true);
     private JSplitPane rightSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, true);
@@ -105,15 +108,14 @@ public class TimeSheetPanel extends JSplitPane
     private Character selectedCharacter;
 
     private ArrayList<KeyFrameAction> keyFrameStack = new ArrayList<>();
-    private KeyFrame[] selectedKeyFrames = new KeyFrame[0];
-    private KeyFrame[] copiedKeyFrames = new KeyFrame[0];
+    private LinkedHashMap<Character, KeyFrame[]> copiedKeyFrames = new LinkedHashMap<>();
     private KeyFrameAction[][] keyFrameActions = new KeyFrameAction[0][];
 
     private final int UNDO_LIMIT = 15;
     private int undoStack = 0;
 
     @Inject
-    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, CreatorsConfig config, ConfigManager configManager, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, MovementManager movementManager, com.creatorskit.selection.SelectionManager selectionManager)
+    public TimeSheetPanel(@Nullable Client client, ToolBoxFrame toolBox, CreatorsPlugin plugin, CreatorsConfig config, ConfigManager configManager, ClientThread clientThread, DataFinder dataFinder, ManagerTree managerTree, MovementManager movementManager, SelectionManager selectionManager, KeyFrameSelectionManager kfsm)
     {
         this.client = client;
         this.toolBox = toolBox;
@@ -125,6 +127,7 @@ public class TimeSheetPanel extends JSplitPane
         this.managerTree = managerTree;
         this.movementManager = movementManager;
         this.selectionManager = selectionManager;
+        this.kfsm = kfsm;
 
         setBackground(ColorScheme.DARKER_GRAY_COLOR);
 
@@ -404,98 +407,86 @@ public class TimeSheetPanel extends JSplitPane
 
     public void onUpdateButtonPressed()
     {
+        if (selectionManager.isEmpty() || selectedCharacter == null)
+        {
+            return;
+        }
+
+        final List<KeyFrameAction> kfa = new ArrayList<>();
+
         KeyFrameType type = attributePanel.getSelectedKeyFramePage();
-
-        List<KeyFrame> targets = new ArrayList<>();
-        List<Character> owners = new ArrayList<>();
-        for (KeyFrame kf : selectedKeyFrames)
+        KeyFrame keyFrame = selectedCharacter.findPreviousKeyFrame(type, currentTime, true);
+        if (keyFrame == null)
         {
-            if (kf == null || kf.getKeyFrameType() != type)
-            {
-                continue;
-            }
-
-            Character owner = findKeyFrameOwner(kf);
-
-            targets.add(kf);
-            owners.add(owner);
+            return;
         }
 
-        if (targets.isEmpty())
+        if (keyFrame.getKeyFrameType() != type)
         {
-            if (selectedCharacter == null)
-            {
-                return;
-            }
-
-            KeyFrame keyFrame = selectedCharacter.findPreviousKeyFrame(type, currentTime, true);
-            if (keyFrame == null)
-            {
-                return;
-            }
-
-            targets.add(keyFrame);
-            owners.add(selectedCharacter);
+            return;
         }
 
-        KeyFrameAction[] kfa = new KeyFrameAction[0];
-        for (int i = 0; i < targets.size(); i++)
+        KeyFrame newKf = attributePanel.createKeyFrame(type, keyFrame.getTick());
+        if (newKf == null)
         {
-            KeyFrame oldKeyFrame = targets.get(i);
-            Character owner = owners.get(i);
-
-            KeyFrame newKf = attributePanel.createKeyFrame(type, oldKeyFrame.getTick());
-            if (newKf == null)
-            {
-                continue;
-            }
-
-            if (type == KeyFrameType.MOVEMENT)
-            {
-                MovementKeyFrame oldKF = (MovementKeyFrame) oldKeyFrame;
-                MovementKeyFrame newKF = (MovementKeyFrame) newKf;
-                newKF.setPlane(oldKF.getPlane());
-                newKF.setPoh(oldKF.isPoh());
-                newKF.setPath(oldKF.getPath());
-                newKF.setCurrentStep(0);
-                newKF.setStepClientTick(0);
-            }
-
-            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(newKf, owner, KeyFrameCharacterActionType.ADD));
-            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(oldKeyFrame, owner, KeyFrameCharacterActionType.REMOVE));
-            addKeyFrame(owner, newKf);
+            return;
         }
 
-        if (kfa.length > 0)
+        if (type == KeyFrameType.MOVEMENT)
         {
-            addKeyFrameActions(kfa);
+            MovementKeyFrame oldKF = (MovementKeyFrame) keyFrame;
+            MovementKeyFrame newKF = (MovementKeyFrame) newKf;
+            newKF.setPlane(oldKF.getPlane());
+            newKF.setPoh(oldKF.isPoh());
+            newKF.setPath(oldKF.getPath());
+            newKF.setCurrentStep(0);
+            newKF.setStepClientTick(0);
         }
-    }
 
-    /**
-     * Locate the Character that owns the given keyframe by scanning the visible
-     * Characters' frame arrays (selection-aware). Used by Update so multi-selected
-     * keyframes spread across owners can all be edited at once.
-     */
-    private Character findKeyFrameOwner(KeyFrame keyFrame)
-    {
-        List<Character> visible = new ArrayList<>(selectionManager.getSelected());
-        for (Character c : visible)
+        kfa.add(new KeyFrameCharacterAction(newKf, selectedCharacter, KeyFrameCharacterActionType.ADD));
+        kfa.add(new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
+        addKeyFrame(selectedCharacter, newKf);
+
+        /*
+        kfsm.getSelected().forEach((character, keyframes) ->
         {
-            KeyFrame[][] frames = c.getFrames();
-
-            for (KeyFrame[] row : frames)
+            for (KeyFrame keyFrame : keyframes)
             {
-                for (KeyFrame kf : row)
+                if (keyFrame.getKeyFrameType() != type)
                 {
-                    if (kf == keyFrame)
-                    {
-                        return c;
-                    }
+                    continue;
                 }
+
+                KeyFrame newKf = attributePanel.createKeyFrame(type, keyFrame.getTick());
+                if (newKf == null)
+                {
+                    continue;
+                }
+
+                if (type == KeyFrameType.MOVEMENT)
+                {
+                    MovementKeyFrame oldKF = (MovementKeyFrame) keyFrame;
+                    MovementKeyFrame newKF = (MovementKeyFrame) newKf;
+                    newKF.setPlane(oldKF.getPlane());
+                    newKF.setPoh(oldKF.isPoh());
+                    newKF.setPath(oldKF.getPath());
+                    newKF.setCurrentStep(0);
+                    newKF.setStepClientTick(0);
+                }
+
+                kfa.add(new KeyFrameCharacterAction(newKf, character, KeyFrameCharacterActionType.ADD));
+                kfa.add(new KeyFrameCharacterAction(keyFrame, character, KeyFrameCharacterActionType.REMOVE));
+                addKeyFrame(character, newKf);
             }
+        });
+
+         */
+
+        if (!kfa.isEmpty())
+        {
+            KeyFrameAction[] actions = kfa.toArray(new KeyFrameAction[0]);
+            addKeyFrameActions(actions);
         }
-        return null;
     }
 
     public KeyFrame[] checkDespawnKeyFrameAt0(KeyFrame keyFrame, KeyFrame[] keyframes, double currentTick)
@@ -965,6 +956,11 @@ public class TimeSheetPanel extends JSplitPane
         toolBox.getProgrammer().updateProgram(character, currentTime);
     }
 
+    public void addKeyFrameActions(List<KeyFrameAction> actions)
+    {
+        addKeyFrameActions(actions.toArray(new KeyFrameAction[0]));
+    }
+
     public void addKeyFrameActions(KeyFrameAction[] actions)
     {
         if (keyFrameActions.length == UNDO_LIMIT)
@@ -1013,7 +1009,8 @@ public class TimeSheetPanel extends JSplitPane
             return;
         }
 
-        selectedKeyFrames = new KeyFrame[0];
+        kfsm.clear();
+
         KeyFrameAction[] lastActions = keyFrameActions[undoStack];
         for (int i = 0; i < lastActions.length; i++)
         {
@@ -1032,12 +1029,14 @@ public class TimeSheetPanel extends JSplitPane
                 if (actionType == KeyFrameCharacterActionType.REMOVE)
                 {
                     KeyFrame keyFrame = keyFrameAction.getKeyFrame();
-                    addKeyFrame(kfca.getCharacter(), keyFrameAction.getKeyFrame());
-                    selectedKeyFrames = ArrayUtils.add(selectedKeyFrames, keyFrame);
+                    Character character = kfca.getCharacter();
+                    addKeyFrame(character, keyFrame);
+                    kfsm.add(character, keyFrame);
                 }
             }
         }
 
+        onSelectedKeyFramesChanged();
         undoStack--;
     }
 
@@ -1049,42 +1048,42 @@ public class TimeSheetPanel extends JSplitPane
         }
 
         undoStack++;
+        kfsm.clear();
 
-        selectedKeyFrames = new KeyFrame[0];
         KeyFrameAction[] lastUndoneActions = keyFrameActions[undoStack];
         for (KeyFrameAction keyFrameAction : lastUndoneActions)
         {
             if (keyFrameAction.getActionType() == KeyFrameActionType.CHARACTER)
             {
-                KeyFrameCharacterAction keyFrameCharacterAction = (KeyFrameCharacterAction) keyFrameAction;
-                KeyFrameCharacterActionType actionType = keyFrameCharacterAction.getCharacterActionType();
+                KeyFrameCharacterAction kfca = (KeyFrameCharacterAction) keyFrameAction;
+                KeyFrameCharacterActionType actionType = kfca.getCharacterActionType();
                 if (actionType == KeyFrameCharacterActionType.ADD)
                 {
                     KeyFrame keyFrame = keyFrameAction.getKeyFrame();
-                    addKeyFrame(keyFrameCharacterAction.getCharacter(), keyFrame);
-                    selectedKeyFrames = ArrayUtils.add(selectedKeyFrames, keyFrame);
+                    Character character = kfca.getCharacter();
+                    addKeyFrame(character, keyFrame);
+                    kfsm.add(character, keyFrame);
                 }
 
                 if (actionType == KeyFrameCharacterActionType.REMOVE)
                 {
-                    removeKeyFrame(keyFrameCharacterAction.getCharacter(), keyFrameAction.getKeyFrame());
+                    removeKeyFrame(kfca.getCharacter(), keyFrameAction.getKeyFrame());
                 }
             }
         }
+
+        onSelectedKeyFramesChanged();
     }
 
     public void updateSelectedCharacter(Character character)
     {
         selectedCharacter = character;
-        summarySheet.setSelectedCharacter(character);
-        attributeSheet.setSelectedCharacter(character);
         attributePanel.setSelectedCharacter(character);
         attributePanel.resetAttributes(character, currentTime);
     }
 
-    public void setSelectedKeyFrames(KeyFrame[] keyFrames)
+    public void onSelectedKeyFramesChanged()
     {
-        this.selectedKeyFrames = keyFrames;
         attributePanel.refreshKeyFrameSelectionState();
         if (selectedCharacter != null)
         {
@@ -1256,9 +1255,9 @@ public class TimeSheetPanel extends JSplitPane
 
     private void setupAttributePanel()
     {
-        attributePanel = new AttributePanel(client, clientThread, config, this, dataFinder, selectionManager);
-        summarySheet = new SummarySheet(toolBox, config, managerTree, attributePanel);
-        attributeSheet = new AttributeSheet(toolBox, config, managerTree, attributePanel);
+        attributePanel = new AttributePanel(client, clientThread, config, this, dataFinder, selectionManager, kfsm);
+        summarySheet = new SummarySheet(toolBox, config, managerTree, attributePanel, kfsm);
+        attributeSheet = new AttributeSheet(toolBox, config, managerTree, attributePanel, selectionManager, kfsm);
     }
 
     private void setupAttributeSheet()
@@ -1410,7 +1409,7 @@ public class TimeSheetPanel extends JSplitPane
 
     public void copyKeyFrames()
     {
-        copiedKeyFrames = selectedKeyFrames;
+        copiedKeyFrames = new LinkedHashMap<>(kfsm.getSelected());
     }
 
     public void pasteKeyFrames()
@@ -1420,13 +1419,129 @@ public class TimeSheetPanel extends JSplitPane
             return;
         }
 
-        if (copiedKeyFrames == null || copiedKeyFrames.length == 0)
+        if (copiedKeyFrames.isEmpty())
         {
             return;
         }
 
+        Point p = getMousePosition(true);
+        if (p == null)
+        {
+            p = getLocationOnScreen();
+            if (p == null)
+            {
+                return;
+            }
+        }
+
+        if (selectionManager.getSelectionSize() == 1
+            && selectionManager.getSelected().contains(selectedCharacter)
+            && kfsm.getSelectionSize() == 1)
+        {
+            KeyFrame[] keyFrames = clearOverridingCopies(selectedCharacter, copiedKeyFrames);
+            pasteToCharacter(selectedCharacter, keyFrames);
+            return;
+        }
+
+        JPopupMenu popup = new JPopupMenu();
+
+        JLabel title = new JLabel("Paste to Whom?");
+        title.setFont(FontManager.getRunescapeBoldFont());
+        title.setBorder(new EmptyBorder(2, 6, 2, 6));
+        popup.add(title);
+        popup.addSeparator();
+
+        JMenuItem pasteToEach = new JMenuItem("Paste To Each");
+        pasteToEach.setToolTipText("Will paste every copied keyframes to every selected Object");
+        pasteToEach.addActionListener(e ->
+        {
+            for (Character character : selectionManager.getSelected())
+            {
+                KeyFrame[] keyFrames = clearOverridingCopies(character, copiedKeyFrames);
+                pasteToCharacter(character, keyFrames);
+            }
+        });
+        popup.add(pasteToEach);
+
+        JMenuItem pasteIteratively = new JMenuItem("Paste Iteratively");
+        pasteIteratively.setToolTipText("Will paste copied keyframes only to the Object they originate from");
+        pasteIteratively.addActionListener(e ->
+        {
+            copiedKeyFrames.forEach(this::pasteToCharacter);
+        });
+        popup.add(pasteIteratively);
+
+        JMenu pasteSingle = new JMenu("Paste to Only:");
+        pasteSingle.setToolTipText("Will paste copied keyframes only to the following Object");
+        popup.add(pasteSingle);
+
+        for (Character character : selectionManager.getSelected())
+        {
+            JMenuItem pasteTo = new JMenuItem(character.getName());
+            pasteTo.addActionListener(e ->
+                    {
+                        KeyFrame[] keyFrames = clearOverridingCopies(character, copiedKeyFrames);
+                        pasteToCharacter(character, keyFrames);
+                    });
+            pasteSingle.add(pasteTo);
+        }
+
+        int x = (int) p.getX();
+        int y = (int) p.getY();
+
+        popup.show(this, x, y);
+    }
+
+    private KeyFrame[] clearOverridingCopies(Character primaryCharacter, LinkedHashMap<Character, KeyFrame[]> keyFrameGroups)
+    {
+        KeyFrame[] primaryKeyFrames = keyFrameGroups.get(primaryCharacter);
+        List<KeyFrame> keyFramesToAdd = new ArrayList<>();
+
+        if (primaryKeyFrames != null)
+        {
+            keyFramesToAdd.addAll(Arrays.asList(primaryKeyFrames));
+        }
+
+        keyFrameGroups.forEach((character, keyFrames) ->
+        {
+            for (KeyFrame keyFrame : keyFrames)
+            {
+                boolean overrides = false;
+                if (primaryKeyFrames != null)
+                {
+                    for (KeyFrame primary : primaryKeyFrames)
+                    {
+                        if (keyFrame.getTick() == primary.getTick())
+                        {
+                            overrides = true;
+                            break;
+                        }
+                    }
+                }
+
+                for (KeyFrame alreadyAdded : keyFramesToAdd)
+                {
+                    if (keyFrame.getTick() == alreadyAdded.getTick())
+                    {
+                        overrides = true;
+                        break;
+                    }
+                }
+
+                if (!overrides)
+                {
+                    keyFramesToAdd.add(keyFrame);
+                }
+            }
+        });
+
+        return keyFramesToAdd.toArray(new KeyFrame[0]);
+    }
+
+    private void pasteToCharacter(Character character, KeyFrame[] keyFrames)
+    {
         double firstTick = ABSOLUTE_MAX_SEQUENCE_LENGTH;
-        for (KeyFrame keyFrame : copiedKeyFrames)
+        for (KeyFrame keyFrame : keyFrames)
         {
             if (keyFrame.getTick() < firstTick)
             {
@@ -1434,24 +1549,25 @@ public class TimeSheetPanel extends JSplitPane
             }
         }
 
-        selectedKeyFrames = new KeyFrame[0];
+        KeyFrame[] selected = new KeyFrame[0];
         KeyFrameAction[] kfa = new KeyFrameAction[0];
-        for (KeyFrame keyFrame : copiedKeyFrames)
+        for (KeyFrame keyFrame : keyFrames)
         {
             double newTime = round(keyFrame.getTick() - firstTick + currentTime);
             KeyFrame copy = KeyFrame.createCopy(keyFrame, newTime);
-            selectedKeyFrames = ArrayUtils.add(selectedKeyFrames, copy);
+            selected = ArrayUtils.add(selected, copy);
 
-            KeyFrame keyFrameToReplace = addKeyFrame(selectedCharacter, copy);
-            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(copy, selectedCharacter, KeyFrameCharacterActionType.ADD));
+            KeyFrame keyFrameToReplace = addKeyFrame(character, copy);
+            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(copy, character, KeyFrameCharacterActionType.ADD));
 
             if (keyFrameToReplace != null)
             {
-                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
+                kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrameToReplace, character, KeyFrameCharacterActionType.REMOVE));
             }
         }
 
         addKeyFrameActions(kfa);
+        onSelectedKeyFramesChanged();
     }
 
     private void setKeyBindings()
@@ -1519,12 +1635,17 @@ public class TimeSheetPanel extends JSplitPane
 
     public void onSelectAllPressed()
     {
-        if (selectedCharacter == null)
+        kfsm.clear();
+        for (Character character : selectionManager.getSelected())
         {
-            return;
+            KeyFrame[][] frames = character.getFrames();
+            KeyFrame[] keyFrames = Arrays.stream(frames)
+                    .flatMap(Arrays::stream)
+                    .toArray(KeyFrame[]::new);
+            kfsm.add(character, keyFrames);
         }
 
-        setSelectedKeyFrames(selectedCharacter.getAllKeyFrames());
+        onSelectedKeyFramesChanged();
     }
 
     public void onDeleteKeyPressed()
@@ -1534,13 +1655,18 @@ public class TimeSheetPanel extends JSplitPane
             return;
         }
 
-        KeyFrameAction[] kfa = new KeyFrameAction[0];
-        for (KeyFrame keyFrame : selectedKeyFrames)
-        {
-            kfa = ArrayUtils.add(kfa, new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
-            removeKeyFrame(selectedCharacter, keyFrame);
-        }
+        ArrayList<KeyFrameAction> kfa = new ArrayList<>();
 
+        kfsm.getSelected().forEach((Character c, KeyFrame[] keyFrames) ->
+        {
+            for (KeyFrame keyFrame : keyFrames)
+            {
+                kfa.add(new KeyFrameCharacterAction(keyFrame, selectedCharacter, KeyFrameCharacterActionType.REMOVE));
+                removeKeyFrame(selectedCharacter, keyFrame);
+            }
+        });
+
+        kfsm.clear();
         addKeyFrameActions(kfa);
     }
 

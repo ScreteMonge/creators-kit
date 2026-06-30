@@ -7,6 +7,7 @@ import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.AttributePanel;
 import com.creatorskit.swing.timesheet.keyframe.*;
+import com.creatorskit.swing.timesheet.keyframe.keyframeselectionmanager.KeyFrameSelectionManager;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.client.ui.ColorScheme;
@@ -26,15 +27,16 @@ public class SummarySheet extends TimeSheet
     private ManagerTree tree;
     private CreatorsConfig config;
     private AttributePanel attributePanel;
+    private KeyFrameSelectionManager kfsm;
     private JPopupMenu popupMenu;
     private Character rightClickedCharacter;
     private JLabel popupTitle;
     private JMenu[] menuItems;
     private final int FONT_SPACER = 9;
 
-    public SummarySheet(ToolBoxFrame toolBox, CreatorsConfig config, ManagerTree tree, AttributePanel attributePanel)
+    public SummarySheet(ToolBoxFrame toolBox, CreatorsConfig config, ManagerTree tree, AttributePanel attributePanel, KeyFrameSelectionManager kfsm)
     {
-        super(toolBox, config, tree, attributePanel);
+        super(toolBox, config, tree, attributePanel, kfsm);
         this.tree = tree;
         this.attributePanel = attributePanel;
 

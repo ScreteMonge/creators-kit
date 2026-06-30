@@ -14,6 +14,7 @@ import com.creatorskit.swing.searchabletable.JFilterableTable;
 import com.creatorskit.swing.searchabletable.TableRenderStyle;
 import com.creatorskit.swing.timesheet.attributes.*;
 import com.creatorskit.swing.timesheet.keyframe.*;
+import com.creatorskit.swing.timesheet.keyframe.keyframeselectionmanager.KeyFrameSelectionManager;
 import com.creatorskit.swing.timesheet.keyframe.settings.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -32,9 +33,8 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
-import java.util.Random;
 
 @Getter
 @Setter
@@ -46,6 +46,7 @@ public class AttributePanel extends JPanel
     private TimeSheetPanel timeSheetPanel;
     private DataFinder dataFinder;
     private SelectionManager selectionManager;
+    private KeyFrameSelectionManager kfsm;
 
     private final BufferedImage HELP = ImageUtil.loadImageResource(getClass(), "/Help.png");
     private final BufferedImage COMPASS = ImageUtil.loadImageResource(getClass(), "/Orientation_compass.png");
@@ -110,7 +111,7 @@ public class AttributePanel extends JPanel
     private final Random random = new Random();
 
     @Inject
-    public AttributePanel(Client client, ClientThread clientThread, CreatorsConfig config, TimeSheetPanel timeSheetPanel, DataFinder dataFinder, SelectionManager selectionManager)
+    public AttributePanel(Client client, ClientThread clientThread, CreatorsConfig config, TimeSheetPanel timeSheetPanel, DataFinder dataFinder, SelectionManager selectionManager, KeyFrameSelectionManager kfsm)
     {
         this.client = client;
         this.clientThread = clientThread;
@@ -118,6 +119,7 @@ public class AttributePanel extends JPanel
         this.timeSheetPanel = timeSheetPanel;
         this.dataFinder = dataFinder;
         this.selectionManager = selectionManager;
+        this.kfsm = kfsm;
         selectionManager.addListener((manager, origin) -> updateObjectLabel(manager.getPrimary()));
 
         setLayout(new GridBagLayout());
@@ -2351,44 +2353,37 @@ public class AttributePanel extends JPanel
         resetAttributes(character, tick);
     }
 
-    /**
-     * Returns the first user-selected keyframe whose type matches the panel's
-     * current page (selectedKeyFramePage). Used so the panel always reflects the
-     * keyframe the user clicked, not the one under the seeker bar.
-     */
-    private KeyFrame findSelectedKeyFrameOfCurrentType()
-    {
-        KeyFrame[] selected = timeSheetPanel.getSelectedKeyFrames();
-        for (KeyFrame kf : selected)
-        {
-            if (kf != null && kf.getKeyFrameType() == selectedKeyFramePage)
-            {
-                return kf;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Reflects the current keyframe selection in the panel: when multiple keyframe
-     * TYPES are selected (e.g. Movement + Animation across the marquee), swap the
-     * card editor for an empty placeholder and disable Update/Reset/keyframe-icon.
-     * The placeholder card preserves the cardPanel's height so the panel doesn't
-     * collapse vertically.
-     */
     public void refreshKeyFrameSelectionState()
     {
-        KeyFrame[] selected = timeSheetPanel.getSelectedKeyFrames();
-        List<KeyFrameType> types = new ArrayList<>();
-        for (KeyFrame kf : selected)
+        LinkedHashMap<Character, KeyFrame[]> selected = kfsm.getSelected();
+        Iterator<Map.Entry<Character, KeyFrame[]>> iterator =
+                selected.entrySet().iterator();
+
+        boolean mixedTypes = false;
+        KeyFrameType type = KeyFrameType.NULL;
+        while (iterator.hasNext())
         {
-            if (kf != null)
+            Map.Entry<Character, KeyFrame[]> entry = iterator.next();
+
+            for (KeyFrame keyFrame : entry.getValue())
             {
-                types.add(kf.getKeyFrameType());
+                if (type == KeyFrameType.NULL)
+                {
+                    type = keyFrame.getKeyFrameType();
+                }
+
+                if (type != keyFrame.getKeyFrameType())
+                {
+                    mixedTypes = true;
+                    break;
+                }
+            }
+
+            if (mixedTypes)
+            {
+                break;
             }
         }
-
-        boolean mixedTypes = types.size() > 1;
 
         CardLayout cl = (CardLayout) cardPanel.getLayout();
         if (mixedTypes)
@@ -2656,25 +2651,17 @@ public class AttributePanel extends JPanel
             return;
         }
 
-        KeyFrame keyFrame = findSelectedKeyFrameOfCurrentType();
-        if (keyFrame != null)
+        setKeyFramedIcon(character.findKeyFrame(selectedKeyFramePage, tick) != null);
+        KeyFrame keyFrame = character.findPreviousKeyFrame(selectedKeyFramePage, tick, true);
+
+        if (keyFrame == null)
         {
-            setKeyFramedIcon(true);
-        }
-        else
-        {
-            setKeyFramedIcon(character.findKeyFrame(selectedKeyFramePage, tick) != null);
-            keyFrame = character.findPreviousKeyFrame(selectedKeyFramePage, tick, true);
+            keyFrame = character.findNextKeyFrame(selectedKeyFramePage, tick);
 
             if (keyFrame == null)
             {
-                keyFrame = character.findNextKeyFrame(selectedKeyFramePage, tick);
-
-                if (keyFrame == null)
-                {
-                    setAttributesEmpty(true);
-                    return;
-                }
+                setAttributesEmpty(true);
+                return;
             }
         }
 

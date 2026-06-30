@@ -2,10 +2,12 @@ package com.creatorskit.swing.timesheet.sheets;
 
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsConfig;
+import com.creatorskit.selection.SelectionManager;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.AttributePanel;
 import com.creatorskit.swing.timesheet.keyframe.*;
+import com.creatorskit.swing.timesheet.keyframe.keyframeselectionmanager.KeyFrameSelectionManager;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.client.ui.ColorScheme;
@@ -15,8 +17,8 @@ import org.apache.commons.lang3.ArrayUtils;
 import java.awt.*;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Getter
 @Setter
@@ -25,13 +27,17 @@ public class AttributeSheet extends TimeSheet
     private ManagerTree tree;
     private CreatorsConfig config;
     private AttributePanel attributePanel;
+    private SelectionManager selectionManager;
+    private KeyFrameSelectionManager kfsm;
 
-    public AttributeSheet(ToolBoxFrame toolBox, CreatorsConfig config, ManagerTree tree, AttributePanel attributePanel)
+    public AttributeSheet(ToolBoxFrame toolBox, CreatorsConfig config, ManagerTree tree, AttributePanel attributePanel, SelectionManager selectionManager, KeyFrameSelectionManager kfsm)
     {
-        super(toolBox, config, tree, attributePanel);
+        super(toolBox, config, tree, attributePanel, kfsm);
         this.config = config;
         this.tree = tree;
         this.attributePanel = attributePanel;
+        this.selectionManager = selectionManager;
+        this.kfsm = kfsm;
 
         setIndexBuffers(0);
         setSelectedIndex(1);
@@ -41,13 +47,21 @@ public class AttributeSheet extends TimeSheet
     @Override
     public void drawBackgroundText(Graphics g)
     {
-        Character character = getSelectedCharacter();
-        if (character == null)
+        Set<Character> selected = selectionManager.getSelected();
+        String name = "[No Object Selected]";
+        if (!selected.isEmpty())
         {
-            return;
-        }
+            Character primary = selectionManager.getPrimary();
+            if (selectionManager.getPrimary() != null)
+            {
+                name = primary.getName();
+            }
 
-        String name = character.getName();
+            if (selected.size() > 1)
+            {
+                name = "[" + selected.size() + " Objects Selected]";
+            }
+        }
 
         g.setFont(new Font(FontManager.getRunescapeBoldFont().getName(), Font.PLAIN, 64));
         g.setColor(new Color(77, 77, 77, 50));
@@ -86,8 +100,8 @@ public class AttributeSheet extends TimeSheet
     @Override
     public void drawKeyFrames(Graphics g)
     {
-        List<Character> visible = getVisibleCharacters();
-        if (visible.isEmpty())
+        Set<Character> selected = selectionManager.getSelected();
+        if (selected.isEmpty())
         {
             return;
         }
@@ -97,9 +111,9 @@ public class AttributeSheet extends TimeSheet
         int yImageOffset = (imageHeight - rowHeight) / 2;
         int xImageOffset = image.getWidth() / 2;
         double zoomFactor = this.getWidth() / getZoom();
-        boolean multi = visible.size() > 1;
+        boolean multi = selected.size() > 1;
 
-        for (Character character : visible)
+        for (Character character : selected)
         {
             drawCharacterKeyFrames(g, character, image, imageHeight, yImageOffset, xImageOffset, zoomFactor, multi);
         }
@@ -114,6 +128,10 @@ public class AttributeSheet extends TimeSheet
         }
 
         g.setColor(character.getColor());
+
+        Collection<KeyFrame> selectedFrames = kfsm.getSelected().values().stream()
+                .flatMap(Arrays::stream)
+                .collect(Collectors.toSet());
 
         for (int i = 0; i < frames.length; i++)
         {
@@ -130,8 +148,8 @@ public class AttributeSheet extends TimeSheet
                 KeyFrame keyFrame = keyFrames[e];
 
                 BufferedImage endImage = image;
-                KeyFrame[] selectedKeyframes = getTimeSheetPanel().getSelectedKeyFrames();
-                if (Arrays.stream(selectedKeyframes).anyMatch(s -> s == keyFrame))
+
+                if (selectedFrames.contains(keyFrame))
                 {
                     endImage = getKeyframeSelected();
                 }
@@ -225,18 +243,12 @@ public class AttributeSheet extends TimeSheet
     @Override
     public void drawPreviewKeyFrames(Graphics2D g)
     {
-        if (getSelectedCharacter() == null)
-        {
-            return;
-        }
-
         if (!isKeyFrameClicked())
         {
             return;
         }
 
-        KeyFrame[] selectedKeyFrames = getSelectedKeyFrames();
-        if (selectedKeyFrames.length == 0)
+        if (kfsm.isEmpty())
         {
             return;
         }
@@ -258,71 +270,78 @@ public class AttributeSheet extends TimeSheet
 
         double xCurrentTime = currentTimeToMouseX();
 
-        double change;
+        final double[] change = new double[]{0};
         if (Math.abs(Math.abs(mouseX) - Math.abs(xCurrentTime)) > DRAG_STICK_RANGE)
         {
-            change = round(timelineUnits, (mouseX - getMousePointOnPressed().getX()) * getZoom() / getWidth());
+            change[0] = round(timelineUnits, (mouseX - getMousePointOnPressed().getX()) * getZoom() / getWidth());
         }
         else
         {
-            KeyFrame keyFrame = getClickedKeyFrames()[0];
-            change = round(timelineUnits, getCurrentTime() - keyFrame.getTick());
+            LinkedHashMap<Character, KeyFrame[]> clickedKeyFrames = getClickedKeyFrames();
+            if (!clickedKeyFrames.isEmpty())
+            {
+                Map.Entry<Character, KeyFrame[]> firstEntry = clickedKeyFrames.entrySet().iterator().next();
+                KeyFrame keyFrame = firstEntry.getValue()[0];
+                change[0] = round(timelineUnits, getCurrentTime() - keyFrame.getTick());
+            }
         }
 
         int imageHeight = image.getHeight();
 
-        for (int e = 0; e < selectedKeyFrames.length; e++)
+        kfsm.getSelected().forEach((Character c, KeyFrame[] keyFrames) ->
         {
-            KeyFrame keyFrame = selectedKeyFrames[e];
-            int i = KeyFrameType.getIndex(keyFrame.getKeyFrameType());
-            KeyFrameType type = KeyFrameType.getKeyFrameType(i);
-
-            int x = (int) ((keyFrame.getTick() + getHScroll() + change) * zoomFactor);
-            int y = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
-
-            switch (type)
+            for (KeyFrame keyFrame : keyFrames)
             {
-                case MOVEMENT:
-                    MovementKeyFrame mkf = (MovementKeyFrame) keyFrame;
-                    int steps = (mkf.getPath().length - 1);
-                    if (steps > 0)
-                    {
-                        double ticks = Math.ceil(steps / mkf.getSpeed());
-                        int pathLength = (int) (ticks * zoomFactor);
-                        g.drawLine(x, y + imageHeight / 2, x + pathLength - 1, y + imageHeight / 2);
-                    }
-                    break;
-                case ORIENTATION:
-                    OrientationKeyFrame okf = (OrientationKeyFrame) keyFrame;
-                    drawPreviewTail(g, x, y, imageHeight, okf.getDuration(), zoomFactor);
-                    break;
-                case TEXT:
-                    TextKeyFrame tkf = (TextKeyFrame) keyFrame;
-                    drawPreviewTail(g, x, y, imageHeight, tkf.getDuration(), zoomFactor);
-                    break;
-                case HEALTH:
-                    HealthKeyFrame hkf = (HealthKeyFrame) keyFrame;
-                    drawPreviewTail(g, x, y, imageHeight, hkf.getDuration(), zoomFactor);
-                    break;
-                case HITSPLAT_1:
-                case HITSPLAT_2:
-                case HITSPLAT_3:
-                case HITSPLAT_4:
-                    HitsplatKeyFrame hskf = (HitsplatKeyFrame) keyFrame;
-                    double duration = hskf.getDuration();
-                    if (duration == -1)
-                    {
-                        duration = HitsplatKeyFrame.DEFAULT_DURATION;
-                    }
+                int i = KeyFrameType.getIndex(keyFrame.getKeyFrameType());
+                KeyFrameType type = KeyFrameType.getKeyFrameType(i);
 
-                    drawPreviewTail(g, x, y, imageHeight, duration, zoomFactor);
-                    break;
-                default:
-                    break;
+                int x = (int) ((keyFrame.getTick() + getHScroll() + change[0]) * zoomFactor);
+                int y = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
+
+                switch (type)
+                {
+                    case MOVEMENT:
+                        MovementKeyFrame mkf = (MovementKeyFrame) keyFrame;
+                        int steps = (mkf.getPath().length - 1);
+                        if (steps > 0)
+                        {
+                            double ticks = Math.ceil(steps / mkf.getSpeed());
+                            int pathLength = (int) (ticks * zoomFactor);
+                            g.drawLine(x, y + imageHeight / 2, x + pathLength - 1, y + imageHeight / 2);
+                        }
+                        break;
+                    case ORIENTATION:
+                        OrientationKeyFrame okf = (OrientationKeyFrame) keyFrame;
+                        drawPreviewTail(g, x, y, imageHeight, okf.getDuration(), zoomFactor);
+                        break;
+                    case TEXT:
+                        TextKeyFrame tkf = (TextKeyFrame) keyFrame;
+                        drawPreviewTail(g, x, y, imageHeight, tkf.getDuration(), zoomFactor);
+                        break;
+                    case HEALTH:
+                        HealthKeyFrame hkf = (HealthKeyFrame) keyFrame;
+                        drawPreviewTail(g, x, y, imageHeight, hkf.getDuration(), zoomFactor);
+                        break;
+                    case HITSPLAT_1:
+                    case HITSPLAT_2:
+                    case HITSPLAT_3:
+                    case HITSPLAT_4:
+                        HitsplatKeyFrame hskf = (HitsplatKeyFrame) keyFrame;
+                        double duration = hskf.getDuration();
+                        if (duration == -1)
+                        {
+                            duration = HitsplatKeyFrame.DEFAULT_DURATION;
+                        }
+
+                        drawPreviewTail(g, x, y, imageHeight, duration, zoomFactor);
+                        break;
+                    default:
+                        break;
+                }
+
+                g.drawImage(bufferedImage, x - xImageOffset, y, null);
             }
-
-            g.drawImage(bufferedImage, x - xImageOffset, y, null);
-        }
+        });
 
         g.setComposite(composite);
     }
@@ -336,32 +355,26 @@ public class AttributeSheet extends TimeSheet
     @Override
     public void updateSelectedKeyFrameOnPressed(boolean shiftDown)
     {
-        KeyFrame[] clickedKeyFrames = getClickedKeyFrames();
-        if (clickedKeyFrames.length == 0)
+        LinkedHashMap<Character, KeyFrame[]> clickedKeyFrames = getClickedKeyFrames();
+        if (clickedKeyFrames.isEmpty())
         {
             return;
         }
 
-        KeyFrame[] selectedKeyFrames = getSelectedKeyFrames();
-        KeyFrame clickedKeyFrame = clickedKeyFrames[0];
-        if (Arrays.stream(selectedKeyFrames).noneMatch(n -> n == clickedKeyFrame))
+        if (!shiftDown && kfsm.isEmpty())
         {
-            if (shiftDown)
-            {
-                setSelectedKeyFrames(ArrayUtils.add(selectedKeyFrames, clickedKeyFrame));
-            }
-            else
-            {
-                setSelectedKeyFrames(new KeyFrame[]{clickedKeyFrame});
-            }
+            kfsm.clear();
         }
+
+        Map.Entry<Character, KeyFrame[]> firstEntry = clickedKeyFrames.entrySet().iterator().next();
+        kfsm.add(firstEntry.getKey(), firstEntry.getValue());
     }
 
     @Override
-    public KeyFrame[] getKeyFrameClicked(Point point)
+    public LinkedHashMap<Character, KeyFrame[]> getKeyFrameClicked(Point point)
     {
-        List<Character> visible = getVisibleCharacters();
-        if (visible.isEmpty())
+        Set<Character> selected = selectionManager.getSelected();
+        if (selected.isEmpty())
         {
             return null;
         }
@@ -371,7 +384,7 @@ public class AttributeSheet extends TimeSheet
         int xImageOffset = image.getWidth() / 2;
         double zoomFactor = this.getWidth() / getZoom();
 
-        for (Character c : visible)
+        for (Character c : selected)
         {
             KeyFrame[][] frames = c.getFrames();
             if (frames == null)
@@ -399,7 +412,9 @@ public class AttributeSheet extends TimeSheet
                     {
                         if (point.getY() >= y1 && point.getY() <= y2)
                         {
-                            return new KeyFrame[]{keyFrame};
+                            LinkedHashMap<Character, KeyFrame[]> selectedKeyFrames = new LinkedHashMap<>();
+                            selectedKeyFrames.put(c, new KeyFrame[]{keyFrame});
+                            return selectedKeyFrames;
                         }
                     }
                 }
@@ -412,8 +427,8 @@ public class AttributeSheet extends TimeSheet
     @Override
     public void updateSelectedKeyFrameOnRelease(Point point, boolean shiftKey)
     {
-        List<Character> visible = getVisibleCharacters();
-        if (visible.isEmpty())
+        Set<Character> selected = selectionManager.getSelected();
+        if (selected.isEmpty())
         {
             return;
         }
@@ -425,7 +440,7 @@ public class AttributeSheet extends TimeSheet
 
         KeyFrame foundKeyFrame = null;
 
-        for (Character c : visible)
+        for (Character c : selected)
         {
             KeyFrame[][] frames = c.getFrames();
             if (frames == null)
@@ -459,41 +474,36 @@ public class AttributeSheet extends TimeSheet
             }
         }
 
+        if (!shiftKey)
+        {
+            kfsm.clear();
+        }
+
         if (foundKeyFrame != null)
         {
-            if (shiftKey)
+            if (!shiftKey)
             {
-                KeyFrame[] selectedKeyFrames = getSelectedKeyFrames();
-                boolean alreadyContains = false;
-                for (KeyFrame kf : selectedKeyFrames)
-                {
-                    if (kf == foundKeyFrame)
-                    {
-                        alreadyContains = true;
-                        break;
-                    }
-                }
-                if (!alreadyContains)
-                {
-                    setSelectedKeyFrames(ArrayUtils.add(selectedKeyFrames, foundKeyFrame));
-                }
+                kfsm.clear();
             }
-            else
+
+            for (Character c : selected)
             {
-                setSelectedKeyFrames(new KeyFrame[]{foundKeyFrame});
+                if (!c.containsKeyFrame(foundKeyFrame))
+                {
+                    continue;
+                }
+
+                kfsm.add(c, foundKeyFrame);
+                break;
             }
-        }
-        else if (!shiftKey)
-        {
-            setSelectedKeyFrames(new KeyFrame[0]);
         }
     }
 
     @Override
     public boolean checkRectangleForKeyFrames(Point point, boolean shiftKey)
     {
-        List<Character> visible = getVisibleCharacters();
-        if (visible.isEmpty())
+        Set<Character> selected = selectionManager.getSelected();
+        if (selected.isEmpty())
         {
             return false;
         }
@@ -567,19 +577,21 @@ public class AttributeSheet extends TimeSheet
         int xImageOffset = image.getWidth() / 2;
         double zoomFactor = this.getWidth() / getZoom();
 
-        KeyFrame[] foundKeyFrames = new KeyFrame[0];
-        if (shiftKey)
+        LinkedHashMap<Character, KeyFrame[]> selectedKeyFrames = kfsm.getSelected();
+        if (!shiftKey)
         {
-            foundKeyFrames = getSelectedKeyFrames();
+            kfsm.clear();
         }
 
-        for (Character c : visible)
+        for (Character c : selected)
         {
             KeyFrame[][] frames = c.getFrames();
-            if (frames == null)
+            KeyFrame[] foundKeyFrames = selectedKeyFrames.get(c);
+            if (foundKeyFrames == null)
             {
-                continue;
+                foundKeyFrames = new KeyFrame[0];
             }
+
             for (int i = 0; i < frames.length; i++)
             {
                 KeyFrame[] keyFrames = frames[i];
@@ -618,9 +630,10 @@ public class AttributeSheet extends TimeSheet
                     }
                 }
             }
+
+            kfsm.add(c, foundKeyFrames);
         }
 
-        setSelectedKeyFrames(foundKeyFrames);
         return true;
     }
 
