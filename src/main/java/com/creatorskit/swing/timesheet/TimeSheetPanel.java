@@ -422,7 +422,7 @@ public class TimeSheetPanel extends JSplitPane
             return;
         }
 
-        final List<KeyFrameAction> kfa = new ArrayList<>();
+        List<KeyFrameAction> kfa = new ArrayList<>();
 
         KeyFrameType type = attributePanel.getSelectedKeyFramePage();
         KeyFrame keyFrame = selectedCharacter.findPreviousKeyFrame(type, currentTime, true);
@@ -1088,7 +1088,7 @@ public class TimeSheetPanel extends JSplitPane
     public void updateSelectedCharacter(Character character)
     {
         selectedCharacter = character;
-        attributePanel.setSelectedCharacter(character);
+        attributePanel.updateSelectedCharacter(character);
         attributePanel.resetAttributes(character, currentTime);
     }
 

@@ -219,7 +219,7 @@ public class CreatorsPanel extends PluginPanel
 
         c.gridwidth = 3;
         c.gridx = 0;
-        c.gridy = 5;
+        c.gridy = 4;
         c.weightx = 1;
         c.weighty = 1;
         JLabel emptyLabel = new JLabel("");
@@ -530,31 +530,7 @@ public class CreatorsPanel extends PluginPanel
         {
             boolean newCustomMode = !character.isCustomMode();
             applyModelMode(character, newCustomMode, modelButton, modelSpinner, modelComboBox);
-            if (bulkEditing)
-            {
-                return;
-            }
-            java.util.Set<Character> targets = getBulkTargets(character);
-            if (targets.size() == 1)
-            {
-                return;
-            }
-            bulkEditing = true;
-            try
-            {
-                for (Character c : targets)
-                {
-                    if (c == character || c.isCustomMode() == newCustomMode)
-                    {
-                        continue;
-                    }
-                    applyModelMode(c, newCustomMode, c.getModelButton(), c.getModelSpinner(), c.getComboBox());
-                }
-            }
-            finally
-            {
-                bulkEditing = false;
-            }
+            propagateModelMode(character, newCustomMode);
         });
 
         modelSpinner.addChangeListener(e ->
@@ -568,9 +544,8 @@ public class CreatorsPanel extends PluginPanel
         {
             CustomModel m = (CustomModel) modelComboBox.getSelectedItem();
             character.setStoredModel(m);
-            if (modelComboBox.isVisible() && character == selectionManager.getPrimary())
-                character.setToBaseModel(client, clientThread, true, -1);
-            propagateCustomModel(character, m);
+            character.setToBaseModel(client, clientThread, true, -1);
+            propagateModelComboBox(character, m);
         });
 
         orientationSpinner.addChangeListener(e ->
@@ -926,11 +901,8 @@ public class CreatorsPanel extends PluginPanel
                 }
             });
             characters.remove(c);
-            if (c == selectedCharacter)
-            {
-                selectionManager.clear(SelectionOrigin.AUTOMATED);
-            }
 
+            selectionManager.remove(c, SelectionOrigin.AUTOMATED);
             toolBox.getTimeSheetPanel().removeKeyFrameActions(c);
         }
     }
@@ -998,45 +970,6 @@ public class CreatorsPanel extends PluginPanel
         objectHolder.repaint();
         objectHolder.revalidate();
         managerTree.updateTreeSelectionIndex();
-    }
-
-    public void clearSidePanels(boolean warning)
-    {
-        if (warning)
-        {
-            int result = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete all Objects from the Side Panel?");
-            if (result != JOptionPane.YES_OPTION)
-                return;
-        }
-
-        for (Character character : sidePanelCharacters)
-        {
-            selectionManager.remove(character, SelectionOrigin.AUTOMATED);
-        }
-
-        Character[] charactersToRemove = sidePanelCharacters.toArray(new Character[sidePanelCharacters.size()]);
-
-        sidePanelCharacters.clear();
-        Thread thread = new Thread(() -> deleteCharacters(charactersToRemove));
-        thread.start();
-        sidePanel.removeAll();
-        sidePanel.repaint();
-        sidePanel.revalidate();
-    }
-
-    public void clearManagerPanels()
-    {
-        ManagerPanel managerPanel = toolBox.getManagerPanel();
-        JPanel objectHolder = managerPanel.getObjectHolder();
-        ArrayList<Character> managerCharacters = managerPanel.getManagerCharacters();
-        selectionManager.clear(SelectionOrigin.AUTOMATED);
-
-        Character[] charactersToRemove = managerCharacters.toArray(new Character[managerCharacters.size()]);
-
-        objectHolder.removeAll();
-        managerPanel.getManagerTree().resetObjectHolder();
-        Thread thread = new Thread(() -> deleteCharacters(charactersToRemove));
-        thread.start();
     }
 
     public void resetSidePanel()
@@ -1149,6 +1082,7 @@ public class CreatorsPanel extends PluginPanel
         {
             return;
         }
+
         Set<Character> targets = getBulkTargets(source);
         if (targets.size() == 1)
         {
@@ -1162,6 +1096,7 @@ public class CreatorsPanel extends PluginPanel
             {
                 continue;
             }
+
             JSpinner s = getter.apply(c);
             if (!Objects.equals(s.getValue(), value))
             {
@@ -1189,7 +1124,32 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
-    private void propagateCustomModel(Character source, CustomModel m)
+    private void propagateModelMode(Character source, boolean newCustomMode)
+    {
+        if (bulkEditing)
+        {
+            return;
+        }
+
+        Set<Character> targets = getBulkTargets(source);
+        if (targets.size() == 1)
+        {
+            return;
+        }
+
+        bulkEditing = true;
+        for (Character c : targets)
+        {
+            if (c == source || c.isCustomMode() == newCustomMode)
+            {
+                continue;
+            }
+            applyModelMode(c, newCustomMode, c.getModelButton(), c.getModelSpinner(), c.getComboBox());
+        }
+        bulkEditing = false;
+    }
+
+    private void propagateModelComboBox(Character source, CustomModel m)
     {
         if (bulkEditing)
         {

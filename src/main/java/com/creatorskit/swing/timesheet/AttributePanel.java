@@ -59,8 +59,6 @@ public class AttributePanel extends JPanel
     private final JLabel objectLabel = new JLabel("[No Object Selected]");
     private final JComboBox<KeyFrameType> cardComboBox = new JComboBox<>();
     private final JButton keyFramed = new JButton();
-    private final JButton updateButton = new JButton("Update");
-    private final JButton resetButton = new JButton();
 
     private final JFilterableTable npcTable = new JFilterableTable("NPCs", TableRenderStyle.HIGHLIGHT_SEARCH);
     private final JFilterableTable itemTable = new JFilterableTable("Items", TableRenderStyle.HIGHLIGHT_SEARCH);
@@ -165,17 +163,18 @@ public class AttributePanel extends JPanel
 
         c.gridx = 2;
         c.gridy = 0;
-        updateButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        updateButton.addActionListener(e -> timeSheetPanel.onUpdateButtonPressed());
-        add(updateButton, c);
+        JButton update = new JButton("Update");
+        update.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        update.addActionListener(e -> timeSheetPanel.onUpdateButtonPressed());
+        add(update, c);
 
         c.gridx = 3;
         c.gridy = 0;
-        resetButton.setIcon(new ImageIcon(RESET));
-        resetButton.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        resetButton.setToolTipText("Reset all the parameters of the currently visible KeyFrame");
-        resetButton.addActionListener(e -> setAttributesEmpty(false));
-        add(resetButton, c);
+        JButton reset = new JButton(new ImageIcon(RESET));
+        reset.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        reset.setToolTipText("Reset all the parameters of the currently visible KeyFrame");
+        reset.addActionListener(e -> setAttributesEmpty(false));
+        add(reset, c);
 
         c.gridx = 4;
         c.gridy = 0;
@@ -2333,7 +2332,7 @@ public class AttributePanel extends JPanel
         resetAttributes(character, currentTick);
     }
 
-    public void setSelectedCharacter(Character character)
+    public void updateSelectedCharacter(Character character)
     {
         double tick = timeSheetPanel.getCurrentTime();
         updateObjectLabel(character);

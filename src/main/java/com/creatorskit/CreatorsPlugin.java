@@ -274,8 +274,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	@Override
 	protected void shutDown() throws Exception
 	{
-		creatorsPanel.clearSidePanels(false);
-		creatorsPanel.clearManagerPanels();
+		creatorsPanel.deleteCharacters(characters.toArray(new Character[0]));
 
 		ToolBoxFrame toolBox = creatorsPanel.getToolBox();
 		eventBus.unregister(toolBox.getProgrammer());

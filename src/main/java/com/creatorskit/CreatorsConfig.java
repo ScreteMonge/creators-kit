@@ -629,7 +629,7 @@ public interface CreatorsConfig extends Config
 	)
 	default ExportFileFormat exportFileFormat()
 	{
-		return ExportFileFormat.BLENDER;
+		return ExportFileFormat.OBJ;
 	}
 
 	@ConfigItem(
