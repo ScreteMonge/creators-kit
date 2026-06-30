@@ -142,6 +142,16 @@ public class TimeSheetPanel extends JSplitPane
         selectionManager.addListener((manager, origin) -> updateSelectedCharacter(manager.getPrimary()));
     }
 
+    public void onInchForward()
+    {
+        setCurrentTime(TimeSheetPanel.round(currentTime + 0.1), false);
+    }
+
+    public void onInchBackward()
+    {
+        setCurrentTime(TimeSheetPanel.round(currentTime - 0.1), false);
+    }
+
     public void onAttributeSkipForward()
     {
         if (selectedCharacter == null)

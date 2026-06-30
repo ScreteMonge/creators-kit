@@ -79,7 +79,6 @@ public class TimeSheet extends JPanel
         setFocusable(true);
         requestFocusInWindow();
 
-        setKeyBindings();
         setMouseListeners(this);
 
         revalidate();
@@ -409,33 +408,6 @@ public class TimeSheet extends JPanel
     public void drawPreviewKeyFrames(Graphics2D g)
     {
 
-    }
-
-    private void setKeyBindings()
-    {
-        ActionMap actionMap = getActionMap();
-        InputMap inputMap = getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, 0), "VK_LEFT");
-        actionMap.put("VK_LEFT", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-
-                getTimeSheetPanel().setCurrentTime(TimeSheetPanel.round(currentTime - 0.1), false);
-            }
-        });
-
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, 0), "VK_RIGHT");
-        actionMap.put("VK_RIGHT", new AbstractAction()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                getTimeSheetPanel().setCurrentTime(TimeSheetPanel.round(currentTime + 0.1), false);
-            }
-        });
     }
 
     public void updateSelectedKeyFrameOnPressed(boolean shiftDown)

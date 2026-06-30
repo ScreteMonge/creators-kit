@@ -353,6 +353,16 @@ public class ToolBoxFrame extends JFrame
         redo.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Y, InputEvent.CTRL_DOWN_MASK));
         timeSheet.add(redo);
 
+        JMenuItem inchForward = new JMenuItem("Inch Forward");
+        inchForward.addActionListener(e -> timeSheetPanel.onInchForward());
+        inchForward.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, InputEvent.SHIFT_DOWN_MASK));
+        timeSheet.add(inchForward);
+
+        JMenuItem inchBackward = new JMenuItem("Inch Backward");
+        inchBackward.addActionListener(e -> timeSheetPanel.onInchBackward());
+        inchBackward.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, InputEvent.SHIFT_DOWN_MASK));
+        timeSheet.add(inchBackward);
+
         JMenuItem skipRight = new JMenuItem("Next KeyFrame");
         skipRight.addActionListener(e -> timeSheetPanel.onAttributeSkipForward());
         skipRight.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, InputEvent.CTRL_DOWN_MASK));
