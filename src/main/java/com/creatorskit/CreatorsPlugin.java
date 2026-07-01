@@ -141,7 +141,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private boolean mousePressed = false;
 	private boolean autoSetupPathFound = true;
 	private boolean autoTransmogFound = true;
-	private boolean queueAddProgramStep = false;
 
 	@Override
 	protected void startUp() throws Exception
@@ -358,12 +357,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 
 		updatePreviewObject(client.getTopLevelWorldView().getSelectedSceneTile());
-
-		if (queueAddProgramStep)
-		{
-			queueAddProgramStep = false;
-			hotKeyManager.addProgramStep();
-		}
 
 		switch (autoRotateYaw)
 		{

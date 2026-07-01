@@ -208,7 +208,7 @@ public class HotKeyManager
         @Override
         public void hotkeyPressed()
         {
-            plugin.setQueueAddProgramStep(true);
+            clientThread.invokeLater(() -> addProgramStep());
         }
     };
 
