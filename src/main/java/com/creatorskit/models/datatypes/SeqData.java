@@ -7,7 +7,6 @@ import lombok.Getter;
 @AllArgsConstructor
 public class SeqData
 {
-    private final String name;
     private final int id;
     private final int leftHandItem;
     private final int rightHandItem;

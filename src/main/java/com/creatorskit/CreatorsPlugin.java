@@ -1,8 +1,8 @@
 package com.creatorskit;
 
+import com.creatorskit.hotkeymanager.HotKeyManager;
 import com.creatorskit.models.*;
 import com.creatorskit.programming.*;
-import com.creatorskit.programming.orientation.OrientationHotkeyMode;
 import com.creatorskit.saves.TransmogLoadOption;
 import com.creatorskit.selection.SelectionManager;
 import com.creatorskit.swing.*;
@@ -28,7 +28,6 @@ import net.runelite.client.chat.ChatMessageBuilder;
 import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
-import net.runelite.client.config.Keybind;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
@@ -43,13 +42,9 @@ import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.ColorUtil;
-import net.runelite.client.util.HotkeyListener;
 import net.runelite.client.util.ImageUtil;
-import org.apache.commons.lang3.ArrayUtils;
 
 import java.awt.*;
-import java.awt.event.InputEvent;
-import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
@@ -125,9 +120,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	@Inject
 	private SelectionManager selectionManager;
 
+	@Inject
+	private HotKeyManager hotKeyManager;
+
 	private CreatorsPanel creatorsPanel;
 	private NavigationButton navigationButton;
-	private boolean overlaysActive = false;
 	private final ArrayList<Character> characters = new ArrayList<>();
 	private final ArrayList<CustomModel> storedModels = new ArrayList<>();
 	private Character hoveredCharacter;
@@ -140,13 +137,12 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private int savedPlane = -1;
 	private AutoRotate autoRotateYaw = AutoRotate.OFF;
 	private AutoRotate autoRotatePitch = AutoRotate.OFF;
-	private int oculusOrbSpeed = 36;
 	private double clickX;
 	private double clickY;
 	private boolean mousePressed = false;
 	private boolean autoSetupPathFound = true;
 	private boolean autoTransmogFound = true;
-	private boolean addProgramStep = false;
+	private boolean queueAddProgramStep = false;
 
 	@Override
 	protected void startUp() throws Exception
@@ -174,35 +170,35 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		overlayManager.add(hitsplatOverlay);
 		overlayManager.add(textOverlay);
 
-		keyManager.registerKeyListener(overlayKeyListener);
-		keyManager.registerKeyListener(oculusOrbListener);
-		keyManager.registerKeyListener(orbPreset1Listener);
-		keyManager.registerKeyListener(orbPreset2Listener);
-		keyManager.registerKeyListener(orbPreset3Listener);
-		keyManager.registerKeyListener(quickSpawnListener);
-		keyManager.registerKeyListener(quickLocationListener);
-		keyManager.registerKeyListener(quickDuplicateListener);
-		keyManager.registerKeyListener(quickRotateCWListener);
-		keyManager.registerKeyListener(quickRotateCCWListener);
-		keyManager.registerKeyListener(autoLeftListener);
-		keyManager.registerKeyListener(autoRightListener);
-		keyManager.registerKeyListener(autoUpListener);
-		keyManager.registerKeyListener(autoDownListener);
-		keyManager.registerKeyListener(addProgramStepListener);
-		keyManager.registerKeyListener(removeProgramStepListener);
-		keyManager.registerKeyListener(clearProgramStepListener);
-		keyManager.registerKeyListener(addOrientationStartListener);
-		keyManager.registerKeyListener(addOrientationGoalListener);
-		keyManager.registerKeyListener(playPauseListener);
-		keyManager.registerKeyListener(resetTimelineListener);
-		keyManager.registerKeyListener(skipForwardListener);
-		keyManager.registerKeyListener(skipSubForwardListener);
-		keyManager.registerKeyListener(skipBackwardListener);
-		keyManager.registerKeyListener(skipSubBackwardListener);
-		keyManager.registerKeyListener(saveListener);
-		keyManager.registerKeyListener(openListener);
-		keyManager.registerKeyListener(undoListener);
-		keyManager.registerKeyListener(redoListener);
+		keyManager.registerKeyListener(hotKeyManager.overlayKeyListener);
+		keyManager.registerKeyListener(hotKeyManager.oculusOrbListener);
+		keyManager.registerKeyListener(hotKeyManager.orbPreset1Listener);
+		keyManager.registerKeyListener(hotKeyManager.orbPreset2Listener);
+		keyManager.registerKeyListener(hotKeyManager.orbPreset3Listener);
+		keyManager.registerKeyListener(hotKeyManager.quickSpawnListener);
+		keyManager.registerKeyListener(hotKeyManager.quickLocationListener);
+		keyManager.registerKeyListener(hotKeyManager.quickDuplicateListener);
+		keyManager.registerKeyListener(hotKeyManager.quickRotateCWListener);
+		keyManager.registerKeyListener(hotKeyManager.quickRotateCCWListener);
+		keyManager.registerKeyListener(hotKeyManager.autoLeftListener);
+		keyManager.registerKeyListener(hotKeyManager.autoRightListener);
+		keyManager.registerKeyListener(hotKeyManager.autoUpListener);
+		keyManager.registerKeyListener(hotKeyManager.autoDownListener);
+		keyManager.registerKeyListener(hotKeyManager.addProgramStepListener);
+		keyManager.registerKeyListener(hotKeyManager.removeProgramStepListener);
+		keyManager.registerKeyListener(hotKeyManager.clearProgramStepListener);
+		keyManager.registerKeyListener(hotKeyManager.addOrientationStartListener);
+		keyManager.registerKeyListener(hotKeyManager.addOrientationGoalListener);
+		keyManager.registerKeyListener(hotKeyManager.playPauseListener);
+		keyManager.registerKeyListener(hotKeyManager.resetTimelineListener);
+		keyManager.registerKeyListener(hotKeyManager.skipForwardListener);
+		keyManager.registerKeyListener(hotKeyManager.skipSubForwardListener);
+		keyManager.registerKeyListener(hotKeyManager.skipBackwardListener);
+		keyManager.registerKeyListener(hotKeyManager.skipSubBackwardListener);
+		keyManager.registerKeyListener(hotKeyManager.saveListener);
+		keyManager.registerKeyListener(hotKeyManager.openListener);
+		keyManager.registerKeyListener(hotKeyManager.undoListener);
+		keyManager.registerKeyListener(hotKeyManager.redoListener);
 		mouseManager.registerMouseWheelListener(this::mouseWheelMoved);
 		mouseManager.registerMouseListener(this);
 
@@ -257,18 +253,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				autoTransmogFound = false;
 			}
 		}
-
-		oculusOrbSpeed = config.orbSpeed();
-
-		String string = configManager.getConfiguration("creatorssuite", "overlaysActive");
-		try
-		{
-            overlaysActive = Boolean.parseBoolean(string);
-		}
-		catch (Exception e)
-		{
-			overlaysActive = false;
-		}
 	}
 
 	@Override
@@ -290,35 +274,35 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		overlayManager.remove(healthOverlay);
 		overlayManager.remove(hitsplatOverlay);
 
-		keyManager.unregisterKeyListener(overlayKeyListener);
-		keyManager.unregisterKeyListener(oculusOrbListener);
-		keyManager.unregisterKeyListener(orbPreset1Listener);
-		keyManager.unregisterKeyListener(orbPreset2Listener);
-		keyManager.unregisterKeyListener(orbPreset3Listener);
-		keyManager.unregisterKeyListener(quickSpawnListener);
-		keyManager.unregisterKeyListener(quickLocationListener);
-		keyManager.unregisterKeyListener(quickDuplicateListener);
-		keyManager.unregisterKeyListener(quickRotateCWListener);
-		keyManager.unregisterKeyListener(quickRotateCCWListener);
-		keyManager.unregisterKeyListener(autoLeftListener);
-		keyManager.unregisterKeyListener(autoRightListener);
-		keyManager.unregisterKeyListener(autoUpListener);
-		keyManager.unregisterKeyListener(autoDownListener);
-		keyManager.unregisterKeyListener(addProgramStepListener);
-		keyManager.unregisterKeyListener(removeProgramStepListener);
-		keyManager.unregisterKeyListener(clearProgramStepListener);
-		keyManager.unregisterKeyListener(addOrientationStartListener);
-		keyManager.unregisterKeyListener(addOrientationGoalListener);
-		keyManager.unregisterKeyListener(playPauseListener);
-		keyManager.unregisterKeyListener(resetTimelineListener);
-		keyManager.unregisterKeyListener(skipForwardListener);
-		keyManager.unregisterKeyListener(skipSubForwardListener);
-		keyManager.unregisterKeyListener(skipBackwardListener);
-		keyManager.unregisterKeyListener(skipSubBackwardListener);
-		keyManager.unregisterKeyListener(saveListener);
-		keyManager.unregisterKeyListener(openListener);
-		keyManager.unregisterKeyListener(undoListener);
-		keyManager.unregisterKeyListener(redoListener);
+		keyManager.unregisterKeyListener(hotKeyManager.overlayKeyListener);
+		keyManager.unregisterKeyListener(hotKeyManager.oculusOrbListener);
+		keyManager.unregisterKeyListener(hotKeyManager.orbPreset1Listener);
+		keyManager.unregisterKeyListener(hotKeyManager.orbPreset2Listener);
+		keyManager.unregisterKeyListener(hotKeyManager.orbPreset3Listener);
+		keyManager.unregisterKeyListener(hotKeyManager.quickSpawnListener);
+		keyManager.unregisterKeyListener(hotKeyManager.quickLocationListener);
+		keyManager.unregisterKeyListener(hotKeyManager.quickDuplicateListener);
+		keyManager.unregisterKeyListener(hotKeyManager.quickRotateCWListener);
+		keyManager.unregisterKeyListener(hotKeyManager.quickRotateCCWListener);
+		keyManager.unregisterKeyListener(hotKeyManager.autoLeftListener);
+		keyManager.unregisterKeyListener(hotKeyManager.autoRightListener);
+		keyManager.unregisterKeyListener(hotKeyManager.autoUpListener);
+		keyManager.unregisterKeyListener(hotKeyManager.autoDownListener);
+		keyManager.unregisterKeyListener(hotKeyManager.addProgramStepListener);
+		keyManager.unregisterKeyListener(hotKeyManager.removeProgramStepListener);
+		keyManager.unregisterKeyListener(hotKeyManager.clearProgramStepListener);
+		keyManager.unregisterKeyListener(hotKeyManager.addOrientationStartListener);
+		keyManager.unregisterKeyListener(hotKeyManager.addOrientationGoalListener);
+		keyManager.unregisterKeyListener(hotKeyManager.playPauseListener);
+		keyManager.unregisterKeyListener(hotKeyManager.resetTimelineListener);
+		keyManager.unregisterKeyListener(hotKeyManager.skipForwardListener);
+		keyManager.unregisterKeyListener(hotKeyManager.skipSubForwardListener);
+		keyManager.unregisterKeyListener(hotKeyManager.skipBackwardListener);
+		keyManager.unregisterKeyListener(hotKeyManager.skipSubBackwardListener);
+		keyManager.unregisterKeyListener(hotKeyManager.saveListener);
+		keyManager.unregisterKeyListener(hotKeyManager.openListener);
+		keyManager.unregisterKeyListener(hotKeyManager.undoListener);
+		keyManager.unregisterKeyListener(hotKeyManager.redoListener);
 		mouseManager.unregisterMouseWheelListener(this::mouseWheelMoved);
 		mouseManager.unregisterMouseListener(this);
 	}
@@ -375,10 +359,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		updatePreviewObject(client.getTopLevelWorldView().getSelectedSceneTile());
 
-		if (addProgramStep)
+		if (queueAddProgramStep)
 		{
-			addProgramStep = false;
-			addProgramStep();
+			queueAddProgramStep = false;
+			hotKeyManager.addProgramStep();
 		}
 
 		switch (autoRotateYaw)
@@ -415,7 +399,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		if (event.getKey().equals("orbSpeed"))
 		{
 			client.setFreeCameraSpeed(config.orbSpeed());
-			oculusOrbSpeed = config.orbSpeed();
+			hotKeyManager.setOculusOrbSpeed(config.orbSpeed());
 		}
 
 		if (event.getKey().equals("enableTransmog"))
@@ -531,15 +515,18 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 		}
 
-		boolean poh = MovementManager.useLocalLocations(client.getTopLevelWorldView());
-
-		if (poh)
+		clientThread.invokeLater(() ->
 		{
-			setLocationPOH(character, initialize, transplant, activeOption, locationOption);
-			return;
-		}
+			boolean poh = MovementManager.useLocalLocations(client.getTopLevelWorldView());
 
-		setLocationWorld(character, initialize, transplant, activeOption, locationOption);
+			if (poh)
+			{
+				setLocationPOH(character, initialize, transplant, activeOption, locationOption);
+				return;
+			}
+
+			setLocationWorld(character, initialize, transplant, activeOption, locationOption);
+		});
 	}
 
 	public void setLocationWorld(Character character, boolean initialize, boolean transplant, ActiveOption activeOption, LocationOption locationOption)
@@ -614,7 +601,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 
 		LocalPoint finalLocalPoint = localPoint;
-		clientThread.invokeLater(() -> character.setLocation(finalLocalPoint, worldView.getPlane()));
+		character.setLocation(finalLocalPoint, worldView.getPlane());
 
 		if (locationOption == LocationOption.TO_HOVERED_TILE)
 		{
@@ -701,7 +688,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 
 		LocalPoint finalLocalPoint = localPoint;
-		clientThread.invokeLater(() -> character.setLocation(finalLocalPoint, worldView.getPlane()));
+		character.setLocation(finalLocalPoint, worldView.getPlane());
 
 		if (locationOption == LocationOption.TO_HOVERED_TILE)
 		{
@@ -957,348 +944,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		return "1000.0.0";
 	}
-
-	private final HotkeyListener overlayKeyListener = new HotkeyListener(() -> config.toggleOverlaysHotkey())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			overlaysActive = !overlaysActive;
-			configManager.setConfiguration("creatorssuite", "overlaysActive", String.valueOf(overlaysActive));
-		}
-	};
-
-	private final HotkeyListener oculusOrbListener = new HotkeyListener(() -> config.toggleOrbHotkey())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			if (client.getCameraMode() == 1)
-			{
-				client.setCameraMode(0);
-				client.setFreeCameraSpeed(12);
-				return;
-			}
-
-			client.setCameraMode(1);
-			client.setFreeCameraSpeed(oculusOrbSpeed);
-		}
-	};
-
-	private final HotkeyListener orbPreset1Listener = new HotkeyListener(() -> config.orbSpeedHotkey1())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			client.setFreeCameraSpeed(config.speedHotkey1());
-			sendChatMessage("Oculus Orb set to speed: " + config.speedHotkey1());
-		}
-	};
-
-	private final HotkeyListener orbPreset2Listener = new HotkeyListener(() -> config.orbSpeedHotkey2())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			client.setFreeCameraSpeed(config.speedHotkey2());
-			sendChatMessage("Oculus Orb set to speed: " + config.speedHotkey2());
-		}
-	};
-
-	private final HotkeyListener orbPreset3Listener = new HotkeyListener(() -> config.orbSpeedHotkey3())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			client.setFreeCameraSpeed(config.speedHotkey3());
-			sendChatMessage("Oculus Orb set to speed: " + config.speedHotkey3());
-		}
-	};
-	private final HotkeyListener quickSpawnListener = new HotkeyListener(() -> config.quickSpawnHotkey())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			Character selectedCharacter = selectionManager.getPrimary();
-			if (selectedCharacter != null)
-			{
-				selectedCharacter.toggleActive(clientThread);
-			}
-		}
-	};
-
-	private final HotkeyListener quickLocationListener = new HotkeyListener(() -> config.quickLocationHotkey())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			Character selectedCharacter = selectionManager.getPrimary();
-			if (selectedCharacter != null)
-			{
-				setLocation(selectedCharacter, false, true, ActiveOption.ACTIVE, LocationOption.TO_HOVERED_TILE);
-			}
-		}
-	};
-
-	private final HotkeyListener quickDuplicateListener = new HotkeyListener(() -> config.quickDuplicateHotkey())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			Character selectedCharacter = selectionManager.getPrimary();
-			if (selectedCharacter != null)
-			{
-				creatorsPanel.onDuplicatePressed(selectedCharacter, true);
-			}
-		}
-	};
-
-	private final HotkeyListener quickRotateCWListener = new HotkeyListener(() -> config.quickRotateCWHotkey())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			Character selectedCharacter = selectionManager.getPrimary();
-			if (selectedCharacter != null)
-			{
-				addOrientation(selectedCharacter, config.rotateDegrees().degrees * -1);
-			}
-		}
-	};
-
-	private final HotkeyListener quickRotateCCWListener = new HotkeyListener(() -> config.quickRotateCCWHotkey())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			Character selectedCharacter = selectionManager.getPrimary();
-			if (selectedCharacter != null)
-			{
-				addOrientation(selectedCharacter, config.rotateDegrees().degrees);
-			}
-		}
-	};
-
-	private final HotkeyListener autoLeftListener = new HotkeyListener(() -> config.rotateLeftHotkey())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			autoRotateYaw = (autoRotateYaw == AutoRotate.OFF) ? AutoRotate.LEFT : AutoRotate.OFF;
-		}
-	};
-
-	private final HotkeyListener autoRightListener = new HotkeyListener(() -> config.rotateRightHotkey())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			autoRotateYaw = (autoRotateYaw == AutoRotate.OFF) ? AutoRotate.RIGHT : AutoRotate.OFF;
-		}
-	};
-
-	private final HotkeyListener autoUpListener = new HotkeyListener(() -> config.rotateUpHotkey())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			autoRotatePitch = (autoRotatePitch == AutoRotate.OFF) ? AutoRotate.UP : AutoRotate.OFF;
-		}
-	};
-
-	private final HotkeyListener autoDownListener = new HotkeyListener(() -> config.rotateDownHotkey())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			autoRotatePitch = (autoRotatePitch == AutoRotate.OFF) ? AutoRotate.DOWN : AutoRotate.OFF;
-		}
-	};
-
-	private final HotkeyListener addProgramStepListener = new HotkeyListener(() -> config.addProgramStepHotkey())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			addProgramStep = true;
-		}
-	};
-
-	private void addProgramStep()
-	{
-		creatorsPanel.getToolBox().getTimeSheetPanel().onAddMovementKeyPressed();
-	}
-
-	private final HotkeyListener removeProgramStepListener = new HotkeyListener(() -> config.removeProgramStepHotkey())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			removeProgramStep();
-		}
-	};
-
-	private void removeProgramStep()
-	{
-		Character selectedCharacter = selectionManager.getPrimary();
-		if (selectedCharacter == null)
-		{
-			return;
-		}
-
-		KeyFrame kf = selectedCharacter.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
-		if (kf == null)
-		{
-			return;
-		}
-
-		MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
-		int[][] path = keyFrame.getPath();
-
-		if (path.length == 0)
-		{
-			return;
-		}
-
-		int newLength = path.length - 1;
-		keyFrame.setPath(ArrayUtils.remove(path, newLength));
-		creatorsPanel.getToolBox().getProgrammer().register3DChanges(selectedCharacter);
-	}
-
-	private final HotkeyListener clearProgramStepListener = new HotkeyListener(() -> config.clearProgramStepHotkey())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			clearProgramSteps();
-		}
-	};
-
-	private void clearProgramSteps()
-	{
-		Character selectedCharacter = selectionManager.getPrimary();
-		if (selectedCharacter == null)
-		{
-			return;
-		}
-
-		KeyFrame kf = selectedCharacter.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
-		if (kf == null)
-		{
-			return;
-		}
-
-		MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
-		keyFrame.setPath(new int[0][2]);
-		keyFrame.setCurrentStep(0);
-	}
-
-	private final HotkeyListener addOrientationStartListener = new HotkeyListener(() -> config.orientationStart()) {
-		@Override
-		public void hotkeyPressed()
-		{
-			creatorsPanel.getToolBox().getTimeSheetPanel().onOrientationKeyPressed(OrientationHotkeyMode.SET_START);
-		}
-	};
-
-	private final HotkeyListener addOrientationGoalListener = new HotkeyListener(() -> config.orientationEnd()) {
-		@Override
-		public void hotkeyPressed()
-		{
-			creatorsPanel.getToolBox().getTimeSheetPanel().onOrientationKeyPressed(OrientationHotkeyMode.SET_GOAL);
-		}
-	};
-
-	private final HotkeyListener playPauseListener = new HotkeyListener(() -> config.playPauseHotkey())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			creatorsPanel.getToolBox().getProgrammer().togglePlay();
-		}
-	};
-
-	private final HotkeyListener resetTimelineListener = new HotkeyListener(() -> config.resetTimelineHotkey())
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			ToolBoxFrame toolBox = creatorsPanel.getToolBox();
-			toolBox.getTimeSheetPanel().setCurrentTime(0, false);
-		}
-	};
-
-	private final HotkeyListener skipForwardListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_RIGHT, InputEvent.CTRL_DOWN_MASK))
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			creatorsPanel.getToolBox().getTimeSheetPanel().onAttributeSkipForward();
-		}
-	};
-
-	private final HotkeyListener skipBackwardListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_LEFT, InputEvent.CTRL_DOWN_MASK))
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			creatorsPanel.getToolBox().getTimeSheetPanel().onAttributeSkipPrevious();
-		}
-	};
-
-	private final HotkeyListener skipSubForwardListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_RIGHT, InputEvent.CTRL_DOWN_MASK | InputEvent.ALT_DOWN_MASK))
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			creatorsPanel.getToolBox().getTimeSheetPanel().skipListener(0.1);
-		}
-	};
-
-	private final HotkeyListener skipSubBackwardListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_LEFT, InputEvent.CTRL_DOWN_MASK | InputEvent.ALT_DOWN_MASK))
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			creatorsPanel.getToolBox().getTimeSheetPanel().skipListener(-0.1);
-		}
-	};
-
-	private final HotkeyListener saveListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK))
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			creatorsPanel.quickSaveToFile();
-		}
-	};
-
-	private final HotkeyListener openListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_O, InputEvent.CTRL_DOWN_MASK))
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			creatorsPanel.openLoadSetupDialog(true);
-		}
-	};
-
-	private final HotkeyListener undoListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_Z, InputEvent.CTRL_DOWN_MASK))
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			creatorsPanel.getToolBox().getTimeSheetPanel().undo();
-		}
-	};
-
-	private final HotkeyListener redoListener = new HotkeyListener(() -> new Keybind(KeyEvent.VK_Y, InputEvent.CTRL_DOWN_MASK))
-	{
-		@Override
-		public void hotkeyPressed()
-		{
-			creatorsPanel.getToolBox().getTimeSheetPanel().redo();
-		}
-	};
 
 	public MouseWheelEvent mouseWheelMoved(MouseWheelEvent event)
 	{

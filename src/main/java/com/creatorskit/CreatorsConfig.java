@@ -75,7 +75,7 @@ public interface CreatorsConfig extends Config
 	)
 	default Keybind quickSpawnHotkey()
 	{
-		return new Keybind(KeyEvent.VK_INSERT, 0);
+		return Keybind.NOT_SET;
 	}
 
 	@ConfigItem(
@@ -111,7 +111,7 @@ public interface CreatorsConfig extends Config
 	)
 	default Keybind quickRotateCWHotkey()
 	{
-		return new Keybind(KeyEvent.VK_DELETE, 0);
+		return Keybind.NOT_SET;
 	}
 
 	@ConfigItem(
@@ -123,7 +123,7 @@ public interface CreatorsConfig extends Config
 	)
 	default Keybind quickRotateCCWHotkey()
 	{
-		return new Keybind(KeyEvent.VK_END, 0);
+		return Keybind.NOT_SET;
 	}
 
 	@ConfigItem(

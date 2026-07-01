@@ -10,6 +10,7 @@ import net.runelite.api.Point;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.gameval.ObjectID;
+import net.runelite.client.config.ConfigManager;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.ui.overlay.Overlay;
@@ -18,16 +19,20 @@ import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayUtil;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 import java.awt.*;
 import java.util.Arrays;
 import java.util.Collection;
 
+@Singleton
 public class CreatorsOverlay extends Overlay
 {
     private final Client client;
     private final CreatorsPlugin plugin;
     private final CreatorsConfig config;
     private final SelectionManager selectionManager;
+    private final ConfigManager configManager;
+
     private static final Color HOVERED_COLOUR = new Color(146, 206, 193, 255);
     private static final Color PRIMARY_COLOUR = new Color(220, 253, 245);
     private static final Color SELECTED_COLOUR = ColorScheme.BRAND_ORANGE;
@@ -41,10 +46,10 @@ public class CreatorsOverlay extends Overlay
     private static final Color PLAYER_COLOUR = new Color(221, 133, 255);
     private static final int MAX_DISTANCE = 2400;
     private final BasicStroke dashedLine = new BasicStroke(2.5f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND, 1f, new float[] { 5, 5, 5, 5 }, 0f);
-
+    private boolean overlaysActive;
 
     @Inject
-    private CreatorsOverlay(Client client, CreatorsPlugin plugin, CreatorsConfig config, com.creatorskit.selection.SelectionManager selectionManager)
+    private CreatorsOverlay(Client client, CreatorsPlugin plugin, CreatorsConfig config, SelectionManager selectionManager, ConfigManager configManager)
     {
         setPosition(OverlayPosition.DYNAMIC);
         setLayer(OverlayLayer.ABOVE_SCENE);
@@ -52,6 +57,23 @@ public class CreatorsOverlay extends Overlay
         this.plugin = plugin;
         this.config = config;
         this.selectionManager = selectionManager;
+        this.configManager = configManager;
+
+        String string = configManager.getConfiguration("creatorssuite", "overlaysActive");
+        try
+        {
+            overlaysActive = Boolean.parseBoolean(string);
+        }
+        catch (Exception e)
+        {
+            overlaysActive = false;
+        }
+    }
+
+    public void toggleOverlays()
+    {
+        overlaysActive = !overlaysActive;
+        configManager.setConfiguration("creatorssuite", "overlaysActive", String.valueOf(overlaysActive));
     }
 
     @Override
@@ -82,7 +104,7 @@ public class CreatorsOverlay extends Overlay
             renderSelectedRLObject(graphics, worldView);
         }
 
-        if (!plugin.isOverlaysActive())
+        if (!overlaysActive)
         {
             return;
         }
@@ -93,6 +115,8 @@ public class CreatorsOverlay extends Overlay
         }
 
         renderObjectsOverlay(graphics, worldView);
+
+        graphics.setFont(FontManager.getRunescapeSmallFont());
 
         if (config.pathOverlay())
         {

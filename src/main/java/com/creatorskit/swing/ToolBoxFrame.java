@@ -354,12 +354,12 @@ public class ToolBoxFrame extends JFrame
         timeSheet.add(redo);
 
         JMenuItem inchForward = new JMenuItem("Inch Forward");
-        inchForward.addActionListener(e -> timeSheetPanel.onInchForward());
+        inchForward.addActionListener(e -> timeSheetPanel.inchTimeline(0.1));
         inchForward.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, InputEvent.SHIFT_DOWN_MASK));
         timeSheet.add(inchForward);
 
         JMenuItem inchBackward = new JMenuItem("Inch Backward");
-        inchBackward.addActionListener(e -> timeSheetPanel.onInchBackward());
+        inchBackward.addActionListener(e -> timeSheetPanel.inchTimeline(-0.1));
         inchBackward.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, InputEvent.SHIFT_DOWN_MASK));
         timeSheet.add(inchBackward);
 
