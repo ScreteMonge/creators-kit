@@ -551,7 +551,7 @@ public class CreatorsPanel extends PluginPanel
         orientationSpinner.addChangeListener(e ->
         {
             int orient = Orientation.boundOrientation((int) orientationSpinner.getValue());
-            plugin.setOrientation(character, orient);
+            character.setOrientation(orient);
             propagateSpinner(character, orient, Character::getOrientationSpinner);
         });
 
@@ -570,7 +570,7 @@ public class CreatorsPanel extends PluginPanel
         radiusSpinner.addChangeListener(e ->
         {
             int rad = (int) radiusSpinner.getValue();
-            plugin.setRadius(character, rad);
+            character.setRadius(clientThread, rad);
             propagateSpinner(character, rad, Character::getRadiusSpinner);
         });
 
@@ -598,7 +598,7 @@ public class CreatorsPanel extends PluginPanel
                 animationSpinner
         );
 
-        plugin.setupRLObject(character, transplant, setHoveredLocation);
+        character.setupRLObject(client, clientThread, getToolBox().getProgrammer(), random, config.randomizeStartFrame(), transplant, setHoveredLocation);
         plugin.getCharacters().add(character);
 
         comboBoxes.add(modelComboBox);

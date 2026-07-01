@@ -172,7 +172,7 @@ public class Programmer
             {
                 setAnimation(character, false, 0, 0);
                 setOrientation(character, currentClientTick);
-                plugin.setLocation(character, false, false, ActiveOption.UNCHANGED, LocationOption.TO_SAVED_LOCATION);
+                character.setLocation(client, clientThread, this, false, false, ActiveOption.UNCHANGED, LocationOption.TO_SAVED_LOCATION);
                 return;
             }
 
@@ -202,7 +202,7 @@ public class Programmer
 
             setAnimation(character, false, 0, 0);
             setOrientationStatic(character);
-            plugin.setLocation(character, false, false, ActiveOption.UNCHANGED, LocationOption.TO_SAVED_LOCATION);
+            character.setLocation(client, clientThread, this, false, false, ActiveOption.UNCHANGED, LocationOption.TO_SAVED_LOCATION);
             return;
         }
 
@@ -397,7 +397,7 @@ public class Programmer
             return;
         }
 
-        character.setLocation(lp, keyFrame.getPlane());
+        character.updateLocation(lp, keyFrame.getPlane());
     }
 
     /**

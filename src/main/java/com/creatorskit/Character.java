@@ -2,6 +2,9 @@ package com.creatorskit;
 
 import com.creatorskit.models.CustomModel;
 import com.creatorskit.programming.AnimationType;
+import com.creatorskit.programming.MovementManager;
+import com.creatorskit.programming.PathFinder;
+import com.creatorskit.programming.Programmer;
 import com.creatorskit.swing.ObjectPanel;
 import com.creatorskit.swing.ParentPanel;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
@@ -9,10 +12,7 @@ import com.creatorskit.swing.timesheet.keyframe.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-import net.runelite.api.Animation;
-import net.runelite.api.Client;
-import net.runelite.api.Constants;
-import net.runelite.api.Model;
+import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.callback.ClientThread;
@@ -22,6 +22,7 @@ import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import java.awt.*;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.Random;
 
@@ -119,25 +120,228 @@ public class Character
         }
     }
 
-    public void setOrientation(int orientation)
+    public void setupRLObject(Client client, ClientThread clientThread, Programmer programmer, Random random, boolean randomizeStartFrame, boolean setHoveredTile, boolean transplant)
     {
-        if (ckObject != null)
+        clientThread.invoke(() ->
         {
-            ckObject.setOrientation(orientation);
+            client.registerRuneLiteObject(ckObject);
+
+            ckObject.setRadius((int) radiusSpinner.getValue());
+            ckObject.setOrientation((int) orientationSpinner.getValue());
+
+            resetToBaseModel(client, clientThread);
+            setAnimation(client, random, AnimationType.ACTIVE, (int) animationSpinner.getValue(), (int) animationFrameSpinner.getValue(), randomizeStartFrame, true);
+
+            LocationOption locationOption = setHoveredTile ? LocationOption.TO_HOVERED_TILE : LocationOption.TO_SAVED_LOCATION;
+            setLocation(client, clientThread, programmer, true, transplant, active ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, locationOption);
+
+            if (client.getGameState() == GameState.LOGGED_IN)
+            {
+                programmer.updateProgram(this);
+            }
+        });
+    }
+
+    public void setLocation(Client client, ClientThread clientThread, Programmer programmer, boolean initialize, boolean transplant, ActiveOption activeOption, LocationOption locationOption)
+    {
+        if (client.getGameState() != GameState.LOGGED_IN)
+        {
+            return;
         }
 
-        if (spotAnim1 != null)
+        clientThread.invokeLater(() ->
         {
-            spotAnim1.setOrientation(orientation);
+            boolean poh = MovementManager.useLocalLocations(client.getTopLevelWorldView());
+
+            if (poh)
+            {
+                setLocationPOH(client, clientThread, programmer, initialize, transplant, activeOption, locationOption);
+                return;
+            }
+
+            setLocationWorld(client, clientThread, programmer, initialize, transplant, activeOption, locationOption);
+        });
+    }
+
+    public void setLocationWorld(Client client, ClientThread clientThread, Programmer programmer, boolean initialize, boolean transplant, ActiveOption activeOption, LocationOption locationOption)
+    {
+        WorldView worldView = client.getTopLevelWorldView();
+        LocalPoint localPoint = null;
+        if (nonInstancedPoint != null)
+        {
+            Collection<WorldPoint> wps = WorldPoint.toLocalInstance(worldView, nonInstancedPoint);
+            if (!wps.isEmpty())
+            {
+                nonInstancedPoint = wps.iterator().next();
+                localPoint = LocalPoint.fromWorld(worldView, nonInstancedPoint);
+            }
         }
 
-        if (spotAnim2 != null)
+        switch (locationOption)
         {
-            spotAnim2.setOrientation(orientation);
+            case TO_PLAYER:
+                localPoint = client.getLocalPlayer().getLocalLocation();
+                break;
+            case TO_HOVERED_TILE:
+                Tile tile = worldView.getSelectedSceneTile();
+                if (tile == null)
+                {
+                    return;
+                }
+
+                localPoint = tile.getLocalLocation();
+                break;
+            case TO_SAVED_LOCATION:
+            case TO_CURRENT_TICK:
+            default:
+                break;
+        }
+
+        if (localPoint == null || !localPoint.isInScene())
+        {
+            inScene = false;
+            return;
+        }
+
+        inScene = true;
+
+        if (initialize)
+        {
+            WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
+            nonInstancedPoint = worldPoint;
+            inPOH = false;
+        }
+
+        if (transplant)
+        {
+            WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
+            PathFinder.transplantSteps(this, worldView, worldPoint.getX(), worldPoint.getY());
+
+            KeyFrame kf = findNextKeyFrame(KeyFrameType.MOVEMENT, -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH);
+            if (kf != null)
+            {
+                MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+                int[][] step = keyFrame.getPath();
+                if (step.length != 0)
+                {
+                    int[] first = step[0];
+                    worldPoint = new WorldPoint(first[0], first[1], worldView.getPlane());
+                }
+            }
+
+            nonInstancedPoint = worldPoint;
+            inPOH = false;
+        }
+
+        LocalPoint finalLocalPoint = localPoint;
+        updateLocation(finalLocalPoint, worldView.getPlane());
+
+        if (locationOption == LocationOption.TO_HOVERED_TILE)
+        {
+            programmer.register3DChanges(this);
+        }
+
+        switch (activeOption)
+        {
+            case ACTIVE:
+                setActive(true, true, true, clientThread);
+                break;
+            case INACTIVE:
+                setActive(false, false, false, clientThread);
+                break;
+            case UNCHANGED:
+                resetActive(clientThread);
         }
     }
 
-    public void setLocation(LocalPoint lp, int plane)
+    public void setLocationPOH(Client client, ClientThread clientThread, Programmer programmer, boolean initialize, boolean transplant, ActiveOption activeOption, LocationOption locationOption)
+    {
+        WorldView worldView = client.getTopLevelWorldView();
+        LocalPoint localPoint = null;
+        if (instancedPoint != null)
+        {
+            localPoint = instancedPoint;
+        }
+
+        switch (locationOption)
+        {
+            case TO_PLAYER:
+                localPoint = client.getLocalPlayer().getLocalLocation();
+                break;
+            case TO_HOVERED_TILE:
+                Tile tile = worldView.getSelectedSceneTile();
+                if (tile == null)
+                {
+                    return;
+                }
+
+                localPoint = tile.getLocalLocation();
+                break;
+            case TO_CURRENT_TICK:
+            case TO_SAVED_LOCATION:
+            default:
+                break;
+        }
+
+        if (localPoint == null || !localPoint.isInScene())
+        {
+            inScene = false;
+            return;
+        }
+
+        inScene = true;
+
+        if (initialize)
+        {
+            instancedPoint = localPoint;
+            instancedPlane = worldView.getPlane();
+            inPOH = true;
+        }
+
+        if (transplant)
+        {
+            PathFinder.transplantSteps(this, worldView, localPoint.getSceneX(), localPoint.getSceneY());
+            LocalPoint savedPoint = localPoint;
+
+            KeyFrame kf = findNextKeyFrame(KeyFrameType.MOVEMENT, -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH);
+            if (kf != null)
+            {
+                MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+                int[][] step = keyFrame.getPath();
+                if (step.length != 0)
+                {
+                    int[] first = step[0];
+                    savedPoint = new LocalPoint(first[0], first[1], worldView);
+                }
+            }
+
+            instancedPoint = savedPoint;
+            instancedPlane = worldView.getPlane();
+            inPOH = true;
+        }
+
+        LocalPoint finalLocalPoint = localPoint;
+        updateLocation(finalLocalPoint, worldView.getPlane());
+
+        if (locationOption == LocationOption.TO_HOVERED_TILE)
+        {
+            programmer.register3DChanges(this);
+        }
+
+        switch (activeOption)
+        {
+            case ACTIVE:
+                setActive(true, true, true, clientThread);
+                break;
+            case INACTIVE:
+                setActive(true, false, false, clientThread);
+                break;
+            case UNCHANGED:
+                resetActive(clientThread);
+        }
+    }
+
+    public void updateLocation(LocalPoint lp, int plane)
     {
         if (ckObject != null)
         {
@@ -213,6 +417,48 @@ public class Character
         {
             pause();
             ckObject.setHasAnimKeyFrame(true);
+        }
+    }
+
+    public void setRadius(ClientThread clientThread, int radius)
+    {
+        clientThread.invoke(() -> ckObject.setRadius(radius));
+    }
+
+    public void addOrientation(int addition)
+    {
+        int orientation = ckObject.getOrientation();
+        orientation += addition;
+        if (orientation >= 2048)
+            orientation -= 2048;
+
+        if (orientation < 0)
+            orientation += 2048;
+
+        setOrientation(orientation);
+    }
+
+    public void setOrientation(int orientation)
+    {
+        orientationSpinner.setValue(orientation);
+        updateCKOOrientation(orientation);
+    }
+
+    public void updateCKOOrientation(int orientation)
+    {
+        if (ckObject != null)
+        {
+            ckObject.setOrientation(orientation);
+        }
+
+        if (spotAnim1 != null)
+        {
+            spotAnim1.setOrientation(orientation);
+        }
+
+        if (spotAnim2 != null)
+        {
+            spotAnim2.setOrientation(orientation);
         }
     }
 

@@ -281,7 +281,7 @@ public class PathFinder
         }
     }
 
-    public void transplantSteps(Character character, WorldView worldView, int newX, int newY)
+    public static void transplantSteps(Character character, WorldView worldView, int newX, int newY)
     {
         boolean poh = MovementManager.useLocalLocations(worldView);
 
@@ -342,7 +342,7 @@ public class PathFinder
         transplantKeyFrames(character, worldView, changeX, changeY);
     }
 
-    private void transplantKeyFrames(Character character, WorldView worldView, int changeX, int changeY)
+    private static void transplantKeyFrames(Character character, WorldView worldView, int changeX, int changeY)
     {
         MovementKeyFrame[] kfs = character.getMovementKeyFrames();
         if (kfs == null)

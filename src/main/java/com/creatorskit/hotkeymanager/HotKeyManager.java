@@ -2,6 +2,7 @@ package com.creatorskit.hotkeymanager;
 
 import com.creatorskit.*;
 import com.creatorskit.Character;
+import com.creatorskit.programming.Programmer;
 import com.creatorskit.programming.orientation.OrientationHotkeyMode;
 import com.creatorskit.selection.SelectionManager;
 import com.creatorskit.swing.ToolBoxFrame;
@@ -121,7 +122,8 @@ public class HotKeyManager
             Character selectedCharacter = selectionManager.getPrimary();
             if (selectedCharacter != null)
             {
-                plugin.setLocation(selectedCharacter, false, true, ActiveOption.ACTIVE, LocationOption.TO_HOVERED_TILE);
+                Programmer programmer = plugin.getCreatorsPanel().getToolBox().getProgrammer();
+                selectedCharacter.setLocation(client, clientThread, programmer, false, true, ActiveOption.ACTIVE, LocationOption.TO_HOVERED_TILE);
             }
         }
     };
@@ -147,7 +149,7 @@ public class HotKeyManager
             Character selectedCharacter = selectionManager.getPrimary();
             if (selectedCharacter != null)
             {
-                plugin.addOrientation(selectedCharacter, config.rotateDegrees().degrees * -1);
+                selectedCharacter.addOrientation(config.rotateDegrees().degrees * -1);
             }
         }
     };
@@ -160,7 +162,7 @@ public class HotKeyManager
             Character selectedCharacter = selectionManager.getPrimary();
             if (selectedCharacter != null)
             {
-                plugin.addOrientation(selectedCharacter, config.rotateDegrees().degrees);
+                selectedCharacter.addOrientation(config.rotateDegrees().degrees);
             }
         }
     };

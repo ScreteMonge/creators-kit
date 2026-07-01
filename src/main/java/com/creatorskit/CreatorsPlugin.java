@@ -343,10 +343,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		if (savedPlane != plane)
 		{
 			savedPlane = plane;
+			Programmer programmer = creatorsPanel.getToolBox().getProgrammer();
 			for (int i = 0; i < characters.size(); i++)
 			{
 				Character character = characters.get(i);
-				setLocation(character, false, false, character.isActive() ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, LocationOption.TO_CURRENT_TICK);
+				character.setLocation(client, clientThread, programmer, false, false, character.isActive() ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, LocationOption.TO_CURRENT_TICK);
 			}
 		}
 	}
@@ -426,7 +427,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 						.setOption(ColorUtil.prependColorTag("Relocate", Color.ORANGE))
 						.setTarget(ColorUtil.colorTag(Color.GREEN) + selectedCharacter.getName())
 						.setType(MenuAction.RUNELITE)
-						.onClick(e -> setLocation(selectedCharacter, false, true, ActiveOption.ACTIVE, LocationOption.TO_HOVERED_TILE));
+						.onClick(e ->
+						{
+							Programmer programmer = creatorsPanel.getToolBox().getProgrammer();
+							selectedCharacter.setLocation(client, clientThread, programmer, false, true, ActiveOption.ACTIVE, LocationOption.TO_HOVERED_TILE);
+						});
 
 				MenuEntry me = client.getMenu().createMenuEntry(-2)
 						.setOption(ColorUtil.prependColorTag("Keyframe", Color.ORANGE))
@@ -508,261 +513,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 	}
 
-	public void setLocation(Character character, boolean initialize, boolean transplant, ActiveOption activeOption, LocationOption locationOption)
-	{
-		if (client.getGameState() != GameState.LOGGED_IN)
-		{
-			return;
-		}
-
-		clientThread.invokeLater(() ->
-		{
-			boolean poh = MovementManager.useLocalLocations(client.getTopLevelWorldView());
-
-			if (poh)
-			{
-				setLocationPOH(character, initialize, transplant, activeOption, locationOption);
-				return;
-			}
-
-			setLocationWorld(character, initialize, transplant, activeOption, locationOption);
-		});
-	}
-
-	public void setLocationWorld(Character character, boolean initialize, boolean transplant, ActiveOption activeOption, LocationOption locationOption)
-	{
-		WorldView worldView = client.getTopLevelWorldView();
-		LocalPoint localPoint = null;
-		WorldPoint wp = character.getNonInstancedPoint();
-		if (wp != null)
-		{
-			Collection<WorldPoint> wps = WorldPoint.toLocalInstance(worldView, wp);
-			if (!wps.isEmpty())
-			{
-				wp = wps.iterator().next();
-				localPoint = LocalPoint.fromWorld(worldView, wp);
-			}
-		}
-
-		switch (locationOption)
-		{
-			case TO_PLAYER:
-				localPoint = client.getLocalPlayer().getLocalLocation();
-				break;
-			case TO_HOVERED_TILE:
-				Tile tile = worldView.getSelectedSceneTile();
-				if (tile == null)
-				{
-					return;
-				}
-
-				localPoint = tile.getLocalLocation();
-				break;
-			case TO_SAVED_LOCATION:
-			case TO_CURRENT_TICK:
-			default:
-				break;
-		}
-
-		if (localPoint == null || !localPoint.isInScene())
-		{
-			character.setInScene(false);
-			return;
-		}
-
-		character.setInScene(true);
-
-		if (initialize)
-		{
-			WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
-			character.setNonInstancedPoint(worldPoint);
-			character.setInPOH(false);
-		}
-
-		if (transplant)
-		{
-			WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, localPoint);
-			pathFinder.transplantSteps(character, worldView, worldPoint.getX(), worldPoint.getY());
-
-			KeyFrame kf = character.findNextKeyFrame(KeyFrameType.MOVEMENT, -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH);
-			if (kf != null)
-			{
-				MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
-				int[][] step = keyFrame.getPath();
-				if (step.length != 0)
-				{
-					int[] first = step[0];
-					worldPoint = new WorldPoint(first[0], first[1], worldView.getPlane());
-				}
-			}
-
-			character.setNonInstancedPoint(worldPoint);
-			character.setInPOH(false);
-		}
-
-		LocalPoint finalLocalPoint = localPoint;
-		character.setLocation(finalLocalPoint, worldView.getPlane());
-
-		if (locationOption == LocationOption.TO_HOVERED_TILE)
-		{
-			creatorsPanel.getToolBox().getProgrammer().register3DChanges(character);
-		}
-
-		switch (activeOption)
-		{
-			case ACTIVE:
-				character.setActive(true, true, true, clientThread);
-				break;
-			case INACTIVE:
-				character.setActive(false, false, false, clientThread);
-				break;
-			case UNCHANGED:
-				character.resetActive(clientThread);
-		}
-	}
-
-	public void setLocationPOH(Character character, boolean initialize, boolean transplant, ActiveOption activeOption, LocationOption locationOption)
-	{
-		WorldView worldView = client.getTopLevelWorldView();
-		LocalPoint localPoint = null;
-		if (character.getInstancedPoint() != null)
-		{
-			localPoint = character.getInstancedPoint();
-		}
-
-		switch (locationOption)
-		{
-			case TO_PLAYER:
-				localPoint = client.getLocalPlayer().getLocalLocation();
-				break;
-			case TO_HOVERED_TILE:
-				Tile tile = worldView.getSelectedSceneTile();
-				if (tile == null)
-				{
-					return;
-				}
-
-				localPoint = tile.getLocalLocation();
-				break;
-			case TO_CURRENT_TICK:
-			case TO_SAVED_LOCATION:
-			default:
-				break;
-		}
-
-		if (localPoint == null || !localPoint.isInScene())
-		{
-			character.setInScene(false);
-			return;
-		}
-
-		character.setInScene(true);
-
-		if (initialize)
-		{
-			character.setInstancedPoint(localPoint);
-			character.setInstancedPlane(worldView.getPlane());
-			character.setInPOH(true);
-		}
-
-		if (transplant)
-		{
-			pathFinder.transplantSteps(character, worldView, localPoint.getSceneX(), localPoint.getSceneY());
-			LocalPoint savedPoint = localPoint;
-
-			KeyFrame kf = character.findNextKeyFrame(KeyFrameType.MOVEMENT, -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH);
-			if (kf != null)
-			{
-				MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
-				int[][] step = keyFrame.getPath();
-				if (step.length != 0)
-				{
-					int[] first = step[0];
-					savedPoint = new LocalPoint(first[0], first[1], worldView);
-				}
-			}
-
-			character.setInstancedPoint(savedPoint);
-			character.setInstancedPlane(worldView.getPlane());
-			character.setInPOH(true);
-		}
-
-		LocalPoint finalLocalPoint = localPoint;
-		character.setLocation(finalLocalPoint, worldView.getPlane());
-
-		if (locationOption == LocationOption.TO_HOVERED_TILE)
-		{
-			creatorsPanel.getToolBox().getProgrammer().register3DChanges(character);
-		}
-
-		switch (activeOption)
-		{
-			case ACTIVE:
-				character.setActive(true, true, true, clientThread);
-				break;
-			case INACTIVE:
-				character.setActive(true, false, false, clientThread);
-				break;
-			case UNCHANGED:
-				character.resetActive(clientThread);
-		}
-	}
-
 	public double getCurrentTick()
 	{
 		return creatorsPanel.getToolBox().getTimeSheetPanel().getCurrentTime();
-	}
-
-	public void setRadius(Character character, int radius)
-	{
-		CKObject ckObject = character.getCkObject();
-		clientThread.invoke(() -> ckObject.setRadius(radius));
-	}
-
-	public void addOrientation(Character character, int addition)
-	{
-		CKObject ckObject = character.getCkObject();
-		int orientation = ckObject.getOrientation();
-		orientation += addition;
-		if (orientation >= 2048)
-			orientation -= 2048;
-
-		if (orientation < 0)
-			orientation += 2048;
-
-		setOrientation(character, orientation);
-	}
-
-	public void setOrientation(Character character, int orientation)
-	{
-		CKObject ckObject = character.getCkObject();
-		character.getOrientationSpinner().setValue(orientation);
-		clientThread.invokeLater(() -> ckObject.setOrientation(orientation));
-	}
-
-	public void setupRLObject(Character character, boolean setHoveredTile, boolean transplant)
-	{
-		clientThread.invoke(() ->
-		{
-			CKObject ckObject = character.getCkObject();
-			client.registerRuneLiteObject(ckObject);
-
-			ckObject.setRadius((int) character.getRadiusSpinner().getValue());
-			ckObject.setOrientation((int) character.getOrientationSpinner().getValue());
-
-			boolean active = character.isActive();
-
-			character.resetToBaseModel(client, clientThread);
-			character.setAnimation(client, random, AnimationType.ACTIVE, (int) character.getAnimationSpinner().getValue(), (int) character.getAnimationFrameSpinner().getValue(), config.randomizeStartFrame(), true);
-
-			LocationOption locationOption = setHoveredTile ? LocationOption.TO_HOVERED_TILE : LocationOption.TO_SAVED_LOCATION;
-			setLocation(character, true, transplant, active ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, locationOption);
-
-			if (client.getGameState() == GameState.LOGGED_IN)
-			{
-				creatorsPanel.getToolBox().getProgrammer().updateProgram(character);
-			}
-		});
 	}
 
 	public void sendChatMessage(String chatMessage)
@@ -992,7 +745,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			final int yaw = client.getCameraYaw();
 			final int pitch = client.getCameraPitch();
 			int jUnit = Rotation.getJagexDegrees(x, y, yaw, pitch);
-			setOrientation(selectedCharacter, jUnit);
+			selectedCharacter.setOrientation(jUnit);
 		}
 
 		return e;
