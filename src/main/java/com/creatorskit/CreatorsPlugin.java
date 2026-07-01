@@ -7,7 +7,6 @@ import com.creatorskit.saves.TransmogLoadOption;
 import com.creatorskit.selection.SelectionManager;
 import com.creatorskit.swing.*;
 import com.creatorskit.swing.anvil.ComplexPanel;
-import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import com.google.gson.Gson;
 import com.google.inject.Provides;

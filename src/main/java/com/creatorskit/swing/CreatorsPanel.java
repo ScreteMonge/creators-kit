@@ -880,7 +880,6 @@ public class CreatorsPanel extends PluginPanel
         removePanels(charactersToRemove);
 
         ArrayList<Character> characters = plugin.getCharacters();
-        Character selectedCharacter = selectionManager.getPrimary();
 
         for (Character c : charactersToRemove)
         {
@@ -903,7 +902,7 @@ public class CreatorsPanel extends PluginPanel
             characters.remove(c);
 
             selectionManager.remove(c, SelectionOrigin.AUTOMATED);
-            toolBox.getTimeSheetPanel().removeKeyFrameActions(c);
+            toolBox.getTimeSheetPanel().unstackKeyFrameActions(c);
         }
     }
 

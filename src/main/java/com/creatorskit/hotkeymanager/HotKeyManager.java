@@ -285,7 +285,7 @@ public class HotKeyManager
         @Override
         public void hotkeyPressed()
         {
-            plugin.getCreatorsPanel().getToolBox().getTimeSheetPanel().onOrientationKeyPressed(OrientationHotkeyMode.SET_START);
+            clientThread.invokeLater(() -> plugin.getCreatorsPanel().getToolBox().getTimeSheetPanel().onOrientationKeyPressed(OrientationHotkeyMode.SET_START));
         }
     };
 
@@ -293,7 +293,7 @@ public class HotKeyManager
         @Override
         public void hotkeyPressed()
         {
-            plugin.getCreatorsPanel().getToolBox().getTimeSheetPanel().onOrientationKeyPressed(OrientationHotkeyMode.SET_GOAL);
+            clientThread.invokeLater(() -> plugin.getCreatorsPanel().getToolBox().getTimeSheetPanel().onOrientationKeyPressed(OrientationHotkeyMode.SET_GOAL));
         }
     };
 
