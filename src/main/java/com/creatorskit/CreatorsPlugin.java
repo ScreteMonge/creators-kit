@@ -343,11 +343,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		{
 			savedPlane = plane;
 			Programmer programmer = creatorsPanel.getToolBox().getProgrammer();
-			for (int i = 0; i < characters.size(); i++)
+			clientThread.invokeLater(() ->
 			{
-				Character character = characters.get(i);
-				character.setLocation(client, clientThread, programmer, false, false, character.isActive() ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, LocationOption.TO_CURRENT_TICK);
-			}
+				for (int i = 0; i < characters.size(); i++)
+				{
+					Character character = characters.get(i);
+					character.setLocation(client, clientThread, programmer, false, false, character.isActive() ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, LocationOption.TO_CURRENT_TICK);
+				}
+			});
 		}
 	}
 
@@ -422,8 +425,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 						.setType(MenuAction.RUNELITE)
 						.onClick(e ->
 						{
-							Programmer programmer = creatorsPanel.getToolBox().getProgrammer();
-							selectedCharacter.setLocation(client, clientThread, programmer, false, true, ActiveOption.ACTIVE, LocationOption.TO_HOVERED_TILE);
+							hotKeyManager.onSetLocation();
 						});
 
 				MenuEntry me = client.getMenu().createMenuEntry(-2)

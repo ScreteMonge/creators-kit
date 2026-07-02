@@ -145,26 +145,28 @@ public class Character
 
     public void setLocation(Client client, ClientThread clientThread, Programmer programmer, boolean initialize, boolean transplant, ActiveOption activeOption, LocationOption locationOption)
     {
+        setLocation(client, clientThread, programmer, initialize, transplant, activeOption, locationOption, new int[]{0, 0});
+    }
+
+    public void setLocation(Client client, ClientThread clientThread, Programmer programmer, boolean initialize, boolean transplant, ActiveOption activeOption, LocationOption locationOption, int[] diff)
+    {
         if (client.getGameState() != GameState.LOGGED_IN)
         {
             return;
         }
 
-        clientThread.invokeLater(() ->
+        boolean poh = MovementManager.useLocalLocations(client.getTopLevelWorldView());
+
+        if (poh)
         {
-            boolean poh = MovementManager.useLocalLocations(client.getTopLevelWorldView());
+            setLocationPOH(client, clientThread, programmer, initialize, transplant, activeOption, locationOption, diff);
+            return;
+        }
 
-            if (poh)
-            {
-                setLocationPOH(client, clientThread, programmer, initialize, transplant, activeOption, locationOption);
-                return;
-            }
-
-            setLocationWorld(client, clientThread, programmer, initialize, transplant, activeOption, locationOption);
-        });
+        setLocationWorld(client, clientThread, programmer, initialize, transplant, activeOption, locationOption, diff);
     }
 
-    public void setLocationWorld(Client client, ClientThread clientThread, Programmer programmer, boolean initialize, boolean transplant, ActiveOption activeOption, LocationOption locationOption)
+    public void setLocationWorld(Client client, ClientThread clientThread, Programmer programmer, boolean initialize, boolean transplant, ActiveOption activeOption, LocationOption locationOption, int[] diff)
     {
         WorldView worldView = client.getTopLevelWorldView();
         LocalPoint localPoint = null;
@@ -205,6 +207,7 @@ public class Character
         }
 
         inScene = true;
+        localPoint = LocalPoint.fromScene(localPoint.getSceneX() + diff[0], localPoint.getSceneY() + diff[1], worldView);
 
         if (initialize)
         {
@@ -234,8 +237,7 @@ public class Character
             inPOH = false;
         }
 
-        LocalPoint finalLocalPoint = localPoint;
-        updateLocation(finalLocalPoint, worldView.getPlane());
+        updateLocation(localPoint, worldView.getPlane());
 
         if (locationOption == LocationOption.TO_HOVERED_TILE)
         {
@@ -255,7 +257,7 @@ public class Character
         }
     }
 
-    public void setLocationPOH(Client client, ClientThread clientThread, Programmer programmer, boolean initialize, boolean transplant, ActiveOption activeOption, LocationOption locationOption)
+    public void setLocationPOH(Client client, ClientThread clientThread, Programmer programmer, boolean initialize, boolean transplant, ActiveOption activeOption, LocationOption locationOption, int[] diff)
     {
         WorldView worldView = client.getTopLevelWorldView();
         LocalPoint localPoint = null;
@@ -291,6 +293,7 @@ public class Character
         }
 
         inScene = true;
+        localPoint = LocalPoint.fromScene(localPoint.getSceneX() + diff[0], localPoint.getSceneY() + diff[1], worldView);
 
         if (initialize)
         {
@@ -321,8 +324,7 @@ public class Character
             inPOH = true;
         }
 
-        LocalPoint finalLocalPoint = localPoint;
-        updateLocation(finalLocalPoint, worldView.getPlane());
+        updateLocation(localPoint, worldView.getPlane());
 
         if (locationOption == LocationOption.TO_HOVERED_TILE)
         {

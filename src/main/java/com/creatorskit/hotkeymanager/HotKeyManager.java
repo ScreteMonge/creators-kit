@@ -11,6 +11,8 @@ import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import com.creatorskit.swing.timesheet.keyframe.MovementKeyFrame;
 import lombok.Setter;
 import net.runelite.api.Client;
+import net.runelite.api.coords.LocalPoint;
+import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.Keybind;
 import net.runelite.client.util.HotkeyListener;
@@ -106,10 +108,9 @@ public class HotKeyManager
         @Override
         public void hotkeyPressed()
         {
-            Character selectedCharacter = selectionManager.getPrimary();
-            if (selectedCharacter != null)
+            for (Character c : selectionManager.getSelected())
             {
-                selectedCharacter.toggleActive(clientThread);
+                c.toggleActive(clientThread);
             }
         }
     };
@@ -117,16 +118,76 @@ public class HotKeyManager
     public final HotkeyListener quickLocationListener = new HotkeyListener(() -> config.quickLocationHotkey())
     {
         @Override
-        public void hotkeyPressed()
+        public void hotkeyPressed() { clientThread.invokeLater(() -> onSetLocation());}
+    };
+
+    public void onSetLocation()
+    {
+        Programmer programmer = plugin.getCreatorsPanel().getToolBox().getProgrammer();
+
+        Character primary = selectionManager.getPrimary();
+        if (primary == null)
         {
-            Character selectedCharacter = selectionManager.getPrimary();
-            if (selectedCharacter != null)
+            return;
+        }
+
+        boolean inPOH = primary.isInPOH();
+        int[] primaryCoordinates = new int[]{0, 0};
+        if (inPOH)
+        {
+            LocalPoint lp = primary.getInstancedPoint();
+            if (lp != null)
             {
-                Programmer programmer = plugin.getCreatorsPanel().getToolBox().getProgrammer();
-                selectedCharacter.setLocation(client, clientThread, programmer, false, true, ActiveOption.ACTIVE, LocationOption.TO_HOVERED_TILE);
+                primaryCoordinates = new int[]{lp.getSceneX(), lp.getSceneY()};
             }
         }
-    };
+        else
+        {
+            WorldPoint wp = primary.getNonInstancedPoint();
+            if (wp != null)
+            {
+                primaryCoordinates = new int[]{wp.getX(), wp.getY()};
+            }
+        }
+
+        for (Character c : selectionManager.getSelected())
+        {
+            if (c == primary)
+            {
+                continue;
+            }
+
+            if (c.isInPOH() != inPOH)
+            {
+                continue;
+            }
+
+            int[] coords = new int[]{0, 0};
+
+            if (inPOH)
+            {
+                LocalPoint lp = c.getInstancedPoint();
+                if (lp != null)
+                {
+                    coords = new int[]{lp.getSceneX(), lp.getSceneY()};
+                }
+            }
+            else
+            {
+                WorldPoint wp = c.getNonInstancedPoint();
+                if (wp != null)
+                {
+                    coords = new int[]{wp.getX(), wp.getY()};
+                }
+            }
+
+            int[] diff = new int[]{coords[0] - primaryCoordinates[0], coords[1] - primaryCoordinates[1]};
+
+            c.setLocation(client, clientThread, programmer, false, true, ActiveOption.ACTIVE, LocationOption.TO_HOVERED_TILE, diff);
+        }
+
+        primary.setLocation(client, clientThread, programmer, false, true, ActiveOption.ACTIVE, LocationOption.TO_HOVERED_TILE);
+    }
 
     public final HotkeyListener quickDuplicateListener = new HotkeyListener(() -> config.quickDuplicateHotkey())
     {
@@ -146,10 +207,9 @@ public class HotKeyManager
         @Override
         public void hotkeyPressed()
         {
-            Character selectedCharacter = selectionManager.getPrimary();
-            if (selectedCharacter != null)
+            for (Character c : selectionManager.getSelected())
             {
-                selectedCharacter.addOrientation(config.rotateDegrees().degrees * -1);
+                c.addOrientation(config.rotateDegrees().degrees * -1);
             }
         }
     };
@@ -159,10 +219,9 @@ public class HotKeyManager
         @Override
         public void hotkeyPressed()
         {
-            Character selectedCharacter = selectionManager.getPrimary();
-            if (selectedCharacter != null)
+            for (Character c : selectionManager.getSelected())
             {
-                selectedCharacter.addOrientation(config.rotateDegrees().degrees);
+                c.addOrientation(config.rotateDegrees().degrees);
             }
         }
     };
