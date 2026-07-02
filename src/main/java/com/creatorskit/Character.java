@@ -1,5 +1,6 @@
 package com.creatorskit;
 
+import com.creatorskit.hotkeymanager.LocationOption;
 import com.creatorskit.models.CustomModel;
 import com.creatorskit.programming.AnimationType;
 import com.creatorskit.programming.MovementManager;

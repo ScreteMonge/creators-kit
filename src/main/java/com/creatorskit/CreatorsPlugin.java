@@ -1,6 +1,7 @@
 package com.creatorskit;
 
 import com.creatorskit.hotkeymanager.HotKeyManager;
+import com.creatorskit.hotkeymanager.LocationOption;
 import com.creatorskit.models.*;
 import com.creatorskit.programming.*;
 import com.creatorskit.saves.TransmogLoadOption;

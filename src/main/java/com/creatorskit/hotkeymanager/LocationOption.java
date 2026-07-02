@@ -1,4 +1,4 @@
-package com.creatorskit;
+package com.creatorskit.hotkeymanager;
 
 public enum LocationOption
 {

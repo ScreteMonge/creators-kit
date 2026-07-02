@@ -2,6 +2,7 @@ package com.creatorskit.programming;
 
 import com.creatorskit.*;
 import com.creatorskit.Character;
+import com.creatorskit.hotkeymanager.LocationOption;
 import com.creatorskit.models.*;
 import com.creatorskit.models.datatypes.SpotanimData;
 import com.creatorskit.programming.orientation.Orientation;
