@@ -134,12 +134,13 @@ public class Character
             setAnimation(client, random, AnimationType.ACTIVE, (int) animationSpinner.getValue(), (int) animationFrameSpinner.getValue(), randomizeStartFrame, true);
 
             LocationOption locationOption = setHoveredTile ? LocationOption.TO_HOVERED_TILE : LocationOption.TO_SAVED_LOCATION;
-            setLocation(client, clientThread, programmer, true, transplant, active ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, locationOption, diff);
 
             if (client.getGameState() == GameState.LOGGED_IN)
             {
                 programmer.updateProgram(this);
             }
+
+            setLocation(client, clientThread, programmer, true, transplant, active ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, locationOption, diff);
         });
     }
 
