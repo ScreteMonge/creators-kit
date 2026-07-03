@@ -9,6 +9,7 @@ import com.creatorskit.models.datatypes.PlayerAnimationType;
 import com.creatorskit.models.datatypes.WeaponAnimData;
 import com.creatorskit.models.exporters.ModelExporter;
 import com.creatorskit.programming.AnimationType;
+import com.creatorskit.selection.SelectionCommand;
 import com.creatorskit.selection.SelectionManager;
 import com.creatorskit.selection.SelectionOrigin;
 import com.creatorskit.swing.CreatorsPanel;
@@ -585,9 +586,10 @@ public class ModelGetter
                         -1,
                         false,
                         false,
-                        false);
+                        false,
+                        new int[]{0, 0});
 
-                SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true, false));
+                SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true, false, SelectionCommand.SELECT_ONLY));
             });
         }
     }
@@ -1640,9 +1642,10 @@ public class ModelGetter
                     -1,
                     false,
                     false,
-                    false);
+                    false,
+                    new int[]{0, 0});
 
-            SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true, false));
+            SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true, false, SelectionCommand.SELECT_ONLY));
 
             if (menuOption == ModelMenuOption.STORE_ADD_ANIMATE)
             {

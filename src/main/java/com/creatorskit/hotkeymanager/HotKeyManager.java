@@ -4,7 +4,10 @@ import com.creatorskit.*;
 import com.creatorskit.Character;
 import com.creatorskit.programming.Programmer;
 import com.creatorskit.programming.orientation.OrientationHotkeyMode;
+import com.creatorskit.selection.SelectionCommand;
 import com.creatorskit.selection.SelectionManager;
+import com.creatorskit.selection.SelectionOrigin;
+import com.creatorskit.swing.CreatorsPanel;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
@@ -19,8 +22,11 @@ import net.runelite.client.util.HotkeyListener;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.inject.Inject;
+import javax.swing.*;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.util.HashSet;
+import java.util.Set;
 
 public class HotKeyManager
 {
@@ -194,13 +200,83 @@ public class HotKeyManager
         @Override
         public void hotkeyPressed()
         {
-            Character selectedCharacter = selectionManager.getPrimary();
-            if (selectedCharacter != null)
-            {
-                plugin.getCreatorsPanel().onDuplicatePressed(selectedCharacter, true);
-            }
+            onDuplicate();
         }
     };
+
+    public void onDuplicate()
+    {
+        Character primary = selectionManager.getPrimary();
+        if (primary == null)
+        {
+            return;
+        }
+
+        CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
+
+        boolean inPOH = primary.isInPOH();
+        int[] primaryCoordinates = new int[]{0, 0};
+        if (inPOH)
+        {
+            LocalPoint lp = primary.getInstancedPoint();
+            if (lp != null)
+            {
+                primaryCoordinates = new int[]{lp.getSceneX(), lp.getSceneY()};
+            }
+        }
+        else
+        {
+            WorldPoint wp = primary.getNonInstancedPoint();
+            if (wp != null)
+            {
+                primaryCoordinates = new int[]{wp.getX(), wp.getY()};
+            }
+        }
+
+        Set<Character> selected = selectionManager.getSelected();
+        Set<Character> characters = new HashSet<>(selected);
+        selectionManager.clear(SelectionOrigin.DIRECT);
+
+        for (Character c : characters)
+        {
+            if (c == primary)
+            {
+                continue;
+            }
+
+            if (c.isInPOH() != inPOH)
+            {
+                continue;
+            }
+
+            int[] coords = new int[]{0, 0};
+
+            if (inPOH)
+            {
+                LocalPoint lp = c.getInstancedPoint();
+                if (lp != null)
+                {
+                    coords = new int[]{lp.getSceneX(), lp.getSceneY()};
+                }
+
+
+            }
+            else
+            {
+                WorldPoint wp = c.getNonInstancedPoint();
+                if (wp != null)
+                {
+                    coords = new int[]{wp.getX(), wp.getY()};
+                }
+            }
+
+            int[] diff = new int[]{coords[0] - primaryCoordinates[0], coords[1] - primaryCoordinates[1]};
+
+            creatorsPanel.onDuplicatePressed(c, true, diff, SelectionCommand.ADD);
+        }
+
+        creatorsPanel.onDuplicatePressed(primary, true, new int[]{0, 0}, SelectionCommand.ADD);
+    }
 
     public final HotkeyListener quickRotateCWListener = new HotkeyListener(() -> config.quickRotateCWHotkey())
     {

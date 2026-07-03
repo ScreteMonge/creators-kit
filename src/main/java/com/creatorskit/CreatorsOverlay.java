@@ -525,10 +525,11 @@ public class CreatorsOverlay extends Overlay
     public void renderSelectedRLObject(Graphics2D graphics, WorldView worldView)
     {
         boolean poh = MovementManager.useLocalLocations(worldView);
-        graphics.setFont(FontManager.getRunescapeBoldFont());
+        Character[] characters = selectionManager.getSelected().toArray(new Character[0]);
 
-        for (Character character : selectionManager.getSelected())
+        for (int i = 0; i < characters.length; i++)
         {
+            Character character = characters[i];
             if (!character.isInScene())
             {
                 continue;
@@ -559,7 +560,9 @@ public class CreatorsOverlay extends Overlay
 
             model.calculateBoundsCylinder();
 
-            Color c = character == selectionManager.getPrimary() ? PRIMARY_COLOUR : SELECTED_COLOUR;
+            boolean primary = character == selectionManager.getPrimary();
+            Color c = primary ? PRIMARY_COLOUR : SELECTED_COLOUR;
+            graphics.setFont(primary ? FontManager.getRunescapeBoldFont() : FontManager.getRunescapeSmallFont());
 
             Point p = Perspective.getCanvasTextLocation(client, graphics, lp, character.getName(), model.getModelHeight());
             if (p != null)
@@ -599,7 +602,7 @@ public class CreatorsOverlay extends Overlay
             }
 
             model.calculateBoundsCylinder();
-            graphics.setFont(selectionManager.contains(character) ? FontManager.getRunescapeBoldFont() : FontManager.getRunescapeSmallFont());
+            graphics.setFont(character == selectionManager.getPrimary() ? FontManager.getRunescapeBoldFont() : FontManager.getRunescapeSmallFont());
 
             Point point = Perspective.getCanvasTextLocation(client, graphics, lp, name, model.getModelHeight());
 

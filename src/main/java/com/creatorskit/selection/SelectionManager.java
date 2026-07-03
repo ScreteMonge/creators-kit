@@ -2,6 +2,7 @@ package com.creatorskit.selection;
 
 import com.creatorskit.Character;
 import lombok.Getter;
+import lombok.Setter;
 
 import javax.inject.Singleton;
 import java.util.ArrayList;
@@ -70,7 +71,7 @@ public class SelectionManager
 		Character last = null;
 		for (Character c : characters)
 		{
-			if (c != null && selected.add(c))
+			if (selected.add(c))
 			{
 				last = c;
 			}
@@ -114,7 +115,7 @@ public class SelectionManager
 		}
 		else
 		{
-			add(c,origin);
+			add(c, origin);
 		}
 	}
 

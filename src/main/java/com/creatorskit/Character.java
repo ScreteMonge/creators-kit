@@ -121,7 +121,7 @@ public class Character
         }
     }
 
-    public void setupRLObject(Client client, ClientThread clientThread, Programmer programmer, Random random, boolean randomizeStartFrame, boolean setHoveredTile, boolean transplant)
+    public void setupRLObject(Client client, ClientThread clientThread, Programmer programmer, Random random, boolean randomizeStartFrame, boolean setHoveredTile, boolean transplant, int[] diff)
     {
         clientThread.invoke(() ->
         {
@@ -134,7 +134,7 @@ public class Character
             setAnimation(client, random, AnimationType.ACTIVE, (int) animationSpinner.getValue(), (int) animationFrameSpinner.getValue(), randomizeStartFrame, true);
 
             LocationOption locationOption = setHoveredTile ? LocationOption.TO_HOVERED_TILE : LocationOption.TO_SAVED_LOCATION;
-            setLocation(client, clientThread, programmer, true, transplant, active ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, locationOption);
+            setLocation(client, clientThread, programmer, true, transplant, active ? ActiveOption.ACTIVE : ActiveOption.INACTIVE, locationOption, diff);
 
             if (client.getGameState() == GameState.LOGGED_IN)
             {
