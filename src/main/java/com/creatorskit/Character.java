@@ -176,8 +176,8 @@ public class Character
             Collection<WorldPoint> wps = WorldPoint.toLocalInstance(worldView, nonInstancedPoint);
             if (!wps.isEmpty())
             {
-                nonInstancedPoint = wps.iterator().next();
-                localPoint = LocalPoint.fromWorld(worldView, nonInstancedPoint);
+                WorldPoint worldPoint = wps.iterator().next();
+                localPoint = LocalPoint.fromWorld(worldView, worldPoint);
             }
         }
 
