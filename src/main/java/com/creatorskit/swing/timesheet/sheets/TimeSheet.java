@@ -462,7 +462,7 @@ public class TimeSheet extends JPanel
         }
 
         LinkedHashMap<Character, KeyFrame[]> copies = new LinkedHashMap<>();
-        KeyFrame[] primary = new KeyFrame[]{kfsm.getPrimary()};
+        KeyFrame[] primary = new KeyFrame[1];
 
         selected.forEach((Character character, KeyFrame[] keyFrames) ->
         {
@@ -473,7 +473,7 @@ public class TimeSheet extends JPanel
                 KeyFrame copy = KeyFrame.createCopy(keyFrame, round(timelineUnits, keyFrame.getTick() + change[0]));
                 keyFrameCopies[i] = copy;
 
-                if (keyFrame == primary[0])
+                if (keyFrame == kfsm.getPrimary())
                 {
                     primary[0] = copy;
                 }
@@ -563,27 +563,30 @@ public class TimeSheet extends JPanel
                     return;
                 }
 
+                boolean keyFrameWasClicked = keyFrameClicked;
                 if (keyFrameClicked)
                 {
                     onKeyFrameDragged(mousePosition, e.isShiftDown());
                     keyFrameClicked = false;
                     allowRectangleSelect = false;
                 }
-                else
-                {
-                    kfsm.clear();
-                    getTimeSheetPanel().onKeyFrameSelectionChanged();
-                }
 
+                boolean rectangleSelectionFound = false;
                 if (allowRectangleSelect)
                 {
-                    boolean rectangleSelected = checkRectangleForKeyFrames(mousePosition, e.isShiftDown());
+                    rectangleSelectionFound = checkRectangleForKeyFrames(mousePosition, e.isShiftDown());
                     allowRectangleSelect = false;
 
-                    if (!rectangleSelected)
+                    if (!rectangleSelectionFound)
                     {
                         updateTableSelection(mousePosition);
                     }
+                }
+
+                if (!keyFrameWasClicked && !rectangleSelectionFound)
+                {
+                    kfsm.clear();
+                    getTimeSheetPanel().onKeyFrameSelectionChanged();
                 }
             }
         });

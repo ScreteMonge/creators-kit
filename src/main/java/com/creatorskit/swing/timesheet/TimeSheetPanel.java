@@ -837,8 +837,6 @@ public class TimeSheetPanel extends JSplitPane
     {
         KeyFrame keyFrameToReplace = character.addKeyFrame(keyFrame, currentTime);
         kfsm.select(character, keyFrame);
-        attributePanel.updateAttributes();
-        attributePanel.switchCards(keyFrame.getKeyFrameType());
 
         if (client.getGameState() == GameState.LOGGED_IN)
         {
@@ -856,7 +854,6 @@ public class TimeSheetPanel extends JSplitPane
     public void removeKeyFrame(Character character, KeyFrame keyFrame)
     {
         character.removeKeyFrame(keyFrame);
-        attributePanel.updateAttributes();
         kfsm.remove(character, keyFrame);
 
         if (client.getGameState() == GameState.LOGGED_IN)

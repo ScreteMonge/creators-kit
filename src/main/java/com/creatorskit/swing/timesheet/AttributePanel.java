@@ -2515,73 +2515,73 @@ public class AttributePanel extends JPanel
 
     public void updateAttributes()
     {
-        KeyFrame keyFrame = kfsm.getPrimary();
-        if (keyFrame == null)
+        KeyFrame primary = kfsm.getPrimary();
+        if (primary == null)
         {
             setAttributesEmpty(true);
             return;
         }
 
-        KeyFrameType type = keyFrame.getKeyFrameType();
-        KeyFrameState keyFrameState = timeSheetPanel.getCurrentTime() == keyFrame.getTick() ? KeyFrameState.ON_KEYFRAME : KeyFrameState.OFF_KEYFRAME;
+        KeyFrameType type = primary.getKeyFrameType();
+        KeyFrameState keyFrameState = timeSheetPanel.getCurrentTime() == primary.getTick() ? KeyFrameState.ON_KEYFRAME : KeyFrameState.OFF_KEYFRAME;
 
         switch (type)
         {
             default:
             case MOVEMENT:
-                movementAttributes.setAttributes(keyFrame);
+                movementAttributes.setAttributes(primary);
                 movementAttributes.setBackgroundColours(keyFrameState);
                 break;
             case ANIMATION:
-                animAttributes.setAttributes(keyFrame);
+                animAttributes.setAttributes(primary);
                 animAttributes.setBackgroundColours(keyFrameState);
                 break;
             case ORIENTATION:
-                oriAttributes.setAttributes(keyFrame);
+                oriAttributes.setAttributes(primary);
                 oriAttributes.setBackgroundColours(keyFrameState);
                 break;
             case SPAWN:
-                spawnAttributes.setAttributes(keyFrame);
+                spawnAttributes.setAttributes(primary);
                 spawnAttributes.setBackgroundColours(keyFrameState);
                 break;
             case MODEL:
-                modelAttributes.setAttributes(keyFrame);
+                modelAttributes.setAttributes(primary);
                 modelAttributes.setBackgroundColours(keyFrameState);
                 break;
             case TEXT:
-                textAttributes.setAttributes(keyFrame);
+                textAttributes.setAttributes(primary);
                 textAttributes.setBackgroundColours(keyFrameState);
                 break;
             case OVERHEAD:
-                overheadAttributes.setAttributes(keyFrame);
+                overheadAttributes.setAttributes(primary);
                 overheadAttributes.setBackgroundColours(keyFrameState);
                 break;
             case HEALTH:
-                healthAttributes.setAttributes(keyFrame);
+                healthAttributes.setAttributes(primary);
                 healthAttributes.setBackgroundColours(keyFrameState);
                 break;
             case SPOTANIM:
-                spotAnimAttributes.setAttributes(keyFrame);
+                spotAnimAttributes.setAttributes(primary);
                 spotAnimAttributes.setBackgroundColours(keyFrameState);
                 break;
             case SPOTANIM2:
-                spotAnim2Attributes.setAttributes(keyFrame);
+                spotAnim2Attributes.setAttributes(primary);
                 spotAnim2Attributes.setBackgroundColours(keyFrameState);
                 break;
             case HITSPLAT_1:
-                hitsplat1Attributes.setAttributes(keyFrame);
+                hitsplat1Attributes.setAttributes(primary);
                 hitsplat1Attributes.setBackgroundColours(keyFrameState);
                 break;
             case HITSPLAT_2:
-                hitsplat2Attributes.setAttributes(keyFrame);
+                hitsplat2Attributes.setAttributes(primary);
                 hitsplat2Attributes.setBackgroundColours(keyFrameState);
                 break;
             case HITSPLAT_3:
-                hitsplat3Attributes.setAttributes(keyFrame);
+                hitsplat3Attributes.setAttributes(primary);
                 hitsplat3Attributes.setBackgroundColours(keyFrameState);
                 break;
             case HITSPLAT_4:
-                hitsplat4Attributes.setAttributes(keyFrame);
+                hitsplat4Attributes.setAttributes(primary);
                 hitsplat4Attributes.setBackgroundColours(keyFrameState);
         }
     }

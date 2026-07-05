@@ -1331,12 +1331,14 @@ public class CreatorsPanel extends PluginPanel
                 .getModelAttributes()
                 .getCustomModel();
 
-        for (CustomModel model : models)
+        for (int i = 0; i < models.length; i++)
         {
+            CustomModel model = models[i];
             modelAttributesBox.addItem(model);
 
-            for (JComboBox<CustomModel> comboBox : comboBoxes)
+            for (int e = 0; e < comboBoxes.size(); e++)
             {
+                JComboBox<CustomModel> comboBox = comboBoxes.get(e);
                 comboBox.addItem(model);
                 if (!setComboBox || selectedCharacter == null)
                 {

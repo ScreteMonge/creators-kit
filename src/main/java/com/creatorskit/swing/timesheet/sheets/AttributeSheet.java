@@ -591,6 +591,9 @@ public class AttributeSheet extends TimeSheet
             kfsm.clear();
         }
 
+        LinkedHashMap<Character, KeyFrame[]> intersectingKeyFrames = new LinkedHashMap<>();
+        KeyFrame primary = null;
+
         for (Character c : selected)
         {
             KeyFrame[][] frames = c.getFrames();
@@ -600,7 +603,6 @@ public class AttributeSheet extends TimeSheet
                 foundKeyFrames = new KeyFrame[0];
             }
 
-            KeyFrame primary = null;
             for (int i = 0; i < frames.length; i++)
             {
                 KeyFrame[] keyFrames = frames[i];
@@ -641,9 +643,18 @@ public class AttributeSheet extends TimeSheet
                 }
             }
 
-            kfsm.addAll(c, foundKeyFrames, primary);
+            if (foundKeyFrames.length > 0)
+            {
+                intersectingKeyFrames.put(c, foundKeyFrames);
+            }
         }
 
+        kfsm.addAll(intersectingKeyFrames, primary);
+        attributePanel.updateAttributes();
+        if (primary != null)
+        {
+            attributePanel.switchCards(primary.getKeyFrameType());
+        }
         return true;
     }
 
