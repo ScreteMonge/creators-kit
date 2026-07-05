@@ -373,8 +373,9 @@ public class AttributeSheet extends TimeSheet
             }
         }
 
-        kfsm.add(character, keyFrames);
-        getTimeSheetPanel().onSelectedKeyFramesChanged();
+        KeyFrame primary = keyFrames[0];
+        kfsm.addAll(character, keyFrames, primary);
+        getTimeSheetPanel().onKeyFrameSelectionChanged();
     }
 
     @Override
@@ -599,6 +600,7 @@ public class AttributeSheet extends TimeSheet
                 foundKeyFrames = new KeyFrame[0];
             }
 
+            KeyFrame primary = null;
             for (int i = 0; i < frames.length; i++)
             {
                 KeyFrame[] keyFrames = frames[i];
@@ -634,11 +636,12 @@ public class AttributeSheet extends TimeSheet
                     if (rectangle.intersects(frameRect))
                     {
                         foundKeyFrames = ArrayUtils.add(foundKeyFrames, keyFrame);
+                        primary = keyFrame;
                     }
                 }
             }
 
-            kfsm.add(c, foundKeyFrames);
+            kfsm.addAll(c, foundKeyFrames, primary);
         }
 
         return true;
@@ -658,5 +661,6 @@ public class AttributeSheet extends TimeSheet
         }
 
         attributePanel.switchCards(types[row]);
+        attributePanel.updateAttributes();
     }
 }

@@ -2,6 +2,7 @@ package com.creatorskit.hotkeymanager;
 
 import com.creatorskit.*;
 import com.creatorskit.Character;
+import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.Programmer;
 import com.creatorskit.programming.orientation.OrientationHotkeyMode;
 import com.creatorskit.selection.SelectionCommand;
@@ -9,11 +10,15 @@ import com.creatorskit.selection.SelectionManager;
 import com.creatorskit.selection.SelectionOrigin;
 import com.creatorskit.swing.CreatorsPanel;
 import com.creatorskit.swing.ToolBoxFrame;
+import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import com.creatorskit.swing.timesheet.keyframe.MovementKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.OrientationKeyFrame;
 import lombok.Setter;
 import net.runelite.api.Client;
+import net.runelite.api.Tile;
+import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.callback.ClientThread;
@@ -22,7 +27,6 @@ import net.runelite.client.util.HotkeyListener;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.inject.Inject;
-import javax.swing.*;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.util.HashSet;
@@ -36,12 +40,13 @@ public class HotKeyManager
     private CreatorsOverlay overlay;
     private CreatorsConfig config;
     private final SelectionManager selectionManager;
+    private final MovementManager movementManager;
 
     @Setter
     private int oculusOrbSpeed = 36;
 
     @Inject
-    public HotKeyManager(Client client, ClientThread clientThread, CreatorsPlugin plugin, CreatorsOverlay overlay, CreatorsConfig config, SelectionManager selectionManager)
+    public HotKeyManager(Client client, ClientThread clientThread, CreatorsPlugin plugin, CreatorsOverlay overlay, CreatorsConfig config, SelectionManager selectionManager, MovementManager movementManager)
     {
         this.client = client;
         this.clientThread = clientThread;
@@ -49,6 +54,7 @@ public class HotKeyManager
         this.overlay = overlay;
         this.config = config;
         this.selectionManager = selectionManager;
+        this.movementManager = movementManager;
 
         oculusOrbSpeed = config.orbSpeed();
     }
@@ -168,31 +174,35 @@ public class HotKeyManager
                 continue;
             }
 
-            int[] coords = new int[]{0, 0};
-
-            if (inPOH)
-            {
-                LocalPoint lp = c.getInstancedPoint();
-                if (lp != null)
-                {
-                    coords = new int[]{lp.getSceneX(), lp.getSceneY()};
-                }
-            }
-            else
-            {
-                WorldPoint wp = c.getNonInstancedPoint();
-                if (wp != null)
-                {
-                    coords = new int[]{wp.getX(), wp.getY()};
-                }
-            }
-
-            int[] diff = new int[]{coords[0] - primaryCoordinates[0], coords[1] - primaryCoordinates[1]};
-
+            int[] diff = calculateLocationDifference(inPOH, c, primaryCoordinates);
             c.setLocation(client, clientThread, programmer, false, true, ActiveOption.ACTIVE, LocationOption.TO_HOVERED_TILE, diff);
         }
 
         primary.setLocation(client, clientThread, programmer, false, true, ActiveOption.ACTIVE, LocationOption.TO_HOVERED_TILE);
+    }
+
+    private int[] calculateLocationDifference(boolean inPOH, Character c, int[] primaryCoordinates)
+    {
+        int[] coords = new int[]{0, 0};
+
+        if (inPOH)
+        {
+            LocalPoint lp = c.getInstancedPoint();
+            if (lp != null)
+            {
+                coords = new int[]{lp.getSceneX(), lp.getSceneY()};
+            }
+        }
+        else
+        {
+            WorldPoint wp = c.getNonInstancedPoint();
+            if (wp != null)
+            {
+                coords = new int[]{wp.getX(), wp.getY()};
+            }
+        }
+
+        return new int[]{coords[0] - primaryCoordinates[0], coords[1] - primaryCoordinates[1]};
     }
 
     public final HotkeyListener quickDuplicateListener = new HotkeyListener(() -> config.quickDuplicateHotkey())
@@ -349,7 +359,160 @@ public class HotKeyManager
 
     public void addProgramStep()
     {
-        plugin.getCreatorsPanel().getToolBox().getTimeSheetPanel().onAddMovementKeyPressed();
+        Character primary = selectionManager.getPrimary();
+        if (primary == null)
+        {
+            return;
+        }
+
+        WorldView worldView = client.getTopLevelWorldView();
+        if (worldView == null)
+        {
+            return;
+        }
+
+        Tile tile = worldView.getSelectedSceneTile();
+        if (tile == null)
+        {
+            return;
+        }
+
+        LocalPoint localPoint = tile.getLocalLocation();
+        if (localPoint == null || !localPoint.isInScene())
+        {
+            return;
+        }
+
+        addMovementKeyFrames(primary, worldView, false, localPoint);
+    }
+
+    public void onAddMovementMenuOptionPressed()
+    {
+        Character primary = selectionManager.getPrimary();
+        if (primary == null)
+        {
+            return;
+        }
+
+        WorldView worldView = client.getTopLevelWorldView();
+        if (worldView == null)
+        {
+            return;
+        }
+
+        CKObject ckObject = primary.getCkObject();
+        if (ckObject == null)
+        {
+            return;
+        }
+
+        LocalPoint localPoint = ckObject.getLocation();
+        if (localPoint == null || !localPoint.isInScene())
+        {
+            return;
+        }
+
+        addMovementKeyFrames(primary, worldView, true, localPoint);
+    }
+
+    public void addMovementKeyFrames(Character primary, WorldView worldView, boolean createNew, LocalPoint localPoint)
+    {
+        boolean inPOH = primary.isInPOH();
+        KeyFrame primaryKeyFrame = createMovementKeyFrame(primary, worldView, createNew, localPoint, new int[]{0, 0});
+        Character[] characters = new Character[]{primary};
+        KeyFrame[][] frames = new KeyFrame[][]{new KeyFrame[]{primaryKeyFrame}};
+
+        int[] primaryCoordinates = new int[]{0, 0};
+        if (inPOH)
+        {
+            LocalPoint lp = primary.getInstancedPoint();
+            if (lp != null)
+            {
+                primaryCoordinates = new int[]{lp.getSceneX(), lp.getSceneY()};
+            }
+        }
+        else
+        {
+            WorldPoint wp = primary.getNonInstancedPoint();
+            if (wp != null)
+            {
+                primaryCoordinates = new int[]{wp.getX(), wp.getY()};
+            }
+        }
+
+        for (Character c : selectionManager.getSelected())
+        {
+            if (c == primary)
+            {
+                continue;
+            }
+
+            int[] diff = calculateLocationDifference(inPOH, c, primaryCoordinates);
+            KeyFrame keyFrame = createMovementKeyFrame(c, worldView, createNew, localPoint, diff);
+
+            characters = ArrayUtils.add(characters, c);
+            frames = ArrayUtils.add(frames, new KeyFrame[]{keyFrame});
+        }
+
+        TimeSheetPanel timeSheetPanel = plugin.getCreatorsPanel().getToolBox().getTimeSheetPanel();
+        timeSheetPanel.runKeyFrameAddActions(characters, frames);
+
+        Programmer programmer = plugin.getCreatorsPanel().getToolBox().getProgrammer();
+        for (Character c : characters)
+        {
+            c.setInScene(true);
+            c.setActive(true, true, true, clientThread);
+            programmer.register3DChanges(c);
+        }
+    }
+
+    public KeyFrame createMovementKeyFrame(Character character, WorldView worldView, boolean createNew, LocalPoint localPoint, int[] diff)
+    {
+        boolean poh = MovementManager.useLocalLocations(worldView);
+        KeyFrame kf = character.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
+        KeyFrame newKeyFrame;
+        LocalPoint lp = LocalPoint.fromScene(localPoint.getSceneX() + diff[0], localPoint.getSceneY() + diff[1], worldView);
+
+        if (createNew || kf == null)
+        {
+            int x = lp.getSceneX();
+            int y = lp.getSceneY();
+            if (!poh)
+            {
+                WorldPoint wp = WorldPoint.fromLocalInstance(client, lp, worldView.getPlane());
+                x = wp.getX();
+                y = wp.getY();
+            }
+
+            int[][] path = new int[][]{new int[]{x, y}};
+            newKeyFrame = new MovementKeyFrame(
+                    plugin.getCurrentTick(),
+                    worldView.getPlane(),
+                    poh,
+                    path,
+                    0,
+                    0,
+                    false,
+                    1,
+                    OrientationKeyFrame.TURN_RATE);
+        }
+        else
+        {
+            MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+            int[][] path = movementManager.addProgramStep(keyFrame, worldView, lp);
+            newKeyFrame = new MovementKeyFrame(
+                    keyFrame.getTick(),
+                    worldView.getPlane(),
+                    poh,
+                    path,
+                    0,
+                    0,
+                    keyFrame.isLoop(),
+                    keyFrame.getSpeed(),
+                    keyFrame.getTurnRate());
+        }
+
+        return newKeyFrame;
     }
 
     public final HotkeyListener removeProgramStepListener = new HotkeyListener(() -> config.removeProgramStepHotkey())
@@ -357,35 +520,63 @@ public class HotKeyManager
         @Override
         public void hotkeyPressed()
         {
-            removeProgramStep();
+            removeProgramSteps(false);
         }
     };
 
-    public void removeProgramStep()
+    public void removeProgramSteps(boolean clearAll)
     {
-        Character selectedCharacter = selectionManager.getPrimary();
-        if (selectedCharacter == null)
+        Programmer programmer = plugin.getCreatorsPanel().getToolBox().getProgrammer();
+        Character[] characters = new Character[0];
+        KeyFrame[][] frames = new KeyFrame[0][0];
+
+        for (Character c : selectionManager.getSelected())
         {
-            return;
+            KeyFrame kf = c.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
+            if (kf == null)
+            {
+                continue;
+            }
+
+            MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
+            int[][] path = keyFrame.getPath();
+
+            if (path.length == 0)
+            {
+                continue;
+            }
+
+            if (clearAll)
+            {
+                path = new int[0][2];
+            }
+            else
+            {
+                path = ArrayUtils.remove(path, path.length - 1);
+            }
+
+            MovementKeyFrame newKeyFrame = new MovementKeyFrame(
+                    keyFrame.getTick(),
+                    keyFrame.getPlane(),
+                    keyFrame.isPoh(),
+                    path,
+                    0,
+                    0,
+                    keyFrame.isLoop(),
+                    keyFrame.getSpeed(),
+                    keyFrame.getTurnRate());
+
+            characters = ArrayUtils.add(characters, c);
+            frames = ArrayUtils.add(frames, new KeyFrame[]{newKeyFrame});
         }
 
-        KeyFrame kf = selectedCharacter.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
-        if (kf == null)
+        TimeSheetPanel timeSheetPanel = plugin.getCreatorsPanel().getToolBox().getTimeSheetPanel();
+        timeSheetPanel.runKeyFrameAddActions(characters, frames);
+
+        for (Character c : characters)
         {
-            return;
+            programmer.register3DChanges(c);
         }
-
-        MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
-        int[][] path = keyFrame.getPath();
-
-        if (path.length == 0)
-        {
-            return;
-        }
-
-        int newLength = path.length - 1;
-        keyFrame.setPath(ArrayUtils.remove(path, newLength));
-        plugin.getCreatorsPanel().getToolBox().getProgrammer().register3DChanges(selectedCharacter);
     }
 
     public final HotkeyListener clearProgramStepListener = new HotkeyListener(() -> config.clearProgramStepHotkey())
@@ -393,28 +584,9 @@ public class HotKeyManager
         @Override
         public void hotkeyPressed()
         {
-            clearProgramSteps();
+            removeProgramSteps(true);
         }
     };
-
-    public void clearProgramSteps()
-    {
-        Character selectedCharacter = selectionManager.getPrimary();
-        if (selectedCharacter == null)
-        {
-            return;
-        }
-
-        KeyFrame kf = selectedCharacter.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
-        if (kf == null)
-        {
-            return;
-        }
-
-        MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
-        keyFrame.setPath(new int[0][2]);
-        keyFrame.setCurrentStep(0);
-    }
 
     public final HotkeyListener addOrientationStartListener = new HotkeyListener(() -> config.orientationStart()) {
         @Override

@@ -444,7 +444,6 @@ public class Character
 
     public void setOrientation(int orientation)
     {
-        orientationSpinner.setValue(orientation);
         updateCKOOrientation(orientation);
     }
 
@@ -633,6 +632,11 @@ public class Character
 
                 if (nextFrame == null)
                 {
+                    if (keyFrame.getTick() <= tick)
+                    {
+                        continue;
+                    }
+
                     nextFrame = keyFrame;
                     continue;
                 }

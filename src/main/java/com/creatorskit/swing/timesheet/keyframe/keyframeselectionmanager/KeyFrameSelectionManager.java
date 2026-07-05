@@ -2,12 +2,16 @@ package com.creatorskit.swing.timesheet.keyframe.keyframeselectionmanager;
 
 import com.creatorskit.Character;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import lombok.Getter;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class KeyFrameSelectionManager
 {
+    @Getter
+    private KeyFrame primary;
     private final LinkedHashMap<Character, KeyFrame[]> selectedKeyFrames = new LinkedHashMap<>();
     private final List<KeyFrameSelectionManager.SelectionListener> listeners = new ArrayList<>();
 
@@ -45,21 +49,41 @@ public class KeyFrameSelectionManager
         return selectedKeyFrames.size();
     }
 
-    public void add(Character character, KeyFrame keyFrame)
+    public void select(Character character, KeyFrame primaryKeyFrame)
     {
-        LinkedHashMap<Character, KeyFrame[]> toAdd = new LinkedHashMap<>();
-        toAdd.put(character, new KeyFrame[]{keyFrame});
-        add(toAdd);
+        clear();
+        selectedKeyFrames.put(character, new KeyFrame[]{primaryKeyFrame});
+        primary = primaryKeyFrame;
     }
 
-    public void add(Character character, KeyFrame[] keyFrames)
+    public void add(Character character, KeyFrame primaryKeyFrame)
     {
         LinkedHashMap<Character, KeyFrame[]> toAdd = new LinkedHashMap<>();
-        toAdd.put(character, keyFrames);
-        add(toAdd);
+        toAdd.put(character, new KeyFrame[]{primaryKeyFrame});
+        addAll(character, new KeyFrame[]{primaryKeyFrame}, primaryKeyFrame);
     }
 
-    public void add(LinkedHashMap<Character, KeyFrame[]> groupsToAdd)
+    public void addAll(Character character, KeyFrame[] keyFrames, KeyFrame primaryKeyFrame)
+    {
+        if (selectedKeyFrames.containsKey(character))
+        {
+            KeyFrame[] previouslySelected = selectedKeyFrames.get(character);
+            Set<KeyFrame> toSelect = new HashSet<>();
+            Collections.addAll(toSelect, previouslySelected);
+            Collections.addAll(toSelect, keyFrames);
+
+            selectedKeyFrames.put(character, toSelect.toArray(new KeyFrame[0]));
+        }
+        else
+        {
+            selectedKeyFrames.put(character, keyFrames);
+        }
+
+        primary = primaryKeyFrame;
+        fireChanged();
+    }
+
+    public void addAll(LinkedHashMap<Character, KeyFrame[]> groupsToAdd, KeyFrame primaryKeyFrame)
     {
         groupsToAdd.forEach((character, keyFrames) ->
         {
@@ -78,31 +102,105 @@ public class KeyFrameSelectionManager
             }
         });
 
+        primary = primaryKeyFrame;
         fireChanged();
     }
 
-    public void remove(LinkedHashMap<Character, KeyFrame[]> groupsToRemove)
+    public void remove(Character c, KeyFrame toRemove)
     {
+        KeyFrame[] keyFrames = selectedKeyFrames.get(c);
+
+        if (keyFrames != null)
+        {
+            keyFrames = ArrayUtils.removeElement(keyFrames, toRemove);
+
+            if (keyFrames.length == 0)
+            {
+                selectedKeyFrames.remove(c);
+            }
+            else
+            {
+                selectedKeyFrames.put(c, keyFrames);
+            }
+        }
+
+        if (primary == toRemove)
+        {
+            primary = null;
+        }
+
+        fireChanged();
+    }
+
+    public void removeAll(Character c, KeyFrame[] toRemove)
+    {
+        boolean containsPrimary = Arrays.stream(toRemove).anyMatch(keyFrame -> keyFrame.equals(primary));
+
+        KeyFrame[] keyFrames = selectedKeyFrames.get(c);
+        List<KeyFrame> list = new ArrayList<>(Arrays.asList(keyFrames));
+        list.removeAll(Arrays.asList(toRemove));
+
+        keyFrames = list.toArray(new KeyFrame[0]);
+
+        if (keyFrames.length == 0)
+        {
+            selectedKeyFrames.remove(c);
+        }
+        else
+        {
+            selectedKeyFrames.put(c, keyFrames);
+        }
+
+        if (containsPrimary)
+        {
+            primary = null;
+        }
+
+        fireChanged();
+    }
+
+    public void removeAll(LinkedHashMap<Character, KeyFrame[]> groupsToRemove)
+    {
+        Map<Character, KeyFrame[]> pairingsToRemove = new HashMap<>();
+        Map<Character, KeyFrame[]> pairingsToReplace = new HashMap<>();
+
         selectedKeyFrames.forEach((Character character, KeyFrame[] keyFrames) ->
         {
             KeyFrame[] toRemove = groupsToRemove.get(character);
             keyFrames = ArrayUtils.removeElement(keyFrames, toRemove);
+
+            for (KeyFrame keyFrame : keyFrames)
+            {
+                if (keyFrame == primary)
+                {
+                    primary = null;
+                    break;
+                }
+            }
+
             if (keyFrames.length == 0)
             {
-                selectedKeyFrames.remove(character);
+                pairingsToRemove.put(character, keyFrames);
             }
             else
             {
-                selectedKeyFrames.put(character, keyFrames);
+                pairingsToReplace.put(character, keyFrames);
             }
         });
 
+        for (Map.Entry<Character, KeyFrame[]> entry : pairingsToRemove.entrySet())
+        {
+            selectedKeyFrames.remove(entry.getKey());
+        }
+
+        selectedKeyFrames.putAll(pairingsToReplace);
         fireChanged();
     }
 
     public void clear()
     {
         selectedKeyFrames.clear();
+        primary = null;
         fireChanged();
     }
 

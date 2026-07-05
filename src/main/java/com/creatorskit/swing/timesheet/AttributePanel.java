@@ -18,7 +18,6 @@ import com.creatorskit.swing.timesheet.keyframe.keyframeselectionmanager.KeyFram
 import com.creatorskit.swing.timesheet.keyframe.settings.*;
 import lombok.Getter;
 import lombok.Setter;
-import net.runelite.api.Animation;
 import net.runelite.api.Client;
 import net.runelite.api.Constants;
 import net.runelite.api.WorldView;
@@ -523,12 +522,6 @@ public class AttributePanel extends JPanel
         startFrame.setPreferredSize(spinnerSize);
         card.add(startFrame, c);
 
-        c.gridx = 2;
-        c.gridy = 1;
-        JButton randomize = new JButton("Random");
-        randomize.setToolTipText("Sets a random starting frame between 0 to the maximum number of frames for the animation that is currently playing");
-        card.add(randomize, c);
-
         /*
         c.gridx = 0;
         c.gridy = 2;
@@ -994,49 +987,6 @@ public class AttributePanel extends JPanel
         });
         card.add(addPlayer, c);
 
-        randomize.addActionListener(e ->
-        {
-            Character character = timeSheetPanel.getSelectedCharacter();
-            if (character == null)
-            {
-                return;
-            }
-
-            CKObject ckObject = character.getCkObject();
-
-            clientThread.invokeLater(() ->
-            {
-                Animation[] animations = ckObject.getAnimations();
-                int animId;
-                Animation activeAnim = animations[0];
-                Animation poseAnim = animations[1];
-
-                if (activeAnim == null || activeAnim.getId() == -1)
-                {
-                    if (poseAnim == null || poseAnim.getId() == -1)
-                    {
-                        return;
-                    }
-
-                    animId = poseAnim.getId();
-                }
-                else
-                {
-                    animId = activeAnim.getId();
-                }
-
-                Animation animation = client.loadAnimation(animId);
-                if (animation == null)
-                {
-                    return;
-                }
-
-                int frames = animation.getNumFrames();
-                int randomFrame = random.nextInt(frames);
-                startFrame.setValue(randomFrame);
-            });
-        });
-
         c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 13;
@@ -1214,13 +1164,13 @@ public class AttributePanel extends JPanel
         getStart.setToolTipText("Grab the current orientation of the Object, and apply it as the Start");
         getStart.addActionListener(e ->
         {
-            Character selectedCharacter = timeSheetPanel.getSelectedCharacter();
-            if (selectedCharacter == null)
+            Character primary = selectionManager.getPrimary();
+            if (primary == null)
             {
                 return;
             }
 
-            CKObject ckObject = selectedCharacter.getCkObject();
+            CKObject ckObject = primary.getCkObject();
             if (ckObject == null)
             {
                 return;
@@ -1237,13 +1187,13 @@ public class AttributePanel extends JPanel
         getEnd.setToolTipText("Grab the current Orientation of the Object, and apply it as the End");
         getEnd.addActionListener(e ->
         {
-            Character selectedCharacter = timeSheetPanel.getSelectedCharacter();
-            if (selectedCharacter == null)
+            Character primary = selectionManager.getPrimary();
+            if (primary == null)
             {
                 return;
             }
 
-            CKObject ckObject = selectedCharacter.getCkObject();
+            CKObject ckObject = primary.getCkObject();
             if (ckObject == null)
             {
                 return;
@@ -1475,14 +1425,14 @@ public class AttributePanel extends JPanel
 
         grab.addActionListener(e ->
         {
-            Character selectedCharacter = timeSheetPanel.getSelectedCharacter();
-            if (selectedCharacter == null)
+            Character primary = selectionManager.getPrimary();
+            if (primary == null)
             {
                 return;
             }
 
-            customComboBox.setSelectedItem(selectedCharacter.getStoredModel());
-            radius.setValue((int) selectedCharacter.getRadiusSpinner().getValue());
+            customComboBox.setSelectedItem(primary.getStoredModel());
+            radius.setValue((int) primary.getRadiusSpinner().getValue());
         });
 
         c.gridwidth = 1;
@@ -2106,8 +2056,8 @@ public class AttributePanel extends JPanel
         JComboBox<HitsplatSprite> sprite = attributes.getSprite();
         sprite.setToolTipText("Set the Hitsplat sprite to display");
         sprite.setFocusable(false);
-        sprite.addItem(HitsplatSprite.BLOCK);
         sprite.addItem(HitsplatSprite.DAMAGE);
+        sprite.addItem(HitsplatSprite.BLOCK);
         sprite.addItem(HitsplatSprite.POISON);
         sprite.addItem(HitsplatSprite.VENOM);
         sprite.addItem(HitsplatSprite.HEAL);
@@ -2295,7 +2245,8 @@ public class AttributePanel extends JPanel
     public void switchCards(KeyFrameType type)
     {
         selectedKeyFramePage = type;
-        String cardName = selectedKeyFramePage.getName();
+
+        String cardName = type.getName();
         activeCard = cardName;
         CardLayout cl = (CardLayout)(cardPanel.getLayout());
         cl.show(cardPanel, cardName);
@@ -2303,7 +2254,7 @@ public class AttributePanel extends JPanel
         JLabel[] labels = timeSheetPanel.getLabels();
         JLabel selectedLabel;
 
-        selectedLabel = labels[KeyFrameType.getIndex(selectedKeyFramePage) + 1];
+        selectedLabel = labels[KeyFrameType.getIndex(type) + 1];
         for (int f = 0; f < labels.length; f++)
         {
             JLabel label = labels[f];
@@ -2316,55 +2267,6 @@ public class AttributePanel extends JPanel
             {
                 label.setBackground(ColorScheme.DARKER_GRAY_COLOR);
             }
-        }
-
-        Character character = timeSheetPanel.getSelectedCharacter();
-        double currentTick = timeSheetPanel.getCurrentTime();
-        if (character == null)
-        {
-            setKeyFramedIcon(false);
-            resetAttributes(null, currentTick);
-            return;
-        }
-
-        KeyFrame keyFrame = character.findKeyFrame(selectedKeyFramePage, currentTick);
-        setKeyFramedIcon(keyFrame != null);
-        resetAttributes(character, currentTick);
-    }
-
-    public void updateSelectedCharacter(Character character)
-    {
-        double tick = timeSheetPanel.getCurrentTime();
-        updateObjectLabel(character);
-
-        if (character == null)
-        {
-            setKeyFramedIcon(false);
-            resetAttributes(null, tick);
-            return;
-        }
-
-        KeyFrame keyFrame = character.findKeyFrame(selectedKeyFramePage, tick);
-        setKeyFramedIcon(keyFrame != null);
-        resetAttributes(character, tick);
-    }
-
-    public void showCardForSelectedKeyFrameType()
-    {
-        LinkedHashMap<Character, KeyFrame[]> selected = kfsm.getSelected();
-        if (selected.size() == 1)
-        {
-            selected.forEach((character, keyFrames) ->
-            {
-                if (keyFrames.length != 1)
-                {
-                    return;
-                }
-
-                KeyFrame keyFrame = keyFrames[0];
-                CardLayout cl = (CardLayout) cardPanel.getLayout();
-                cl.show(cardPanel, keyFrame.getKeyFrameType().getName());
-            });
         }
     }
 
@@ -2611,31 +2513,19 @@ public class AttributePanel extends JPanel
         }
     }
 
-    public void resetAttributes(Character character, double tick)
+    public void updateAttributes()
     {
-        if (character == null)
+        KeyFrame keyFrame = kfsm.getPrimary();
+        if (keyFrame == null)
         {
             setAttributesEmpty(true);
             return;
         }
 
-        setKeyFramedIcon(character.findKeyFrame(selectedKeyFramePage, tick) != null);
-        KeyFrame keyFrame = character.findPreviousKeyFrame(selectedKeyFramePage, tick, true);
+        KeyFrameType type = keyFrame.getKeyFrameType();
+        KeyFrameState keyFrameState = timeSheetPanel.getCurrentTime() == keyFrame.getTick() ? KeyFrameState.ON_KEYFRAME : KeyFrameState.OFF_KEYFRAME;
 
-        if (keyFrame == null)
-        {
-            keyFrame = character.findNextKeyFrame(selectedKeyFramePage, tick);
-
-            if (keyFrame == null)
-            {
-                setAttributesEmpty(true);
-                return;
-            }
-        }
-
-        KeyFrameState keyFrameState = tick == keyFrame.getTick() ? KeyFrameState.ON_KEYFRAME : KeyFrameState.OFF_KEYFRAME;
-
-        switch (selectedKeyFramePage)
+        switch (type)
         {
             default:
             case MOVEMENT:

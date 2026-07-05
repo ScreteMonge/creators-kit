@@ -428,7 +428,9 @@ public class TimeSheet extends JPanel
 
         final List<KeyFrameAction> kfa = new ArrayList<>();
 
-        kfsm.getSelected().forEach((Character character, KeyFrame[] keyFrames) ->
+        LinkedHashMap<Character, KeyFrame[]> selected = new LinkedHashMap<>(kfsm.getSelected());
+
+        selected.forEach((Character character, KeyFrame[] keyFrames) ->
         {
             for (KeyFrame keyFrame : keyFrames)
             {
@@ -460,8 +462,9 @@ public class TimeSheet extends JPanel
         }
 
         LinkedHashMap<Character, KeyFrame[]> copies = new LinkedHashMap<>();
+        KeyFrame[] primary = new KeyFrame[]{kfsm.getPrimary()};
 
-        kfsm.getSelected().forEach((Character character, KeyFrame[] keyFrames) ->
+        selected.forEach((Character character, KeyFrame[] keyFrames) ->
         {
             KeyFrame[] keyFrameCopies = new KeyFrame[keyFrames.length];
             for (int i = 0; i < keyFrames.length; i++)
@@ -469,6 +472,11 @@ public class TimeSheet extends JPanel
                 KeyFrame keyFrame = keyFrames[i];
                 KeyFrame copy = KeyFrame.createCopy(keyFrame, round(timelineUnits, keyFrame.getTick() + change[0]));
                 keyFrameCopies[i] = copy;
+
+                if (keyFrame == primary[0])
+                {
+                    primary[0] = copy;
+                }
 
                 KeyFrame keyFrameToReplace = timeSheetPanel.addKeyFrame(character, copy);
                 if (keyFrameToReplace != null)
@@ -482,8 +490,7 @@ public class TimeSheet extends JPanel
             copies.put(character, keyFrameCopies);
         });
 
-        kfsm.clear();
-        kfsm.add(copies);
+        kfsm.addAll(copies, primary[0]);
         timeSheetPanel.stackKeyFrameActions(kfa);
     }
 
@@ -565,7 +572,7 @@ public class TimeSheet extends JPanel
                 else
                 {
                     kfsm.clear();
-                    getTimeSheetPanel().onSelectedKeyFramesChanged();
+                    getTimeSheetPanel().onKeyFrameSelectionChanged();
                 }
 
                 if (allowRectangleSelect)

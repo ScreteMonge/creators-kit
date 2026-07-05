@@ -434,7 +434,11 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 						.setType(MenuAction.RUNELITE);
 
 				Menu menu = me.createSubMenu();
-				SubMenuCreator.createSubMenus(creatorsPanel.getToolBox().getTimeSheetPanel(), menu);
+				menu.createMenuEntry(0)
+						.setOption(ColorUtil.prependColorTag("Add", Color.ORANGE))
+						.setTarget(ColorUtil.colorTag(Color.WHITE) + KeyFrameType.MOVEMENT)
+						.setType(MenuAction.RUNELITE)
+						.onClick(e -> hotKeyManager.onAddMovementMenuOptionPressed());
 			}
 		}
 
