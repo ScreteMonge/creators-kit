@@ -542,32 +542,38 @@ public class TimeSheetPanel extends JSplitPane
             return;
         }
 
+        int startOrientation = ckObject.getOrientation();
+        int endOrientation;
+
         KeyFrame okf = primary.getCurrentKeyFrame(KeyFrameType.ORIENTATION);
         KeyFrame keyFrame;
+
         if (okf == null)
         {
-            int orientation = ckObject.getOrientation();
+            endOrientation = ckObject.getOrientation();
 
             keyFrame = initializeOrientationKeyFrame(
                     primary,
                     hotkeyMode,
                     localPoint,
                     currentTime,
-                    orientation,
-                    orientation,
+                    startOrientation,
+                    endOrientation,
                     OrientationGoal.POINT,
                     OrientationKeyFrame.TURN_RATE);
         }
         else
         {
             OrientationKeyFrame kf = (OrientationKeyFrame) okf;
+            startOrientation = kf.getStart();
+            endOrientation = kf.getEnd();
             keyFrame = initializeOrientationKeyFrame(
                     primary,
                     hotkeyMode,
                     localPoint,
                     kf.getTick(),
-                    kf.getStart(),
-                    kf.getEnd(),
+                    startOrientation,
+                    endOrientation,
                     kf.getGoal(),
                     kf.getTurnRate());
         }
@@ -587,47 +593,9 @@ public class TimeSheetPanel extends JSplitPane
                 continue;
             }
 
-            CKObject ckObjectCopy = c.getCkObject();
-            if (ckObjectCopy == null)
-            {
-                continue;
-            }
-
-            KeyFrame okfCopy = c.getCurrentKeyFrame(KeyFrameType.ORIENTATION);
-            KeyFrame keyFrameCopy;
-            if (okfCopy == null)
-            {
-                int orientation = ckObject.getOrientation();
-
-                keyFrameCopy = initializeOrientationKeyFrame(
-                        c,
-                        hotkeyMode,
-                        localPoint,
-                        currentTime,
-                        orientation,
-                        orientation,
-                        OrientationGoal.POINT,
-                        OrientationKeyFrame.TURN_RATE);
-            }
-            else
-            {
-                OrientationKeyFrame kf = (OrientationKeyFrame) okfCopy;
-                keyFrameCopy = initializeOrientationKeyFrame(
-                        c,
-                        hotkeyMode,
-                        localPoint,
-                        kf.getTick(),
-                        kf.getStart(),
-                        kf.getEnd(),
-                        kf.getGoal(),
-                        kf.getTurnRate());
-            }
-
-            if (keyFrameCopy != null)
-            {
-                characters = ArrayUtils.add(characters, c);
-                keyFrameSets = ArrayUtils.add(keyFrameSets, new KeyFrame[]{keyFrameCopy});
-            }
+            KeyFrame keyFrameCopy = KeyFrame.createCopy(keyFrame, keyFrame.getTick());
+            characters = ArrayUtils.add(characters, c);
+            keyFrameSets = ArrayUtils.add(keyFrameSets, new KeyFrame[]{keyFrameCopy});
         }
 
         runKeyFrameAddActions(characters, keyFrameSets);
