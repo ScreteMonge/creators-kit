@@ -38,6 +38,7 @@ public class TimeSheet extends JPanel
 
     private final BufferedImage keyframeImage = ImageUtil.loadImageResource(getClass(), "/Keyframe.png");
     private final BufferedImage keyframeSelected = ImageUtil.loadImageResource(getClass(), "/Keyframe_Selected.png");
+    private final BufferedImage keyframePrimary = ImageUtil.loadImageResource(getClass(), "/Keyframe_Primary.png");
 
     private double zoom = 50;
     private double hScroll = 0;
@@ -429,6 +430,7 @@ public class TimeSheet extends JPanel
         final List<KeyFrameAction> kfa = new ArrayList<>();
 
         LinkedHashMap<Character, KeyFrame[]> selected = new LinkedHashMap<>(kfsm.getSelected());
+        KeyFrame primary = kfsm.getPrimary();
 
         selected.forEach((Character character, KeyFrame[] keyFrames) ->
         {
@@ -462,7 +464,7 @@ public class TimeSheet extends JPanel
         }
 
         LinkedHashMap<Character, KeyFrame[]> copies = new LinkedHashMap<>();
-        KeyFrame[] primary = new KeyFrame[1];
+        KeyFrame[] primaryCopy = new KeyFrame[1];
 
         selected.forEach((Character character, KeyFrame[] keyFrames) ->
         {
@@ -473,9 +475,9 @@ public class TimeSheet extends JPanel
                 KeyFrame copy = KeyFrame.createCopy(keyFrame, round(timelineUnits, keyFrame.getTick() + change[0]));
                 keyFrameCopies[i] = copy;
 
-                if (keyFrame == kfsm.getPrimary())
+                if (keyFrame == primary)
                 {
-                    primary[0] = copy;
+                    primaryCopy[0] = copy;
                 }
 
                 KeyFrame keyFrameToReplace = timeSheetPanel.addKeyFrame(character, copy);
@@ -490,7 +492,7 @@ public class TimeSheet extends JPanel
             copies.put(character, keyFrameCopies);
         });
 
-        kfsm.addAll(copies, primary[0]);
+        kfsm.addAll(copies, primaryCopy[0]);
         timeSheetPanel.stackKeyFrameActions(kfa);
     }
 

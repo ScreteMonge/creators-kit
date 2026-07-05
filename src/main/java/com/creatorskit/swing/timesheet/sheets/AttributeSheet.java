@@ -154,6 +154,11 @@ public class AttributeSheet extends TimeSheet
                     endImage = getKeyframeSelected();
                 }
 
+                if (kfsm.getPrimary() == keyFrame)
+                {
+                    endImage = getKeyframePrimary();
+                }
+
                 int x = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor);
                 int y = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
 
@@ -261,7 +266,8 @@ public class AttributeSheet extends TimeSheet
         int xImageOffset = image.getWidth() / 2;
         double zoomFactor = this.getWidth() / getZoom();
 
-        BufferedImage bufferedImage = getKeyframeImage();
+        BufferedImage selectedImage = getKeyframeSelected();
+        BufferedImage primaryImage = getKeyframePrimary();
         Composite composite = g.getComposite();
         g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.2F));
 
@@ -294,6 +300,11 @@ public class AttributeSheet extends TimeSheet
             {
                 int i = KeyFrameType.getIndex(keyFrame.getKeyFrameType());
                 KeyFrameType type = KeyFrameType.getKeyFrameType(i);
+                BufferedImage endImage = selectedImage;
+                if (kfsm.getPrimary() == keyFrame)
+                {
+                    endImage = primaryImage;
+                }
 
                 int x = (int) ((keyFrame.getTick() + getHScroll() + change[0]) * zoomFactor);
                 int y = rowHeightOffset + rowHeight + rowHeight * i - getVScroll() - yImageOffset;
@@ -339,7 +350,7 @@ public class AttributeSheet extends TimeSheet
                         break;
                 }
 
-                g.drawImage(bufferedImage, x - xImageOffset, y, null);
+                g.drawImage(endImage, x - xImageOffset, y, null);
             }
         });
 
