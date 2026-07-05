@@ -23,6 +23,7 @@ import com.creatorskit.swing.timesheet.keyframe.*;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
+import net.runelite.api.KeyCode;
 import net.runelite.api.Model;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
@@ -499,11 +500,20 @@ public class CreatorsPanel extends PluginPanel
             }
         });
 
-        switchButton.addActionListener(e -> onSwitchButtonPressed(character));
+        switchButton.addActionListener(e -> onSwitchButtonPressed((e.getModifiers() & ActionEvent.CTRL_MASK) != 0, character));
 
-        deleteButton.addActionListener(e -> onDeleteButtonPressed(character));
+        deleteButton.addActionListener(e -> onDeleteButtonPressed((e.getModifiers() & ActionEvent.CTRL_MASK) != 0, character));
 
-        duplicateButton.addActionListener(e -> onDuplicatePressed(character, false, new int[]{0, 0}, SelectionCommand.SELECT_ONLY));
+        duplicateButton.addActionListener(e ->
+        {
+            if ((e.getModifiers() & ActionEvent.CTRL_MASK) != 0)
+            {
+                getPlugin().getHotKeyManager().onDuplicate(false);
+                return;
+            }
+
+            onDuplicatePressed(character, false, new int[]{0, 0}, SelectionCommand.SELECT_ONLY);
+        });
 
         objectPanel.addMouseListener(new MouseAdapter()
         {
@@ -600,7 +610,7 @@ public class CreatorsPanel extends PluginPanel
                 animationSpinner
         );
 
-        character.setupRLObject(client, clientThread, getToolBox().getProgrammer(), random, config.randomizeStartFrame(), transplant, setHoveredLocation, diff);
+        character.setupRLObject(client, clientThread, getToolBox().getProgrammer(), random, config.randomizeStartFrame(), setHoveredLocation, transplant, diff);
         plugin.getCharacters().add(character);
 
         comboBoxes.add(modelComboBox);
@@ -764,18 +774,34 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
-    public void onSwitchButtonPressed(Character character)
+    public void onSwitchButtonPressed(boolean propagate, Character character)
+    {
+        if (propagate)
+        {
+            Set<Character> characters = new HashSet<>(selectionManager.getSelected());
+            for (Character c : characters)
+            {
+                switchCharacter(c);
+            }
+
+            return;
+        }
+
+        switchCharacter(character);
+    }
+
+    private void switchCharacter(Character character)
     {
         ParentPanel parentPanel = character.getParentPanel();
         removePanel(character);
 
         if (parentPanel == ParentPanel.SIDE_PANEL)
         {
-            addPanel(ParentPanel.MANAGER, character, true, true, SelectionCommand.SELECT_ONLY);
+            addPanel(ParentPanel.MANAGER, character, false, true, SelectionCommand.SELECT_ONLY);
         }
         else
         {
-            addPanel(ParentPanel.SIDE_PANEL, character, true, true, SelectionCommand.SELECT_ONLY);
+            addPanel(ParentPanel.SIDE_PANEL, character, false, true, SelectionCommand.SELECT_ONLY);
         }
     }
 
@@ -876,8 +902,15 @@ public class CreatorsPanel extends PluginPanel
         toolBox.repaint();
     }
 
-    public void onDeleteButtonPressed(Character character)
+    public void onDeleteButtonPressed(boolean propagate, Character character)
     {
+        if (propagate)
+        {
+            Character[] characters = selectionManager.getSelected().toArray(new Character[0]);
+            deleteCharacters(characters);
+            return;
+        }
+
         deleteCharacters(new Character[]{character});
     }
 

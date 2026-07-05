@@ -210,11 +210,11 @@ public class HotKeyManager
         @Override
         public void hotkeyPressed()
         {
-            onDuplicate();
+            onDuplicate(true);
         }
     };
 
-    public void onDuplicate()
+    public void onDuplicate(boolean setLocation)
     {
         Character primary = selectionManager.getPrimary();
         if (primary == null)
@@ -282,10 +282,10 @@ public class HotKeyManager
 
             int[] diff = new int[]{coords[0] - primaryCoordinates[0], coords[1] - primaryCoordinates[1]};
 
-            creatorsPanel.onDuplicatePressed(c, true, diff, SelectionCommand.ADD);
+            creatorsPanel.onDuplicatePressed(c, setLocation, diff, SelectionCommand.ADD);
         }
 
-        creatorsPanel.onDuplicatePressed(primary, true, new int[]{0, 0}, SelectionCommand.ADD);
+        creatorsPanel.onDuplicatePressed(primary, setLocation, new int[]{0, 0}, SelectionCommand.ADD);
     }
 
     public final HotkeyListener quickRotateCWListener = new HotkeyListener(() -> config.quickRotateCWHotkey())
