@@ -78,7 +78,16 @@ public class ModelGetter
                             .setOption(ColorUtil.prependColorTag("Select", Color.ORANGE))
                             .setTarget(ColorUtil.colorTag(Color.GREEN) + character.getName())
                             .setType(MenuAction.RUNELITE)
-                            .onClick(e -> selectionManager.select(character, SelectionOrigin.DIRECT));
+                            .onClick(e ->
+                            {
+                                if (client.isKeyPressed(KeyCode.KC_CONTROL))
+                                {
+                                    selectionManager.add(character, SelectionOrigin.DIRECT);
+                                    return;
+                                }
+
+                                selectionManager.select(character, SelectionOrigin.DIRECT);
+                            });
 
                     Menu menu = menuEntry.createSubMenu();
 
