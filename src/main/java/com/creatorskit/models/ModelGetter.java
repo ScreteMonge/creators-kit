@@ -30,8 +30,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import javax.inject.Inject;
 import javax.swing.*;
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.*;
 import java.util.List;
 
 public class ModelGetter
@@ -94,12 +93,38 @@ public class ModelGetter
                     menu.createMenuEntry(0)
                             .setOption(ColorUtil.prependColorTag("Export 3D", Color.WHITE))
                             .setType(MenuAction.RUNELITE)
-                            .onClick(e -> exportRLObject(character, false));
+                            .onClick(e ->
+                            {
+                                if (client.isKeyPressed(KeyCode.KC_CONTROL))
+                                {
+                                    Set<Character> set = new HashSet<>(selectionManager.getSelected());
+                                    for (Character c : set)
+                                    {
+                                        exportRLObject(c, false);
+                                    }
+                                    return;
+                                }
+
+                                exportRLObject(character, false);
+                            });
 
                     menu.createMenuEntry(0)
                             .setOption(ColorUtil.prependColorTag("Export Animation", Color.WHITE))
                             .setType(MenuAction.RUNELITE)
-                            .onClick(e -> exportRLObject(character, true));
+                            .onClick(e ->
+                            {
+                                if (client.isKeyPressed(KeyCode.KC_CONTROL))
+                                {
+                                    Set<Character> set = new HashSet<>(selectionManager.getSelected());
+                                    for (Character c : set)
+                                    {
+                                        exportRLObject(c, true);
+                                    }
+                                    return;
+                                }
+
+                                exportRLObject(character, true);
+                            });
                 }
             }
         }
