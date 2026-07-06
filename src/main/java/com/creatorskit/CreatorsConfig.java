@@ -127,23 +127,11 @@ public interface CreatorsConfig extends Config
 	}
 
 	@ConfigItem(
-			keyName = "rotateDegrees",
-			name = "Rotate Degrees",
-			description = "Determines how much the Rotate Hotkeys rotate the Object by",
-			section = sceneSettings,
-			position = 13
-	)
-	default Rotation rotateDegrees()
-	{
-		return Rotation._90_DEGREES;
-	}
-
-	@ConfigItem(
 			keyName = "orientationStart",
 			name = "Set Orientation Start",
 			description = "Hotkey to set the Start Orientation of an Orientation Keyframe",
 			section = sceneSettings,
-			position = 14
+			position = 13
 	)
 	default Keybind orientationStart()
 	{
@@ -155,7 +143,7 @@ public interface CreatorsConfig extends Config
 			name = "Set Orientation End",
 			description = "Hotkey to set the End Orientation of an Orientation Keyframe",
 			section = sceneSettings,
-			position = 15
+			position = 14
 	)
 	default Keybind orientationEnd()
 	{

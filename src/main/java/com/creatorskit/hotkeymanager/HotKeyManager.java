@@ -44,6 +44,7 @@ public class HotKeyManager
 
     @Setter
     private int oculusOrbSpeed = 36;
+    private final int _45_DEGREES = 256;
 
     @Inject
     public HotKeyManager(Client client, ClientThread clientThread, CreatorsPlugin plugin, CreatorsOverlay overlay, CreatorsConfig config, SelectionManager selectionManager, MovementManager movementManager)
@@ -295,7 +296,7 @@ public class HotKeyManager
         {
             for (Character c : selectionManager.getSelected())
             {
-                c.addOrientation(config.rotateDegrees().degrees * -1);
+                c.addOrientation(-_45_DEGREES);
             }
         }
     };
@@ -307,7 +308,7 @@ public class HotKeyManager
         {
             for (Character c : selectionManager.getSelected())
             {
-                c.addOrientation(config.rotateDegrees().degrees);
+                c.addOrientation(_45_DEGREES);
             }
         }
     };

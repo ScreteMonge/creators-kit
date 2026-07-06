@@ -4,6 +4,7 @@ import com.creatorskit.hotkeymanager.HotKeyManager;
 import com.creatorskit.hotkeymanager.LocationOption;
 import com.creatorskit.models.*;
 import com.creatorskit.programming.*;
+import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.saves.TransmogLoadOption;
 import com.creatorskit.selection.SelectionManager;
 import com.creatorskit.swing.*;
@@ -18,7 +19,6 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.Menu;
-import net.runelite.api.Point;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.*;
@@ -137,8 +137,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private int savedPlane = -1;
 	private AutoRotate autoRotateYaw = AutoRotate.OFF;
 	private AutoRotate autoRotatePitch = AutoRotate.OFF;
-	private double clickX;
-	private double clickY;
+	private LocalPoint draggedPoint;
 	private boolean mousePressed = false;
 	private boolean autoSetupPathFound = true;
 	private boolean autoTransmogFound = true;
@@ -574,39 +573,31 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			return;
 		}
 
-		Character selectedCharacter = selectionManager.getPrimary();
+		Character primary = selectionManager.getPrimary();
 		if (!client.isKeyPressed(KeyCode.KC_CONTROL)
 			|| client.isMenuOpen()
 			|| tile == null
-			|| selectedCharacter == null)
+			|| primary == null)
 		{
 			previewObject.setActive(false);
 			return;
 		}
 
-		CKObject ckObject = selectedCharacter.getCkObject();
+		CKObject ckObject = primary.getCkObject();
 		if (ckObject == null)
 		{
 			return;
 		}
 
 		boolean allowArrow = false;
-		int orientation;
+		double orientation = ckObject.getOrientation();
 		if (mousePressed)
 		{
-			final int yaw = client.getCameraYaw();
-			final int pitch = client.getCameraPitch();
-			Point p = client.getMouseCanvasPosition();
-			double x = p.getX() - clickX;
-			double y = -1 * (p.getY() - clickY);
-			if (Math.sqrt(x * x + y * y) < 40)
-			{
-				orientation = Rotation.roundRotation(ckObject.getOrientation());
-			}
-			else
+			LocalPoint hovered = tile.getLocalLocation();
+			if (hovered != null && draggedPoint != null)
 			{
 				allowArrow = true;
-				orientation = Rotation.getJagexDegrees(p.getX() - clickX, (p.getY() - clickY) * -1, yaw, pitch);
+				orientation = Orientation.getAngleBetween(draggedPoint, hovered);
 			}
 		}
 		else
@@ -621,20 +612,20 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 		else
 		{
-			if (selectedCharacter.isCustomMode())
+			if (primary.isCustomMode())
 			{
-				if (selectedCharacter.getStoredModel() == null)
+				if (primary.getStoredModel() == null)
 				{
 					model = client.loadModel(29757);
 				}
 				else
 				{
-					model = selectedCharacter.getStoredModel().getModel();
+					model = primary.getStoredModel().getModel();
 				}
 			}
 			else
 			{
-				model = client.loadModel((int) selectedCharacter.getModelSpinner().getValue());
+				model = client.loadModel((int) primary.getModelSpinner().getValue());
 			}
 		}
 
@@ -672,7 +663,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 
 		previewObject.setModel(model);
-		previewObject.setOrientation(orientation);
+		previewObject.setOrientation((int) orientation);
 		previewObject.setAnimation(AnimationType.ACTIVE, animId);
 		previewObject.setAnimationFrame(AnimationType.ACTIVE, ckObject.getAnimationFrame(AnimationType.ACTIVE), random, false,true);
 		previewObject.setLocation(lp, client.getTopLevelWorldView().getPlane());
@@ -715,9 +706,23 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				&& e.getButton() == MouseEvent.BUTTON1
 				&& client.isKeyPressed(KeyCode.KC_CONTROL))
 		{
-			mousePressed = true;
-			clickX = e.getPoint().getX();
-			clickY = e.getPoint().getY();
+			clientThread.invokeLater(() ->
+			{
+				Tile tile = client.getTopLevelWorldView().getSelectedSceneTile();
+				if (tile == null)
+				{
+					return;
+				}
+
+				LocalPoint lp = tile.getLocalLocation();
+				if (lp == null)
+				{
+					return;
+				}
+
+				mousePressed = true;
+				draggedPoint = lp;
+			});
 		}
 
 		return e;
@@ -728,24 +733,39 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	{
 		mousePressed = false;
 
-		Character selectedCharacter = selectionManager.getPrimary();
-		if (config.enableCtrlHotkeys() &&
-				e.getButton() == MouseEvent.BUTTON1 &&
-				client.isKeyPressed(KeyCode.KC_CONTROL) &&
-				selectedCharacter != null)
+		if (!config.enableCtrlHotkeys() || e.getButton() != MouseEvent.BUTTON1 || !client.isKeyPressed(KeyCode.KC_CONTROL))
 		{
-			double x = e.getX() - clickX;
-			double y = -1 * (e.getY() - clickY);
-			if (Math.sqrt(x * x + y * y) < 40)
+			return e;
+		}
+
+		if (draggedPoint == null)
+		{
+			return e;
+		}
+
+		clientThread.invokeLater(() ->
+		{
+			WorldView worldView = client.getTopLevelWorldView();
+			Tile tile = worldView.getSelectedSceneTile();
+			if (tile == null)
 			{
-				return e;
+				return;
 			}
 
-			final int yaw = client.getCameraYaw();
-			final int pitch = client.getCameraPitch();
-			int jUnit = Rotation.getJagexDegrees(x, y, yaw, pitch);
-			selectedCharacter.setOrientation(jUnit);
-		}
+			LocalPoint lp = tile.getLocalLocation();
+			if (lp == null)
+			{
+				return;
+			}
+
+			int orientation = (int) Orientation.getAngleBetween(draggedPoint, lp);
+
+			Set<Character> selected = new HashSet<>(selectionManager.getSelected());
+			for (Character character : selected)
+			{
+				character.setOrientation(orientation);
+			}
+		});
 
 		return e;
 	}
