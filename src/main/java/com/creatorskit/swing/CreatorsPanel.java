@@ -23,7 +23,6 @@ import com.creatorskit.swing.timesheet.keyframe.*;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
-import net.runelite.api.KeyCode;
 import net.runelite.api.Model;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
@@ -563,7 +562,7 @@ public class CreatorsPanel extends PluginPanel
         orientationSpinner.addChangeListener(e ->
         {
             int orient = Orientation.boundOrientation((int) orientationSpinner.getValue());
-            character.setOrientation(orient);
+            character.updateCKOOrientation(orient);
             propagateSpinner(character, orient, Character::getOrientationSpinner);
         });
 

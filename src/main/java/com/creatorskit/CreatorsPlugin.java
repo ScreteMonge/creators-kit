@@ -19,6 +19,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.Menu;
+import net.runelite.api.Point;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.*;
@@ -138,6 +139,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private AutoRotate autoRotateYaw = AutoRotate.OFF;
 	private AutoRotate autoRotatePitch = AutoRotate.OFF;
 	private LocalPoint draggedPoint;
+	private double clickX;
+	private double clickY;
 	private boolean mousePressed = false;
 	private boolean autoSetupPathFound = true;
 	private boolean autoTransmogFound = true;
@@ -594,7 +597,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		if (mousePressed)
 		{
 			LocalPoint hovered = tile.getLocalLocation();
-			if (hovered != null && draggedPoint != null)
+
+			Point p = client.getMouseCanvasPosition();
+			double x = p.getX() - clickX;
+			double y = -1 * (p.getY() - clickY);
+
+			if ((Math.sqrt(x * x + y * y) > 40)
+				&& hovered != null
+				&& draggedPoint != null)
 			{
 				allowArrow = true;
 				orientation = Orientation.getAngleBetween(draggedPoint, hovered);
@@ -721,6 +731,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				}
 
 				mousePressed = true;
+				clickX = e.getPoint().getX();
+				clickY = e.getPoint().getY();
 				draggedPoint = lp;
 			});
 		}
@@ -739,6 +751,13 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 
 		if (draggedPoint == null)
+		{
+			return e;
+		}
+
+		double x = e.getX() - clickX;
+		double y = -1 * (e.getY() - clickY);
+		if (Math.sqrt(x * x + y * y) < 40)
 		{
 			return e;
 		}

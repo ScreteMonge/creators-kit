@@ -6,6 +6,7 @@ import com.creatorskit.programming.AnimationType;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.PathFinder;
 import com.creatorskit.programming.Programmer;
+import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.swing.ObjectPanel;
 import com.creatorskit.swing.ParentPanel;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
@@ -431,20 +432,13 @@ public class Character
 
     public void addOrientation(int addition)
     {
-        int orientation = ckObject.getOrientation();
-        orientation += addition;
-        if (orientation >= 2048)
-            orientation -= 2048;
-
-        if (orientation < 0)
-            orientation += 2048;
-
+        int orientation = Orientation.boundOrientation(ckObject.getOrientation() + addition);
         setOrientation(orientation);
     }
 
     public void setOrientation(int orientation)
     {
-        updateCKOOrientation(orientation);
+        orientationSpinner.setValue(orientation);
     }
 
     public void updateCKOOrientation(int orientation)
