@@ -490,6 +490,8 @@ public class TimeSheetPanel extends JSplitPane
         {
             stackKeyFrameActions(kfa);
         }
+
+        attributePanel.updateAttributes();
     }
 
     public KeyFrame checkDespawnKeyFrameAt0(Character c, KeyFrame keyFrame, double currentTick)
@@ -1323,12 +1325,6 @@ public class TimeSheetPanel extends JSplitPane
 
     public void pasteKeyFrames()
     {
-        Character primary = selectionManager.getPrimary();
-        if (primary == null)
-        {
-            return;
-        }
-
         if (copiedKeyFrames.isEmpty())
         {
             return;
@@ -1344,13 +1340,21 @@ public class TimeSheetPanel extends JSplitPane
             }
         }
 
-        if (selectionManager.getSelectionSize() == 1
-            && selectionManager.getSelected().contains(primary)
-            && kfsm.getSelectionSize() == 1)
+        if (selectionManager.getSelectionSize() == 1)
         {
-            KeyFrame[] keyFrames = clearOverridingCopies(primary, copiedKeyFrames);
-            KeyFrame[] copies = createKeyFrameCopies(primary, keyFrames);
-            runKeyFrameAddActions(new Character[]{primary}, new KeyFrame[][]{copies});
+            Character[] characters = new Character[0];
+            KeyFrame[][] keyFrameSet = new KeyFrame[0][0];
+
+            for (Character character : selectionManager.getSelected())
+            {
+                KeyFrame[] keyFrames = clearOverridingCopies(character, copiedKeyFrames);
+                KeyFrame[] copies = createKeyFrameCopies(character, keyFrames);
+
+                characters = ArrayUtils.add(characters, character);
+                keyFrameSet = ArrayUtils.add(keyFrameSet, copies);
+            }
+
+            runKeyFrameAddActions(characters, keyFrameSet);
             return;
         }
 
@@ -1386,7 +1390,18 @@ public class TimeSheetPanel extends JSplitPane
         pasteIteratively.setToolTipText("Will paste copied keyframes only to the Object they originate from");
         pasteIteratively.addActionListener(e ->
         {
-            copiedKeyFrames.forEach(this::createKeyFrameCopies);
+            List<KeyFrame[]> keyFrameSet = new ArrayList<>();
+            List<Character> characters = new ArrayList<>();
+
+            LinkedHashMap<Character, KeyFrame[]> map = new LinkedHashMap<>();
+            copiedKeyFrames.forEach((character, keyframes) ->
+            {
+                KeyFrame[] copies = createKeyFrameCopies(character, keyframes);
+                keyFrameSet.add(copies);
+                characters.add(character);
+            });
+
+            runKeyFrameAddActions(characters.toArray(new Character[0]), keyFrameSet.toArray(new KeyFrame[0][]));
         });
         popup.add(pasteIteratively);
 
@@ -1412,14 +1427,14 @@ public class TimeSheetPanel extends JSplitPane
         popup.show(this, x, y);
     }
 
-    private KeyFrame[] clearOverridingCopies(Character primaryCharacter, LinkedHashMap<Character, KeyFrame[]> keyFrameGroups)
+    private KeyFrame[] clearOverridingCopies(Character masterCharacter, LinkedHashMap<Character, KeyFrame[]> keyFrameGroups)
     {
-        KeyFrame[] primaryKeyFrames = keyFrameGroups.get(primaryCharacter);
+        KeyFrame[] masterKeyFrames = keyFrameGroups.get(masterCharacter);
         List<KeyFrame> keyFramesToAdd = new ArrayList<>();
 
-        if (primaryKeyFrames != null)
+        if (masterKeyFrames != null)
         {
-            keyFramesToAdd.addAll(Arrays.asList(primaryKeyFrames));
+            keyFramesToAdd.addAll(Arrays.asList(masterKeyFrames));
         }
 
         keyFrameGroups.forEach((character, keyFrames) ->
@@ -1427,11 +1442,11 @@ public class TimeSheetPanel extends JSplitPane
             for (KeyFrame keyFrame : keyFrames)
             {
                 boolean overrides = false;
-                if (primaryKeyFrames != null)
+                if (masterKeyFrames != null)
                 {
-                    for (KeyFrame primary : primaryKeyFrames)
+                    for (KeyFrame master : masterKeyFrames)
                     {
-                        if (keyFrame.getTick() == primary.getTick())
+                        if (keyFrame.getTick() == master.getTick() && keyFrame.getKeyFrameType() == master.getKeyFrameType())
                         {
                             overrides = true;
                             break;
@@ -1441,7 +1456,7 @@ public class TimeSheetPanel extends JSplitPane
 
                 for (KeyFrame alreadyAdded : keyFramesToAdd)
                 {
-                    if (keyFrame.getTick() == alreadyAdded.getTick())
+                    if (keyFrame.getTick() == alreadyAdded.getTick() && keyFrame.getKeyFrameType() == alreadyAdded.getKeyFrameType())
                     {
                         overrides = true;
                         break;

@@ -494,6 +494,7 @@ public class TimeSheet extends JPanel
 
         kfsm.addAll(copies, primaryCopy[0]);
         timeSheetPanel.stackKeyFrameActions(kfa);
+        attributePanel.updateAttributes();
     }
 
     private void setMouseListeners(TimeSheet timeSheet)
