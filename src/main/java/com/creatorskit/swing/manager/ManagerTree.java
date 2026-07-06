@@ -17,6 +17,7 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.util.*;
 import java.util.List;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.*;
@@ -448,6 +449,45 @@ public class ManagerTree extends JTree
             if (!node.isLeaf())
                 getObjectPanelChildren(node, characters, parentPanel);
         }
+    }
+
+    public Set<Character> getCharactersBetween(Character start, Character end)
+    {
+        DefaultMutableTreeNode startNode = start.getLinkedManagerNode();
+        DefaultMutableTreeNode endNode = end.getLinkedManagerNode();
+
+        List<DefaultMutableTreeNode> nodes = new ArrayList<>();
+
+        Enumeration<?> e = rootNode.preorderEnumeration();
+        while (e.hasMoreElements())
+        {
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode) e.nextElement();
+            if (node.getUserObject() instanceof Folder)
+            {
+                continue;
+            }
+
+            nodes.add(node);
+        }
+
+        int i1 = nodes.indexOf(startNode);
+        int i2 = nodes.indexOf(endNode);
+
+        if (i1 == -1 || i2 == -1)
+        {
+            return Collections.emptySet();
+        }
+
+        if (i1 > i2)
+        {
+            int temp = i1;
+            i1 = i2;
+            i2 = temp;
+        }
+
+        return nodes.subList(i1, i2 + 1).stream()
+                .map(n -> (Character) n.getUserObject())
+                .collect(Collectors.toSet());
     }
 
     class MyTreeSelectionListener implements TreeSelectionListener

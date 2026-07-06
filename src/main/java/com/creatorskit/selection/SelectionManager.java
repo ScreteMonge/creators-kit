@@ -103,6 +103,12 @@ public class SelectionManager
 		fireChanged(origin);
 	}
 
+	public void setPrimary(Character c, SelectionOrigin origin)
+	{
+		primary = c;
+		fireChanged(origin);
+	}
+
 	public void toggle(Character c, SelectionOrigin origin)
 	{
 		if (c == null)

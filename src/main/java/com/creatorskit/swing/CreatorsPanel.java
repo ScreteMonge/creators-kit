@@ -702,7 +702,7 @@ public class CreatorsPanel extends PluginPanel
             component.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mousePressed(MouseEvent e) {
-                    onCharacterPanelClicked(character, e);
+                    onObjectPanelClicked(character, e);
                 }
             });
         }
@@ -1026,7 +1026,7 @@ public class CreatorsPanel extends PluginPanel
         sidePanel.revalidate();
     }
 
-    public void onCharacterPanelClicked(Character character, MouseEvent e)
+    public void onObjectPanelClicked(Character character, MouseEvent e)
     {
         if (e.getButton() == MouseEvent.BUTTON3)
         {
@@ -1037,6 +1037,21 @@ public class CreatorsPanel extends PluginPanel
             }
 
             selectionManager.clear(SelectionOrigin.DIRECT);
+            return;
+        }
+
+        if (e.isShiftDown())
+        {
+            Character primary = selectionManager.getPrimary();
+            if (primary == null)
+            {
+                return;
+            }
+
+            ManagerTree tree = toolBox.getManagerPanel().getManagerTree();
+            Set<Character> characters = tree.getCharactersBetween(primary, character);
+            selectionManager.selectAll(characters, SelectionOrigin.DIRECT);
+            selectionManager.setPrimary(primary, SelectionOrigin.DIRECT);
             return;
         }
 
