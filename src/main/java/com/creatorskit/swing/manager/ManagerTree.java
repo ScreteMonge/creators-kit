@@ -12,6 +12,7 @@ import net.runelite.client.util.ImageUtil;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.awt.*;
+import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
@@ -860,6 +861,12 @@ public class ManagerTree extends JTree
             }
 
             selectedFolders = folders;
+            if ((e.getModifiers() & ActionEvent.CTRL_MASK) != 0)
+            {
+                plugin.getSelectionManager().addAll(characters, SelectionOrigin.DIRECT);
+                return;
+            }
+
             plugin.getSelectionManager().selectAll(characters, SelectionOrigin.DIRECT);
         });
         popup.add(selectAll);

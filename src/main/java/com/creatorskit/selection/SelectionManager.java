@@ -88,6 +88,26 @@ public class SelectionManager
 		fireChanged(origin);
 	}
 
+	public void addAll(Collection<Character> characters, SelectionOrigin origin)
+	{
+		if (characters == null || characters.isEmpty())
+		{
+			return;
+		}
+
+		Character last = null;
+		for (Character c : characters)
+		{
+			if (selected.add(c))
+			{
+				last = c;
+			}
+		}
+
+		primary = last;
+		fireChanged(origin);
+	}
+
 	public void remove(Character c, SelectionOrigin origin)
 	{
 		if (!selected.remove(c))
