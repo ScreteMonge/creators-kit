@@ -19,6 +19,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Enumeration;
 
 @Getter
 @Setter
@@ -135,21 +136,23 @@ public class SummarySheet extends TimeSheet
     @Override
     public void drawRowLabels(Graphics g)
     {
-        ArrayList<DefaultMutableTreeNode> nodes = new ArrayList<>();
-        nodes.add(tree.getRootNode());
-        tree.getAllNodes(tree.getRootNode(), nodes);
-        int index = -2;
-
         g.setFont(FontManager.getRunescapeFont());
         g.setColor(ColorScheme.LIGHT_GRAY_COLOR);
 
         FontMetrics fontMetrics = g.getFontMetrics();
         int textHeight = fontMetrics.getHeight();
-        final int X = 5;
+        int x = 5;
 
-        for (DefaultMutableTreeNode node : nodes)
+        int index = -2;
+        Enumeration<?> e = tree.getRootNode().preorderEnumeration();
+        while (e.hasMoreElements())
         {
             index++;
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode) e.nextElement();
+            if (node.getUserObject() instanceof Folder)
+            {
+                continue;
+            }
 
             TreePath path = new TreePath(node.getPath());
 
@@ -159,15 +162,10 @@ public class SummarySheet extends TimeSheet
                 continue;
             }
 
-            if (node.getUserObject() instanceof Folder)
-            {
-                continue;
-            }
-
             Character character = (Character) node.getUserObject();
 
             int y = index * rowHeight - getVScroll() + rowHeight - textHeight / 2;
-            g.drawString(character.getName(), X, y);
+            g.drawString(character.getName(), x, y);
         }
     }
 
@@ -181,18 +179,21 @@ public class SummarySheet extends TimeSheet
 
         g.setFont(FontManager.getRunescapeSmallFont());
 
-        for (DefaultMutableTreeNode node : nodes)
+        Enumeration<?> e = tree.getRootNode().preorderEnumeration();
+        while (e.hasMoreElements())
         {
             index++;
-
-            TreePath path = tree.getPathForRow(index);
-            if (path == null)
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode) e.nextElement();
+            if (node.getUserObject() instanceof Folder)
             {
                 continue;
             }
 
-            if (node.getUserObject() instanceof Folder)
+            TreePath path = new TreePath(node.getPath());
+
+            if (!tree.isVisible(path))
             {
+                index--;
                 continue;
             }
 

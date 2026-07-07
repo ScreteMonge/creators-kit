@@ -50,8 +50,7 @@ public class AttributePanel extends JPanel
     private final BufferedImage HELP = ImageUtil.loadImageResource(getClass(), "/Help.png");
     private final BufferedImage COMPASS = ImageUtil.loadImageResource(getClass(), "/Orientation_compass.png");
     private final BufferedImage RESET = ImageUtil.loadImageResource(getClass(), "/Reset.png");
-    private final Icon keyframeImage = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/Keyframe.png"));
-    private final Icon keyframeEmptyImage = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/Keyframe_Empty.png"));
+    private final Icon keyframeImage = new ImageIcon(ImageUtil.loadImageResource(getClass(), "/Keyframe_Empty.png"));
 
     private final GridBagConstraints c = new GridBagConstraints();
     private final JPanel cardPanel = new JPanel();
@@ -177,7 +176,7 @@ public class AttributePanel extends JPanel
 
         c.gridx = 4;
         c.gridy = 0;
-        keyFramed.setIcon(keyframeEmptyImage);
+        keyFramed.setIcon(keyframeImage);
         keyFramed.setPreferredSize(new Dimension(32, 32));
         keyFramed.setBackground(ColorScheme.DARK_GRAY_COLOR);
         keyFramed.addActionListener(e -> timeSheetPanel.onKeyFrameIconPressedEvent());
@@ -2633,16 +2632,5 @@ public class AttributePanel extends JPanel
             case HITSPLAT_4:
                 hitsplat4Attributes.resetAttributes(resetBackground);
         }
-    }
-
-    public void setKeyFramedIcon(boolean isKeyFramed)
-    {
-        if (isKeyFramed)
-        {
-            keyFramed.setIcon(keyframeImage);
-            return;
-        }
-
-        keyFramed.setIcon(keyframeEmptyImage);
     }
 }
