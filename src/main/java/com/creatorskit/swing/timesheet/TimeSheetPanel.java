@@ -375,19 +375,15 @@ public class TimeSheetPanel extends JSplitPane
 
     public void onKeyFrameIconPressedEvent()
     {
-        onKeyFrameIconPressedEvent(currentTime, attributePanel.getSelectedKeyFramePage());
-    }
-
-    public void onKeyFrameIconPressedEvent(double currentTick, KeyFrameType type)
-    {
+        KeyFrameType type = attributePanel.getSelectedKeyFramePage();
         List<KeyFrameAction> kfa = new ArrayList<>();
 
         for (Character c : selectionManager.getSelected())
         {
-            KeyFrame keyFrame = c.findKeyFrame(type, currentTick);
+            KeyFrame keyFrame = c.findKeyFrame(type, currentTime);
             if (keyFrame == null)
             {
-                KeyFrame kf = attributePanel.createKeyFrame(type, currentTick);
+                KeyFrame kf = attributePanel.createKeyFrame(type, currentTime);
                 if (kf == null)
                 {
                     continue;
@@ -395,9 +391,9 @@ public class TimeSheetPanel extends JSplitPane
 
                 kfa.add(new KeyFrameCharacterAction(kf, c, KeyFrameCharacterActionType.ADD));
 
-                if (type == KeyFrameType.SPAWN && currentTick > 0)
+                if (type == KeyFrameType.SPAWN && currentTime > 0)
                 {
-                    KeyFrame spawn0 = checkDespawnKeyFrameAt0(c, kf, currentTick);
+                    KeyFrame spawn0 = checkDespawnKeyFrameAt0(c, kf, currentTime);
                     if (spawn0 != null)
                     {
                         kfa.add(new KeyFrameCharacterAction(spawn0, c, KeyFrameCharacterActionType.ADD));
@@ -417,6 +413,7 @@ public class TimeSheetPanel extends JSplitPane
         }
 
         stackKeyFrameActions(kfa);
+        attributePanel.updateAttributes();
     }
 
     public void runKeyFrameAddActions(Character[] characters, KeyFrame[][] keyFrameSets)
