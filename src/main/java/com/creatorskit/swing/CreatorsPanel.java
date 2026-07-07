@@ -1227,7 +1227,9 @@ public class CreatorsPanel extends PluginPanel
 
             if (cb.getSelectedItem() != m)
             {
+                bulkEditing = false;
                 cb.setSelectedItem(m);
+                bulkEditing = true;
             }
 
             if (c.isCustomMode())
