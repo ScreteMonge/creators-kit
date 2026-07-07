@@ -260,7 +260,7 @@ public class ToolBoxFrame extends JFrame
         JMenuItem load = new JMenuItem("Open Setup");
         load.addActionListener(e ->
         {
-            createNewSetup(false, true);
+            createNewSetup(true, true);
         });
         load.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_DOWN_MASK));
         file.add(load);
