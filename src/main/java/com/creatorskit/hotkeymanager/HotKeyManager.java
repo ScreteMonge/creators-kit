@@ -211,11 +211,11 @@ public class HotKeyManager
         @Override
         public void hotkeyPressed()
         {
-            onDuplicate(true);
+            onDuplicate(LocationOption.TO_HOVERED_TILE);
         }
     };
 
-    public void onDuplicate(boolean setLocation)
+    public void onDuplicate(LocationOption locationOption)
     {
         Character primary = selectionManager.getPrimary();
         if (primary == null)
@@ -260,33 +260,35 @@ public class HotKeyManager
                 continue;
             }
 
-            int[] coords = new int[]{0, 0};
-
-            if (inPOH)
+            int[] diff = new int[]{0, 0};
+            if (locationOption == LocationOption.TO_HOVERED_TILE)
             {
-                LocalPoint lp = c.getInstancedPoint();
-                if (lp != null)
+                int[] coords = new int[]{0, 0};
+
+                if (inPOH)
                 {
-                    coords = new int[]{lp.getSceneX(), lp.getSceneY()};
+                    LocalPoint lp = c.getInstancedPoint();
+                    if (lp != null)
+                    {
+                        coords = new int[]{lp.getSceneX(), lp.getSceneY()};
+                    }
+                }
+                else
+                {
+                    WorldPoint wp = c.getNonInstancedPoint();
+                    if (wp != null)
+                    {
+                        coords = new int[]{wp.getX(), wp.getY()};
+                    }
                 }
 
-
-            }
-            else
-            {
-                WorldPoint wp = c.getNonInstancedPoint();
-                if (wp != null)
-                {
-                    coords = new int[]{wp.getX(), wp.getY()};
-                }
+                diff = new int[]{coords[0] - primaryCoordinates[0], coords[1] - primaryCoordinates[1]};
             }
 
-            int[] diff = new int[]{coords[0] - primaryCoordinates[0], coords[1] - primaryCoordinates[1]};
-
-            creatorsPanel.onDuplicatePressed(c, setLocation, diff, SelectionCommand.ADD);
+            creatorsPanel.onDuplicatePressed(c, locationOption, diff, SelectionCommand.ADD);
         }
 
-        creatorsPanel.onDuplicatePressed(primary, setLocation, new int[]{0, 0}, SelectionCommand.ADD);
+        creatorsPanel.onDuplicatePressed(primary, locationOption, new int[]{0, 0}, SelectionCommand.ADD);
     }
 
     public final HotkeyListener quickRotateCWListener = new HotkeyListener(() -> config.quickRotateCWHotkey())

@@ -2,6 +2,7 @@ package com.creatorskit.models;
 
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
+import com.creatorskit.hotkeymanager.LocationOption;
 import com.creatorskit.saves.TransmogLoadOption;
 import com.creatorskit.saves.TransmogSave;
 import com.creatorskit.selection.SelectionCommand;
@@ -377,7 +378,7 @@ public class ModelUtilities
                             -1,
                             false,
                             false,
-                            false,
+                            LocationOption.TO_SAVED_LOCATION,
                             new int[]{0, 0});
 
                     SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true, false, SelectionCommand.SELECT_ONLY));

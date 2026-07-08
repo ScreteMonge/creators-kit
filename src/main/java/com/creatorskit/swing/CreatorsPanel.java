@@ -2,6 +2,7 @@ package com.creatorskit.swing;
 
 import com.creatorskit.CKObject;
 import com.creatorskit.CreatorsConfig;
+import com.creatorskit.hotkeymanager.LocationOption;
 import com.creatorskit.programming.AnimationType;
 import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.saves.CharacterSave;
@@ -242,7 +243,7 @@ public class CreatorsPanel extends PluginPanel
                 new KeyFrame[KeyFrameType.getTotalFrameTypes()][0],
                 KeyFrameType.createDefaultSummary(),
                 getRandomColor(),
-                false, null, null, -1, false, false, false, new int[]{0, 0});
+                false, null, null, -1, false, false, LocationOption.TO_SAVED_LOCATION, new int[]{0, 0});
     }
 
     public Character createCharacter(
@@ -264,7 +265,7 @@ public class CreatorsPanel extends PluginPanel
                               int plane,
                               boolean inPOH,
                               boolean transplant,
-                              boolean setHoveredLocation,
+                              LocationOption locationOption,
                               int[] diff)
     {
         ObjectPanel objectPanel = new ObjectPanel();
@@ -507,11 +508,11 @@ public class CreatorsPanel extends PluginPanel
         {
             if ((e.getModifiers() & ActionEvent.CTRL_MASK) != 0)
             {
-                getPlugin().getHotKeyManager().onDuplicate(false);
+                getPlugin().getHotKeyManager().onDuplicate(LocationOption.TO_SAVED_LOCATION);
                 return;
             }
 
-            onDuplicatePressed(character, false, new int[]{0, 0}, SelectionCommand.SELECT_ONLY);
+            onDuplicatePressed(character, LocationOption.TO_SAVED_LOCATION, new int[]{0, 0}, SelectionCommand.SELECT_ONLY);
         });
 
         objectPanel.addMouseListener(new MouseAdapter()
@@ -609,7 +610,7 @@ public class CreatorsPanel extends PluginPanel
                 animationSpinner
         );
 
-        character.setupRLObject(client, clientThread, getToolBox().getProgrammer(), random, config.randomizeStartFrame(), setHoveredLocation, transplant, diff);
+        character.setupRLObject(client, clientThread, getToolBox().getProgrammer(), random, config.randomizeStartFrame(), locationOption, transplant, diff);
         plugin.getCharacters().add(character);
 
         comboBoxes.add(modelComboBox);
@@ -804,7 +805,7 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
-    public void onDuplicatePressed(Character character, boolean setLocation, int[] diff, SelectionCommand selectionCommand)
+    public void onDuplicatePressed(Character character, LocationOption locationOption, int[] diff, SelectionCommand selectionCommand)
     {
         String newName = character.getName();
         Matcher matcher = pattern.matcher(newName);
@@ -847,7 +848,7 @@ public class CreatorsPanel extends PluginPanel
                 character.getInstancedPlane(),
                 character.isInPOH(),
                 true,
-                setLocation,
+                locationOption,
                 diff);
 
         SwingUtilities.invokeLater(() -> addPanel(parentPanel, c, true, false, selectionCommand));
@@ -1931,7 +1932,7 @@ public class CreatorsPanel extends PluginPanel
                                 save.getInstancedPlane(),
                                 save.isInInstance(),
                                 false,
-                                false,
+                                LocationOption.TO_SAVED_LOCATION,
                                 new int[]{0, 0});
 
                         SwingUtilities.invokeLater(() -> addPanel(ParentPanel.SIDE_PANEL, character, true, false, SelectionCommand.SELECT_ONLY));
@@ -2109,7 +2110,7 @@ public class CreatorsPanel extends PluginPanel
                     save.getInstancedPlane(),
                     save.isInInstance(),
                     false,
-                    false,
+                    LocationOption.TO_SAVED_LOCATION,
                     new int[]{0, 0});
 
             addPanel(parentPanel, character, node, false, false, SelectionCommand.SELECT_ONLY);

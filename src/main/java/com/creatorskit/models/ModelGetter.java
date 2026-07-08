@@ -4,6 +4,7 @@ import com.creatorskit.Character;
 import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.CKObject;
+import com.creatorskit.hotkeymanager.LocationOption;
 import com.creatorskit.models.datatypes.NPCData;
 import com.creatorskit.models.datatypes.PlayerAnimationType;
 import com.creatorskit.models.datatypes.WeaponAnimData;
@@ -620,7 +621,7 @@ public class ModelGetter
                         -1,
                         false,
                         false,
-                        false,
+                        LocationOption.TO_SAVED_LOCATION,
                         new int[]{0, 0});
 
                 SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true, false, SelectionCommand.SELECT_ONLY));
@@ -1676,7 +1677,7 @@ public class ModelGetter
                     -1,
                     false,
                     false,
-                    false,
+                    LocationOption.TO_SAVED_LOCATION,
                     new int[]{0, 0});
 
             SwingUtilities.invokeLater(() -> creatorsPanel.addPanel(ParentPanel.SIDE_PANEL, character, true, false, SelectionCommand.SELECT_ONLY));
