@@ -500,13 +500,13 @@ public class CreatorsPanel extends PluginPanel
             }
         });
 
-        switchButton.addActionListener(e -> onSwitchButtonPressed((e.getModifiers() & ActionEvent.CTRL_MASK) != 0, character));
+        switchButton.addActionListener(e -> onSwitchButtonPressed((e.getModifiers() & ActionEvent.CTRL_MASK) != 0 && selectionManager.contains(character), character));
 
-        deleteButton.addActionListener(e -> onDeleteButtonPressed((e.getModifiers() & ActionEvent.CTRL_MASK) != 0, character));
+        deleteButton.addActionListener(e -> onDeleteButtonPressed((e.getModifiers() & ActionEvent.CTRL_MASK) != 0 && selectionManager.contains(character), character));
 
         duplicateButton.addActionListener(e ->
         {
-            if ((e.getModifiers() & ActionEvent.CTRL_MASK) != 0)
+            if ((e.getModifiers() & ActionEvent.CTRL_MASK) != 0 && selectionManager.contains(character))
             {
                 getPlugin().getHotKeyManager().onDuplicate(LocationOption.TO_SAVED_LOCATION);
                 return;
@@ -643,7 +643,7 @@ public class CreatorsPanel extends PluginPanel
         addSelectListeners(objectPanel, character, objectPanel, true);
         addSelectListeners(textField, character, objectPanel, true);
         addSelectListeners(topButtonsPanel, character, objectPanel, true);
-        addSelectListeners(switchButton, character, objectPanel, true);
+        addSelectListeners(switchButton, character, objectPanel, false);
         addSelectListeners(duplicateButton, character, objectPanel, false);
         addSelectListeners(deleteButton, character, objectPanel, false);
         addSelectListeners(modelButton, character, objectPanel, true);
