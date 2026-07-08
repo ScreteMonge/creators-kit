@@ -557,6 +557,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				}
 
 				arrow.cloneVertices().rotateY180Ccw().scale(256, 256, 256);
+                Arrays.fill(arrow.getVerticesY(), -5);
+
 				ModelData merge = client.mergeModels(arrow, transparent);
 				merge.cloneTransparencies();
 				byte[] transparencies = merge.getFaceTransparencies();
