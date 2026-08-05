@@ -1131,7 +1131,7 @@ public class CreatorsPanel extends PluginPanel
     {
         if (selectionManager.getSelectionSize() > 1 && selectionManager.contains(source))
         {
-            return selectionManager.getSelected();
+            return new HashSet<>(selectionManager.getSelected());
         }
         return Collections.singleton(source);
     }
