@@ -349,6 +349,7 @@ public class TransmogPanel extends JPanel
                 newTransmog.setHasAnimKeyFrame(false);
                 newTransmog.setActive(true);
                 newTransmog.setModel(customModel.getModel());
+                newTransmog.setRenderMode(customModel.getComp().getRenderMode());
                 newTransmog.setRadius(radius);
                 newTransmog.setupAnimController(AnimationType.ACTIVE, 0);
                 newTransmog.setupAnimController(AnimationType.POSE, 0);
@@ -380,6 +381,7 @@ public class TransmogPanel extends JPanel
         plugin.setTransmogModel(customModel);
         transmogLabel.setText(customModel.getComp().getName());
         transmog.setModel(customModel.getModel());
+        transmog.setRenderMode(customModel.getComp().getRenderMode());
         transmog.setRadius(radius);
     }
 

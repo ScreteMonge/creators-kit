@@ -198,7 +198,7 @@ public class ModelImporter
         if (model == null)
             return;
 
-        CustomModelComp comp = new CustomModelComp(CustomModelType.BLENDER, -1, null, null, null, blenderModel, cl, false, name);
+        CustomModelComp comp = new CustomModelComp(CustomModelType.BLENDER, -1, null, null, null, blenderModel, Renderable.RENDERMODE_SORTED, cl, false, name);
         CustomModel customModel = new CustomModel(model, comp);
         modelUtilities.addCustomModels(new CustomModel[]{customModel}, false);
     }

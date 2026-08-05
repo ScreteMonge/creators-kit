@@ -25,6 +25,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.Model;
+import net.runelite.api.Renderable;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.RuneLite;
@@ -610,7 +611,13 @@ public class CreatorsPanel extends PluginPanel
                 animationSpinner
         );
 
-        character.setupRLObject(client, clientThread, getToolBox().getProgrammer(), random, config.randomizeStartFrame(), locationOption, transplant, diff);
+        int renderMode = Renderable.RENDERMODE_DEFAULT;
+        if (customModeActive && customModel != null)
+        {
+            renderMode = customModel.getComp().getRenderMode();
+        }
+
+        character.setupRLObject(client, clientThread, getToolBox().getProgrammer(), random, config.randomizeStartFrame(), locationOption, transplant, diff, renderMode);
         plugin.getCharacters().add(character);
 
         comboBoxes.add(modelComboBox);
@@ -1834,6 +1841,24 @@ public class CreatorsPanel extends PluginPanel
             Model model;
             CustomModel customModel;
             ModelStats[] modelStats;
+
+            //Compatibility check for version < 2.2.1
+            if (comp.getRenderMode() == null)
+            {
+                int renderMode = Renderable.RENDERMODE_DEFAULT;
+                CustomModelType type = comp.getType();
+                switch (type)
+                {
+                    case CACHE_PLAYER:
+                    case CACHE_NPC:
+                    case FORGED:
+                    case BLENDER:
+                        renderMode = Renderable.RENDERMODE_SORTED_NO_DEPTH;
+                        break;
+                }
+
+                comp.setRenderMode(renderMode);
+            }
 
             switch (comp.getType())
             {

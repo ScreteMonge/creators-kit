@@ -15,6 +15,7 @@ public class CustomModelComp
     private int[] kitRecolours;
     private DetailedModel[] detailedModels;
     private BlenderModel blenderModel;
+    private Integer renderMode;
     private CustomLighting customLighting;
     private boolean priority;
     private String name;

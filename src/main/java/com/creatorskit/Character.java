@@ -122,7 +122,7 @@ public class Character
         }
     }
 
-    public void setupRLObject(Client client, ClientThread clientThread, Programmer programmer, Random random, boolean randomizeStartFrame, LocationOption locationOption, boolean transplant, int[] diff)
+    public void setupRLObject(Client client, ClientThread clientThread, Programmer programmer, Random random, boolean randomizeStartFrame, LocationOption locationOption, boolean transplant, int[] diff, int renderMode)
     {
         clientThread.invoke(() ->
         {
@@ -130,6 +130,7 @@ public class Character
 
             ckObject.setRadius((int) radiusSpinner.getValue());
             ckObject.setOrientation((int) orientationSpinner.getValue());
+            ckObject.setRenderMode(renderMode);
 
             resetToBaseModel(client, clientThread);
             setAnimation(client, random, AnimationType.ACTIVE, (int) animationSpinner.getValue(), (int) animationFrameSpinner.getValue(), randomizeStartFrame, true);
@@ -376,9 +377,20 @@ public class Character
 
         clientThread.invokeLater(() -> {
             Model model;
+            int renderMode = Renderable.RENDERMODE_DEFAULT;
             if (modelMode)
             {
-                model = storedModel == null ? client.loadModel(29757) : storedModel.getModel();
+                boolean storedModelExists = storedModel != null;
+                if (storedModelExists)
+                {
+                    model = storedModel.getModel();
+                    renderMode = storedModel.getComp().getRenderMode();
+                }
+                else
+                {
+                    int chinchompa = 29757;
+                    model = client.loadModel(chinchompa);
+                }
             }
             else
             {
@@ -386,6 +398,7 @@ public class Character
             }
 
             ckObject.setModel(model);
+            ckObject.setRenderMode(renderMode);
             objectPanel.updateImage(model);
         });
     }

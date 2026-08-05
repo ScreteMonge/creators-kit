@@ -618,6 +618,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 
 		Model model;
+		int renderMode = Renderable.RENDERMODE_DEFAULT;
 		if (mousePressed && previewArrow != null && allowArrow)
 		{
 			model = previewArrow;
@@ -628,11 +629,14 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			{
 				if (primary.getStoredModel() == null)
 				{
-					model = client.loadModel(29757);
+					int chinchompa = 29757;
+					model = client.loadModel(chinchompa);
 				}
 				else
 				{
-					model = primary.getStoredModel().getModel();
+					CustomModel customModel = primary.getStoredModel();
+					model = customModel.getModel();
+					renderMode = customModel.getComp().getRenderMode();
 				}
 			}
 			else
@@ -675,6 +679,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		}
 
 		previewObject.setModel(model);
+		previewObject.setRenderMode(renderMode);
 		previewObject.setOrientation((int) orientation);
 		previewObject.setAnimation(AnimationType.ACTIVE, animId);
 		previewObject.setAnimationFrame(AnimationType.ACTIVE, ckObject.getAnimationFrame(AnimationType.ACTIVE), random, false,true);

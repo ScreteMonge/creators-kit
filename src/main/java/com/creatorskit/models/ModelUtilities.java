@@ -17,6 +17,7 @@ import com.google.gson.Gson;
 import net.runelite.api.Client;
 import net.runelite.api.Model;
 import net.runelite.api.ModelData;
+import net.runelite.api.Renderable;
 import net.runelite.client.callback.ClientThread;
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -317,6 +318,7 @@ public class ModelUtilities
         {
             ModelStats[] modelStats;
             LightingStyle ls;
+            int renderMode = Renderable.RENDERMODE_DEFAULT;
 
             switch (type)
             {
@@ -347,7 +349,7 @@ public class ModelUtilities
             }
 
             CustomLighting cl = CustomLighting.fromLightingStyle(ls);
-            CustomModelComp comp = new CustomModelComp(type, id, modelStats, null, null, null, cl, false, name);
+            CustomModelComp comp = new CustomModelComp(type, id, modelStats, null, null, null, renderMode, cl, false, name);
 
             clientThread.invokeLater(() ->
             {
@@ -517,6 +519,21 @@ public class ModelUtilities
             Reader reader = Files.newBufferedReader(file.toPath());
             CustomModelComp comp = gson.fromJson(reader, CustomModelComp.class);
 
+            if (comp.getRenderMode() == null)
+            {
+                int renderMode = Renderable.RENDERMODE_DEFAULT;
+                CustomModelType type = comp.getType();
+                switch (type)
+                {
+                    case CACHE_PLAYER:
+                    case BLENDER:
+                        renderMode = Renderable.RENDERMODE_SORTED_NO_DEPTH;
+                        break;
+                }
+
+                comp.setRenderMode(renderMode);
+            }
+
             SwingUtilities.invokeLater(() ->
             {
                 for (DetailedModel detailedModel : comp.getDetailedModels())
@@ -559,6 +576,21 @@ public class ModelUtilities
         {
             Reader reader = Files.newBufferedReader(file.toPath());
             CustomModelComp comp = gson.fromJson(reader, CustomModelComp.class);
+
+            if (comp.getRenderMode() == null)
+            {
+                int renderMode = Renderable.RENDERMODE_DEFAULT;
+                CustomModelType type = comp.getType();
+                switch (type)
+                {
+                    case CACHE_PLAYER:
+                    case BLENDER:
+                        renderMode = Renderable.RENDERMODE_SORTED_NO_DEPTH;
+                }
+
+                comp.setRenderMode(renderMode);
+            }
+
             clientThread.invokeLater(() ->
             {
                 CustomLighting cl = comp.getCustomLighting();
@@ -596,6 +628,20 @@ public class ModelUtilities
                 {
                     detailedModels = creatorsPanel.getModelOrganizer().modelToDetailedPanels(comp);
                     comp.setDetailedModels(detailedModels);
+                }
+
+                if (comp.getRenderMode() == null)
+                {
+                    int renderMode = Renderable.RENDERMODE_DEFAULT;
+                    CustomModelType type = comp.getType();
+                    switch (type)
+                    {
+                        case CACHE_PLAYER:
+                        case BLENDER:
+                            renderMode = Renderable.RENDERMODE_SORTED_NO_DEPTH;
+                    }
+
+                    comp.setRenderMode(renderMode);
                 }
             }
 

@@ -410,8 +410,7 @@ public class ModelGetter
                 i++;
             }
         }
-
-        handleStoreOptions(modelStats, menuOption, CustomModelType.CACHE_NPC, name, new int[0], false, LightingStyle.ACTOR, npc.getOrientation(), npc.getPoseAnimation(), akf, spkfs);
+        handleStoreOptions(modelStats, menuOption, CustomModelType.CACHE_NPC, name, new int[0], false, npc.getRenderMode(), LightingStyle.ACTOR, npc.getOrientation(), npc.getPoseAnimation(), akf, spkfs);
     }
 
     public void exportNPC(NPC npc, boolean exportAnimation)
@@ -586,7 +585,7 @@ public class ModelGetter
             clientThread.invokeLater(() ->
             {
                 CustomLighting lighting = modelStats[0].getLighting();
-                CustomModelComp comp = new CustomModelComp(CustomModelType.CACHE_SPOTANIM, spotAnim.getId(), modelStats, null, null, null, lighting, false, name);
+                CustomModelComp comp = new CustomModelComp(CustomModelType.CACHE_SPOTANIM, spotAnim.getId(), modelStats, null, null, null, spotAnim.getRenderMode(), lighting, false, name);
 
                 ModelData modelData = client.loadModelData(modelStats[0].getModelId()).cloneColors().cloneVertices();
                 short[] recolFrom = modelStats[0].getRecolourFrom();
@@ -792,7 +791,7 @@ public class ModelGetter
             }
         }
 
-        handleStoreOptions(modelStats, menuOption, CustomModelType.CACHE_PLAYER, name, colours, true, LightingStyle.ACTOR, player.getOrientation(), animId, akf, spkfs);
+        handleStoreOptions(modelStats, menuOption, CustomModelType.CACHE_PLAYER, name, colours, true, player.getRenderMode(), LightingStyle.ACTOR, player.getOrientation(), animId, akf, spkfs);
     }
 
     public void exportPlayer(Player player, boolean exportAnimation)
@@ -994,11 +993,11 @@ public class ModelGetter
 
         if (dynamicObject)
         {
-            handleStoreOptions(modelStats, menuOption, type, name, new int[0], false, ls, orientation, animationId, null, new SpotAnimKeyFrame[0]);
+            handleStoreOptions(modelStats, menuOption, type, name, new int[0], false, model.getRenderMode(), ls, orientation, animationId, null, new SpotAnimKeyFrame[0]);
             return;
         }
 
-        handleStoreOptions(model, modelStats, menuOption, type, name, new int[0], false, ls, orientation, animationId, null, new SpotAnimKeyFrame[0]);
+        handleStoreOptions(model, modelStats, menuOption, type, name, new int[0], false, model.getRenderMode(), ls, orientation, animationId, null, new SpotAnimKeyFrame[0]);
     }
 
     public void exportObject(String name, int objectId, int modelType, Model model)
@@ -1528,7 +1527,7 @@ public class ModelGetter
             return;
         }
 
-        handleStoreOptions(model, modelStats, menuOption, CustomModelType.CACHE_GROUND_ITEM, name, new int[0], false, LightingStyle.DEFAULT, 0, -1, null, new SpotAnimKeyFrame[0]);
+        handleStoreOptions(model, modelStats, menuOption, CustomModelType.CACHE_GROUND_ITEM, name, new int[0], false, model.getRenderMode(), LightingStyle.DEFAULT, 0, -1, null, new SpotAnimKeyFrame[0]);
     }
 
     public void exportGroundItem(String name, int itemId, Model model)
@@ -1625,27 +1624,27 @@ public class ModelGetter
         });
     }
 
-    private void handleStoreOptions(ModelStats[] modelStats, ModelMenuOption menuOption, CustomModelType customModelType, String name, int[] kitRecolours, boolean player, LightingStyle ls, int orientation, int poseAnimation, AnimationKeyFrame keyFrame, SpotAnimKeyFrame[] spkfs)
+    private void handleStoreOptions(ModelStats[] modelStats, ModelMenuOption menuOption, CustomModelType customModelType, String name, int[] kitRecolours, boolean player, int renderMode, LightingStyle ls, int orientation, int poseAnimation, AnimationKeyFrame keyFrame, SpotAnimKeyFrame[] spkfs)
     {
         clientThread.invokeLater(() ->
         {
             Model model = modelUtilities.constructModelFromCache(modelStats, kitRecolours, player, CustomLighting.fromLightingStyle(ls));
-            store(model, modelStats, menuOption, customModelType, name, kitRecolours, ls, orientation, poseAnimation, keyFrame, spkfs);
+            store(model, modelStats, menuOption, customModelType, name, kitRecolours, renderMode, ls, orientation, poseAnimation, keyFrame, spkfs);
         });
     }
 
-    private void handleStoreOptions(Model model, ModelStats[] modelStats, ModelMenuOption menuOption, CustomModelType customModelType, String name, int[] kitRecolours, boolean player, LightingStyle ls, int orientation, int poseAnimation, AnimationKeyFrame keyFrame, SpotAnimKeyFrame[] spkfs)
+    private void handleStoreOptions(Model model, ModelStats[] modelStats, ModelMenuOption menuOption, CustomModelType customModelType, String name, int[] kitRecolours, boolean player, int renderMode, LightingStyle ls, int orientation, int poseAnimation, AnimationKeyFrame keyFrame, SpotAnimKeyFrame[] spkfs)
     {
         Thread thread = new Thread(() ->
         {
-            store(model, modelStats, menuOption, customModelType, name, kitRecolours, ls, orientation, poseAnimation, keyFrame, spkfs);
+            store(model, modelStats, menuOption, customModelType, name, kitRecolours, renderMode, ls, orientation, poseAnimation, keyFrame, spkfs);
         });
         thread.start();
     }
 
-    private void store(Model model, ModelStats[] modelStats, ModelMenuOption menuOption, CustomModelType customModelType, String name, int[] kitRecolours, LightingStyle ls, int orientation, int poseAnimation, AnimationKeyFrame keyFrame, SpotAnimKeyFrame[] spkfs)
+    private void store(Model model, ModelStats[] modelStats, ModelMenuOption menuOption, CustomModelType customModelType, String name, int[] kitRecolours, int renderMode, LightingStyle ls, int orientation, int poseAnimation, AnimationKeyFrame keyFrame, SpotAnimKeyFrame[] spkfs)
     {
-        CustomModelComp comp = new CustomModelComp(customModelType, 7699, modelStats, kitRecolours, null, null, CustomLighting.fromLightingStyle(ls), false, name);
+        CustomModelComp comp = new CustomModelComp(customModelType, 7699, modelStats, kitRecolours, null, null, renderMode, CustomLighting.fromLightingStyle(ls), false, name);
         CustomModel customModel = new CustomModel(model, comp);
         modelUtilities.addCustomModels(new CustomModel[]{customModel}, false);
         plugin.sendChatMessage("Model stored: " + name);

@@ -5,11 +5,13 @@ import com.creatorskit.models.*;
 import com.creatorskit.swing.StringHandler;
 import com.creatorskit.swing.colours.ColourSwapPanel;
 import com.creatorskit.swing.renderer.RenderPanel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.Model;
 import net.runelite.api.ModelData;
+import net.runelite.api.Renderable;
 import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
@@ -54,9 +56,9 @@ public class ModelAnvil extends JPanel
     private final BufferedImage COPY_COLOURS = ImageUtil.loadImageResource(getClass(), "/Copy_Colours.png");
     private final BufferedImage PASTE_COLOURS = ImageUtil.loadImageResource(getClass(), "/Paste_Colours.png");
     private final Dimension SPINNER_DIMENSION = new Dimension(65, 25);
-    private final Dimension LIGHT_DIMENSION = new Dimension(70, 25);
     @Getter
     private final JSpinner[] lightingSpinners = new JSpinner[5];
+    private final JComboBox<RenderMode> renderBox = new JComboBox<>(RenderMode.values());
     private final JComboBox<LightingStyle> presetComboBox = new JComboBox<>();
     private final JSpinner ambSpinner = new JSpinner(new SpinnerNumberModel(LightingStyle.DEFAULT.getAmbient(), -1000, 1000, 1));
     private final JSpinner conSpinner = new JSpinner(new SpinnerNumberModel(LightingStyle.DEFAULT.getContrast(), 100, 9999, 1));
@@ -148,20 +150,20 @@ public class ModelAnvil extends JPanel
         JPanel settingsPanel = new JPanel();
         settingsPanel.setLayout(new BorderLayout(4, 4));
 
-        JPanel lightsButtonsPanel = new JPanel();
-        lightsButtonsPanel.setLayout(new GridLayout(0, 2, 4, 4));
+        JPanel globalSettings = new JPanel();
+        globalSettings.setLayout(new GridLayout(0, 2, 4, 4));
 
-        JPanel buttonsPanel = new JPanel();
-        buttonsPanel.setLayout(new GridLayout(0, 1, 4, 4));
+        JPanel forgeButtons = new JPanel();
+        forgeButtons.setLayout(new GridLayout(0, 1, 4, 4));
 
-        buttonsPanel.add(forgeButton);
-        buttonsPanel.add(forgeSetButton);
+        forgeButtons.add(forgeButton);
+        forgeButtons.add(forgeSetButton);
 
-        lightsButtonsPanel.add(lightPanel);
-        lightsButtonsPanel.add(buttonsPanel);
+        globalSettings.add(lightPanel);
+        globalSettings.add(forgeButtons);
 
         settingsPanel.add(nameField, BorderLayout.NORTH);
-        settingsPanel.add(lightsButtonsPanel, BorderLayout.CENTER);
+        settingsPanel.add(globalSettings, BorderLayout.CENTER);
 
         rightPanel.add(settingsPanel, BorderLayout.NORTH);
         rightPanel.add(previewPanel, BorderLayout.CENTER);
@@ -175,40 +177,38 @@ public class ModelAnvil extends JPanel
         c.weightx = 1;
         c.weighty = 0;
         c.insets = new Insets(4, 0, 4, 0);
+        c.fill = GridBagConstraints.HORIZONTAL;
 
         c.gridx = 0;
         c.gridy = 0;
         c.gridwidth = 4;
-        JLabel lightingLabel = new JLabel("Lighting Settings", SwingConstants.CENTER);
+        JLabel lightingLabel = new JLabel("Lighting/Render Settings", SwingConstants.CENTER);
         lightingLabel.setFont(FontManager.getRunescapeBoldFont());
         lightPanel.add(lightingLabel, c);
 
         c.gridx = 0;
         c.gridy = 1;
         c.gridwidth = 1;
-        lightPanel.add(new JLabel("Pre ", SwingConstants.RIGHT), c);
+        lightPanel.add(new JLabel("Preset ", SwingConstants.RIGHT), c);
 
         c.gridx = 1;
         c.gridy = 1;
-        presetComboBox.setPreferredSize(LIGHT_DIMENSION);
         lightPanel.add(presetComboBox, c);
 
         c.gridx = 0;
         c.gridy = 2;
-        lightPanel.add(new JLabel("Amb ", SwingConstants.RIGHT), c);
+        lightPanel.add(new JLabel("Ambient ", SwingConstants.RIGHT), c);
 
         c.gridx = 0;
         c.gridy = 3;
-        lightPanel.add(new JLabel("Con ", SwingConstants.RIGHT), c);
+        lightPanel.add(new JLabel("Contrast ", SwingConstants.RIGHT), c);
 
         c.gridx = 1;
         c.gridy = 2;
-        ambSpinner.setPreferredSize(LIGHT_DIMENSION);
         lightPanel.add(ambSpinner, c);
 
         c.gridx = 1;
         c.gridy = 3;
-        conSpinner.setPreferredSize(LIGHT_DIMENSION);
         lightPanel.add(conSpinner, c);
 
         c.gridx = 2;
@@ -225,17 +225,14 @@ public class ModelAnvil extends JPanel
 
         c.gridx = 3;
         c.gridy = 1;
-        lightXSpinner.setPreferredSize(LIGHT_DIMENSION);
         lightPanel.add(lightXSpinner, c);
 
         c.gridx = 3;
         c.gridy = 2;
-        lightYSpinner.setPreferredSize(LIGHT_DIMENSION);
         lightPanel.add(lightYSpinner, c);
 
         c.gridx = 3;
         c.gridy = 3;
-        lightZSpinner.setPreferredSize(LIGHT_DIMENSION);
         lightPanel.add(lightZSpinner, c);
 
         lightingSpinners[0] = ambSpinner;
@@ -275,6 +272,17 @@ public class ModelAnvil extends JPanel
             lightingSpinners[3].setValue(preset.getY());
             lightingSpinners[4].setValue(preset.getZ());
         });
+
+        c.gridx = 0;
+        c.gridy = 4;
+        c.gridwidth = 3;
+        JLabel renderMode = new JLabel("Render Mode:");
+        renderMode.setToolTipText("Setting to Player will reduce Z-fighting");
+        lightPanel.add(new JLabel("Render Mode:", SwingConstants.RIGHT), c);
+
+        c.gridx = 3;
+        c.gridy = 4;
+        lightPanel.add(renderBox, c);
     }
 
     private void setupLeftPanel()
@@ -381,7 +389,14 @@ public class ModelAnvil extends JPanel
                     (int) lightingSpinners[3].getValue(),
                     (int) lightingSpinners[4].getValue());
 
-            openSaveDialog(nameField.getText(), priorityCheckBox.isSelected(), LightingStyle.CUSTOM, lighting);
+            int renderMode = Renderable.RENDERMODE_DEFAULT;
+            RenderMode mode = (RenderMode) renderBox.getSelectedItem();
+            if (mode != null)
+            {
+                renderMode = mode.getId();
+            }
+
+            openSaveDialog(nameField.getText(), priorityCheckBox.isSelected(), renderMode, lighting);
         });
     }
 
@@ -996,7 +1011,14 @@ public class ModelAnvil extends JPanel
         if (lighting.getX() == 0 && lighting.getY() == 0 && lighting.getZ() == 0)
             lighting.setZ(1);
 
-        forgeModel(client, nameField, priorityCheckBox.isSelected(), lighting, forgeAndSet);
+        int renderMode = Renderable.RENDERMODE_DEFAULT;
+        RenderMode mode = (RenderMode) renderBox.getSelectedItem();
+        if (mode != null)
+        {
+            renderMode = mode.getId();
+        }
+
+        forgeModel(client, nameField, priorityCheckBox.isSelected(), lighting, renderMode, forgeAndSet);
     }
 
     private CustomLighting getLightingSettings()
@@ -1009,7 +1031,7 @@ public class ModelAnvil extends JPanel
                 (int) lightingSpinners[4].getValue());
     }
 
-    private void forgeModel(Client client, JTextField nameField, boolean setPriority, CustomLighting lighting, boolean forgeAndSet)
+    private void forgeModel(Client client, JTextField nameField, boolean setPriority, CustomLighting lighting, int renderMode, boolean forgeAndSet)
     {
         if (client == null)
         {
@@ -1028,7 +1050,7 @@ public class ModelAnvil extends JPanel
                 return;
             }
 
-            CustomModelComp comp = new CustomModelComp(CustomModelType.FORGED, -1, null, null, detailedModels, null, lighting, setPriority, nameField.getText());
+            CustomModelComp comp = new CustomModelComp(CustomModelType.FORGED, -1, null, null, detailedModels, null, renderMode, lighting, setPriority, nameField.getText());
             CustomModel customModel = new CustomModel(model, comp);
             modelUtilities.addCustomModels(new CustomModel[]{customModel}, forgeAndSet);
         });
@@ -1099,7 +1121,7 @@ public class ModelAnvil extends JPanel
         return detailedModels;
     }
 
-    private void openSaveDialog(String name, boolean priority, LightingStyle lightingStyle, CustomLighting lighting)
+    private void openSaveDialog(String name, boolean priority, int renderMode, CustomLighting lighting)
     {
         File outputDir = MODELS_DIR;
         outputDir.mkdirs();
@@ -1149,17 +1171,17 @@ public class ModelAnvil extends JPanel
             {
                 selectedFile = new File(selectedFile.getPath() + ".json");
             }
-            saveToFile(selectedFile, name, priority, lighting);
+            saveToFile(selectedFile, name, priority, renderMode, lighting);
         }
     }
 
-    public void saveToFile(File file, String name, boolean priority, CustomLighting lighting)
+    public void saveToFile(File file, String name, boolean priority, int renderMode, CustomLighting lighting)
     {
         try {
             FileWriter writer = new FileWriter(file, false);
 
             DetailedModel[] detailedModels = panelsToDetailedModels();
-            CustomModelComp comp = new CustomModelComp(CustomModelType.FORGED, -1, null, null, detailedModels, null, lighting, priority, name);
+            CustomModelComp comp = new CustomModelComp(CustomModelType.FORGED, -1, null, null, detailedModels, null, renderMode, lighting, priority, name);
             String string = plugin.getGson().toJson(comp);
             writer.write(string);
             writer.close();
@@ -1253,5 +1275,23 @@ public class ModelAnvil extends JPanel
         lightXSpinner.setValue(x);
         lightYSpinner.setValue(y);
         lightZSpinner.setValue(z);
+    }
+}
+
+@AllArgsConstructor
+enum RenderMode
+{
+    DEFAULT("Default", Renderable.RENDERMODE_DEFAULT),
+    SORTED_NO_DEPTH("Player", Renderable.RENDERMODE_SORTED_NO_DEPTH)
+    ;
+
+    private String name;
+    @Getter
+    private int id;
+
+    @Override
+    public String toString()
+    {
+        return name;
     }
 }
