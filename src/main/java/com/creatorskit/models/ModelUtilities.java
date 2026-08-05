@@ -526,6 +526,7 @@ public class ModelUtilities
                 switch (type)
                 {
                     case CACHE_PLAYER:
+                    case FORGED:
                     case BLENDER:
                         renderMode = Renderable.RENDERMODE_SORTED_NO_DEPTH;
                         break;
@@ -584,6 +585,7 @@ public class ModelUtilities
                 switch (type)
                 {
                     case CACHE_PLAYER:
+                    case FORGED:
                     case BLENDER:
                         renderMode = Renderable.RENDERMODE_SORTED_NO_DEPTH;
                 }
@@ -637,6 +639,7 @@ public class ModelUtilities
                     switch (type)
                     {
                         case CACHE_PLAYER:
+                        case FORGED:
                         case BLENDER:
                             renderMode = Renderable.RENDERMODE_SORTED_NO_DEPTH;
                     }
