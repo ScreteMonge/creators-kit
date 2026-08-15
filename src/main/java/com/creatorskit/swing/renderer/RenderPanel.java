@@ -129,6 +129,12 @@ public class RenderPanel extends JPanel
         }
 
         ac.setAnimation(animation);
+        if (model == null)
+        {
+            repaint();
+            return;
+        }
+
         Model animated = ac.animate(model);
         updateModelParameters(animated);
         repaint();

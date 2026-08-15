@@ -6,7 +6,7 @@ import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.DataFinder;
 import com.creatorskit.models.datatypes.PlayerAnimationType;
-import com.creatorskit.models.datatypes.SpotanimData;
+import com.creatorskit.models.datatypes.SpotAnimDefinition;
 import com.creatorskit.models.datatypes.WeaponAnimData;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.Programmer;
@@ -735,7 +735,7 @@ public class TimeSheetPanel extends JSplitPane
         runKeyFrameAddActions(characters, keyFrameSets);
     }
 
-    public void addSpotAnimKeyFrameFromCache(SpotanimData spotanimData)
+    public void addSpotAnimKeyFrameFromCache(SpotAnimDefinition spotanimData)
     {
         Character[] characters = new Character[0];
         KeyFrame[][] keyFrameSets = new KeyFrame[0][0];

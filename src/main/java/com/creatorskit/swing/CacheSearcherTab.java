@@ -188,35 +188,35 @@ public class CacheSearcherTab extends JPanel
             {
                 case CACHE_NPC:
                     Object npc = npcTable.getSelectedObject();
-                    if (npc instanceof NPCData)
+                    if (npc instanceof NpcDefinition)
                     {
-                        NPCData data = (NPCData) npc;
+                        NpcDefinition data = (NpcDefinition) npc;
                         updateRenderPanel(CustomModelType.CACHE_NPC, data.getId(), renderAll, modelId, data.getStandingAnimation());
                     }
                     break;
                 case CACHE_OBJECT:
                     Object object = objectTable.getSelectedObject();
-                    if (object instanceof ObjectData)
+                    if (object instanceof ObjectDefinition)
                     {
-                        ObjectData data = (ObjectData) object;
-                        updateRenderPanel(CustomModelType.CACHE_OBJECT, data.getId(), renderAll, modelId, data.getAnimationId());
+                        ObjectDefinition data = (ObjectDefinition) object;
+                        updateRenderPanel(CustomModelType.CACHE_OBJECT, data.getId(), renderAll, modelId, data.getAnimationID());
                     }
                     break;
                 case CACHE_GROUND_ITEM:
                 case CACHE_MAN_WEAR:
                 case CACHE_WOMAN_WEAR:
                     Object item = itemTable.getSelectedObject();
-                    if (item instanceof ItemData)
+                    if (item instanceof ItemDefinition)
                     {
-                        ItemData data = (ItemData) item;
+                        ItemDefinition data = (ItemDefinition) item;
                         updateRenderPanel(selectedType, data.getId(), renderAll, modelId, -1);
                     }
                     break;
                 case CACHE_SPOTANIM:
                     Object spotAnim = spotAnimTable.getSelectedObject();
-                    if (spotAnim instanceof SpotanimData)
+                    if (spotAnim instanceof SpotAnimDefinition)
                     {
-                        SpotanimData data = (SpotanimData) spotAnim;
+                        SpotAnimDefinition data = (SpotAnimDefinition) spotAnim;
                         updateRenderPanel(selectedType, data.getId(), renderAll, modelId, data.getAnimationId());
                     }
                     break;
@@ -523,9 +523,9 @@ public class CacheSearcherTab extends JPanel
         npcTable.getSelectionModel().addListSelectionListener(e ->
         {
             Object o = npcTable.getSelectedObject();
-            if (o instanceof NPCData)
+            if (o instanceof NpcDefinition)
             {
-                NPCData data = (NPCData) o;
+                NpcDefinition data = (NpcDefinition) o;
 
                 idle.setText("Idle: " + data.getStandingAnimation());
                 walk.setText("Walk: " + data.getWalkingAnimation());
@@ -580,12 +580,12 @@ public class CacheSearcherTab extends JPanel
         objectTable.getSelectionModel().addListSelectionListener(e ->
         {
             Object o = objectTable.getSelectedObject();
-            if (o instanceof ObjectData)
+            if (o instanceof ObjectDefinition)
             {
-                ObjectData data = (ObjectData) o;
+                ObjectDefinition data = (ObjectDefinition) o;
 
                 selectedType = CustomModelType.CACHE_OBJECT;
-                updateRenderPanel(CustomModelType.CACHE_OBJECT, data.getId(), true, -1, data.getAnimationId());
+                updateRenderPanel(CustomModelType.CACHE_OBJECT, data.getId(), true, -1, data.getAnimationID());
                 updateModelBreakdownTable(data.getObjectModels());
             }
         });
@@ -639,9 +639,9 @@ public class CacheSearcherTab extends JPanel
             }
 
             Object o = itemTable.getSelectedObject();
-            if (o instanceof ItemData)
+            if (o instanceof ItemDefinition)
             {
-                ItemData data = (ItemData) o;
+                ItemDefinition data = (ItemDefinition) o;
                 int itemId = data.getId();
                 WeaponAnimData weaponAnimData = dataFinder.findWeaponAnimData(itemId);
                 if (weaponAnimData == null)
@@ -698,9 +698,9 @@ public class CacheSearcherTab extends JPanel
         itemTable.getSelectionModel().addListSelectionListener(e ->
         {
             Object o = itemTable.getSelectedObject();
-            if (o instanceof ItemData)
+            if (o instanceof ItemDefinition)
             {
-                ItemData data = (ItemData) o;
+                ItemDefinition data = (ItemDefinition) o;
                 int itemId = data.getId();
 
                 selectedType = (CustomModelType) itemType.getSelectedItem();
@@ -832,9 +832,9 @@ public class CacheSearcherTab extends JPanel
             }
 
             Object o = spotAnimTable.getSelectedObject();
-            if (o instanceof SpotanimData)
+            if (o instanceof SpotAnimDefinition)
             {
-                SpotanimData data = (SpotanimData) o;
+                SpotAnimDefinition data = (SpotAnimDefinition) o;
                 plugin.getCreatorsPanel().getToolBox().getTimeSheetPanel().addSpotAnimKeyFrameFromCache(data);
             }
         });
@@ -842,9 +842,9 @@ public class CacheSearcherTab extends JPanel
         spotAnimTable.getSelectionModel().addListSelectionListener(e ->
         {
             Object o = spotAnimTable.getSelectedObject();
-            if (o instanceof SpotanimData)
+            if (o instanceof SpotAnimDefinition)
             {
-                SpotanimData data = (SpotanimData) o;
+                SpotAnimDefinition data = (SpotAnimDefinition) o;
 
                 selectedType = CustomModelType.CACHE_SPOTANIM;
                 updateRenderPanel(CustomModelType.CACHE_SPOTANIM, data.getId(), true, -1, data.getAnimationId());
@@ -1111,7 +1111,7 @@ public class CacheSearcherTab extends JPanel
 
         if (dataFinder.isDataLoaded(DataFinder.DataType.NPC))
         {
-            List<NPCData> dataList = dataFinder.getNpcData();
+            List<NpcDefinition> dataList = dataFinder.getNpcData();
             List<Object> list = new ArrayList<>(dataList);
             npcTable.initialize(list);
         }
@@ -1119,7 +1119,7 @@ public class CacheSearcherTab extends JPanel
         {
             dataFinder.addLoadCallback(DataFinder.DataType.NPC, () ->
             {
-                List<NPCData> dataList = dataFinder.getNpcData();
+                List<NpcDefinition> dataList = dataFinder.getNpcData();
                 List<Object> list = new ArrayList<>(dataList);
                 npcTable.initialize(list);
             });
@@ -1205,7 +1205,7 @@ public class CacheSearcherTab extends JPanel
 
         if (dataFinder.isDataLoaded(DataFinder.DataType.OBJECT))
         {
-            List<ObjectData> dataList = dataFinder.getObjectData();
+            List<ObjectDefinition> dataList = dataFinder.getObjectData();
             List<Object> list = new ArrayList<>(dataList);
             objectTable.initialize(list);
         }
@@ -1213,7 +1213,7 @@ public class CacheSearcherTab extends JPanel
         {
             dataFinder.addLoadCallback(DataFinder.DataType.OBJECT, () ->
             {
-                List<ObjectData> dataList = dataFinder.getObjectData();
+                List<ObjectDefinition> dataList = dataFinder.getObjectData();
                 List<Object> list = new ArrayList<>(dataList);
                 objectTable.initialize(list);
             });
@@ -1273,10 +1273,12 @@ public class CacheSearcherTab extends JPanel
 
         itemType.addItemListener(e ->
         {
+            selectedType = (CustomModelType) itemType.getSelectedItem();
+
             Object o = itemTable.getSelectedObject();
-            if (o instanceof ItemData)
+            if (o instanceof ItemDefinition)
             {
-                ItemData data = (ItemData) o;
+                ItemDefinition data = (ItemDefinition) o;
 
                 CustomModelType type = (CustomModelType) itemType.getSelectedItem();
                 updateRenderPanel(type, data.getId(), true, -1, -1);
@@ -1354,7 +1356,7 @@ public class CacheSearcherTab extends JPanel
 
         if (dataFinder.isDataLoaded(DataFinder.DataType.ITEM))
         {
-            List<ItemData> dataList = dataFinder.getItemData();
+            List<ItemDefinition> dataList = dataFinder.getItemData();
             List<Object> list = new ArrayList<>(dataList);
             itemTable.initialize(list);
         }
@@ -1362,7 +1364,7 @@ public class CacheSearcherTab extends JPanel
         {
             dataFinder.addLoadCallback(DataFinder.DataType.ITEM, () ->
             {
-                List<ItemData> dataList = dataFinder.getItemData();
+                List<ItemDefinition> dataList = dataFinder.getItemData();
                 List<Object> list = new ArrayList<>(dataList);
                 itemTable.initialize(list);
             });
@@ -1448,7 +1450,7 @@ public class CacheSearcherTab extends JPanel
 
         if (dataFinder.isDataLoaded(DataFinder.DataType.SPOTANIM))
         {
-            List<SpotanimData> dataList = dataFinder.getSpotanimData();
+            List<SpotAnimDefinition> dataList = dataFinder.getSpotanimData();
             List<Object> list = new ArrayList<>(dataList);
             spotAnimTable.initialize(list);
         }
@@ -1456,7 +1458,7 @@ public class CacheSearcherTab extends JPanel
         {
             dataFinder.addLoadCallback(DataFinder.DataType.SPOTANIM, () ->
             {
-                List<SpotanimData> dataList = dataFinder.getSpotanimData();
+                List<SpotAnimDefinition> dataList = dataFinder.getSpotanimData();
                 List<Object> list = new ArrayList<>(dataList);
                 spotAnimTable.initialize(list);
             });
@@ -1678,9 +1680,9 @@ public class CacheSearcherTab extends JPanel
         {
             case CACHE_NPC:
                 Object npc = npcTable.getSelectedObject();
-                if (npc instanceof NPCData)
+                if (npc instanceof NpcDefinition)
                 {
-                    NPCData data = (NPCData) npc;
+                    NpcDefinition data = (NpcDefinition) npc;
                     name = data.getName();
                     id = data.getId();
                     size = data.getSize();
@@ -1708,12 +1710,12 @@ public class CacheSearcherTab extends JPanel
                 break;
             case CACHE_OBJECT:
                 Object obj = objectTable.getSelectedObject();
-                if (obj instanceof ObjectData)
+                if (obj instanceof ObjectDefinition)
                 {
-                    ObjectData data = (ObjectData) obj;
+                    ObjectDefinition data = (ObjectDefinition) obj;
                     name = data.getName();
                     id = data.getId();
-                    animId = data.getAnimationId();
+                    animId = data.getAnimationID();
 
                     if (addAnimationKeyframe)
                     {
@@ -1724,7 +1726,7 @@ public class CacheSearcherTab extends JPanel
                                 0,
                                 false,
                                 false,
-                                data.getAnimationId(),
+                                data.getAnimationID(),
                                 -1,
                                 -1,
                                 -1,
@@ -1739,18 +1741,18 @@ public class CacheSearcherTab extends JPanel
             case CACHE_MAN_WEAR:
             case CACHE_WOMAN_WEAR:
                 Object item = itemTable.getSelectedObject();
-                if (item instanceof ItemData)
+                if (item instanceof ItemDefinition)
                 {
-                    ItemData data = (ItemData) item;
+                    ItemDefinition data = (ItemDefinition) item;
                     name = data.getName();
                     id = data.getId();
                 }
                 break;
             case CACHE_SPOTANIM:
                 Object sa = spotAnimTable.getSelectedObject();
-                if (sa instanceof SpotanimData)
+                if (sa instanceof SpotAnimDefinition)
                 {
-                    SpotanimData data = (SpotanimData) sa;
+                    SpotAnimDefinition data = (SpotAnimDefinition) sa;
                     name = data.getName();
                     id = data.getId();
                     animId = data.getAnimationId();
@@ -1802,17 +1804,17 @@ public class CacheSearcherTab extends JPanel
         {
             case CACHE_NPC:
                 Object npc = npcTable.getSelectedObject();
-                if (npc instanceof NPCData)
+                if (npc instanceof NpcDefinition)
                 {
-                    NPCData data = (NPCData) npc;
+                    NpcDefinition data = (NpcDefinition) npc;
                     id = data.getId();
                 }
                 break;
             case CACHE_OBJECT:
                 Object obj = objectTable.getSelectedObject();
-                if (obj instanceof ObjectData)
+                if (obj instanceof ObjectDefinition)
                 {
-                    ObjectData data = (ObjectData) obj;
+                    ObjectDefinition data = (ObjectDefinition) obj;
                     id = data.getId();
                 }
                 break;
@@ -1820,17 +1822,17 @@ public class CacheSearcherTab extends JPanel
             case CACHE_MAN_WEAR:
             case CACHE_WOMAN_WEAR:
                 Object item = itemTable.getSelectedObject();
-                if (item instanceof ItemData)
+                if (item instanceof ItemDefinition)
                 {
-                    ItemData data = (ItemData) item;
+                    ItemDefinition data = (ItemDefinition) item;
                     id = data.getId();
                 }
                 break;
             case CACHE_SPOTANIM:
                 Object sa = spotAnimTable.getSelectedObject();
-                if (sa instanceof SpotanimData)
+                if (sa instanceof SpotAnimDefinition)
                 {
-                    SpotanimData data = (SpotanimData) sa;
+                    SpotAnimDefinition data = (SpotAnimDefinition) sa;
                     id = data.getId();
                 }
         }
@@ -1876,18 +1878,18 @@ public class CacheSearcherTab extends JPanel
         {
             case CACHE_NPC:
                 Object npc = npcTable.getSelectedObject();
-                if (npc instanceof NPCData)
+                if (npc instanceof NpcDefinition)
                 {
-                    NPCData data = (NPCData) npc;
+                    NpcDefinition data = (NpcDefinition) npc;
                     name = data.getName();
                     id = data.getId();
                 }
                 break;
             case CACHE_OBJECT:
                 Object obj = objectTable.getSelectedObject();
-                if (obj instanceof ObjectData)
+                if (obj instanceof ObjectDefinition)
                 {
-                    ObjectData data = (ObjectData) obj;
+                    ObjectDefinition data = (ObjectDefinition) obj;
                     name = data.getName();
                     id = data.getId();
                 }
@@ -1896,18 +1898,18 @@ public class CacheSearcherTab extends JPanel
             case CACHE_MAN_WEAR:
             case CACHE_WOMAN_WEAR:
                 Object item = itemTable.getSelectedObject();
-                if (item instanceof ItemData)
+                if (item instanceof ItemDefinition)
                 {
-                    ItemData data = (ItemData) item;
+                    ItemDefinition data = (ItemDefinition) item;
                     name = data.getName();
                     id = data.getId();
                 }
                 break;
             case CACHE_SPOTANIM:
                 Object sa = spotAnimTable.getSelectedObject();
-                if (sa instanceof SpotanimData)
+                if (sa instanceof SpotAnimDefinition)
                 {
-                    SpotanimData data = (SpotanimData) sa;
+                    SpotAnimDefinition data = (SpotAnimDefinition) sa;
                     name = data.getName();
                     id = data.getId();
                 }

@@ -5,7 +5,7 @@ import com.creatorskit.CreatorsConfig;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.CKObject;
 import com.creatorskit.hotkeymanager.LocationOption;
-import com.creatorskit.models.datatypes.NPCData;
+import com.creatorskit.models.datatypes.NpcDefinition;
 import com.creatorskit.models.datatypes.PlayerAnimationType;
 import com.creatorskit.models.datatypes.WeaponAnimData;
 import com.creatorskit.models.exporters.ModelExporter;
@@ -332,27 +332,11 @@ public class ModelGetter
 
     public void storeNPC(NPC npc, ModelMenuOption menuOption)
     {
-        NPCComposition composition = npc.getTransformedComposition();
-        NpcOverrides overrides = npc.getModelOverrides();
-
-        ModelStats[] modelStats;
-        if (overrides != null)
-        {
-            modelStats = dataFinder.findModelsForNPC(npc.getId(), overrides);
-        }
-        else if (composition != null)
-        {
-            modelStats = dataFinder.findModelsForNPC(npc.getId(), composition);
-        }
-        else
-        {
-            modelStats = dataFinder.findModelsForNPC(npc.getId());
-        }
-
+        ModelStats[] modelStats = dataFinder.findModelsForNPC(npc);
         if (modelStats == null || modelStats.length == 0)
         {
-            plugin.sendChatMessage("Could not find this NPC in the cache.");
-            plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+            plugin.sendChatMessage("Could not find any models for this Npc in the cache.");
+            plugin.sendChatMessage("If this should have associated models, please let ScreteMonge know.");
             return;
         }
 
@@ -368,7 +352,7 @@ public class ModelGetter
         SpotAnimKeyFrame[] spkfs = new SpotAnimKeyFrame[0];
         if (menuOption == ModelMenuOption.STORE_ADD_ANIMATE)
         {
-            NPCData npcData = dataFinder.findNPCData(npc);
+            NpcDefinition npcData = dataFinder.findNPCData(npc);
             if (npcData != null)
             {
                 akf = new AnimationKeyFrame(
@@ -441,22 +425,11 @@ public class ModelGetter
             {
                 Thread thread = new Thread(() ->
                 {
-                    NPCComposition composition = npc.getTransformedComposition();
-
-                    ModelStats[] modelStats;
-                    if (composition == null)
-                    {
-                        modelStats = dataFinder.findModelsForNPC(npc.getId());
-                    }
-                    else
-                    {
-                        modelStats = dataFinder.findModelsForNPC(npc.getId(), composition);
-                    }
-
+                    ModelStats[] modelStats = dataFinder.findModelsForNPC(npc);
                     if (modelStats == null || modelStats.length == 0)
                     {
-                        plugin.sendChatMessage("Could not find this NPC in the cache.");
-                        plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                        plugin.sendChatMessage("Could not find any models for this NPC in the cache.");
+                        plugin.sendChatMessage("If this should have associated models, please let ScreteMonge know.");
                         return;
                     }
 
@@ -528,8 +501,8 @@ public class ModelGetter
                 ModelStats[] modelStats = dataFinder.findModelsForNPC(npcId);
                 if (modelStats == null || modelStats.length == 0)
                 {
-                    plugin.sendChatMessage("Could not find this NPC in the cache.");
-                    plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                    plugin.sendChatMessage("Could not find any models for this NPC in the cache.");
+                    plugin.sendChatMessage("If this should have associated models, please let ScreteMonge know.");
                     return;
                 }
 
@@ -576,8 +549,8 @@ public class ModelGetter
             ModelStats[] modelStats = dataFinder.findSpotAnim(spotAnim.getId());
             if (modelStats == null || modelStats.length == 0)
             {
-                plugin.sendChatMessage("Could not find this Spotanim in the cache.");
-                plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                plugin.sendChatMessage("Could not find any models for this SpotAnim in the cache.");
+                plugin.sendChatMessage("If this should have associated models, please let ScreteMonge know.");
                 continue;
             }
 
@@ -699,13 +672,17 @@ public class ModelGetter
             animId = player.getPoseAnimation();
         }
 
+        Animation animation = client.loadAnimation(animId);
+        int leftHandItem = animation.getLeftHandItem();
+        int rightHandItem = animation.getRightHandItem();
+
         String name = player.getName();
         if (player == client.getLocalPlayer())
         {
             name = "Local Player";
         }
 
-        ModelStats[] modelStats = dataFinder.findModelsForPlayer(false, comp.getGender() == 0, items, animId, fSpotAnims);
+        ModelStats[] modelStats = dataFinder.findModelsForPlayer(false, comp.getGender() == 0, items, animId, leftHandItem, rightHandItem, fSpotAnims);
 
         if (menuOption == ModelMenuOption.ANVIL)
         {
@@ -819,6 +796,10 @@ public class ModelGetter
             player.setPoseAnimation(-1);
         }
 
+        Animation animation = client.loadAnimation(finalAnimId);
+        int leftHandItem = animation.getLeftHandItem();
+        int rightHandItem = animation.getRightHandItem();
+
         Model model = player.getModel();
         int vCount = model.getVerticesCount();
         int fCount = model.getFaceCount();
@@ -882,7 +863,7 @@ public class ModelGetter
             {
                 Thread thread = new Thread(() ->
                 {
-                    ModelStats[] modelStats = dataFinder.findModelsForPlayer(false, comp.getGender() == 0, items, finalAnimId, fSpotAnims);
+                    ModelStats[] modelStats = dataFinder.findModelsForPlayer(false, comp.getGender() == 0, items, finalAnimId, leftHandItem, rightHandItem, fSpotAnims);
                     clientThread.invokeLater(() ->
                     {
                         initiateAnimationExport(finalAnimId, finalName, bm, modelStats, comp.getColors(), true, CustomLighting.fromLightingStyle(LightingStyle.ACTOR));
@@ -899,7 +880,7 @@ public class ModelGetter
         {
             Thread thread = new Thread(() ->
             {
-                ModelStats[] modelStats = dataFinder.findModelsForPlayer(false, comp.getGender() == 0, items, finalAnimId, fSpotAnims);
+                ModelStats[] modelStats = dataFinder.findModelsForPlayer(false, comp.getGender() == 0, items, finalAnimId, leftHandItem, rightHandItem, fSpotAnims);
 
                 clientThread.invokeLater(() ->
                 {
@@ -980,8 +961,8 @@ public class ModelGetter
         ModelStats[] modelStats = dataFinder.findModelsForObject(objectId, modelType, ls, false);
         if (modelStats == null || modelStats.length == 0)
         {
-            plugin.sendChatMessage("Could not find this Object in the cache.");
-            plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+            plugin.sendChatMessage("Could not find any models for this Object in the cache.");
+            plugin.sendChatMessage("If this should have associated models, please let ScreteMonge know.");
             return;
         }
 
@@ -1056,8 +1037,8 @@ public class ModelGetter
                 ModelStats[] modelStats = dataFinder.findModelsForObject(objectId, modelType, LightingStyle.DEFAULT, false);
                 if (modelStats == null || modelStats.length == 0)
                 {
-                    plugin.sendChatMessage("Could not find this Object in the cache.");
-                    plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                    plugin.sendChatMessage("Could not find any models for this Object in the cache.");
+                    plugin.sendChatMessage("If this should have associated models, please let ScreteMonge know.");
                     return;
                 }
 
@@ -1144,8 +1125,8 @@ public class ModelGetter
                                 ModelStats[] modelStats = dataFinder.findModelsForObject(objectId, modelType, LightingStyle.DYNAMIC, false);
                                 if (modelStats == null || modelStats.length == 0)
                                 {
-                                    plugin.sendChatMessage("Could not find this Object in the cache.");
-                                    plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                                    plugin.sendChatMessage("Could not find any models for this Object in the cache.");
+                                    plugin.sendChatMessage("If this should have associated models, please let ScreteMonge know.");
                                     return;
                                 }
 
@@ -1168,8 +1149,8 @@ public class ModelGetter
                             ModelStats[] modelStats = dataFinder.findModelsForObject(objectId, modelType, LightingStyle.DYNAMIC, false);
                             if (modelStats == null || modelStats.length == 0)
                             {
-                                plugin.sendChatMessage("Could not find this Object in the cache.");
-                                plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                                plugin.sendChatMessage("Could not find any models for this Object in the cache.");
+                                plugin.sendChatMessage("If this should have associated models, please let ScreteMonge know.");
                                 return;
                             }
 
@@ -1516,8 +1497,8 @@ public class ModelGetter
         ModelStats[] modelStats = dataFinder.findModelsForGroundItem(itemId, CustomModelType.CACHE_GROUND_ITEM);
         if (modelStats == null || modelStats.length == 0)
         {
-            plugin.sendChatMessage("Could not find this Item in the cache.");
-            plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+            plugin.sendChatMessage("Could not find any models for this Item in the cache.");
+            plugin.sendChatMessage("If this should have associated models, please let ScreteMonge know.");
             return;
         }
 
@@ -1587,8 +1568,8 @@ public class ModelGetter
                 ModelStats[] modelStats = dataFinder.findModelsForGroundItem(itemId, CustomModelType.CACHE_GROUND_ITEM);
                 if (modelStats == null || modelStats.length == 0)
                 {
-                    plugin.sendChatMessage("Could not find this Item in the cache.");
-                    plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+                    plugin.sendChatMessage("Could not find any models for this Item in the cache.");
+                    plugin.sendChatMessage("If this should have associated models, please let ScreteMonge know.");
                     return;
                 }
 
@@ -1717,8 +1698,8 @@ public class ModelGetter
 
         if (modelStats == null || modelStats.length == 0)
         {
-            plugin.sendChatMessage("Could not find this element in the cache.");
-            plugin.sendChatMessage("This may be because Creator's Kit's cache dumps have not yet been updated to the latest game update.");
+            plugin.sendChatMessage("Could not find any models for this element in the cache.");
+            plugin.sendChatMessage("If this should have associated models, please let ScreteMonge know.");
             return;
         }
 

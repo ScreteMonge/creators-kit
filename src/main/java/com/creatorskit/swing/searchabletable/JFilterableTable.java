@@ -66,6 +66,11 @@ public class JFilterableTable extends JTable
             if (searchFor instanceof String)
             {
                 String search = (String) searchFor;
+                if (s.contains("null") && !search.contains("null"))
+                {
+                    continue;
+                }
+
                 if (s.matches("(?i).*" + Pattern.quote(search) + ".*"))
                 {
                     found.add(new Object[]{tmp, searchFor});

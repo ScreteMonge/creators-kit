@@ -776,9 +776,9 @@ public class AttributePanel extends JPanel
                 if (e.getClickCount() == 2 && e.getButton() == MouseEvent.BUTTON1)
                 {
                     Object o = npcTable.getSelectedObject();
-                    if (o instanceof NPCData)
+                    if (o instanceof NpcDefinition)
                     {
-                        NPCData data = (NPCData) o;
+                        NpcDefinition data = (NpcDefinition) o;
                         idle.setValue(data.getStandingAnimation());
                         walk.setValue(data.getWalkingAnimation());
                         run.setValue(data.getRunAnimation());
@@ -796,7 +796,7 @@ public class AttributePanel extends JPanel
 
         if (dataFinder.isDataLoaded(DataFinder.DataType.NPC))
         {
-            List<NPCData> dataList = dataFinder.getNpcData();
+            List<NpcDefinition> dataList = dataFinder.getNpcData();
             List<Object> list = new ArrayList<>(dataList);
             npcTable.initialize(list);
         }
@@ -804,7 +804,7 @@ public class AttributePanel extends JPanel
         {
             dataFinder.addLoadCallback(DataFinder.DataType.NPC, () ->
             {
-                List<NPCData> dataList = dataFinder.getNpcData();
+                List<NpcDefinition> dataList = dataFinder.getNpcData();
                 List<Object> list = new ArrayList<>(dataList);
                 npcTable.initialize(list);
             });
@@ -876,9 +876,9 @@ public class AttributePanel extends JPanel
                 if (e.getClickCount() == 2 && e.getButton() == MouseEvent.BUTTON1)
                 {
                     Object o = itemTable.getSelectedObject();
-                    if (o instanceof ItemData)
+                    if (o instanceof ItemDefinition)
                     {
-                        ItemData data = (ItemData) o;
+                        ItemDefinition data = (ItemDefinition) o;
                         int itemId = data.getId();
 
                         boolean foundMatch = false;
@@ -935,7 +935,7 @@ public class AttributePanel extends JPanel
 
         if (dataFinder.isDataLoaded(DataFinder.DataType.ITEM))
         {
-            List<ItemData> dataList = dataFinder.getItemData();
+            List<ItemDefinition> dataList = dataFinder.getItemData();
             List<Object> list = new ArrayList<>(dataList);
             itemTable.initialize(list);
         }
@@ -943,29 +943,22 @@ public class AttributePanel extends JPanel
         {
             dataFinder.addLoadCallback(DataFinder.DataType.ITEM, () ->
             {
-                List<ItemData> dataList = dataFinder.getItemData();
+                List<ItemDefinition> dataList = dataFinder.getItemData();
                 List<Object> list = new ArrayList<>(dataList);
                 itemTable.initialize(list);
             });
         }
 
-        NPCData player = new NPCData(
-                -1,
-                "Player",
-                new int[0],
-                1,
-                WeaponAnimData.IDLE_UNARMED,
-                WeaponAnimData.WALK_UNARMED,
-                WeaponAnimData.RUN_UNARMED,
-                WeaponAnimData.IDLE_ROTATE_LEFT_UNARMED,
-                WeaponAnimData.IDLE_ROTATE_RIGHT_UNARMED,
-                WeaponAnimData.ROTATE_180,
-                WeaponAnimData.ROTATE_LEFT,
-                WeaponAnimData.ROTATE_RIGHT,
-                1,
-                1,
-                new int[0],
-                new int[0]);
+        NpcDefinition player = new NpcDefinition(-1);
+        player.setName("Player");
+        player.setStandingAnimation(WeaponAnimData.IDLE_UNARMED);
+        player.setWalkingAnimation(WeaponAnimData.WALK_UNARMED);
+        player.setIdleRotateLeftAnimation(WeaponAnimData.IDLE_ROTATE_LEFT_UNARMED);
+        player.setIdleRotateRightAnimation(WeaponAnimData.IDLE_ROTATE_RIGHT_UNARMED);
+        player.setRunAnimation(WeaponAnimData.RUN_UNARMED);
+        player.setRotate180Animation(WeaponAnimData.ROTATE_180);
+        player.setRotateRightAnimation(WeaponAnimData.ROTATE_RIGHT);
+        player.setRotateLeftAnimation(WeaponAnimData.ROTATE_LEFT);
 
         c.gridwidth = 2;
         c.gridx = 4;
@@ -1935,9 +1928,9 @@ public class AttributePanel extends JPanel
                 if (e.getClickCount() == 2 && e.getButton() == MouseEvent.BUTTON1)
                 {
                     Object o = spotanimTable.getSelectedObject();
-                    if (o instanceof SpotanimData)
+                    if (o instanceof SpotAnimDefinition)
                     {
-                        SpotanimData data = (SpotanimData) o;
+                        SpotAnimDefinition data = (SpotAnimDefinition) o;
                         JSpinner id;
                         if (spotAnimType == KeyFrameType.SPOTANIM)
                         {
@@ -1958,7 +1951,7 @@ public class AttributePanel extends JPanel
 
         if (dataFinder.isDataLoaded(DataFinder.DataType.SPOTANIM))
         {
-            List<SpotanimData> dataList = dataFinder.getSpotanimData();
+            List<SpotAnimDefinition> dataList = dataFinder.getSpotanimData();
             List<Object> list = new ArrayList<>(dataList);
             spotanimTable.initialize(list);
         }
@@ -1966,7 +1959,7 @@ public class AttributePanel extends JPanel
         {
             dataFinder.addLoadCallback(DataFinder.DataType.SPOTANIM, () ->
             {
-                List<SpotanimData> dataList = dataFinder.getSpotanimData();
+                List<SpotAnimDefinition> dataList = dataFinder.getSpotanimData();
                 List<Object> list = new ArrayList<>(dataList);
                 spotanimTable.initialize(list);
             });

@@ -4,7 +4,7 @@ import com.creatorskit.*;
 import com.creatorskit.Character;
 import com.creatorskit.hotkeymanager.LocationOption;
 import com.creatorskit.models.*;
-import com.creatorskit.models.datatypes.SpotanimData;
+import com.creatorskit.models.datatypes.SpotAnimDefinition;
 import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.programming.orientation.OrientationAction;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
@@ -1488,7 +1488,7 @@ public class Programmer
             }
         }
 
-        SpotanimData data = dataFinder.getSpotAnimData(spotAnimId);
+        SpotAnimDefinition data = dataFinder.getSpotAnimData(spotAnimId);
 
         if (data != null)
         {
