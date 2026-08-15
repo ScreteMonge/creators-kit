@@ -1,7 +1,5 @@
 package com.creatorskit.models.dataloaders;
 
-import lombok.var;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
