@@ -11,6 +11,7 @@ import com.creatorskit.swing.ObjectPanel;
 import com.creatorskit.swing.ParentPanel;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.*;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -115,7 +116,7 @@ public class Character
      */
     public void updateProgram(double tick)
     {
-        for (KeyFrameType type : KeyFrameType.ALL_KEYFRAME_TYPES)
+        for (KeyFrameType type : KeyFrameType.CHARACTER_KEY_FRAME_TYPES)
         {
             KeyFrame current = findPreviousKeyFrame(type, tick, true);
             setCurrentKeyFrame(current, type);
@@ -485,12 +486,12 @@ public class Character
 
     public KeyFrame getCurrentKeyFrame(KeyFrameType type)
     {
-        return currentFrames[KeyFrameType.getIndex(type)];
+        return currentFrames[KeyFrameType.getCharacterKeyFrameIndex(type)];
     }
 
     public void setCurrentKeyFrame(KeyFrame keyFrame, KeyFrameType type)
     {
-        currentFrames[KeyFrameType.getIndex(type)] = keyFrame;
+        currentFrames[KeyFrameType.getCharacterKeyFrameIndex(type)] = keyFrame;
     }
 
     public void resetMovementKeyFrame(int clientTick, double currentTime)
@@ -510,7 +511,7 @@ public class Character
 
     public KeyFrame[] getKeyFrames(KeyFrameType type)
     {
-        return frames[KeyFrameType.getIndex(type)];
+        return frames[KeyFrameType.getCharacterKeyFrameIndex(type)];
     }
 
     public KeyFrame[] getAllKeyFrames()
@@ -526,7 +527,7 @@ public class Character
 
     public void setKeyFrames(KeyFrame[] keyFrames, KeyFrameType type)
     {
-        frames[KeyFrameType.getIndex(type)] = keyFrames;
+        frames[KeyFrameType.getCharacterKeyFrameIndex(type)] = keyFrames;
     }
 
     /**

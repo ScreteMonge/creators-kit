@@ -1,5 +1,6 @@
 package com.creatorskit;
 
+import com.creatorskit.programming.camera.AutoRotate;
 import com.creatorskit.hotkeymanager.HotKeyManager;
 import com.creatorskit.hotkeymanager.LocationOption;
 import com.creatorskit.models.*;
@@ -176,6 +177,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.registerKeyListener(hotKeyManager.orbPreset1Listener);
 		keyManager.registerKeyListener(hotKeyManager.orbPreset2Listener);
 		keyManager.registerKeyListener(hotKeyManager.orbPreset3Listener);
+		keyManager.registerKeyListener(hotKeyManager.cameraHotkey);
 		keyManager.registerKeyListener(hotKeyManager.quickSpawnListener);
 		keyManager.registerKeyListener(hotKeyManager.quickLocationListener);
 		keyManager.registerKeyListener(hotKeyManager.quickDuplicateListener);
@@ -282,6 +284,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.unregisterKeyListener(hotKeyManager.orbPreset1Listener);
 		keyManager.unregisterKeyListener(hotKeyManager.orbPreset2Listener);
 		keyManager.unregisterKeyListener(hotKeyManager.orbPreset3Listener);
+		keyManager.unregisterKeyListener(hotKeyManager.cameraHotkey);
 		keyManager.unregisterKeyListener(hotKeyManager.quickSpawnListener);
 		keyManager.unregisterKeyListener(hotKeyManager.quickLocationListener);
 		keyManager.unregisterKeyListener(hotKeyManager.quickDuplicateListener);

@@ -1,7 +1,9 @@
-package com.creatorskit.swing.timesheet.keyframe;
+package com.creatorskit.swing.timesheet.keyframe.subtypes;
 
 
 import com.creatorskit.models.CustomModel;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import lombok.Getter;
 import lombok.Setter;
 

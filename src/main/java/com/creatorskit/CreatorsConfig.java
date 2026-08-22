@@ -357,11 +357,23 @@ public interface CreatorsConfig extends Config
 	}
 
 	@ConfigItem(
+			keyName = "keyframeCamera",
+			name = "Keyframe Camera",
+			description = "Hotkey to add a new Camera Keyframe from the current view",
+			section = programmer,
+			position = 6
+	)
+	default Keybind cameraKeyFrameHotkey()
+	{
+		return new Keybind(KeyEvent.VK_K, KeyEvent.CTRL_DOWN_MASK);
+	}
+
+	@ConfigItem(
 			keyName = "timelineUnits",
 			name = "Timeline Units",
 			description = "Set whether the timeline displays in game ticks or seconds",
 			section = programmer,
-			position = 6
+			position = 7
 	)
 	default TimelineUnits timelineUnits()
 	{
@@ -373,7 +385,7 @@ public interface CreatorsConfig extends Config
 			name = "Randomize Start Frame",
 			description = "Randomizes the start frame of Pose (including default) animations, unless otherwise specified",
 			section = programmer,
-			position = 7
+			position = 8
 	)
 	default boolean randomizeStartFrame()
 	{

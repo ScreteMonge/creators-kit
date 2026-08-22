@@ -1,35 +1,40 @@
 package com.creatorskit.swing.timesheet.attributes;
 
+import com.creatorskit.programming.camera.EaseType;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.CameraKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.subtypes.SpawnKeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.settings.Toggle;
 import lombok.Getter;
 
 import javax.swing.*;
 import java.awt.*;
 
 @Getter
-public class SpawnAttributes extends Attributes
+public class CameraAttributes extends Attributes
 {
-    private final JComboBox<Toggle> spawn = new JComboBox<>();
+    private final JComboBox<EaseType> easeType = new JComboBox<>();
 
-    public SpawnAttributes()
+    public CameraAttributes()
     {
         addChangeListeners();
-        spawn.setOpaque(true);
     }
 
     @Override
     public void setAttributes(KeyFrame keyFrame)
     {
-        SpawnKeyFrame kf = (SpawnKeyFrame) keyFrame;
-        spawn.setSelectedItem(kf.isSpawnActive() ? Toggle.ENABLE : Toggle.DISABLE);
+        if (keyFrame == null)
+        {
+            resetAttributes(true);
+            return;
+        }
+
+        CameraKeyFrame kf = (CameraKeyFrame) keyFrame;
+        easeType.setSelectedItem(kf.getEase());
     }
 
     @Override
     public void setBackgroundColours(Color color)
     {
-        spawn.setBackground(color);
+        easeType.setBackground(color);
     }
 
     @Override
@@ -37,23 +42,23 @@ public class SpawnAttributes extends Attributes
     {
         return new JComponent[]
                 {
-                        spawn
+                        easeType
                 };
     }
 
     @Override
     public void addChangeListeners()
     {
-        spawn.addItemListener(e ->
+        easeType.addItemListener(e ->
         {
-            spawn.setBackground(getRed().brighter());
+            easeType.setBackground(getRed());
         });
     }
 
     @Override
     public void resetAttributes(boolean resetBackground)
     {
-        spawn.setSelectedItem(Toggle.ENABLE);
+        easeType.setSelectedItem(EaseType.SINE);
         super.resetAttributes(resetBackground);
     }
 }

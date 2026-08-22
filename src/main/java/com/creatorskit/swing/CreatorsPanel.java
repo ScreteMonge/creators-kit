@@ -21,6 +21,7 @@ import com.creatorskit.swing.manager.FolderType;
 import com.creatorskit.swing.manager.ManagerPanel;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.keyframe.*;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.*;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
@@ -241,7 +242,7 @@ public class CreatorsPanel extends PluginPanel
                 -1,
                 -1,
                 60,
-                new KeyFrame[KeyFrameType.getTotalFrameTypes()][0],
+                new KeyFrame[KeyFrameType.getTotalCharacterKeyFrameTypes()][0],
                 KeyFrameType.createDefaultSummary(),
                 getRandomColor(),
                 false, null, null, -1, false, false, LocationOption.TO_SAVED_LOCATION, new int[]{0, 0});
@@ -461,7 +462,7 @@ public class CreatorsPanel extends PluginPanel
                 active,
                 false,
                 keyFrames,
-                new KeyFrame[KeyFrameType.getTotalFrameTypes()],
+                new KeyFrame[KeyFrameType.getTotalCharacterKeyFrameTypes()],
                 summary,
                 null,
                 null,
@@ -863,7 +864,7 @@ public class CreatorsPanel extends PluginPanel
 
     private KeyFrame[][] duplicateKeyFrames(Character character)
     {
-        KeyFrame[][] duplicatesArrays = new KeyFrame[KeyFrameType.getTotalFrameTypes()][];
+        KeyFrame[][] duplicatesArrays = new KeyFrame[KeyFrameType.getTotalCharacterKeyFrameTypes()][];
 
         KeyFrame[][] originalArrays = character.getFrames();
         for (int i = 0; i < originalArrays.length; i++)
@@ -1936,7 +1937,7 @@ public class CreatorsPanel extends PluginPanel
                             animFrame = -1;
                         }
 
-                        KeyFrame[][] frames = new KeyFrame[KeyFrameType.getTotalFrameTypes()][];
+                        KeyFrame[][] frames = new KeyFrame[KeyFrameType.getTotalCharacterKeyFrameTypes()][];
 
                         character = createCharacter(
                                 ParentPanel.SIDE_PANEL,
@@ -2023,14 +2024,14 @@ public class CreatorsPanel extends PluginPanel
                 animFrame = -1;
             }
 
-            KeyFrame[][] frames = new KeyFrame[KeyFrameType.getTotalFrameTypes()][];
+            KeyFrame[][] frames = new KeyFrame[KeyFrameType.getTotalCharacterKeyFrameTypes()][];
             if (save.getMovementKeyFrames() != null)
             {
-                frames[KeyFrameType.getIndex(KeyFrameType.MOVEMENT)] = save.getMovementKeyFrames();
+                frames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.MOVEMENT)] = save.getMovementKeyFrames();
 
                 if (resetTurnRate)
                 {
-                    for (KeyFrame kf : frames[KeyFrameType.getIndex(KeyFrameType.MOVEMENT)])
+                    for (KeyFrame kf : frames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.MOVEMENT)])
                     {
                         MovementKeyFrame keyFrame = (MovementKeyFrame) kf;
                         if (keyFrame.getTurnRate() == -1)
@@ -2043,28 +2044,28 @@ public class CreatorsPanel extends PluginPanel
 
             if (save.getAnimationKeyFrames() != null)
             {
-                frames[KeyFrameType.getIndex(KeyFrameType.ANIMATION)] = save.getAnimationKeyFrames();
+                frames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.ANIMATION)] = save.getAnimationKeyFrames();
             }
 
             if (save.getSpawnKeyFrames() != null)
             {
-                frames[KeyFrameType.getIndex(KeyFrameType.SPAWN)] = save.getSpawnKeyFrames();
+                frames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.SPAWN)] = save.getSpawnKeyFrames();
             }
 
             ModelKeyFrameSave[] modelKeyFrameSaves = save.getModelKeyFrameSaves();
             if (modelKeyFrameSaves != null)
             {
                 ModelKeyFrame[] modelKeyFrames = loadModelKeyFrames(modelKeyFrameSaves, customModels);
-                frames[KeyFrameType.getIndex(KeyFrameType.MODEL)] = modelKeyFrames;
+                frames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.MODEL)] = modelKeyFrames;
             }
 
             if (save.getOrientationKeyFrames() != null)
             {
-                frames[KeyFrameType.getIndex(KeyFrameType.ORIENTATION)] = save.getOrientationKeyFrames();
+                frames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.ORIENTATION)] = save.getOrientationKeyFrames();
 
                 if (resetTurnRate)
                 {
-                    for (KeyFrame kf : frames[KeyFrameType.getIndex(KeyFrameType.ORIENTATION)])
+                    for (KeyFrame kf : frames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.ORIENTATION)])
                     {
                         OrientationKeyFrame keyFrame = (OrientationKeyFrame) kf;
                         if (keyFrame.getTurnRate() == -1)
@@ -2077,33 +2078,33 @@ public class CreatorsPanel extends PluginPanel
 
             if (save.getTextKeyFrames() != null)
             {
-                frames[KeyFrameType.getIndex(KeyFrameType.TEXT)] = save.getTextKeyFrames();
+                frames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.TEXT)] = save.getTextKeyFrames();
             }
 
             if (save.getOverheadKeyFrames() != null)
             {
-                frames[KeyFrameType.getIndex(KeyFrameType.OVERHEAD)] = save.getOverheadKeyFrames();
+                frames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.OVERHEAD)] = save.getOverheadKeyFrames();
             }
 
             if (save.getHealthKeyFrames() != null)
             {
-                frames[KeyFrameType.getIndex(KeyFrameType.HEALTH)] = save.getHealthKeyFrames();
+                frames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.HEALTH)] = save.getHealthKeyFrames();
             }
 
             SpotAnimKeyFrame[][] spotAnimKeyFrames = save.getSpotanimKeyFrames();
             if (save.getSpotanimKeyFrames() != null)
             {
-                frames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM)] = spotAnimKeyFrames[0];
-                frames[KeyFrameType.getIndex(KeyFrameType.SPOTANIM2)] = spotAnimKeyFrames[1];
+                frames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.SPOTANIM)] = spotAnimKeyFrames[0];
+                frames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.SPOTANIM2)] = spotAnimKeyFrames[1];
             }
 
             HitsplatKeyFrame[][] hitsplatKeyFrames = save.getHitsplatKeyFrames();
             if (hitsplatKeyFrames != null)
             {
-                frames[KeyFrameType.getIndex(KeyFrameType.HITSPLAT_1)] = hitsplatKeyFrames[0];
-                frames[KeyFrameType.getIndex(KeyFrameType.HITSPLAT_2)] = hitsplatKeyFrames[1];
-                frames[KeyFrameType.getIndex(KeyFrameType.HITSPLAT_3)] = hitsplatKeyFrames[2];
-                frames[KeyFrameType.getIndex(KeyFrameType.HITSPLAT_4)] = hitsplatKeyFrames[3];
+                frames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.HITSPLAT_1)] = hitsplatKeyFrames[0];
+                frames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.HITSPLAT_2)] = hitsplatKeyFrames[1];
+                frames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.HITSPLAT_3)] = hitsplatKeyFrames[2];
+                frames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.HITSPLAT_4)] = hitsplatKeyFrames[3];
             }
 
             KeyFrameType[] summary;

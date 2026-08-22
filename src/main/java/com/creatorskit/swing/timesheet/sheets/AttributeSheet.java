@@ -8,6 +8,7 @@ import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.AttributePanel;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import com.creatorskit.swing.timesheet.keyframe.keyframeselectionmanager.KeyFrameSelectionManager;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.*;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.client.ui.ColorScheme;
@@ -88,7 +89,7 @@ public class AttributeSheet extends TimeSheet
         final int X = 5;
         final int HEIGHT_BUFFER = 1;
 
-        KeyFrameType[] keyFrameTypes = KeyFrameType.ALL_KEYFRAME_TYPES;
+        KeyFrameType[] keyFrameTypes = KeyFrameType.CHARACTER_KEY_FRAME_TYPES;
         for (int i = 0; i < keyFrameTypes.length; i++)
         {
             KeyFrameType type = keyFrameTypes[i];
@@ -135,7 +136,7 @@ public class AttributeSheet extends TimeSheet
 
         for (int i = 0; i < frames.length; i++)
         {
-            KeyFrameType type = KeyFrameType.getKeyFrameType(i);
+            KeyFrameType type = KeyFrameType.getCharacterKeyFrameType(i);
 
             KeyFrame[] keyFrames = frames[i];
             if (keyFrames == null)
@@ -283,10 +284,10 @@ public class AttributeSheet extends TimeSheet
         }
         else
         {
-            LinkedHashMap<Character, KeyFrame[]> clickedKeyFrames = getClickedKeyFrames();
+            LinkedHashMap<KeyFrameTarget, KeyFrame[]> clickedKeyFrames = getClickedKeyFrames();
             if (!clickedKeyFrames.isEmpty())
             {
-                Map.Entry<Character, KeyFrame[]> firstEntry = clickedKeyFrames.entrySet().iterator().next();
+                Map.Entry<KeyFrameTarget, KeyFrame[]> firstEntry = clickedKeyFrames.entrySet().iterator().next();
                 KeyFrame keyFrame = firstEntry.getValue()[0];
                 change[0] = round(timelineUnits, getCurrentTime() - keyFrame.getTick());
             }
@@ -294,12 +295,17 @@ public class AttributeSheet extends TimeSheet
 
         int imageHeight = image.getHeight();
 
-        kfsm.getSelected().forEach((Character c, KeyFrame[] keyFrames) ->
+        kfsm.getSelected().forEach((KeyFrameTarget target, KeyFrame[] keyFrames) ->
         {
+            if (target.getType() != KeyFrameCategory.CHARACTER)
+            {
+                return;
+            }
+
             for (KeyFrame keyFrame : keyFrames)
             {
-                int i = KeyFrameType.getIndex(keyFrame.getKeyFrameType());
-                KeyFrameType type = KeyFrameType.getKeyFrameType(i);
+                int i = KeyFrameType.getCharacterKeyFrameIndex(keyFrame.getKeyFrameType());
+                KeyFrameType type = KeyFrameType.getCharacterKeyFrameType(i);
                 BufferedImage endImage = selectedImage;
                 if (kfsm.getPrimary() == keyFrame)
                 {
@@ -366,14 +372,19 @@ public class AttributeSheet extends TimeSheet
     @Override
     public void updateSelectedKeyFrameOnPressed(boolean shiftDown)
     {
-        LinkedHashMap<Character, KeyFrame[]> clickedKeyFrames = getClickedKeyFrames();
+        LinkedHashMap<KeyFrameTarget, KeyFrame[]> clickedKeyFrames = getClickedKeyFrames();
         if (clickedKeyFrames.isEmpty())
         {
             return;
         }
 
-        Map.Entry<Character, KeyFrame[]> firstEntry = clickedKeyFrames.entrySet().iterator().next();
-        Character character = firstEntry.getKey();
+        Map.Entry<KeyFrameTarget, KeyFrame[]> firstEntry = clickedKeyFrames.entrySet().iterator().next();
+        KeyFrameTarget target = firstEntry.getKey();
+        if (target.getType() != KeyFrameCategory.CHARACTER)
+        {
+            return;
+        }
+
         KeyFrame[] keyFrames = firstEntry.getValue(); //only registers for the first clicked keyframe
 
         if (!shiftDown)
@@ -385,12 +396,12 @@ public class AttributeSheet extends TimeSheet
         }
 
         KeyFrame primary = keyFrames[0];
-        kfsm.addAll(character, keyFrames, primary);
+        kfsm.add(target, keyFrames, primary);
         getTimeSheetPanel().onKeyFrameSelectionChanged();
     }
 
     @Override
-    public LinkedHashMap<Character, KeyFrame[]> getKeyFrameClicked(Point point)
+    public LinkedHashMap<KeyFrameTarget, KeyFrame[]> getKeyFrameClicked(Point point)
     {
         Set<Character> selected = selectionManager.getSelected();
         if (selected.isEmpty())
@@ -431,8 +442,8 @@ public class AttributeSheet extends TimeSheet
                     {
                         if (point.getY() >= y1 && point.getY() <= y2)
                         {
-                            LinkedHashMap<Character, KeyFrame[]> selectedKeyFrames = new LinkedHashMap<>();
-                            selectedKeyFrames.put(c, new KeyFrame[]{keyFrame});
+                            LinkedHashMap<KeyFrameTarget, KeyFrame[]> selectedKeyFrames = new LinkedHashMap<>();
+                            selectedKeyFrames.put(new KeyFrameTarget(KeyFrameCategory.CHARACTER, c), new KeyFrame[]{keyFrame});
                             return selectedKeyFrames;
                         }
                     }
@@ -512,7 +523,7 @@ public class AttributeSheet extends TimeSheet
                     continue;
                 }
 
-                kfsm.add(c, foundKeyFrame);
+                kfsm.add(new KeyFrameTarget(KeyFrameCategory.CHARACTER, c), foundKeyFrame);
                 break;
             }
         }
@@ -596,7 +607,7 @@ public class AttributeSheet extends TimeSheet
         int xImageOffset = image.getWidth() / 2;
         double zoomFactor = this.getWidth() / getZoom();
 
-        LinkedHashMap<Character, KeyFrame[]> selectedKeyFrames = kfsm.getSelected();
+        LinkedHashMap<KeyFrameTarget, KeyFrame[]> selectedKeyFrames = kfsm.getSelected();
         if (!shiftKey)
         {
             kfsm.clear();
@@ -660,7 +671,7 @@ public class AttributeSheet extends TimeSheet
             }
         }
 
-        kfsm.addAll(intersectingKeyFrames, primary);
+        kfsm.addCharacterGroups(intersectingKeyFrames, primary);
         attributePanel.updateAttributes();
         if (primary != null)
         {
@@ -672,7 +683,7 @@ public class AttributeSheet extends TimeSheet
     @Override
     public void updateTableSelection(Point p)
     {
-        KeyFrameType[] types = KeyFrameType.ALL_KEYFRAME_TYPES;
+        KeyFrameType[] types = KeyFrameType.CHARACTER_KEY_FRAME_TYPES;
         int y = (int) p.getY();
         final int ROW_BUFFER = 1;
 

@@ -8,7 +8,7 @@ import com.creatorskit.models.exporters.ModelExporter;
 import com.creatorskit.swing.renderer.RenderPanel;
 import com.creatorskit.swing.searchabletable.JFilterableTable;
 import com.creatorskit.swing.searchabletable.TableRenderStyle;
-import com.creatorskit.swing.timesheet.keyframe.ModelKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.ModelKeyFrame;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.client.RuneLite;

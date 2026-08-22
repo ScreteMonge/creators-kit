@@ -6,6 +6,7 @@ import com.creatorskit.CKObject;
 import com.creatorskit.swing.timesheet.keyframe.*;
 import com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite;
 import com.creatorskit.swing.timesheet.keyframe.settings.HitsplatVariant;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.HitsplatKeyFrame;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.Model;

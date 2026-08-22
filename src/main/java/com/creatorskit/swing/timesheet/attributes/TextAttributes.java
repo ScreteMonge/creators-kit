@@ -1,8 +1,7 @@
 package com.creatorskit.swing.timesheet.attributes;
 
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrameState;
-import com.creatorskit.swing.timesheet.keyframe.TextKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.TextKeyFrame;
 import lombok.Getter;
 
 import javax.swing.*;

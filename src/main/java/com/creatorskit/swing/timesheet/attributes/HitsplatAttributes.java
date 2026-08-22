@@ -1,6 +1,6 @@
 package com.creatorskit.swing.timesheet.attributes;
 
-import com.creatorskit.swing.timesheet.keyframe.HitsplatKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.HitsplatKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite;
 import com.creatorskit.swing.timesheet.keyframe.settings.HitsplatVariant;

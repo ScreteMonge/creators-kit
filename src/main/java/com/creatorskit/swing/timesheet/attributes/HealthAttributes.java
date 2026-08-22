@@ -1,10 +1,8 @@
 package com.creatorskit.swing.timesheet.attributes;
 
-import com.creatorskit.swing.timesheet.keyframe.HealthKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.HealthKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrameState;
 import com.creatorskit.swing.timesheet.keyframe.settings.HealthbarSprite;
-import com.creatorskit.swing.timesheet.keyframe.settings.Toggle;
 import lombok.Getter;
 
 import javax.swing.*;

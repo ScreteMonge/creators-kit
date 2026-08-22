@@ -7,6 +7,7 @@ import com.creatorskit.models.ModelUtilities;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.PathFinder;
 import com.creatorskit.programming.Programmer;
+import com.creatorskit.programming.camera.CameraManager;
 import com.creatorskit.selection.SelectionManager;
 import com.creatorskit.swing.anvil.ModelAnvil;
 import com.creatorskit.swing.manager.Folder;
@@ -53,6 +54,7 @@ public class ToolBoxFrame extends JFrame
     private final TransmogPanel transmogPanel;
     private final TimeSheetPanel timeSheetPanel;
     private final Programmer programmer;
+    private final CameraManager cameraManager;
     private final PathFinder pathFinder;
     private OkHttpClient httpClient;
 
@@ -60,7 +62,7 @@ public class ToolBoxFrame extends JFrame
     private final BufferedImage ICON = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
 
     @Inject
-    public ToolBoxFrame(Client client, EventBus eventBus, ClientThread clientThread, CreatorsPlugin plugin, CreatorsConfig config, ConfigManager configManager, DataFinder dataFinder, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, TransmogPanel transmogPanel, PathFinder pathFinder, ModelUtilities modelUtilities, OkHttpClient httpClient, SelectionManager selectionManager, KeyFrameSelectionManager keyFrameSelectionManager)
+    public ToolBoxFrame(Client client, EventBus eventBus, ClientThread clientThread, CreatorsPlugin plugin, CreatorsConfig config, ConfigManager configManager, DataFinder dataFinder, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, TransmogPanel transmogPanel, PathFinder pathFinder, ModelUtilities modelUtilities, OkHttpClient httpClient, SelectionManager selectionManager, KeyFrameSelectionManager keyFrameSelectionManager, CameraManager cameraManager)
     {
         this.client = client;
         this.clientThread = clientThread;
@@ -69,6 +71,7 @@ public class ToolBoxFrame extends JFrame
         this.eventBus = eventBus;
         this.configManager = configManager;
         this.modelUtilities = modelUtilities;
+        this.cameraManager = cameraManager;
         this.jMenuBar = new JMenuBar();
         this.dataFinder = dataFinder;
         this.modelOrganizer = modelOrganizer;
@@ -93,10 +96,10 @@ public class ToolBoxFrame extends JFrame
         MovementManager movementManager = new MovementManager(client, config, pathFinder);
 
         setupMenuBar();
-        this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, config, configManager, clientThread, dataFinder, managerTree, movementManager, selectionManager, keyFrameSelectionManager);
+        this.timeSheetPanel = new TimeSheetPanel(client, this, plugin, config, configManager, clientThread, dataFinder, managerTree, movementManager, selectionManager, keyFrameSelectionManager, cameraManager);
         this.managerPanel = new ManagerPanel(client, plugin, objectHolder, managerTree);
         this.cacheSearcher = new CacheSearcherTab(client, plugin, clientThread, dataFinder, modelUtilities, httpClient);
-        this.programmer = new Programmer(client, config, clientThread, plugin, timeSheetPanel, dataFinder, modelUtilities);
+        this.programmer = new Programmer(client, config, clientThread, plugin, timeSheetPanel, dataFinder, modelUtilities, cameraManager);
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
         setTitle("Creator's Kit Toolbox");

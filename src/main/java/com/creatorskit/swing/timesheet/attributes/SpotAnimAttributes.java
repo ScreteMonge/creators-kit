@@ -1,9 +1,7 @@
 package com.creatorskit.swing.timesheet.attributes;
 
-import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrameState;
-import com.creatorskit.swing.timesheet.keyframe.SpotAnimKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.SpotAnimKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.settings.Toggle;
 import lombok.Getter;
 

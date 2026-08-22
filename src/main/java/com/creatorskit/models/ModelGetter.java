@@ -15,10 +15,10 @@ import com.creatorskit.selection.SelectionManager;
 import com.creatorskit.selection.SelectionOrigin;
 import com.creatorskit.swing.CreatorsPanel;
 import com.creatorskit.swing.ParentPanel;
-import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.AnimationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
-import com.creatorskit.swing.timesheet.keyframe.SpotAnimKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.SpotAnimKeyFrame;
 import lombok.Getter;
 import net.runelite.api.*;
 import net.runelite.api.Menu;
@@ -584,7 +584,7 @@ public class ModelGetter
                         anim,
                         -1,
                         60,
-                        new KeyFrame[KeyFrameType.getTotalFrameTypes()][],
+                        new KeyFrame[KeyFrameType.getTotalCharacterKeyFrameTypes()][],
                         KeyFrameType.createDefaultSummary(),
                         creatorsPanel.getRandomColor(),
                         false,
@@ -1648,7 +1648,7 @@ public class ModelGetter
                     poseAnimation,
                     -1,
                     60,
-                    new KeyFrame[KeyFrameType.getTotalFrameTypes()][],
+                    new KeyFrame[KeyFrameType.getTotalCharacterKeyFrameTypes()][],
                     KeyFrameType.createDefaultSummary(),
                     creatorsPanel.getRandomColor(),
                     false,

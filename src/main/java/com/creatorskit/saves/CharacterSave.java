@@ -1,6 +1,7 @@
 package com.creatorskit.saves;
 
 import com.creatorskit.swing.timesheet.keyframe.*;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;

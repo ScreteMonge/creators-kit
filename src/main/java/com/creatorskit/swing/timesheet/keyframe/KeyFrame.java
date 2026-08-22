@@ -1,5 +1,6 @@
 package com.creatorskit.swing.timesheet.keyframe;
 
+import com.creatorskit.swing.timesheet.keyframe.subtypes.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,6 +19,12 @@ public class KeyFrame
         switch (type)
         {
             default:
+            case CAMERA:
+                CameraKeyFrame camKF = (CameraKeyFrame) keyFrame;
+                return new CameraKeyFrame(
+                        tick,
+                        camKF.getScript(),
+                        camKF.getEase());
             case MOVEMENT:
                 MovementKeyFrame moveKF = (MovementKeyFrame) keyFrame;
                 int[][] path = moveKF.getPath();

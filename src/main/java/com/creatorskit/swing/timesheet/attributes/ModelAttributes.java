@@ -1,10 +1,8 @@
 package com.creatorskit.swing.timesheet.attributes;
 
 import com.creatorskit.models.CustomModel;
-import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrameState;
-import com.creatorskit.swing.timesheet.keyframe.ModelKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.ModelKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.settings.ModelToggle;
 import lombok.Getter;
 

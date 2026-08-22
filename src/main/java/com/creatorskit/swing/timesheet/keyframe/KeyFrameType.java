@@ -8,6 +8,7 @@ import lombok.Getter;
 public enum KeyFrameType
 {
     NULL("Null", "N"),
+    CAMERA("Camera", "C"),
     MOVEMENT("Movement","M"),
     ANIMATION("Animation","A"),
     ORIENTATION("Orientation","O"),
@@ -31,7 +32,7 @@ public enum KeyFrameType
         return name;
     }
 
-    public static final KeyFrameType[] ALL_KEYFRAME_TYPES = new KeyFrameType[]{
+    public static final KeyFrameType[] CHARACTER_KEY_FRAME_TYPES = new KeyFrameType[]{
             MOVEMENT,
             ANIMATION,
             ORIENTATION,
@@ -51,7 +52,7 @@ public enum KeyFrameType
     public static final KeyFrameType[] HITSPLAT_TYPES = new KeyFrameType[]{KeyFrameType.HITSPLAT_1, KeyFrameType.HITSPLAT_2, KeyFrameType.HITSPLAT_3, KeyFrameType.HITSPLAT_4};
     public static final KeyFrameType[] SPOTANIM_TYPES = new KeyFrameType[]{KeyFrameType.SPOTANIM, KeyFrameType.SPOTANIM2};
 
-    public static int getIndex(KeyFrameType type)
+    public static int getCharacterKeyFrameIndex(KeyFrameType type)
     {
         switch (type)
         {
@@ -87,7 +88,7 @@ public enum KeyFrameType
         }
     }
 
-    public static KeyFrameType getKeyFrameType(int index)
+    public static KeyFrameType getCharacterKeyFrameType(int index)
     {
         switch (index)
         {
@@ -123,7 +124,7 @@ public enum KeyFrameType
         }
     }
 
-    public static int getTotalFrameTypes()
+    public static int getTotalCharacterKeyFrameTypes()
     {
         return 14;
     }

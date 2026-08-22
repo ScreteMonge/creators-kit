@@ -1,8 +1,7 @@
 package com.creatorskit.programming;
 
 import com.creatorskit.CreatorsConfig;
-import com.creatorskit.CreatorsPlugin;
-import com.creatorskit.swing.timesheet.keyframe.MovementKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.MovementKeyFrame;
 import net.runelite.api.Client;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;

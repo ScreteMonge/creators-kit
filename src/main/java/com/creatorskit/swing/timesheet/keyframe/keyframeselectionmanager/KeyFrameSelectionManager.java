@@ -2,27 +2,23 @@ package com.creatorskit.swing.timesheet.keyframe.keyframeselectionmanager;
 
 import com.creatorskit.Character;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrameCategory;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrameTarget;
 import lombok.Getter;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class KeyFrameSelectionManager
 {
     @Getter
     private KeyFrame primary;
-    private final LinkedHashMap<Character, KeyFrame[]> selectedKeyFrames = new LinkedHashMap<>();
+    private final LinkedHashMap<KeyFrameTarget, KeyFrame[]> selectedKeyFrames = new LinkedHashMap<>();
     private final List<KeyFrameSelectionManager.SelectionListener> listeners = new ArrayList<>();
 
-    public LinkedHashMap<Character, KeyFrame[]> getSelected()
+    public LinkedHashMap<KeyFrameTarget, KeyFrame[]> getSelected()
     {
         return selectedKeyFrames;
-    }
-
-    public boolean containsCharacter(Character c)
-    {
-        return selectedKeyFrames.containsKey(c);
     }
 
     public boolean containsKeyFrame(KeyFrame[] keyFrames)
@@ -32,95 +28,139 @@ public class KeyFrameSelectionManager
                 .anyMatch(kf -> Arrays.asList(keyFrames).contains(kf));
     }
 
-    public boolean containsKeyFrame(KeyFrame kf)
-    {
-        return selectedKeyFrames.values().stream()
-                .flatMap(Arrays::stream)
-                .anyMatch(keyFrame -> keyFrame.equals(kf));
-    }
-
     public boolean isEmpty()
     {
         return selectedKeyFrames.isEmpty();
     }
 
-    public int getSelectionSize()
-    {
-        return selectedKeyFrames.size();
-    }
-
-    public void select(Character character, KeyFrame primaryKeyFrame)
+    public void select(KeyFrameTarget target, KeyFrame primaryKeyFrame)
     {
         clear();
-        selectedKeyFrames.put(character, new KeyFrame[]{primaryKeyFrame});
+        selectedKeyFrames.put(target, new KeyFrame[]{primaryKeyFrame});
         primary = primaryKeyFrame;
     }
 
-    public void add(Character character, KeyFrame primaryKeyFrame)
+    public void add(KeyFrameTarget target, KeyFrame primaryKeyFrame)
     {
-        LinkedHashMap<Character, KeyFrame[]> toAdd = new LinkedHashMap<>();
-        toAdd.put(character, new KeyFrame[]{primaryKeyFrame});
-        addAll(character, new KeyFrame[]{primaryKeyFrame}, primaryKeyFrame);
+        add(target, new KeyFrame[]{primaryKeyFrame}, primaryKeyFrame);
     }
 
-    public void addAll(Character character, KeyFrame[] keyFrames, KeyFrame primaryKeyFrame)
+    public void add(KeyFrameTarget target, KeyFrame[] keyFrames, KeyFrame primaryKeyFrame)
     {
-        if (selectedKeyFrames.containsKey(character))
+        if (selectedKeyFrames.containsKey(target))
         {
-            KeyFrame[] previouslySelected = selectedKeyFrames.get(character);
+            KeyFrame[] previouslySelected = selectedKeyFrames.get(target);
             Set<KeyFrame> toSelect = new HashSet<>();
             Collections.addAll(toSelect, previouslySelected);
             Collections.addAll(toSelect, keyFrames);
 
-            selectedKeyFrames.put(character, toSelect.toArray(new KeyFrame[0]));
+            selectedKeyFrames.put(target, toSelect.toArray(new KeyFrame[0]));
         }
         else
         {
-            selectedKeyFrames.put(character, keyFrames);
+            selectedKeyFrames.put(target, keyFrames);
         }
 
-        primary = primaryKeyFrame;
-        fireChanged();
+        postAddGroups(primaryKeyFrame);
     }
 
-    public void addAll(LinkedHashMap<Character, KeyFrame[]> groupsToAdd, KeyFrame primaryKeyFrame)
+    public void addCameraGroups(KeyFrame[] cameraKeyFrames, KeyFrame primaryKeyFrame)
+    {
+        if (selectedKeyFrames.containsKey(new KeyFrameTarget(KeyFrameCategory.CAMERA, null)))
+        {
+            KeyFrame[] previouslySelected = selectedKeyFrames.get(new KeyFrameTarget(KeyFrameCategory.CAMERA, null));
+            Set<KeyFrame> toAdd = new HashSet<>();
+            Collections.addAll(toAdd, previouslySelected);
+            Collections.addAll(toAdd, cameraKeyFrames);
+
+            selectedKeyFrames.put(new KeyFrameTarget(KeyFrameCategory.CAMERA, null), toAdd.toArray(new KeyFrame[0]));
+        }
+        else
+        {
+            selectedKeyFrames.put(new KeyFrameTarget(KeyFrameCategory.CAMERA, null), cameraKeyFrames);
+        }
+
+        postAddGroups(primaryKeyFrame);
+    }
+
+    public void addCharacterGroups(LinkedHashMap<Character, KeyFrame[]> groupsToAdd, KeyFrame primaryKeyFrame)
     {
         groupsToAdd.forEach((character, keyFrames) ->
         {
-            if (selectedKeyFrames.containsKey(character))
+            if (selectedKeyFrames.containsKey(new KeyFrameTarget(KeyFrameCategory.CHARACTER, character)))
             {
-                KeyFrame[] previouslySelected = selectedKeyFrames.get(character);
+                KeyFrame[] previouslySelected = selectedKeyFrames.get(new KeyFrameTarget(KeyFrameCategory.CHARACTER, character));
                 Set<KeyFrame> toSelect = new HashSet<>();
                 Collections.addAll(toSelect, previouslySelected);
                 Collections.addAll(toSelect, keyFrames);
 
-                selectedKeyFrames.put(character, toSelect.toArray(new KeyFrame[0]));
+                selectedKeyFrames.put(new KeyFrameTarget(KeyFrameCategory.CHARACTER, character), toSelect.toArray(new KeyFrame[0]));
             }
             else
             {
-                selectedKeyFrames.put(character, keyFrames);
+                selectedKeyFrames.put(new KeyFrameTarget(KeyFrameCategory.CHARACTER, character), keyFrames);
             }
         });
 
+        postAddGroups(primaryKeyFrame);
+    }
+
+    public void addGroups(KeyFrame[] cameraKeyFrames, LinkedHashMap<Character, KeyFrame[]> groupsToAdd, KeyFrame primaryKeyFrame)
+    {
+        if (selectedKeyFrames.containsKey(new KeyFrameTarget(KeyFrameCategory.CAMERA, null)))
+        {
+            KeyFrame[] previouslySelected = selectedKeyFrames.get(new KeyFrameTarget(KeyFrameCategory.CAMERA, null));
+            Set<KeyFrame> toAdd = new HashSet<>();
+            Collections.addAll(toAdd, previouslySelected);
+            Collections.addAll(toAdd, cameraKeyFrames);
+
+            selectedKeyFrames.put(new KeyFrameTarget(KeyFrameCategory.CAMERA, null), toAdd.toArray(new KeyFrame[0]));
+        }
+        else
+        {
+            selectedKeyFrames.put(new KeyFrameTarget(KeyFrameCategory.CAMERA, null), cameraKeyFrames);
+        }
+
+        groupsToAdd.forEach((character, keyFrames) ->
+        {
+            if (selectedKeyFrames.containsKey(new KeyFrameTarget(KeyFrameCategory.CHARACTER, character)))
+            {
+                KeyFrame[] previouslySelected = selectedKeyFrames.get(new KeyFrameTarget(KeyFrameCategory.CHARACTER, character));
+                Set<KeyFrame> toSelect = new HashSet<>();
+                Collections.addAll(toSelect, previouslySelected);
+                Collections.addAll(toSelect, keyFrames);
+
+                selectedKeyFrames.put(new KeyFrameTarget(KeyFrameCategory.CHARACTER, character), toSelect.toArray(new KeyFrame[0]));
+            }
+            else
+            {
+                selectedKeyFrames.put(new KeyFrameTarget(KeyFrameCategory.CHARACTER, character), keyFrames);
+            }
+        });
+
+        postAddGroups(primaryKeyFrame);
+    }
+
+    private void postAddGroups(KeyFrame primaryKeyFrame)
+    {
         primary = primaryKeyFrame;
         fireChanged();
     }
 
-    public void remove(Character c, KeyFrame toRemove)
+    public void remove(KeyFrameTarget target, KeyFrame toRemove)
     {
-        KeyFrame[] keyFrames = selectedKeyFrames.get(c);
-
+        KeyFrame[] keyFrames = selectedKeyFrames.get(target);
         if (keyFrames != null)
         {
             keyFrames = ArrayUtils.removeElement(keyFrames, toRemove);
 
             if (keyFrames.length == 0)
             {
-                selectedKeyFrames.remove(c);
+                selectedKeyFrames.remove(target);
             }
             else
             {
-                selectedKeyFrames.put(c, keyFrames);
+                selectedKeyFrames.put(target, keyFrames);
             }
         }
 
@@ -129,71 +169,6 @@ public class KeyFrameSelectionManager
             primary = null;
         }
 
-        fireChanged();
-    }
-
-    public void removeAll(Character c, KeyFrame[] toRemove)
-    {
-        boolean containsPrimary = Arrays.stream(toRemove).anyMatch(keyFrame -> keyFrame.equals(primary));
-
-        KeyFrame[] keyFrames = selectedKeyFrames.get(c);
-        List<KeyFrame> list = new ArrayList<>(Arrays.asList(keyFrames));
-        list.removeAll(Arrays.asList(toRemove));
-
-        keyFrames = list.toArray(new KeyFrame[0]);
-
-        if (keyFrames.length == 0)
-        {
-            selectedKeyFrames.remove(c);
-        }
-        else
-        {
-            selectedKeyFrames.put(c, keyFrames);
-        }
-
-        if (containsPrimary)
-        {
-            primary = null;
-        }
-
-        fireChanged();
-    }
-
-    public void removeAll(LinkedHashMap<Character, KeyFrame[]> groupsToRemove)
-    {
-        Map<Character, KeyFrame[]> pairingsToRemove = new HashMap<>();
-        Map<Character, KeyFrame[]> pairingsToReplace = new HashMap<>();
-
-        selectedKeyFrames.forEach((Character character, KeyFrame[] keyFrames) ->
-        {
-            KeyFrame[] toRemove = groupsToRemove.get(character);
-            keyFrames = ArrayUtils.removeElement(keyFrames, toRemove);
-
-            for (KeyFrame keyFrame : keyFrames)
-            {
-                if (keyFrame == primary)
-                {
-                    primary = null;
-                    break;
-                }
-            }
-
-            if (keyFrames.length == 0)
-            {
-                pairingsToRemove.put(character, keyFrames);
-            }
-            else
-            {
-                pairingsToReplace.put(character, keyFrames);
-            }
-        });
-
-        for (Map.Entry<Character, KeyFrame[]> entry : pairingsToRemove.entrySet())
-        {
-            selectedKeyFrames.remove(entry.getKey());
-        }
-
-        selectedKeyFrames.putAll(pairingsToReplace);
         fireChanged();
     }
 

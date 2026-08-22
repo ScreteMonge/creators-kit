@@ -1,7 +1,8 @@
-package com.creatorskit.swing.timesheet.keyframe;
+package com.creatorskit.swing.timesheet.keyframe.subtypes;
 
+import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import com.creatorskit.swing.timesheet.keyframe.settings.HealthbarSprite;
-import com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite;
 import lombok.Getter;
 import lombok.Setter;
 

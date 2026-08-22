@@ -5,11 +5,13 @@ import com.creatorskit.Character;
 import com.creatorskit.hotkeymanager.LocationOption;
 import com.creatorskit.models.*;
 import com.creatorskit.models.datatypes.SpotAnimDefinition;
+import com.creatorskit.programming.camera.CameraManager;
 import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.programming.orientation.OrientationAction;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.programming.orientation.OrientationInstruction;
 import com.creatorskit.swing.timesheet.keyframe.*;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.*;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.*;
@@ -32,6 +34,7 @@ public class Programmer
     private final TimeSheetPanel timeSheetPanel;
     private final DataFinder dataFinder;
     private final ModelUtilities modelUtilities;
+    private final CameraManager cameraManager;
 
     private int clientTickAtLastProgramTick = 0;
     private final int GOLDEN_CHIN = 29757;
@@ -44,7 +47,7 @@ public class Programmer
     private boolean triggerPause = false;
 
     @Inject
-    public Programmer(Client client, CreatorsConfig config, ClientThread clientThread, CreatorsPlugin plugin, TimeSheetPanel timeSheetPanel, DataFinder dataFinder, ModelUtilities modelUtilities)
+    public Programmer(Client client, CreatorsConfig config, ClientThread clientThread, CreatorsPlugin plugin, TimeSheetPanel timeSheetPanel, DataFinder dataFinder, ModelUtilities modelUtilities, CameraManager cameraManager)
     {
         this.client = client;
         this.config = config;
@@ -53,6 +56,7 @@ public class Programmer
         this.timeSheetPanel = timeSheetPanel;
         this.dataFinder = dataFinder;
         this.modelUtilities = modelUtilities;
+        this.cameraManager = cameraManager;
     }
 
     @Subscribe
@@ -72,6 +76,7 @@ public class Programmer
                 incrementSubTime();
             }
 
+            cameraManager.tick();
             updateCharacter3D();
             if (clientTickAtLastProgramTick == 0 && triggerPause)
             {
@@ -983,6 +988,7 @@ public class Programmer
      */
     public void updatePrograms(double tick)
     {
+        cameraManager.updateProgram(tick);
         ArrayList<Character> characters = plugin.getCharacters();
         for (int i = 0; i < characters.size(); i++)
         {
@@ -997,13 +1003,14 @@ public class Programmer
     public void updateProgramsOnTick()
     {
         double currentTime = timeSheetPanel.getCurrentTime();
+        cameraManager.updateProgramOnTick(currentTime);
         ArrayList<Character> characters = plugin.getCharacters();
         for (int i = 0; i < characters.size(); i++)
         {
             Character character = characters.get(i);
             KeyFrame[] currentFrames = character.getCurrentFrames();
 
-            KeyFrame currentMovement = currentFrames[KeyFrameType.getIndex(KeyFrameType.MOVEMENT)];
+            KeyFrame currentMovement = currentFrames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.MOVEMENT)];
             double lastMovementTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
             if (currentMovement != null)
             {
@@ -1022,7 +1029,7 @@ public class Programmer
             }
 
 
-            KeyFrame currentAnimation = currentFrames[KeyFrameType.getIndex(KeyFrameType.ANIMATION)];
+            KeyFrame currentAnimation = currentFrames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.ANIMATION)];
             double lastAnimationTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
             if (currentAnimation != null)
             {
@@ -1040,7 +1047,7 @@ public class Programmer
             }
 
 
-            KeyFrame currentSpawn = currentFrames[KeyFrameType.getIndex(KeyFrameType.SPAWN)];
+            KeyFrame currentSpawn = currentFrames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.SPAWN)];
             double lastSpawnTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
             if (currentSpawn != null)
             {
@@ -1058,7 +1065,7 @@ public class Programmer
             }
 
 
-            KeyFrame currentModel = currentFrames[KeyFrameType.getIndex(KeyFrameType.MODEL)];
+            KeyFrame currentModel = currentFrames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.MODEL)];
             double lastModelTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
             if (currentModel != null)
             {
@@ -1076,7 +1083,7 @@ public class Programmer
             }
 
 
-            KeyFrame currentOrientation = currentFrames[KeyFrameType.getIndex(KeyFrameType.ORIENTATION)];
+            KeyFrame currentOrientation = currentFrames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.ORIENTATION)];
             double lastOrientationTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
             if (currentOrientation != null)
             {
@@ -1094,7 +1101,7 @@ public class Programmer
             }
 
 
-            KeyFrame currentText = currentFrames[KeyFrameType.getIndex(KeyFrameType.TEXT)];
+            KeyFrame currentText = currentFrames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.TEXT)];
             double lastTextTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
             if (currentText != null)
             {
@@ -1111,7 +1118,7 @@ public class Programmer
             }
 
 
-            KeyFrame currentOverhead = currentFrames[KeyFrameType.getIndex(KeyFrameType.OVERHEAD)];
+            KeyFrame currentOverhead = currentFrames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.OVERHEAD)];
             double lastOverheadTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
             if (currentOverhead != null)
             {
@@ -1128,7 +1135,7 @@ public class Programmer
             }
 
 
-            KeyFrame currentHealth = currentFrames[KeyFrameType.getIndex(KeyFrameType.HEALTH)];
+            KeyFrame currentHealth = currentFrames[KeyFrameType.getCharacterKeyFrameIndex(KeyFrameType.HEALTH)];
             double lastHealthTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
             if (currentHealth != null)
             {
@@ -1147,7 +1154,7 @@ public class Programmer
 
             for (KeyFrameType spotanimType : KeyFrameType.SPOTANIM_TYPES)
             {
-                KeyFrame currentSpotAnim = currentFrames[KeyFrameType.getIndex(spotanimType)];
+                KeyFrame currentSpotAnim = currentFrames[KeyFrameType.getCharacterKeyFrameIndex(spotanimType)];
                 double lastSpotAnimTick = -TimeSheetPanel.ABSOLUTE_MAX_SEQUENCE_LENGTH;
                 if (currentSpotAnim != null)
                 {
@@ -1168,7 +1175,7 @@ public class Programmer
 
             for (KeyFrameType hitsplatType : KeyFrameType.HITSPLAT_TYPES)
             {
-                KeyFrame currentHitsplat = currentFrames[KeyFrameType.getIndex(hitsplatType)];
+                KeyFrame currentHitsplat = currentFrames[KeyFrameType.getCharacterKeyFrameIndex(hitsplatType)];
                 double lastHitsplatTick = Integer.MIN_VALUE;
                 if (currentHitsplat != null)
                 {

@@ -1,5 +1,7 @@
-package com.creatorskit.swing.timesheet.keyframe;
+package com.creatorskit.swing.timesheet.keyframe.subtypes;
 
+import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import com.creatorskit.swing.timesheet.keyframe.settings.HitsplatSprite;
 import com.creatorskit.swing.timesheet.keyframe.settings.HitsplatVariant;
 import lombok.Getter;

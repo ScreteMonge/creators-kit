@@ -2,8 +2,11 @@ package com.creatorskit.hotkeymanager;
 
 import com.creatorskit.*;
 import com.creatorskit.Character;
+import com.creatorskit.programming.camera.AutoRotate;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.Programmer;
+import com.creatorskit.programming.camera.CameraScript;
+import com.creatorskit.programming.camera.EaseType;
 import com.creatorskit.programming.orientation.OrientationHotkeyMode;
 import com.creatorskit.selection.SelectionCommand;
 import com.creatorskit.selection.SelectionManager;
@@ -13,10 +16,12 @@ import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
-import com.creatorskit.swing.timesheet.keyframe.MovementKeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.OrientationKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.CameraKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.MovementKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.OrientationKeyFrame;
 import lombok.Setter;
 import net.runelite.api.Client;
+import net.runelite.api.GameState;
 import net.runelite.api.Tile;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
@@ -113,6 +118,34 @@ public class HotKeyManager
         {
             client.setFreeCameraSpeed(config.speedHotkey3());
             plugin.sendChatMessage("Oculus Orb set to speed: " + config.speedHotkey3());
+        }
+    };
+
+    public final HotkeyListener cameraHotkey = new HotkeyListener(() -> config.cameraKeyFrameHotkey())
+    {
+        @Override
+        public void hotkeyPressed()
+        {
+            if (client == null || client.getGameState() != GameState.LOGGED_IN)
+            {
+                return;
+            }
+
+            CameraKeyFrame cameraKeyFrame = new CameraKeyFrame(
+                    plugin.getCurrentTick(),
+                    new CameraScript(
+                            client.getCameraFocalPointX(),
+                            client.getCameraFocalPointY(),
+                            client.getCameraFocalPointZ(),
+                            client.getCameraPitch(),
+                            client.getCameraYaw(),
+                            client.getScale()
+                    ),
+                    EaseType.SINE
+            );
+
+            TimeSheetPanel timeSheetPanel = plugin.getCreatorsPanel().getToolBox().getTimeSheetPanel();
+            timeSheetPanel.runKeyFrameAddActions(new KeyFrame[]{cameraKeyFrame});
         }
     };
 

@@ -7,9 +7,11 @@ import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.AttributePanel;
 import com.creatorskit.swing.timesheet.TimeSheetPanel;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrameTarget;
+import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameCameraAction;
 import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameCharacterAction;
 import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameAction;
-import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameCharacterActionType;
+import com.creatorskit.swing.timesheet.keyframe.keyframeactions.KeyFrameActionType;
 import com.creatorskit.swing.timesheet.keyframe.keyframeselectionmanager.KeyFrameSelectionManager;
 import lombok.Getter;
 import lombok.Setter;
@@ -64,7 +66,7 @@ public class TimeSheet extends JPanel
     public final int SHOW_1_ZOOM = 50;
 
     private boolean keyFrameClicked = false;
-    private LinkedHashMap<Character, KeyFrame[]> clickedKeyFrames = new LinkedHashMap<>();
+    private LinkedHashMap<KeyFrameTarget, KeyFrame[]> clickedKeyFrames = new LinkedHashMap<>();
 
     public TimeSheet(ToolBoxFrame toolBox, CreatorsConfig config, ManagerTree managerTree, AttributePanel attributePanel, KeyFrameSelectionManager kfsm)
     {
@@ -429,15 +431,27 @@ public class TimeSheet extends JPanel
 
         final List<KeyFrameAction> kfa = new ArrayList<>();
 
-        LinkedHashMap<Character, KeyFrame[]> selected = new LinkedHashMap<>(kfsm.getSelected());
+        LinkedHashMap<KeyFrameTarget, KeyFrame[]> selected = new LinkedHashMap<>(kfsm.getSelected());
         KeyFrame primary = kfsm.getPrimary();
 
-        selected.forEach((Character character, KeyFrame[] keyFrames) ->
+        selected.forEach((KeyFrameTarget target, KeyFrame[] keyFrames) ->
         {
-            for (KeyFrame keyFrame : keyFrames)
+            switch (target.getType())
             {
-                timeSheetPanel.removeKeyFrame(character, keyFrame);
-                kfa.add(new KeyFrameCharacterAction(keyFrame, character, KeyFrameCharacterActionType.REMOVE));
+                case CHARACTER:
+                    for (KeyFrame keyFrame : keyFrames)
+                    {
+                        timeSheetPanel.removeKeyFrame(target, keyFrame);
+                        kfa.add(new KeyFrameCharacterAction(keyFrame, (Character) target.getValue(), KeyFrameActionType.REMOVE));
+                    }
+                    break;
+                case CAMERA:
+                    for (KeyFrame keyFrame : keyFrames)
+                    {
+                        timeSheetPanel.removeKeyFrame(target, keyFrame);
+                        kfa.add(new KeyFrameCameraAction(keyFrame, KeyFrameActionType.REMOVE));
+                    }
+                    break;
             }
         });
 
@@ -451,48 +465,79 @@ public class TimeSheet extends JPanel
         }
         else
         {
-            LinkedHashMap<Character, KeyFrame[]> clickedFrames = getClickedKeyFrames();
+            LinkedHashMap<KeyFrameTarget, KeyFrame[]> clickedFrames = getClickedKeyFrames();
             change[0] = 0;
 
             if (!clickedFrames.isEmpty())
             {
-                Map.Entry<Character, KeyFrame[]> firstEntry = clickedFrames.entrySet().iterator().next();
+                Map.Entry<KeyFrameTarget, KeyFrame[]> firstEntry = clickedFrames.entrySet().iterator().next();
                 KeyFrame[] keyFrames = firstEntry.getValue();
                 KeyFrame keyFrame = keyFrames[0];
                 change[0] = round(timelineUnits, getCurrentTime() - keyFrame.getTick());
             }
         }
 
-        LinkedHashMap<Character, KeyFrame[]> copies = new LinkedHashMap<>();
+        List<KeyFrame> cameraKeyFrameCopies = new ArrayList<>();
+        LinkedHashMap<Character, KeyFrame[]> characterCopies = new LinkedHashMap<>();
         KeyFrame[] primaryCopy = new KeyFrame[1];
 
-        selected.forEach((Character character, KeyFrame[] keyFrames) ->
+        selected.forEach((KeyFrameTarget target, KeyFrame[] keyFrames) ->
         {
-            KeyFrame[] keyFrameCopies = new KeyFrame[keyFrames.length];
-            for (int i = 0; i < keyFrames.length; i++)
+            switch (target.getType())
             {
-                KeyFrame keyFrame = keyFrames[i];
-                KeyFrame copy = KeyFrame.createCopy(keyFrame, round(timelineUnits, keyFrame.getTick() + change[0]));
-                keyFrameCopies[i] = copy;
+                case CHARACTER:
+                    KeyFrame[] keyFrameCopies = new KeyFrame[keyFrames.length];
+                    Character c = (Character) target.getValue();
+                    for (int i = 0; i < keyFrames.length; i++)
+                    {
+                        KeyFrame keyFrame = keyFrames[i];
+                        KeyFrame copy = KeyFrame.createCopy(keyFrame, round(timelineUnits, keyFrame.getTick() + change[0]));
+                        keyFrameCopies[i] = copy;
 
-                if (keyFrame == primary)
-                {
-                    primaryCopy[0] = copy;
-                }
+                        if (keyFrame == primary)
+                        {
+                            primaryCopy[0] = copy;
+                        }
 
-                KeyFrame keyFrameToReplace = timeSheetPanel.addKeyFrame(character, copy);
-                if (keyFrameToReplace != null)
-                {
-                    kfa.add(new KeyFrameCharacterAction(keyFrameToReplace, character, KeyFrameCharacterActionType.REMOVE));
-                }
+                        KeyFrame keyFrameToReplace = timeSheetPanel.addKeyFrame(target, copy);
+                        if (keyFrameToReplace != null)
+                        {
+                            kfa.add(new KeyFrameCharacterAction(keyFrameToReplace, c, KeyFrameActionType.REMOVE));
+                        }
 
-                kfa.add(new KeyFrameCharacterAction(copy, character, KeyFrameCharacterActionType.ADD));
+                        kfa.add(new KeyFrameCharacterAction(copy, c, KeyFrameActionType.ADD));
+                    }
+
+                    characterCopies.put(c, keyFrameCopies);
+                    break;
+                case CAMERA:
+                    KeyFrame[] cameraCopies = new KeyFrame[keyFrames.length];
+                    for (int i = 0; i < keyFrames.length; i++)
+                    {
+                        KeyFrame keyFrame = keyFrames[i];
+                        KeyFrame copy = KeyFrame.createCopy(keyFrame, round(timelineUnits, keyFrame.getTick() + change[0]));
+                        cameraCopies[i] = copy;
+
+                        if (keyFrame == primary)
+                        {
+                            primaryCopy[0] = copy;
+                        }
+
+                        KeyFrame keyFrameToReplace = timeSheetPanel.addKeyFrame(target, copy);
+                        if (keyFrameToReplace != null)
+                        {
+                            kfa.add(new KeyFrameCameraAction(keyFrameToReplace, KeyFrameActionType.REMOVE));
+                        }
+
+                        kfa.add(new KeyFrameCameraAction(copy, KeyFrameActionType.ADD));
+                    }
+
+                    cameraKeyFrameCopies.addAll(Arrays.asList(cameraCopies));
+                    break;
             }
-
-            copies.put(character, keyFrameCopies);
         });
 
-        kfsm.addAll(copies, primaryCopy[0]);
+        kfsm.addGroups(cameraKeyFrameCopies.toArray(new KeyFrame[0]), characterCopies, primaryCopy[0]);
         timeSheetPanel.stackKeyFrameActions(kfa);
         attributePanel.updateAttributes();
     }
@@ -695,7 +740,7 @@ public class TimeSheet extends JPanel
 
     public void updateTableSelection(Point p) {};
 
-    public LinkedHashMap<Character, KeyFrame[]> getKeyFrameClicked(Point point)
+    public LinkedHashMap<KeyFrameTarget, KeyFrame[]> getKeyFrameClicked(Point point)
     {
         return null;
     }

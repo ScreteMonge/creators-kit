@@ -10,7 +10,7 @@ import com.creatorskit.swing.CreatorsPanel;
 import com.creatorskit.swing.ParentPanel;
 import com.creatorskit.swing.TransmogPanel;
 import com.creatorskit.swing.anvil.ModelAnvil;
-import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.AnimationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import com.google.gson.Gson;
@@ -371,7 +371,7 @@ public class ModelUtilities
                             animId,
                             -1,
                             60 * size,
-                            new KeyFrame[KeyFrameType.getTotalFrameTypes()][],
+                            new KeyFrame[KeyFrameType.getTotalCharacterKeyFrameTypes()][],
                             KeyFrameType.createDefaultSummary(),
                             creatorsPanel.getRandomColor(),
                             false,

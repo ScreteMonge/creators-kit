@@ -1,10 +1,8 @@
 package com.creatorskit.swing.timesheet.attributes;
 
-import com.creatorskit.programming.MovementType;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrameState;
-import com.creatorskit.swing.timesheet.keyframe.MovementKeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.OrientationKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.MovementKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.OrientationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.settings.Toggle;
 import lombok.Getter;
 

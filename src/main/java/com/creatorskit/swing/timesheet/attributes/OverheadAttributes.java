@@ -1,11 +1,8 @@
 package com.creatorskit.swing.timesheet.attributes;
 
-import com.creatorskit.swing.timesheet.keyframe.AnimationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
-import com.creatorskit.swing.timesheet.keyframe.KeyFrameState;
-import com.creatorskit.swing.timesheet.keyframe.OverheadKeyFrame;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.OverheadKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.settings.OverheadSprite;
-import com.creatorskit.swing.timesheet.keyframe.settings.Toggle;
 import lombok.Getter;
 
 import javax.swing.*;

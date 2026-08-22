@@ -1,4 +1,4 @@
-package com.creatorskit;
+package com.creatorskit.programming.camera;
 
 public enum AutoRotate
 {
