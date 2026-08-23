@@ -7,6 +7,7 @@ import lombok.Getter;
 @Getter
 public class CameraScript
 {
+    private boolean inPOH;
     private float focalX;
     private float focalY;
     private float focalZ;

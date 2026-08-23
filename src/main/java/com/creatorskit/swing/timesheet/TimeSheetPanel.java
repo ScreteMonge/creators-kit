@@ -908,11 +908,6 @@ public class TimeSheetPanel extends JSplitPane
             case CAMERA:
                 keyFrameToReplace = cameraManager.addKeyFrame(keyFrame);
                 kfsm.select(new KeyFrameTarget(KeyFrameCategory.CAMERA, null), keyFrame);
-
-                if (client.getGameState() == GameState.LOGGED_IN)
-                {
-                    //RELEASE - UPDATE CAMERA POSITION toolBox.getProgrammer().updateProgram(c, currentTime);
-                }
                 break;
         }
 
@@ -939,11 +934,6 @@ public class TimeSheetPanel extends JSplitPane
                 break;
             case CAMERA:
                 cameraManager.removeKeyFrame(keyFrame);
-
-                if (client.getGameState() == GameState.LOGGED_IN)
-                {
-                    //RELEASE - UPDATE CAM POSITION toolBox.getProgrammer().updateProgram(character, currentTime);
-                }
                 break;
         }
 
@@ -1468,16 +1458,16 @@ public class TimeSheetPanel extends JSplitPane
             }
         }
 
-        KeyFrame[] cameraKeyFrames = new KeyFrame[0];
+        Set<KeyFrame> cameraKeyFrames = new HashSet<>();
         copiedKeyFrames.forEach((target, keyFrames) ->
         {
             if (target.getType() == KeyFrameCategory.CAMERA)
             {
-                ArrayUtils.addAll(cameraKeyFrames, keyFrames);
+                cameraKeyFrames.addAll(List.of(keyFrames));
             }
         });
 
-        KeyFrame[] cameraCopies = createKeyFrameCopies(KeyFrameCategory.CAMERA, cameraKeyFrames);
+        KeyFrame[] cameraCopies = createKeyFrameCopies(KeyFrameCategory.CAMERA, cameraKeyFrames.toArray(new KeyFrame[0]));
 
         if (selectionManager.getSelectionSize() == 1)
         {
@@ -1494,6 +1484,12 @@ public class TimeSheetPanel extends JSplitPane
             }
 
             runKeyFrameAddActions(cameraCopies, characters, keyFrameSet);
+            return;
+        }
+
+        if (selectionManager.getSelectionSize() == 0 && cameraCopies.length > 0)
+        {
+            runKeyFrameAddActions(cameraCopies);
             return;
         }
 

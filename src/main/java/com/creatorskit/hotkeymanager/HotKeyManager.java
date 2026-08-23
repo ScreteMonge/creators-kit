@@ -2,11 +2,9 @@ package com.creatorskit.hotkeymanager;
 
 import com.creatorskit.*;
 import com.creatorskit.Character;
-import com.creatorskit.programming.camera.AutoRotate;
+import com.creatorskit.programming.camera.*;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.Programmer;
-import com.creatorskit.programming.camera.CameraScript;
-import com.creatorskit.programming.camera.EaseType;
 import com.creatorskit.programming.orientation.OrientationHotkeyMode;
 import com.creatorskit.selection.SelectionCommand;
 import com.creatorskit.selection.SelectionManager;
@@ -28,6 +26,7 @@ import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.Keybind;
+import net.runelite.client.input.KeyListener;
 import net.runelite.client.util.HotkeyListener;
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -82,6 +81,50 @@ public class HotKeyManager
         }
     };
 
+    public final KeyListener freecamKeyListener = new KeyListener()
+    {
+        @Override
+        public void keyTyped(KeyEvent e) { }
+
+        @Override
+        public void keyPressed(KeyEvent e)
+        {
+            if (client.getCameraMode() != 1)
+            {
+                return;
+            }
+
+            switch (e.getKeyCode())
+            {
+                case KeyEvent.VK_W:
+                case KeyEvent.VK_A:
+                case KeyEvent.VK_S:
+                case KeyEvent.VK_D:
+                case KeyEvent.VK_R:
+                case KeyEvent.VK_F:
+                    onFreeCamDirectionPressed();
+                    break;
+            }
+        }
+
+        @Override
+        public void keyReleased(KeyEvent e) { }
+
+        @Override
+        public void focusLost() { }
+    };
+
+    private void onFreeCamDirectionPressed()
+    {
+        ToolBoxFrame toolBox = plugin.getCreatorsPanel().getToolBox();
+        if (!toolBox.getProgrammer().isPlaying())
+        {
+            return;
+        }
+
+        toolBox.getCameraManager().setCancelled(true);
+    }
+
     public final HotkeyListener overlayKeyListener = new HotkeyListener(() -> config.toggleOverlaysHotkey())
     {
         @Override
@@ -131,16 +174,18 @@ public class HotKeyManager
                 return;
             }
 
+            WorldView worldView = client.getTopLevelWorldView();
+            CameraScript script = CameraUtilities.writeCameraScript(client, worldView, MovementManager.useLocalLocations(worldView));
+
+            if (script == null)
+            {
+                plugin.sendChatMessage("Failed to create a Camera Keyframe from the current view");
+                return;
+            }
+
             CameraKeyFrame cameraKeyFrame = new CameraKeyFrame(
                     plugin.getCurrentTick(),
-                    new CameraScript(
-                            client.getCameraFocalPointX(),
-                            client.getCameraFocalPointY(),
-                            client.getCameraFocalPointZ(),
-                            client.getCameraPitch(),
-                            client.getCameraYaw(),
-                            client.getScale()
-                    ),
+                    script,
                     EaseType.SINE
             );
 

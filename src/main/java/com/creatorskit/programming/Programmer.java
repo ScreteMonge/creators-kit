@@ -923,6 +923,7 @@ public class Programmer
         {
             triggerPause = false;
             playing = true;
+            cameraManager.setCancelled(false);
             timeSheetPanel.setPlayButtonIcon(true);
             double currentTime = timeSheetPanel.getCurrentTime();
 

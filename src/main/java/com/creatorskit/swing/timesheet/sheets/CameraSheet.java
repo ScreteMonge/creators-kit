@@ -91,8 +91,7 @@ public class CameraSheet extends TimeSheet
             int y = rowHeightOffset + rowHeight - yImageOffset;
 
             g.drawImage(endImage, x - xImageOffset, y, null);
-
-            //g.drawImage(cameraImage, x - xImageOffset, y + endImage.getHeight(), null);
+            g.drawImage(cameraImage, x - xImageOffset, y + endImage.getHeight() - cameraImage.getHeight(), null);
         }
     }
 

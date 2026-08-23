@@ -1,20 +1,15 @@
 package com.creatorskit.programming.camera;
 
-import com.creatorskit.swing.timesheet.keyframe.subtypes.CameraKeyFrame;
-
 public class Ease
 {
-    public static CameraScript interpolate(double ratio, CameraKeyFrame currentKeyframe, CameraKeyFrame nextKeyframe)
+    public static CameraScript interpolate(boolean isInPOH, double ratio, EaseType easeType, CameraScript currentScript, CameraScript nextScript)
     {
-        if (nextKeyframe == null)
+        if (nextScript == null)
         {
-            return currentKeyframe.getScript();
+            return currentScript;
         }
 
-        CameraScript currentScript = currentKeyframe.getScript();
-        CameraScript nextScript = nextKeyframe.getScript();
-
-        double interpolationFactor = calculateEasing(currentKeyframe.getEase(), ratio);
+        double interpolationFactor = calculateEasing(easeType, ratio);
 
         double currentYaw = currentScript.getYaw();
         double nextYaw = nextScript.getYaw();
@@ -29,6 +24,7 @@ public class Ease
         }
 
         return new CameraScript(
+                isInPOH,
                 (float) lerp(currentScript.getFocalX(), nextScript.getFocalX(), interpolationFactor),
                 (float) lerp(currentScript.getFocalY(), nextScript.getFocalY(), interpolationFactor),
                 (float) lerp(currentScript.getFocalZ(), nextScript.getFocalZ(), interpolationFactor),

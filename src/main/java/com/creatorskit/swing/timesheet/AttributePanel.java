@@ -3,11 +3,13 @@ package com.creatorskit.swing.timesheet;
 import com.creatorskit.CKObject;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsConfig;
+import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.models.CustomModel;
 import com.creatorskit.models.DataFinder;
 import com.creatorskit.models.datatypes.*;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.camera.CameraScript;
+import com.creatorskit.programming.camera.CameraUtilities;
 import com.creatorskit.programming.camera.EaseType;
 import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.programming.orientation.OrientationGoal;
@@ -45,6 +47,7 @@ public class AttributePanel extends JPanel
 {
     private Client client;
     private ClientThread clientThread;
+    private CreatorsPlugin plugin;
     private CreatorsConfig config;
     private TimeSheetPanel timeSheetPanel;
     private DataFinder dataFinder;
@@ -260,34 +263,30 @@ public class AttributePanel extends JPanel
      */
     public KeyFrame createKeyFrame(KeyFrameType keyFrameType, double tick)
     {
+        WorldView worldView = client.getTopLevelWorldView();
+
         switch (keyFrameType)
         {
             default:
             case CAMERA:
                 if (client == null || client.getGameState() != GameState.LOGGED_IN)
                 {
-                    //RELEASE - Testing only, return null
-                    return new CameraKeyFrame(
-                            tick,
-                            new CameraScript(0, 0, 0, 0, 0, 0),
-                            (EaseType) cameraAttributes.getEaseType().getSelectedItem()
-                    );
+                    return null;
+                }
+
+                CameraScript script = CameraUtilities.writeCameraScript(client, worldView, MovementManager.useLocalLocations(worldView));
+                if (script == null)
+                {
+                    plugin.sendChatMessage("Failed to create a Camera Keyframe from the current view");
+                    return null;
                 }
 
                 return new CameraKeyFrame(
                         tick,
-                        new CameraScript(
-                                client.getCameraFocalPointX(),
-                                client.getCameraFocalPointY(),
-                                client.getCameraFocalPointZ(),
-                                client.getCameraPitch(),
-                                client.getCameraYaw(),
-                                client.getScale()
-                        ),
+                        script,
                         (EaseType) cameraAttributes.getEaseType().getSelectedItem()
                 );
             case MOVEMENT:
-                WorldView worldView = client.getTopLevelWorldView();
                 if (worldView == null || worldView.getMapRegions() == null)
                 {
                     return null;
@@ -464,6 +463,13 @@ public class AttributePanel extends JPanel
         loop.addItem(EaseType.QUINT);
         loop.addItem(EaseType.EXPO);
         card.add(loop, c);
+
+        c.gridwidth = 3;
+        c.gridx = 0;
+        c.gridy = 2;
+        JLabel description = new JLabel("<html>Allows programming of the Camera" +
+                "<br>To add a new Camera Keyframe, you can use the Hotkey " + config.cameraKeyFrameHotkey().toString() + " in the scene to keyframe the current view</html>");
+        card.add(description, c);
 
         c.gridwidth = 1;
         c.gridheight = 1;

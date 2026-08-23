@@ -174,6 +174,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		keyManager.registerKeyListener(hotKeyManager.overlayKeyListener);
 		keyManager.registerKeyListener(hotKeyManager.oculusOrbListener);
+		keyManager.registerKeyListener(hotKeyManager.freecamKeyListener);
 		keyManager.registerKeyListener(hotKeyManager.orbPreset1Listener);
 		keyManager.registerKeyListener(hotKeyManager.orbPreset2Listener);
 		keyManager.registerKeyListener(hotKeyManager.orbPreset3Listener);
@@ -281,6 +282,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		keyManager.unregisterKeyListener(hotKeyManager.overlayKeyListener);
 		keyManager.unregisterKeyListener(hotKeyManager.oculusOrbListener);
+		keyManager.unregisterKeyListener(hotKeyManager.freecamKeyListener);
 		keyManager.unregisterKeyListener(hotKeyManager.orbPreset1Listener);
 		keyManager.unregisterKeyListener(hotKeyManager.orbPreset2Listener);
 		keyManager.unregisterKeyListener(hotKeyManager.orbPreset3Listener);
