@@ -26,8 +26,10 @@ public class Ease
         return new CameraScript(
                 isInPOH,
                 (float) lerp(currentScript.getFocalX(), nextScript.getFocalX(), interpolationFactor),
+                0,
                 (float) lerp(currentScript.getFocalY(), nextScript.getFocalY(), interpolationFactor),
                 (float) lerp(currentScript.getFocalZ(), nextScript.getFocalZ(), interpolationFactor),
+                0,
                 lerp(currentScript.getPitch(), nextScript.getPitch(), interpolationFactor),
                 lerp(currentYaw, nextYaw, interpolationFactor) % 16384,
                 (int) lerp(currentScript.getScale(), nextScript.getScale(), interpolationFactor)

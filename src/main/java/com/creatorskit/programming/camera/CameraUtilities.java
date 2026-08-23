@@ -1,7 +1,7 @@
 package com.creatorskit.programming.camera;
 
-import com.creatorskit.programming.MovementManager;
 import net.runelite.api.Client;
+import net.runelite.api.Perspective;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
@@ -30,11 +30,16 @@ public class CameraUtilities
             return null;
         }
 
+        int baseX = localPoint.getX() - Perspective.LOCAL_TILE_SIZE / 2;
+        int baseY = localPoint.getY() - Perspective.LOCAL_TILE_SIZE / 2;
+
         return new CameraScript(
                 script.isInPOH(),
-                localPoint.getX(),
+                baseX + script.getOffsetX(),
+                0,
                 script.getFocalY(),
-                localPoint.getY(),
+                baseY + script.getOffsetZ(),
+                0,
                 script.getPitch(),
                 script.getYaw(),
                 script.getScale()
@@ -56,8 +61,10 @@ public class CameraUtilities
         return new CameraScript(
                 inPOH,
                 client.getCameraFocalPointX(),
+                0,
                 client.getCameraFocalPointY(),
                 client.getCameraFocalPointZ(),
+                0,
                 client.getCameraPitch(),
                 client.getCameraYaw(),
                 client.getVarcIntValue(VarClientID.CAMERA_ZOOM_SMALL)
@@ -67,6 +74,8 @@ public class CameraUtilities
     private static CameraScript writeWorldScript(Client client, WorldView worldView, boolean inPOH)
     {
         LocalPoint lp = new LocalPoint((int) client.getCameraFocalPointX(), (int) client.getCameraFocalPointZ(), worldView);
+        int offsetX = lp.getX() & 127;
+        int offsetY = lp.getY() & 127;
         WorldPoint worldPoint = WorldPoint.fromLocalInstance(client, lp);
 
         Collection<WorldPoint> wps = WorldPoint.toLocalInstance(worldView, worldPoint);
@@ -80,8 +89,10 @@ public class CameraUtilities
         return new CameraScript(
                 inPOH,
                 wp.getX(),
+                offsetX,
                 client.getCameraFocalPointY(),
                 wp.getY(),
+                offsetY,
                 client.getCameraPitch(),
                 client.getCameraYaw(),
                 client.getVarcIntValue(VarClientID.CAMERA_ZOOM_SMALL)
