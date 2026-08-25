@@ -576,6 +576,7 @@ public class ModelGetter
 
                 Character character = creatorsPanel.createCharacter(
                         ParentPanel.SIDE_PANEL,
+                        UUID.randomUUID().toString(),
                         name,
                         7699,
                         customModel,
@@ -1640,6 +1641,7 @@ public class ModelGetter
         {
             Character character = creatorsPanel.createCharacter(
                     ParentPanel.SIDE_PANEL,
+                    UUID.randomUUID().toString(),
                     name,
                     7699,
                     customModel,

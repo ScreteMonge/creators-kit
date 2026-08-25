@@ -24,16 +24,14 @@ import org.apache.commons.lang3.ArrayUtils;
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import java.awt.*;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Objects;
-import java.util.Random;
+import java.util.*;
 
 @Getter
 @Setter
 @AllArgsConstructor
 public class Character
 {
+    private String id;
     private String name;
     private boolean active;
     private boolean inScene;
@@ -69,6 +67,11 @@ public class Character
     public String toString()
     {
         return name;
+    }
+
+    public void rerollId()
+    {
+        id = UUID.randomUUID().toString();
     }
 
     public void setPlaying(boolean playing)

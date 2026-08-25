@@ -3,17 +3,20 @@ package com.creatorskit.programming.camera;
 import com.creatorskit.CKObject;
 import com.creatorskit.Character;
 import com.creatorskit.programming.MovementManager;
+import com.creatorskit.saves.CameraScriptSave;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.subtypes.CameraKeyFrame;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.Client;
+import net.runelite.api.Model;
 import net.runelite.api.ScriptID;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.client.callback.ClientThread;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.inject.Inject;
+import java.util.List;
 
 public class CameraManager
 {
@@ -206,13 +209,22 @@ public class CameraManager
         }
 
         LocalPoint lp = ckObject.getLocation();
+        int tileHeight = client.getTopLevelWorldView().getTileHeights()[ckObject.getLevel()][lp.getSceneX()][lp.getSceneY()];
+
+        Model model = ckObject.getBaseModel();
+        if (model == null)
+        {
+            return;
+        }
+        model.calculateBoundsCylinder();
+        int modelHeight = (int) (model.getModelHeight() * 0.75);
 
         CameraTrackingScript nextScript;
         if (nextKeyFrame == null || nextKeyFrame.getScript().getType() == CameraMotionType.DIRECTIONAL)
         {
             setCamera(
                     lp.getX(),
-                    0,
+                    tileHeight - modelHeight,
                     lp.getY(),
                     (int) currentTrackingScript.getPitch(),
                     (int) currentTrackingScript.getYaw(),
@@ -228,7 +240,7 @@ public class CameraManager
         CameraTrackingScript script = Ease.interplateTracking(ratio, currentTrackingScript.getEase(), character, currentTrackingScript, nextScript);
         setCamera(
                 lp.getX(),
-                0,
+                tileHeight,
                 lp.getY(),
                 (int) script.getPitch(),
                 (int) script.getYaw(),
@@ -319,5 +331,128 @@ public class CameraManager
     public void removeKeyFrame(KeyFrame keyFrame)
     {
         keyFrames = ArrayUtils.removeElement(keyFrames, keyFrame);
+    }
+
+    public void clearKeyFrames()
+    {
+        keyFrames = new KeyFrame[0];
+        currentKeyFrame = null;
+        nextKeyFrame = null;
+    }
+
+    public CameraScriptSave[] packCameraKeyFrames()
+    {
+        CameraScriptSave[] scriptSaves = new CameraScriptSave[keyFrames.length];
+        for (int i = 0; i < keyFrames.length; i++)
+        {
+            KeyFrame keyFrame = keyFrames[i];
+            CameraKeyFrame kf = (CameraKeyFrame) keyFrame;
+            if (kf.getScript().getType() == CameraMotionType.DIRECTIONAL)
+            {
+                CameraDirectionalScript script = (CameraDirectionalScript) kf.getScript();
+                CameraScriptSave save = new CameraScriptSave(
+                        CameraMotionType.DIRECTIONAL,
+                        script.getEase(),
+                        script.getPitch(),
+                        script.getYaw(),
+                        script.getScale(),
+                        keyFrame.getTick(),
+                        script.isInPOH(),
+                        script.getFocalX(),
+                        script.getOffsetX(),
+                        script.getFocalY(),
+                        script.getFocalZ(),
+                        script.getOffsetZ(),
+                        null
+                );
+                scriptSaves[i] = save;
+            }
+            else
+            {
+                CameraTrackingScript script = (CameraTrackingScript) kf.getScript();
+                Character character = script.getCharacter();
+                String id = character == null ? "" : character.getId();
+                CameraScriptSave save = new CameraScriptSave(
+                        CameraMotionType.TRACKING,
+                        script.getEase(),
+                        script.getPitch(),
+                        script.getYaw(),
+                        script.getScale(),
+                        keyFrame.getTick(),
+                        false,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        id
+                );
+
+                scriptSaves[i] = save;
+            }
+        }
+
+        return scriptSaves;
+    }
+
+    public void unpackCameraKeyFrames(CameraScriptSave[] scriptSaves, List<Character> characters)
+    {
+        if (scriptSaves == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < scriptSaves.length; i++)
+        {
+            CameraScriptSave scriptSave = scriptSaves[i];
+            if (scriptSave.getType() == CameraMotionType.DIRECTIONAL)
+            {
+                CameraDirectionalScript script = new CameraDirectionalScript(
+                        CameraMotionType.DIRECTIONAL,
+                        scriptSave.getEase(),
+                        scriptSave.getPitch(),
+                        scriptSave.getYaw(),
+                        scriptSave.getScale(),
+                        scriptSave.isInPOH(),
+                        scriptSave.getFocalX(),
+                        scriptSave.getOffsetX(),
+                        scriptSave.getFocalY(),
+                        scriptSave.getFocalZ(),
+                        scriptSave.getOffsetZ()
+                );
+
+                addKeyFrame(new CameraKeyFrame(
+                        scriptSave.getTick(),
+                        script)
+                );
+            }
+            else
+            {
+                Character character = null;
+                String scriptId = scriptSave.getId();
+                for (Character c : characters)
+                {
+                    if (c.getId().equals(scriptId))
+                    {
+                        character = c;
+                        break;
+                    }
+                }
+
+                CameraTrackingScript script = new CameraTrackingScript(
+                        CameraMotionType.TRACKING,
+                        scriptSave.getEase(),
+                        scriptSave.getPitch(),
+                        scriptSave.getYaw(),
+                        scriptSave.getScale(),
+                        character
+                );
+
+                addKeyFrame(new CameraKeyFrame(
+                        scriptSave.getTick(),
+                        script)
+                );
+            }
+        }
     }
 }

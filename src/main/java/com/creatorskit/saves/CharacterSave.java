@@ -13,6 +13,7 @@ import net.runelite.api.coords.WorldPoint;
 @Setter
 public class CharacterSave
 {
+    private String id;
     private String name;
     private WorldPoint nonInstancedPoint;
     private LocalPoint instancedPoint;

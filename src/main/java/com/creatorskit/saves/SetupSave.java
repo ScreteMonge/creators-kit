@@ -14,4 +14,5 @@ public class SetupSave
     private CustomModelComp[] comps;
     private FolderNodeSave masterFolderNode;
     private CharacterSave[] saves;
+    private CameraScriptSave[] cameraScriptSaves;
 }

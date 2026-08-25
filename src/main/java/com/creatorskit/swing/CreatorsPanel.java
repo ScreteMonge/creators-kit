@@ -5,12 +5,9 @@ import com.creatorskit.CreatorsConfig;
 import com.creatorskit.hotkeymanager.LocationOption;
 import com.creatorskit.programming.AnimationType;
 import com.creatorskit.programming.orientation.Orientation;
-import com.creatorskit.saves.CharacterSave;
+import com.creatorskit.saves.*;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.Character;
-import com.creatorskit.saves.FolderNodeSave;
-import com.creatorskit.saves.ModelKeyFrameSave;
-import com.creatorskit.saves.SetupSave;
 import com.creatorskit.models.*;
 import com.creatorskit.selection.SelectionCommand;
 import com.creatorskit.selection.SelectionManager;
@@ -55,6 +52,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.time.LocalTime;
 import java.util.*;
+import java.util.List;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -234,6 +232,7 @@ public class CreatorsPanel extends PluginPanel
     {
         return createCharacter(
                 parentPanel,
+                UUID.randomUUID().toString(),
                 "Object (" + npcPanels + ")",
                 7699,
                 null,
@@ -250,6 +249,7 @@ public class CreatorsPanel extends PluginPanel
 
     public Character createCharacter(
                               ParentPanel parentPanel,
+                              String id,
                               String name,
                               int modelId,
                               CustomModel customModel,
@@ -458,6 +458,7 @@ public class CreatorsPanel extends PluginPanel
         });
 
         Character character = new Character(
+                id,
                 textField.getText(),
                 active,
                 false,
@@ -839,6 +840,7 @@ public class CreatorsPanel extends PluginPanel
         String finalNewName = newName;
         Character c = createCharacter(
                 character.getParentPanel(),
+                UUID.randomUUID().toString(),
                 finalNewName,
                 (int) character.getModelSpinner().getValue(),
                 (CustomModel) character.getComboBox().getSelectedItem(),
@@ -1554,8 +1556,14 @@ public class CreatorsPanel extends PluginPanel
 
         //Get Folder structure and all characters contained within
         FolderNodeSave folderNodeSave = getFolders(comps);
+        CameraScriptSave[] cameraKeyFrames = toolBox.getCameraManager().packCameraKeyFrames();
 
-        SetupSave saveFile = new SetupSave(CreatorsPlugin.getPluginVersion(), comps, folderNodeSave, new CharacterSave[0]);
+        SetupSave saveFile = new SetupSave(
+                CreatorsPlugin.getPluginVersion(),
+                comps,
+                folderNodeSave,
+                new CharacterSave[0],
+                cameraKeyFrames);
 
         try
         {
@@ -1665,6 +1673,7 @@ public class CreatorsPanel extends PluginPanel
 
     private CharacterSave createCharacterSave(Character character, CustomModelComp[] comps)
     {
+        String id = character.getId();
         String name = character.getName();
         WorldPoint savedWorldPoint = character.getNonInstancedPoint();
         LocalPoint savedLocalPoint = character.getInstancedPoint();
@@ -1710,6 +1719,7 @@ public class CreatorsPanel extends PluginPanel
                 };
 
         return new CharacterSave(
+                id,
                 name,
                 savedWorldPoint,
                 savedLocalPoint,
@@ -1904,11 +1914,18 @@ public class CreatorsPanel extends PluginPanel
 
         SwingUtilities.invokeLater(() ->
         {
+            List<Character> characters = new ArrayList<>();
             if (folderNodeSave != null)
             {
-                openFolderNodeSave(version, managerTree, rootNode, folderNodeSave, customModels);
+                openFolderNodeSave(version, managerTree, characters, rootNode, folderNodeSave, customModels);
                 toolBox.repaint();
                 toolBox.revalidate();
+            }
+
+            toolBox.getCameraManager().unpackCameraKeyFrames(saveFile.getCameraScriptSaves(), characters);
+            for (Character character : characters)
+            {
+                character.rerollId();
             }
         });
 
@@ -1941,6 +1958,7 @@ public class CreatorsPanel extends PluginPanel
 
                         character = createCharacter(
                                 ParentPanel.SIDE_PANEL,
+                                UUID.randomUUID().toString(),
                                 save.getName(),
                                 save.getModelId(),
                                 customModel,
@@ -1969,7 +1987,7 @@ public class CreatorsPanel extends PluginPanel
         }
     }
 
-    private void openFolderNodeSave(String fileVersion, ManagerTree managerTree, DefaultMutableTreeNode parentNode, FolderNodeSave folderNodeSave, CustomModel[] customModels)
+    private void openFolderNodeSave(String fileVersion, ManagerTree managerTree, List<Character> characters, DefaultMutableTreeNode parentNode, FolderNodeSave folderNodeSave, CustomModel[] customModels)
     {
         String name = folderNodeSave.getName();
         DefaultMutableTreeNode node;
@@ -2012,6 +2030,16 @@ public class CreatorsPanel extends PluginPanel
         for (CharacterSave save : folderNodeSave.getCharacterSaves())
         {
             Character character;
+            String id;
+            if (isVersionLessThan(fileVersion, "2.3.3"))
+            {
+                id = UUID.randomUUID().toString();
+            }
+            else
+            {
+                id = save.getId();
+            }
+
             CustomModel customModel = null;
             if (customModels.length > 0)
             {
@@ -2119,6 +2147,7 @@ public class CreatorsPanel extends PluginPanel
 
             character = createCharacter(
                     parentPanel,
+                    id,
                     save.getName(),
                     save.getModelId(),
                     customModel,
@@ -2139,13 +2168,14 @@ public class CreatorsPanel extends PluginPanel
                     LocationOption.TO_SAVED_LOCATION,
                     new int[]{0, 0});
 
+            characters.add(character);
             addPanel(parentPanel, character, node, false, false, SelectionCommand.SELECT_ONLY);
         }
 
         FolderNodeSave[] folderNodeSaves = folderNodeSave.getFolderSaves();
         for (FolderNodeSave fns : folderNodeSaves)
         {
-            openFolderNodeSave(fileVersion, managerTree, node, fns, customModels);
+            openFolderNodeSave(fileVersion, managerTree, characters, node, fns, customModels);
         }
     }
 

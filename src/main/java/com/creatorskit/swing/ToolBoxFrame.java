@@ -445,6 +445,7 @@ public class ToolBoxFrame extends JFrame
 
             managerPanel.getManagerTree().removeAllNodes();
             modelUtilities.clearCustomModels();
+            cameraManager.clearKeyFrames();
 
             if (loadNewSetup)
             {

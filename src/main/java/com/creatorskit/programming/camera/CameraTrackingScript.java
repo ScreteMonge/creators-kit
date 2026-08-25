@@ -8,7 +8,7 @@ import lombok.Setter;
 @Getter
 public class CameraTrackingScript extends CameraScript
 {
-    Character character;
+    private Character character;
 
     public CameraTrackingScript(CameraMotionType type, EaseType ease, double pitch, double yaw, int scale, Character character)
     {

@@ -28,6 +28,7 @@ import java.io.Reader;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.UUID;
 
 public class ModelUtilities
 {
@@ -363,6 +364,7 @@ public class ModelUtilities
                     CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
                     Character character = creatorsPanel.createCharacter(
                             ParentPanel.SIDE_PANEL,
+                            UUID.randomUUID().toString(),
                             name,
                             7699,
                             customModel,
