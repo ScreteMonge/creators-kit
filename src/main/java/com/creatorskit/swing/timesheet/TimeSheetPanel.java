@@ -10,7 +10,7 @@ import com.creatorskit.models.datatypes.SpotAnimDefinition;
 import com.creatorskit.models.datatypes.WeaponAnimData;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.Programmer;
-import com.creatorskit.programming.camera.CameraManager;
+import com.creatorskit.programming.camera.*;
 import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.programming.orientation.OrientationGoal;
 import com.creatorskit.programming.orientation.OrientationHotkeyMode;
@@ -511,6 +511,32 @@ public class TimeSheetPanel extends JSplitPane
                 if (newKf == null)
                 {
                     continue;
+                }
+
+                if (type == KeyFrameType.CAMERA)
+                {
+                    CameraKeyFrame oldKF = (CameraKeyFrame) keyFrame;
+                    CameraKeyFrame newKF = (CameraKeyFrame) newKf;
+                    CameraScript oldScript = oldKF.getScript();
+                    CameraScript newScript = newKF.getScript();
+
+                    if (oldScript.getType() == CameraMotionType.DIRECTIONAL && newScript.getType() == CameraMotionType.DIRECTIONAL)
+                    {
+                        CameraDirectionalScript oldDS = (CameraDirectionalScript) oldScript;
+                        CameraDirectionalScript newDS = (CameraDirectionalScript) newScript;
+                        newDS.setInPOH(oldDS.isInPOH());
+                        newDS.setFocalX(oldDS.getFocalX());
+                        newDS.setFocalY(oldDS.getFocalY());
+                        newDS.setFocalZ(oldDS.getFocalZ());
+                        newDS.setOffsetX(oldDS.getOffsetX());
+                        newDS.setOffsetZ(oldDS.getOffsetZ());
+                    }
+                    else if (oldScript.getType() == CameraMotionType.TRACKING && newScript.getType() == CameraMotionType.TRACKING)
+                    {
+                        CameraTrackingScript oldTS = (CameraTrackingScript) oldScript;
+                        CameraTrackingScript newTS = (CameraTrackingScript) newScript;
+                        newTS.setCharacter(oldTS.getCharacter());
+                    }
                 }
 
                 if (type == KeyFrameType.MOVEMENT)
@@ -1283,7 +1309,7 @@ public class TimeSheetPanel extends JSplitPane
 
     private void setupAttributePanel()
     {
-        attributePanel = new AttributePanel(client, clientThread, config, this, dataFinder, selectionManager, kfsm);
+        attributePanel = new AttributePanel(client, clientThread, plugin, config, this, dataFinder, selectionManager, kfsm);
         summarySheet = new SummarySheet(toolBox, config, managerTree, attributePanel, kfsm);
         attributeSheet = new AttributeSheet(toolBox, config, managerTree, attributePanel, selectionManager, kfsm);
         cameraSheet = new CameraSheet(toolBox, config, managerTree, attributePanel, kfsm, cameraManager);

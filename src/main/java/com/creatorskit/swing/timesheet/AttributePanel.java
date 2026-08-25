@@ -8,9 +8,7 @@ import com.creatorskit.models.CustomModel;
 import com.creatorskit.models.DataFinder;
 import com.creatorskit.models.datatypes.*;
 import com.creatorskit.programming.MovementManager;
-import com.creatorskit.programming.camera.CameraScript;
-import com.creatorskit.programming.camera.CameraUtilities;
-import com.creatorskit.programming.camera.EaseType;
+import com.creatorskit.programming.camera.*;
 import com.creatorskit.programming.orientation.Orientation;
 import com.creatorskit.programming.orientation.OrientationGoal;
 import com.creatorskit.selection.SelectionManager;
@@ -115,10 +113,11 @@ public class AttributePanel extends JPanel
     private final Random random = new Random();
 
     @Inject
-    public AttributePanel(Client client, ClientThread clientThread, CreatorsConfig config, TimeSheetPanel timeSheetPanel, DataFinder dataFinder, SelectionManager selectionManager, KeyFrameSelectionManager kfsm)
+    public AttributePanel(Client client, ClientThread clientThread, CreatorsPlugin plugin, CreatorsConfig config, TimeSheetPanel timeSheetPanel, DataFinder dataFinder, SelectionManager selectionManager, KeyFrameSelectionManager kfsm)
     {
         this.client = client;
         this.clientThread = clientThread;
+        this.plugin = plugin;
         this.config = config;
         this.timeSheetPanel = timeSheetPanel;
         this.dataFinder = dataFinder;
@@ -274,7 +273,18 @@ public class AttributePanel extends JPanel
                     return null;
                 }
 
-                CameraScript script = CameraUtilities.writeCameraScript(client, worldView, MovementManager.useLocalLocations(worldView));
+                CameraScript script;
+                CameraMotionType motionType = (CameraMotionType) cameraAttributes.getMotionType().getSelectedItem();
+                EaseType easeType = (EaseType) cameraAttributes.getEaseType().getSelectedItem();
+                if (motionType == CameraMotionType.DIRECTIONAL)
+                {
+                    script = CameraUtilities.writeDirectionalScript(client, worldView, easeType, MovementManager.useLocalLocations(worldView));
+                }
+                else
+                {
+                    script = CameraUtilities.writeTrackingScript(client, easeType, cameraAttributes.getCharacter());
+                }
+
                 if (script == null)
                 {
                     plugin.sendChatMessage("Failed to create a Camera Keyframe from the current view");
@@ -283,8 +293,7 @@ public class AttributePanel extends JPanel
 
                 return new CameraKeyFrame(
                         tick,
-                        script,
-                        (EaseType) cameraAttributes.getEaseType().getSelectedItem()
+                        script
                 );
             case MOVEMENT:
                 if (worldView == null || worldView.getMapRegions() == null)
@@ -440,33 +449,125 @@ public class AttributePanel extends JPanel
         JLabel manualTitleHelp = new JLabel(new ImageIcon(HELP));
         manualTitleHelp.setHorizontalAlignment(SwingConstants.LEFT);
         manualTitleHelp.setBorder(new EmptyBorder(0, 4, 0, 4));
-        manualTitleHelp.setToolTipText("Set the equation for how this keyframe eases into the next");
+        manualTitleHelp.setToolTipText("Set how the camera moves. You can choose to let it travel toward a specific tile or track a given Character");
         manualTitlePanel.add(manualTitleHelp);
 
         c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 1;
-        JLabel easeLabel = new JLabel("Ease Type: ");
-        easeLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        card.add(easeLabel, c);
+        JLabel motionTypeLabel = new JLabel("Motion Type: ");
+        card.add(motionTypeLabel, c);
 
         c.gridx = 1;
         c.gridy = 1;
-        JComboBox<EaseType> loop = cameraAttributes.getEaseType();
-        loop.setToolTipText("Sets whether the Active animation should loop until the next Animation KeyFrame");
-        loop.setFocusable(false);
-        loop.addItem(EaseType.SINE);
-        loop.addItem(EaseType.LINEAR);
-        loop.addItem(EaseType.QUAD);
-        loop.addItem(EaseType.CUBIC);
-        loop.addItem(EaseType.QUART);
-        loop.addItem(EaseType.QUINT);
-        loop.addItem(EaseType.EXPO);
-        card.add(loop, c);
+        JComboBox<CameraMotionType> motionType = cameraAttributes.getMotionType();
+        motionType.setToolTipText("Sets whether the camera should move to a specific tile or track a given Object");
+        motionType.addItem(CameraMotionType.DIRECTIONAL);
+        motionType.addItem(CameraMotionType.TRACKING);
+        card.add(motionType, c);
+
+        c.gridx = 0;
+        c.gridy = 2;
+        JLabel easeLabel = new JLabel("Ease Type: ");
+        card.add(easeLabel, c);
+
+        c.gridx = 1;
+        c.gridy = 2;
+        JComboBox<EaseType> easeType = cameraAttributes.getEaseType();
+        easeType.setToolTipText("Sets the equation by which the current Camera keyframe eases into the next");
+        easeType.addItem(EaseType.SINE);
+        easeType.addItem(EaseType.LINEAR);
+        easeType.addItem(EaseType.QUAD);
+        easeType.addItem(EaseType.CUBIC);
+        easeType.addItem(EaseType.QUART);
+        easeType.addItem(EaseType.QUINT);
+        easeType.addItem(EaseType.EXPO);
+        card.add(easeType, c);
+
+        c.gridwidth = 2;
+        c.gridx = 0;
+        c.gridy = 3;
+        JLabel characterTrackLabel = new JLabel("Object To Track (if Track Object is selected as Motion Type):");
+        characterTrackLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        card.add(characterTrackLabel, c);
+
+        c.gridx = 0;
+        c.gridy = 4;
+        JTextField characterField = cameraAttributes.getTrackingTarget();
+        characterField.setToolTipText("Search up which Object to track");
+        characterField.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        card.add(characterField, c);
+
+        JFilterableTable characterTable = new JFilterableTable("Objects", TableRenderStyle.HIGHLIGHT_SEARCH);
+        JPopupMenu characterPopup = new JPopupMenu("Objects");
+        JScrollPane npcScrollPane = new JScrollPane(characterTable);
+        characterPopup.add(npcScrollPane);
+
+        KeyListener npcListener = new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e)
+            {
+                String text = characterField.getText();
+                List<Object> list = new ArrayList<>(plugin.getCharacters());
+                characterTable.initialize(list);
+
+                characterTable.searchAndListEntries(text);
+                characterPopup.setVisible(true);
+                Point p = characterField.getLocationOnScreen();
+                characterPopup.setLocation(new Point((int) p.getX() + characterField.getWidth(), (int) p.getY()));
+            }
+        };
+        characterField.addKeyListener(npcListener);
+
+        characterField.addFocusListener(new FocusListener()
+        {
+            @Override
+            public void focusGained(FocusEvent e)
+            {
+
+            }
+
+            @Override
+            public void focusLost(FocusEvent e)
+            {
+                characterPopup.setVisible(false);
+            }
+        });
+
+        characterTable.addMouseListener(new MouseAdapter()
+        {
+            @Override
+            public void mouseClicked(MouseEvent e)
+            {
+                super.mouseClicked(e);
+                if (e.getButton() == MouseEvent.BUTTON1)
+                {
+                    Object o = characterTable.getSelectedObject();
+                    if (o instanceof Character)
+                    {
+                        Character character = (Character) o;
+                        cameraAttributes.setCharacter(character);
+                        characterField.setText(character.getName());
+                    }
+
+                    characterPopup.setVisible(false);
+                }
+            }
+        });
 
         c.gridwidth = 3;
         c.gridx = 0;
-        c.gridy = 2;
+        c.gridy = 5;
         JLabel description = new JLabel("<html>Allows programming of the Camera" +
                 "<br>To add a new Camera Keyframe, you can use the Hotkey " + config.cameraKeyFrameHotkey().toString() + " in the scene to keyframe the current view</html>");
         card.add(description, c);

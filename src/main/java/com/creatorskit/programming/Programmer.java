@@ -989,12 +989,12 @@ public class Programmer
      */
     public void updatePrograms(double tick)
     {
-        cameraManager.updateProgram(tick);
         ArrayList<Character> characters = plugin.getCharacters();
         for (int i = 0; i < characters.size(); i++)
         {
             updateProgram(characters.get(i), tick);
         }
+        cameraManager.updateProgram(tick);
     }
 
     /**
@@ -1004,7 +1004,6 @@ public class Programmer
     public void updateProgramsOnTick()
     {
         double currentTime = timeSheetPanel.getCurrentTime();
-        cameraManager.updateProgramOnTick(currentTime);
         ArrayList<Character> characters = plugin.getCharacters();
         for (int i = 0; i < characters.size(); i++)
         {
@@ -1193,6 +1192,8 @@ public class Programmer
                 }
             }
         }
+
+        cameraManager.updateProgramOnTick(currentTime);
     }
 
     private void registerSpawnChanges(Character character)

@@ -1,8 +1,10 @@
 package com.creatorskit.programming.camera;
 
+import com.creatorskit.Character;
+
 public class Ease
 {
-    public static CameraScript interpolate(boolean isInPOH, double ratio, EaseType easeType, CameraScript currentScript, CameraScript nextScript)
+    public static CameraDirectionalScript interpolateDirectional(boolean isInPOH, double ratio, EaseType easeType, CameraDirectionalScript currentScript, CameraDirectionalScript nextScript)
     {
         if (nextScript == null)
         {
@@ -23,16 +25,49 @@ public class Ease
             }
         }
 
-        return new CameraScript(
+        return new CameraDirectionalScript(
+                CameraMotionType.DIRECTIONAL,
+                currentScript.getEase(),
+                lerp(currentScript.getPitch(), nextScript.getPitch(), interpolationFactor),
+                lerp(currentYaw, nextYaw, interpolationFactor) % 16384,
+                (int) lerp(currentScript.getScale(), nextScript.getScale(), interpolationFactor),
                 isInPOH,
                 (float) lerp(currentScript.getFocalX(), nextScript.getFocalX(), interpolationFactor),
                 0,
                 (float) lerp(currentScript.getFocalY(), nextScript.getFocalY(), interpolationFactor),
                 (float) lerp(currentScript.getFocalZ(), nextScript.getFocalZ(), interpolationFactor),
-                0,
+                0
+        );
+    }
+
+    public static CameraTrackingScript interplateTracking(double ratio, EaseType easeType, Character character, CameraTrackingScript currentScript, CameraTrackingScript nextScript)
+    {
+        if (nextScript == null)
+        {
+            return currentScript;
+        }
+
+        double interpolationFactor = calculateEasing(easeType, ratio);
+
+        double currentYaw = currentScript.getYaw();
+        double nextYaw = nextScript.getYaw();
+
+        double yawDiff = nextYaw - currentYaw;
+        if (Math.abs(yawDiff) > 8192) {
+            if (yawDiff > 0) {
+                currentYaw += 16384;
+            } else {
+                nextYaw += 16384;
+            }
+        }
+
+        return new CameraTrackingScript(
+                CameraMotionType.TRACKING,
+                currentScript.getEase(),
                 lerp(currentScript.getPitch(), nextScript.getPitch(), interpolationFactor),
                 lerp(currentYaw, nextYaw, interpolationFactor) % 16384,
-                (int) lerp(currentScript.getScale(), nextScript.getScale(), interpolationFactor)
+                (int) lerp(currentScript.getScale(), nextScript.getScale(), interpolationFactor),
+                character
         );
     }
 

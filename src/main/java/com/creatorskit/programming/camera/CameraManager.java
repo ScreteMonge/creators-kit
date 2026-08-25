@@ -1,5 +1,7 @@
 package com.creatorskit.programming.camera;
 
+import com.creatorskit.CKObject;
+import com.creatorskit.Character;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.subtypes.CameraKeyFrame;
@@ -7,6 +9,7 @@ import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.Client;
 import net.runelite.api.ScriptID;
+import net.runelite.api.coords.LocalPoint;
 import net.runelite.client.callback.ClientThread;
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -34,6 +37,27 @@ public class CameraManager
     {
         this.client = client;
         this.clientThread = clientThread;
+    }
+
+    /**
+     * Ticks the camera timer for interpolating between GameTicks. Intended for use when Playing the programmer, not when manually setting the time
+     */
+    public void tick()
+    {
+        clientTicksPassed++;
+
+        if (currentKeyFrame == null)
+        {
+            return;
+        }
+
+        if (nextKeyFrame == null)
+        {
+            handleCameraScript();
+            return;
+        }
+
+        handleCameraScript();
     }
 
     /**
@@ -113,77 +137,112 @@ public class CameraManager
         }
 
         CameraScript currentScript = currentKeyFrame.getScript();
+        if (currentScript.getType() == CameraMotionType.DIRECTIONAL)
+        {
+            CameraDirectionalScript currentDirectionalScript = (CameraDirectionalScript) currentScript;
+            handleDirectionalScript(currentDirectionalScript);
+            return;
+        }
 
+        CameraTrackingScript currentTrackingScript = (CameraTrackingScript) currentScript;
+        handleTrackingScript(currentTrackingScript);
+    }
+
+    private void handleDirectionalScript(CameraDirectionalScript currentDirectionalScript)
+    {
         boolean inPOH = MovementManager.useLocalLocations(client.getTopLevelWorldView());
-        if (!inPOH && currentScript.isInPOH() || inPOH && !currentScript.isInPOH())
+        if (!inPOH && currentDirectionalScript.isInPOH() || inPOH && !currentDirectionalScript.isInPOH())
         {
             return;
         }
 
-        CameraScript convertedCurrent = CameraUtilities.readCameraScript(inPOH, client.getTopLevelWorldView(), currentScript);
+        CameraDirectionalScript convertedCurrent = CameraUtilities.readCameraScript(inPOH, client.getTopLevelWorldView(), currentDirectionalScript);
         if (convertedCurrent == null)
         {
             return;
         }
 
-        CameraScript nextScript;
-        if (nextKeyFrame == null)
+        CameraDirectionalScript nextScript;
+        if (nextKeyFrame == null || nextKeyFrame.getScript().getType() == CameraMotionType.TRACKING)
         {
-            setCamera(convertedCurrent);
+            setCamera(convertedCurrent.getFocalX(), convertedCurrent.getFocalY(), convertedCurrent.getFocalZ(), (int) convertedCurrent.getPitch(), (int) convertedCurrent.getYaw(), convertedCurrent.getScale());
             return;
         }
         else
         {
-            nextScript = nextKeyFrame.getScript();
+            nextScript = (CameraDirectionalScript) nextKeyFrame.getScript();
         }
 
         if (!inPOH && nextScript.isInPOH() || inPOH && !nextScript.isInPOH())
         {
-            setCamera(convertedCurrent);
+            setCamera(convertedCurrent.getFocalX(), convertedCurrent.getFocalY(), convertedCurrent.getFocalZ(), (int) convertedCurrent.getPitch(), (int) convertedCurrent.getYaw(), convertedCurrent.getScale());
             return;
         }
 
-        CameraScript convertedNext = CameraUtilities.readCameraScript(inPOH, client.getTopLevelWorldView(), nextScript);
+        CameraDirectionalScript convertedNext = CameraUtilities.readCameraScript(inPOH, client.getTopLevelWorldView(), nextScript);
         if (convertedNext == null)
         {
-            setCamera(convertedCurrent);
+            setCamera(convertedCurrent.getFocalX(), convertedCurrent.getFocalY(), convertedCurrent.getFocalZ(), (int) convertedCurrent.getPitch(), (int) convertedCurrent.getYaw(), convertedCurrent.getScale());
             return;
         }
 
         double ratio = ((double) clientTicksPassed / CLIENT_TO_GAME_TICK_RATIO) / (nextKeyFrame.getTick() - currentKeyFrame.getTick());
-        CameraScript script = Ease.interpolate(MovementManager.useLocalLocations(client.getTopLevelWorldView()), ratio, currentKeyFrame.getEase(), convertedCurrent, convertedNext);
-        setCamera(script);
+        CameraDirectionalScript script = Ease.interpolateDirectional(MovementManager.useLocalLocations(client.getTopLevelWorldView()), ratio, convertedCurrent.getEase(), convertedCurrent, convertedNext);
+        setCamera(script.getFocalX(), script.getFocalY(), script.getFocalZ(), (int) script.getPitch(), (int) script.getYaw(), script.getScale());
     }
 
-    /**
-     * Ticks the camera timer for interpolating between GameTicks. Intended for use when Playing the programmer, not when manually setting the time
-     */
-    public void tick()
+    private void handleTrackingScript(CameraTrackingScript currentTrackingScript)
     {
-        clientTicksPassed++;
-
-        if (currentKeyFrame == null)
+        Character character = currentTrackingScript.getCharacter();
+        if (character == null || !character.isInScene())
         {
             return;
         }
 
-        if (nextKeyFrame == null)
+        CKObject ckObject = character.getCkObject();
+        if (ckObject == null)
         {
-            handleCameraScript();
             return;
         }
 
-        handleCameraScript();
+        LocalPoint lp = ckObject.getLocation();
+
+        CameraTrackingScript nextScript;
+        if (nextKeyFrame == null || nextKeyFrame.getScript().getType() == CameraMotionType.DIRECTIONAL)
+        {
+            setCamera(
+                    lp.getX(),
+                    0,
+                    lp.getY(),
+                    (int) currentTrackingScript.getPitch(),
+                    (int) currentTrackingScript.getYaw(),
+                    currentTrackingScript.getScale());
+            return;
+        }
+        else
+        {
+            nextScript = (CameraTrackingScript) nextKeyFrame.getScript();
+        }
+
+        double ratio = ((double) clientTicksPassed / CLIENT_TO_GAME_TICK_RATIO) / (nextKeyFrame.getTick() - currentKeyFrame.getTick());
+        CameraTrackingScript script = Ease.interplateTracking(ratio, currentTrackingScript.getEase(), character, currentTrackingScript, nextScript);
+        setCamera(
+                lp.getX(),
+                0,
+                lp.getY(),
+                (int) script.getPitch(),
+                (int) script.getYaw(),
+                script.getScale());
     }
 
-    private void setCamera(CameraScript script)
+    private void setCamera(float x, float y, float z, int pitch, int yaw, int scale)
     {
-        client.setCameraFocalPointX(script.getFocalX());
-        client.setCameraFocalPointY(script.getFocalY());
-        client.setCameraFocalPointZ(script.getFocalZ());
-        client.setCameraPitchTarget((int) script.getPitch());
-        client.setCameraYawTarget((int) script.getYaw());
-        clientThread.invokeLater(() -> client.runScript(ScriptID.CAMERA_DO_ZOOM, script.getScale(), script.getScale()));
+        client.setCameraFocalPointX(x);
+        client.setCameraFocalPointY(y);
+        client.setCameraFocalPointZ(z);
+        client.setCameraPitchTarget(pitch);
+        client.setCameraYawTarget(yaw);
+        clientThread.invokeLater(() -> client.runScript(ScriptID.CAMERA_DO_ZOOM, scale, scale));
     }
 
     public KeyFrame getCurrentKeyFrame(double currentTick)

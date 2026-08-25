@@ -1,5 +1,9 @@
 package com.creatorskit.swing.timesheet.keyframe;
 
+import com.creatorskit.programming.camera.CameraDirectionalScript;
+import com.creatorskit.programming.camera.CameraMotionType;
+import com.creatorskit.programming.camera.CameraScript;
+import com.creatorskit.programming.camera.CameraTrackingScript;
 import com.creatorskit.swing.timesheet.keyframe.subtypes.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -21,10 +25,42 @@ public class KeyFrame
             default:
             case CAMERA:
                 CameraKeyFrame camKF = (CameraKeyFrame) keyFrame;
+                CameraScript script = camKF.getScript();
+                CameraScript scriptCopy;
+
+                if (script.getType() == CameraMotionType.DIRECTIONAL)
+                {
+                    CameraDirectionalScript ds = (CameraDirectionalScript) script;
+                    scriptCopy = new CameraDirectionalScript(
+                            ds.getType(),
+                            ds.getEase(),
+                            ds.getPitch(),
+                            ds.getYaw(),
+                            ds.getScale(),
+                            ds.isInPOH(),
+                            ds.getFocalX(),
+                            ds.getOffsetX(),
+                            ds.getFocalY(),
+                            ds.getFocalZ(),
+                            ds.getOffsetZ()
+                    );
+                }
+                else
+                {
+                    CameraTrackingScript ts = (CameraTrackingScript) script;
+                    scriptCopy = new CameraTrackingScript(
+                            ts.getType(),
+                            ts.getEase(),
+                            ts.getPitch(),
+                            ts.getYaw(),
+                            ts.getScale(),
+                            ts.getCharacter()
+                    );
+                }
+
                 return new CameraKeyFrame(
                         tick,
-                        camKF.getScript(),
-                        camKF.getEase());
+                        scriptCopy);
             case MOVEMENT:
                 MovementKeyFrame moveKF = (MovementKeyFrame) keyFrame;
                 int[][] path = moveKF.getPath();

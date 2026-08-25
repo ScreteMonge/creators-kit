@@ -175,7 +175,7 @@ public class HotKeyManager
             }
 
             WorldView worldView = client.getTopLevelWorldView();
-            CameraScript script = CameraUtilities.writeCameraScript(client, worldView, MovementManager.useLocalLocations(worldView));
+            CameraScript script = CameraUtilities.writeDirectionalScript(client, worldView, EaseType.SINE, MovementManager.useLocalLocations(worldView));
 
             if (script == null)
             {
@@ -185,8 +185,7 @@ public class HotKeyManager
 
             CameraKeyFrame cameraKeyFrame = new CameraKeyFrame(
                     plugin.getCurrentTick(),
-                    script,
-                    EaseType.SINE
+                    script
             );
 
             TimeSheetPanel timeSheetPanel = plugin.getCreatorsPanel().getToolBox().getTimeSheetPanel();
