@@ -2,8 +2,8 @@ package com.creatorskit.programming.camera;
 
 public enum CameraMotionType
 {
-    DIRECTIONAL("Move to Tile"),
-    TRACKING("Track Object");
+    TILE_TRACKING("Track Tile"),
+    OBJECT_TRACKING("Track Object");
 
     private final String name;
 

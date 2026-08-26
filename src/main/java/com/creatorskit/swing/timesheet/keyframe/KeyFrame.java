@@ -28,7 +28,7 @@ public class KeyFrame
                 CameraScript script = camKF.getScript();
                 CameraScript scriptCopy;
 
-                if (script.getType() == CameraMotionType.DIRECTIONAL)
+                if (script.getType() == CameraMotionType.TILE_TRACKING)
                 {
                     CameraDirectionalScript ds = (CameraDirectionalScript) script;
                     scriptCopy = new CameraDirectionalScript(

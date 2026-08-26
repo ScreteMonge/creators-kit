@@ -42,7 +42,7 @@ public class CameraAttributes extends Attributes
         motionType.setSelectedItem(type);
         easeType.setSelectedItem(script.getEase());
 
-        if (type == CameraMotionType.TRACKING)
+        if (type == CameraMotionType.OBJECT_TRACKING)
         {
             CameraTrackingScript trackingScript = (CameraTrackingScript) script;
             character = trackingScript.getCharacter();
@@ -106,7 +106,7 @@ public class CameraAttributes extends Attributes
     @Override
     public void resetAttributes(boolean resetBackground)
     {
-        motionType.setSelectedItem(CameraMotionType.DIRECTIONAL);
+        motionType.setSelectedItem(CameraMotionType.TILE_TRACKING);
         easeType.setSelectedItem(EaseType.SINE);
         character = null;
         trackingTarget.setText("");

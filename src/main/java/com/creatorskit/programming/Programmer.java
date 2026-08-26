@@ -994,7 +994,7 @@ public class Programmer
         {
             updateProgram(characters.get(i), tick);
         }
-        cameraManager.updateProgram(tick);
+        cameraManager.updateProgram(tick, false);
     }
 
     /**

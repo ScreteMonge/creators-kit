@@ -1,10 +1,17 @@
 package com.creatorskit.programming.camera;
 
 import com.creatorskit.Character;
+import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
+import com.creatorskit.swing.timesheet.keyframe.subtypes.MovementKeyFrame;
+import net.runelite.api.Client;
+import net.runelite.api.Constants;
+import net.runelite.api.WorldView;
+import net.runelite.api.coords.LocalPoint;
+import net.runelite.api.coords.WorldPoint;
 
 public class Ease
 {
-    public static CameraDirectionalScript interpolateDirectional(boolean isInPOH, double ratio, EaseType easeType, CameraDirectionalScript currentScript, CameraDirectionalScript nextScript)
+    public static CameraDirectionalScript interpolateTileTracking(boolean isInPOH, double ratio, EaseType easeType, CameraDirectionalScript currentScript, CameraDirectionalScript nextScript)
     {
         if (nextScript == null)
         {
@@ -26,7 +33,7 @@ public class Ease
         }
 
         return new CameraDirectionalScript(
-                CameraMotionType.DIRECTIONAL,
+                CameraMotionType.TILE_TRACKING,
                 currentScript.getEase(),
                 lerp(currentScript.getPitch(), nextScript.getPitch(), interpolationFactor),
                 lerp(currentYaw, nextYaw, interpolationFactor) % 16384,
@@ -40,7 +47,106 @@ public class Ease
         );
     }
 
-    public static CameraTrackingScript interplateTracking(double ratio, EaseType easeType, Character character, CameraTrackingScript currentScript, CameraTrackingScript nextScript)
+    public static float interpolateObjectTrackingHeight(Client client, double currentTick, boolean playing, Character c, double modelHeight)
+    {
+        MovementKeyFrame keyFrame = (MovementKeyFrame) c.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
+        WorldView worldView = client.getTopLevelWorldView();
+
+        int currentStep = keyFrame.getCurrentStep();
+        int[][] path = keyFrame.getPath();
+        if (currentStep >= path.length)
+        {
+            currentStep = path.length - 1;
+        }
+
+        int[] current = path[currentStep];
+
+        LocalPoint lp;
+        if (c.isInPOH())
+        {
+            lp = new LocalPoint(current[0], current[1], worldView);
+        }
+        else
+        {
+            lp = LocalPoint.fromWorld(worldView, new WorldPoint(current[0], current[1], worldView.getPlane()));
+        }
+
+        if (lp == null)
+        {
+            return (float) modelHeight;
+        }
+
+        int currentTileHeight = worldView.getTileHeights()[worldView.getPlane()][lp.getSceneX()][lp.getSceneY()];
+
+        if (currentStep == path.length - 1)
+        {
+            return (float) (currentTileHeight + modelHeight);
+        }
+
+        int[] next = path[currentStep + 1];
+        LocalPoint nextLp;
+        if (c.isInPOH())
+        {
+            nextLp = new LocalPoint(next[0], next[1], worldView);
+        }
+        else
+        {
+            nextLp = LocalPoint.fromWorld(worldView, new WorldPoint(next[0], next[1], worldView.getPlane()));
+        }
+
+        if (nextLp == null)
+        {
+            return (float) (currentTileHeight + modelHeight);
+        }
+
+        int nextTileHeight = worldView.getTileHeights()[worldView.getPlane()][nextLp.getSceneX()][nextLp.getSceneY()];
+        double percentComplete = calculatePercentStepComplete(keyFrame, currentTick, client.getGameCycle(), currentStep, playing);
+        double tileHeight = percentComplete * (nextTileHeight - currentTileHeight) + currentTileHeight;
+        return (float) (tileHeight - (modelHeight * 0.75));
+    }
+
+    private static double calculatePercentStepComplete(MovementKeyFrame keyFrame, double currentTick, int gameCycle, int currentStep, boolean playing)
+    {
+        if (playing)
+        {
+            double tileSpeed = keyFrame.getSpeed();
+            double speed = tileSpeed * Constants.CLIENT_TICK_LENGTH / Constants.GAME_TICK_LENGTH;
+            int clientTicksPassed = gameCycle - keyFrame.getStepClientTick();
+            double stepsComplete = clientTicksPassed * speed;
+            return Math.abs(stepsComplete - currentStep);
+        }
+
+        int[][] path = keyFrame.getPath();
+        int pathLength = path.length;
+
+        double tileSpeed = keyFrame.getSpeed();
+        double timePassed = currentTick - keyFrame.getTick();
+        double stepsComplete = timePassed * tileSpeed;
+        currentStep = (int) Math.floor(stepsComplete);
+        double endSpeed = (pathLength - 1) - (Math.floor(((pathLength - 1) / tileSpeed)) * tileSpeed);
+
+        if (stepsComplete + endSpeed > pathLength - 1)
+        {
+            double jumps = (pathLength - 1) % tileSpeed;
+            if (jumps != 0)
+            {
+                double ticksPreSlowdown = (pathLength - 1 - endSpeed) / tileSpeed;
+                double stepsPreSlowdown = ticksPreSlowdown * tileSpeed;
+
+                stepsComplete = (timePassed - ticksPreSlowdown) * endSpeed + stepsPreSlowdown;
+                currentStep = (int) (stepsComplete);
+            }
+        }
+
+        if (currentStep > pathLength)
+        {
+            currentStep = pathLength;
+        }
+
+        return Math.abs(stepsComplete - currentStep);
+    }
+
+    public static CameraTrackingScript interpolateObjectTracking(double ratio, EaseType easeType, Character character, CameraTrackingScript currentScript, CameraTrackingScript nextScript)
     {
         if (nextScript == null)
         {
@@ -62,7 +168,7 @@ public class Ease
         }
 
         return new CameraTrackingScript(
-                CameraMotionType.TRACKING,
+                CameraMotionType.OBJECT_TRACKING,
                 currentScript.getEase(),
                 lerp(currentScript.getPitch(), nextScript.getPitch(), interpolationFactor),
                 lerp(currentYaw, nextYaw, interpolationFactor) % 16384,

@@ -35,7 +35,7 @@ public class CameraUtilities
         int baseY = localPoint.getY() - Perspective.LOCAL_TILE_SIZE / 2;
 
         return new CameraDirectionalScript(
-                CameraMotionType.DIRECTIONAL,
+                CameraMotionType.TILE_TRACKING,
                 script.getEase(),
                 script.getPitch(),
                 script.getYaw(),
@@ -52,7 +52,7 @@ public class CameraUtilities
     public static CameraTrackingScript writeTrackingScript(Client client, EaseType easeType, Character character)
     {
         return new CameraTrackingScript(
-                CameraMotionType.TRACKING,
+                CameraMotionType.OBJECT_TRACKING,
                 easeType,
                 client.getCameraPitch(),
                 client.getCameraYaw(),
@@ -74,7 +74,7 @@ public class CameraUtilities
     private static CameraDirectionalScript writeDirecationalPOHScript(Client client, EaseType easeType, boolean inPOH)
     {
         return new CameraDirectionalScript(
-                CameraMotionType.DIRECTIONAL,
+                CameraMotionType.TILE_TRACKING,
                 easeType,
                 client.getCameraPitch(),
                 client.getCameraYaw(),
@@ -104,7 +104,7 @@ public class CameraUtilities
         WorldPoint wp = wps.iterator().next();
 
         return new CameraDirectionalScript(
-                CameraMotionType.DIRECTIONAL,
+                CameraMotionType.TILE_TRACKING,
                 easeType,
                 client.getCameraPitch(),
                 client.getCameraYaw(),

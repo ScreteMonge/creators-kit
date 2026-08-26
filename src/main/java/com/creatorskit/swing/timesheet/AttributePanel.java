@@ -276,7 +276,7 @@ public class AttributePanel extends JPanel
                 CameraScript script;
                 CameraMotionType motionType = (CameraMotionType) cameraAttributes.getMotionType().getSelectedItem();
                 EaseType easeType = (EaseType) cameraAttributes.getEaseType().getSelectedItem();
-                if (motionType == CameraMotionType.DIRECTIONAL)
+                if (motionType == CameraMotionType.TILE_TRACKING)
                 {
                     script = CameraUtilities.writeDirectionalScript(client, worldView, easeType, MovementManager.useLocalLocations(worldView));
                 }
@@ -461,9 +461,9 @@ public class AttributePanel extends JPanel
         c.gridx = 1;
         c.gridy = 1;
         JComboBox<CameraMotionType> motionType = cameraAttributes.getMotionType();
-        motionType.setToolTipText("Sets whether the camera should move to a specific tile or track a given Object");
-        motionType.addItem(CameraMotionType.DIRECTIONAL);
-        motionType.addItem(CameraMotionType.TRACKING);
+        motionType.setToolTipText("Sets whether the camera should track to a specific Tile or to a given Object");
+        motionType.addItem(CameraMotionType.TILE_TRACKING);
+        motionType.addItem(CameraMotionType.OBJECT_TRACKING);
         card.add(motionType, c);
 
         c.gridx = 0;

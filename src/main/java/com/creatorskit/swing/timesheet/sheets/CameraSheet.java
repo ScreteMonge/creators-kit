@@ -2,6 +2,7 @@ package com.creatorskit.swing.timesheet.sheets;
 
 import com.creatorskit.CreatorsConfig;
 import com.creatorskit.programming.camera.CameraManager;
+import com.creatorskit.programming.camera.CameraMotionType;
 import com.creatorskit.swing.ToolBoxFrame;
 import com.creatorskit.swing.manager.ManagerTree;
 import com.creatorskit.swing.timesheet.AttributePanel;
@@ -28,7 +29,8 @@ public class CameraSheet extends TimeSheet
     private CameraManager cameraManager;
     private final int FONT_SPACER = 9;
 
-    private final BufferedImage cameraImage = ImageUtil.loadImageResource(getClass(), "/Camera.png");
+    private final BufferedImage trackObject = ImageUtil.loadImageResource(getClass(), "/Track_Object.png");
+    private final BufferedImage trackTile = ImageUtil.loadImageResource(getClass(), "/Track_Tile.png");
 
     public CameraSheet(ToolBoxFrame toolBox, CreatorsConfig config, ManagerTree tree, AttributePanel attributePanel, KeyFrameSelectionManager kfsm, CameraManager cameraManager)
     {
@@ -87,11 +89,13 @@ public class CameraSheet extends TimeSheet
                 endImage = getKeyframePrimary();
             }
 
+            BufferedImage trackImage = ((CameraKeyFrame) keyFrame).getScript().getType() == CameraMotionType.TILE_TRACKING ? trackTile : trackObject;
+
             int x = (int) ((keyFrame.getTick() + getHScroll()) * zoomFactor);
             int y = rowHeightOffset + rowHeight - yImageOffset;
 
             g.drawImage(endImage, x - xImageOffset, y, null);
-            g.drawImage(cameraImage, x - xImageOffset, y + endImage.getHeight() - cameraImage.getHeight(), null);
+            g.drawImage(trackImage, x - xImageOffset, y + endImage.getHeight() - trackImage.getHeight(), null);
         }
     }
 

@@ -56,11 +56,11 @@ public class CameraManager
 
         if (nextKeyFrame == null)
         {
-            handleCameraScript();
+            handleCameraScript(true, 0);
             return;
         }
 
-        handleCameraScript();
+        handleCameraScript(true, 0);
     }
 
     /**
@@ -96,7 +96,7 @@ public class CameraManager
     /**
      * Updates the active camera keyframe. Intended for use when manually setting the time
      */
-    public void updateProgram(double currentTick)
+    public void updateProgram(double currentTick, boolean playing)
     {
         cancelled = false;
         KeyFrame current = getCurrentKeyFrame(currentTick);
@@ -118,16 +118,16 @@ public class CameraManager
         if (next == null)
         {
             nextKeyFrame = null;
-            handleCameraScript();
+            handleCameraScript(playing, currentTick);
             return;
         }
 
         nextKeyFrame = (CameraKeyFrame) next;
         clientTicksPassed = (int) ((currentTick - currentKeyFrame.getTick()) * CLIENT_TO_GAME_TICK_RATIO);
-        handleCameraScript();
+        handleCameraScript(playing, currentTick);
     }
 
-    private void handleCameraScript()
+    private void handleCameraScript(boolean playing, double currentTick)
     {
         if (!enabled || cancelled || client.getCameraMode() != 1)
         {
@@ -140,7 +140,7 @@ public class CameraManager
         }
 
         CameraScript currentScript = currentKeyFrame.getScript();
-        if (currentScript.getType() == CameraMotionType.DIRECTIONAL)
+        if (currentScript.getType() == CameraMotionType.TILE_TRACKING)
         {
             CameraDirectionalScript currentDirectionalScript = (CameraDirectionalScript) currentScript;
             handleDirectionalScript(currentDirectionalScript);
@@ -148,7 +148,7 @@ public class CameraManager
         }
 
         CameraTrackingScript currentTrackingScript = (CameraTrackingScript) currentScript;
-        handleTrackingScript(currentTrackingScript);
+        handleTrackingScript(currentTrackingScript, playing, currentTick);
     }
 
     private void handleDirectionalScript(CameraDirectionalScript currentDirectionalScript)
@@ -166,7 +166,7 @@ public class CameraManager
         }
 
         CameraDirectionalScript nextScript;
-        if (nextKeyFrame == null || nextKeyFrame.getScript().getType() == CameraMotionType.TRACKING)
+        if (nextKeyFrame == null || nextKeyFrame.getScript().getType() == CameraMotionType.OBJECT_TRACKING)
         {
             setCamera(convertedCurrent.getFocalX(), convertedCurrent.getFocalY(), convertedCurrent.getFocalZ(), (int) convertedCurrent.getPitch(), (int) convertedCurrent.getYaw(), convertedCurrent.getScale());
             return;
@@ -190,11 +190,11 @@ public class CameraManager
         }
 
         double ratio = ((double) clientTicksPassed / CLIENT_TO_GAME_TICK_RATIO) / (nextKeyFrame.getTick() - currentKeyFrame.getTick());
-        CameraDirectionalScript script = Ease.interpolateDirectional(MovementManager.useLocalLocations(client.getTopLevelWorldView()), ratio, convertedCurrent.getEase(), convertedCurrent, convertedNext);
+        CameraDirectionalScript script = Ease.interpolateTileTracking(MovementManager.useLocalLocations(client.getTopLevelWorldView()), ratio, convertedCurrent.getEase(), convertedCurrent, convertedNext);
         setCamera(script.getFocalX(), script.getFocalY(), script.getFocalZ(), (int) script.getPitch(), (int) script.getYaw(), script.getScale());
     }
 
-    private void handleTrackingScript(CameraTrackingScript currentTrackingScript)
+    private void handleTrackingScript(CameraTrackingScript currentTrackingScript, boolean playing, double currentTick)
     {
         Character character = currentTrackingScript.getCharacter();
         if (character == null || !character.isInScene())
@@ -209,22 +209,22 @@ public class CameraManager
         }
 
         LocalPoint lp = ckObject.getLocation();
-        int tileHeight = client.getTopLevelWorldView().getTileHeights()[ckObject.getLevel()][lp.getSceneX()][lp.getSceneY()];
 
         Model model = ckObject.getBaseModel();
         if (model == null)
         {
             return;
         }
+
         model.calculateBoundsCylinder();
-        int modelHeight = (int) (model.getModelHeight() * 0.75);
+        float height = Ease.interpolateObjectTrackingHeight(client, currentTick, playing, character, model.getModelHeight());
 
         CameraTrackingScript nextScript;
-        if (nextKeyFrame == null || nextKeyFrame.getScript().getType() == CameraMotionType.DIRECTIONAL)
+        if (nextKeyFrame == null || nextKeyFrame.getScript().getType() == CameraMotionType.TILE_TRACKING)
         {
             setCamera(
                     lp.getX(),
-                    tileHeight - modelHeight,
+                    height,
                     lp.getY(),
                     (int) currentTrackingScript.getPitch(),
                     (int) currentTrackingScript.getYaw(),
@@ -237,10 +237,10 @@ public class CameraManager
         }
 
         double ratio = ((double) clientTicksPassed / CLIENT_TO_GAME_TICK_RATIO) / (nextKeyFrame.getTick() - currentKeyFrame.getTick());
-        CameraTrackingScript script = Ease.interplateTracking(ratio, currentTrackingScript.getEase(), character, currentTrackingScript, nextScript);
+        CameraTrackingScript script = Ease.interpolateObjectTracking(ratio, currentTrackingScript.getEase(), character, currentTrackingScript, nextScript);
         setCamera(
                 lp.getX(),
-                tileHeight,
+                height,
                 lp.getY(),
                 (int) script.getPitch(),
                 (int) script.getYaw(),
@@ -347,11 +347,11 @@ public class CameraManager
         {
             KeyFrame keyFrame = keyFrames[i];
             CameraKeyFrame kf = (CameraKeyFrame) keyFrame;
-            if (kf.getScript().getType() == CameraMotionType.DIRECTIONAL)
+            if (kf.getScript().getType() == CameraMotionType.TILE_TRACKING)
             {
                 CameraDirectionalScript script = (CameraDirectionalScript) kf.getScript();
                 CameraScriptSave save = new CameraScriptSave(
-                        CameraMotionType.DIRECTIONAL,
+                        CameraMotionType.TILE_TRACKING,
                         script.getEase(),
                         script.getPitch(),
                         script.getYaw(),
@@ -373,7 +373,7 @@ public class CameraManager
                 Character character = script.getCharacter();
                 String id = character == null ? "" : character.getId();
                 CameraScriptSave save = new CameraScriptSave(
-                        CameraMotionType.TRACKING,
+                        CameraMotionType.OBJECT_TRACKING,
                         script.getEase(),
                         script.getPitch(),
                         script.getYaw(),
@@ -405,10 +405,10 @@ public class CameraManager
         for (int i = 0; i < scriptSaves.length; i++)
         {
             CameraScriptSave scriptSave = scriptSaves[i];
-            if (scriptSave.getType() == CameraMotionType.DIRECTIONAL)
+            if (scriptSave.getType() == CameraMotionType.TILE_TRACKING)
             {
                 CameraDirectionalScript script = new CameraDirectionalScript(
-                        CameraMotionType.DIRECTIONAL,
+                        CameraMotionType.TILE_TRACKING,
                         scriptSave.getEase(),
                         scriptSave.getPitch(),
                         scriptSave.getYaw(),
@@ -440,7 +440,7 @@ public class CameraManager
                 }
 
                 CameraTrackingScript script = new CameraTrackingScript(
-                        CameraMotionType.TRACKING,
+                        CameraMotionType.OBJECT_TRACKING,
                         scriptSave.getEase(),
                         scriptSave.getPitch(),
                         scriptSave.getYaw(),

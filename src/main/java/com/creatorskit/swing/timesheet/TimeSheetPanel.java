@@ -520,7 +520,7 @@ public class TimeSheetPanel extends JSplitPane
                     CameraScript oldScript = oldKF.getScript();
                     CameraScript newScript = newKF.getScript();
 
-                    if (oldScript.getType() == CameraMotionType.DIRECTIONAL && newScript.getType() == CameraMotionType.DIRECTIONAL)
+                    if (oldScript.getType() == CameraMotionType.TILE_TRACKING && newScript.getType() == CameraMotionType.TILE_TRACKING)
                     {
                         CameraDirectionalScript oldDS = (CameraDirectionalScript) oldScript;
                         CameraDirectionalScript newDS = (CameraDirectionalScript) newScript;
@@ -531,7 +531,7 @@ public class TimeSheetPanel extends JSplitPane
                         newDS.setOffsetX(oldDS.getOffsetX());
                         newDS.setOffsetZ(oldDS.getOffsetZ());
                     }
-                    else if (oldScript.getType() == CameraMotionType.TRACKING && newScript.getType() == CameraMotionType.TRACKING)
+                    else if (oldScript.getType() == CameraMotionType.OBJECT_TRACKING && newScript.getType() == CameraMotionType.OBJECT_TRACKING)
                     {
                         CameraTrackingScript oldTS = (CameraTrackingScript) oldScript;
                         CameraTrackingScript newTS = (CameraTrackingScript) newScript;
