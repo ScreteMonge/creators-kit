@@ -120,6 +120,20 @@ public class DataFinder
         lookupSoundData();
     }
 
+    public void clearDataBase()
+    {
+        Arrays.stream(DataType.values()).forEach(d -> loadState.put(d, false));
+        Arrays.stream(DataType.values()).forEach(d -> loadCallbacks.put(d, new ArrayList<>()));
+        npcData.clear();
+        objectData.clear();
+        spotanimData.clear();
+        itemData.clear();
+        kitData.clear();
+        animData.clear();
+        weaponAnimData.clear();
+        soundData.clear();
+    }
+
     /**
      * <p>Adds a callback to be executed once the specified data type has been loaded.</p>
      * <p>The callback will run on the same thread that executes the load operation.</p>

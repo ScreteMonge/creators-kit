@@ -313,6 +313,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		keyManager.unregisterKeyListener(hotKeyManager.redoListener);
 		mouseManager.unregisterMouseWheelListener(this::mouseWheelMoved);
 		mouseManager.unregisterMouseListener(this);
+
+		dataFinder.clearDataBase();
 	}
 
 	@Subscribe

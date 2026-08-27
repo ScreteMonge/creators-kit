@@ -753,7 +753,7 @@ public class HotKeyManager
         @Override
         public void hotkeyPressed()
         {
-            plugin.getCreatorsPanel().openLoadSetupDialog(true);
+            plugin.getCreatorsPanel().getToolBox().createNewSetup(true, true);
         }
     };
 
