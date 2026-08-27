@@ -2434,22 +2434,16 @@ public class AttributePanel extends JPanel
         CardLayout cl = (CardLayout)(cardPanel.getLayout());
         cl.show(cardPanel, cardName);
 
-        JLabel[] labels = timeSheetPanel.getLabels();
-        JLabel selectedLabel;
-
-        selectedLabel = labels[KeyFrameType.getCharacterKeyFrameIndex(type) + 1];
-        for (int f = 0; f < labels.length; f++)
+        int index = KeyFrameType.getCharacterKeyFrameIndex(selectedKeyFramePage);
+        if (type == KeyFrameType.CAMERA)
         {
-            JLabel label = labels[f];
-            if (label == selectedLabel)
-            {
-                timeSheetPanel.getAttributeSheet().setSelectedIndex(f);
-                label.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
-            }
-            else
-            {
-                label.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-            }
+            timeSheetPanel.getAttributeSheet().setSelectedIndex(-1);
+            timeSheetPanel.getCameraSheet().setSelectedIndex(0);
+        }
+        else
+        {
+            timeSheetPanel.getAttributeSheet().setSelectedIndex(index + 1);
+            timeSheetPanel.getCameraSheet().setSelectedIndex(-1);
         }
     }
 

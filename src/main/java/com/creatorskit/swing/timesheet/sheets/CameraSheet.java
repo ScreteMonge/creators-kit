@@ -41,7 +41,20 @@ public class CameraSheet extends TimeSheet
         this.kfsm = kfsm;
         this.cameraManager = cameraManager;
 
+        setSelectedIndex(0);
         setPreferredSize(new Dimension(0, 60));
+    }
+
+    @Override
+    public void drawHighlight(Graphics g)
+    {
+        if (getSelectedIndex() == -1)
+        {
+            return;
+        }
+
+        g.setColor(Color.DARK_GRAY);
+        g.fillRect(0, (getSelectedIndex() + getIndexBuffers()) * rowHeight + rowHeightOffset - getVScroll(), this.getWidth(), rowHeight);
     }
 
     @Override

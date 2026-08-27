@@ -41,7 +41,7 @@ public class AttributeSheet extends TimeSheet
         this.kfsm = kfsm;
 
         setIndexBuffers(0);
-        setSelectedIndex(1);
+        setSelectedIndex(-1);
         this.rowHeightOffset = 1;
     }
 
@@ -74,6 +74,11 @@ public class AttributeSheet extends TimeSheet
     @Override
     public void drawHighlight(Graphics g)
     {
+        if (getSelectedIndex() == -1)
+        {
+            return;
+        }
+
         g.setColor(Color.DARK_GRAY);
         g.fillRect(0, (getSelectedIndex() + getIndexBuffers()) * rowHeight + rowHeightOffset - getVScroll(), this.getWidth(), rowHeight);
     }

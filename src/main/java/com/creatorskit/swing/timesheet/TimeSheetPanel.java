@@ -84,7 +84,6 @@ public class TimeSheetPanel extends JSplitPane
     private boolean triggerTimeSpinnerChange = true;
     private JScrollBar scrollBar;
     private AttributePanel attributePanel;
-    private final JScrollPane labelScrollPane = new JScrollPane();
     private final JPanel controlPanel = new JPanel();
     private final JButton playButton = new JButton();
 
@@ -99,9 +98,6 @@ public class TimeSheetPanel extends JSplitPane
     private static final int DEFAULT_MAX_H_SCROLL = 200;
     private static final int ZOOM_MAX = 500;
     private static final int ZOOM_MIN = 5;
-
-    private final String LABEL_OFFSET = "  ";
-    private JLabel[] labels = new JLabel[0];
 
     private double zoom = 50;
     private double hScroll = 0;
@@ -139,7 +135,6 @@ public class TimeSheetPanel extends JSplitPane
         setupTreeScrollPane();
         setupControlPanel();
         setupAttributePanel();
-        setupAttributeSheet();
         setupScrollBar();
         setupLayout();
         setMouseListeners();
@@ -1315,128 +1310,6 @@ public class TimeSheetPanel extends JSplitPane
         cameraSheet = new CameraSheet(toolBox, config, managerTree, attributePanel, kfsm, cameraManager);
     }
 
-    private void setupAttributeSheet()
-    {
-        JPanel labelPanel = new JPanel();
-        labelPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        labelPanel.setLayout(new GridLayout(0, 1, 0, 0));
-        labelPanel.setFocusable(true);
-
-        labelScrollPane.setViewportView(labelPanel);
-        labelScrollPane.setBorder(new EmptyBorder(1, 0, 1, 0));
-        labelScrollPane.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-        labelScrollPane.setPreferredSize(new Dimension(100, 150));
-        labelScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        labelScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
-
-        MouseWheelListener[] mouseWheelListeners = labelScrollPane.getMouseWheelListeners();
-        for (int i = 0; i < mouseWheelListeners.length; i++)
-        {
-            labelScrollPane.removeMouseWheelListener(mouseWheelListeners[i]);
-        }
-
-        InvisibleScrollBar labelScrollBar = new InvisibleScrollBar();
-        labelScrollBar.addAdjustmentListener(e -> attributeSheet.onVerticalScrollEvent(e.getValue()));
-        labelScrollPane.setVerticalScrollBar(labelScrollBar);
-
-        labelScrollPane.addMouseWheelListener(new MouseAdapter()
-        {
-            @Override
-            public void mouseWheelMoved(MouseWheelEvent e)
-            {
-                if (e.isControlDown())
-                {
-                    if (e.isAltDown() || e.isShiftDown())
-                    {
-                        return;
-                    }
-
-                    managerTree.scrollSelectedIndex(e.getWheelRotation());
-                    return;
-                }
-
-                if (e.isShiftDown())
-                {
-                    if (e.isControlDown() || e.isAltDown())
-                    {
-                        return;
-                    }
-
-                    scrollAttributePanel(e.getWheelRotation());
-                    return;
-                }
-
-                labelScrollBar.setValue(labelScrollBar.getValue() + e.getWheelRotation() * 15);
-            }
-        });
-
-        labels = new JLabel[KeyFrameType.getTotalCharacterKeyFrameTypes() + 1];
-        for (int i = 0; i < KeyFrameType.getTotalCharacterKeyFrameTypes() + 1; i++)
-        {
-            JLabel label = new JLabel();
-            label.setFocusable(true);
-            label.setHorizontalAlignment(SwingConstants.RIGHT);
-            label.setOpaque(true);
-            label.setPreferredSize(new Dimension(100, 24));
-            label.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-
-            // Skip the empty label
-            if (i == 1)
-            {
-                label.setBackground(ColorScheme.MEDIUM_GRAY_COLOR);
-            }
-
-            if (i != 0)
-            {
-                label.addMouseListener(new MouseAdapter()
-                {
-                    @Override
-                    public void mousePressed(MouseEvent e)
-                    {
-                        super.mousePressed(e);
-                        attributePanel.switchCards(label.getText().replaceAll(LABEL_OFFSET, ""));
-                        label.requestFocusInWindow();
-                    }
-                });
-
-                label.addKeyListener(new KeyAdapter()
-                {
-                    @Override
-                    public void keyReleased(KeyEvent e)
-                    {
-                        if (e.getKeyCode() == KeyEvent.VK_DOWN)
-                        {
-                            scrollAttributePanel(1);
-                        }
-
-                        if (e.getKeyCode() == KeyEvent.VK_UP)
-                        {
-                            scrollAttributePanel(-1);
-                        }
-                    }
-                });
-            }
-
-            labels[i] = label;
-            labelPanel.add(label);
-        }
-
-        labels[1].setText(AttributePanel.MOVE_CARD + LABEL_OFFSET);
-        labels[2].setText(AttributePanel.ANIM_CARD + LABEL_OFFSET);
-        labels[3].setText(AttributePanel.ORI_CARD + LABEL_OFFSET);
-        labels[4].setText(AttributePanel.SPAWN_CARD + LABEL_OFFSET);
-        labels[5].setText(AttributePanel.MODEL_CARD + LABEL_OFFSET);
-        labels[6].setText(AttributePanel.SPOTANIM_CARD + LABEL_OFFSET);
-        labels[7].setText(AttributePanel.SPOTANIM2_CARD + LABEL_OFFSET);
-        labels[8].setText(AttributePanel.TEXT_CARD + LABEL_OFFSET);
-        labels[9].setText(AttributePanel.OVER_CARD + LABEL_OFFSET);
-        labels[10].setText(AttributePanel.HEALTH_CARD + LABEL_OFFSET);
-        labels[11].setText(AttributePanel.HITSPLAT_1_CARD + LABEL_OFFSET);
-        labels[12].setText(AttributePanel.HITSPLAT_2_CARD + LABEL_OFFSET);
-        labels[13].setText(AttributePanel.HITSPLAT_3_CARD + LABEL_OFFSET);
-        labels[14].setText(AttributePanel.HITSPLAT_4_CARD + LABEL_OFFSET);
-    }
-
     private void setupScrollBar()
     {
         scrollBar = new JScrollBar(Adjustable.HORIZONTAL);
@@ -1769,19 +1642,48 @@ public class TimeSheetPanel extends JSplitPane
 
     public void scrollAttributePanel(int direction)
     {
-        int index = KeyFrameType.getCharacterKeyFrameIndex(attributePanel.getSelectedKeyFramePage()) + direction;
+        KeyFrameType currentType = attributePanel.getSelectedKeyFramePage();
+
         int totalFrameTypes = KeyFrameType.getTotalCharacterKeyFrameTypes();
-        if (index >= totalFrameTypes)
+        KeyFrameType nextType;
+        if (currentType == KeyFrameType.CAMERA)
         {
-            index = 0;
+            if (direction == -1)
+            {
+                nextType = KeyFrameType.getCharacterKeyFrameType(KeyFrameType.getTotalCharacterKeyFrameTypes() - 1);
+            }
+            else
+            {
+                nextType = KeyFrameType.getCharacterKeyFrameType(0);
+            }
+        }
+        else
+        {
+            int currentIndex = KeyFrameType.getCharacterKeyFrameIndex(currentType);
+
+            if ((currentIndex == 0 && direction == -1)
+                    || (currentIndex == KeyFrameType.getTotalCharacterKeyFrameTypes() - 1 && direction == 1))
+            {
+                nextType = KeyFrameType.CAMERA;
+            }
+            else
+            {
+                int index = KeyFrameType.getCharacterKeyFrameIndex(attributePanel.getSelectedKeyFramePage()) + direction;
+                if (index >= totalFrameTypes)
+                {
+                    index = 0;
+                }
+
+                if (index == -1)
+                {
+                    index = totalFrameTypes - 1;
+                }
+
+                nextType = KeyFrameType.getCharacterKeyFrameType(index);
+            }
         }
 
-        if (index == -1)
-        {
-            index = totalFrameTypes - 1;
-        }
-
-        attributePanel.switchCards(KeyFrameType.getCharacterKeyFrameType(index).toString());
+        attributePanel.switchCards(nextType.toString());
         attributePanel.updateAttributes();
     }
 

@@ -80,7 +80,7 @@ public class Ease
 
         if (currentStep == path.length - 1)
         {
-            return (float) (currentTileHeight + modelHeight);
+            return (float) (currentTileHeight - (modelHeight * 0.75));
         }
 
         int[] next = path[currentStep + 1];
@@ -96,7 +96,7 @@ public class Ease
 
         if (nextLp == null)
         {
-            return (float) (currentTileHeight + modelHeight);
+            return (float) (currentTileHeight - (modelHeight * 0.75));
         }
 
         int nextTileHeight = worldView.getTileHeights()[worldView.getPlane()][nextLp.getSceneX()][nextLp.getSceneY()];
