@@ -365,7 +365,7 @@ public interface CreatorsConfig extends Config
 	)
 	default Keybind cameraKeyFrameHotkey()
 	{
-		return new Keybind(KeyEvent.VK_K, KeyEvent.CTRL_DOWN_MASK);
+		return new Keybind(KeyEvent.VK_Q, KeyEvent.CTRL_DOWN_MASK);
 	}
 
 	@ConfigItem(

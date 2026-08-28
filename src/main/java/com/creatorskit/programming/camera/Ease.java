@@ -1,6 +1,7 @@
 package com.creatorskit.programming.camera;
 
 import com.creatorskit.Character;
+import com.creatorskit.programming.MovementManager;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrameType;
 import com.creatorskit.swing.timesheet.keyframe.subtypes.MovementKeyFrame;
 import net.runelite.api.Client;
@@ -47,9 +48,14 @@ public class Ease
         );
     }
 
-    public static float interpolateObjectTrackingHeight(Client client, double currentTick, boolean playing, Character c, double modelHeight)
+    public static Float interpolateObjectTrackingHeight(Client client, double currentTick, boolean playing, Character c, double modelHeight)
     {
         MovementKeyFrame keyFrame = (MovementKeyFrame) c.getCurrentKeyFrame(KeyFrameType.MOVEMENT);
+        if (keyFrame == null)
+        {
+            return null;
+        }
+
         WorldView worldView = client.getTopLevelWorldView();
 
         int currentStep = keyFrame.getCurrentStep();
@@ -60,9 +66,10 @@ public class Ease
         }
 
         int[] current = path[currentStep];
+        boolean inPOH = MovementManager.useLocalLocations(worldView);
 
         LocalPoint lp;
-        if (c.isInPOH())
+        if (inPOH)
         {
             lp = new LocalPoint(current[0], current[1], worldView);
         }
@@ -73,19 +80,20 @@ public class Ease
 
         if (lp == null)
         {
-            return (float) modelHeight;
+            return null;
         }
 
-        int currentTileHeight = worldView.getTileHeights()[worldView.getPlane()][lp.getSceneX()][lp.getSceneY()];
+        int currentTileHeight = worldView.getTileHeight(lp.getX(), lp.getY(), worldView.getPlane());
+        float calculatedModelHeight = (float) (-0.55 * modelHeight);
 
         if (currentStep == path.length - 1)
         {
-            return (float) (currentTileHeight - (modelHeight * 0.75));
+            return (float) currentTileHeight + calculatedModelHeight;
         }
 
         int[] next = path[currentStep + 1];
         LocalPoint nextLp;
-        if (c.isInPOH())
+        if (inPOH)
         {
             nextLp = new LocalPoint(next[0], next[1], worldView);
         }
@@ -96,13 +104,13 @@ public class Ease
 
         if (nextLp == null)
         {
-            return (float) (currentTileHeight - (modelHeight * 0.75));
+            return (float) currentTileHeight + calculatedModelHeight;
         }
 
-        int nextTileHeight = worldView.getTileHeights()[worldView.getPlane()][nextLp.getSceneX()][nextLp.getSceneY()];
+        int nextTileHeight = worldView.getTileHeight(nextLp.getX(), nextLp.getY(), worldView.getPlane());
         double percentComplete = calculatePercentStepComplete(keyFrame, currentTick, client.getGameCycle(), currentStep, playing);
         double tileHeight = percentComplete * (nextTileHeight - currentTileHeight) + currentTileHeight;
-        return (float) (tileHeight - (modelHeight * 0.75));
+        return (float) (tileHeight + calculatedModelHeight);
     }
 
     private static double calculatePercentStepComplete(MovementKeyFrame keyFrame, double currentTick, int gameCycle, int currentStep, boolean playing)

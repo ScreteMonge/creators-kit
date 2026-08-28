@@ -217,7 +217,11 @@ public class CameraManager
         }
 
         model.calculateBoundsCylinder();
-        float height = Ease.interpolateObjectTrackingHeight(client, currentTick, playing, character, model.getModelHeight());
+        Float height = Ease.interpolateObjectTrackingHeight(client, currentTick, playing, character, model.getModelHeight());
+        if (height == null)
+        {
+            return;
+        }
 
         CameraTrackingScript nextScript;
         if (nextKeyFrame == null || nextKeyFrame.getScript().getType() == CameraMotionType.TILE_TRACKING)
