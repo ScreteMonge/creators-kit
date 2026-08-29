@@ -412,7 +412,7 @@ public class TimeSheetPanel extends JSplitPane
 
         if (type == KeyFrameType.CAMERA)
         {
-            createCameraKeyFrame();
+            createCameraKeyFrame(true);
             return;
         }
 
@@ -583,10 +583,22 @@ public class TimeSheetPanel extends JSplitPane
         attributePanel.updateAttributes();
     }
 
-    public void createCameraKeyFrame()
+    public void createCameraKeyFrame(boolean createNew)
     {
+        KeyFrame primary = kfsm.getPrimary();
+        double tick = currentTime;
+        if (!createNew && primary == null)
+        {
+            return;
+        }
+
+        if (!createNew)
+        {
+            tick = primary.getTick();
+        }
+
         ArrayList<KeyFrameAction> kfa = new ArrayList<>();
-        KeyFrame kf = attributePanel.createKeyFrame(KeyFrameType.CAMERA, currentTime);
+        KeyFrame kf = attributePanel.createKeyFrame(KeyFrameType.CAMERA, tick);
         if (kf == null)
         {
             return;

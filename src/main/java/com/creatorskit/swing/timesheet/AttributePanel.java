@@ -586,7 +586,7 @@ public class AttributePanel extends JPanel
         JButton updateViewButton = new JButton("Update Camera View");
         updateViewButton.setToolTipText("Updates this keyframe's view to the current camera settings/view of the game scene");
         card.add(updateViewButton, c);
-        updateViewButton.addActionListener(e -> timeSheetPanel.createCameraKeyFrame());
+        updateViewButton.addActionListener(e -> timeSheetPanel.createCameraKeyFrame(false));
 
         c.gridwidth = 1;
         c.gridheight = 1;
