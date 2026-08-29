@@ -211,6 +211,23 @@ public class Ease
                 return quintEaseInOut(t);
             case EXPO:
                 return expoEaseInOut(t);
+            case EASE_IN_CUBIC:
+                return cubicEaseIn(t);
+            case EASE_IN_QUAD:
+                return quadEaseIn(t);
+            case EASE_IN_QUART:
+                return quartEaseIn(t);
+            case EASE_IN_QUINT:
+                return quintEaseIn(t);
+            case EASE_OUT_CUBIC:
+                return cubicEaseOut(t);
+            case EASE_OUT_QUAD:
+                return quadEaseOut(t);
+            case EASE_OUT_QUART:
+                return quartEaseOut(t);
+            case EASE_OUT_QUINT:
+                return quintEaseOut(t);
+
             default:
                 throw new IllegalArgumentException("Unknown easing type: " + ease);
         }
@@ -238,5 +255,37 @@ public class Ease
     private static double expoEaseInOut(double t) {
         return t == 0 ? 0 : t == 1 ? 1 : t < 0.5 ? Math.pow(2, 20 * t - 10) / 2
                 : (2 - Math.pow(2, -20 * t + 10)) / 2;
+    }
+
+    private static double quadEaseIn(double t) {
+        return t * t;
+    }
+
+    private static double cubicEaseIn(double t) {
+        return t * t * t;
+    }
+
+    private static double quartEaseIn(double t) {
+        return t * t * t * t;
+    }
+
+    private static double quintEaseIn(double t) {
+        return t * t * t * t * t;
+    }
+
+    private static double quadEaseOut(double t) {
+        return 1 - Math.pow(1 - t, 2);
+    }
+
+    private static double cubicEaseOut(double t) {
+        return 1 - Math.pow(1 - t, 3);
+    }
+
+    private static double quartEaseOut(double t) {
+        return 1 - Math.pow(1 - t, 4);
+    }
+
+    private static double quintEaseOut(double t) {
+        return 1 - Math.pow(1 - t, 5);
     }
 }
