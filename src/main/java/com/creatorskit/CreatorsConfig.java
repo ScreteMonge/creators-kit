@@ -194,11 +194,23 @@ public interface CreatorsConfig extends Config
 	}
 
 	@ConfigItem(
+			keyName = "cameraOverlay",
+			name = "Camera Overlay",
+			description = "Enables an overlay for the camera position",
+			section = overlaySettings,
+			position = 3
+	)
+	default boolean cameraOverlay()
+	{
+		return true;
+	}
+
+	@ConfigItem(
 			keyName = "gameObjectOverlay",
 			name = "Game Object Overlay",
 			description = "Enables an overlay for GameObjects",
 			section = overlaySettings,
-			position = 3
+			position = 4
 	)
 	default boolean gameObjectOverlay()
 	{
@@ -210,7 +222,7 @@ public interface CreatorsConfig extends Config
 			name = "Player Overlay",
 			description = "Enables an overlay for Players",
 			section = overlaySettings,
-			position = 4
+			position = 5
 	)
 	default boolean playerOverlay()
 	{
@@ -222,7 +234,7 @@ public interface CreatorsConfig extends Config
 			name = "NPC Overlay",
 			description = "Enables an overlay for NPCs",
 			section = overlaySettings,
-			position = 5
+			position = 6
 	)
 	default boolean npcOverlay()
 	{
@@ -234,7 +246,7 @@ public interface CreatorsConfig extends Config
 			name = "Ground Object Overlay",
 			description = "Enables an overlay for GroundObjects",
 			section = overlaySettings,
-			position = 6
+			position = 7
 	)
 	default boolean groundObjectOverlay()
 	{
@@ -246,7 +258,7 @@ public interface CreatorsConfig extends Config
 			name = "Wall Object Overlay",
 			description = "Enables an overlay for TileObjects",
 			section = overlaySettings,
-			position = 7
+			position = 8
 	)
 	default boolean wallObjectOverlay()
 	{
@@ -258,7 +270,7 @@ public interface CreatorsConfig extends Config
 			name = "Decorative Object Overlay",
 			description = "Enables an overlay for DecorativeObjects",
 			section = overlaySettings,
-			position = 8
+			position = 9
 	)
 	default boolean decorativeObjectOverlay()
 	{
@@ -270,7 +282,7 @@ public interface CreatorsConfig extends Config
 			name = "Projectile Overlay",
 			description = "Enables an overlay for Projectiles",
 			section = overlaySettings,
-			position = 9
+			position = 10
 	)
 	default boolean projectileOverlay()
 	{

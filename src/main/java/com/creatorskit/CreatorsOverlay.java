@@ -109,6 +109,11 @@ public class CreatorsOverlay extends Overlay
             return;
         }
 
+        if (config.cameraOverlay())
+        {
+            renderCameraOverlay(graphics, worldView);
+        }
+
         if (config.myObjectOverlay())
         {
             renderRLObjects(graphics, keyHeld, worldView);
@@ -143,6 +148,37 @@ public class CreatorsOverlay extends Overlay
         if (config.projectileOverlay())
         {
             renderProjectiles(graphics, worldView);
+        }
+    }
+
+    private void renderCameraOverlay(Graphics2D graphics, WorldView worldView)
+    {
+        int focalX = (int) client.getCameraFocalPointX();
+        int focalY = (int) client.getCameraFocalPointZ();
+
+        int size = 16;
+        int half = size / 2;
+
+        LocalPoint p1 = new LocalPoint(focalX - half, focalY - half, client.getTopLevelWorldView());
+        LocalPoint p2 = new LocalPoint(focalX + half, focalY - half, client.getTopLevelWorldView());
+        LocalPoint p3 = new LocalPoint(focalX + half, focalY + half, client.getTopLevelWorldView());
+        LocalPoint p4 = new LocalPoint(focalX - half, focalY + half, client.getTopLevelWorldView());
+
+        Point c1 = Perspective.localToCanvas(client, p1, worldView.getPlane());
+        Point c2 = Perspective.localToCanvas(client, p2, worldView.getPlane());
+        Point c3 = Perspective.localToCanvas(client, p3, worldView.getPlane());
+        Point c4 = Perspective.localToCanvas(client, p4, worldView.getPlane());
+
+        if (c1 != null && c2 != null && c3 != null && c4 != null)
+        {
+            Polygon poly = new Polygon();
+
+            poly.addPoint(c1.getX(), c1.getY());
+            poly.addPoint(c2.getX(), c2.getY());
+            poly.addPoint(c3.getX(), c3.getY());
+            poly.addPoint(c4.getX(), c4.getY());
+
+            OverlayUtil.renderPolygon(graphics, poly, Color.WHITE);
         }
     }
 
