@@ -572,6 +572,14 @@ public class AttributePanel extends JPanel
                 "<br>To add a new Camera Keyframe, you can use the Hotkey " + config.cameraKeyFrameHotkey().toString() + " in the scene to keyframe the current view</html>");
         card.add(description, c);
 
+        c.gridwidth = 2;
+        c.gridx = 0;
+        c.gridy = 6;
+        JButton updateViewButton = new JButton("Update Camera View");
+        updateViewButton.setToolTipText("Updates this keyframe's view to the current camera settings/view of the game scene");
+        card.add(updateViewButton, c);
+        updateViewButton.addActionListener(e -> timeSheetPanel.createCameraKeyFrame());
+
         c.gridwidth = 1;
         c.gridheight = 1;
         c.weightx = 1;

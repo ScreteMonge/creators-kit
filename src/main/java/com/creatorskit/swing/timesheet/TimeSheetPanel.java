@@ -164,6 +164,21 @@ public class TimeSheetPanel extends JSplitPane
             }
         }
 
+        KeyFrame cameraKeyFrame = cameraManager.getNextKeyFrame(currentTime);
+
+        if (next == null)
+        {
+            next = cameraKeyFrame;
+        }
+
+        if (cameraKeyFrame != null)
+        {
+            if (cameraKeyFrame.getTick() < next.getTick())
+            {
+                next = cameraKeyFrame;
+            }
+        }
+
         if (next == null)
         {
             return;
@@ -192,6 +207,21 @@ public class TimeSheetPanel extends JSplitPane
             if (keyFrame.getTick() > previous.getTick())
             {
                 previous = keyFrame;
+            }
+        }
+
+        KeyFrame cameraKeyFrame = cameraManager.getPreviousKeyFrame(false, currentTime);
+
+        if (previous == null)
+        {
+            previous = cameraKeyFrame;
+        }
+
+        if (cameraKeyFrame != null)
+        {
+            if (cameraKeyFrame.getTick() > previous.getTick())
+            {
+                previous = cameraKeyFrame;
             }
         }
 
@@ -382,22 +412,7 @@ public class TimeSheetPanel extends JSplitPane
 
         if (type == KeyFrameType.CAMERA)
         {
-            KeyFrame kf = attributePanel.createKeyFrame(KeyFrameType.CAMERA, currentTime);
-            if (kf == null)
-            {
-                return;
-            }
-
-            kfa.add(new KeyFrameCameraAction(kf, KeyFrameActionType.ADD));
-
-            KeyFrame keyFrameToReplace = addKeyFrame(new KeyFrameTarget(KeyFrameCategory.CAMERA, null), kf);
-            if (keyFrameToReplace != null)
-            {
-                kfa.add(new KeyFrameCameraAction(keyFrameToReplace, KeyFrameActionType.REMOVE));
-            }
-
-            stackKeyFrameActions(kfa);
-            attributePanel.updateAttributes();
+            createCameraKeyFrame();
             return;
         }
 
@@ -567,6 +582,27 @@ public class TimeSheetPanel extends JSplitPane
             stackKeyFrameActions(kfa);
         }
 
+        attributePanel.updateAttributes();
+    }
+
+    public void createCameraKeyFrame()
+    {
+        ArrayList<KeyFrameAction> kfa = new ArrayList<>();
+        KeyFrame kf = attributePanel.createKeyFrame(KeyFrameType.CAMERA, currentTime);
+        if (kf == null)
+        {
+            return;
+        }
+
+        kfa.add(new KeyFrameCameraAction(kf, KeyFrameActionType.ADD));
+
+        KeyFrame keyFrameToReplace = addKeyFrame(new KeyFrameTarget(KeyFrameCategory.CAMERA, null), kf);
+        if (keyFrameToReplace != null)
+        {
+            kfa.add(new KeyFrameCameraAction(keyFrameToReplace, KeyFrameActionType.REMOVE));
+        }
+
+        stackKeyFrameActions(kfa);
         attributePanel.updateAttributes();
     }
 

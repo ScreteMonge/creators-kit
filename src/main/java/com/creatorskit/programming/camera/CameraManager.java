@@ -296,6 +296,25 @@ public class CameraManager
         return keyFrames[keyFrames.length - 1];
     }
 
+    public KeyFrame getPreviousKeyFrame(boolean includeCurrentTick, double currentTick)
+    {
+        for (int i = keyFrames.length - 1; i >= 0; i--)
+        {
+            KeyFrame keyFrame = keyFrames[i];
+            if (includeCurrentTick && keyFrame.getTick() == currentTick)
+            {
+                return keyFrame;
+            }
+
+            if (keyFrame.getTick() < currentTick)
+            {
+                return keyFrame;
+            }
+        }
+
+        return null;
+    }
+
     public KeyFrame getNextKeyFrame(double currentTick)
     {
         for (int i = 0; i < keyFrames.length; i++)
@@ -342,6 +361,23 @@ public class CameraManager
         keyFrames = new KeyFrame[0];
         currentKeyFrame = null;
         nextKeyFrame = null;
+    }
+
+    public void onCharacterDeleted(Character c)
+    {
+        for (int i = 0; i < keyFrames.length; i++)
+        {
+            CameraKeyFrame keyFrame = (CameraKeyFrame) keyFrames[i];
+            CameraScript script = keyFrame.getScript();
+            if (script.getType() == CameraMotionType.OBJECT_TRACKING)
+            {
+                CameraTrackingScript trackingScript = (CameraTrackingScript) script;
+                if (trackingScript.getCharacter() == c)
+                {
+                    trackingScript.setCharacter(null);
+                }
+            }
+        }
     }
 
     public CameraScriptSave[] packCameraKeyFrames()

@@ -67,6 +67,11 @@ public class Ease
 
         int[] current = path[currentStep];
         boolean inPOH = MovementManager.useLocalLocations(worldView);
+        int pohFactor = 0;
+        if (inPOH)
+        {
+            pohFactor = -232;
+        }
 
         LocalPoint lp;
         if (inPOH)
@@ -88,7 +93,7 @@ public class Ease
 
         if (currentStep == path.length - 1)
         {
-            return (float) currentTileHeight + calculatedModelHeight;
+            return (float) currentTileHeight + calculatedModelHeight + pohFactor;
         }
 
         int[] next = path[currentStep + 1];
@@ -104,13 +109,14 @@ public class Ease
 
         if (nextLp == null)
         {
-            return (float) currentTileHeight + calculatedModelHeight;
+            return (float) currentTileHeight + calculatedModelHeight + pohFactor;
         }
 
         int nextTileHeight = worldView.getTileHeight(nextLp.getX(), nextLp.getY(), worldView.getPlane());
         double percentComplete = calculatePercentStepComplete(keyFrame, currentTick, client.getGameCycle(), currentStep, playing);
         double tileHeight = percentComplete * (nextTileHeight - currentTileHeight) + currentTileHeight;
-        return (float) (tileHeight + calculatedModelHeight);
+
+        return (float) (tileHeight + calculatedModelHeight + pohFactor);
     }
 
     private static double calculatePercentStepComplete(MovementKeyFrame keyFrame, double currentTick, int gameCycle, int currentStep, boolean playing)

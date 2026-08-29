@@ -930,9 +930,9 @@ public class CreatorsPanel extends PluginPanel
 
         ArrayList<Character> characters = plugin.getCharacters();
 
-        for (Character c : charactersToRemove)
+        clientThread.invokeLater(() ->
         {
-            clientThread.invokeLater(() ->
+            for (Character c : charactersToRemove)
             {
                 c.getCkObject().setActive(false);
 
@@ -947,12 +947,14 @@ public class CreatorsPanel extends PluginPanel
                 {
                     sp2.setActive(false);
                 }
-            });
-            characters.remove(c);
 
-            selectionManager.remove(c, SelectionOrigin.AUTOMATED);
-            toolBox.getTimeSheetPanel().unstackKeyFrameActions(c);
-        }
+                characters.remove(c);
+
+                toolBox.getCameraManager().onCharacterDeleted(c);
+                selectionManager.remove(c, SelectionOrigin.AUTOMATED);
+                toolBox.getTimeSheetPanel().unstackKeyFrameActions(c);
+            }
+        });
     }
 
     public void removePanels(Character[] characters)
