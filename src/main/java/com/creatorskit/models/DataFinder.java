@@ -585,7 +585,7 @@ public class DataFinder
                             ls.getZ());
 
                     String name = spotanimData.getName();
-                    if (name.equals("null") || name.isEmpty())
+                    if (name == null || name.equals("null") || name.isEmpty())
                     {
                         name = DEFAULT_NAME;
                     }
@@ -760,7 +760,7 @@ public class DataFinder
                 ls.getZ());
 
         String name = spotanimData.getName();
-        if (name.equals("null") || name.isEmpty())
+        if (name == null || name.equals("null") || name.isEmpty())
         {
             name = DEFAULT_NAME;
         }
