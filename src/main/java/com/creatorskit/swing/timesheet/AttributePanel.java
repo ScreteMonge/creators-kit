@@ -529,7 +529,7 @@ public class AttributePanel extends JPanel
                 List<Object> list = new ArrayList<>(plugin.getCharacters());
                 characterTable.initialize(list);
 
-                characterTable.searchAndListEntries(text);
+                characterTable.searchAndListEntries(text, true);
                 characterPopup.setVisible(true);
                 Point p = characterField.getLocationOnScreen();
                 characterPopup.setLocation(new Point((int) p.getX() + characterField.getWidth(), (int) p.getY()));
@@ -956,7 +956,7 @@ public class AttributePanel extends JPanel
             public void keyReleased(KeyEvent e)
             {
                 String text = npcField.getText();
-                npcTable.searchAndListEntries(text);
+                npcTable.searchAndListEntries(text, false);
                 npcPopup.setVisible(true);
                 Point p = npcField.getLocationOnScreen();
                 npcPopup.setLocation(new Point((int) p.getX() + npcField.getWidth(), (int) p.getY()));
@@ -1056,7 +1056,7 @@ public class AttributePanel extends JPanel
             public void keyReleased(KeyEvent e)
             {
                 String text = itemField.getText();
-                itemTable.searchAndListEntries(text);
+                itemTable.searchAndListEntries(text, false);
                 itemPopup.setVisible(true);
                 Point p = itemField.getLocationOnScreen();
                 itemPopup.setLocation(new Point((int) p.getX() + itemField.getWidth(), (int) p.getY()));
@@ -1225,7 +1225,7 @@ public class AttributePanel extends JPanel
             public void keyReleased(KeyEvent e)
             {
                 String text = animField.getText();
-                animTable.searchAndListEntries(text);
+                animTable.searchAndListEntries(text, false);
                 animPopup.setVisible(true);
                 Point p = animField.getLocationOnScreen();
                 animPopup.setLocation(new Point((int) p.getX() + animField.getWidth(), (int) p.getY()));
@@ -2045,7 +2045,7 @@ public class AttributePanel extends JPanel
             public void keyReleased(KeyEvent e)
             {
                 String text = spotanimField.getText();
-                spotanimTable.searchAndListEntries(text);
+                spotanimTable.searchAndListEntries(text, true);
                 spotanimPopup.setVisible(true);
                 Point p = spotanimField.getLocationOnScreen();
                 spotanimPopup.setLocation(new Point((int) p.getX() + spotanimField.getWidth(), (int) p.getY()));

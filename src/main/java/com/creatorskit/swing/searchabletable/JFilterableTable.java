@@ -43,7 +43,7 @@ public class JFilterableTable extends JTable
         setModel(new DataTableModel(entry.toArray()));
     }
 
-    public void searchAndListEntries(Object searchFor)
+    public void searchAndListEntries(Object searchFor, boolean allowNull)
     {
         if (itemBackup == null || itemBackup.isEmpty())
         {
@@ -66,7 +66,7 @@ public class JFilterableTable extends JTable
             if (searchFor instanceof String)
             {
                 String search = (String) searchFor;
-                if (s.contains("null") && !search.contains("null"))
+                if (s.contains("null") && !allowNull)
                 {
                     continue;
                 }

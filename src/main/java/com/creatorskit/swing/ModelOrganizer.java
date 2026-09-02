@@ -155,7 +155,7 @@ public class ModelOrganizer extends JPanel
             public void keyReleased(KeyEvent e)
             {
                 String text = field.getText();
-                table.searchAndListEntries(text);
+                table.searchAndListEntries(text, true);
             }
         };
         field.addKeyListener(keyListener);

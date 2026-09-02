@@ -69,6 +69,7 @@ public class CacheSearcherTab extends JPanel
     private final JFilterableTable modelTable = new JFilterableTable("Model Id Breakdown", TableRenderStyle.HIGHLIGHT_SEARCH);
 
     private final JComboBox<CustomModelType> itemType = new JComboBox<>();
+    private final JCheckBox allowNull = new JCheckBox("Allow search to include 'null'");
     private final JPanel display = new JPanel();
     private final JCheckBox defaultAnimations = new JCheckBox("Default Animations");
     public static final File SOUNDS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit/sound-exports");
@@ -320,7 +321,7 @@ public class CacheSearcherTab extends JPanel
 
         List<Object> list = new ArrayList<>(dataList);
         modelTable.initialize(list);
-        modelTable.searchAndListEntries("");
+        modelTable.searchAndListEntries("", true);
         revalidate();
     }
 
@@ -410,47 +411,53 @@ public class CacheSearcherTab extends JPanel
         c.gridwidth = 1;
         c.weightx = 2;
         c.weighty = 0;
+
         c.gridx = 1;
         c.gridy = 0;
-        add(npcPanel, c);
+        allowNull.setToolTipText("Allows your search to include 'null' entries");
+        add(allowNull, c);
 
         c.gridx = 1;
         c.gridy = 1;
-        add(objectPanel, c);
+        add(npcPanel, c);
 
         c.gridx = 1;
         c.gridy = 2;
-        add(itemPanel, c);
+        add(objectPanel, c);
 
         c.gridx = 1;
         c.gridy = 3;
-        add(spotAnimPanel, c);
+        add(itemPanel, c);
 
         c.gridx = 1;
         c.gridy = 4;
-        add(animPanel, c);
+        add(spotAnimPanel, c);
 
         c.gridx = 1;
         c.gridy = 5;
-        add(soundPanel, c);
+        add(animPanel, c);
 
         c.gridx = 1;
         c.gridy = 6;
-        add(breakdownPanel, c);
+        add(soundPanel, c);
 
         c.gridx = 1;
         c.gridy = 7;
+        add(breakdownPanel, c);
+
+        c.gridx = 1;
+        c.gridy = 8;
         c.weighty = 1;
         add(new JLabel(""), c);
 
-        c.gridheight = 8;
+        c.gridheight = 9;
         c.weighty = 5;
         c.weightx = 2;
         c.gridx = 2;
         c.gridy = 0;
         add(display, c);
 
-        c.gridheight = 8;
+        c.gridheight = 9;
         c.weighty = 5;
         c.weightx = 8;
         c.gridx = 3;
@@ -1104,7 +1111,7 @@ public class CacheSearcherTab extends JPanel
             {
                 switchCards(NPC);
                 String text = field.getText();
-                npcTable.searchAndListEntries(text);
+                npcTable.searchAndListEntries(text, allowNull.isSelected());
             }
         };
         field.addKeyListener(keyListener);
@@ -1198,7 +1205,7 @@ public class CacheSearcherTab extends JPanel
             {
                 switchCards(OBJECT);
                 String text = field.getText();
-                objectTable.searchAndListEntries(text);
+                objectTable.searchAndListEntries(text, allowNull.isSelected());
             }
         };
         field.addKeyListener(keyListener);
@@ -1349,7 +1356,7 @@ public class CacheSearcherTab extends JPanel
             {
                 switchCards(ITEM);
                 String text = field.getText();
-                itemTable.searchAndListEntries(text);
+                itemTable.searchAndListEntries(text, allowNull.isSelected());
             }
         };
         field.addKeyListener(keyListener);
@@ -1443,7 +1450,7 @@ public class CacheSearcherTab extends JPanel
             {
                 switchCards(SPOTANIM);
                 String text = field.getText();
-                spotAnimTable.searchAndListEntries(text);
+                spotAnimTable.searchAndListEntries(text, allowNull.isSelected());
             }
         };
         field.addKeyListener(keyListener);
@@ -1537,7 +1544,7 @@ public class CacheSearcherTab extends JPanel
             {
                 switchCards(ANIM);
                 String text = field.getText();
-                animTable.searchAndListEntries(text);
+                animTable.searchAndListEntries(text, allowNull.isSelected());
             }
         };
         field.addKeyListener(keyListener);
@@ -1631,7 +1638,7 @@ public class CacheSearcherTab extends JPanel
             {
                 switchCards(SOUND);
                 String text = field.getText();
-                soundTable.searchAndListEntries(text);
+                soundTable.searchAndListEntries(text, allowNull.isSelected());
             }
         };
         field.addKeyListener(keyListener);
