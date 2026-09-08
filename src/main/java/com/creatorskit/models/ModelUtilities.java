@@ -28,6 +28,7 @@ import java.io.Reader;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.UUID;
 
 public class ModelUtilities
@@ -197,15 +198,27 @@ public class ModelUtilities
         return modelData;
     }
 
-    public void cacheToAnvil(CustomModelType type, int id, boolean all, int modelId)
+    public void cacheToAnvil(CustomModelType type, int id, String name, boolean all, int modelId)
     {
         ModelStats[] modelStats;
+        int widthScale = 128;
+        int heightScale = 128;
         DataFinder dataFinder = plugin.getDataFinder();
 
         switch (type)
         {
             case CACHE_NPC:
-                modelStats = dataFinder.findModelsForNPC(id);
+                Map.Entry<int[], ModelStats[]> set = dataFinder.findModelsForNPC(id);
+                if (set == null)
+                {
+                    sendChatMessage("Could not find the " + type + " you were looking for in the cache.");
+                    return;
+                }
+
+                int[] scale = set.getKey();
+                widthScale = scale[0];
+                heightScale = scale[1];
+                modelStats = set.getValue();
                 break;
             default:
             case CACHE_OBJECT:
@@ -232,7 +245,7 @@ public class ModelUtilities
 
         if (all)
         {
-            cacheToAnvil(modelStats, new int[0], type);
+            cacheToAnvil(name, widthScale, heightScale, modelStats, new int[0], type);
         }
         else
         {
@@ -240,7 +253,7 @@ public class ModelUtilities
             {
                 if (stats.getModelId() == modelId)
                 {
-                    cacheToAnvil(new ModelStats[]{stats}, new int[0], type);
+                    cacheToAnvil(name, widthScale, heightScale, new ModelStats[]{stats}, new int[0], type);
                     break;
                 }
             }
@@ -249,11 +262,12 @@ public class ModelUtilities
         sendChatMessage("Model sent to Anvil: " + modelStats[0].getName());
     }
 
-    public void cacheToAnvil(ModelStats[] modelStatsArray, int[] kitRecolours, CustomModelType type)
+    public void cacheToAnvil(String globalName, int widthScale, int heightScale, ModelStats[] modelStatsArray, int[] kitRecolours, CustomModelType type)
     {
         SwingUtilities.invokeLater(() ->
         {
             CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
+            LightingStyle ls = LightingStyle.fromModelType(type);
 
             for (ModelStats modelStats : modelStatsArray)
             {
@@ -309,6 +323,7 @@ public class ModelUtilities
             ModelAnvil modelAnvil = creatorsPanel.getModelAnvil();
             modelAnvil.generateNames();
             modelAnvil.updateRenderPanel();
+            modelAnvil.updateGlobalSettings(ls, false, globalName, widthScale, heightScale);
         });
     }
 
@@ -320,11 +335,23 @@ public class ModelUtilities
             ModelStats[] modelStats;
             LightingStyle ls;
             int renderMode = Renderable.RENDERMODE_DEFAULT;
+            int widthScale = 128;
+            int heightScale = 128;
 
             switch (type)
             {
                 case CACHE_NPC:
-                    modelStats = dataFinder.findModelsForNPC(id);
+                    Map.Entry<int[], ModelStats[]> set = dataFinder.findModelsForNPC(id);
+                    if (set == null)
+                    {
+                        sendChatMessage("Could not find the " + type + " you were looking for in the cache.");
+                        return;
+                    }
+
+                    int[] scale = set.getKey();
+                    widthScale = scale[0];
+                    heightScale = scale[1];
+                    modelStats = set.getValue();
                     ls = LightingStyle.ACTOR;
                     break;
                 default:
@@ -350,7 +377,7 @@ public class ModelUtilities
             }
 
             CustomLighting cl = CustomLighting.fromLightingStyle(ls);
-            CustomModelComp comp = new CustomModelComp(type, id, modelStats, null, null, null, renderMode, cl, false, name);
+            CustomModelComp comp = new CustomModelComp(type, id, widthScale, heightScale, modelStats, null, null, null, renderMode, cl, false, name);
 
             clientThread.invokeLater(() ->
             {
@@ -475,29 +502,7 @@ public class ModelUtilities
         {
             CustomModelComp comp = customModel.getComp();
             sendChatMessage("Model sent to Anvil: " + comp.getName());
-
-            LightingStyle ls;
-            CustomLighting cl = comp.getCustomLighting();
-            if (cl == null)
-            {
-                ls = LightingStyle.DEFAULT;
-                cl = new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getZ(), ls.getY());
-            }
-            else
-            {
-                ls = LightingStyle.fromCustomLighting(cl);
-            }
-
-            modelAnvil.setLightingSettings(
-                    ls,
-                    cl.getAmbient(),
-                    cl.getContrast(),
-                    cl.getX(),
-                    cl.getY(),
-                    cl.getZ());
-
-            modelAnvil.getPriorityCheckBox().setSelected(comp.isPriority());
-            modelAnvil.getNameField().setText(comp.getName());
+            modelAnvil.updateGlobalSettings(comp);
 
             if (comp.getModelStats() == null)
             {
@@ -508,7 +513,7 @@ public class ModelUtilities
                 return;
             }
 
-            cacheToAnvil(comp.getModelStats(), comp.getKitRecolours(), comp.getType());
+            cacheToAnvil(comp.getName(), comp.getWidthScale(), comp.getHeightScale(), comp.getModelStats(), comp.getKitRecolours(), comp.getType());
         });
     }
 
@@ -537,6 +542,12 @@ public class ModelUtilities
                 comp.setRenderMode(renderMode);
             }
 
+            if (comp.getWidthScale() == null || comp.getHeightScale() == null)
+            {
+                comp.setWidthScale(128);
+                comp.setHeightScale(128);
+            }
+
             SwingUtilities.invokeLater(() ->
             {
                 for (DetailedModel detailedModel : comp.getDetailedModels())
@@ -547,24 +558,7 @@ public class ModelUtilities
                 modelAnvil.updateRenderPanel();
             });
 
-            CustomLighting cl = comp.getCustomLighting();
-            if (cl == null)
-            {
-                cl = CustomLighting.fromLightingStyle(LightingStyle.DEFAULT);
-            }
-
-            LightingStyle ls = LightingStyle.fromCustomLighting(cl);
-
-            modelAnvil.setLightingSettings(
-                    ls,
-                    cl.getAmbient(),
-                    cl.getContrast(),
-                    cl.getX(),
-                    cl.getY(),
-                    cl.getZ());
-
-            modelAnvil.getPriorityCheckBox().setSelected(comp.isPriority());
-            modelAnvil.getNameField().setText(comp.getName());
+            modelAnvil.updateGlobalSettings(comp);
             reader.close();
         }
         catch (Exception e)
@@ -593,6 +587,12 @@ public class ModelUtilities
                 }
 
                 comp.setRenderMode(renderMode);
+            }
+
+            if (comp.getWidthScale() == null || comp.getHeightScale() == null)
+            {
+                comp.setWidthScale(128);
+                comp.setHeightScale(128);
             }
 
             clientThread.invokeLater(() ->
@@ -647,6 +647,12 @@ public class ModelUtilities
                     }
 
                     comp.setRenderMode(renderMode);
+                }
+
+                if (comp.getWidthScale() == null || comp.getHeightScale() == null)
+                {
+                    comp.setWidthScale(128);
+                    comp.setHeightScale(128);
                 }
             }
 

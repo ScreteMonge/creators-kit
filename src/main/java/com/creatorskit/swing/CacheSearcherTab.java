@@ -28,6 +28,7 @@ import java.awt.event.*;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 public class CacheSearcherTab extends JPanel
@@ -233,12 +234,24 @@ public class CacheSearcherTab extends JPanel
     {
         lastDefaultAnimation = defaultAnimation;
         ModelStats[] modelStats = new ModelStats[0];
+        int widthScale = 128;
+        int heightScale = 128;
         LightingStyle ls = LightingStyle.DEFAULT;
 
         switch (type)
         {
             case CACHE_NPC:
-                modelStats = dataFinder.findModelsForNPC(id);
+                Map.Entry<int[], ModelStats[]> set = dataFinder.findModelsForNPC(id);
+                if (set == null)
+                {
+                    renderPanel.resetViewer();
+                    return;
+                }
+
+                int[] scale = set.getKey();
+                widthScale = scale[0];
+                heightScale = scale[1];
+                modelStats = set.getValue();
                 ls = LightingStyle.ACTOR;
                 break;
             case CACHE_OBJECT:
@@ -273,6 +286,9 @@ public class CacheSearcherTab extends JPanel
 
         final int anim = animId;
         LightingStyle finalLs = ls;
+
+        int finalWidthScale = widthScale;
+        int finalHeightScale = heightScale;
         if (renderAll)
         {
             ModelStats[] allModelStats = modelStats;
@@ -280,7 +296,7 @@ public class CacheSearcherTab extends JPanel
             {
                 ModelData md = modelUtilities.constructModelDataFromCache(allModelStats, new int[0], false);
                 Animation animation = client.loadAnimation(anim);
-                renderPanel.updateModel(md, finalLs, false);
+                renderPanel.updateModel(md, finalWidthScale, finalHeightScale, finalLs, false);
                 renderPanel.updateAnimation(animation);
             });
             return;
@@ -294,7 +310,7 @@ public class CacheSearcherTab extends JPanel
                 {
                     ModelData md = modelUtilities.constructModelDataFromCache(new ModelStats[]{modelStat}, new int[0], false);
                     Animation animation = client.loadAnimation(anim);
-                    renderPanel.updateModel(md, finalLs, false);
+                    renderPanel.updateModel(md, finalWidthScale, finalHeightScale, finalLs, false);
                     renderPanel.updateAnimation(animation);
                 });
                 return;
@@ -1806,6 +1822,7 @@ public class CacheSearcherTab extends JPanel
         }
 
         int id = 0;
+        String name = "Name";
 
         switch (selectedType)
         {
@@ -1815,6 +1832,7 @@ public class CacheSearcherTab extends JPanel
                 {
                     NpcDefinition data = (NpcDefinition) npc;
                     id = data.getId();
+                    name = data.getName();
                 }
                 break;
             case CACHE_OBJECT:
@@ -1823,6 +1841,7 @@ public class CacheSearcherTab extends JPanel
                 {
                     ObjectDefinition data = (ObjectDefinition) obj;
                     id = data.getId();
+                    name = data.getName();
                 }
                 break;
             case CACHE_GROUND_ITEM:
@@ -1833,6 +1852,7 @@ public class CacheSearcherTab extends JPanel
                 {
                     ItemDefinition data = (ItemDefinition) item;
                     id = data.getId();
+                    name = data.getName();
                 }
                 break;
             case CACHE_SPOTANIM:
@@ -1841,6 +1861,7 @@ public class CacheSearcherTab extends JPanel
                 {
                     SpotAnimDefinition data = (SpotAnimDefinition) sa;
                     id = data.getId();
+                    name = data.getName();
                 }
         }
 
@@ -1850,7 +1871,7 @@ public class CacheSearcherTab extends JPanel
         Object o = modelTable.getSelectedObject();
         if (o == null)
         {
-            modelUtilities.cacheToAnvil(selectedType, id, true, -1);
+            modelUtilities.cacheToAnvil(selectedType, id, name, true, -1);
             return;
         }
 
@@ -1868,7 +1889,7 @@ public class CacheSearcherTab extends JPanel
             modelId = (Integer) o;
         }
 
-        modelUtilities.cacheToAnvil(selectedType, id, renderAll, modelId);
+        modelUtilities.cacheToAnvil(selectedType, id, name, renderAll, modelId);
     }
 
     private void export3DModel()

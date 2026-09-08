@@ -15,6 +15,8 @@ public class CKObject extends RuneLiteObjectController
 {
     private final Client client;
     private Model baseModel;
+    private int widthScale;
+    private int heightScale;
     private boolean freeze;
     private boolean playing;
     private boolean hasAnimKeyFrame;
@@ -30,9 +32,11 @@ public class CKObject extends RuneLiteObjectController
 
     private int startCycle;
 
-    public void setModel(Model baseModel)
+    public void setModel(Model baseModel, int widthScale, int heightScale)
     {
         this.baseModel = baseModel;
+        this.widthScale = widthScale;
+        this.heightScale = heightScale;
     }
 
     @Override
@@ -173,15 +177,15 @@ public class CKObject extends RuneLiteObjectController
     {
         if (animationController != null)
         {
-            return animationController.animate(this.baseModel, this.poseAnimationController);
+            return animationController.animate(this.baseModel, this.poseAnimationController).scale(widthScale, heightScale, widthScale);
         }
         else if (poseAnimationController != null)
         {
-            return poseAnimationController.animate(this.baseModel);
+            return poseAnimationController.animate(this.baseModel).scale(widthScale, heightScale, widthScale);
         }
         else
         {
-            return baseModel;
+            return baseModel.scale(widthScale, heightScale, widthScale);
         }
     }
 

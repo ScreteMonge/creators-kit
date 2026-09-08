@@ -887,9 +887,9 @@ public class DataFinder
                     recolorToFind,
                     new short[0],
                     new short[0],
-                    comp.getWidthScale(),
-                    comp.getWidthScale(),
-                    comp.getHeightScale(),
+                    128,
+                    128,
+                    128,
                     0,
                     customLighting
             ));
@@ -904,19 +904,23 @@ public class DataFinder
         return stats;
     }
 
-    public ModelStats[] findModelsForNPC(int npcId)
+    public Map.Entry<int[], ModelStats[]> findModelsForNPC(int npcId)
     {
         ArrayList<ModelStats> modelStats = new ArrayList<>();
+        int widthScale = 128;
+        int heightScale = 128;
         for (NpcDefinition npcData : npcData)
         {
             if (npcData.getId() == npcId)
             {
                 lastAnim = npcData.getStandingAnimation();
+                widthScale = npcData.getWidthScale();
+                heightScale = npcData.getHeightScale();
 
                 int[] modelIds = npcData.getModels();
                 if (modelIds == null || modelIds.length == 0)
                 {
-                    return new ModelStats[0];
+                    return null;
                 }
 
                 short[] recolorToFind = npcData.getRecolorToFind();
@@ -940,9 +944,9 @@ public class DataFinder
                             recolorToReplace,
                             new short[0],
                             new short[0],
-                            npcData.getWidthScale(),
-                            npcData.getWidthScale(),
-                            npcData.getHeightScale(),
+                            128,
+                            128,
+                            128,
                             0,
                             customLighting
                     ));
@@ -958,7 +962,7 @@ public class DataFinder
             stats[i] = modelStats.get(i);
         }
 
-        return stats;
+        return new AbstractMap.SimpleEntry<>(new int[]{widthScale, heightScale}, stats);
     }
 
     private void lookupObjectData()

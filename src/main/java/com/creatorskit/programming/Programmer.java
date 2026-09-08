@@ -1416,7 +1416,7 @@ public class Programmer
             CustomModel customModel = modelKeyFrame.getCustomModel();
             if (customModel == null)
             {
-                clientThread.invokeLater(() -> ckObject.setModel(client.loadModel(GOLDEN_CHIN)));
+                clientThread.invokeLater(() -> ckObject.setModel(client.loadModel(GOLDEN_CHIN), 128, 128));
                 return;
             }
 
@@ -1426,7 +1426,8 @@ public class Programmer
                 return;
             }
 
-            ckObject.setModel(model);
+            CustomModelComp comp = customModel.getComp();
+            ckObject.setModel(model, comp.getWidthScale(), comp.getHeightScale());
         }
         else
         {
@@ -1438,7 +1439,7 @@ public class Programmer
 
             final int id = modelId;
 
-            clientThread.invokeLater(() -> ckObject.setModel(client.loadModel(id)));
+            clientThread.invokeLater(() -> ckObject.setModel(client.loadModel(id), 128, 128));
         }
     }
 
@@ -1533,7 +1534,7 @@ public class Programmer
 
                 Model model = modelUtilities.constructModelFromCache(stats, new int[0], false, cl);
 
-                ckObject.setModel(model);
+                ckObject.setModel(model, 128, 128);
                 setActiveAnimationFrame(ckObject, data.getAnimationId(), currentTime, startTick, 0, loop, false, true);
             });
         }

@@ -177,7 +177,8 @@ public class ModelOrganizer extends JPanel
             if (o instanceof CustomModel)
             {
                 CustomModel model = (CustomModel) o;
-                clientThread.invokeLater(() -> renderPanel.updateModel(model.getModel(), true));
+                CustomModelComp comp = model.getComp();
+                clientThread.invokeLater(() -> renderPanel.updateModel(model.getModel(), comp.getWidthScale(), comp.getHeightScale(), true));
             }
         });
         add(scrollPane, c);
@@ -338,8 +339,10 @@ public class ModelOrganizer extends JPanel
 
             clientThread.invokeLater(() ->
             {
-                String name = model.getComp().getName();
+                CustomModelComp comp = model.getComp();
+                String name = comp.getName();
                 BlenderModel blenderModel = modelExporter.bmFromCustomModel(model);
+                blenderModel.scale(comp.getWidthScale(), comp.getHeightScale());
                 modelExporter.saveToFile(name, blenderModel);
             });
         });
@@ -457,7 +460,7 @@ public class ModelOrganizer extends JPanel
         table.resetView();
     }
 
-    private void openLoadDialog()
+    public void openLoadDialog()
     {
         MODELS_DIR.mkdirs();
 

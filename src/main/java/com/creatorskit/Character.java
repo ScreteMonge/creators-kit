@@ -2,6 +2,7 @@ package com.creatorskit;
 
 import com.creatorskit.hotkeymanager.LocationOption;
 import com.creatorskit.models.CustomModel;
+import com.creatorskit.models.CustomModelComp;
 import com.creatorskit.programming.AnimationType;
 import com.creatorskit.programming.MovementManager;
 import com.creatorskit.programming.PathFinder;
@@ -381,6 +382,9 @@ public class Character
 
         clientThread.invokeLater(() -> {
             Model model;
+            int widthScale = 128;
+            int heightScale = 128;
+
             int renderMode = Renderable.RENDERMODE_DEFAULT;
             if (modelMode)
             {
@@ -388,7 +392,10 @@ public class Character
                 if (storedModelExists)
                 {
                     model = storedModel.getModel();
-                    renderMode = storedModel.getComp().getRenderMode();
+                    CustomModelComp comp = storedModel.getComp();
+                    renderMode = comp.getRenderMode();
+                    widthScale = comp.getWidthScale();
+                    heightScale = comp.getHeightScale();
                 }
                 else
                 {
@@ -401,7 +408,7 @@ public class Character
                 model = client.loadModel(modelId);
             }
 
-            ckObject.setModel(model);
+            ckObject.setModel(model, widthScale, heightScale);
             ckObject.setRenderMode(renderMode);
             objectPanel.updateImage(model);
         });

@@ -198,7 +198,7 @@ public class CreatorsPanel extends PluginPanel
         loadCustomModelButton.setFocusable(false);
         loadCustomModelButton.setToolTipText("Load a previously Saved Model");
         add(loadCustomModelButton, c);
-        loadCustomModelButton.addActionListener(e -> openLoadCustomModelDialog());
+        loadCustomModelButton.addActionListener(e -> modelOrganizer.openLoadDialog());
 
         c.gridx = 2;
         c.gridy = 2;
@@ -1873,6 +1873,13 @@ public class CreatorsPanel extends PluginPanel
                 comp.setRenderMode(renderMode);
             }
 
+            //Compatibility check for version < 2.3.2
+            if (comp.getWidthScale() == null || comp.getHeightScale() == null)
+            {
+                comp.setWidthScale(128);
+                comp.setHeightScale(128);
+            }
+
             switch (comp.getType())
             {
                 case FORGED:
@@ -2178,30 +2185,6 @@ public class CreatorsPanel extends PluginPanel
         for (FolderNodeSave fns : folderNodeSaves)
         {
             openFolderNodeSave(fileVersion, managerTree, characters, node, fns, customModels);
-        }
-    }
-
-    private void openLoadCustomModelDialog()
-    {
-        MODELS_DIR.mkdirs();
-
-        JFileChooser fileChooser = new JFileChooser(MODELS_DIR);
-        fileChooser.setDialogTitle("Choose a model to load");
-
-        JCheckBox priorityCheckbox = new JCheckBox("Set Priority?");
-        priorityCheckbox.setToolTipText("May resolve some rendering issues by setting all faces to the same priority. Leave off if you're unsure");
-
-        JPanel accessory = new JPanel();
-        accessory.setLayout(new GridLayout(0, 1));
-        accessory.add(priorityCheckbox);
-
-        fileChooser.setAccessory(accessory);
-
-        int option = fileChooser.showOpenDialog(fileChooser);
-        if (option == JFileChooser.APPROVE_OPTION)
-        {
-            File selectedFile = fileChooser.getSelectedFile();
-            toolBox.getModelUtilities().loadCustomModel(selectedFile);
         }
     }
 

@@ -50,4 +50,25 @@ public enum LightingStyle
 
         return CUSTOM;
     }
+
+    public static LightingStyle fromModelType(CustomModelType type)
+    {
+        switch (type)
+        {
+            case BLENDER:
+            case FORGED:
+            case CACHE_PLAYER:
+            case CACHE_NPC:
+                return ACTOR;
+            default:
+            case CACHE_OBJECT:
+            case CACHE_MAN_WEAR:
+            case CACHE_WOMAN_WEAR:
+            case CACHE_GROUND_ITEM:
+                return DEFAULT;
+            case CACHE_SPOTANIM:
+                return SPOTANIM;
+
+        }
+    }
 }

@@ -56,7 +56,6 @@ public class ModelAnvil extends JPanel
     private final BufferedImage COPY_COLOURS = ImageUtil.loadImageResource(getClass(), "/Copy_Colours.png");
     private final BufferedImage PASTE_COLOURS = ImageUtil.loadImageResource(getClass(), "/Paste_Colours.png");
     private final Dimension SPINNER_DIMENSION = new Dimension(65, 25);
-    @Getter
     private final JSpinner[] lightingSpinners = new JSpinner[5];
     private final JComboBox<RenderMode> renderBox = new JComboBox<>(RenderMode.values());
     private final JComboBox<LightingStyle> presetComboBox = new JComboBox<>();
@@ -72,9 +71,9 @@ public class ModelAnvil extends JPanel
     private final JPanel complexMode = new JPanel();
     private final JScrollPane scrollPane = new JScrollPane();
     private final JTabbedPane tabbedPane = new JTabbedPane();
-    @Getter
+    private final JSpinner widthScaleSpinner = new JSpinner(new SpinnerNumberModel(128, 0, 128000, 1));
+    private final JSpinner heightScaleSpinner = new JSpinner(new SpinnerNumberModel(128, 0, 128000, 1));
     private final JCheckBox priorityCheckBox = new JCheckBox("Priority");
-    @Getter
     private final JTextField nameField = new JTextField();
     private ColourSwapPanel colourSwapPanel;
     private final GridBagConstraints c = new GridBagConstraints();
@@ -182,7 +181,7 @@ public class ModelAnvil extends JPanel
         c.gridx = 0;
         c.gridy = 0;
         c.gridwidth = 4;
-        JLabel lightingLabel = new JLabel("Lighting/Render Settings", SwingConstants.CENTER);
+        JLabel lightingLabel = new JLabel("Lighting", SwingConstants.CENTER);
         lightingLabel.setFont(FontManager.getRunescapeBoldFont());
         lightPanel.add(lightingLabel, c);
 
@@ -283,6 +282,36 @@ public class ModelAnvil extends JPanel
         c.gridx = 3;
         c.gridy = 4;
         lightPanel.add(renderBox, c);
+
+        c.gridx = 0;
+        c.gridy = 5;
+        c.gridwidth = 4;
+        JLabel globalScale = new JLabel("Global Scale", SwingConstants.CENTER);
+        globalScale.setFont(FontManager.getRunescapeBoldFont());
+        globalScale.setToolTipText("Sets the global size scaling factor");
+        lightPanel.add(globalScale, c);
+
+        c.gridx = 0;
+        c.gridy = 6;
+        c.gridwidth = 3;
+        JLabel widthScale = new JLabel("Width:", SwingConstants.RIGHT);
+        lightPanel.add(widthScale, c);
+
+        c.gridx = 3;
+        c.gridy = 6;
+        c.gridwidth = 1;
+        lightPanel.add(widthScaleSpinner, c);
+
+        c.gridx = 0;
+        c.gridy = 7;
+        c.gridwidth = 3;
+        JLabel heightScale = new JLabel("Height:", SwingConstants.RIGHT);
+        lightPanel.add(heightScale, c);
+
+        c.gridx = 3;
+        c.gridy = 7;
+        c.gridwidth = 1;
+        lightPanel.add(heightScaleSpinner, c);
     }
 
     private void setupLeftPanel()
@@ -396,7 +425,7 @@ public class ModelAnvil extends JPanel
                 renderMode = mode.getId();
             }
 
-            openSaveDialog(nameField.getText(), priorityCheckBox.isSelected(), renderMode, lighting);
+            openSaveDialog(nameField.getText(), priorityCheckBox.isSelected(), (int) widthScaleSpinner.getValue(), (int) heightScaleSpinner.getValue(), renderMode, lighting);
         });
     }
 
@@ -424,7 +453,7 @@ public class ModelAnvil extends JPanel
             }
             else
             {
-                renderPanel.updateModel(md, getLightingSettings(), true);
+                renderPanel.updateModel(md, (int) widthScaleSpinner.getValue(), (int) heightScaleSpinner.getValue(), getLightingSettings(), true);
             }
         });
     }
@@ -1018,7 +1047,7 @@ public class ModelAnvil extends JPanel
             renderMode = mode.getId();
         }
 
-        forgeModel(client, nameField, priorityCheckBox.isSelected(), lighting, renderMode, forgeAndSet);
+        forgeModel(client, nameField, priorityCheckBox.isSelected(), (int) widthScaleSpinner.getValue(), (int) heightScaleSpinner.getValue(), lighting, renderMode, forgeAndSet);
     }
 
     private CustomLighting getLightingSettings()
@@ -1031,7 +1060,7 @@ public class ModelAnvil extends JPanel
                 (int) lightingSpinners[4].getValue());
     }
 
-    private void forgeModel(Client client, JTextField nameField, boolean setPriority, CustomLighting lighting, int renderMode, boolean forgeAndSet)
+    private void forgeModel(Client client, JTextField nameField, boolean setPriority, int widthScale, int heightScale, CustomLighting lighting, int renderMode, boolean forgeAndSet)
     {
         if (client == null)
         {
@@ -1050,7 +1079,7 @@ public class ModelAnvil extends JPanel
                 return;
             }
 
-            CustomModelComp comp = new CustomModelComp(CustomModelType.FORGED, -1, null, null, detailedModels, null, renderMode, lighting, setPriority, nameField.getText());
+            CustomModelComp comp = new CustomModelComp(CustomModelType.FORGED, -1, widthScale, heightScale, null, null, detailedModels, null, renderMode, lighting, setPriority, nameField.getText());
             CustomModel customModel = new CustomModel(model, comp);
             modelUtilities.addCustomModels(new CustomModel[]{customModel}, forgeAndSet);
         });
@@ -1121,7 +1150,7 @@ public class ModelAnvil extends JPanel
         return detailedModels;
     }
 
-    private void openSaveDialog(String name, boolean priority, int renderMode, CustomLighting lighting)
+    private void openSaveDialog(String name, boolean priority, int widthScale, int heightScale, int renderMode, CustomLighting lighting)
     {
         File outputDir = MODELS_DIR;
         outputDir.mkdirs();
@@ -1171,17 +1200,17 @@ public class ModelAnvil extends JPanel
             {
                 selectedFile = new File(selectedFile.getPath() + ".json");
             }
-            saveToFile(selectedFile, name, priority, renderMode, lighting);
+            saveToFile(selectedFile, name, priority, widthScale, heightScale, renderMode, lighting);
         }
     }
 
-    public void saveToFile(File file, String name, boolean priority, int renderMode, CustomLighting lighting)
+    public void saveToFile(File file, String name, boolean priority, int widthScale, int heightScale, int renderMode, CustomLighting lighting)
     {
         try {
             FileWriter writer = new FileWriter(file, false);
 
             DetailedModel[] detailedModels = panelsToDetailedModels();
-            CustomModelComp comp = new CustomModelComp(CustomModelType.FORGED, -1, null, null, detailedModels, null, renderMode, lighting, priority, name);
+            CustomModelComp comp = new CustomModelComp(CustomModelType.FORGED, -1, widthScale, heightScale, null, null, detailedModels, null, renderMode, lighting, priority, name);
             String string = plugin.getGson().toJson(comp);
             writer.write(string);
             writer.close();
@@ -1264,17 +1293,34 @@ public class ModelAnvil extends JPanel
         return Color.getHSBColor(hue, 1, (float) 0.7);
     }
 
-    public void setLightingSettings(LightingStyle preset, int ambience, int contrast, int x, int y, int z)
+    public void updateGlobalSettings(CustomModelComp comp)
     {
-        if (preset == LightingStyle.CUSTOM)
-            preset = LightingStyle.DEFAULT;
+        CustomLighting cl = comp.getCustomLighting();
+        if (cl == null)
+        {
+            cl = CustomLighting.fromLightingStyle(LightingStyle.DEFAULT);
+        }
 
-        presetComboBox.setSelectedItem(preset);
-        ambSpinner.setValue(ambience);
-        conSpinner.setValue(contrast);
-        lightXSpinner.setValue(x);
-        lightYSpinner.setValue(y);
-        lightZSpinner.setValue(z);
+        LightingStyle ls = LightingStyle.fromCustomLighting(cl);
+        updateGlobalSettings(ls, comp.isPriority(), comp.getName(), comp.getWidthScale(), comp.getHeightScale());
+    }
+
+    public void updateGlobalSettings(LightingStyle ls, boolean priority, String name, int widthScale, int heightScale)
+    {
+        if (ls == LightingStyle.CUSTOM)
+            ls = LightingStyle.DEFAULT;
+
+        presetComboBox.setSelectedItem(ls);
+        ambSpinner.setValue(ls.getAmbient());
+        conSpinner.setValue(ls.getContrast());
+        lightXSpinner.setValue(ls.getX());
+        lightYSpinner.setValue(ls.getY());
+        lightZSpinner.setValue(ls.getZ());
+
+        priorityCheckBox.setSelected(priority);
+        nameField.setText(name);
+        widthScaleSpinner.setValue(widthScale);
+        heightScaleSpinner.setValue(heightScale);
     }
 }
 

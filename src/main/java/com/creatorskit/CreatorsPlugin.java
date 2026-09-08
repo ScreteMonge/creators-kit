@@ -628,6 +628,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		Model model;
 		int renderMode = Renderable.RENDERMODE_DEFAULT;
+		int widthScale = 128;
+		int heightScale = 128;
+
 		if (mousePressed && previewArrow != null && allowArrow)
 		{
 			model = previewArrow;
@@ -645,7 +648,10 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				{
 					CustomModel customModel = primary.getStoredModel();
 					model = customModel.getModel();
-					renderMode = customModel.getComp().getRenderMode();
+					CustomModelComp comp = customModel.getComp();
+					renderMode = comp.getRenderMode();
+					widthScale = comp.getWidthScale();
+					heightScale = comp.getHeightScale();
 				}
 			}
 			else
@@ -687,7 +693,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			animId = ckObject.getAnimationId();
 		}
 
-		previewObject.setModel(model);
+		previewObject.setModel(model, widthScale, heightScale);
 		previewObject.setRenderMode(renderMode);
 		previewObject.setOrientation((int) orientation);
 		previewObject.setAnimation(AnimationType.ACTIVE, animId);

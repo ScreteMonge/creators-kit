@@ -11,6 +11,8 @@ public class CustomModelComp
 {
     private CustomModelType type;
     private int modelId;
+    private Integer widthScale;
+    private Integer heightScale;
     private ModelStats[] modelStats;
     private int[] kitRecolours;
     private DetailedModel[] detailedModels;

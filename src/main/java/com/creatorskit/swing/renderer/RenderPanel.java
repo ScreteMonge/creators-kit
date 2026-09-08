@@ -4,7 +4,6 @@ import com.creatorskit.models.CustomLighting;
 import com.creatorskit.models.LightingStyle;
 import net.runelite.api.*;
 import net.runelite.api.events.PostClientTick;
-import net.runelite.client.callback.ClientThread;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
@@ -26,6 +25,8 @@ public class RenderPanel extends JPanel
     private final JSlider fovSlider;
     private boolean enableAnimations = true;
     private BufferedImage img;
+    private int scaleWidth;
+    private int scaleHeight;
 
     public static final double HEADING_DEFAULT = 0;
     public static final double PITCH_DEFAULT = 0;
@@ -112,7 +113,7 @@ public class RenderPanel extends JPanel
             return;
         }
 
-        Model animated = ac.animate(model);
+        Model animated = ac.animate(model).scale(scaleWidth, scaleHeight, scaleWidth);
         updateModelParameters(animated);
         repaint();
     }
@@ -135,23 +136,23 @@ public class RenderPanel extends JPanel
             return;
         }
 
-        Model animated = ac.animate(model);
+        Model animated = ac.animate(model).scale(scaleWidth, scaleHeight, scaleWidth);
         updateModelParameters(animated);
         repaint();
     }
 
-    public void updateModel(ModelData md, LightingStyle ls, boolean shouldRepaint)
+    public void updateModel(ModelData md, int widthScale, int heightScale, LightingStyle ls, boolean shouldRepaint)
     {
-        updateModel(md, new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getY(), ls.getZ()), shouldRepaint);
+        updateModel(md, widthScale, heightScale, new CustomLighting(ls.getAmbient(), ls.getContrast(), ls.getX(), ls.getY(), ls.getZ()), shouldRepaint);
     }
 
-    public void updateModel(ModelData md, CustomLighting ls, boolean shouldRepaint)
+    public void updateModel(ModelData md, int widthScale, int heightScale, CustomLighting ls, boolean shouldRepaint)
     {
         Model m = md.light(ls.getAmbient(), ls.getContrast(), ls.getX(), -ls.getZ(), ls.getY());
-        updateModel(m, shouldRepaint);
+        updateModel(m, widthScale, heightScale, shouldRepaint);
     }
 
-    public void updateModel(Model m, boolean shouldRepaint)
+    public void updateModel(Model m, int widthScale, int heightScale, boolean shouldRepaint)
     {
         if (m == null)
         {
@@ -160,6 +161,8 @@ public class RenderPanel extends JPanel
 
         model = m;
         modelExists = true;
+        scaleWidth = widthScale;
+        scaleHeight = heightScale;
         updateModelParameters(model);
         if (shouldRepaint)
         {
