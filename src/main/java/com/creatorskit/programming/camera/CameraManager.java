@@ -83,6 +83,13 @@ public class CameraManager
             currentKeyFrame = (CameraKeyFrame) current;
         }
 
+        if (currentKeyFrame.getTick() > currentTick)
+        {
+            clientTicksPassed = 0;
+            nextKeyFrame = null;
+            return;
+        }
+
         KeyFrame next = getNextKeyFrame(currentTick);
         if (next == null)
         {
@@ -102,6 +109,7 @@ public class CameraManager
         KeyFrame current = getCurrentKeyFrame(currentTick);
         if (current == null)
         {
+            System.out.println("Current key frame is null");
             clientTicksPassed = 0;
             currentKeyFrame = null;
             nextKeyFrame = null;
@@ -112,6 +120,13 @@ public class CameraManager
         {
             clientTicksPassed = 0;
             currentKeyFrame = (CameraKeyFrame) current;
+        }
+
+        if (currentKeyFrame.getTick() > currentTick)
+        {
+            nextKeyFrame = null;
+            handleCameraScript(playing, currentKeyFrame.getTick());
+            return;
         }
 
         KeyFrame next = getNextKeyFrame(currentTick);
