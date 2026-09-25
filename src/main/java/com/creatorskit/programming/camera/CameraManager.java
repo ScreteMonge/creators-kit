@@ -109,7 +109,6 @@ public class CameraManager
         KeyFrame current = getCurrentKeyFrame(currentTick);
         if (current == null)
         {
-            System.out.println("Current key frame is null");
             clientTicksPassed = 0;
             currentKeyFrame = null;
             nextKeyFrame = null;

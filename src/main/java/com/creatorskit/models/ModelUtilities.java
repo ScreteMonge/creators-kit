@@ -266,8 +266,9 @@ public class ModelUtilities
     {
         SwingUtilities.invokeLater(() ->
         {
-            CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
+            ModelAnvil modelAnvil = plugin.getCreatorsPanel().getModelAnvil();
             LightingStyle ls = LightingStyle.fromModelType(type);
+            boolean empty = modelAnvil.getComplexPanels().isEmpty();
 
             for (ModelStats modelStats : modelStatsArray)
             {
@@ -306,7 +307,7 @@ public class ModelUtilities
                     itemRecolourFrom = ArrayUtils.addAll(itemRecolourFrom, kitRecolourFrom);
                 }
 
-                creatorsPanel.getModelAnvil().createComplexPanel(
+                modelAnvil.createComplexPanel(
                         name,
                         id,
                         group,
@@ -320,10 +321,13 @@ public class ModelUtilities
                         false);
             }
 
-            ModelAnvil modelAnvil = creatorsPanel.getModelAnvil();
             modelAnvil.generateNames();
             modelAnvil.updateRenderPanel();
-            modelAnvil.updateGlobalSettings(ls, false, globalName, widthScale, heightScale);
+
+            if (empty)
+            {
+                modelAnvil.updateGlobalSettings(ls, false, globalName, widthScale, heightScale);
+            }
         });
     }
 
@@ -502,7 +506,10 @@ public class ModelUtilities
         {
             CustomModelComp comp = customModel.getComp();
             sendChatMessage("Model sent to Anvil: " + comp.getName());
-            modelAnvil.updateGlobalSettings(comp);
+            if (modelAnvil.getComplexPanels().isEmpty())
+            {
+                modelAnvil.updateGlobalSettings(comp);
+            }
 
             if (comp.getModelStats() == null)
             {
@@ -525,6 +532,7 @@ public class ModelUtilities
         {
             Reader reader = Files.newBufferedReader(file.toPath());
             CustomModelComp comp = gson.fromJson(reader, CustomModelComp.class);
+            boolean empty = modelAnvil.getComplexPanels().isEmpty();
 
             if (comp.getRenderMode() == null)
             {
@@ -558,7 +566,11 @@ public class ModelUtilities
                 modelAnvil.updateRenderPanel();
             });
 
-            modelAnvil.updateGlobalSettings(comp);
+            if (empty)
+            {
+                modelAnvil.updateGlobalSettings(comp);
+            }
+
             reader.close();
         }
         catch (Exception e)

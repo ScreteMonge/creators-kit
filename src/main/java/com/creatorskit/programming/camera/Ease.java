@@ -213,12 +213,16 @@ public class Ease
                 return expoEaseInOut(t);
             case EASE_IN_CUBIC:
                 return cubicEaseIn(t);
+            case EASE_IN_SINE:
+                return sineEaseIn(t);
             case EASE_IN_QUAD:
                 return quadEaseIn(t);
             case EASE_IN_QUART:
                 return quartEaseIn(t);
             case EASE_IN_QUINT:
                 return quintEaseIn(t);
+            case EASE_OUT_SINE:
+                return sineEaseOut(t);
             case EASE_OUT_CUBIC:
                 return cubicEaseOut(t);
             case EASE_OUT_QUAD:
@@ -257,6 +261,10 @@ public class Ease
                 : (2 - Math.pow(2, -20 * t + 10)) / 2;
     }
 
+    private static double sineEaseIn(double t) {
+        return 1 - Math.cos((t * Math.PI) / 2);
+    }
+
     private static double quadEaseIn(double t) {
         return t * t;
     }
@@ -271,6 +279,10 @@ public class Ease
 
     private static double quintEaseIn(double t) {
         return t * t * t * t * t;
+    }
+
+    private static double sineEaseOut(double t) {
+        return Math.sin((t * Math.PI) / 2);
     }
 
     private static double quadEaseOut(double t) {

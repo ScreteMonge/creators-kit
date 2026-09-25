@@ -482,10 +482,12 @@ public class AttributePanel extends JPanel
         easeType.addItem(EaseType.QUART);
         easeType.addItem(EaseType.QUINT);
         easeType.addItem(EaseType.EXPO);
+        easeType.addItem(EaseType.EASE_IN_SINE);
         easeType.addItem(EaseType.EASE_IN_CUBIC);
         easeType.addItem(EaseType.EASE_IN_QUAD);
         easeType.addItem(EaseType.EASE_IN_QUART);
         easeType.addItem(EaseType.EASE_IN_QUINT);
+        easeType.addItem(EaseType.EASE_OUT_SINE);
         easeType.addItem(EaseType.EASE_OUT_CUBIC);
         easeType.addItem(EaseType.EASE_OUT_QUAD);
         easeType.addItem(EaseType.EASE_OUT_QUART);
