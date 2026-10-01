@@ -114,6 +114,11 @@ public class SpotAnimLoader
                 def.textureToReplace[var4] = (short) stream.readUnsignedShort();
             }
         }
+        else if (opcode == 42)
+        {
+            //def.fullRecolor = (short)
+            stream.readUnsignedShort();
+        }
         else
         {
             return false;

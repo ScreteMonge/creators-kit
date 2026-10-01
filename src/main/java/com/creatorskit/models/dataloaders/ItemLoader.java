@@ -281,6 +281,10 @@ public class ItemLoader
         {
             stream.readUnsignedShort();
         }
+        else if (opcode == 99)
+        {
+            stream.readUnsignedShort();
+        }
         else if (opcode >= 100 && opcode < 110)
         {
             stream.readUnsignedShort();
@@ -330,6 +334,14 @@ public class ItemLoader
         {
             //def.stackable = 2;
         }
+        else if (opcode == 161)
+        {
+            int len = stream.readUnsignedShort();
+            for (int i = 0; i < len; i++)
+            {
+                stream.readUnsignedShort();
+            }
+        }
         else if (opcode == 200)
         {
             stream.readUnsignedByte();
@@ -378,6 +390,10 @@ public class ItemLoader
                     stream.readInt();
                 }
             }
+        }
+        else if (opcode == 251)
+        {
+            //def.bronzeman = true;
         }
         else
         {
