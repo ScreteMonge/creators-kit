@@ -49,6 +49,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.LocalTime;
 import java.util.*;
@@ -1569,7 +1570,10 @@ public class CreatorsPanel extends PluginPanel
 
         try
         {
-            FileWriter writer = new FileWriter(file, false);
+            Writer writer = new OutputStreamWriter(
+                new FileOutputStream(file, false),
+                StandardCharsets.UTF_8);
+
             String string = plugin.getGson().toJson(saveFile);
             writer.write(string);
             writer.close();
