@@ -1127,26 +1127,13 @@ public class CacheSearcherTab extends JPanel
             {
                 switchCards(NPC);
                 String text = field.getText();
+                List<NpcDefinition> dataList = dataFinder.filterNPCs(text);
+                List<Object> list = new ArrayList<>(dataList);
+                npcTable.initialize(list);
                 npcTable.searchAndListEntries(text, allowNull.isSelected());
             }
         };
         field.addKeyListener(keyListener);
-
-        if (dataFinder.isDataLoaded(DataFinder.DataType.NPC))
-        {
-            List<NpcDefinition> dataList = dataFinder.getNpcData();
-            List<Object> list = new ArrayList<>(dataList);
-            npcTable.initialize(list);
-        }
-        else
-        {
-            dataFinder.addLoadCallback(DataFinder.DataType.NPC, () ->
-            {
-                List<NpcDefinition> dataList = dataFinder.getNpcData();
-                List<Object> list = new ArrayList<>(dataList);
-                npcTable.initialize(list);
-            });
-        }
     }
 
     private void setupObjectPanel()
@@ -1221,26 +1208,13 @@ public class CacheSearcherTab extends JPanel
             {
                 switchCards(OBJECT);
                 String text = field.getText();
+                List<ObjectDefinition> dataList = dataFinder.filterObjects(text);
+                List<Object> list = new ArrayList<>(dataList);
+                objectTable.initialize(list);
                 objectTable.searchAndListEntries(text, allowNull.isSelected());
             }
         };
         field.addKeyListener(keyListener);
-
-        if (dataFinder.isDataLoaded(DataFinder.DataType.OBJECT))
-        {
-            List<ObjectDefinition> dataList = dataFinder.getObjectData();
-            List<Object> list = new ArrayList<>(dataList);
-            objectTable.initialize(list);
-        }
-        else
-        {
-            dataFinder.addLoadCallback(DataFinder.DataType.OBJECT, () ->
-            {
-                List<ObjectDefinition> dataList = dataFinder.getObjectData();
-                List<Object> list = new ArrayList<>(dataList);
-                objectTable.initialize(list);
-            });
-        }
     }
 
     private void setupItemPanel()
@@ -1372,26 +1346,13 @@ public class CacheSearcherTab extends JPanel
             {
                 switchCards(ITEM);
                 String text = field.getText();
+                List<ItemDefinition> dataList = dataFinder.filterItems(text);
+                List<Object> list = new ArrayList<>(dataList);
+                itemTable.initialize(list);
                 itemTable.searchAndListEntries(text, allowNull.isSelected());
             }
         };
         field.addKeyListener(keyListener);
-
-        if (dataFinder.isDataLoaded(DataFinder.DataType.ITEM))
-        {
-            List<ItemDefinition> dataList = dataFinder.getItemData();
-            List<Object> list = new ArrayList<>(dataList);
-            itemTable.initialize(list);
-        }
-        else
-        {
-            dataFinder.addLoadCallback(DataFinder.DataType.ITEM, () ->
-            {
-                List<ItemDefinition> dataList = dataFinder.getItemData();
-                List<Object> list = new ArrayList<>(dataList);
-                itemTable.initialize(list);
-            });
-        }
     }
 
     private void setupSpotAnimPanel()

@@ -958,6 +958,9 @@ public class AttributePanel extends JPanel
             public void keyReleased(KeyEvent e)
             {
                 String text = npcField.getText();
+                List<NpcDefinition> dataList = dataFinder.filterNPCs(text);
+                List<Object> list = new ArrayList<>(dataList);
+                npcTable.initialize(list);
                 npcTable.searchAndListEntries(text, false);
                 npcPopup.setVisible(true);
                 Point p = npcField.getLocationOnScreen();
@@ -1008,22 +1011,6 @@ public class AttributePanel extends JPanel
             }
         });
 
-        if (dataFinder.isDataLoaded(DataFinder.DataType.NPC))
-        {
-            List<NpcDefinition> dataList = dataFinder.getNpcData();
-            List<Object> list = new ArrayList<>(dataList);
-            npcTable.initialize(list);
-        }
-        else
-        {
-            dataFinder.addLoadCallback(DataFinder.DataType.NPC, () ->
-            {
-                List<NpcDefinition> dataList = dataFinder.getNpcData();
-                List<Object> list = new ArrayList<>(dataList);
-                npcTable.initialize(list);
-            });
-        }
-
         c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 12;
@@ -1058,6 +1045,9 @@ public class AttributePanel extends JPanel
             public void keyReleased(KeyEvent e)
             {
                 String text = itemField.getText();
+                List<ItemDefinition> dataList = dataFinder.filterItems(text);
+                List<Object> list = new ArrayList<>(dataList);
+                itemTable.initialize(list);
                 itemTable.searchAndListEntries(text, false);
                 itemPopup.setVisible(true);
                 Point p = itemField.getLocationOnScreen();
@@ -1146,22 +1136,6 @@ public class AttributePanel extends JPanel
                 }
             }
         });
-
-        if (dataFinder.isDataLoaded(DataFinder.DataType.ITEM))
-        {
-            List<ItemDefinition> dataList = dataFinder.getItemData();
-            List<Object> list = new ArrayList<>(dataList);
-            itemTable.initialize(list);
-        }
-        else
-        {
-            dataFinder.addLoadCallback(DataFinder.DataType.ITEM, () ->
-            {
-                List<ItemDefinition> dataList = dataFinder.getItemData();
-                List<Object> list = new ArrayList<>(dataList);
-                itemTable.initialize(list);
-            });
-        }
 
         NpcDefinition player = new NpcDefinition(-1);
         player.setName("Player");

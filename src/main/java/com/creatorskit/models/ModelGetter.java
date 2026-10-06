@@ -354,7 +354,7 @@ public class ModelGetter
         SpotAnimKeyFrame[] spkfs = new SpotAnimKeyFrame[0];
         if (menuOption == ModelMenuOption.STORE_ADD_ANIMATE)
         {
-            NpcDefinition npcData = dataFinder.findNPCData(npc);
+            NpcDefinition npcData = dataFinder.findNPCData(npc.getId());
             if (npcData != null)
             {
                 akf = new AnimationKeyFrame(

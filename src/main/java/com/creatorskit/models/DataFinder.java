@@ -64,11 +64,7 @@ public class DataFinder
     private int lastAnim;
     private static final String DEFAULT_NAME = "Name";
 
-    private final List<NpcDefinition> npcData = new ArrayList<>();
-    private final List<ObjectDefinition> objectData = new ArrayList<>();
     private final List<SpotAnimDefinition> spotanimData = new ArrayList<>();
-    private final List<ItemDefinition> itemData = new ArrayList<>();
-    private final List<KitDefinition> kitData = new ArrayList<>();
     private final List<AnimData> animData = new ArrayList<>();
     private final List<WeaponAnimData> weaponAnimData = new ArrayList<>();
     private final List<SoundData> soundData = new ArrayList<>();
@@ -110,11 +106,7 @@ public class DataFinder
             return;
         }
 
-        lookupNPCData();
-        lookupObjectData();
         lookupSpotAnimData();
-        lookupItemData();
-        lookupKitData();
         lookupAnimData();
         lookupWeaponAnimationData();
         lookupSoundData();
@@ -124,11 +116,7 @@ public class DataFinder
     {
         Arrays.stream(DataType.values()).forEach(d -> loadState.put(d, false));
         Arrays.stream(DataType.values()).forEach(d -> loadCallbacks.put(d, new ArrayList<>()));
-        npcData.clear();
-        objectData.clear();
         spotanimData.clear();
-        itemData.clear();
-        kitData.clear();
         animData.clear();
         weaponAnimData.clear();
         soundData.clear();
@@ -167,29 +155,49 @@ public class DataFinder
 
     public boolean isDataLoaded(DataType dataType) { return loadState.get(dataType); }
 
-    private void lookupKitData()
+    public KitDefinition findKitData(int id)
     {
         if (client == null || client.getIndexConfig() == null)
         {
-            return;
+            return null;
         }
 
         final int KIT_CONFIG = 3;
-        int[] ids = client.getIndexConfig().getFileIds(KIT_CONFIG);
 
-        for (int i : ids)
+        byte[] data = client.getIndex(2).loadData(KIT_CONFIG, id);
+        if (data == null)
         {
-            byte[] data = client.getIndex(2).loadData(KIT_CONFIG, i);
+            return null;
+        }
+
+        return kitLoader.load(id, data);
+    }
+
+    public KitDefinition[] findKitData(int[] ids)
+    {
+        KitDefinition[] items = new KitDefinition[ids.length];
+
+        if (client == null || client.getIndexConfig() == null)
+        {
+            return items;
+        }
+
+        final int KIT_CONFIG = 3;
+
+        for (int i = 0; i < ids.length; i++)
+        {
+            int id = ids[i];
+            byte[] data = client.getIndex(2).loadData(KIT_CONFIG, id);
             if (data == null)
             {
+                items[i] = null;
                 continue;
             }
 
-            KitDefinition def = kitLoader.load(i, data);
-            kitData.add(def);
+            items[i] = kitLoader.load(id, data);
         }
 
-        executeCallbacks(DataType.KIT);
+        return items;
     }
 
     private void lookupAnimData()
@@ -381,97 +389,75 @@ public class DataFinder
                 break;
         }
 
-        int itemsToComplete = updatedItemIds.length;
-        for (int i : updatedItemIds)
+        ItemDefinition[] items = findItemData(updatedItemIds);
+        for (int i = 0; i < items.length; i++)
         {
-            if (i == -1)
+            ItemDefinition itemDatum = items[i];
+            if (itemDatum == null)
             {
-                itemsToComplete--;
-            }
-        }
-
-        for (ItemDefinition itemDatum : itemData)
-        {
-            if (itemsToComplete == 0)
-            {
-                break;
+                continue;
             }
 
-            for (int i = 0; i < updatedItemIds.length; i++)
+            int[] modelIds = new int[0];
+            int offset = 0;
+
+            if (groundItem)
             {
-                int item = updatedItemIds[i];
-                if (item == -1)
+                modelIds = ArrayUtils.add(modelIds, itemDatum.getInventoryModel());
+            }
+            else if (maleItem)
+            {
+                modelIds = ArrayUtils.addAll(modelIds, itemDatum.getMaleModel0(), itemDatum.getMaleModel1(), itemDatum.getMaleModel2());
+                offset = itemDatum.getMaleOffset();
+            }
+            else
+            {
+                modelIds = ArrayUtils.addAll(modelIds, itemDatum.getFemaleModel0(), itemDatum.getFemaleModel1(), itemDatum.getFemaleModel2());
+                offset = itemDatum.getFemaleOffset();
+            }
+
+            if (modelIds == null || modelIds.length == 0)
+            {
+                continue;
+            }
+
+            short[] rf = itemDatum.getColorFind();
+            short[] rt = itemDatum.getColorReplace();
+            short[] rtFrom = itemDatum.getTextureFind();
+            short[] rtTo = itemDatum.getTextureReplace();
+
+            LightingStyle ls = LightingStyle.ACTOR;
+            CustomLighting customLighting = new CustomLighting(
+                    ls.getAmbient(),
+                    ls.getContrast(),
+                    ls.getX(),
+                    ls.getY(),
+                    ls.getZ());
+
+            String name = itemDatum.getName();
+            if (name.equals("null") || name.isEmpty())
+            {
+                name = DEFAULT_NAME;
+            }
+
+            for (int id : modelIds)
+            {
+                if (id != -1)
                 {
-                    continue;
-                }
-
-                if (itemDatum.getId() == item)
-                {
-                    itemsToComplete--;
-                    int[] modelIds = new int[0];
-                    int offset = 0;
-
-                    if (groundItem)
-                    {
-                        modelIds = ArrayUtils.add(modelIds, itemDatum.getInventoryModel());
-                    }
-                    else if (maleItem)
-                    {
-                        modelIds = ArrayUtils.addAll(modelIds, itemDatum.getMaleModel0(), itemDatum.getMaleModel1(), itemDatum.getMaleModel2());
-                        offset = itemDatum.getMaleOffset();
-                    }
-                    else
-                    {
-                        modelIds = ArrayUtils.addAll(modelIds, itemDatum.getFemaleModel0(), itemDatum.getFemaleModel1(), itemDatum.getFemaleModel2());
-                        offset = itemDatum.getFemaleOffset();
-                    }
-
-                    if (modelIds == null || modelIds.length == 0)
-                    {
-                        continue;
-                    }
-
-                    short[] rf = itemDatum.getColorFind();
-                    short[] rt = itemDatum.getColorReplace();
-                    short[] rtFrom = itemDatum.getTextureFind();
-                    short[] rtTo = itemDatum.getTextureReplace();
-
-                    LightingStyle ls = LightingStyle.ACTOR;
-                    CustomLighting customLighting = new CustomLighting(
-                            ls.getAmbient(),
-                            ls.getContrast(),
-                            ls.getX(),
-                            ls.getY(),
-                            ls.getZ());
-
-                    String name = itemDatum.getName();
-                    if (name.equals("null") || name.isEmpty())
-                    {
-                        name = DEFAULT_NAME;
-                    }
-
-                    for (int id : modelIds)
-                    {
-                        if (id != -1)
-                        {
-                            modelStats.add(new ModelStats(
-                                    id,
-                                    name,
-                                    bodyParts[i],
-                                    rf,
-                                    rt,
-                                    rtFrom,
-                                    rtTo,
-                                    itemDatum.getResizeX(),
-                                    itemDatum.getResizeZ(),
-                                    itemDatum.getResizeY(),
-                                    offset * -1,
-                                    customLighting
-                            ));
-                        }
-                    }
-
-                    break;
+                    modelStats.add(new ModelStats(
+                            id,
+                            name,
+                            bodyParts[i],
+                            rf,
+                            rt,
+                            rtFrom,
+                            rtTo,
+                            itemDatum.getResizeX(),
+                            itemDatum.getResizeZ(),
+                            itemDatum.getResizeY(),
+                            offset * -1,
+                            customLighting
+                    ));
                 }
             }
         }
@@ -479,74 +465,52 @@ public class DataFinder
 
     public void getPlayerKit(ArrayList<ModelStats> modelStats, int[] kitId)
     {
-        int itemsToComplete = kitId.length;
-        for (int i : kitId)
+        KitDefinition[] items = findKitData(kitId);
+        for (int i = 0; i < items.length; i++)
         {
-            if (i == -1)
+            KitDefinition kitData = items[i];
+            if (kitData == null)
             {
-                itemsToComplete--;
-            }
-        }
-
-        for (KitDefinition kitData : kitData)
-        {
-            if (itemsToComplete == 0)
-            {
-                break;
+                continue;
             }
 
-            for (int i = 0; i < kitId.length; i++)
+            int[] modelIds = kitData.getModels();
+            if (modelIds == null || modelIds.length == 0)
             {
-                int item = kitId[i];
-                if (item == -1)
+                continue;
+            }
+
+            short[] rf = kitData.getRecolorToFind();
+            short[] rt = kitData.getRecolorToReplace();
+            short[] rtf = kitData.getRetextureToFind();
+            short[] rtt = kitData.getRetextureToReplace();
+
+            LightingStyle ls = LightingStyle.ACTOR;
+            CustomLighting customLighting = new CustomLighting(
+                    ls.getAmbient(),
+                    ls.getContrast(),
+                    ls.getX(),
+                    ls.getY(),
+                    ls.getZ());
+
+            for (int id : modelIds)
+            {
+                if (id != -1)
                 {
-                    continue;
-                }
-
-                if (kitData.getId() == item)
-                {
-                    itemsToComplete--;
-                    int[] modelIds = kitData.getModels();
-                    if (modelIds == null || modelIds.length == 0)
-                    {
-                        continue;
-                    }
-
-                    short[] rf = kitData.getRecolorToFind();
-                    short[] rt = kitData.getRecolorToReplace();
-                    short[] rtf = kitData.getRetextureToFind();
-                    short[] rtt = kitData.getRetextureToReplace();
-
-                    LightingStyle ls = LightingStyle.ACTOR;
-                    CustomLighting customLighting = new CustomLighting(
-                            ls.getAmbient(),
-                            ls.getContrast(),
-                            ls.getX(),
-                            ls.getY(),
-                            ls.getZ());
-
-                    for (int id : modelIds)
-                    {
-                        if (id != -1)
-                        {
-                            modelStats.add(new ModelStats(
-                                    id,
-                                    bodyParts[i].getName(),
-                                    bodyParts[i],
-                                    rf,
-                                    rt,
-                                    rtf,
-                                    rtt,
-                                    128,
-                                    128,
-                                    128,
-                                    0,
-                                    customLighting
-                            ));
-                        }
-                    }
-
-                    break;
+                    modelStats.add(new ModelStats(
+                            id,
+                            bodyParts[i].getName(),
+                            bodyParts[i],
+                            rf,
+                            rt,
+                            rtf,
+                            rtt,
+                            128,
+                            128,
+                            128,
+                            0,
+                            customLighting
+                    ));
                 }
             }
         }
@@ -795,46 +759,23 @@ public class DataFinder
         return null;
     }
 
-    public void lookupNPCData()
+    public NpcDefinition findNPCData(int id)
     {
         if (client == null || client.getIndexConfig() == null)
         {
-            return;
+            return null;
         }
 
         final int NPC_CONFIG = 9;
-        int[] ids = client.getIndexConfig().getFileIds(NPC_CONFIG);
         Set<Integer> unknownOpcodes = new HashSet<>();
 
-        for (int i : ids)
+        byte[] data = client.getIndex(2).loadData(NPC_CONFIG, id);
+        if (data == null)
         {
-            byte[] data = client.getIndex(2).loadData(NPC_CONFIG, i);
-            if (data == null)
-            {
-                continue;
-            }
-
-            NpcDefinition def = npcLoader.load(unknownOpcodes, i, data);
-            if (def != null)
-            {
-                npcData.add(def);
-            }
+            return null;
         }
 
-        executeCallbacks(DataType.NPC);
-    }
-
-    public NpcDefinition findNPCData(NPC npc)
-    {
-        for (NpcDefinition npcData : npcData)
-        {
-            if (npcData.getId() == npc.getId())
-            {
-                return npcData;
-            }
-        }
-
-        return null;
+        return npcLoader.load(unknownOpcodes, id, data);
     }
 
     public ModelStats[] findModelsForNPC(NPC npc)
@@ -909,51 +850,49 @@ public class DataFinder
         ArrayList<ModelStats> modelStats = new ArrayList<>();
         int widthScale = 128;
         int heightScale = 128;
-        for (NpcDefinition npcData : npcData)
+        NpcDefinition npcData = findNPCData(npcId);
+        if (npcData == null)
         {
-            if (npcData.getId() == npcId)
-            {
-                lastAnim = npcData.getStandingAnimation();
-                widthScale = npcData.getWidthScale();
-                heightScale = npcData.getHeightScale();
+            return null;
+        }
 
-                int[] modelIds = npcData.getModels();
-                if (modelIds == null || modelIds.length == 0)
-                {
-                    return null;
-                }
+        lastAnim = npcData.getStandingAnimation();
+        widthScale = npcData.getWidthScale();
+        heightScale = npcData.getHeightScale();
 
-                short[] recolorToFind = npcData.getRecolorToFind();
-                short[] recolorToReplace = npcData.getRecolorToReplace();
+        int[] modelIds = npcData.getModels();
+        if (modelIds == null || modelIds.length == 0)
+        {
+            return null;
+        }
 
-                LightingStyle ls = LightingStyle.ACTOR;
-                CustomLighting customLighting = new CustomLighting(
-                        ls.getAmbient(),
-                        ls.getContrast(),
-                        ls.getX(),
-                        ls.getY(),
-                        ls.getZ());
+        short[] recolorToFind = npcData.getRecolorToFind();
+        short[] recolorToReplace = npcData.getRecolorToReplace();
 
-                for (int i : modelIds)
-                {
-                    modelStats.add(new ModelStats(
-                            i,
-                            npcData.getName(),
-                            BodyPart.NA,
-                            recolorToFind,
-                            recolorToReplace,
-                            new short[0],
-                            new short[0],
-                            128,
-                            128,
-                            128,
-                            0,
-                            customLighting
-                    ));
-                }
+        LightingStyle ls = LightingStyle.ACTOR;
+        CustomLighting customLighting = new CustomLighting(
+                ls.getAmbient(),
+                ls.getContrast(),
+                ls.getX(),
+                ls.getY(),
+                ls.getZ());
 
-                break;
-            }
+        for (int i : modelIds)
+        {
+            modelStats.add(new ModelStats(
+                    i,
+                    npcData.getName(),
+                    BodyPart.NA,
+                    recolorToFind,
+                    recolorToReplace,
+                    new short[0],
+                    new short[0],
+                    128,
+                    128,
+                    128,
+                    0,
+                    customLighting
+            ));
         }
 
         ModelStats[] stats = new ModelStats[modelStats.size()];
@@ -965,11 +904,155 @@ public class DataFinder
         return new AbstractMap.SimpleEntry<>(new int[]{widthScale, heightScale}, stats);
     }
 
-    private void lookupObjectData()
+    public List<NpcDefinition> filterNPCs(String entry)
+    {
+        ArrayList<NpcDefinition> list = new ArrayList<>();
+
+        if (client == null || client.getIndexConfig() == null)
+        {
+            return list;
+        }
+
+        final int NPC_CONFIG = 9;
+        int[] ids = client.getIndexConfig().getFileIds(NPC_CONFIG);
+        Set<Integer> unknownOpcodes = new HashSet<>();
+
+        for (int i : ids)
+        {
+            byte[] data = client.getIndex(2).loadData(NPC_CONFIG, i);
+            if (data == null)
+            {
+                continue;
+            }
+
+            NpcDefinition def = npcLoader.load(unknownOpcodes, i, data);
+            if (def != null)
+            {
+                String name = def.getName();
+                int id = def.getId();
+                String merged = name + " (" + id + ")";
+
+                if (merged.contains(entry))
+                {
+                    list.add(def);
+                }
+            }
+        }
+
+        return list;
+    }
+
+    public ObjectDefinition findObjectData(int id)
     {
         if (client == null || client.getIndexConfig() == null)
         {
-            return;
+            return null;
+        }
+
+        final int OBJECT_CONFIG = 6;
+        Set<Integer> unknownOpcodes = new HashSet<>();
+
+        byte[] data = client.getIndex(2).loadData(OBJECT_CONFIG, id);
+        if (data == null)
+        {
+            return null;
+        }
+
+        return objectLoader.load(unknownOpcodes, id, data);
+    }
+
+    public ModelStats[] findModelsForObject(int objectId, int modelType, LightingStyle ls, boolean firstModelType)
+    {
+        ArrayList<ModelStats> modelStats = new ArrayList<>();
+
+        ObjectDefinition objectData = findObjectData(objectId);
+        if (objectData == null)
+        {
+            return null;
+        }
+
+        int[] modelIds = objectData.getObjectModels();
+        if (modelIds == null)
+        {
+            return new ModelStats[0];
+        }
+
+        int[] objectTypes = objectData.getObjectTypes();
+        if (objectTypes != null && objectTypes.length > 0)
+        {
+            if (firstModelType)
+            {
+                int modelId = modelIds[0];
+                modelIds = new int[]{modelId};
+            }
+            else
+            {
+                for (int i = 0; i < objectTypes.length; i++)
+                {
+                    if (objectTypes[i] == modelType)
+                    {
+                        int modelId = modelIds[i];
+                        modelIds = new int[]{modelId};
+                        break;
+                    }
+                }
+            }
+        }
+
+        short[] rf = objectData.getRecolorToFind();
+        short[] rt = objectData.getRecolorToReplace();
+        short[] rtFrom = objectData.getRetextureToFind();
+        short[] rtTo = objectData.getTextureToReplace();
+
+        int ambient = objectData.getAmbient();
+        int contrast = objectData.getContrast();
+        CustomLighting customLighting = new CustomLighting(
+                ls.getAmbient() + ambient,
+                ls.getContrast() + contrast,
+                ls.getX(),
+                ls.getY(),
+                ls.getZ());
+
+        String name = objectData.getName();
+        if (name.equals("null") || name.isEmpty())
+        {
+            name = DEFAULT_NAME;
+        }
+
+        for (int i : modelIds)
+        {
+            modelStats.add(new ModelStats(
+                    i,
+                    name,
+                    BodyPart.NA,
+                    rf,
+                    rt,
+                    rtFrom,
+                    rtTo,
+                    objectData.getModelSizeX(),
+                    objectData.getModelSizeY(),
+                    objectData.getModelSizeHeight(),
+                    0,
+                    customLighting
+            ));
+        }
+
+        ModelStats[] stats = new ModelStats[modelStats.size()];
+        for (int i = 0; i < modelStats.size(); i++)
+        {
+            stats[i] = modelStats.get(i);
+        }
+
+        return stats;
+    }
+
+    public List<ObjectDefinition> filterObjects(String entry)
+    {
+        ArrayList<ObjectDefinition> list = new ArrayList<>();
+
+        if (client == null || client.getIndexConfig() == null)
+        {
+            return list;
         }
 
         final int OBJECT_CONFIG = 6;
@@ -987,90 +1070,162 @@ public class DataFinder
             ObjectDefinition def = objectLoader.load(unknownOpcodes, i, data);
             if (def != null)
             {
-                objectData.add(def);
+                String name = def.getName();
+                int id = def.getId();
+                String merged = name + " (" + id + ")";
+
+                if (merged.contains(entry))
+                {
+                    list.add(def);
+                }
             }
         }
 
-        objectData.sort(Comparator.comparing(ObjectDefinition::getName));
-        executeCallbacks(DataType.OBJECT);
+        return list;
     }
 
-    public ModelStats[] findModelsForObject(int objectId, int modelType, LightingStyle ls, boolean firstModelType)
+    public ItemDefinition findItemData(int id)
+    {
+        if (client == null || client.getIndexConfig() == null)
+        {
+            return null;
+        }
+
+        final int ITEM_CONFIG = 10;
+        Set<Integer> unknownOpcodes = new HashSet<>();
+
+        byte[] data = client.getIndex(2).loadData(ITEM_CONFIG, id);
+        if (data == null)
+        {
+            return null;
+        }
+
+        return itemLoader.load(unknownOpcodes, id, data);
+    }
+
+    public ItemDefinition[] findItemData(int[] ids)
+    {
+        ItemDefinition[] items = new ItemDefinition[ids.length];
+
+        if (client == null || client.getIndexConfig() == null)
+        {
+            return items;
+        }
+
+        final int ITEM_CONFIG = 10;
+        Set<Integer> unknownOpcodes = new HashSet<>();
+
+        for (int i = 0; i < ids.length; i++)
+        {
+            int id = ids[i];
+            byte[] data = client.getIndex(2).loadData(ITEM_CONFIG, id);
+            if (data == null)
+            {
+                items[i] = null;
+                continue;
+            }
+
+            items[i] = itemLoader.load(unknownOpcodes, id, data);
+        }
+
+        return items;
+    }
+
+    public ModelStats[] findModelsForGroundItem(int itemId, CustomModelType modelType)
     {
         ArrayList<ModelStats> modelStats = new ArrayList<>();
 
-        for (ObjectDefinition objectData : objectData)
+        ItemDefinition item = findItemData(itemId);
+        if (item == null)
         {
-            if (objectData.getId() == objectId)
-            {
-                int[] modelIds = objectData.getObjectModels();
-                if (modelIds == null)
-                {
-                    return new ModelStats[0];
-                }
+            return null;
+        }
 
-                int[] objectTypes = objectData.getObjectTypes();
-                if (objectTypes != null && objectTypes.length > 0)
-                {
-                    if (firstModelType)
-                    {
-                        int modelId = modelIds[0];
-                        modelIds = new int[]{modelId};
-                    }
-                    else
-                    {
-                        for (int i = 0; i < objectTypes.length; i++)
-                        {
-                            if (objectTypes[i] == modelType)
-                            {
-                                int modelId = modelIds[i];
-                                modelIds = new int[]{modelId};
-                                break;
-                            }
-                        }
-                    }
-                }
+        int[] modelIds = new int[0];
 
-                short[] rf = objectData.getRecolorToFind();
-                short[] rt = objectData.getRecolorToReplace();
-                short[] rtFrom = objectData.getRetextureToFind();
-                short[] rtTo = objectData.getTextureToReplace();
-
-                int ambient = objectData.getAmbient();
-                int contrast = objectData.getContrast();
-                CustomLighting customLighting = new CustomLighting(
-                        ls.getAmbient() + ambient,
-                        ls.getContrast() + contrast,
-                        ls.getX(),
-                        ls.getY(),
-                        ls.getZ());
-
-                String name = objectData.getName();
-                if (name.equals("null") || name.isEmpty())
-                {
-                    name = DEFAULT_NAME;
-                }
-
-                for (int i : modelIds)
-                {
-                    modelStats.add(new ModelStats(
-                            i,
-                            name,
-                            BodyPart.NA,
-                            rf,
-                            rt,
-                            rtFrom,
-                            rtTo,
-                            objectData.getModelSizeX(),
-                            objectData.getModelSizeY(),
-                            objectData.getModelSizeHeight(),
-                            0,
-                            customLighting
-                    ));
-                }
-
+        switch (modelType)
+        {
+            default:
+            case CACHE_GROUND_ITEM:
+                modelIds = ArrayUtils.add(modelIds, item.getInventoryModel());
                 break;
+            case CACHE_MAN_WEAR:
+                modelIds = ArrayUtils.addAll(modelIds, item.getMaleModel0(), item.getMaleModel1(), item.getMaleModel2());
+                break;
+            case CACHE_WOMAN_WEAR:
+                modelIds = ArrayUtils.addAll(modelIds, item.getFemaleModel0(), item.getFemaleModel1(), item.getFemaleModel2());
+        }
+
+        short[] rf = item.getColorFind();
+        short[] rt = item.getColorReplace();
+        short[] rtFrom = item.getTextureFind();
+        short[] rtTo = item.getTextureReplace();
+
+        LightingStyle ls;
+
+        switch (modelType)
+        {
+            default:
+            case CACHE_GROUND_ITEM:
+                ls = LightingStyle.DEFAULT;
+                break;
+            case CACHE_MAN_WEAR:
+            case CACHE_WOMAN_WEAR:
+                ls = LightingStyle.ACTOR;
+        }
+
+        CustomLighting customLighting = new CustomLighting(
+                ls.getAmbient(),
+                ls.getContrast(),
+                ls.getX(),
+                ls.getY(),
+                ls.getZ());
+
+        String name = item.getName();
+        if (name.equals("null") || name.isEmpty())
+        {
+            name = DEFAULT_NAME;
+        }
+
+        for (int i = 0; i < modelIds.length; i++)
+        {
+            int id = modelIds[i];
+            int wearPos;
+            switch (i)
+            {
+                default:
+                case 0:
+                    wearPos = item.getWearPos1();
+                    break;
+                case 1:
+                    wearPos = item.getWearPos2();
+                    break;
+                case 2:
+                    wearPos = item.getWearPos3();
             }
+
+            if (id != -1)
+            {
+                modelStats.add(new ModelStats(
+                        id,
+                        name,
+                        BodyPart.wearPosToBodyPart(wearPos),
+                        rf,
+                        rt,
+                        rtFrom,
+                        rtTo,
+                        item.getResizeX(),
+                        item.getResizeZ(),
+                        item.getResizeY(),
+                        0,
+                        customLighting
+                ));
+            }
+        }
+
+        if (modelStats.isEmpty())
+        {
+            return null;
         }
 
         ModelStats[] stats = new ModelStats[modelStats.size()];
@@ -1082,11 +1237,13 @@ public class DataFinder
         return stats;
     }
 
-    private void lookupItemData()
+    public List<ItemDefinition> filterItems(String entry)
     {
+        ArrayList<ItemDefinition> list = new ArrayList<>();
+
         if (client == null || client.getIndexConfig() == null)
         {
-            return;
+            return list;
         }
 
         final int ITEM_CONFIG = 10;
@@ -1104,120 +1261,18 @@ public class DataFinder
             ItemDefinition def = itemLoader.load(unknownOpcodes, i, data);
             if (def != null)
             {
-                itemData.add(def);
+                String name = def.getName();
+                int id = def.getId();
+                String merged = name + " (" + id + ")";
+
+                if (merged.contains(entry))
+                {
+                    list.add(def);
+                }
             }
         }
 
-        itemData.sort(Comparator.comparing(ItemDefinition::getName));
-        executeCallbacks(DataType.ITEM);
-    }
-
-    public ModelStats[] findModelsForGroundItem(int itemId, CustomModelType modelType)
-    {
-        ArrayList<ModelStats> modelStats = new ArrayList<>();
-
-        for (ItemDefinition item : itemData)
-        {
-            if (item.getId() == itemId)
-            {
-                int[] modelIds = new int[0];
-
-                switch (modelType)
-                {
-                    default:
-                    case CACHE_GROUND_ITEM:
-                        modelIds = ArrayUtils.add(modelIds, item.getInventoryModel());
-                        break;
-                    case CACHE_MAN_WEAR:
-                        modelIds = ArrayUtils.addAll(modelIds, item.getMaleModel0(), item.getMaleModel1(), item.getMaleModel2());
-                        break;
-                    case CACHE_WOMAN_WEAR:
-                        modelIds = ArrayUtils.addAll(modelIds, item.getFemaleModel0(), item.getFemaleModel1(), item.getFemaleModel2());
-                }
-
-                short[] rf = item.getColorFind();
-                short[] rt = item.getColorReplace();
-                short[] rtFrom = item.getTextureFind();
-                short[] rtTo = item.getTextureReplace();
-
-                LightingStyle ls;
-
-                switch (modelType)
-                {
-                    default:
-                    case CACHE_GROUND_ITEM:
-                        ls = LightingStyle.DEFAULT;
-                        break;
-                    case CACHE_MAN_WEAR:
-                    case CACHE_WOMAN_WEAR:
-                        ls = LightingStyle.ACTOR;
-                }
-
-                CustomLighting customLighting = new CustomLighting(
-                        ls.getAmbient(),
-                        ls.getContrast(),
-                        ls.getX(),
-                        ls.getY(),
-                        ls.getZ());
-
-                String name = item.getName();
-                if (name.equals("null") || name.isEmpty())
-                {
-                    name = DEFAULT_NAME;
-                }
-
-                for (int i = 0; i < modelIds.length; i++)
-                {
-                    int id = modelIds[i];
-                    int wearPos;
-                    switch (i)
-                    {
-                        default:
-                        case 0:
-                            wearPos = item.getWearPos1();
-                            break;
-                        case 1:
-                            wearPos = item.getWearPos2();
-                            break;
-                        case 2:
-                            wearPos = item.getWearPos3();
-                    }
-
-                    if (id != -1)
-                    {
-                        modelStats.add(new ModelStats(
-                                id,
-                                name,
-                                BodyPart.wearPosToBodyPart(wearPos),
-                                rf,
-                                rt,
-                                rtFrom,
-                                rtTo,
-                                item.getResizeX(),
-                                item.getResizeZ(),
-                                item.getResizeY(),
-                                0,
-                                customLighting
-                        ));
-                    }
-                }
-
-                break;
-            }
-        }
-
-        if (modelStats.isEmpty())
-        {
-            return null;
-        }
-
-        ModelStats[] stats = new ModelStats[modelStats.size()];
-        for (int i = 0; i < modelStats.size(); i++)
-        {
-            stats[i] = modelStats.get(i);
-        }
-
-        return stats;
+        return list;
     }
 
     private void lookupWeaponAnimationData()
@@ -1313,20 +1368,48 @@ public class DataFinder
             return DEFAULT_NAME;
         }
 
-        for (KitDefinition data : kitData)
+        if (client == null || client.getIndexConfig() == null)
         {
-            if (data.getModels() != null && Arrays.stream(data.getModels()).anyMatch(e -> e == id))
+            return DEFAULT_NAME;
+        }
+
+        final int KIT_CONFIG = 3;
+        int[] kitIds = client.getIndexConfig().getFileIds(KIT_CONFIG);
+        for (int i : kitIds)
+        {
+            byte[] data = client.getIndex(2).loadData(KIT_CONFIG, i);
+            if (data == null)
             {
-                return BodyPart.bodyPartIdToBodyPart(data.getBodyPartId()).getName();
+                continue;
             }
 
-            if (data.getChatheadModels() != null && Arrays.stream(data.getChatheadModels()).anyMatch(e -> e == id))
+            KitDefinition def = kitLoader.load(i, data);
+            if (def == null)
             {
-                return BodyPart.bodyPartIdToBodyPart(data.getBodyPartId()).getName();
+                continue;
+            }
+
+            int[] models = def.getModels();
+            if (models != null)
+            {
+                if (Arrays.stream(models).anyMatch(e -> e == id))
+                {
+                    return BodyPart.bodyPartIdToBodyPart(def.getBodyPartId()).getName();
+                }
+            }
+
+            int[] chatheadModels = def.getChatheadModels();
+            if (chatheadModels != null)
+            {
+                if (Arrays.stream(chatheadModels).anyMatch(e -> e == id))
+                {
+                    return BodyPart.bodyPartIdToBodyPart(def.getBodyPartId()).getName();
+                }
             }
         }
 
-        for (ObjectDefinition data : objectData)
+        List<ObjectDefinition> objects = filterObjects("");
+        for (ObjectDefinition data : objects)
         {
             if (data.getObjectModels() == null)
             {
@@ -1339,7 +1422,8 @@ public class DataFinder
             }
         }
 
-        for (ItemDefinition data : itemData)
+        List<ItemDefinition> items = filterItems("");
+        for (ItemDefinition data : items)
         {
             int[] itemModels = new int[]{
                     data.getFemaleModel0(),
