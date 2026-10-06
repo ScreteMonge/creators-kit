@@ -407,7 +407,6 @@ public class ModelGetter
         {
             animId = poseAnimId;
         }
-        int finalAnimId = animId;
 
         if (exportAnimation && animId == -1)
         {
@@ -419,136 +418,113 @@ public class ModelGetter
         NPCComposition comp = npc.getComposition();
         String name = npc.getName();
 
-        if (config.vertexColours())
+        if (config.exportTPose() && !exportAnimation)
         {
-            BlenderModel bm = modelExporter.bmVertexColours(npc.getModel());
+            animId = -1;
+        }
 
-            if (exportAnimation)
-            {
-                Thread thread = new Thread(() ->
-                {
-                    ModelStats[] modelStats = dataFinder.findModelsForNPC(npc);
-                    if (modelStats == null || modelStats.length == 0)
-                    {
-                        sendErrorMessage("NPC");
-                        return;
-                    }
+        int finalAnimId = animId;
 
-                    clientThread.invokeLater(() ->
-                    {
-                        initiateAnimationExport(finalAnimId, name, comp.getWidthScale(), comp.getHeightScale(), bm, modelStats, new int[0], false, CustomLighting.fromLightingStyle(LightingStyle.ACTOR));
-                    });
-                });
-                thread.start();
-            }
-            else
-            {
-                if (config.exportTPose())
-                {
-                    npc.setAnimation(-1);
-                    npc.setPoseAnimation(-1);
-                }
+        Map.Entry<int[], ModelStats[]> set = dataFinder.findModelsForNPC(npcId);
+        if (set == null)
+        {
+            sendErrorMessage("NPC");
+            return;
+        }
 
-                bm.scale(comp.getWidthScale(), comp.getHeightScale());
-                modelExporter.saveToFile(name, bm);
-            }
+        ModelStats[] modelStats = set.getValue();
+        if (modelStats == null || modelStats.length == 0)
+        {
+            sendErrorMessage("NPC");
+            return;
+        }
+
+        Model model;
+        if (config.exportTPose() && !exportAnimation)
+        {
+            model = modelUtilities.constructModelFromCache(modelStats, new int[0], false, CustomLighting.fromLightingStyle(LightingStyle.ACTOR));
         }
         else
         {
-            Model model = npc.getModel();
-            int vCount = model.getVerticesCount();
-            int fCount = model.getFaceCount();
-            float[] fvX = Arrays.copyOf(model.getVerticesX(), vCount);
-            float[] fvY = Arrays.copyOf(model.getVerticesY(), vCount);
-            float[] fvZ = Arrays.copyOf(model.getVerticesZ(), vCount);
-
-            int[] vX = new int[vCount];
-            int[] vY = new int[vCount];
-            int[] vZ = new int[vCount];
-
-            for (int i = 0; i < vCount; i++)
-            {
-                vX[i] = (int) fvX[i];
-                vY[i] = (int) fvY[i];
-                vZ[i] = (int) fvZ[i];
-            }
-
-            int[] f1 = Arrays.copyOf(model.getFaceIndices1(), fCount);
-            int[] f2 = Arrays.copyOf(model.getFaceIndices2(), fCount);
-            int[] f3 = Arrays.copyOf(model.getFaceIndices3(), fCount);
-            byte[] renderPriorities;
-            if (model.getFaceRenderPriorities() == null)
-            {
-                renderPriorities = new byte[fCount];
-                Arrays.fill(renderPriorities, (byte) 0);
-            }
-            else
-            {
-                renderPriorities = model.getFaceRenderPriorities();
-            }
-
-            byte[] transparencies;
-            if (model.getFaceTransparencies() == null)
-            {
-                transparencies = new byte[fCount];
-                Arrays.fill(transparencies, (byte) 0);
-            }
-            else
-            {
-                transparencies = model.getFaceTransparencies();
-            }
-
-            Thread thread = new Thread(() ->
-            {
-                Map.Entry<int[], ModelStats[]> set = dataFinder.findModelsForNPC(npcId);
-                if (set == null)
-                {
-                    sendErrorMessage("NPC");
-                    return;
-                }
-
-                ModelStats[] modelStats = set.getValue();
-                if (modelStats == null || modelStats.length == 0)
-                {
-                    sendErrorMessage("NPC");
-                    return;
-                }
-
-                clientThread.invokeLater(() ->
-                {
-                    if (config.exportTPose() && !exportAnimation)
-                    {
-                        npc.setAnimation(-1);
-                        npc.setPoseAnimation(-1);
-                    }
-
-                    BlenderModel bm = modelExporter.bmFaceColours(
-                            modelStats,
-                            false,
-                            new int[0],
-                            false,
-                            vX,
-                            vY,
-                            vZ,
-                            f1,
-                            f2,
-                            f3,
-                            transparencies,
-                            renderPriorities);
-
-                    if (exportAnimation)
-                    {
-                        initiateAnimationExport(finalAnimId, name, comp.getWidthScale(), comp.getHeightScale(), bm, modelStats, new int[0], false, CustomLighting.fromLightingStyle(LightingStyle.ACTOR));
-                    }
-                    else
-                    {
-                        bm.scale(comp.getWidthScale(), comp.getHeightScale());
-                        modelExporter.saveToFile(name, bm);
-                    }
-                });
-            });
-            thread.start();
+            model = npc.getModel();
         }
+
+        int vCount = model.getVerticesCount();
+        int fCount = model.getFaceCount();
+        float[] fvX = Arrays.copyOf(model.getVerticesX(), vCount);
+        float[] fvY = Arrays.copyOf(model.getVerticesY(), vCount);
+        float[] fvZ = Arrays.copyOf(model.getVerticesZ(), vCount);
+
+        int[] vX = new int[vCount];
+        int[] vY = new int[vCount];
+        int[] vZ = new int[vCount];
+
+        for (int i = 0; i < vCount; i++)
+        {
+            vX[i] = (int) fvX[i];
+            vY[i] = (int) fvY[i];
+            vZ[i] = (int) fvZ[i];
+        }
+
+        int[] f1 = Arrays.copyOf(model.getFaceIndices1(), fCount);
+        int[] f2 = Arrays.copyOf(model.getFaceIndices2(), fCount);
+        int[] f3 = Arrays.copyOf(model.getFaceIndices3(), fCount);
+        byte[] renderPriorities;
+        if (model.getFaceRenderPriorities() == null)
+        {
+            renderPriorities = new byte[fCount];
+            Arrays.fill(renderPriorities, (byte) 0);
+        }
+        else
+        {
+            renderPriorities = model.getFaceRenderPriorities();
+        }
+
+        byte[] transparencies;
+        if (model.getFaceTransparencies() == null)
+        {
+            transparencies = new byte[fCount];
+            Arrays.fill(transparencies, (byte) 0);
+        }
+        else
+        {
+            transparencies = model.getFaceTransparencies();
+        }
+
+        BlenderModel bm;
+        if (config.vertexColours())
+        {
+            bm = modelExporter.bmVertexColours(model);
+        }
+        else
+        {
+            bm = modelExporter.bmFaceColours(
+                    modelStats,
+                    false,
+                    new int[0],
+                    false,
+                    vX,
+                    vY,
+                    vZ,
+                    f1,
+                    f2,
+                    f3,
+                    transparencies,
+                    renderPriorities);
+        }
+
+        clientThread.invokeLater(() ->
+        {
+            if (exportAnimation)
+            {
+                initiateAnimationExport(finalAnimId, name, comp.getWidthScale(), comp.getHeightScale(), bm, modelStats, new int[0], false, CustomLighting.fromLightingStyle(LightingStyle.ACTOR));
+            }
+            else
+            {
+                bm.scale(comp.getWidthScale(), comp.getHeightScale());
+                modelExporter.saveToFile(name, bm);
+            }
+        });
     }
 
     public void storeSpotAnims(IterableHashTable<ActorSpotAnim> spotAnims)
@@ -788,7 +764,6 @@ public class ModelGetter
         {
             animId = poseAnimId;
         }
-        int finalAnimId = animId;
 
         if (exportAnimation && animId == -1)
         {
@@ -801,15 +776,34 @@ public class ModelGetter
 
         if (config.exportTPose() && !exportAnimation)
         {
-            player.setAnimation(-1);
-            player.setPoseAnimation(-1);
+            animId = -1;
         }
 
-        Animation animation = client.loadAnimation(finalAnimId);
-        int leftHandItem = animation.getLeftHandItem();
-        int rightHandItem = animation.getRightHandItem();
+        int finalAnimId = animId;
 
-        Model model = player.getModel();
+        Animation animation = client.loadAnimation(finalAnimId);
+        int leftHandItem = animation == null ? -1 : animation.getLeftHandItem();
+        int rightHandItem = animation == null ? -1 : animation.getRightHandItem();
+
+        IterableHashTable<ActorSpotAnim> actorSpotAnims = player.getSpotAnims();
+        int[] spotAnims = new int[0];
+        for (ActorSpotAnim actorSpotAnim : actorSpotAnims)
+        {
+            spotAnims = ArrayUtils.add(spotAnims, actorSpotAnim.getId());
+        }
+        final int[] fSpotAnims = Arrays.copyOf(spotAnims, spotAnims.length);
+
+        ModelStats[] modelStats = dataFinder.findModelsForPlayer(false, comp.getGender() == 0, items, finalAnimId, leftHandItem, rightHandItem, fSpotAnims);
+        Model model;
+        if (config.exportTPose() && !exportAnimation)
+        {
+            model = modelUtilities.constructModelFromCache(modelStats, comp.getColors(), true, CustomLighting.fromLightingStyle(LightingStyle.ACTOR));
+        }
+        else
+        {
+            model = player.getModel();
+        }
+
         int vCount = model.getVerticesCount();
         int fCount = model.getFaceCount();
         float[] fvX = Arrays.copyOf(model.getVerticesX(), vCount);
@@ -852,73 +846,44 @@ public class ModelGetter
             transparencies = model.getFaceTransparencies();
         }
 
-        IterableHashTable<ActorSpotAnim> actorSpotAnims = player.getSpotAnims();
-        int[] spotAnims = new int[0];
-        for (ActorSpotAnim actorSpotAnim : actorSpotAnims)
-        {
-            spotAnims = ArrayUtils.add(spotAnims, actorSpotAnim.getId());
-        }
-        final int[] fSpotAnims = Arrays.copyOf(spotAnims, spotAnims.length);
-
         String name = player.getName();
         if (player == client.getLocalPlayer())
             name = "Local Player";
         String finalName = name;
 
+        BlenderModel bm;
         if (config.vertexColours())
         {
-            BlenderModel bm = modelExporter.bmVertexColours(model);
+            bm = modelExporter.bmVertexColours(model);
+        }
+        else
+        {
+            bm = modelExporter.bmFaceColours(
+                    modelStats,
+                    false,
+                    comp.getColors(),
+                    true,
+                    vX,
+                    vY,
+                    vZ,
+                    f1,
+                    f2,
+                    f3,
+                    transparencies,
+                    renderPriorities);
+        }
+
+        clientThread.invokeLater(() ->
+        {
             if (exportAnimation)
             {
-                Thread thread = new Thread(() ->
-                {
-                    ModelStats[] modelStats = dataFinder.findModelsForPlayer(false, comp.getGender() == 0, items, finalAnimId, leftHandItem, rightHandItem, fSpotAnims);
-                    clientThread.invokeLater(() ->
-                    {
-                        initiateAnimationExport(finalAnimId, finalName, 128, 128, bm, modelStats, comp.getColors(), true, CustomLighting.fromLightingStyle(LightingStyle.ACTOR));
-                    });
-                });
-                thread.start();
+                initiateAnimationExport(finalAnimId, finalName, 128, 128, bm, modelStats, comp.getColors(), true, CustomLighting.fromLightingStyle(LightingStyle.ACTOR));
             }
             else
             {
                 modelExporter.saveToFile(finalName, bm);
             }
-        }
-        else
-        {
-            Thread thread = new Thread(() ->
-            {
-                ModelStats[] modelStats = dataFinder.findModelsForPlayer(false, comp.getGender() == 0, items, finalAnimId, leftHandItem, rightHandItem, fSpotAnims);
-
-                clientThread.invokeLater(() ->
-                {
-                    BlenderModel bm = modelExporter.bmFaceColours(
-                            modelStats,
-                            false,
-                            comp.getColors(),
-                            true,
-                            vX,
-                            vY,
-                            vZ,
-                            f1,
-                            f2,
-                            f3,
-                            transparencies,
-                            renderPriorities);
-
-                    if (exportAnimation)
-                    {
-                        initiateAnimationExport(finalAnimId, finalName, 128, 128, bm, modelStats, comp.getColors(), true, CustomLighting.fromLightingStyle(LightingStyle.ACTOR));
-                    }
-                    else
-                    {
-                        modelExporter.saveToFile(finalName, bm);
-                    }
-                });
-            });
-            thread.start();
-        }
+        });
     }
 
     public void addGameObjectMenuEntries(String name, Model model, int objectId, int modelType, CustomModelType type, int animationId, int orientation, LightingStyle ls, boolean dynamicObject)
