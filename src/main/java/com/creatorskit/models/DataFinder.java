@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Singleton
@@ -67,7 +68,6 @@ public class DataFinder
     private final List<SpotAnimDefinition> spotanimData = new ArrayList<>();
     private final List<AnimData> animData = new ArrayList<>();
     private final List<WeaponAnimData> weaponAnimData = new ArrayList<>();
-    private final List<SoundData> soundData = new ArrayList<>();
 
     private static final BodyPart[] bodyParts = new BodyPart[]{
             BodyPart.HEAD,
@@ -109,7 +109,6 @@ public class DataFinder
         lookupSpotAnimData();
         lookupAnimData();
         lookupWeaponAnimationData();
-        lookupSoundData();
     }
 
     public void clearDataBase()
@@ -119,7 +118,6 @@ public class DataFinder
         spotanimData.clear();
         animData.clear();
         weaponAnimData.clear();
-        soundData.clear();
     }
 
     /**
@@ -154,24 +152,6 @@ public class DataFinder
     }
 
     public boolean isDataLoaded(DataType dataType) { return loadState.get(dataType); }
-
-    public KitDefinition findKitData(int id)
-    {
-        if (client == null || client.getIndexConfig() == null)
-        {
-            return null;
-        }
-
-        final int KIT_CONFIG = 3;
-
-        byte[] data = client.getIndex(2).loadData(KIT_CONFIG, id);
-        if (data == null)
-        {
-            return null;
-        }
-
-        return kitLoader.load(id, data);
-    }
 
     public KitDefinition[] findKitData(int[] ids)
     {
@@ -1329,36 +1309,61 @@ public class DataFinder
         return null;
     }
 
-    private void lookupSoundData()
+    public CompletableFuture<List<SoundData>> filterSoundData(String entry)
     {
-        Request request = new Request.Builder().url("https://raw.githubusercontent.com/ScreteMonge/cache-converter/refs/heads/master/.venv/sounds.json").build();
+        CompletableFuture<List<SoundData>> future = new CompletableFuture<>();
+
+        Request request = new Request.Builder()
+                .url("https://raw.githubusercontent.com/ScreteMonge/cache-converter/refs/heads/master/.venv/sounds.json")
+                .build();
+
         Call call = httpClient.newCall(request);
+
         call.enqueue(new Callback()
         {
             @Override
             public void onFailure(Call call, IOException e)
             {
                 log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/refs/heads/master/.venv/sounds.json");
-                executeCallbacks(DataType.SOUND);
+                future.completeExceptionally(e);
             }
 
             @Override
             public void onResponse(Call call, Response response)
             {
-                if (response.isSuccessful() && response.body() != null)
+                try (ResponseBody body = response.body())
                 {
-                    //create a reader to read the URL
-                    InputStreamReader reader = new InputStreamReader(response.body().byteStream());
+                    if (!response.isSuccessful() || body == null)
+                    {
+                        future.completeExceptionally(new IOException("HTTP error: " + response.code()));
+                        return;
+                    }
+
+                    InputStreamReader reader = new InputStreamReader(body.byteStream());
 
                     Type listType = new TypeToken<List<SoundData>>() {}.getType();
                     List<SoundData> list = gson.fromJson(reader, listType);
 
-                    soundData.addAll(list);
-                    response.body().close();
+                    List<SoundData> filtered = new ArrayList<>();
+
+                    for (SoundData soundData : list)
+                    {
+                        if (soundData.getName().contains(entry))
+                        {
+                            filtered.add(soundData);
+                        }
+                    }
+
+                    future.complete(filtered);
                 }
-                executeCallbacks(DataType.SOUND);
+                catch (Exception e)
+                {
+                    future.completeExceptionally(e);
+                }
             }
         });
+
+        return future;
     }
 
     public String generateNameFromModel(int id)

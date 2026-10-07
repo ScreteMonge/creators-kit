@@ -1615,26 +1615,15 @@ public class CacheSearcherTab extends JPanel
             {
                 switchCards(SOUND);
                 String text = field.getText();
-                soundTable.searchAndListEntries(text, allowNull.isSelected());
+                dataFinder.filterSoundData(text).thenAccept(soundData ->
+                {
+                    List<Object> list = new ArrayList<>(soundData);
+                    soundTable.initialize(list);
+                    soundTable.searchAndListEntries(text, allowNull.isSelected());
+                });
             }
         };
         field.addKeyListener(keyListener);
-
-        if (dataFinder.isDataLoaded(DataFinder.DataType.SOUND))
-        {
-            List<SoundData> dataList = dataFinder.getSoundData();
-            List<Object> list = new ArrayList<>(dataList);
-            soundTable.initialize(list);
-        }
-        else
-        {
-            dataFinder.addLoadCallback(DataFinder.DataType.SOUND, () ->
-            {
-                List<SoundData> dataList = dataFinder.getSoundData();
-                List<Object> list = new ArrayList<>(dataList);
-                soundTable.initialize(list);
-            });
-        }
 
         soundTable.getSelectionModel().addListSelectionListener(e ->
         {
