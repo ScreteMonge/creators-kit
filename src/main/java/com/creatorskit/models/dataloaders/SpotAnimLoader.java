@@ -90,6 +90,10 @@ public class SpotAnimLoader
         {
             def.name = stream.readString();
         }
+        else if (opcode == 10)
+        {
+
+        }
         else if (opcode == 40)
         {
             int var3 = stream.readUnsignedByte();
