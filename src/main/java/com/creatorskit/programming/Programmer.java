@@ -1498,11 +1498,11 @@ public class Programmer
             }
         }
 
-        SpotAnimDefinition data = dataFinder.getSpotAnimData(spotAnimId);
+        SpotAnimDefinition data = dataFinder.findSpotAnimData(spotAnimId);
 
         if (data != null)
         {
-            ModelStats[] stats = dataFinder.findSpotAnim(data);
+            ModelStats[] stats = dataFinder.findModelsForSpotAnims(new int[]{data.getId()});
             clientThread.invokeLater(() ->
             {
                 CKObject ckObject;

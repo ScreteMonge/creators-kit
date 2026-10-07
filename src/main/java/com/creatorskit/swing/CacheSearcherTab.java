@@ -263,7 +263,7 @@ public class CacheSearcherTab extends JPanel
                 modelStats = dataFinder.findModelsForGroundItem(id, type);
                 break;
             case CACHE_SPOTANIM:
-                modelStats = dataFinder.findSpotAnim(id);
+                modelStats = dataFinder.findModelsForSpotAnims(new int[]{id});
                 ls = LightingStyle.SPOTANIM;
         }
 
@@ -1427,26 +1427,15 @@ public class CacheSearcherTab extends JPanel
             {
                 switchCards(SPOTANIM);
                 String text = field.getText();
-                spotAnimTable.searchAndListEntries(text, allowNull.isSelected());
+                dataFinder.filterSpotAnimNames(text).thenAccept(spotAnimData ->
+                {
+                    List<Object> list = new ArrayList<>(spotAnimData);
+                    spotAnimTable.initialize(list);
+                    spotAnimTable.searchAndListEntries(text, allowNull.isSelected());
+                });
             }
         };
         field.addKeyListener(keyListener);
-
-        if (dataFinder.isDataLoaded(DataFinder.DataType.SPOTANIM))
-        {
-            List<SpotAnimDefinition> dataList = dataFinder.getSpotanimData();
-            List<Object> list = new ArrayList<>(dataList);
-            spotAnimTable.initialize(list);
-        }
-        else
-        {
-            dataFinder.addLoadCallback(DataFinder.DataType.SPOTANIM, () ->
-            {
-                List<SpotAnimDefinition> dataList = dataFinder.getSpotanimData();
-                List<Object> list = new ArrayList<>(dataList);
-                spotAnimTable.initialize(list);
-            });
-        }
     }
 
     private void setupAnimPanel()

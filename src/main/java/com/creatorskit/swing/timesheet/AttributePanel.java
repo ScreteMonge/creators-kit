@@ -2010,10 +2010,15 @@ public class AttributePanel extends JPanel
             public void keyReleased(KeyEvent e)
             {
                 String text = spotanimField.getText();
-                spotanimTable.searchAndListEntries(text, true);
-                spotanimPopup.setVisible(true);
-                Point p = spotanimField.getLocationOnScreen();
-                spotanimPopup.setLocation(new Point((int) p.getX() + spotanimField.getWidth(), (int) p.getY()));
+                dataFinder.filterSpotAnimNames(text).thenAccept(spotAnimData ->
+                {
+                    List<Object> list = new ArrayList<>(spotAnimData);
+                    spotanimTable.initialize(list);
+                    spotanimTable.searchAndListEntries(text, false);
+                    spotanimPopup.setVisible(true);
+                    Point p = spotanimField.getLocationOnScreen();
+                    spotanimPopup.setLocation(new Point((int) p.getX() + spotanimField.getWidth(), (int) p.getY()));
+                });
             }
         };
         spotanimField.addKeyListener(listener);
@@ -2118,22 +2123,6 @@ public class AttributePanel extends JPanel
                 }
             }
         });
-
-        if (dataFinder.isDataLoaded(DataFinder.DataType.SPOTANIM))
-        {
-            List<SpotAnimDefinition> dataList = dataFinder.getSpotanimData();
-            List<Object> list = new ArrayList<>(dataList);
-            spotanimTable.initialize(list);
-        }
-        else
-        {
-            dataFinder.addLoadCallback(DataFinder.DataType.SPOTANIM, () ->
-            {
-                List<SpotAnimDefinition> dataList = dataFinder.getSpotanimData();
-                List<Object> list = new ArrayList<>(dataList);
-                spotanimTable.initialize(list);
-            });
-        }
 
         JScrollPane scrollPane = new JScrollPane(spotanimTable);
         spotanimPopup.add(scrollPane);

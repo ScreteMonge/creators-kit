@@ -65,7 +65,6 @@ public class DataFinder
     private int lastAnim;
     private static final String DEFAULT_NAME = "Name";
 
-    private final List<SpotAnimDefinition> spotanimData = new ArrayList<>();
     private final List<WeaponAnimData> weaponAnimData = new ArrayList<>();
 
     private static final BodyPart[] bodyParts = new BodyPart[]{
@@ -105,7 +104,6 @@ public class DataFinder
             return;
         }
 
-        lookupSpotAnimData();
         lookupWeaponAnimationData();
     }
 
@@ -113,27 +111,7 @@ public class DataFinder
     {
         Arrays.stream(DataType.values()).forEach(d -> loadState.put(d, false));
         Arrays.stream(DataType.values()).forEach(d -> loadCallbacks.put(d, new ArrayList<>()));
-        spotanimData.clear();
         weaponAnimData.clear();
-    }
-
-    /**
-     * <p>Adds a callback to be executed once the specified data type has been loaded.</p>
-     * <p>The callback will run on the same thread that executes the load operation.</p>
-     * <p>If thread-specific execution is needed, it should be handled within the callback.</p>
-     * @param dataType The DataType for which to add the callback
-     * @param callback The Runnable to execute once the data has been loaded
-     */
-    public void addLoadCallback(DataType dataType, Runnable callback)
-    {
-        LoadCallback cbe = new LoadCallback(callback);
-        boolean shouldRun;
-        synchronized (dataType)
-        {
-            shouldRun = loadState.get(dataType);
-            if(!shouldRun) loadCallbacks.get(dataType).add(cbe);
-        }
-        if (shouldRun) cbe.run();
     }
 
     private void executeCallbacks(DataType dataType)
@@ -147,8 +125,6 @@ public class DataFinder
         }
         callbacksToExecute.forEach(LoadCallback::run);
     }
-
-    public boolean isDataLoaded(DataType dataType) { return loadState.get(dataType); }
 
     public KitDefinition[] findKitData(int[] ids)
     {
@@ -216,7 +192,7 @@ public class DataFinder
 
                     for (AnimData animData : list)
                     {
-                        if (animData.getName().contains(entry))
+                        if (animData.toString().contains(entry))
                         {
                             filtered.add(animData);
                         }
@@ -234,7 +210,7 @@ public class DataFinder
         return future;
     }
 
-    public ModelStats[] findModelsForPlayer(boolean groundItem, boolean maleItem, int[] items, int animId, int leftHandItem, int rightHandItem, int[] spotAnims)
+    public ModelStats[] findModelsForPlayer(boolean groundItem, boolean maleItem, int[] items, int animId, int leftHandItem, int rightHandItem, int[] spotAnimIds)
     {
         //Convert equipmentId to itemId or kitId as appropriate
         int[] ids = new int[items.length];
@@ -284,14 +260,10 @@ public class DataFinder
         ArrayList<ModelStats> kitArray = new ArrayList<>();
         getPlayerKit(kitArray, kitShortList);
 
-        ArrayList<ModelStats> spotAnimArray = new ArrayList<>();
-        if (spotAnims.length > 0)
-        {
-            getPlayerSpotAnims(spotAnims, spotAnimArray);
-        }
+        ModelStats[] spotAnim = findModelsForSpotAnims(spotAnimIds);
 
         itemArray.addAll(kitArray);
-        itemArray.addAll(spotAnimArray);
+        itemArray.addAll(List.of(spotAnim));
         ArrayList<ModelStats> orderedItems = new ArrayList<>();
         for (int e = 0; e < bodyParts.length; e++)
         {
@@ -518,247 +490,169 @@ public class DataFinder
         }
     }
 
-    public void getPlayerSpotAnims(int[] spotAnims, ArrayList<ModelStats> modelStats)
+    public ModelStats[] findModelsForSpotAnims(int[] ids)
     {
-        int itemsToComplete = spotAnims.length;
-
-        for (SpotAnimDefinition spotanimData : spotanimData)
+        ModelStats[] modelStats = new ModelStats[0];
+        SpotAnimDefinition[] spotAnims = findSpotAnimData(ids);
+        for (int i = 0; i < spotAnims.length; i++)
         {
-            if (itemsToComplete == 0)
-            {
-                break;
-            }
-
-            for (int i : spotAnims)
-            {
-                if (spotanimData.getId() == i)
-                {
-                    itemsToComplete--;
-                    int modelId = spotanimData.getModelId();
-
-                    short[] rf = spotanimData.getRecolorToFind();
-                    short[] rt = spotanimData.getRecolorToReplace();
-
-                    int ambient = spotanimData.getAmbient();
-                    int contrast = spotanimData.getContrast();
-
-                    LightingStyle ls = LightingStyle.SPOTANIM;
-                    CustomLighting customLighting = new CustomLighting(
-                            ls.getAmbient() + ambient,
-                            ls.getContrast() + contrast,
-                            ls.getX(),
-                            ls.getY(),
-                            ls.getZ());
-
-                    String name = spotanimData.getName();
-                    if (name == null || name.equals("null") || name.isEmpty())
-                    {
-                        name = DEFAULT_NAME;
-                    }
-
-                    modelStats.add(new ModelStats(
-                            modelId,
-                            name,
-                            BodyPart.SPOTANIM,
-                            rf,
-                            rt,
-                            new short[0],
-                            new short[0],
-                            spotanimData.getResizeX(),
-                            spotanimData.getResizeX(),
-                            spotanimData.getResizeY(),
-                            0,
-                            customLighting
-                    ));
-
-                    break;
-                }
-            }
-        }
-    }
-
-    private void lookupSpotAnimData()
-    {
-        if (client == null || client.getIndexConfig() == null)
-        {
-            return;
-        }
-
-        final int SPOTANIM_CONFIG = 13;
-        int[] ids = client.getIndexConfig().getFileIds(SPOTANIM_CONFIG);
-        Set<Integer> unknownOpcodes = new HashSet<>();
-
-        for (int i : ids)
-        {
-            byte[] data = client.getIndex(2).loadData(SPOTANIM_CONFIG, i);
-            if (data == null)
+            SpotAnimDefinition spotAnim = spotAnims[i];
+            if (spotAnim == null)
             {
                 continue;
             }
 
-            SpotAnimDefinition def = spotAnimLoader.load(unknownOpcodes, i, data);
-            if (def != null)
+            int modelId = spotAnim.getModelId();
+
+            short[] rf = spotAnim.getRecolorToFind();
+            short[] rt = spotAnim.getRecolorToReplace();
+
+            int ambient = spotAnim.getAmbient();
+            int contrast = spotAnim.getContrast();
+
+            LightingStyle ls = LightingStyle.SPOTANIM;
+            CustomLighting customLighting = new CustomLighting(
+                    ls.getAmbient() + ambient,
+                    ls.getContrast() + contrast,
+                    ls.getX(),
+                    ls.getY(),
+                    ls.getZ());
+
+            String name = spotAnim.getName();
+            if (name == null || name.equals("null") || name.isEmpty())
             {
-                spotanimData.add(def);
+                name = DEFAULT_NAME;
             }
+
+            modelStats = ArrayUtils.add(modelStats, new ModelStats(
+                    modelId,
+                    name,
+                    BodyPart.SPOTANIM,
+                    rf,
+                    rt,
+                    new short[0],
+                    new short[0],
+                    spotAnim.getResizeX(),
+                    spotAnim.getResizeX(),
+                    spotAnim.getResizeY(),
+                    0,
+                    customLighting
+            ));
         }
 
-        Request spotanimRequest = new Request.Builder()
+        return modelStats;
+    }
+
+    public SpotAnimDefinition findSpotAnimData(int id)
+    {
+        if (client == null || client.getIndexConfig() == null)
+        {
+            return null;
+        }
+
+        final int SPOTANIM_CONFIG = 13;
+        Set<Integer> unknownOpcodes = new HashSet<>();
+
+        byte[] data = client.getIndex(2).loadData(SPOTANIM_CONFIG, id);
+        if (data == null)
+        {
+            return null;
+        }
+
+        return spotAnimLoader.load(unknownOpcodes, id, data);
+    }
+
+    public SpotAnimDefinition[] findSpotAnimData(int[] ids)
+    {
+        SpotAnimDefinition[] spotAnims = new SpotAnimDefinition[ids.length];
+
+        if (client == null || client.getIndexConfig() == null)
+        {
+            return spotAnims;
+        }
+
+        final int SPOTANIM_CONFIG = 13;
+        Set<Integer> unknownOpcodes = new HashSet<>();
+
+        for (int i = 0; i < ids.length; i++)
+        {
+            int id = ids[i];
+            byte[] data = client.getIndex(2).loadData(SPOTANIM_CONFIG, id);
+            if (data == null)
+            {
+                spotAnims[i] = null;
+                continue;
+            }
+
+            spotAnims[i] = spotAnimLoader.load(unknownOpcodes, id, data);
+        }
+
+        return spotAnims;
+    }
+
+    public CompletableFuture<List<SpotAnimDefinition>> filterSpotAnimNames(String entry)
+    {
+        CompletableFuture<List<SpotAnimDefinition>> future = new CompletableFuture<>();
+
+        Request request = new Request.Builder()
                 .url("https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/spotanims.json")
                 .build();
-        Call call = httpClient.newCall(spotanimRequest);
+
+        Call call = httpClient.newCall(request);
+
         call.enqueue(new Callback()
         {
             @Override
             public void onFailure(Call call, IOException e)
             {
                 log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/spotanims.json");
-                executeCallbacks(DataType.SPOTANIM);
+                future.completeExceptionally(e);
             }
 
             @Override
             public void onResponse(Call call, Response response)
             {
-                if (response.isSuccessful() && response.body() != null)
+                try (ResponseBody body = response.body())
                 {
+                    if (!response.isSuccessful() || body == null)
+                    {
+                        future.completeExceptionally(new IOException("HTTP error: " + response.code()));
+                        return;
+                    }
 
-                    InputStreamReader reader = new InputStreamReader(response.body().byteStream());
+                    InputStreamReader reader = new InputStreamReader(body.byteStream());
+
                     Type listType = new TypeToken<List<SpotanimData>>() {}.getType();
                     List<SpotanimData> list = gson.fromJson(reader, listType);
-                    response.body().close();
 
-                    for (SpotAnimDefinition def : spotanimData)
+                    List<SpotanimData> filtered = new ArrayList<>();
+
+                    for (SpotanimData spotanimData : list)
                     {
-                        for (SpotanimData data : list)
+                        if (spotanimData.toString().contains(entry))
                         {
-                            if (def.getId() == data.getId())
-                            {
-                                def.setName(data.getName());
-                                break;
-                            }
+                            filtered.add(spotanimData);
                         }
                     }
+
+                    List<SpotAnimDefinition> definitions = new ArrayList<>();
+                    for (SpotanimData spotanimData : filtered)
+                    {
+                        SpotAnimDefinition def = findSpotAnimData(spotanimData.getId());
+                        def.setName(spotanimData.getName());
+                        definitions.add(def);
+                    }
+
+                    future.complete(definitions);
                 }
-                executeCallbacks(DataType.SPOTANIM);
+                catch (Exception e)
+                {
+                    future.completeExceptionally(e);
+                }
             }
         });
-    }
 
-    public ModelStats[] findSpotAnim(int spotAnimId)
-    {
-        ArrayList<ModelStats> modelStats = new ArrayList<>();
-        for (SpotAnimDefinition spotanimData : spotanimData)
-        {
-            if (spotanimData.getId() == spotAnimId)
-            {
-                int modelId = spotanimData.getModelId();
-
-                lastAnim = spotanimData.getAnimationId();
-
-                short[] rf = spotanimData.getRecolorToFind();
-                short[] rt = spotanimData.getRecolorToReplace();
-
-                int ambient = spotanimData.getAmbient();
-                int contrast = spotanimData.getContrast();
-
-                LightingStyle ls = LightingStyle.SPOTANIM;
-                CustomLighting customLighting = new CustomLighting(
-                        ls.getAmbient() + ambient,
-                        ls.getContrast() + contrast,
-                        ls.getX(),
-                        ls.getY(),
-                        ls.getZ());
-
-                String name = spotanimData.getName();
-                if (name == null || name.equals("null") || name.isEmpty())
-                {
-                    name = DEFAULT_NAME;
-                }
-
-                modelStats.add(new ModelStats(
-                        modelId,
-                        name,
-                        BodyPart.SPOTANIM,
-                        rf,
-                        rt,
-                        new short[0],
-                        new short[0],
-                        spotanimData.getResizeX(),
-                        spotanimData.getResizeX(),
-                        spotanimData.getResizeY(),
-                        0,
-                        customLighting));
-            }
-        }
-
-        if (modelStats.isEmpty())
-        {
-            return null;
-        }
-
-        return new ModelStats[]{modelStats.get(0)};
-    }
-
-    public ModelStats[] findSpotAnim(SpotAnimDefinition spotanimData)
-    {
-        if (spotanimData == null)
-        {
-            return null;
-        }
-
-        ArrayList<ModelStats> modelStats = new ArrayList<>();
-        int modelId = spotanimData.getModelId();
-
-        lastAnim = spotanimData.getAnimationId();
-
-        short[] rf = spotanimData.getRecolorToFind();
-        short[] rt = spotanimData.getRecolorToReplace();
-
-        int ambient = spotanimData.getAmbient();
-        int contrast = spotanimData.getContrast();
-
-        LightingStyle ls = LightingStyle.SPOTANIM;
-        CustomLighting customLighting = new CustomLighting(
-                ls.getAmbient() + ambient,
-                ls.getContrast() + contrast,
-                ls.getX(),
-                ls.getY(),
-                ls.getZ());
-
-        String name = spotanimData.getName();
-        if (name == null || name.equals("null") || name.isEmpty())
-        {
-            name = DEFAULT_NAME;
-        }
-
-        modelStats.add(new ModelStats(
-                modelId,
-                name,
-                BodyPart.SPOTANIM,
-                rf,
-                rt,
-                new short[0],
-                new short[0],
-                spotanimData.getResizeX(),
-                spotanimData.getResizeX(),
-                spotanimData.getResizeY(),
-                0,
-                customLighting));
-
-        return new ModelStats[]{modelStats.get(0)};
-    }
-
-    public SpotAnimDefinition getSpotAnimData(int spotAnimId)
-    {
-        for (SpotAnimDefinition data : spotanimData)
-        {
-            if (data.getId() == spotAnimId)
-            {
-                return data;
-            }
-        }
-
-        return null;
+        return future;
     }
 
     public NpcDefinition findNPCData(int id)
@@ -930,11 +824,7 @@ public class DataFinder
             NpcDefinition def = npcLoader.load(unknownOpcodes, i, data);
             if (def != null)
             {
-                String name = def.getName();
-                int id = def.getId();
-                String merged = name + " (" + id + ")";
-
-                if (merged.contains(entry))
+                if (def.toString().contains(entry))
                 {
                     list.add(def);
                 }
@@ -1072,11 +962,7 @@ public class DataFinder
             ObjectDefinition def = objectLoader.load(unknownOpcodes, i, data);
             if (def != null)
             {
-                String name = def.getName();
-                int id = def.getId();
-                String merged = name + " (" + id + ")";
-
-                if (merged.contains(entry))
+                if (def.toString().contains(entry))
                 {
                     list.add(def);
                 }
@@ -1263,11 +1149,7 @@ public class DataFinder
             ItemDefinition def = itemLoader.load(unknownOpcodes, i, data);
             if (def != null)
             {
-                String name = def.getName();
-                int id = def.getId();
-                String merged = name + " (" + id + ")";
-
-                if (merged.contains(entry))
+                if (def.toString().contains(entry))
                 {
                     list.add(def);
                 }
@@ -1370,7 +1252,7 @@ public class DataFinder
 
                     for (SoundData soundData : list)
                     {
-                        if (soundData.getName().contains(entry))
+                        if (soundData.toString().contains(entry))
                         {
                             filtered.add(soundData);
                         }
@@ -1388,16 +1270,21 @@ public class DataFinder
         return future;
     }
 
-    public String generateNameFromModel(int id)
+    public CompletableFuture<String> generateNameFromModel(int id)
     {
+        CompletableFuture<String> future = new CompletableFuture<>();
+        String name = DEFAULT_NAME;
+
         if (id == -1)
         {
-            return DEFAULT_NAME;
+            future.complete(name);
+            return future;
         }
 
         if (client == null || client.getIndexConfig() == null)
         {
-            return DEFAULT_NAME;
+            future.complete(name);
+            return future;
         }
 
         final int KIT_CONFIG = 3;
@@ -1421,7 +1308,9 @@ public class DataFinder
             {
                 if (Arrays.stream(models).anyMatch(e -> e == id))
                 {
-                    return BodyPart.bodyPartIdToBodyPart(def.getBodyPartId()).getName();
+                    name = BodyPart.bodyPartIdToBodyPart(def.getBodyPartId()).getName();
+                    future.complete(name);
+                    return future;
                 }
             }
 
@@ -1430,7 +1319,9 @@ public class DataFinder
             {
                 if (Arrays.stream(chatheadModels).anyMatch(e -> e == id))
                 {
-                    return BodyPart.bodyPartIdToBodyPart(def.getBodyPartId()).getName();
+                    name = BodyPart.bodyPartIdToBodyPart(def.getBodyPartId()).getName();
+                    future.complete(name);
+                    return future;
                 }
             }
         }
@@ -1445,7 +1336,8 @@ public class DataFinder
 
             if (Arrays.stream(data.getObjectModels()).anyMatch(e -> e == id))
             {
-                return data.getName();
+                future.complete(data.getName());
+                return future;
             }
         }
 
@@ -1466,18 +1358,81 @@ public class DataFinder
 
             if (Arrays.stream(itemModels).anyMatch(e -> e == id))
             {
-                return data.getName();
+                future.complete(data.getName());
+                return future;
             }
         }
 
-        for (SpotAnimDefinition data : spotanimData)
+        final int SPOTANIM_CONFIG = 13;
+        int[] spotAnimIds = client.getIndexConfig().getFileIds(SPOTANIM_CONFIG);
+        Set<Integer> unknownOpcodes = new HashSet<>();
+
+        for (int i : spotAnimIds)
         {
-            if (data.getModelId() == id)
+            byte[] data = client.getIndex(2).loadData(SPOTANIM_CONFIG, i);
+            if (data == null)
             {
-                return data.getName();
+                continue;
+            }
+
+            SpotAnimDefinition def = spotAnimLoader.load(unknownOpcodes, i, data);
+            if (def == null)
+            {
+                continue;
+            }
+
+            int model = def.getModelId();
+            if (model == id)
+            {
+                Request request = new Request.Builder()
+                        .url("https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/spotanims.json")
+                        .build();
+
+                Call call = httpClient.newCall(request);
+
+                call.enqueue(new Callback()
+                {
+                    @Override
+                    public void onFailure(Call call, IOException e)
+                    {
+                        log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/spotanims.json");
+                        future.completeExceptionally(e);
+                    }
+
+                    @Override
+                    public void onResponse(Call call, Response response)
+                    {
+                        try (ResponseBody body = response.body())
+                        {
+                            if (!response.isSuccessful() || body == null)
+                            {
+                                future.completeExceptionally(new IOException("HTTP error: " + response.code()));
+                                return;
+                            }
+
+                            InputStreamReader reader = new InputStreamReader(body.byteStream());
+
+                            Type listType = new TypeToken<List<SpotanimData>>() {}.getType();
+                            List<SpotanimData> list = gson.fromJson(reader, listType);
+
+                            for (SpotanimData spotanimData : list)
+                            {
+                                if (spotanimData.getId() == def.getId())
+                                {
+                                    future.complete(spotanimData.getName());
+                                    return;
+                                }
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            future.completeExceptionally(e);
+                        }
+                    }
+                });
             }
         }
 
-        return DEFAULT_NAME;
+        return future;
     }
 }

@@ -234,7 +234,7 @@ public class ModelUtilities
                 modelStats = dataFinder.findModelsForGroundItem(id, CustomModelType.CACHE_WOMAN_WEAR);
                 break;
             case CACHE_SPOTANIM:
-                modelStats = dataFinder.findSpotAnim(id);
+                modelStats = dataFinder.findModelsForSpotAnims(new int[]{id});
         }
 
         if (modelStats == null || modelStats.length == 0)
@@ -273,13 +273,12 @@ public class ModelUtilities
             for (ModelStats modelStats : modelStatsArray)
             {
                 int id = modelStats.getModelId();
-                String name;
+                String name = "Name";
 
                 switch (type)
                 {
                     default:
                     case CACHE_NPC:
-                        name = plugin.getDataFinder().generateNameFromModel(id);
                         break;
                     case CACHE_PLAYER:
                     case CACHE_MAN_WEAR:
@@ -370,7 +369,7 @@ public class ModelUtilities
                     ls = LightingStyle.DEFAULT;
                     break;
                 case CACHE_SPOTANIM:
-                    modelStats = dataFinder.findSpotAnim(id);
+                    modelStats = dataFinder.findModelsForSpotAnims(new int[]{id});
                     ls = LightingStyle.SPOTANIM;
             }
 

@@ -1254,10 +1254,10 @@ public class ModelAnvil extends JPanel
             int modelId = (int) complexPanel.getModelIdSpinner().getValue();
             String name = complexPanel.getNameField().getText();
 
-            if (name.equals("Name"))
+            if (name.equals("Name") || name.equals("null"))
             {
-                name = dataFinder.generateNameFromModel(modelId);
-                complexPanel.getNameField().setText(name);
+                dataFinder.generateNameFromModel(modelId).thenAccept(s ->
+                        complexPanel.getNameField().setText(s));
             }
         }
     }

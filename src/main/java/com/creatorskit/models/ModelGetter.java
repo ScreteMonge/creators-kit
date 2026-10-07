@@ -531,7 +531,7 @@ public class ModelGetter
     {
         for (ActorSpotAnim spotAnim : spotAnims)
         {
-            ModelStats[] modelStats = dataFinder.findSpotAnim(spotAnim.getId());
+            ModelStats[] modelStats = dataFinder.findModelsForSpotAnims(new int[]{spotAnim.getId()});
             if (modelStats == null || modelStats.length == 0)
             {
                 sendErrorMessage("SpotAnim");
@@ -1681,7 +1681,7 @@ public class ModelGetter
                 modelStats = dataFinder.findModelsForGroundItem(id, type);
                 break;
             case CACHE_SPOTANIM:
-                modelStats = dataFinder.findSpotAnim(id);
+                modelStats = dataFinder.findModelsForSpotAnims(new int[]{id});
         }
 
         if (modelStats == null || modelStats.length == 0)
