@@ -1521,26 +1521,15 @@ public class CacheSearcherTab extends JPanel
             {
                 switchCards(ANIM);
                 String text = field.getText();
-                animTable.searchAndListEntries(text, allowNull.isSelected());
+                dataFinder.filterAnimData(text).thenAccept(animData ->
+                {
+                    List<Object> list = new ArrayList<>(animData);
+                    animTable.initialize(list);
+                    animTable.searchAndListEntries(text, allowNull.isSelected());
+                });
             }
         };
         field.addKeyListener(keyListener);
-
-        if (dataFinder.isDataLoaded(DataFinder.DataType.ANIM))
-        {
-            List<AnimData> dataList = dataFinder.getAnimData();
-            List<Object> list = new ArrayList<>(dataList);
-            animTable.initialize(list);
-        }
-        else
-        {
-            dataFinder.addLoadCallback(DataFinder.DataType.ANIM, () ->
-            {
-                List<AnimData> dataList = dataFinder.getAnimData();
-                List<Object> list = new ArrayList<>(dataList);
-                animTable.initialize(list);
-            });
-        }
     }
 
     private void setupSoundPanel()

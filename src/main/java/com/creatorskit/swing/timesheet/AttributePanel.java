@@ -1201,10 +1201,15 @@ public class AttributePanel extends JPanel
             public void keyReleased(KeyEvent e)
             {
                 String text = animField.getText();
-                animTable.searchAndListEntries(text, false);
-                animPopup.setVisible(true);
-                Point p = animField.getLocationOnScreen();
-                animPopup.setLocation(new Point((int) p.getX() + animField.getWidth(), (int) p.getY()));
+                dataFinder.filterAnimData(text).thenAccept(animData ->
+                {
+                    List<Object> list = new ArrayList<>(animData);
+                    animTable.initialize(list);
+                    animTable.searchAndListEntries(text, false);
+                    animPopup.setVisible(true);
+                    Point p = animField.getLocationOnScreen();
+                    animPopup.setLocation(new Point((int) p.getX() + animField.getWidth(), (int) p.getY()));
+                });
             }
         };
         animField.addKeyListener(animListener);
@@ -1244,22 +1249,6 @@ public class AttributePanel extends JPanel
                 }
             }
         });
-
-        if (dataFinder.isDataLoaded(DataFinder.DataType.ANIM))
-        {
-            List<AnimData> dataList = dataFinder.getAnimData();
-            List<Object> list = new ArrayList<>(dataList);
-            animTable.initialize(list);
-        }
-        else
-        {
-            dataFinder.addLoadCallback(DataFinder.DataType.ANIM, () ->
-            {
-                List<AnimData> dataList = dataFinder.getAnimData();
-                List<Object> list = new ArrayList<>(dataList);
-                animTable.initialize(list);
-            });
-        }
 
         c.gridwidth = 1;
         c.gridheight = 1;

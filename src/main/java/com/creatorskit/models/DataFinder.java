@@ -66,7 +66,6 @@ public class DataFinder
     private static final String DEFAULT_NAME = "Name";
 
     private final List<SpotAnimDefinition> spotanimData = new ArrayList<>();
-    private final List<AnimData> animData = new ArrayList<>();
     private final List<WeaponAnimData> weaponAnimData = new ArrayList<>();
 
     private static final BodyPart[] bodyParts = new BodyPart[]{
@@ -107,7 +106,6 @@ public class DataFinder
         }
 
         lookupSpotAnimData();
-        lookupAnimData();
         lookupWeaponAnimationData();
     }
 
@@ -116,7 +114,6 @@ public class DataFinder
         Arrays.stream(DataType.values()).forEach(d -> loadState.put(d, false));
         Arrays.stream(DataType.values()).forEach(d -> loadCallbacks.put(d, new ArrayList<>()));
         spotanimData.clear();
-        animData.clear();
         weaponAnimData.clear();
     }
 
@@ -180,36 +177,61 @@ public class DataFinder
         return items;
     }
 
-    private void lookupAnimData()
+    public CompletableFuture<List<AnimData>> filterAnimData(String entry)
     {
-        Request animRequest = new Request.Builder()
+        CompletableFuture<List<AnimData>> future = new CompletableFuture<>();
+
+        Request request = new Request.Builder()
                 .url("https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/anims.json")
                 .build();
-        Call call = httpClient.newCall(animRequest);
+
+        Call call = httpClient.newCall(request);
+
         call.enqueue(new Callback()
         {
             @Override
             public void onFailure(Call call, IOException e)
             {
                 log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/master/.venv/anims.json");
-                executeCallbacks(DataType.ANIM);
+                future.completeExceptionally(e);
             }
 
             @Override
             public void onResponse(Call call, Response response)
             {
-                if (response.isSuccessful() && response.body() != null)
+                try (ResponseBody body = response.body())
                 {
-                    InputStreamReader reader = new InputStreamReader(response.body().byteStream());
+                    if (!response.isSuccessful() || body == null)
+                    {
+                        future.completeExceptionally(new IOException("HTTP error: " + response.code()));
+                        return;
+                    }
+
+                    InputStreamReader reader = new InputStreamReader(body.byteStream());
+
                     Type listType = new TypeToken<List<AnimData>>() {}.getType();
                     List<AnimData> list = gson.fromJson(reader, listType);
-                    animData.addAll(list);
 
-                    response.body().close();
+                    List<AnimData> filtered = new ArrayList<>();
+
+                    for (AnimData animData : list)
+                    {
+                        if (animData.getName().contains(entry))
+                        {
+                            filtered.add(animData);
+                        }
+                    }
+
+                    future.complete(filtered);
                 }
-                executeCallbacks(DataType.ANIM);
+                catch (Exception e)
+                {
+                    future.completeExceptionally(e);
+                }
             }
         });
+
+        return future;
     }
 
     public ModelStats[] findModelsForPlayer(boolean groundItem, boolean maleItem, int[] items, int animId, int leftHandItem, int rightHandItem, int[] spotAnims)
