@@ -337,7 +337,7 @@ public class CacheSearcherTab extends JPanel
 
         List<Object> list = new ArrayList<>(dataList);
         modelTable.initialize(list);
-        modelTable.searchAndListEntries("", true);
+        modelTable.searchAndListEntries(true, "", true);
         revalidate();
     }
 
@@ -1118,7 +1118,7 @@ public class CacheSearcherTab extends JPanel
                 List<NpcDefinition> dataList = dataFinder.filterNPCs(text);
                 List<Object> list = new ArrayList<>(dataList);
                 npcTable.initialize(list);
-                npcTable.searchAndListEntries(text, allowNull.isSelected());
+                npcTable.searchAndListEntries(true, text, allowNull.isSelected());
             }
         };
         field.addKeyListener(keyListener);
@@ -1199,7 +1199,7 @@ public class CacheSearcherTab extends JPanel
                 List<ObjectDefinition> dataList = dataFinder.filterObjects(text);
                 List<Object> list = new ArrayList<>(dataList);
                 objectTable.initialize(list);
-                objectTable.searchAndListEntries(text, allowNull.isSelected());
+                objectTable.searchAndListEntries(true, text, allowNull.isSelected());
             }
         };
         field.addKeyListener(keyListener);
@@ -1337,7 +1337,7 @@ public class CacheSearcherTab extends JPanel
                 List<ItemDefinition> dataList = dataFinder.filterItems(text);
                 List<Object> list = new ArrayList<>(dataList);
                 itemTable.initialize(list);
-                itemTable.searchAndListEntries(text, allowNull.isSelected());
+                itemTable.searchAndListEntries(true, text, allowNull.isSelected());
             }
         };
         field.addKeyListener(keyListener);
@@ -1419,7 +1419,7 @@ public class CacheSearcherTab extends JPanel
                 {
                     List<Object> list = new ArrayList<>(spotAnimData);
                     spotAnimTable.initialize(list);
-                    spotAnimTable.searchAndListEntries(text, allowNull.isSelected());
+                    spotAnimTable.searchAndListEntries(true, text, allowNull.isSelected());
                 });
             }
         };
@@ -1502,7 +1502,7 @@ public class CacheSearcherTab extends JPanel
                 {
                     List<Object> list = new ArrayList<>(animData);
                     animTable.initialize(list);
-                    animTable.searchAndListEntries(text, allowNull.isSelected());
+                    animTable.searchAndListEntries(true, text, allowNull.isSelected());
                 });
             }
         };
@@ -1585,7 +1585,7 @@ public class CacheSearcherTab extends JPanel
                 {
                     List<Object> list = new ArrayList<>(soundData);
                     soundTable.initialize(list);
-                    soundTable.searchAndListEntries(text, allowNull.isSelected());
+                    soundTable.searchAndListEntries(true, text, allowNull.isSelected());
                 });
             }
         };
@@ -1866,7 +1866,7 @@ public class CacheSearcherTab extends JPanel
         Object o = modelTable.getSelectedObject();
         if (o == null)
         {
-            modelGetter.exportModelFromCache(selectedType, id, name, true, -1);;
+            modelGetter.exportModelFromCache(selectedType, id, name, true, -1);
             return;
         }
 

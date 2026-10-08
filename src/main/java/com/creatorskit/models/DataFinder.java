@@ -19,6 +19,7 @@ import java.lang.reflect.Type;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 @Singleton
 @Slf4j
@@ -166,7 +167,7 @@ public class DataFinder
 
                     for (AnimData animData : list)
                     {
-                        if (animData.toString().contains(entry))
+                        if (animData.toString().matches("(?i).*" + Pattern.quote(entry) + ".*"))
                         {
                             filtered.add(animData);
                         }
@@ -603,7 +604,7 @@ public class DataFinder
 
                     for (SpotanimData spotanimData : list)
                     {
-                        if (spotanimData.toString().contains(entry))
+                        if (spotanimData.toString().matches("(?i).*" + Pattern.quote(entry) + ".*"))
                         {
                             filtered.add(spotanimData);
                         }
@@ -798,7 +799,7 @@ public class DataFinder
             NpcDefinition def = npcLoader.load(unknownOpcodes, i, data);
             if (def != null)
             {
-                if (def.toString().contains(entry))
+                if (def.toString().matches("(?i).*" + Pattern.quote(entry) + ".*"))
                 {
                     list.add(def);
                 }
@@ -936,7 +937,7 @@ public class DataFinder
             ObjectDefinition def = objectLoader.load(unknownOpcodes, i, data);
             if (def != null)
             {
-                if (def.toString().contains(entry))
+                if (def.toString().matches("(?i).*" + Pattern.quote(entry) + ".*"))
                 {
                     list.add(def);
                 }
@@ -1123,7 +1124,7 @@ public class DataFinder
             ItemDefinition def = itemLoader.load(unknownOpcodes, i, data);
             if (def != null)
             {
-                if (def.toString().contains(entry))
+                if (def.toString().matches("(?i).*" + Pattern.quote(entry) + ".*"))
                 {
                     list.add(def);
                 }
@@ -1231,7 +1232,7 @@ public class DataFinder
 
                     for (SoundData soundData : list)
                     {
-                        if (soundData.toString().contains(entry))
+                        if (soundData.toString().matches("(?i).*" + Pattern.quote(entry) + ".*"))
                         {
                             filtered.add(soundData);
                         }

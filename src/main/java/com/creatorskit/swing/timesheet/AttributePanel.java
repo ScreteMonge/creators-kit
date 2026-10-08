@@ -513,7 +513,7 @@ public class AttributePanel extends JPanel
         JScrollPane npcScrollPane = new JScrollPane(characterTable);
         characterPopup.add(npcScrollPane);
 
-        KeyListener npcListener = new KeyListener() {
+        KeyListener tableListener = new KeyListener() {
             @Override
             public void keyTyped(KeyEvent e) {
 
@@ -531,13 +531,13 @@ public class AttributePanel extends JPanel
                 List<Object> list = new ArrayList<>(plugin.getCharacters());
                 characterTable.initialize(list);
 
-                characterTable.searchAndListEntries(text, true);
+                characterTable.searchAndListEntries(false, text, true);
                 characterPopup.setVisible(true);
                 Point p = characterField.getLocationOnScreen();
                 characterPopup.setLocation(new Point((int) p.getX() + characterField.getWidth(), (int) p.getY()));
             }
         };
-        characterField.addKeyListener(npcListener);
+        characterField.addKeyListener(tableListener);
 
         characterField.addFocusListener(new FocusListener()
         {
@@ -961,7 +961,7 @@ public class AttributePanel extends JPanel
                 List<NpcDefinition> dataList = dataFinder.filterNPCs(text);
                 List<Object> list = new ArrayList<>(dataList);
                 npcTable.initialize(list);
-                npcTable.searchAndListEntries(text, false);
+                npcTable.searchAndListEntries(true, text, false);
                 npcPopup.setVisible(true);
                 Point p = npcField.getLocationOnScreen();
                 npcPopup.setLocation(new Point((int) p.getX() + npcField.getWidth(), (int) p.getY()));
@@ -1048,7 +1048,7 @@ public class AttributePanel extends JPanel
                 List<ItemDefinition> dataList = dataFinder.filterItems(text);
                 List<Object> list = new ArrayList<>(dataList);
                 itemTable.initialize(list);
-                itemTable.searchAndListEntries(text, false);
+                itemTable.searchAndListEntries(true, text, false);
                 itemPopup.setVisible(true);
                 Point p = itemField.getLocationOnScreen();
                 itemPopup.setLocation(new Point((int) p.getX() + itemField.getWidth(), (int) p.getY()));
@@ -1193,7 +1193,7 @@ public class AttributePanel extends JPanel
                 {
                     List<Object> list = new ArrayList<>(animData);
                     animTable.initialize(list);
-                    animTable.searchAndListEntries(text, false);
+                    animTable.searchAndListEntries(true, text, false);
                 });
 
                 animPopup.setVisible(true);
@@ -2003,7 +2003,7 @@ public class AttributePanel extends JPanel
                 {
                     List<Object> list = new ArrayList<>(spotAnimData);
                     spotanimTable.initialize(list);
-                    spotanimTable.searchAndListEntries(text, false);
+                    spotanimTable.searchAndListEntries(true, text, false);
                 });
 
                 spotanimPopup.setVisible(true);
