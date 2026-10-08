@@ -65,8 +65,6 @@ public class DataFinder
     private int lastAnim;
     private static final String DEFAULT_NAME = "Name";
 
-    private final List<WeaponAnimData> weaponAnimData = new ArrayList<>();
-
     private static final BodyPart[] bodyParts = new BodyPart[]{
             BodyPart.HEAD,
             BodyPart.CAPE,
@@ -97,33 +95,9 @@ public class DataFinder
         this.spotAnimLoader = spotAnimLoader;
     }
 
-    public void loadDataBase()
-    {
-        if (client == null)
-        {
-            return;
-        }
-
-        lookupWeaponAnimationData();
-    }
-
     public void clearDataBase()
     {
-        Arrays.stream(DataType.values()).forEach(d -> loadState.put(d, false));
-        Arrays.stream(DataType.values()).forEach(d -> loadCallbacks.put(d, new ArrayList<>()));
-        weaponAnimData.clear();
-    }
 
-    private void executeCallbacks(DataType dataType)
-    {
-        List<LoadCallback> callbacksToExecute;
-        synchronized (dataType)
-        {
-            loadState.put(dataType, true);
-            callbacksToExecute = new ArrayList<>(loadCallbacks.get(dataType));
-            loadCallbacks.get(dataType).clear();
-        }
-        callbacksToExecute.forEach(LoadCallback::run);
     }
 
     public KitDefinition[] findKitData(int[] ids)
@@ -1159,58 +1133,63 @@ public class DataFinder
         return list;
     }
 
-    private void lookupWeaponAnimationData()
+    public CompletableFuture<WeaponAnimData> findWeaponAnimData(int id)
     {
-        Request request = new Request.Builder().url("https://raw.githubusercontent.com/ScreteMonge/cache-converter/refs/heads/master/.venv/weapon_animations.json").build();
+        CompletableFuture<WeaponAnimData> future = new CompletableFuture<>();
+
+        Request request = new Request.Builder()
+                .url("https://raw.githubusercontent.com/ScreteMonge/cache-converter/refs/heads/master/.venv/weapon_animations.json")
+                .build();
+
         Call call = httpClient.newCall(request);
+
         call.enqueue(new Callback()
         {
             @Override
             public void onFailure(Call call, IOException e)
             {
                 log.debug("Failed to access URL: https://raw.githubusercontent.com/ScreteMonge/cache-converter/refs/heads/master/.venv/weapon_animations.json");
-                executeCallbacks(DataType.WEAPON_ANIM);
+                future.completeExceptionally(e);
             }
 
             @Override
             public void onResponse(Call call, Response response)
             {
-                if (response.isSuccessful() && response.body() != null)
+                try (ResponseBody body = response.body())
                 {
-                    //create a reader to read the URL
-                    InputStreamReader reader = new InputStreamReader(response.body().byteStream());
+                    if (!response.isSuccessful() || body == null)
+                    {
+                        future.completeExceptionally(new IOException("HTTP error: " + response.code()));
+                        return;
+                    }
+
+                    InputStreamReader reader = new InputStreamReader(body.byteStream());
 
                     Type listType = new TypeToken<List<WeaponAnimData>>() {}.getType();
                     List<WeaponAnimData> list = gson.fromJson(reader, listType);
 
-                    weaponAnimData.addAll(list);
-                    response.body().close();
+                    for (WeaponAnimData weaponAnim : list)
+                    {
+                        for (int i : weaponAnim.getId())
+                        {
+                            if (i == id)
+                            {
+                                future.complete(weaponAnim);
+                                return;
+                            }
+                        }
+                    }
+
+                    future.complete(null);
                 }
-                executeCallbacks(DataType.WEAPON_ANIM);
+                catch (Exception e)
+                {
+                    future.completeExceptionally(e);
+                }
             }
         });
-    }
 
-    public WeaponAnimData findWeaponAnimData(int itemId)
-    {
-        for (WeaponAnimData weaponAnim : weaponAnimData)
-        {
-            int[] ids = weaponAnim.getId();
-            if (ids == null || ids.length == 0)
-            {
-                continue;
-            }
-
-            for (int i : ids)
-            {
-                if (i == itemId)
-                {
-                    return weaponAnim;
-                }
-            }
-        }
-
-        return null;
+        return future;
     }
 
     public CompletableFuture<List<SoundData>> filterSoundData(String entry)

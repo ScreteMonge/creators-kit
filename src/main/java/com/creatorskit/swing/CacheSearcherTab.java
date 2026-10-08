@@ -666,13 +666,14 @@ public class CacheSearcherTab extends JPanel
             {
                 ItemDefinition data = (ItemDefinition) o;
                 int itemId = data.getId();
-                WeaponAnimData weaponAnimData = dataFinder.findWeaponAnimData(itemId);
-                if (weaponAnimData == null)
-                {
-                    return;
-                }
 
-                plugin.getCreatorsPanel().getToolBox().getTimeSheetPanel().addAnimationKeyFrameFromCache(weaponAnimData);
+                dataFinder.findWeaponAnimData(itemId).thenAccept(weaponAnim ->
+                {
+                    if (weaponAnim != null)
+                    {
+                        plugin.getCreatorsPanel().getToolBox().getTimeSheetPanel().addAnimationKeyFrameFromCache(weaponAnim);
+                    }
+                });
             }
         });
 
@@ -744,17 +745,29 @@ public class CacheSearcherTab extends JPanel
                 }
                 updateModelBreakdownTable(modelIds);
 
-                boolean foundMatch = false;
-
-                List<WeaponAnimData> weaponAnimSets = dataFinder.getWeaponAnimData();
-                for (WeaponAnimData weaponAnim : weaponAnimSets)
+                dataFinder.findWeaponAnimData(itemId).thenAccept(weaponAnim ->
                 {
-                    int[] ids = weaponAnim.getId();
-                    if (ids == null || ids.length == 0)
+                    if (weaponAnim == null || weaponAnim.getId() == null || weaponAnim.getId().length == 0)
                     {
-                        continue;
+                        idle.setText("Idle: " + -1);
+                        walk.setText("Walk: " + -1);
+                        run.setText("Run: " + -1);
+                        walk180.setText("Walk 180: " + -1);
+                        walkRight.setText("Walk Right: " + -1);
+                        walkLeft.setText("Walk Left: " + -1);
+                        idleRight.setText("Idle Right: " + -1);
+                        idleLeft.setText("Idle Left: " + -1);
+                        special.setText("Special: " + -1);
+                        stab.setText("Stab: " + -1);
+                        slash.setText("Slash: " + -1);
+                        crush.setText("Crush: " + -1);
+                        slash2.setText("Slash2: " + -1);
+                        crush2.setText("Crush2: " + -1);
+                        defend.setText("Defend: " + -1);
+                        return;
                     }
 
+                    int[] ids = weaponAnim.getId();
                     for (int i : ids)
                     {
                         if (i == itemId)
@@ -774,35 +787,10 @@ public class CacheSearcherTab extends JPanel
                             slash2.setText("Slash2: " + WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.SLASH_2));
                             crush2.setText("Crush2: " + WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.CRUSH_2));
                             defend.setText("Defend: " + WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.DEFEND));
-                            foundMatch = true;
-                            break;
+                            return;
                         }
                     }
-
-                    if (foundMatch)
-                    {
-                        break;
-                    }
-                }
-
-                if (!foundMatch)
-                {
-                    idle.setText("Idle: " + -1);
-                    walk.setText("Walk: " + -1);
-                    run.setText("Run: " + -1);
-                    walk180.setText("Walk 180: " + -1);
-                    walkRight.setText("Walk Right: " + -1);
-                    walkLeft.setText("Walk Left: " + -1);
-                    idleRight.setText("Idle Right: " + -1);
-                    idleLeft.setText("Idle Left: " + -1);
-                    special.setText("Special: " + -1);
-                    stab.setText("Stab: " + -1);
-                    slash.setText("Slash: " + -1);
-                    crush.setText("Crush: " + -1);
-                    slash2.setText("Slash2: " + -1);
-                    crush2.setText("Crush2: " + -1);
-                    defend.setText("Defend: " + -1);
-                }
+                });
             }
         });
     }

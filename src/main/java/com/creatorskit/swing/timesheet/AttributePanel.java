@@ -1085,16 +1085,22 @@ public class AttributePanel extends JPanel
                         ItemDefinition data = (ItemDefinition) o;
                         int itemId = data.getId();
 
-                        boolean foundMatch = false;
-
-                        List<WeaponAnimData> weaponAnimSets = dataFinder.getWeaponAnimData();
-                        for (WeaponAnimData weaponAnim : weaponAnimSets)
+                        dataFinder.findWeaponAnimData(itemId).thenAccept(weaponAnim ->
                         {
-                            int[] ids = weaponAnim.getId();
-                            if (ids == null || ids.length == 0)
+                            if (weaponAnim == null || weaponAnim.getId() == null || weaponAnim.getId().length == 0)
                             {
-                                continue;
+                                idle.setValue(-1);
+                                walk.setValue(-1);
+                                run.setValue(-1);
+                                walk180.setValue(-1);
+                                walkRight.setValue(-1);
+                                walkLeft.setValue(-1);
+                                idleRight.setValue(-1);
+                                idleLeft.setValue(-1);
+                                return;
                             }
+
+                            int[] ids = weaponAnim.getId();
 
                             for (int i : ids)
                             {
@@ -1108,28 +1114,10 @@ public class AttributePanel extends JPanel
                                     walkLeft.setValue(WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_LEFT));
                                     idleRight.setValue(WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_RIGHT));
                                     idleLeft.setValue(WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_LEFT));
-                                    foundMatch = true;
-                                    break;
+                                    return;
                                 }
                             }
-
-                            if (foundMatch)
-                            {
-                                break;
-                            }
-                        }
-
-                        if (!foundMatch)
-                        {
-                            idle.setValue(-1);
-                            walk.setValue(-1);
-                            run.setValue(-1);
-                            walk180.setValue(-1);
-                            walkRight.setValue(-1);
-                            walkLeft.setValue(-1);
-                            idleRight.setValue(-1);
-                            idleLeft.setValue(-1);
-                        }
+                        });
                     }
 
                     itemPopup.setVisible(false);
@@ -1206,10 +1194,11 @@ public class AttributePanel extends JPanel
                     List<Object> list = new ArrayList<>(animData);
                     animTable.initialize(list);
                     animTable.searchAndListEntries(text, false);
-                    animPopup.setVisible(true);
-                    Point p = animField.getLocationOnScreen();
-                    animPopup.setLocation(new Point((int) p.getX() + animField.getWidth(), (int) p.getY()));
                 });
+
+                animPopup.setVisible(true);
+                Point p = animField.getLocationOnScreen();
+                animPopup.setLocation(new Point((int) p.getX() + animField.getWidth(), (int) p.getY()));
             }
         };
         animField.addKeyListener(animListener);
@@ -2015,10 +2004,11 @@ public class AttributePanel extends JPanel
                     List<Object> list = new ArrayList<>(spotAnimData);
                     spotanimTable.initialize(list);
                     spotanimTable.searchAndListEntries(text, false);
-                    spotanimPopup.setVisible(true);
-                    Point p = spotanimField.getLocationOnScreen();
-                    spotanimPopup.setLocation(new Point((int) p.getX() + spotanimField.getWidth(), (int) p.getY()));
                 });
+
+                spotanimPopup.setVisible(true);
+                Point p = spotanimField.getLocationOnScreen();
+                spotanimPopup.setLocation(new Point((int) p.getX() + spotanimField.getWidth(), (int) p.getY()));
             }
         };
         spotanimField.addKeyListener(listener);

@@ -675,61 +675,10 @@ public class ModelGetter
             return;
         }
 
-        AnimationKeyFrame akf = null;
-        SpotAnimKeyFrame[] spkfs = new SpotAnimKeyFrame[0];
+
         if (menuOption == ModelMenuOption.STORE_ADD_ANIMATE)
         {
-            int itemId = player.getPlayerComposition().getEquipmentId(KitType.WEAPON);
-            WeaponAnimData weaponAnim = dataFinder.findWeaponAnimData(itemId);
-
-            int idle;
-            int walk;
-            int run;
-            int rotate180;
-            int rotateRight;
-            int rotateLeft;
-            int idleRotateRight;
-            int idleRotateLeft;
-
-            if (weaponAnim == null)
-            {
-                idle = WeaponAnimData.IDLE_UNARMED;
-                walk = WeaponAnimData.WALK_UNARMED;
-                run = WeaponAnimData.RUN_UNARMED;
-                rotate180 = WeaponAnimData.ROTATE_180;
-                rotateRight = WeaponAnimData.ROTATE_RIGHT;
-                rotateLeft = WeaponAnimData.ROTATE_LEFT;
-                idleRotateRight = WeaponAnimData.IDLE_ROTATE_RIGHT_UNARMED;
-                idleRotateLeft = WeaponAnimData.IDLE_ROTATE_LEFT_UNARMED;
-            }
-            else
-            {
-                idle = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE);
-                walk = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.WALK);
-                run = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.RUN);
-                rotate180 = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_180);
-                rotateRight = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_RIGHT);
-                rotateLeft = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_LEFT);
-                idleRotateRight = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_RIGHT);
-                idleRotateLeft = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_LEFT);
-            }
-
-            akf = new AnimationKeyFrame(
-                    plugin.getCurrentTick(),
-                    false,
-                    player.getAnimation(),
-                    0,
-                    false,
-                    false,
-                    idle,
-                    walk,
-                    run,
-                    rotate180,
-                    rotateRight,
-                    rotateLeft,
-                    idleRotateRight,
-                    idleRotateLeft);
-
+            SpotAnimKeyFrame[] spkfs = new SpotAnimKeyFrame[0];
             int i = 0;
             for (ActorSpotAnim actorSpotAnim : actorSpotAnims)
             {
@@ -751,9 +700,69 @@ public class ModelGetter
 
                 i++;
             }
+
+            String finalName = name;
+            int finalAnimId = animId;
+            SpotAnimKeyFrame[] finalSpkfs = spkfs;
+
+            int itemId = player.getPlayerComposition().getEquipmentId(KitType.WEAPON);
+            dataFinder.findWeaponAnimData(itemId).thenAccept(weaponAnim ->
+            {
+                int idle;
+                int walk;
+                int run;
+                int rotate180;
+                int rotateRight;
+                int rotateLeft;
+                int idleRotateRight;
+                int idleRotateLeft;
+
+                if (weaponAnim == null)
+                {
+                    idle = WeaponAnimData.IDLE_UNARMED;
+                    walk = WeaponAnimData.WALK_UNARMED;
+                    run = WeaponAnimData.RUN_UNARMED;
+                    rotate180 = WeaponAnimData.ROTATE_180;
+                    rotateRight = WeaponAnimData.ROTATE_RIGHT;
+                    rotateLeft = WeaponAnimData.ROTATE_LEFT;
+                    idleRotateRight = WeaponAnimData.IDLE_ROTATE_RIGHT_UNARMED;
+                    idleRotateLeft = WeaponAnimData.IDLE_ROTATE_LEFT_UNARMED;
+                }
+                else
+                {
+                    idle = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE);
+                    walk = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.WALK);
+                    run = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.RUN);
+                    rotate180 = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_180);
+                    rotateRight = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_RIGHT);
+                    rotateLeft = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.ROTATE_LEFT);
+                    idleRotateRight = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_RIGHT);
+                    idleRotateLeft = WeaponAnimData.getAnimation(weaponAnim, PlayerAnimationType.IDLE_ROTATE_LEFT);
+                }
+
+                AnimationKeyFrame akf = new AnimationKeyFrame(
+                        plugin.getCurrentTick(),
+                        false,
+                        player.getAnimation(),
+                        0,
+                        false,
+                        false,
+                        idle,
+                        walk,
+                        run,
+                        rotate180,
+                        rotateRight,
+                        rotateLeft,
+                        idleRotateRight,
+                        idleRotateLeft);
+
+                handleStoreOptions(128, 128, modelStats, menuOption, CustomModelType.CACHE_PLAYER, finalName, colours, true, player.getRenderMode(), LightingStyle.ACTOR, player.getOrientation(), finalAnimId, akf, finalSpkfs);
+            });
+
+            return;
         }
 
-        handleStoreOptions(128, 128, modelStats, menuOption, CustomModelType.CACHE_PLAYER, name, colours, true, player.getRenderMode(), LightingStyle.ACTOR, player.getOrientation(), animId, akf, spkfs);
+        handleStoreOptions(128, 128, modelStats, menuOption, CustomModelType.CACHE_PLAYER, name, colours, true, player.getRenderMode(), LightingStyle.ACTOR, player.getOrientation(), animId, null, new SpotAnimKeyFrame[0]);
     }
 
     public void exportPlayer(Player player, boolean exportAnimation)
@@ -951,7 +960,7 @@ public class ModelGetter
             return;
         }
 
-        handleStoreOptions(model, modelStats, menuOption, type, name, new int[0], false, model.getRenderMode(), ls, orientation, animationId, null, new SpotAnimKeyFrame[0]);
+        handleStoreOptions(model, modelStats, menuOption, type, name, new int[0], model.getRenderMode(), ls, orientation, animationId, null, new SpotAnimKeyFrame[0]);
     }
 
     public void exportObject(String name, int objectId, int modelType, Model model)
@@ -1484,7 +1493,7 @@ public class ModelGetter
             return;
         }
 
-        handleStoreOptions(model, modelStats, menuOption, CustomModelType.CACHE_GROUND_ITEM, name, new int[0], false, model.getRenderMode(), LightingStyle.DEFAULT, 0, -1, null, new SpotAnimKeyFrame[0]);
+        handleStoreOptions(model, modelStats, menuOption, CustomModelType.CACHE_GROUND_ITEM, name, new int[0], model.getRenderMode(), LightingStyle.DEFAULT, 0, -1, null, new SpotAnimKeyFrame[0]);
     }
 
     public void exportGroundItem(String name, int itemId, Model model)
@@ -1589,13 +1598,9 @@ public class ModelGetter
         });
     }
 
-    private void handleStoreOptions(Model model, ModelStats[] modelStats, ModelMenuOption menuOption, CustomModelType customModelType, String name, int[] kitRecolours, boolean player, int renderMode, LightingStyle ls, int orientation, int poseAnimation, AnimationKeyFrame keyFrame, SpotAnimKeyFrame[] spkfs)
+    private void handleStoreOptions(Model model, ModelStats[] modelStats, ModelMenuOption menuOption, CustomModelType customModelType, String name, int[] kitRecolours, int renderMode, LightingStyle ls, int orientation, int poseAnimation, AnimationKeyFrame keyFrame, SpotAnimKeyFrame[] spkfs)
     {
-        Thread thread = new Thread(() ->
-        {
-            store(model, 128, 128, modelStats, menuOption, customModelType, name, kitRecolours, renderMode, ls, orientation, poseAnimation, keyFrame, spkfs);
-        });
-        thread.start();
+        store(model, 128, 128, modelStats, menuOption, customModelType, name, kitRecolours, renderMode, ls, orientation, poseAnimation, keyFrame, spkfs);
     }
 
     private void store(Model model, int widthScale, int heightScale, ModelStats[] modelStats, ModelMenuOption menuOption, CustomModelType customModelType, String name, int[] kitRecolours, int renderMode, LightingStyle ls, int orientation, int poseAnimation, AnimationKeyFrame keyFrame, SpotAnimKeyFrame[] spkfs)

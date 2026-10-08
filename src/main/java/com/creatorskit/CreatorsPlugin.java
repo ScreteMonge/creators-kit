@@ -206,8 +206,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		mouseManager.registerMouseWheelListener(this::mouseWheelMoved);
 		mouseManager.registerMouseListener(this);
 
-		dataFinder.loadDataBase();
-
 		if (config.autoSetup())
 		{
 			File SETUP_DIR = new File(config.setupPath());
