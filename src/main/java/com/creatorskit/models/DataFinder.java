@@ -263,7 +263,7 @@ public class DataFinder
                 animSequence.setOffHandData(AnimSequenceData.HIDE);
                 break;
             default:
-                animSequence.setOffHandItemId(leftHandItem - 512);
+                animSequence.setOffHandItemId(leftHandItem);
                 animSequence.setOffHandData(AnimSequenceData.SWAP);
         }
 
@@ -275,7 +275,7 @@ public class DataFinder
                 animSequence.setMainHandData(AnimSequenceData.HIDE);
                 break;
             default:
-                animSequence.setMainHandItemId(rightHandItem - 512);
+                animSequence.setMainHandItemId(rightHandItem);
                 animSequence.setMainHandData(AnimSequenceData.SWAP);
         }
     }
