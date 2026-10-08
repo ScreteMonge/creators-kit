@@ -246,6 +246,14 @@ public class AttributePanel extends JPanel
         setupHitsplatCard(hitsplat4Card, KeyFrameType.HITSPLAT_4);
     }
 
+    public void clearData()
+    {
+        npcTable.clear();
+        itemTable.clear();
+        animTable.clear();
+        spotanimTable.clear();
+    }
+
     /**
      * Create a keyframe out of the current AttributePanel settings, based on which card is currently being shown
      * @return a keyframe of type depending on which card is currently showing, with settings based on what is displayed on that card

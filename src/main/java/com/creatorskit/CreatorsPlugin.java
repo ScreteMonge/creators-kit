@@ -312,7 +312,8 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		mouseManager.unregisterMouseWheelListener(this::mouseWheelMoved);
 		mouseManager.unregisterMouseListener(this);
 
-		dataFinder.clearDataBase();
+		toolBox.getCacheSearcher().clearData();
+		toolBox.getTimeSheetPanel().getAttributePanel().clearData();
 	}
 
 	@Subscribe

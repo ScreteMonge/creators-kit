@@ -133,6 +133,17 @@ public class CacheSearcherTab extends JPanel
         display.add(soundCard, SOUND);
     }
 
+    public void clearData()
+    {
+        npcTable.clear();
+        objectTable.clear();
+        itemTable.clear();
+        animTable.clear();
+        spotAnimTable.clear();
+        soundTable.clear();
+        modelTable.clear();
+    }
+
     private void setupBreakdownTable()
     {
         breakdownPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);

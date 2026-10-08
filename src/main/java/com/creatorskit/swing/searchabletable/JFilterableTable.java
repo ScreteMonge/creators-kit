@@ -24,6 +24,15 @@ public class JFilterableTable extends JTable
         itemBackup = list;
     }
 
+    public void clear()
+    {
+        if (itemBackup != null)
+        {
+            itemBackup.clear();
+        }
+        itemBackup = null;
+    }
+
     public void resetView()
     {
         List<Object> entry = new ArrayList<>();

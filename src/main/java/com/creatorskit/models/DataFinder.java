@@ -96,11 +96,6 @@ public class DataFinder
         this.spotAnimLoader = spotAnimLoader;
     }
 
-    public void clearDataBase()
-    {
-
-    }
-
     public KitDefinition[] findKitData(int[] ids)
     {
         KitDefinition[] items = new KitDefinition[ids.length];
