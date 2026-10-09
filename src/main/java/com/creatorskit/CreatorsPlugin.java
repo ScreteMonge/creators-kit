@@ -6,7 +6,6 @@ import com.creatorskit.hotkeymanager.LocationOption;
 import com.creatorskit.models.*;
 import com.creatorskit.programming.*;
 import com.creatorskit.programming.orientation.Orientation;
-import com.creatorskit.saves.TransmogLoadOption;
 import com.creatorskit.selection.SelectionManager;
 import com.creatorskit.swing.*;
 import com.creatorskit.swing.anvil.ComplexPanel;
@@ -130,11 +129,9 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private final ArrayList<Character> characters = new ArrayList<>();
 	private final ArrayList<CustomModel> storedModels = new ArrayList<>();
 	private Character hoveredCharacter;
-	private CKObject transmog;
 	private CKObject previewObject;
 	private Random random = new Random();
 	private Model previewArrow;
-	private CustomModel transmogModel;
 	private int savedRegion = -1;
 	private int savedPlane = -1;
 	private AutoRotate autoRotateYaw = AutoRotate.OFF;
@@ -144,7 +141,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private double clickY;
 	private boolean mousePressed = false;
 	private boolean autoSetupPathFound = true;
-	private boolean autoTransmogFound = true;
 
 	@Override
 	protected void startUp() throws Exception
@@ -162,7 +158,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 
 		eventBus.register(toolBox.getProgrammer());
 		eventBus.register(toolBox.getTimeSheetPanel().getSummarySheet());
-		eventBus.register(toolBox.getTransmogPanel());
 		eventBus.register(toolBox.getCacheSearcher().getRenderPanel());
 
 		clientToolbar.addNavigation(navigationButton);
@@ -231,32 +226,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 				autoSetupPathFound = false;
 			}
 		}
-
-		if (config.autoTransmog())
-		{
-			File TRANSMOG_DIR = new File(config.transmogPath());
-			if (!TRANSMOG_DIR.exists())
-			{
-				TRANSMOG_DIR = new File(config.transmogPath() + ".json");
-				if (!TRANSMOG_DIR.exists())
-				{
-					TRANSMOG_DIR = new File(config.transmogPath().replaceAll("/", "\\\\"));
-					if (!TRANSMOG_DIR.exists())
-					{
-						TRANSMOG_DIR = new File(config.transmogPath().replaceAll("/", "\\\\") + ".json");
-					}
-				}
-			}
-
-			if (TRANSMOG_DIR.exists())
-			{
-				creatorsPanel.getToolBox().getModelUtilities().loadTransmog(TRANSMOG_DIR, TransmogLoadOption.BOTH);
-			}
-			else
-			{
-				autoTransmogFound = false;
-			}
-		}
 	}
 
 	@Override
@@ -267,7 +236,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		ToolBoxFrame toolBox = creatorsPanel.getToolBox();
 		eventBus.unregister(toolBox.getProgrammer());
 		eventBus.unregister(toolBox.getTimeSheetPanel().getSummarySheet());
-		eventBus.unregister(toolBox.getTransmogPanel());
 		eventBus.unregister(toolBox.getCacheSearcher().getRenderPanel());
 		toolBox.dispose();
 
@@ -326,13 +294,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		{
 			autoSetupPathFound = true;
 			sendChatMessage("Creator's Kit auto-Setup has failed to find the file at the path: " + config.setupPath());
-			sendChatMessage("Please ensure the config menu has the appropriate file path.");
-		}
-
-		if (!autoTransmogFound)
-		{
-			autoTransmogFound = true;
-			sendChatMessage("Creator's Kit auto-Transmog has failed to find the file at the path: " + config.transmogPath());
 			sendChatMessage("Please ensure the config menu has the appropriate file path.");
 		}
 
@@ -407,17 +368,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		{
 			client.setFreeCameraSpeed(config.orbSpeed());
 			hotKeyManager.setOculusOrbSpeed(config.orbSpeed());
-		}
-
-		if (event.getKey().equals("enableTransmog"))
-		{
-			if (transmog == null)
-				return;
-
-			clientThread.invokeLater(() ->
-			{
-				transmog.setActive(config.enableTransmog());
-			});
 		}
 	}
 

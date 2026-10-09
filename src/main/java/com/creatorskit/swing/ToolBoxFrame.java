@@ -51,7 +51,6 @@ public class ToolBoxFrame extends JFrame
     private final ModelOrganizer modelOrganizer;
     private final ModelAnvil modelAnvil;
     private final CacheSearcherTab cacheSearcher;
-    private final TransmogPanel transmogPanel;
     private final TimeSheetPanel timeSheetPanel;
     private final Programmer programmer;
     private final CameraManager cameraManager;
@@ -62,7 +61,7 @@ public class ToolBoxFrame extends JFrame
     private final BufferedImage ICON = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
 
     @Inject
-    public ToolBoxFrame(Client client, EventBus eventBus, ClientThread clientThread, CreatorsPlugin plugin, CreatorsConfig config, ConfigManager configManager, DataFinder dataFinder, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, TransmogPanel transmogPanel, PathFinder pathFinder, ModelUtilities modelUtilities, OkHttpClient httpClient, SelectionManager selectionManager, KeyFrameSelectionManager keyFrameSelectionManager, CameraManager cameraManager)
+    public ToolBoxFrame(Client client, EventBus eventBus, ClientThread clientThread, CreatorsPlugin plugin, CreatorsConfig config, ConfigManager configManager, DataFinder dataFinder, ModelOrganizer modelOrganizer, ModelAnvil modelAnvil, PathFinder pathFinder, ModelUtilities modelUtilities, OkHttpClient httpClient, SelectionManager selectionManager, KeyFrameSelectionManager keyFrameSelectionManager, CameraManager cameraManager)
     {
         this.client = client;
         this.clientThread = clientThread;
@@ -76,7 +75,6 @@ public class ToolBoxFrame extends JFrame
         this.dataFinder = dataFinder;
         this.modelOrganizer = modelOrganizer;
         this.modelAnvil = modelAnvil;
-        this.transmogPanel = transmogPanel;
         this.pathFinder = pathFinder;
         this.httpClient = httpClient;
 
@@ -144,12 +142,10 @@ public class ToolBoxFrame extends JFrame
         tabbedPane.addTab("Model Organizer", modelOrganizer);
         tabbedPane.addTab("Model Anvil", modelAnvil);
         tabbedPane.addTab("Cache Searcher", cacheSearcher);
-        tabbedPane.addTab("Transmogger", transmogPanel);
         tabbedPane.setToolTipTextAt(0, "Manage and organize all your Objects");
         tabbedPane.setToolTipTextAt(1, "Organize Custom Models you've loaded from the cache or Forged");
         tabbedPane.setToolTipTextAt(2, "Create Custom Models by modifying and merging different models together");
         tabbedPane.setToolTipTextAt(3, "Search the cache for NPCs, Items, and Objects for their models");
-        tabbedPane.setToolTipTextAt(5, "Set animations for Transmogging your player character");
 
         //Move the FolderTree between the Manager and Programmer tabs when the given tab is selected
         tabbedPane.addChangeListener(e -> {

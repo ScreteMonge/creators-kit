@@ -3,12 +3,9 @@ package com.creatorskit.models;
 import com.creatorskit.Character;
 import com.creatorskit.CreatorsPlugin;
 import com.creatorskit.hotkeymanager.LocationOption;
-import com.creatorskit.saves.TransmogLoadOption;
-import com.creatorskit.saves.TransmogSave;
 import com.creatorskit.selection.SelectionCommand;
 import com.creatorskit.swing.CreatorsPanel;
 import com.creatorskit.swing.ParentPanel;
-import com.creatorskit.swing.TransmogPanel;
 import com.creatorskit.swing.anvil.ModelAnvil;
 import com.creatorskit.swing.timesheet.keyframe.subtypes.AnimationKeyFrame;
 import com.creatorskit.swing.timesheet.keyframe.KeyFrame;
@@ -623,88 +620,6 @@ public class ModelUtilities
         catch (Exception e)
         {
             sendChatMessage("Failed to load this Saved Model file.");
-        }
-    }
-
-    public void loadTransmog(File file, TransmogLoadOption transmogLoadOption)
-    {
-        CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
-        TransmogPanel transmogPanel = creatorsPanel.getToolBox().getTransmogPanel();
-
-        try
-        {
-            Reader reader = Files.newBufferedReader(file.toPath());
-            TransmogSave transmogSave = gson.fromJson(reader, TransmogSave.class);
-            CustomModelComp comp = transmogSave.getCustomModelComp();
-            if (comp != null)
-            {
-                DetailedModel[] detailedModels = comp.getDetailedModels();
-                if (detailedModels == null)
-                {
-                    detailedModels = creatorsPanel.getModelOrganizer().modelToDetailedPanels(comp);
-                    comp.setDetailedModels(detailedModels);
-                }
-
-                if (comp.getRenderMode() == null)
-                {
-                    int renderMode = Renderable.RENDERMODE_DEFAULT;
-                    CustomModelType type = comp.getType();
-                    switch (type)
-                    {
-                        case CACHE_PLAYER:
-                        case FORGED:
-                        case BLENDER:
-                            renderMode = Renderable.RENDERMODE_SORTED_NO_DEPTH;
-                    }
-
-                    comp.setRenderMode(renderMode);
-                }
-
-                if (comp.getWidthScale() == null || comp.getHeightScale() == null)
-                {
-                    comp.setWidthScale(128);
-                    comp.setHeightScale(128);
-                }
-            }
-
-            reader.close();
-
-            boolean loadCustomModel = false;
-            switch (transmogLoadOption)
-            {
-                case ANIMATIONS:
-                    transmogPanel.loadTransmog(transmogSave);
-                    break;
-                case CUSTOM_MODEL:
-                    if (comp != null)
-                        loadCustomModel = true;
-                    break;
-                case BOTH:
-                    transmogPanel.loadTransmog(transmogSave);
-                    if (comp != null)
-                        loadCustomModel = true;
-            }
-
-            if (loadCustomModel)
-            {
-                clientThread.invokeLater(() ->
-                {
-                    CustomLighting cl = comp.getCustomLighting();
-                    if (cl == null)
-                    {
-                        cl = CustomLighting.fromLightingStyle(LightingStyle.DEFAULT);
-                    }
-
-                    Model model = createComplexModel(comp.getDetailedModels(), comp.isPriority(), cl, false);
-                    CustomModel customModel = new CustomModel(model, comp);
-                    addCustomModels(new CustomModel[]{customModel}, false);
-                    transmogPanel.setTransmog(customModel);
-                });
-            }
-        }
-        catch (Exception e)
-        {
-            sendChatMessage("Failed to load the selected Transmog. Make sure you selected an appropriate transmog file.");
         }
     }
 

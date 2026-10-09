@@ -310,11 +310,6 @@ public class ModelGetter
                 .onClick(e -> storeNPC(npc, ModelMenuOption.ANVIL));
 
         menu.createMenuEntry(0)
-                .setOption(ColorUtil.prependColorTag("Transmog", Color.WHITE))
-                .setType(MenuAction.RUNELITE)
-                .onClick(e -> storeNPC(npc, ModelMenuOption.TRANSMOG));
-
-        menu.createMenuEntry(0)
                 .setOption(ColorUtil.prependColorTag("Export 3D", Color.WHITE))
                 .setType(MenuAction.RUNELITE)
                 .onClick(e -> exportNPC(npc, false));
@@ -610,11 +605,6 @@ public class ModelGetter
                 .setOption(ColorUtil.prependColorTag("Anvil", Color.WHITE))
                 .setType(MenuAction.RUNELITE)
                 .onClick(e -> storePlayer(player, ModelMenuOption.ANVIL, true));
-
-        menu.createMenuEntry(0)
-                .setOption(ColorUtil.prependColorTag("Transmog", Color.WHITE))
-                .setType(MenuAction.RUNELITE)
-                .onClick(e -> storePlayer(player, ModelMenuOption.TRANSMOG, false));
 
         menu.createMenuEntry(0)
                 .setOption(ColorUtil.prependColorTag("Export 3D", Color.WHITE))
@@ -916,11 +906,6 @@ public class ModelGetter
                 .setOption(ColorUtil.prependColorTag("Anvil", Color.WHITE))
                 .setType(MenuAction.RUNELITE)
                 .onClick(e -> storeGameObject(name, model, objectId, modelType, type, animationId, orientation, ls, dynamicObject, ModelMenuOption.ANVIL));
-
-        menu.createMenuEntry(0)
-                .setOption(ColorUtil.prependColorTag("Transmog", Color.WHITE))
-                .setType(MenuAction.RUNELITE)
-                .onClick(e -> storeGameObject(name, model, objectId, modelType, type, animationId, orientation, ls, dynamicObject, ModelMenuOption.TRANSMOG));
 
         if (dynamicObject)
         {
@@ -1468,11 +1453,6 @@ public class ModelGetter
                 .onClick(e -> storeGroundItem(name, model, itemId, ModelMenuOption.ANVIL));
 
         menu.createMenuEntry(0)
-                .setOption(ColorUtil.prependColorTag("Transmog", Color.WHITE))
-                .setType(MenuAction.RUNELITE)
-                .onClick(e -> storeGroundItem(name, model, itemId, ModelMenuOption.TRANSMOG));
-
-        menu.createMenuEntry(0)
                 .setOption(ColorUtil.prependColorTag("Export 3D", Color.WHITE))
                 .setType(MenuAction.RUNELITE)
                 .onClick(e -> exportGroundItem(name, itemId, model));
@@ -1610,11 +1590,6 @@ public class ModelGetter
         modelUtilities.addCustomModels(new CustomModel[]{customModel}, false);
         plugin.sendChatMessage("Model stored: " + name);
         CreatorsPanel creatorsPanel = plugin.getCreatorsPanel();
-
-        if (menuOption == ModelMenuOption.TRANSMOG)
-        {
-            creatorsPanel.getToolBox().getTransmogPanel().setTransmog(customModel);
-        }
 
         if (menuOption == ModelMenuOption.STORE_AND_ADD || menuOption == ModelMenuOption.STORE_ADD_ANIMATE)
         {

@@ -50,7 +50,6 @@ public class ModelOrganizer extends JPanel
     private final BufferedImage CLEAR = ImageUtil.loadImageResource(getClass(), "/Clear.png");
     private final BufferedImage ANVIL = ImageUtil.loadImageResource(getClass(), "/Anvil.png");
     private final BufferedImage SAVE = ImageUtil.loadImageResource(getClass(), "/Save.png");
-    private final BufferedImage TRANSMOG = ImageUtil.loadImageResource(getClass(), "/Transmog.png");
     private final BufferedImage EXPORT = ImageUtil.loadImageResource(getClass(), "/Export.png");
     private final GridBagConstraints c = new GridBagConstraints();
     public static final File MODELS_DIR = new File(RuneLite.RUNELITE_DIR, "creatorskit");
@@ -259,8 +258,6 @@ public class ModelOrganizer extends JPanel
             model.getComp().setName(text);
             modelUtilities.updatePanelComboBoxes();
 
-            TransmogPanel transmogPanel = plugin.getCreatorsPanel().getToolBox().getTransmogPanel();
-            transmogPanel.getTransmogLabel().setText(text);
             repaint();
         });
 
@@ -309,22 +306,6 @@ public class ModelOrganizer extends JPanel
             openSaveDialog(model, model.getComp().getName());
         });
 
-        JButton transmogButton = new JButton(new ImageIcon(TRANSMOG));
-        transmogButton.setText("Set as Transmog");
-        transmogButton.setToolTipText("Set this as your player transmog");
-        buttons.add(transmogButton);
-        transmogButton.addActionListener(e ->
-        {
-            CustomModel model = getSelectedCustomModel();
-            if (model == null)
-            {
-                return;
-            }
-
-            TransmogPanel transmogPanel = plugin.getCreatorsPanel().getToolBox().getTransmogPanel();
-            transmogPanel.setTransmog(model);
-        });
-
         JButton exportButton = new JButton(new ImageIcon(EXPORT));
         exportButton.setText("Export 3D Model");
         exportButton.setToolTipText("Export this model to a 3D format based on the Model Exporter settings in the config");
@@ -351,16 +332,12 @@ public class ModelOrganizer extends JPanel
     private void onClearButtonPressed()
     {
         CustomModel[] unusedModels = new CustomModel[0];
-        CustomModel transmogModel = plugin.getTransmogModel();
         ArrayList<Character> characters = plugin.getCharacters();
 
         ArrayList<CustomModel> storedModels = plugin.getStoredModels();
         for (int i = 0; i < storedModels.size(); i++)
         {
             CustomModel customModel = storedModels.get(i);
-
-            if (customModel == transmogModel)
-                continue;
 
             boolean isBeingUsed = false;
             for (int x = 0; x < characters.size(); x++)

@@ -405,50 +405,6 @@ public interface CreatorsConfig extends Config
 	}
 
 	@ConfigSection(
-			name = "Transmogrification",
-			description = "Settings for replacing your player character with a saved Custom Model",
-			position = 3
-	)
-	String transmogrification = "Transmogrification";
-
-	@ConfigItem(
-			keyName = "enableTransmog",
-			name = "Enable Transmogrification",
-			description = "Allow your character to be transmogrified into a chosen Custom Model",
-			section = transmogrification,
-			position = 0
-	)
-	default boolean enableTransmog()
-	{
-		return true;
-	}
-
-	@ConfigItem(
-			keyName = "enableAutoTransmog",
-			name = "Enable Auto-Transmog",
-			description = "Automatically loads the Transmog from the file path below" +
-					"<br>Please note that enabling this feature will slow down client start-up",
-			section = transmogrification,
-			position = 1
-	)
-	default boolean autoTransmog()
-	{
-		return false;
-	}
-
-	@ConfigItem(
-			keyName = "transmogPath",
-			name = "Auto-Transmog Path",
-			description = "Enter the file path of a previously saved Transmog to automatically load on client start-up",
-			section = transmogrification,
-			position = 2
-	)
-	default String transmogPath()
-	{
-		return "";
-	}
-
-	@ConfigSection(
 			name = "Oculus Orb",
 			description = "Settings for enabling and modifying Oculus Orb mode",
 			position = 4
