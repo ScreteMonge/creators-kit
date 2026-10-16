@@ -1,13 +1,9 @@
 package com.creatorskit.swing.anvil;
 
-import com.creatorskit.CreatorsPlugin;
-import net.runelite.api.Client;
-import net.runelite.client.callback.ClientThread;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.FontManager;
 import net.runelite.client.util.ImageUtil;
 
-import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.swing.*;
 import javax.swing.border.LineBorder;
@@ -18,12 +14,10 @@ import java.awt.*;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.image.BufferedImage;
-import java.util.HashMap;
 
 public class GroupPanel extends JPanel
 {
-    private final CreatorsPlugin plugin;
-    private final ClientThread clientThread;
+    private ModelAnvil modelAnvil;
     private final GridBagConstraints c = new GridBagConstraints();
 
     private final BufferedImage ICON = ImageUtil.loadImageResource(getClass(), "/panelicon.png");
@@ -35,52 +29,34 @@ public class GroupPanel extends JPanel
     private final JSpinner groupSpinner = new JSpinner();
 
     @Inject
-    public GroupPanel(CreatorsPlugin plugin, ClientThread clientThread)
+    public GroupPanel(ModelAnvil modelAnvil)
     {
-        this.plugin = plugin;
-        this.clientThread = clientThread;
+        this.modelAnvil = modelAnvil;
 
         setBackground(ColorScheme.DARK_GRAY_COLOR);
-        setLayout(new GridBagLayout());
+        setLayout(new BorderLayout(4, 4));
 
-        c.fill = GridBagConstraints.BOTH;
-        c.insets = new Insets(4, 4, 4, 4);
-        c.gridwidth = 1;
-        c.gridheight = 1;
-        c.weightx = 1;
+        JPanel titlePanel = new JPanel(new GridLayout(0, 1, 2, 2));
+        titlePanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        add(titlePanel, BorderLayout.NORTH);
 
-        c.gridx = 0;
-        c.gridy = 0;
-        JLabel title1 = new JLabel("Group");
-        title1.setFont(FontManager.getRunescapeBoldFont());
-        title1.setHorizontalAlignment(SwingConstants.CENTER);
-        add(title1, c);
+        JLabel title = new JLabel("<html>Group<br>Transformer</html>", SwingConstants.CENTER);
+        title.setFont(FontManager.getRunescapeBoldFont());
+        titlePanel.add(title);
 
-        c.gridx = 0;
-        c.gridy = 1;
-        JLabel title2 = new JLabel("Transformer");
-        title2.setFont(FontManager.getRunescapeBoldFont());
-        title2.setHorizontalAlignment(SwingConstants.CENTER);
-        add(title2, c);
-
-        c.gridx = 0;
-        c.gridy = 2;
         SpinnerNumberModel spinnerNumberModel = new SpinnerNumberModel(1, 1, 99, 1);
         groupSpinner.setModel(spinnerNumberModel);
         groupSpinner.setBackground(ModelAnvil.getBorderColour(6));
         groupSpinner.setToolTipText("Pick the Group number to Group Transform");
         groupSpinner.addChangeListener(e -> groupSpinner.setBackground(ModelAnvil.getBorderColour((int) groupSpinner.getValue() * 6)));
-        add(groupSpinner, c);
+        titlePanel.add(groupSpinner);
 
+        JPanel modificationPanel = new JPanel(new GridLayout(0, 1, 2, 2));
         JPanel adjustPanel = createAdjustPanel();
-        c.gridx = 0;
-        c.gridy = 3;
-        add(adjustPanel, c);
-
         JPanel setPanel = createSetPanel();
-        c.gridx = 0;
-        c.gridy = 4;
-        add(setPanel, c);
+        modificationPanel.add(adjustPanel);
+        modificationPanel.add(setPanel);
+        add(modificationPanel);
     }
 
     public JPanel createAdjustPanel()
@@ -314,7 +290,7 @@ public class GroupPanel extends JPanel
     {
         int value = (int) spinner.getValue();
 
-        for (ComplexPanel complexPanel : plugin.getComplexPanels())
+        for (ComplexPanel complexPanel : modelAnvil.getComplexPanels())
         {
             if (complexPanel.getGroupSpinner().getValue() != groupSpinner.getValue())
                 continue;
@@ -372,7 +348,7 @@ public class GroupPanel extends JPanel
 
         int change = Integer.parseInt((String) e.getItem());
 
-        for (ComplexPanel complexPanel : plugin.getComplexPanels())
+        for (ComplexPanel complexPanel : modelAnvil.getComplexPanels())
         {
             if (complexPanel.getGroupSpinner().getValue() == groupSpinner.getValue())
             {
@@ -424,7 +400,7 @@ public class GroupPanel extends JPanel
 
     private void adjustValueInvert()
     {
-        for (ComplexPanel complexPanel : plugin.getComplexPanels())
+        for (ComplexPanel complexPanel : modelAnvil.getComplexPanels())
         {
             if (complexPanel.getGroupSpinner().getValue() == groupSpinner.getValue())
             {
@@ -658,8 +634,6 @@ public class GroupPanel extends JPanel
         setPanel.add(invertButton, c);
         invertButton.addActionListener(e -> setValueInvert(invertButton));
 
-        HashMap<Short, Short> colourMap = new HashMap<>();
-
         colourNewField.setVisible(false);
         setPanel.add(colourNewField);
 
@@ -685,7 +659,7 @@ public class GroupPanel extends JPanel
     {
         int value = (int) spinner.getValue();
 
-        for (ComplexPanel complexPanel : plugin.getComplexPanels())
+        for (ComplexPanel complexPanel : modelAnvil.getComplexPanels())
         {
             if (complexPanel.getGroupSpinner().getValue() != groupSpinner.getValue())
                 continue;
@@ -727,7 +701,7 @@ public class GroupPanel extends JPanel
         if (e.getItem() == "Rot")
             return;
 
-        for (ComplexPanel complexPanel : plugin.getComplexPanels())
+        for (ComplexPanel complexPanel : modelAnvil.getComplexPanels())
         {
             if (complexPanel.getGroupSpinner().getValue() == groupSpinner.getValue())
             {
@@ -764,7 +738,7 @@ public class GroupPanel extends JPanel
     private void setValueInvert(JButton button)
     {
         boolean invert = button.getText().equals("Inv On");
-        for (ComplexPanel complexPanel : plugin.getComplexPanels())
+        for (ComplexPanel complexPanel : modelAnvil.getComplexPanels())
         {
             if (complexPanel.getGroupSpinner().getValue() == groupSpinner.getValue())
             {

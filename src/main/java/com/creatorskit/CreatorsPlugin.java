@@ -132,7 +132,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 	private CKObject previewObject;
 	private Random random = new Random();
 	private Model previewArrow;
-	private int savedRegion = -1;
 	private int savedPlane = -1;
 	private AutoRotate autoRotateYaw = AutoRotate.OFF;
 	private AutoRotate autoRotatePitch = AutoRotate.OFF;
@@ -297,19 +296,7 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 			sendChatMessage("Please ensure the config menu has the appropriate file path.");
 		}
 
-		if (client.getLocalPlayer() == null)
-			return;
-
-		WorldPoint worldPoint = client.getLocalPlayer().getWorldLocation();
-		LocalPoint localPoint = client.getLocalPlayer().getLocalLocation();
-		WorldView worldView = client.getTopLevelWorldView();
-
-		int region = worldView.getScene().isInstance() ? WorldPoint.fromLocalInstance(client, localPoint).getRegionID() : worldPoint.getRegionID();
-
-		if (savedRegion != region)
-			savedRegion = region;
-
-		int plane = worldView.getPlane();
+		int plane = client.getTopLevelWorldView().getPlane();
 		if (savedPlane != plane)
 		{
 			savedPlane = plane;
@@ -650,11 +637,6 @@ public class CreatorsPlugin extends Plugin implements MouseListener {
 		previewObject.setLocation(lp, client.getTopLevelWorldView().getPlane());
 		previewObject.setRadius(ckObject.getRadius());
 		previewObject.setActive(true);
-	}
-
-	public ArrayList<ComplexPanel> getComplexPanels()
-	{
-		return creatorsPanel.getModelAnvil().getComplexPanels();
 	}
 
 	public static String getPluginVersion()

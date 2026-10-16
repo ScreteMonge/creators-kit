@@ -335,7 +335,7 @@ public class ModelAnvil extends JPanel
         groupScrollPane.setBackground(ColorScheme.DARK_GRAY_COLOR);
         groupScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 
-        JPanel groupPanel = new GroupPanel(plugin, clientThread);
+        JPanel groupPanel = new GroupPanel(this);
         groupScrollPane.setViewportView(groupPanel);
 
         anvilPanel.add(scrollPane, BorderLayout.CENTER);
