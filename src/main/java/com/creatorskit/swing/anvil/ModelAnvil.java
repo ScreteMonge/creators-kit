@@ -29,6 +29,7 @@ import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 @Slf4j
 public class ModelAnvil extends JPanel
@@ -547,24 +548,46 @@ public class ModelAnvil extends JPanel
         JCheckBox check270 = new JCheckBox();
         JCheckBox checkInvertFaces = new JCheckBox();
 
+        short[] colFrom = new short[0];
+        short[] colTo = new short[0];
+
         if (coloursFrom == null)
-            coloursFrom = stringToShort(oldColours);
+        {
+            colFrom = stringToShort(oldColours);
+        }
+        else
+        {
+            colFrom = Arrays.copyOf(coloursFrom, coloursFrom.length);
+        }
 
         if (coloursTo == null)
-            coloursTo = stringToShort(newColours);
+        {
+            colTo = stringToShort(newColours);
+        }
+        else
+        {
+            colTo = Arrays.copyOf(coloursTo, coloursTo.length);
+        }
 
-        if (texturesFrom == null)
-            texturesFrom = new short[0];
+        short[] textFrom = new short[0];
+        short[] textTo = new short[0];
 
-        if (texturesTo == null)
-            texturesTo = new short[0];
+        if (texturesFrom != null)
+        {
+            textFrom = Arrays.copyOf(texturesFrom, texturesFrom.length);
+        }
+
+        if (texturesTo != null)
+        {
+            textTo = Arrays.copyOf(texturesTo, texturesTo.length);
+        }
 
         ComplexPanel complexModePanel = new ComplexPanel(
                 modelIdSpinner,
                 groupSpinner,
                 nameField,
-                coloursFrom, coloursTo,
-                texturesFrom, texturesTo,
+                colFrom, colTo,
+                textFrom, textTo,
                 xSpinner, ySpinner, zSpinner,
                 xTileSpinner, yTileSpinner, zTileSpinner,
                 xScaleSpinner, yScaleSpinner, zScaleSpinner,
@@ -1073,7 +1096,7 @@ public class ModelAnvil extends JPanel
         clientThread.invokeLater(() ->
         {
             DetailedModel[] detailedModels = panelsToDetailedModels();
-            Model model = forgeComplexModel(setPriority, detailedModels, lighting);
+            Model model = modelUtilities.createComplexModel(detailedModels, setPriority, lighting, true);
             if (model == null)
             {
                 return;
@@ -1083,11 +1106,6 @@ public class ModelAnvil extends JPanel
             CustomModel customModel = new CustomModel(model, comp);
             modelUtilities.addCustomModels(new CustomModel[]{customModel}, forgeAndSet);
         });
-    }
-
-    public Model forgeComplexModel(boolean setPriority, DetailedModel[] detailedModels, CustomLighting lighting)
-    {
-        return modelUtilities.createComplexModel(detailedModels, setPriority, lighting, true);
     }
 
     private DetailedModel[] panelsToDetailedModels()
