@@ -1020,27 +1020,42 @@ public class CacheSearcherTab extends JPanel
                     @Override
                     public void onResponse(Call call, Response response) throws IOException
                     {
-                        if (response.isSuccessful() && response.body() != null)
+                        try (Response ignored = response)
                         {
-                            InputStream inputStream = response.body().byteStream();
-
-                            if (!SOUNDS_DIR.exists())
+                            if (!response.isSuccessful() || response.body() == null)
                             {
-                                SOUNDS_DIR.mkdirs();
+                                plugin.sendChatMessage("This sound file could not be found.");
+                                return;
                             }
 
-                            FileOutputStream outputStream = new FileOutputStream(new File(SOUNDS_DIR, sd + ".wav"));
-                            byte[] buffer = new byte[8192];
-                            int bytesRead;
-                            while ((bytesRead = inputStream.read(buffer)) != -1)
+                            if (!SOUNDS_DIR.exists() && !SOUNDS_DIR.mkdirs())
                             {
-                                outputStream.write(buffer, 0, bytesRead);
+                                plugin.sendChatMessage("Could not create the sound export directory.");
+                                return;
                             }
-                            outputStream.close();
-                            inputStream.close();
+
+                            File outputFile = new File(SOUNDS_DIR, sd + ".wav");
+
+                            try (
+                                    InputStream inputStream = response.body().byteStream();
+                                    FileOutputStream outputStream = new FileOutputStream(outputFile)
+                            )
+                            {
+                                byte[] buffer = new byte[8192];
+                                int bytesRead;
+
+                                while ((bytesRead = inputStream.read(buffer)) != -1)
+                                {
+                                    outputStream.write(buffer, 0, bytesRead);
+                                }
+                            }
 
                             plugin.sendChatMessage("Exported " + sd + ".wav to your /.runelite/creatorskit/sound-exports directory.");
-                            response.body().close();
+                        }
+                        catch (IOException e)
+                        {
+                            log.debug("Failed to export sound file: " + sd, e);
+                            plugin.sendChatMessage("Failed to export " + sd + ".wav.");
                         }
                     }
                 });

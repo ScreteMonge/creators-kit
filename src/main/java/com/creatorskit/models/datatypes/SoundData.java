@@ -23,6 +23,7 @@ public class SoundData
             return "" + id;
         }
 
-        return id + "%20" + name;
+        String s = name.replaceAll(" ", "_");
+        return id + "%20" + s;
     }
 }
